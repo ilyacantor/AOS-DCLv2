@@ -40,24 +40,23 @@ export function ControlsBar({
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Env</span>
-          <div className="inline-flex items-center rounded-lg border border-cyan-500/50 p-1 bg-background/50">
+          <div className="inline-flex gap-2">
             <button
               onClick={() => setRunMode('Dev')}
-              className={`px-3 py-1 text-xs font-medium rounded transition-all ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
                 runMode === 'Dev' 
-                  ? 'bg-cyan-500/20 text-cyan-300 shadow-sm' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
+                  ? 'bg-white/10 text-white border-white/30' 
+                  : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
               }`}
             >
               Dev
             </button>
-            <span className="text-white text-xs px-2 font-bold">-</span>
             <button
               onClick={() => setRunMode('Prod')}
-              className={`px-3 py-1 text-xs font-medium rounded transition-all ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
                 runMode === 'Prod' 
-                  ? 'bg-cyan-500/20 text-cyan-300 shadow-sm' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
+                  ? 'bg-white/10 text-white border-white/30' 
+                  : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
               }`}
             >
               Prod
@@ -67,24 +66,23 @@ export function ControlsBar({
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Data</span>
-          <div className="inline-flex items-center rounded-lg border border-cyan-500/50 p-1 bg-background/50">
+          <div className="inline-flex gap-2">
             <button
               onClick={() => setDataMode('Demo')}
-              className={`px-3 py-1 text-xs font-medium rounded transition-all ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
                 dataMode === 'Demo' 
-                  ? 'bg-cyan-500/20 text-cyan-300 shadow-sm' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
+                  ? 'bg-white/10 text-white border-white/30' 
+                  : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
               }`}
             >
               Demo
             </button>
-            <span className="text-muted-foreground text-xs px-1">-</span>
             <button
               onClick={() => setDataMode('Farm')}
-              className={`px-3 py-1 text-xs font-medium rounded transition-all ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
                 dataMode === 'Farm' 
-                  ? 'bg-cyan-500/20 text-cyan-300 shadow-sm' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
+                  ? 'bg-white/10 text-white border-white/30' 
+                  : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
               }`}
             >
               Farm
