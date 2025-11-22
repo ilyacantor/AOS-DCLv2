@@ -40,36 +40,36 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
                   <CardHeader className="pb-4 pt-0 px-0">
                     <div className="flex justify-between items-start gap-4">
                       <div className="flex-1">
-                        <CardTitle className="text-sm mb-3">{view.title}</CardTitle>
-                        <div className="text-[9px] flex gap-2 text-muted-foreground flex-wrap">
+                        <CardTitle className="text-base mb-3 font-semibold">{view.title}</CardTitle>
+                        <div className="text-[11px] flex gap-2 text-muted-foreground flex-wrap">
                           {view.focusAreas.map(area => (
-                            <Badge key={area} className="text-[8px] h-5 px-2 font-normal border border-white/80 bg-transparent text-white">
+                            <Badge key={area} className="text-[10px] h-6 px-2 font-normal border border-white/80 bg-transparent text-white">
                               {area}
                             </Badge>
                           ))}
                         </div>
                       </div>
-                      <Badge variant="secondary" className="text-[9px] h-5 px-2 shrink-0">{view.personaId}</Badge>
+                      <Badge variant="secondary" className="text-[10px] h-6 px-2 shrink-0">{view.personaId}</Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="px-0 pb-0 pt-4 space-y-6">
                     <div className="grid grid-cols-2 gap-4">
                       {view.metrics.slice(0, 2).map(metric => (
                         <div key={metric.id} className="bg-secondary/30 rounded flex flex-col gap-3" style={{ padding: '12px' }}>
-                          <span className="text-[8px] text-muted-foreground uppercase truncate leading-relaxed">{metric.label}</span>
+                          <span className="text-[10px] text-muted-foreground uppercase truncate leading-relaxed">{metric.label}</span>
                           <div className="flex items-end justify-between gap-2">
-                            <span className="text-sm font-medium leading-relaxed">
+                            <span className="text-base font-medium leading-relaxed">
                               {metric.value.toLocaleString()}
-                              {metric.unit && <span className="text-[9px] text-muted-foreground ml-0.5">{metric.unit}</span>}
+                              {metric.unit && <span className="text-[11px] text-muted-foreground ml-0.5">{metric.unit}</span>}
                             </span>
                             {metric.trend && (
-                              <span className={`flex items-center text-[9px] leading-relaxed shrink-0 ${
+                              <span className={`flex items-center text-[11px] leading-relaxed shrink-0 ${
                                 metric.trend === 'up' ? 'text-green-400' : 
                                 metric.trend === 'down' ? 'text-red-400' : 'text-muted-foreground'
                               }`}>
-                                {metric.trend === 'up' && <TrendingUp className="w-2.5 h-2.5 mr-0.5" />}
-                                {metric.trend === 'down' && <TrendingDown className="w-2.5 h-2.5 mr-0.5" />}
-                                {metric.trend === 'flat' && <Minus className="w-2.5 h-2.5 mr-0.5" />}
+                                {metric.trend === 'up' && <TrendingUp className="w-3 h-3 mr-0.5" />}
+                                {metric.trend === 'down' && <TrendingDown className="w-3 h-3 mr-0.5" />}
+                                {metric.trend === 'flat' && <Minus className="w-3 h-3 mr-0.5" />}
                                 {metric.trendDeltaPct ? `${Math.abs(metric.trendDeltaPct)}%` : ''}
                               </span>
                             )}
@@ -81,13 +81,13 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
                     {(view.insights.length > 0 || view.alerts.length > 0) && (
                       <div className="space-y-3">
                          {view.alerts.map(alert => (
-                           <div key={alert.id} className="flex gap-2 text-[9px] p-2 rounded bg-red-500/10 border border-red-500/20 text-red-200 leading-relaxed">
-                             <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
+                           <div key={alert.id} className="flex gap-2 text-[11px] p-3 rounded bg-red-500/10 border border-red-500/20 text-red-200 leading-relaxed">
+                             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                              <span>{alert.message}</span>
                            </div>
                          ))}
                          {view.insights.map(insight => (
-                           <div key={insight.id} className="flex gap-2 text-[9px] p-2 rounded bg-blue-500/10 border border-blue-500/20 text-blue-200 leading-relaxed">
+                           <div key={insight.id} className="flex gap-2 text-[11px] p-3 rounded bg-blue-500/10 border border-blue-500/20 text-blue-200 leading-relaxed">
                              <span className="text-blue-300">ℹ</span>
                              <span>{insight.message}</span>
                            </div>
