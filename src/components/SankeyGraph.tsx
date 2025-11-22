@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { sankey, sankeyLinkHorizontal, SankeyNode, SankeyLink } from 'd3-sankey';
+import { sankey, sankeyLinkHorizontal } from 'd3-sankey';
 import * as d3 from 'd3';
 import './SankeyGraph.css';
 
