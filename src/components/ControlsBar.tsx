@@ -38,10 +38,8 @@ export function ControlsBar({
 
         <Separator orientation="vertical" className="h-6" />
 
-        <div className="inline-flex gap-2 px-3 py-1.5 rounded-lg border border-white/40 bg-white/5">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Env</span>
-            <div className="inline-flex gap-2">
+        <div className="inline-flex gap-4 px-3 py-1.5 rounded-lg border border-white/40 bg-white/5">
+          <div className="inline-flex gap-2">
               <button
                 onClick={() => setRunMode('Dev')}
                 className={`px-3 py-1 text-xs font-medium rounded-md border transition-all bg-white text-black border-white/80 hover:bg-white/90`}
@@ -59,11 +57,8 @@ export function ControlsBar({
                 Prod
               </button>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Data</span>
-            <div className="inline-flex gap-2">
+          <div className="inline-flex gap-2">
               <button
                 onClick={() => setDataMode('Demo')}
                 className={`px-3 py-1 text-xs font-medium rounded-md border transition-all bg-white text-black border-white/80 hover:bg-white/90`}
@@ -81,7 +76,6 @@ export function ControlsBar({
                 Farm
               </button>
             </div>
-          </div>
         </div>
 
         <Separator orientation="vertical" className="h-6" />
