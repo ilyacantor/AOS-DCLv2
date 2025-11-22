@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { sankey, sankeyLinkHorizontal } from 'd3-sankey';
+import { sankey, sankeyLinkHorizontal, SankeyNode, SankeyLink } from 'd3-sankey';
 import * as d3 from 'd3';
 import './SankeyGraph.css';
 
@@ -87,63 +87,8 @@ const SankeyGraph: React.FC<SankeyGraphProps> = ({ data }) => {
       .attr('dy', '0.35em')
       .attr('text-anchor', (d: any) => d.x0 < width / 2 ? 'start' : 'end')
       .attr('font-size', '12px')
-      .attr('fill', '#e2e8f0')
-      .attr('font-weight', '600')
+      .attr('fill', '#333')
       .text((d: any) => d.label);
-
-    // Add link labels with pill backgrounds
-    const linkLabels = svg.append('g')
-      .attr('class', 'link-labels')
-      .selectAll('g')
-      .data(graph.links.filter((d: any) => d.info_summary))
-      .join('g')
-      .attr('class', 'link-label');
-
-    // Calculate positions for link labels
-    linkLabels.each(function(d: any) {
-      const link = d as any;
-      const sourceNode = link.source;
-      const targetNode = link.target;
-      
-      // Position at midpoint of link
-      const x = (sourceNode.x1 + targetNode.x0) / 2;
-      const y = (link.y0 + link.y1) / 2;
-      
-      // Get source node color
-      const nodeColor = colorScale(sourceNode.level) as string;
-      
-      // Create text element first to measure it
-      const text = d3.select(this)
-        .append('text')
-        .attr('x', x)
-        .attr('y', y)
-        .attr('text-anchor', 'middle')
-        .attr('dy', '0.35em')
-        .attr('font-size', '11px')
-        .attr('font-weight', '600')
-        .attr('fill', '#0f172a')
-        .attr('pointer-events', 'none')
-        .text(link.info_summary || '');
-      
-      // Get text bounding box for pill background
-      const bbox = (text.node() as any).getBBox();
-      const padding = 8;
-      const pillHeight = bbox.height + padding * 2;
-      const pillWidth = bbox.width + padding * 2;
-      
-      // Insert pill background before text
-      d3.select(this)
-        .insert('rect', 'text')
-        .attr('x', x - pillWidth / 2)
-        .attr('y', y - pillHeight / 2)
-        .attr('width', pillWidth)
-        .attr('height', pillHeight)
-        .attr('rx', pillHeight / 2)
-        .attr('ry', pillHeight / 2)
-        .attr('fill', nodeColor)
-        .attr('stroke', 'rgba(15, 23, 42, 0.3)')
-        .attr('stroke-width', 1);
-    });
 
   }, [data]);
 
