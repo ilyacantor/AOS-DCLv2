@@ -44,7 +44,7 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
       .nodeAlign(sankeyLeft)
       .nodeWidth(20)
       .nodePadding(30)
-      .extent([[40, 40], [size.width - 40, size.height - 40]]);
+      .extent([[60, 50], [size.width - 120, size.height - 50]]);
 
     const { nodes: sNodes, links: sLinks } = sankeyGenerator({
       nodes,

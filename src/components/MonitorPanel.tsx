@@ -3,7 +3,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, Info } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertTriangle } from 'lucide-react';
 
 interface MonitorPanelProps {
   data: GraphSnapshot | null;
@@ -52,18 +52,18 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
                       <Badge variant="secondary" className="text-[9px] h-4 px-1.5">{view.personaId}</Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="px-3 pb-2 pt-1 space-y-2">
-                    <div className="grid grid-cols-2 gap-1.5">
+                  <CardContent className="px-3 pb-2 pt-1 space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
                       {view.metrics.map(metric => (
-                        <div key={metric.id} className="bg-secondary/30 rounded p-1.5 flex flex-col">
-                          <span className="text-[8px] text-muted-foreground uppercase truncate">{metric.label}</span>
-                          <div className="flex items-end justify-between mt-0.5">
-                            <span className="text-sm font-medium leading-none">
+                        <div key={metric.id} className="bg-secondary/30 rounded p-2 flex flex-col gap-1">
+                          <span className="text-[8px] text-muted-foreground uppercase truncate leading-relaxed">{metric.label}</span>
+                          <div className="flex items-end justify-between">
+                            <span className="text-sm font-medium leading-relaxed">
                               {metric.value.toLocaleString()}
                               {metric.unit && <span className="text-[9px] text-muted-foreground ml-0.5">{metric.unit}</span>}
                             </span>
                             {metric.trend && (
-                              <span className={`flex items-center text-[9px] ${
+                              <span className={`flex items-center text-[9px] leading-relaxed ${
                                 metric.trend === 'up' ? 'text-green-400' : 
                                 metric.trend === 'down' ? 'text-red-400' : 'text-muted-foreground'
                               }`}>
@@ -78,18 +78,12 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
                       ))}
                     </div>
 
-                    {(view.insights.length > 0 || view.alerts.length > 0) && (
-                      <div className="space-y-1 pt-1">
+                    {view.alerts.length > 0 && (
+                      <div className="space-y-2">
                          {view.alerts.map(alert => (
-                           <div key={alert.id} className="flex gap-1.5 text-[9px] p-1.5 rounded bg-red-500/10 border border-red-500/20 text-red-200">
+                           <div key={alert.id} className="flex gap-2 text-[9px] p-2 rounded bg-red-500/10 border border-red-500/20 text-red-200 leading-relaxed">
                              <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
                              <span>{alert.message}</span>
-                           </div>
-                         ))}
-                         {view.insights.map(insight => (
-                           <div key={insight.id} className="flex gap-1.5 text-[9px] p-1.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-200">
-                             <Info className="w-3 h-3 shrink-0 mt-0.5" />
-                             <span>{insight.message}</span>
                            </div>
                          ))}
                       </div>
