@@ -187,7 +187,7 @@ class DCLEngine:
             bll_id = f"bll_{persona.value.lower()}"
             nodes.append(GraphNode(
                 id=bll_id,
-                label=f"BLL {persona.value}",
+                label=persona.value,
                 level="L3",
                 kind="bll",
                 group="Business Logic",
@@ -235,8 +235,8 @@ class DCLEngine:
                     {"label": "Data Quality", "value": 94, "unit": "%", "trend": "flat", "delta": 0}
                 ],
                 "sample_insights": [
-                    "Revenue data integrated from 3 sources with 98% confidence",
-                    "Cost allocations mapped to ontology with high accuracy"
+                    "Revenue variance increased 8.5% this quarter",
+                    "Operating costs reduced by 3.2% year-over-year"
                 ],
                 "sample_alerts": [
                     "2 revenue fields missing from NetSuite integration"
@@ -253,8 +253,8 @@ class DCLEngine:
                     {"label": "Data Coverage", "value": 96, "unit": "%", "trend": "up", "delta": 1.5}
                 ],
                 "sample_insights": [
-                    "Opportunity pipeline unified across Salesforce and HubSpot",
-                    "Account hierarchies successfully mapped to ontology"
+                    "Pipeline value up 15.7% month-over-month",
+                    "Win rate improved to 32.5% from 28.3%"
                 ],
                 "sample_alerts": []
             },
@@ -269,8 +269,8 @@ class DCLEngine:
                     {"label": "Data Freshness", "value": 92, "unit": "%", "trend": "up", "delta": 2.1}
                 ],
                 "sample_insights": [
-                    "Usage metrics consolidated from MongoDB and Supabase",
-                    "Health indicators showing strong operational performance"
+                    "Active users grew 6.8% this period",
+                    "System uptime maintained at 99.8%"
                 ],
                 "sample_alerts": [
                     "1 usage data source showing increased latency"
@@ -287,8 +287,8 @@ class DCLEngine:
                     {"label": "Schema Coverage", "value": 89, "unit": "%", "trend": "up", "delta": 3.2}
                 ],
                 "sample_insights": [
-                    "AWS resource metadata integrated with cost ontology",
-                    f"Infrastructure mapped across {len(sources)} data sources"
+                    "Infrastructure costs increased 3.7% due to scaling",
+                    "CPU utilization trending up to 68% capacity"
                 ],
                 "sample_alerts": [
                     "Cost allocation incomplete for 3 AWS resource types"

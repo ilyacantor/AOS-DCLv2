@@ -28,7 +28,7 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
 
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-4">
-            <TabsContent value="views" className="mt-0 space-y-4">
+            <TabsContent value="views" className="mt-0 space-y-6">
               {activePersonaViews.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground text-sm">
                   Select a persona filter to see views
@@ -78,12 +78,18 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
                       ))}
                     </div>
 
-                    {view.alerts.length > 0 && (
+                    {(view.insights.length > 0 || view.alerts.length > 0) && (
                       <div className="space-y-2">
                          {view.alerts.map(alert => (
                            <div key={alert.id} className="flex gap-2 text-[9px] p-2 rounded bg-red-500/10 border border-red-500/20 text-red-200 leading-relaxed">
                              <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
                              <span>{alert.message}</span>
+                           </div>
+                         ))}
+                         {view.insights.map(insight => (
+                           <div key={insight.id} className="flex gap-2 text-[9px] p-2 rounded bg-blue-500/10 border border-blue-500/20 text-blue-200 leading-relaxed">
+                             <span className="text-blue-300">ℹ</span>
+                             <span>{insight.message}</span>
                            </div>
                          ))}
                       </div>

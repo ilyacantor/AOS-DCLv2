@@ -1,4 +1,3 @@
-import React from 'react';
 import { GraphSnapshot, PersonaId } from '../types';
 import { Play, Activity, Database, Cpu, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -92,7 +91,7 @@ export function ControlsBar({
             </div>
             <div className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded">
               <Clock className="w-3 h-3" />
-              <span>{metrics.totalMs}ms</span>
+              <span>{Math.round(metrics.totalMs)}ms</span>
             </div>
           </div>
         )}
