@@ -7,6 +7,10 @@ export default defineConfig({
     host: true,
     port: 5000,
     strictPort: true,
+    allowedHosts: [
+      '.replit.dev',
+      'aab3c90e-30cf-4951-8ddd-e8c2f4334aa7-00-ytm76ihwy3bl.picard.replit.dev'
+    ],
     hmr: {
       clientPort: 5000,
     },
@@ -16,5 +20,9 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+  },
+  preview: {
+    host: true,
+    port: 5000,
   },
 })
