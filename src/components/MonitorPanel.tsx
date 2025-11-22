@@ -28,7 +28,7 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
 
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-4">
-            <TabsContent value="views" className="mt-0 space-y-6">
+            <TabsContent value="views" className="mt-0" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {activePersonaViews.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground text-sm">
                   Select a persona filter to see views
