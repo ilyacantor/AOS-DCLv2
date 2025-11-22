@@ -38,55 +38,57 @@ export function ControlsBar({
 
         <Separator orientation="vertical" className="h-6" />
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Env</span>
-          <div className="inline-flex gap-2">
-            <button
-              onClick={() => setRunMode('Dev')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
-                runMode === 'Dev' 
-                  ? 'bg-white/10 text-white border-white/30' 
-                  : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
-              }`}
-            >
-              Dev
-            </button>
-            <button
-              onClick={() => setRunMode('Prod')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
-                runMode === 'Prod' 
-                  ? 'bg-white/10 text-white border-white/30' 
-                  : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
-              }`}
-            >
-              Prod
-            </button>
+        <div className="inline-flex gap-2 px-3 py-1.5 rounded-lg border border-white/40 bg-white/5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Env</span>
+            <div className="inline-flex gap-2">
+              <button
+                onClick={() => setRunMode('Dev')}
+                className={`px-3 py-1 text-xs font-medium rounded-md border transition-all ${
+                  runMode === 'Dev' 
+                    ? 'bg-white/10 text-white border-white/30' 
+                    : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
+                }`}
+              >
+                Dev
+              </button>
+              <button
+                onClick={() => setRunMode('Prod')}
+                className={`px-3 py-1 text-xs font-medium rounded-md border transition-all ${
+                  runMode === 'Prod' 
+                    ? 'bg-white/10 text-white border-white/30' 
+                    : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
+                }`}
+              >
+                Prod
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Data</span>
-          <div className="inline-flex gap-2">
-            <button
-              onClick={() => setDataMode('Demo')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
-                dataMode === 'Demo' 
-                  ? 'bg-white/10 text-white border-white/30' 
-                  : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
-              }`}
-            >
-              Demo
-            </button>
-            <button
-              onClick={() => setDataMode('Farm')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all ${
-                dataMode === 'Farm' 
-                  ? 'bg-white/10 text-white border-white/30' 
-                  : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
-              }`}
-            >
-              Farm
-            </button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Data</span>
+            <div className="inline-flex gap-2">
+              <button
+                onClick={() => setDataMode('Demo')}
+                className={`px-3 py-1 text-xs font-medium rounded-md border transition-all ${
+                  dataMode === 'Demo' 
+                    ? 'bg-white/10 text-white border-white/30' 
+                    : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
+                }`}
+              >
+                Demo
+              </button>
+              <button
+                onClick={() => setDataMode('Farm')}
+                className={`px-3 py-1 text-xs font-medium rounded-md border transition-all ${
+                  dataMode === 'Farm' 
+                    ? 'bg-white/10 text-white border-white/30' 
+                    : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
+                }`}
+              >
+                Farm
+              </button>
+            </div>
           </div>
         </div>
 
