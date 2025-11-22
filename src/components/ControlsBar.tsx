@@ -51,7 +51,7 @@ export function ControlsBar({
             >
               Dev
             </button>
-            <span className="text-muted-foreground text-xs px-1">-</span>
+            <span className="text-white text-xs px-2 font-bold">-</span>
             <button
               onClick={() => setRunMode('Prod')}
               className={`px-3 py-1 text-xs font-medium rounded transition-all ${
