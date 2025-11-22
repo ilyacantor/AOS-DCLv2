@@ -42,7 +42,11 @@ export function ControlsBar({
           <div className="inline-flex gap-2">
               <button
                 onClick={() => setRunMode('Dev')}
-                className={`px-3 py-1 text-xs font-medium rounded-md border transition-all bg-white text-black border-white/80 hover:bg-white/90`}
+                className={`px-3 py-1 text-xs font-medium rounded-md border transition-all ${
+                  runMode === 'Dev'
+                    ? 'bg-white text-black border-white/80 hover:bg-white/90'
+                    : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
+                }`}
               >
                 Dev
               </button>
@@ -50,7 +54,7 @@ export function ControlsBar({
                 onClick={() => setRunMode('Prod')}
                 className={`px-3 py-1 text-xs font-medium rounded-md border transition-all ${
                   runMode === 'Prod' 
-                    ? 'bg-white/10 text-white border-white/30' 
+                    ? 'bg-white text-black border-white/80 hover:bg-white/90'
                     : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
                 }`}
               >
@@ -61,7 +65,11 @@ export function ControlsBar({
           <div className="inline-flex gap-2">
               <button
                 onClick={() => setDataMode('Demo')}
-                className={`px-3 py-1 text-xs font-medium rounded-md border transition-all bg-white text-black border-white/80 hover:bg-white/90`}
+                className={`px-3 py-1 text-xs font-medium rounded-md border transition-all ${
+                  dataMode === 'Demo'
+                    ? 'bg-white text-black border-white/80 hover:bg-white/90'
+                    : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
+                }`}
               >
                 Demo
               </button>
@@ -69,7 +77,7 @@ export function ControlsBar({
                 onClick={() => setDataMode('Farm')}
                 className={`px-3 py-1 text-xs font-medium rounded-md border transition-all ${
                   dataMode === 'Farm' 
-                    ? 'bg-white/10 text-white border-white/30' 
+                    ? 'bg-white text-black border-white/80 hover:bg-white/90'
                     : 'bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-white/20 hover:text-white/70'
                 }`}
               >
