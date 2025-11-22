@@ -41,11 +41,11 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
                     <div className="flex justify-between items-start gap-4">
                       <div className="flex-1">
                         <CardTitle className="text-base mb-3 font-semibold">{view.title}</CardTitle>
-                        <div className="text-[11px] flex gap-2 text-muted-foreground flex-wrap">
+                        <div className="flex gap-3 flex-wrap">
                           {view.focusAreas.map(area => (
-                            <Badge key={area} className="text-[10px] px-4 py-2 font-normal border-2 border-white bg-transparent text-white">
+                            <div key={area} className="text-[11px] px-5 py-3 font-normal border-2 border-white bg-transparent text-white rounded">
                               {area}
-                            </Badge>
+                            </div>
                           ))}
                         </div>
                       </div>
