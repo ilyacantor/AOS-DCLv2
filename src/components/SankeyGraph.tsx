@@ -50,7 +50,7 @@ const SankeyGraph: React.FC<SankeyGraphProps> = ({ data }) => {
 
     const colorScale = d3.scaleOrdinal()
       .domain(['L0', 'L1', 'L2', 'L3'])
-      .range(['#667eea', '#48bb78', '#ed8936', '#e53e3e']);
+      .range(['#22d3ee', '#4ade80', '#60a5fa', '#c084fc']);
 
     svg.append('g')
       .selectAll('path')

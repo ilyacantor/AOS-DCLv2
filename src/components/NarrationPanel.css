@@ -1,17 +1,19 @@
 .narration-panel {
   height: 100%;
-  background: white;
+  background: rgba(30, 41, 59, 0.6);
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid #334155;
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.1);
   display: flex;
   flex-direction: column;
 }
 
 .narration-panel h3 {
   margin: 0 0 1rem;
-  color: #1a1a2e;
+  color: #22d3ee;
   font-size: 1.25rem;
+  font-weight: 700;
 }
 
 .messages {
@@ -23,14 +25,15 @@
 }
 
 .no-messages {
-  color: #999;
+  color: #64748b;
   text-align: center;
   padding: 2rem;
+  font-weight: 500;
 }
 
 .message {
-  background: #f7fafc;
-  border-left: 3px solid #667eea;
+  background: rgba(15, 23, 42, 0.5);
+  border-left: 3px solid #22d3ee;
   padding: 0.75rem;
   border-radius: 6px;
 }
@@ -43,22 +46,22 @@
 }
 
 .message-number {
-  color: #667eea;
+  color: #22d3ee;
   font-weight: 700;
 }
 
 .message-source {
-  color: #666;
+  color: #94a3b8;
   font-weight: 600;
 }
 
 .message-time {
-  color: #999;
+  color: #64748b;
   margin-left: auto;
 }
 
 .message-body {
-  color: #333;
+  color: #e2e8f0;
   font-size: 0.9rem;
   line-height: 1.4;
 }
