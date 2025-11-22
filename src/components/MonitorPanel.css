@@ -1,0 +1,46 @@
+.monitor-panel {
+  padding: 2rem;
+}
+
+.monitor-panel h2 {
+  margin: 0 0 1.5rem;
+  color: #1a1a2e;
+  font-size: 1.5rem;
+}
+
+.placeholder-text {
+  color: #999;
+  text-align: center;
+  padding: 3rem 0;
+  font-size: 1.1rem;
+}
+
+.monitor-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.monitor-section {
+  background: #f7fafc;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.monitor-section h3 {
+  margin: 0 0 0.75rem;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.monitor-section p {
+  margin: 0;
+  color: #666;
+  line-height: 1.6;
+}
+
+.status-ok {
+  color: #48bb78;
+  font-weight: 600;
+}

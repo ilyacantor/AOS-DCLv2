@@ -1,0 +1,64 @@
+.narration-panel {
+  height: 100%;
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.narration-panel h3 {
+  margin: 0 0 1rem;
+  color: #1a1a2e;
+  font-size: 1.25rem;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.no-messages {
+  color: #999;
+  text-align: center;
+  padding: 2rem;
+}
+
+.message {
+  background: #f7fafc;
+  border-left: 3px solid #667eea;
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+
+.message-header {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.message-number {
+  color: #667eea;
+  font-weight: 700;
+}
+
+.message-source {
+  color: #666;
+  font-weight: 600;
+}
+
+.message-time {
+  color: #999;
+  margin-left: auto;
+}
+
+.message-body {
+  color: #333;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}

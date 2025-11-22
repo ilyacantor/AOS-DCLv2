@@ -1,0 +1,346 @@
+Perfect, this is exactly the level of constraint we need.
+
+First, a quick note on **Farm vs Demo** so you’re not stuck:
+
+* Think of **Demo vs Farm** as two *upstream providers* of schemas + sample data:
+
+  * **Demo** → loads the 9 attached schemas from the local `schema.zip`.
+  * **Farm** → calls your synthetic data farm API / client to get a *larger* and more varied set of schemas + sample data.
+* The **DCL engine** should not care *which* provider is used beyond an abstraction like:
+
+  * `load_schemas(mode: "Demo" | "Farm") -> [SourceSystemSchemas]`
+* The **persona + intent layer** (CFO/CRO/COO/CTO) should drive:
+
+  * Which ontology entities matter.
+  * Which sources (from Demo or Farm) are actually tapped to feed those entities.
+* The Sankey just visualizes the pipeline: **L0 (pipe) → L1 (sources) → L2 (ontology) → L3 (BLL persona endpoints)**. 
+
+Below is a **single Replit prompt** that bakes in everything you asked for, without talking about old code, and assuming the schema zip is attached and API keys will be supplied.
+
+You can paste this into a brand-new Replit project as your “do everything” brief.
+
+---
+
+```text
+PROJECT GOAL
+Build a brand-new full-stack DCL (Data Connectivity Layer) engine plus Sankey-based UI in a single Replit project.
+
+This project:
+- Ingests schemas and sample data either from:
+  - a local "Demo" schema zip (9 legacy sources), or
+  - a synthetic "Farm" that is already set up and callable as an API/client.
+- Uses heuristics + RAG + LLM calls to unify those sources into a common ontology.
+- Exposes a clean "GraphSnapshot" to a responsive, wow-factor Sankey graph.
+- Replaces agents with a Business Logic Layer (BLL) targeting personas: CFO, CRO, COO, CTO.
+- Includes a parallel enterprise monitor view, a narration container, and simple run controls.
+
+Do NOT reference or depend on any other Replit projects. This is a clean build.
+
+
+ENVIRONMENT & STORAGE
+
+Assume I will provide these environment variables:
+
+- GEMINI_API_KEY      = Google Gemini AI API key (use Gemini 2.5 Flash)
+- OPENAI_API_KEY      = OpenAI key (use gpt-5-mini and gpt-5-nano)
+- PINECONE_API_KEY    = Pinecone vector DB key (for RAG)
+- DATABASE_URL        = PostgreSQL URL (same format as Supabase / Neon; only use if needed)
+- SUPABASE_DB_URL     = Primary Postgres storage (Supabase)
+
+Important:
+- Do NOT use any native Replit database features.
+- Explicitly configure the code to use SUPABASE_DB_URL for relational storage.
+- If Replit tries to default to Neon or a built-in DB, override that and always point to SUPABASE_DB_URL.
+- DATABASE_URL is available if you truly need a second connection, but default to SUPABASE_DB_URL.
+
+
+INPUT DATA SOURCES (DEMO vs FARM)
+
+- Assume I will upload a "schema.zip" file into the project. It contains 9 sample schemas (CSV/JSON) used for "Demo" mode.
+- You do NOT need any special tooling to handle the upload; just assume the files exist locally once unzipped.
+
+Define an abstraction something like:
+
+- `load_schemas(mode: "Demo" | "Farm") -> List[SourceSystemSchemas]`
+
+Where:
+- In **Demo** mode, schemas come from the local zip (9 sources).
+- In **Farm** mode, schemas and sample data come from my existing synthetic data farm:
+  - Implement a small adapter/client module for the farm.
+  - It should return a richer, larger set of sources, tables, fields, and sample statistics.
+  - Farm responses should be normalized into the same internal schema model as Demo.
+
+The DCL engine should be able to work with either set of schemas without any further structural changes.
+
+
+ARCHITECTURE LAYERS (STRICT BOUNDARIES)
+
+Structure the code into four main layers:
+
+1) DOMAIN MODEL & GRAPH CONTRACT
+--------------------------------
+Create a small, framework-independent Python module that defines:
+
+- Core entities:
+  - `SourceSystem` (id, name, type, tags, etc.)
+  - `TableSchema` / `Asset` (id, system_id, name, fields, stats, etc.)
+  - `FieldSchema` (name, type, semantic hints, etc.)
+  - `OntologyConcept` (id, name, description, example fields, etc.)
+  - `Mapping` (source_field -> ontology_concept with confidence, method, status)
+  - `Persona` (CFO, CRO, COO, CTO) and optionally a simple embedding/tag structure for persona vectors.
+
+- Graph contract:
+  - `GraphNode` with:
+    - `id: string`
+    - `label: string`
+    - `level: "L0" | "L1" | "L2" | "L3"`
+    - `kind: "pipe" | "source" | "ontology" | "bll"`
+    - `group?: string` (e.g., "Demo" vs "Farm", "Salesforce", "AWS")
+    - `status?: string` (e.g., "ok", "conflict", "warning")
+    - Optional metrics (e.g., record counts, mapped fields).
+
+  - `GraphLink` with:
+    - `id: string`
+    - `source: string` (node id)
+    - `target: string` (node id)
+    - `value: number` (relative weight / volume)
+    - `confidence?: number`
+    - `flow_type?: string` (e.g., "schema", "metric", "semantic")
+    - `info_summary?: string` (used for hover text).
+
+  - `GraphSnapshot` with:
+    - `nodes: GraphNode[]`
+    - `links: GraphLink[]`
+    - `meta: { mode: "Demo" | "Farm", run_id: string, generated_at: ISO8601, stats: { ... } }`
+
+This module must not depend on FastAPI, DB, or any LLM client. It is the single contract for the frontend.
+
+
+2) DCL ENGINE (WITH RAG/LLM & FARM INTEGRATION)
+-----------------------------------------------
+Implement the engine in Python under something like `engine/`.
+
+Responsibilities:
+
+- Given:
+  - mode: "Demo" | "Farm"
+  - run_mode: "Dev" | "Prod"
+  - persona_set: {CFO, CRO, COO, CTO} (could be all or filtered)
+- Perform:
+  1. Load schemas:
+     - `load_schemas("Demo")` from schema.zip.
+     - `load_schemas("Farm")` from the synthetic data farm adapter.
+  
+  2. Profile and enrich:
+     - Basic stats: record counts, null %, distinct counts where available.
+     - Basic semantic hints: detect obvious IDs, emails, amounts, timestamps, regions, etc.
+
+  3. Ontology mapping:
+     - Maintain a simple ontology of entities like:
+       - account, opportunity, health, usage, aws_resources, cost_reports, etc.
+     - Implement a mapping layer that:
+       - In Dev mode:
+         - Uses heuristics + **RAG READ** only:
+           - Retrieve ontology definitions and prior mappings from Pinecone using PINECONE_API_KEY.
+           - No LLM write-back; no RAG updates.
+       - In Prod mode:
+         - Uses heuristics + RAG + LLM calls **read/write**:
+           - Use Gemini 2.5 Flash and/or OpenAI gpt-5-mini/gpt-5-nano to:
+             - Propose mappings,
+             - Explain mapping rationales,
+             - Identify conflicts.
+           - Write new or updated mapping embeddings and metadata back to Pinecone (RAG WRITE).
+
+  4. Conflict detection:
+     - At least:
+       - Type mismatches between mapped fields and ontology expectations.
+       - Multiple competing sources for the same ontology concept, with differing definitions.
+     - Mark affected nodes/links with conflict-related status/info.
+
+  5. Persona-driven BLL targeting:
+     - Replace old “agents” with BLL endpoints for personas:
+       - L3 nodes should be business logic endpoints such as:
+         - `BLL_CFO`, `BLL_CRO`, `BLL_COO`, `BLL_CTO`.
+       - These consume specific ontology entities relevant to each persona.
+     - The engine should:
+       - Decide which sources / ontology entities to emphasize based on persona vectors.
+       - Still build a complete graph, but persona relevance can affect weights and link highlighting.
+
+  6. Graph construction:
+     - Build a `GraphSnapshot` with four levels:
+       - L0: Connector pipe nodes
+         - Represent the entry-point of data: e.g. "Demo Pipe" and/or "Farm Pipe".
+       - L1: Source / asset nodes
+         - Labeled with source names: Salesforce, SAP, Snowflake, AWS, etc.
+       - L2: Ontology nodes
+         - Labeled with unified ontology names: account, opportunity, aws_resources, cost_reports, health, usage, etc.
+       - L3: BLL persona nodes
+         - Nodes representing BLL endpoints aligned to CFO/CRO/COO/CTO personas.
+
+       - Edges:
+         - L0 → L1: Data flows from connector mode (Demo/Farm) into concrete sources.
+         - L1 → L2: Mappings from fields/tables into ontology concepts.
+         - L2 → L3: Ontology entities consumed by BLL endpoints/personas.
+
+       - Every link should have enough information to power helpful hover text about “what flows through here” (e.g., key fields, metrics, volume).
+
+  7. Counters & metrics:
+     - For each run, track:
+       - Number of LLM calls (per provider if reasonable).
+       - Number of RAG reads.
+       - Number of RAG writes.
+       - Processing time (engine side).
+       - Render-ready time (time until GraphSnapshot is fully built and sent to frontend).
+     - Expose these metrics alongside the GraphSnapshot meta so the frontend can display them.
+
+Provide a single facade such as:
+- `build_graph_snapshot(mode: "Demo" | "Farm", run_mode: "Dev" | "Prod", personas: List[Persona]) -> GraphSnapshot & metrics`
+
+So the API and UI only call this function and do not know the internal details.
+
+
+3) API LAYER
+------------
+Use FastAPI (or similar) for HTTP endpoints.
+
+Implement at least:
+
+- `POST /api/dcl/run`  
+  Request body:
+  - `mode`: "Demo" | "Farm"
+  - `run_mode`: "Dev" | "Prod"
+  - `personas`: optional list (default to all: CFO, CRO, COO, CTO)
+
+  Response:
+  - `graph: GraphSnapshot`
+  - `run_metrics: { llm_calls, rag_reads, rag_writes, processing_ms, render_ms }`
+  - `run_id`: string
+
+- `GET /api/dcl/monitor/{run_id}`  
+  - Returns enterprise monitor data for that run:
+    - Source list, raw schema summaries, ontology mapping stats, conflict counts, etc.
+
+- `GET /api/dcl/narration/{run_id}`  
+  - Returns narration messages (see Narration Container below).
+
+Persist run records (minimal) in Supabase via SUPABASE_DB_URL.
+
+
+4) FRONTEND UI (SANEKY + MONITOR + NARRATION)
+---------------------------------------------
+Use React + TypeScript. No need for Next.js unless you want it.
+
+CORE REQUIREMENTS:
+
+A) Responsive graph
+- Implement a Sankey graph that:
+  - Automatically sizes itself to the available container space.
+  - Re-renders and resizes on window/container size changes.
+  - Is usable on typical laptop and desktop breakpoints.
+- The graph must:
+  - Distinguish L0/L1/L2/L3 visually (e.g., subtle shape or styling differences).
+  - Support hover tooltips on nodes and links with structured info.
+  - Handle at least ~50 sources and a few hundred links without choking.
+
+B) Controls pane (top of graph)
+- Simple controls panel above the graph:
+
+  - Toggle for run mode:
+    - Dev mode = heuristics + RAG read only (no write-back, minimal LLM usage).
+    - Prod mode = heuristics + full AI/RAG read/write.
+
+  - Toggle for data mode:
+    - Demo = use schema.zip (9 sources).
+    - Farm = use synthetic data farm.
+
+  - Persona selection:
+    - Multi-select or simple checkboxes for: CFO, CRO, COO, CTO.
+    - Defaults to all selected.
+
+- When the user hits a “Run” button:
+  - POST `/api/dcl/run` with the selected options.
+  - Show a running state/spinner until the graph is fully loaded.
+  - Once the graph is rendered, stop the timer and display the run metrics.
+
+- Below the controls pane, show run metrics (for the latest run):
+  - `LLM calls: X`
+  - `RAG reads: Y`
+  - `RAG writes: Z`
+  - `Processing time: N ms`
+  - `Total time (processing + render): M ms`
+- Run metrics should persist on screen until the next run resets them.
+
+C) Narration container
+- A right or bottom panel that displays **narration messages** related to the current run.
+
+Behavior:
+- Each run gets its own message list.
+- Messages reset at each run (start from empty when “Run” is triggered).
+- Messages are sorted with newest at the top.
+- Each message has:
+  - A sequential number for that run (2, 3, 4, …).
+  - A timestamp.
+  - A type / source (e.g., "Engine", "RAG", "LLM", "Monitor").
+  - Message body (short textual explanation).
+
+- There should be no hard limit on the number of messages per run from a UI perspective (scrollable).
+
+- The engine should:
+  - Push narration entries for:
+    - Major mapping steps,
+    - Conflict detection summary,
+    - RAG learning actions (reads/writes),
+    - Any notable BLL/persona decisions (e.g., “CFO persona de-emphasized low-volume sources X, Y”).
+
+You can implement narration storage as simple rows keyed by run_id in Supabase and a polling or WebSocket pattern in the frontend.
+
+D) Enterprise monitor interface
+- Provide a “Monitor” view/panel parallel to the Sankey:
+
+  - It should show:
+    - Data sources (Demo/Farm, L0/L1).
+    - Initial field/table structures.
+    - Ontology unification results (L2 entities, mapped fields, conflict counts).
+    - Basic tables/charts, not heavy visualizations.
+
+  - It does NOT need deep interaction yet—think of it as an observability console.
+
+- You can implement this as:
+  - Tabs: [Graph] [Monitor] [Narration]
+  - Or a split layout where Graph is main and Monitor/Narration are side-tabs.
+
+E) Visual style (AI Startup Ecosystem look)
+- Use a clean, modern enterprise AI aesthetic consistent with an “AI startup ecosystem” graphic:
+  - Sharp, semi-transparent floating cards around the graph.
+  - Clear typography, subtle gradients, and depth.
+  - Distinct color families for:
+    - L0 pipe nodes,
+    - L1 sources,
+    - L2 ontology,
+    - L3 BLL personas.
+
+- Focus on clarity, not heavy animation. Light transitions are fine, but performance matters.
+
+
+IMPLEMENTATION STYLE & TESTING
+
+- Keep modules small and responsibilities clear:
+  - The frontend should ONLY know about GraphSnapshot and API endpoints.
+  - The engine facade (`build_graph_snapshot`) should hide all RAG/LLM complexity.
+
+- Provide a minimal set of tests for:
+  - Graph construction logic (L0–L3 structure, basic correctness).
+  - Mapping logic (heuristic + mocked LLM/RAG paths).
+  - Basic API shape.
+
+- Make sure the system still runs if:
+  - No LLM keys are set (fallback to heuristics).
+  - Pinecone is unavailable (fallback to in-memory, no-write RAG).
+
+- Do NOT use Replit native DB; always use SUPABASE_DB_URL for persistent data.
+
+End goal: I should be able to upload schema.zip, configure env vars, select Dev/Prod + Demo/Farm + personas, click Run, and get:
+- a responsive L0–L3 Sankey that reflects logical unification,
+- a live narration stream of what the engine is doing,
+- and a simple monitor view of actual data/ontology structure.
+```
