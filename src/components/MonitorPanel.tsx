@@ -36,14 +36,14 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
               )}
               
               {activePersonaViews.map((view) => (
-                <Card key={view.personaId} className="border-l-4 border-l-primary shadow-sm bg-card/50">
-                  <CardHeader className="pb-1 pt-2 px-3">
+                <Card key={view.personaId} className="border-l-4 border-l-primary shadow-sm bg-card/50" style={{ padding: '8px' }}>
+                  <CardHeader className="pb-1 pt-0 px-0">
                     <div className="flex justify-between items-start">
                       <div>
                         <CardTitle className="text-sm">{view.title}</CardTitle>
                         <div className="text-[9px] mt-0.5 flex gap-1 text-muted-foreground">
                           {view.focusAreas.map(area => (
-                            <Badge key={area} variant="outline" className="text-[8px] h-4 px-1 font-normal">
+                            <Badge key={area} className="text-[8px] h-4 px-1 font-normal border border-white/80 bg-transparent text-white">
                               {area}
                             </Badge>
                           ))}
@@ -52,10 +52,10 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
                       <Badge variant="secondary" className="text-[9px] h-4 px-1.5">{view.personaId}</Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="px-3 pb-2 pt-1 space-y-3">
+                  <CardContent className="px-0 pb-0 pt-1 space-y-3">
                     <div className="grid grid-cols-2 gap-2">
-                      {view.metrics.map(metric => (
-                        <div key={metric.id} className="bg-secondary/30 rounded p-2 flex flex-col gap-1">
+                      {view.metrics.slice(0, 2).map(metric => (
+                        <div key={metric.id} className="bg-secondary/30 rounded flex flex-col gap-1" style={{ padding: '8px' }}>
                           <span className="text-[8px] text-muted-foreground uppercase truncate leading-relaxed">{metric.label}</span>
                           <div className="flex items-end justify-between">
                             <span className="text-sm font-medium leading-relaxed">

@@ -1,7 +1,6 @@
 import { GraphSnapshot, PersonaId } from '../types';
 import { Play, Activity, Database, Cpu, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Separator } from '@/components/ui/separator';
 
 interface ControlsBarProps {
@@ -41,18 +40,48 @@ export function ControlsBar({
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Env</span>
-          <ToggleGroup type="single" value={runMode} onValueChange={(v) => v && setRunMode(v as any)} className="gap-0 rounded-lg border border-cyan-500/50 p-0.5">
-            <ToggleGroupItem value="Dev" size="sm" className="h-7 px-3 text-xs rounded-md data-[state=on]:bg-secondary">Dev</ToggleGroupItem>
-            <ToggleGroupItem value="Prod" size="sm" className="h-7 px-3 text-xs rounded-md data-[state=on]:bg-secondary">Prod</ToggleGroupItem>
-          </ToggleGroup>
+          <div className="flex items-center gap-0 rounded-lg border border-cyan-500/50 p-0.5">
+            <button
+              onClick={() => setRunMode('Dev')}
+              className={`h-7 px-3 text-xs rounded-md transition-colors ${
+                runMode === 'Dev' ? 'bg-secondary' : 'hover:bg-secondary/50'
+              }`}
+            >
+              Dev
+            </button>
+            <span className="text-muted-foreground px-1">-</span>
+            <button
+              onClick={() => setRunMode('Prod')}
+              className={`h-7 px-3 text-xs rounded-md transition-colors ${
+                runMode === 'Prod' ? 'bg-secondary' : 'hover:bg-secondary/50'
+              }`}
+            >
+              Prod
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Data</span>
-          <ToggleGroup type="single" value={dataMode} onValueChange={(v) => v && setDataMode(v as any)} className="gap-0 rounded-lg border border-cyan-500/50 p-0.5">
-            <ToggleGroupItem value="Demo" size="sm" className="h-7 px-3 text-xs rounded-md data-[state=on]:bg-secondary">Demo</ToggleGroupItem>
-            <ToggleGroupItem value="Farm" size="sm" className="h-7 px-3 text-xs rounded-md data-[state=on]:bg-secondary">Farm</ToggleGroupItem>
-          </ToggleGroup>
+          <div className="flex items-center gap-0 rounded-lg border border-cyan-500/50 p-0.5">
+            <button
+              onClick={() => setDataMode('Demo')}
+              className={`h-7 px-3 text-xs rounded-md transition-colors ${
+                dataMode === 'Demo' ? 'bg-secondary' : 'hover:bg-secondary/50'
+              }`}
+            >
+              Demo
+            </button>
+            <span className="text-muted-foreground px-1">-</span>
+            <button
+              onClick={() => setDataMode('Farm')}
+              className={`h-7 px-3 text-xs rounded-md transition-colors ${
+                dataMode === 'Farm' ? 'bg-secondary' : 'hover:bg-secondary/50'
+              }`}
+            >
+              Farm
+            </button>
+          </div>
         </div>
 
         <Separator orientation="vertical" className="h-6" />
