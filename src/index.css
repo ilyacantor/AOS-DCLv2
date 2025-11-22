@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: 'Inter', 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
-  --font-display: 'Space Grotesk', 'Quicksand', sans-serif;
+  --font-sans: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'Quicksand', 'Courier New', monospace;
+  --font-display: 'Quicksand', sans-serif;
 }
 
 :root {

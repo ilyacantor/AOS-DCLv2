@@ -1,8 +1,7 @@
-import React from 'react';
 import { GraphSnapshot, PersonaId } from '../types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, Info } from 'lucide-react';
 
@@ -38,39 +37,39 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
               
               {activePersonaViews.map((view) => (
                 <Card key={view.personaId} className="border-l-4 border-l-primary shadow-sm bg-card/50">
-                  <CardHeader className="pb-2 pt-4 px-4">
+                  <CardHeader className="pb-1 pt-2 px-3">
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-lg font-display">{view.title}</CardTitle>
-                        <div className="text-xs mt-1 flex gap-2 text-muted-foreground">
+                        <CardTitle className="text-sm">{view.title}</CardTitle>
+                        <div className="text-[9px] mt-0.5 flex gap-1 text-muted-foreground">
                           {view.focusAreas.map(area => (
-                            <Badge key={area} variant="outline" className="text-[10px] h-5 px-1.5 font-normal">
+                            <Badge key={area} variant="outline" className="text-[8px] h-4 px-1 font-normal">
                               {area}
                             </Badge>
                           ))}
                         </div>
                       </div>
-                      <Badge variant="secondary" className="font-mono text-xs">{view.personaId}</Badge>
+                      <Badge variant="secondary" className="text-[9px] h-4 px-1.5">{view.personaId}</Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="px-4 pb-4 pt-2 space-y-4">
-                    <div className="grid grid-cols-2 gap-2">
+                  <CardContent className="px-3 pb-2 pt-1 space-y-2">
+                    <div className="grid grid-cols-2 gap-1.5">
                       {view.metrics.map(metric => (
-                        <div key={metric.id} className="bg-secondary/30 rounded p-2 flex flex-col">
-                          <span className="text-[10px] text-muted-foreground uppercase truncate">{metric.label}</span>
-                          <div className="flex items-end justify-between mt-1">
-                            <span className="text-lg font-mono font-medium leading-none">
+                        <div key={metric.id} className="bg-secondary/30 rounded p-1.5 flex flex-col">
+                          <span className="text-[8px] text-muted-foreground uppercase truncate">{metric.label}</span>
+                          <div className="flex items-end justify-between mt-0.5">
+                            <span className="text-sm font-medium leading-none">
                               {metric.value.toLocaleString()}
-                              {metric.unit && <span className="text-xs text-muted-foreground ml-0.5">{metric.unit}</span>}
+                              {metric.unit && <span className="text-[9px] text-muted-foreground ml-0.5">{metric.unit}</span>}
                             </span>
                             {metric.trend && (
-                              <span className={`flex items-center text-xs ${
+                              <span className={`flex items-center text-[9px] ${
                                 metric.trend === 'up' ? 'text-green-400' : 
                                 metric.trend === 'down' ? 'text-red-400' : 'text-muted-foreground'
                               }`}>
-                                {metric.trend === 'up' && <TrendingUp className="w-3 h-3 mr-0.5" />}
-                                {metric.trend === 'down' && <TrendingDown className="w-3 h-3 mr-0.5" />}
-                                {metric.trend === 'flat' && <Minus className="w-3 h-3 mr-0.5" />}
+                                {metric.trend === 'up' && <TrendingUp className="w-2.5 h-2.5 mr-0.5" />}
+                                {metric.trend === 'down' && <TrendingDown className="w-2.5 h-2.5 mr-0.5" />}
+                                {metric.trend === 'flat' && <Minus className="w-2.5 h-2.5 mr-0.5" />}
                                 {metric.trendDeltaPct ? `${Math.abs(metric.trendDeltaPct)}%` : ''}
                               </span>
                             )}
@@ -80,16 +79,16 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
                     </div>
 
                     {(view.insights.length > 0 || view.alerts.length > 0) && (
-                      <div className="space-y-2 pt-2">
+                      <div className="space-y-1 pt-1">
                          {view.alerts.map(alert => (
-                           <div key={alert.id} className="flex gap-2 text-xs p-2 rounded bg-red-500/10 border border-red-500/20 text-red-200">
-                             <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                           <div key={alert.id} className="flex gap-1.5 text-[9px] p-1.5 rounded bg-red-500/10 border border-red-500/20 text-red-200">
+                             <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
                              <span>{alert.message}</span>
                            </div>
                          ))}
                          {view.insights.map(insight => (
-                           <div key={insight.id} className="flex gap-2 text-xs p-2 rounded bg-blue-500/10 border border-blue-500/20 text-blue-200">
-                             <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                           <div key={insight.id} className="flex gap-1.5 text-[9px] p-1.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-200">
+                             <Info className="w-3 h-3 shrink-0 mt-0.5" />
                              <span>{insight.message}</span>
                            </div>
                          ))}

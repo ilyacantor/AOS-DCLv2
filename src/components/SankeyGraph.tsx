@@ -1,5 +1,4 @@
-import React, { useEffect, useRef, useMemo, useState } from 'react';
-import * as d3 from 'd3';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { sankey, sankeyLinkHorizontal, sankeyLeft } from 'd3-sankey';
 import { GraphSnapshot, PersonaId } from '../types';
 
@@ -45,7 +44,7 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
       .nodeAlign(sankeyLeft)
       .nodeWidth(20)
       .nodePadding(30)
-      .extent([[20, 20], [size.width - 20, size.height - 20]]);
+      .extent([[40, 40], [size.width - 40, size.height - 40]]);
 
     const { nodes: sNodes, links: sLinks } = sankeyGenerator({
       nodes,
@@ -103,11 +102,11 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
                 key={link.id || `${link.source.id}-${link.target.id}`}
                 d={sankeyLinkHorizontal()(link) || ''}
                 stroke={`url(#gradient-${link.source.id}-${link.target.id})`}
-                strokeWidth={Math.max(2, link.width)}
+                strokeWidth={Math.max(3, link.width)}
                 fill="none"
                 filter="url(#glow)"
                 className={`transition-all duration-500 ease-in-out
-                  ${isHighlighted ? 'opacity-80' : 'opacity-10 blur-[1px]'}
+                  ${isHighlighted ? 'opacity-90' : 'opacity-50'}
                 `}
               />
             );
