@@ -43,7 +43,7 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
                         <CardTitle className="text-base mb-3 font-semibold">{view.title}</CardTitle>
                         <div className="text-[11px] flex gap-2 text-muted-foreground flex-wrap">
                           {view.focusAreas.map(area => (
-                            <Badge key={area} className="text-[10px] h-6 px-2 font-normal border-2 border-white bg-transparent text-white">
+                            <Badge key={area} className="text-[10px] px-4 py-2 font-normal border-2 border-white bg-transparent text-white">
                               {area}
                             </Badge>
                           ))}
