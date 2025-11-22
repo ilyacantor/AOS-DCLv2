@@ -17,6 +17,21 @@ The application features:
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+**November 22, 2025:**
+- Converted entire UI to AutonomOS color palette with dark mode aesthetic
+- Implemented Quicksand font from Google Fonts
+- Added color-coordinated pill-shaped labels on Sankey edge links for better visibility against dark background
+- Enhanced link labels with:
+  - Tight pill boxes with rounded corners
+  - Layer-specific colors (Cyan for L0, Green for L1, Blue for L2, Purple for L3)
+  - Dark text (#0f172a) for high contrast
+  - Automatic sizing based on label content
+  - Positioned at link midpoints
+- Updated all UI components (panels, buttons, tabs) to use Slate backgrounds with Cyan accents
+- Added custom scrollbars and subtle glow effects
+
 ## System Architecture
 
 ### Frontend Architecture
