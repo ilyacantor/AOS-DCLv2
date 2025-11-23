@@ -33,14 +33,24 @@ class RAGService:
             )
             return 0
         
+        unique_mappings = self._deduplicate_mappings(high_confidence_mappings)
+        
+        if len(unique_mappings) < len(high_confidence_mappings):
+            duplicates_removed = len(high_confidence_mappings) - len(unique_mappings)
+            self.narration.add_message(
+                self.run_id,
+                "RAG",
+                f"Removed {duplicates_removed} duplicate lessons, storing {len(unique_mappings)} unique lessons"
+            )
+        
         try:
             self.narration.add_message(
                 self.run_id,
                 "RAG", 
-                f"Storing {len(high_confidence_mappings)} mapping lessons in vector DB"
+                f"Storing {len(unique_mappings)} mapping lessons in vector DB"
             )
             
-            lessons_stored = self._store_to_pinecone(high_confidence_mappings)
+            lessons_stored = self._store_to_pinecone(unique_mappings)
             
             self.narration.add_message(
                 self.run_id,
@@ -57,6 +67,25 @@ class RAGService:
                 f"Error storing lessons: {str(e)}"
             )
             return 0
+    
+    def _deduplicate_mappings(self, mappings: List[Mapping]) -> List[Mapping]:
+        seen = {}
+        unique = []
+        
+        for mapping in mappings:
+            key = f"{mapping.source_field.lower()}:{mapping.ontology_concept}"
+            
+            if key not in seen:
+                seen[key] = mapping
+                unique.append(mapping)
+            else:
+                existing = seen[key]
+                if mapping.confidence > existing.confidence:
+                    unique.remove(existing)
+                    unique.append(mapping)
+                    seen[key] = mapping
+        
+        return unique
     
     def _store_to_pinecone(self, mappings: List[Mapping]) -> int:
         try:
@@ -119,15 +148,17 @@ class RAGService:
             
             vectors = []
             for mapping in mappings:
-                text = f"{mapping.source_field} maps to {mapping.ontology_concept} with confidence {mapping.confidence}"
+                text = f"{mapping.source_field} maps to {mapping.ontology_concept}"
                 
                 response = client.embeddings.create(
                     input=text,
                     model="text-embedding-3-small"
                 )
                 
+                lesson_id = f"lesson:{mapping.source_field.lower()}:{mapping.ontology_concept}"
+                
                 vectors.append((
-                    mapping.id,
+                    lesson_id,
                     response.data[0].embedding,
                     {
                         "source_field": mapping.source_field,
@@ -163,8 +194,10 @@ class RAGService:
         for mapping in mappings:
             mock_embedding = [random.random() for _ in range(1536)]
             
+            lesson_id = f"lesson:{mapping.source_field.lower()}:{mapping.ontology_concept}"
+            
             vectors.append((
-                mapping.id,
+                lesson_id,
                 mock_embedding,
                 {
                     "source_field": mapping.source_field,
