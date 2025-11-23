@@ -14,7 +14,7 @@ const LEVEL_COLORS = {
   L3: '#8b5cf6',
 };
 
-export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
+export function SankeyGraph({ data }: SankeyGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 600 });
 
@@ -82,11 +82,6 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
 
         <g className="links">
           {graphData.links.map((link: any, idx: number) => {
-            const isHighlighted = 
-               selectedPersonas.length > 0 && 
-               link.target.kind === 'bll' && 
-               selectedPersonas.includes(link.target.personaId);
-            
             const gradientId = `gradient-${link.id || `${link.source.id}-${link.target.id}-${idx}`}`;
 
             return (
@@ -96,7 +91,7 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
                 stroke={`url(#${gradientId})`}
                 strokeWidth={Math.max(1, link.width || 1)}
                 fill="none"
-                className={isHighlighted ? 'opacity-60' : 'opacity-15'}
+                opacity="0.6"
               />
             );
           })}
@@ -104,10 +99,6 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
 
         <g className="nodes">
           {graphData.nodes.map((node: any) => {
-            const isHighlighted = 
-              selectedPersonas.length > 0 &&
-              (node.kind !== 'bll' || (node.personaId && selectedPersonas.includes(node.personaId)));
-
             const color = LEVEL_COLORS[node.level as keyof typeof LEVEL_COLORS] || '#999';
             
             return (
@@ -120,17 +111,11 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
                 className="overflow-visible"
               >
                 <div 
-                  className={`
-                    h-full min-w-[20px] w-[20px] rounded-full border
-                    flex items-center relative group
-                    ${isHighlighted 
-                      ? 'opacity-100 scale-100' 
-                      : 'opacity-40 scale-95'}
-                  `}
+                  className="h-full min-w-[20px] w-[20px] rounded-full border flex items-center relative group"
                   style={{
                     borderColor: color,
                     backgroundColor: '#0f172a',
-                    boxShadow: isHighlighted ? `0 0 10px ${color}40` : 'none'
+                    boxShadow: `0 0 10px ${color}40`
                   }}
                 >
                   <div className="absolute left-1/2 top-1 bottom-1 -translate-x-1/2 w-0.5 bg-white/20 rounded-full" />
