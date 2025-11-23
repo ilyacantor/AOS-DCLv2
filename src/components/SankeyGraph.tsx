@@ -141,9 +141,7 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
                 <div 
                   className={`
                     absolute top-1/2 -translate-y-1/2 whitespace-nowrap px-3 py-1.5 rounded-full
-                    border backdrop-blur-sm text-[10px] font-medium
-                    transition-all duration-300 z-10 pointer-events-none
-                    ${isHighlighted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'}
+                    border backdrop-blur-sm text-[10px] font-medium z-10 pointer-events-none
                     ${node.kind === 'bll' 
                       ? 'bg-[#0f172a] shadow-lg' 
                       : 'bg-[#0f172a]/90'
