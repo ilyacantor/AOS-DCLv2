@@ -1,128 +1,128 @@
-import React, { useState } from 'react';
-import ControlPanel from './components/ControlPanel';
-import SankeyGraph from './components/SankeyGraph';
-import NarrationPanel from './components/NarrationPanel';
-import MonitorPanel from './components/MonitorPanel';
-import './App.css';
-
-export interface RunMetrics {
-  llm_calls: number;
-  rag_reads: number;
-  rag_writes: number;
-  processing_ms: number;
-  render_ms: number;
-}
-
-export interface GraphData {
-  nodes: any[];
-  links: any[];
-  meta: any;
-}
+import { useEffect, useState } from 'react';
+import { GraphSnapshot, PersonaId } from './types';
+import { ControlsBar } from './components/ControlsBar';
+import { MonitorPanel } from './components/MonitorPanel';
+import { NarrationPanel } from './components/NarrationPanel';
+import { SankeyGraph } from './components/SankeyGraph';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/resizable';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
+import { Toaster } from './components/ui/toaster';
+import { useToast } from './hooks/use-toast';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'graph' | 'monitor'>('graph');
-  const [graphData, setGraphData] = useState<GraphData | null>(null);
-  const [metrics, setMetrics] = useState<RunMetrics | null>(null);
-  const [runId, setRunId] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [graphData, setGraphData] = useState<GraphSnapshot | null>(null);
+  const [runMode, setRunMode] = useState<'Dev' | 'Prod'>('Dev');
+  const [dataMode, setDataMode] = useState<'Demo' | 'Farm'>('Demo');
+  const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>([]);
+  const [runId, setRunId] = useState<string | undefined>(undefined);
+  const { toast } = useToast();
 
-  const handleRun = async (mode: string, runMode: string, personas: string[]) => {
-    setIsLoading(true);
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
     try {
-      const response = await fetch('/api/dcl/run', {
+      const res = await fetch('/api/dcl/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, run_mode: runMode, personas }),
+        body: JSON.stringify({ mode: 'Demo', run_mode: 'Dev', personas: [] }),
       });
-
-      if (!response.ok) throw new Error('Failed to run DCL');
-
-      const data = await response.json();
+      
+      if (!res.ok) throw new Error('Failed to load graph');
+      const data = await res.json();
       setGraphData(data.graph);
-      setMetrics(data.run_metrics);
       setRunId(data.run_id);
-    } catch (error) {
-      console.error('Error running DCL:', error);
-      alert('Failed to run DCL engine. Check console for details.');
-    } finally {
-      setIsLoading(false);
+    } catch (e) {
+      console.error(e);
     }
   };
 
+  const handleRun = async () => {
+    toast({ title: 'Pipeline Started', description: `Running in ${runMode} mode on ${dataMode} data...` });
+    
+    try {
+      const res = await fetch('/api/dcl/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          mode: dataMode, 
+          run_mode: runMode, 
+          personas: selectedPersonas 
+        }),
+      });
+      
+      if (!res.ok) throw new Error('Failed to run pipeline');
+      const data = await res.json();
+      setGraphData(data.graph);
+      setRunId(data.run_id);
+      toast({ title: 'Pipeline Complete', description: 'New graph snapshot generated.' });
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Error', description: 'Failed to run pipeline', variant: 'destructive' });
+    }
+  };
+
+  const togglePersona = (p: PersonaId) => {
+    setSelectedPersonas(prev => 
+      prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
+    );
+  };
+
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>DCL Engine</h1>
-        <p>Data Connectivity Layer Visualization</p>
-      </header>
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-background text-foreground">
+      <ControlsBar 
+        runMode={runMode}
+        setRunMode={setRunMode}
+        dataMode={dataMode}
+        setDataMode={setDataMode}
+        selectedPersonas={selectedPersonas}
+        togglePersona={togglePersona}
+        onRun={handleRun}
+        metrics={graphData?.meta.runMetrics}
+      />
 
-      <ControlPanel onRun={handleRun} isLoading={isLoading} />
-
-      {metrics && (
-        <div className="metrics-bar">
-          <div className="metric">
-            <span className="metric-label">LLM Calls:</span>
-            <span className="metric-value">{metrics.llm_calls}</span>
-          </div>
-          <div className="metric">
-            <span className="metric-label">RAG Reads:</span>
-            <span className="metric-value">{metrics.rag_reads}</span>
-          </div>
-          <div className="metric">
-            <span className="metric-label">RAG Writes:</span>
-            <span className="metric-value">{metrics.rag_writes}</span>
-          </div>
-          <div className="metric">
-            <span className="metric-label">Processing:</span>
-            <span className="metric-value">{Math.round(metrics.processing_ms)}ms</span>
-          </div>
-          <div className="metric">
-            <span className="metric-label">Total:</span>
-            <span className="metric-value">{Math.round(metrics.processing_ms + metrics.render_ms)}ms</span>
-          </div>
-        </div>
-      )}
-
-      <div className="tabs">
-        <button
-          className={`tab ${activeTab === 'graph' ? 'active' : ''}`}
-          onClick={() => setActiveTab('graph')}
-        >
-          Graph
-        </button>
-        <button
-          className={`tab ${activeTab === 'monitor' ? 'active' : ''}`}
-          onClick={() => setActiveTab('monitor')}
-        >
-          Monitor
-        </button>
-      </div>
-
-      <div className="main-content">
-        <div className="content-area">
-          {activeTab === 'graph' && (
-            <div className="graph-container">
-              {graphData ? (
-                <SankeyGraph data={graphData} />
-              ) : (
-                <div className="placeholder">
-                  <p>Click "Run" to generate graph</p>
+      <div className="flex-1 overflow-hidden">
+        <ResizablePanelGroup direction="horizontal">
+          <ResizablePanel defaultSize={70} minSize={40}>
+            <div className="h-full w-full relative">
+              <div className="absolute inset-0 p-4">
+                <div className="h-full w-full rounded-xl border bg-card/30 overflow-hidden shadow-inner">
+                  <SankeyGraph 
+                    data={graphData} 
+                    selectedPersonas={selectedPersonas} 
+                  />
                 </div>
-              )}
+              </div>
             </div>
-          )}
-
-          {activeTab === 'monitor' && (
-            <div className="monitor-container">
-              <MonitorPanel runId={runId} />
+          </ResizablePanel>
+          
+          <ResizableHandle className="bg-border/50 w-1.5 hover:bg-primary/50 transition-colors" />
+          
+          <ResizablePanel defaultSize={30} minSize={20}>
+            <div className="h-full border-l bg-sidebar flex flex-col">
+              <Tabs defaultValue="monitor" className="flex-1 flex flex-col">
+                 <div className="border-b px-4 pt-2">
+                   <TabsList className="w-full">
+                     <TabsTrigger value="monitor" className="flex-1">Monitor</TabsTrigger>
+                     <TabsTrigger value="narration" className="flex-1">Narration</TabsTrigger>
+                   </TabsList>
+                 </div>
+                 
+                 <div className="flex-1 overflow-hidden">
+                   <TabsContent value="monitor" className="h-full mt-0">
+                     <MonitorPanel data={graphData} selectedPersonas={selectedPersonas} />
+                   </TabsContent>
+                   <TabsContent value="narration" className="h-full mt-0">
+                     <NarrationPanel runId={runId} />
+                   </TabsContent>
+                 </div>
+              </Tabs>
             </div>
-          )}
-        </div>
-
-        <div className="narration-area">
-          <NarrationPanel runId={runId} />
-        </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
+      <Toaster />
     </div>
   );
 }
