@@ -1,4 +1,3 @@
-import React from 'react';
 import { GraphSnapshot, PersonaId } from '../types';
 import { Play, Activity, Database, Cpu, Clock } from 'lucide-react';
 
@@ -79,15 +78,15 @@ export function ControlsBar({
           <div className="flex items-center gap-3 text-xs text-muted-foreground mr-2">
             <div className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded">
               <Cpu className="w-3 h-3" />
-              <span>LLM: <span className="text-foreground font-mono">{metrics.llmCalls}</span></span>
+              <span>LLM: <span className="text-foreground font-mono">{metrics.llm_calls || 0}</span></span>
             </div>
             <div className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded">
               <Database className="w-3 h-3" />
-              <span>RAG: <span className="text-foreground font-mono">{metrics.ragReads}</span></span>
+              <span>RAG: <span className="text-foreground font-mono">{metrics.rag_reads || 0}</span></span>
             </div>
             <div className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded">
               <Clock className="w-3 h-3" />
-              <span>{metrics.totalMs || metrics.processingMs}ms</span>
+              <span>{((metrics.processing_ms || 0) / 1000).toFixed(2)}s</span>
             </div>
           </div>
         )}

@@ -74,11 +74,11 @@ export interface GraphSnapshot {
     stats?: Record<string, unknown>;
     personaViews?: PersonaView[];
     runMetrics?: {
-      llmCalls: number;
-      ragReads: number;
-      ragWrites: number;
-      processingMs: number;
-      totalMs: number;
+      llm_calls: number;
+      rag_reads: number;
+      rag_writes: number;
+      processing_ms: number;
+      render_ms: number;
     };
   };
 }
