@@ -1,5 +1,4 @@
-import React, { useEffect, useRef, useMemo, useState } from 'react';
-import * as d3 from 'd3';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { sankey, sankeyLinkHorizontal, sankeyLeft } from 'd3-sankey';
 import { GraphSnapshot, PersonaId } from '../types';
 
@@ -66,14 +65,14 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
              const gradientId = `gradient-${link.id || `${link.source.id}-${link.target.id}-${idx}`}`;
              return (
                <linearGradient key={gradientId} id={gradientId} gradientUnits="userSpaceOnUse" x1={link.source.x1 || 0} x2={link.target.x0 || 0}>
-                 <stop offset="0%" stopColor={sourceColor} stopOpacity="1" />
-                 <stop offset="100%" stopColor={targetColor} stopOpacity="1" />
+                 <stop offset="0%" stopColor={sourceColor} stopOpacity="0.7" />
+                 <stop offset="100%" stopColor={targetColor} stopOpacity="0.7" />
                </linearGradient>
              );
           })}
           
           <filter id="glow">
-            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+            <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
             <feMerge>
               <feMergeNode in="coloredBlur"/>
               <feMergeNode in="SourceGraphic"/>
@@ -81,7 +80,7 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
           </filter>
         </defs>
 
-        <g className="links" style={{ mixBlendMode: 'screen' }}>
+        <g className="links">
           {graphData.links.map((link: any, idx: number) => {
             const isHighlighted = 
                (link.target.kind === 'bll' && selectedPersonas.includes(link.target.personaId)) ||
@@ -94,11 +93,10 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
                 key={link.id || `link-${idx}`}
                 d={sankeyLinkHorizontal()(link) || ''}
                 stroke={`url(#${gradientId})`}
-                strokeWidth={Math.max(8, (link.width || 1) * 1.5)}
+                strokeWidth={Math.max(1, link.width || 1)}
                 fill="none"
-                filter="url(#glow)"
                 className={`transition-all duration-500 ease-in-out
-                  ${isHighlighted ? 'opacity-100' : 'opacity-20 blur-[1px]'}
+                  ${isHighlighted ? 'opacity-60' : 'opacity-15 blur-[1px]'}
                 `}
               />
             );
