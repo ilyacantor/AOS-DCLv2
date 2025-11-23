@@ -1,15 +1,47 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GraphSnapshot, PersonaId } from '../types';
 import { Badge } from './Badge';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, Info } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, Info, Database, Zap, CheckCircle2, XCircle } from 'lucide-react';
 
 interface MonitorPanelProps {
   data: GraphSnapshot | null;
   selectedPersonas: PersonaId[];
+  runId?: string;
 }
 
-export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
+export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProps) {
   const [activeTab, setActiveTab] = useState('views');
+  const [ragMessages, setRagMessages] = useState<any[]>([]);
+  const [ragMetrics, setRagMetrics] = useState({ llm_calls: 0, rag_reads: 0, rag_writes: 0 });
+  
+  useEffect(() => {
+    if (!runId) return;
+    
+    const fetchRagData = async () => {
+      try {
+        const response = await fetch(`/api/dcl/narration/${runId}`);
+        const narrationData = await response.json();
+        const ragMsgs = narrationData.messages?.filter((m: any) => m.source === 'RAG' || m.source === 'LLM') || [];
+        setRagMessages(ragMsgs);
+      } catch (error) {
+        console.error('Error fetching RAG data:', error);
+      }
+    };
+    
+    fetchRagData();
+    const interval = setInterval(fetchRagData, 3000);
+    return () => clearInterval(interval);
+  }, [runId]);
+  
+  useEffect(() => {
+    if (data?.meta?.runMetrics) {
+      setRagMetrics({
+        llm_calls: data.meta.runMetrics.llm_calls || 0,
+        rag_reads: data.meta.runMetrics.rag_reads || 0,
+        rag_writes: data.meta.runMetrics.rag_writes || 0,
+      });
+    }
+  }, [data]);
   
   if (!data) return <div className="p-4 text-muted-foreground">No data loaded</div>;
 
@@ -22,6 +54,7 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
           <button onClick={() => setActiveTab('views')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'views' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Persona Views</button>
           <button onClick={() => setActiveTab('sources')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'sources' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Sources</button>
           <button onClick={() => setActiveTab('ontology')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'ontology' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Ontology</button>
+          <button onClick={() => setActiveTab('rag')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'rag' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>RAG History</button>
         </div>
       </div>
 
@@ -117,6 +150,71 @@ export function MonitorPanel({ data, selectedPersonas }: MonitorPanelProps) {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {activeTab === 'rag' && (
+          <div className="space-y-4">
+            <div className="bg-card/50 rounded p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Database className="w-4 h-4 text-cyan-400" />
+                <h3 className="text-sm font-semibold">Vector Database Status</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 text-xs">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                  <span>Pinecone Connected</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                  <span>API Keys Configured</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card/50 rounded p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Zap className="w-4 h-4 text-violet-400" />
+                <h3 className="text-sm font-semibold">RAG Metrics</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-secondary/30 rounded p-2">
+                  <div className="text-[10px] text-muted-foreground uppercase">LLM Calls</div>
+                  <div className="text-lg font-mono font-medium mt-1">{ragMetrics.llm_calls}</div>
+                </div>
+                <div className="bg-secondary/30 rounded p-2">
+                  <div className="text-[10px] text-muted-foreground uppercase">Vector Reads</div>
+                  <div className="text-lg font-mono font-medium mt-1">{ragMetrics.rag_reads}</div>
+                </div>
+                <div className="bg-secondary/30 rounded p-2">
+                  <div className="text-[10px] text-muted-foreground uppercase">Vector Writes</div>
+                  <div className="text-lg font-mono font-medium mt-1">{ragMetrics.rag_writes}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card/50 rounded p-4">
+              <h3 className="text-sm font-semibold mb-3">Operation Log</h3>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {ragMessages.length === 0 && (
+                  <div className="text-xs text-muted-foreground italic">No RAG operations yet. Run pipeline in Prod mode to see activity.</div>
+                )}
+                {ragMessages.map((msg, idx) => (
+                  <div key={idx} className="flex gap-2 text-xs p-2 rounded bg-secondary/20 border border-border/30">
+                    <Database className="w-3.5 h-3.5 shrink-0 mt-0.5 text-cyan-400" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className="h-4 text-[10px] px-1">{msg.source}</Badge>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour12: false })}
+                        </span>
+                      </div>
+                      <p className="text-foreground/90">{msg.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>

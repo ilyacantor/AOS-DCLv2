@@ -177,7 +177,7 @@ function App() {
                  
                  <div className="flex-1 overflow-hidden">
                    <TabsContent value="monitor" className="h-full mt-0">
-                     <MonitorPanel data={graphData} selectedPersonas={selectedPersonas} />
+                     <MonitorPanel data={graphData} selectedPersonas={selectedPersonas} runId={runId} />
                    </TabsContent>
                    <TabsContent value="narration" className="h-full mt-0">
                      <NarrationPanel runId={runId} />
