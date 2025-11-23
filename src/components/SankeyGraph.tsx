@@ -156,7 +156,7 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
                     boxShadow: node.kind === 'bll' ? `0 0 12px ${color}60` : undefined
                   }}
                 >
-                  {node.label}
+                  {node.label.replace('BLL ', '')}
                 </div>
               </foreignObject>
             );
