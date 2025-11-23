@@ -60,20 +60,20 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
     <div ref={containerRef} className="w-full h-full bg-[#020617] overflow-hidden relative select-none">
       <svg width={size.width} height={size.height} className="overflow-visible">
         <defs>
-          {graphData.links.map((link: any) => {
+          {graphData.links.map((link: any, idx: number) => {
              const sourceColor = LEVEL_COLORS[(link.source.level || 'L0') as keyof typeof LEVEL_COLORS] || '#999';
              const targetColor = LEVEL_COLORS[(link.target.level || 'L0') as keyof typeof LEVEL_COLORS] || '#999';
-             const gradientId = `gradient-${link.source.id}-${link.target.id}`;
+             const gradientId = `gradient-${link.id || `${link.source.id}-${link.target.id}-${idx}`}`;
              return (
                <linearGradient key={gradientId} id={gradientId} gradientUnits="userSpaceOnUse" x1={link.source.x1 || 0} x2={link.target.x0 || 0}>
-                 <stop offset="0%" stopColor={sourceColor} stopOpacity="0.8" />
-                 <stop offset="100%" stopColor={targetColor} stopOpacity="0.8" />
+                 <stop offset="0%" stopColor={sourceColor} stopOpacity="1" />
+                 <stop offset="100%" stopColor={targetColor} stopOpacity="1" />
                </linearGradient>
              );
           })}
           
           <filter id="glow">
-            <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
             <feMerge>
               <feMergeNode in="coloredBlur"/>
               <feMergeNode in="SourceGraphic"/>
@@ -82,21 +82,23 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
         </defs>
 
         <g className="links" style={{ mixBlendMode: 'screen' }}>
-          {graphData.links.map((link: any) => {
+          {graphData.links.map((link: any, idx: number) => {
             const isHighlighted = 
                (link.target.kind === 'bll' && selectedPersonas.includes(link.target.personaId)) ||
                (selectedPersonas.length === 0);
+            
+            const gradientId = `gradient-${link.id || `${link.source.id}-${link.target.id}-${idx}`}`;
 
             return (
               <path
-                key={link.id || `${link.source.id}-${link.target.id}`}
+                key={link.id || `link-${idx}`}
                 d={sankeyLinkHorizontal()(link) || ''}
-                stroke={`url(#gradient-${link.source.id}-${link.target.id})`}
-                strokeWidth={Math.max(2, link.width || 1)}
+                stroke={`url(#${gradientId})`}
+                strokeWidth={Math.max(8, (link.width || 1) * 1.5)}
                 fill="none"
                 filter="url(#glow)"
                 className={`transition-all duration-500 ease-in-out
-                  ${isHighlighted ? 'opacity-80' : 'opacity-10 blur-[1px]'}
+                  ${isHighlighted ? 'opacity-100' : 'opacity-20 blur-[1px]'}
                 `}
               />
             );
