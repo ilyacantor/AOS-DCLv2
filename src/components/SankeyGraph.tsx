@@ -83,8 +83,9 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
         <g className="links">
           {graphData.links.map((link: any, idx: number) => {
             const isHighlighted = 
-               (link.target.kind === 'bll' && selectedPersonas.includes(link.target.personaId)) ||
-               (selectedPersonas.length === 0);
+               selectedPersonas.length > 0 && 
+               link.target.kind === 'bll' && 
+               selectedPersonas.includes(link.target.personaId);
             
             const gradientId = `gradient-${link.id || `${link.source.id}-${link.target.id}-${idx}`}`;
 
@@ -95,9 +96,7 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
                 stroke={`url(#${gradientId})`}
                 strokeWidth={Math.max(1, link.width || 1)}
                 fill="none"
-                className={`transition-all duration-500 ease-in-out
-                  ${isHighlighted ? 'opacity-60' : 'opacity-15 blur-[1px]'}
-                `}
+                className={isHighlighted ? 'opacity-60' : 'opacity-15'}
               />
             );
           })}
@@ -106,9 +105,8 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
         <g className="nodes">
           {graphData.nodes.map((node: any) => {
             const isHighlighted = 
-              node.kind !== 'bll' ||
-              selectedPersonas.length === 0 ||
-              (node.personaId && selectedPersonas.includes(node.personaId));
+              selectedPersonas.length > 0 &&
+              (node.kind !== 'bll' || (node.personaId && selectedPersonas.includes(node.personaId)));
 
             const color = LEVEL_COLORS[node.level as keyof typeof LEVEL_COLORS] || '#999';
             
@@ -123,11 +121,11 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
               >
                 <div 
                   className={`
-                    h-full min-w-[20px] w-[20px] rounded-full border transition-all duration-300
+                    h-full min-w-[20px] w-[20px] rounded-full border
                     flex items-center relative group
                     ${isHighlighted 
-                      ? 'opacity-100 scale-100 shadow-[0_0_15px_-3px_rgba(0,0,0,0.3)]' 
-                      : 'opacity-40 scale-95 grayscale'}
+                      ? 'opacity-100 scale-100' 
+                      : 'opacity-40 scale-95'}
                   `}
                   style={{
                     borderColor: color,
