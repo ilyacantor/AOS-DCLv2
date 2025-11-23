@@ -140,15 +140,20 @@ export function SankeyGraph({ data, selectedPersonas }: SankeyGraphProps) {
 
                 <div 
                   className={`
-                    absolute top-1/2 -translate-y-1/2 whitespace-nowrap px-2 py-1 rounded-md
-                    bg-[#0f172a]/90 border backdrop-blur-sm text-[10px] font-medium text-white
+                    absolute top-1/2 -translate-y-1/2 whitespace-nowrap px-3 py-1.5 rounded-full
+                    border backdrop-blur-sm text-[10px] font-medium
                     transition-all duration-300 z-10 pointer-events-none
                     ${isHighlighted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'}
+                    ${node.kind === 'bll' 
+                      ? 'bg-[#0f172a] shadow-lg' 
+                      : 'bg-[#0f172a]/90'
+                    }
                   `}
                   style={{
                     left: 24,
-                    borderColor: `${color}40`,
-                    color: color === '#10b981' ? '#d1fae5' : color === '#06b6d4' ? '#cffafe' : '#ede9fe'
+                    borderColor: node.kind === 'bll' ? color : `${color}40`,
+                    color: color === '#10b981' ? '#d1fae5' : color === '#06b6d4' ? '#cffafe' : '#ede9fe',
+                    boxShadow: node.kind === 'bll' ? `0 0 12px ${color}60` : undefined
                   }}
                 >
                   {node.label}
