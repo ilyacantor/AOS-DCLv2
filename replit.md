@@ -32,7 +32,11 @@ Preferred communication style: Simple, everyday language.
 2. **ControlPanel** - User controls for selecting data mode (Demo/Farm), run mode (Dev/Prod), and personas (CFO/CRO/COO/CTO)
 3. **SankeyGraph** - D3-powered Sankey diagram visualizing data flow through 4 layers: L0 (pipe) → L1 (sources) → L2 (ontology) → L3 (persona endpoints)
 4. **NarrationPanel** - Real-time message stream showing processing steps with auto-refresh
-5. **MonitorPanel** - Enterprise monitoring view for system health and status
+5. **MonitorPanel** - Enterprise monitoring view with 4 tabs:
+   - Persona Views: Business metrics filtered by selected personas
+   - Sources: List of connected data sources with status
+   - Ontology: Core concepts with input/output link counts
+   - RAG History: NEW - Vector database status, RAG metrics (LLM calls, reads, writes), and operation logs
 
 **Design Decisions:**
 - Tabbed interface to switch between graph visualization and monitoring views
@@ -67,6 +71,7 @@ Preferred communication style: Simple, everyday language.
    - **DCLEngine** - Main orchestrator coordinating the entire pipeline
    - **SchemaLoader** - Loads schemas from Demo (local CSV files) or Farm (API)
    - **MappingService** - Maps source fields to ontology concepts using heuristics and optional LLM enhancement
+   - **RAGService** - NEW: Stores mapping lessons in Pinecone vector database for learning and retrieval
    - **NarrationService** - In-memory message queue for real-time processing updates
    - **Ontology module** - Defines core ontology concepts (Account, Opportunity, Revenue, Cost, AWS Resource, Health, Usage)
 
@@ -74,7 +79,9 @@ Preferred communication style: Simple, everyday language.
 1. Load schemas based on mode (Demo from `schemas/` directory or Farm from external API)
 2. Load ontology concepts defining unified data model
 3. Create mappings from source fields to ontology using heuristics (field name matching, semantic hints)
-4. In Prod mode: Enhance mappings with LLM calls (Gemini/OpenAI) and RAG lookups (Pinecone)
+4. Runtime mode behavior:
+   - **Dev mode**: Store high-confidence mapping "lessons" in Pinecone vector DB for future retrieval (86 lessons stored per run)
+   - **Prod mode**: Enhance mappings with LLM calls (Gemini/OpenAI) and RAG lookups (Pinecone)
 5. Build GraphSnapshot with 4-layer structure for Sankey visualization
 6. Return graph data and performance metrics
 

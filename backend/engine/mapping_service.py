@@ -2,6 +2,7 @@ from typing import List, Dict, Optional
 import os
 from backend.domain import SourceSystem, OntologyConcept, Mapping, RunMetrics
 from backend.engine.narration_service import NarrationService
+from backend.engine.rag_service import RAGService
 
 
 class MappingService:
@@ -48,7 +49,12 @@ class MappingService:
             self.metrics.rag_reads += 5
             self.metrics.rag_writes += 2
         else:
-            self.narration.add_message(self.run_id, "RAG", "Dev mode: Using heuristics only")
+            self.narration.add_message(self.run_id, "Engine", "Dev mode: Using heuristics and storing lessons")
+            
+            rag_service = RAGService(self.run_id, self.narration)
+            lessons_stored = rag_service.store_mapping_lessons(mappings)
+            
+            self.metrics.rag_writes += lessons_stored
             self.metrics.rag_reads += 3
         
         return mappings
