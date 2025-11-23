@@ -23,47 +23,22 @@ Preferred communication style: Simple, everyday language.
 
 **Technology Stack:**
 - React 18 with TypeScript
-- Vite 5 as build tool and dev server (ESM mode)
-- Tailwind CSS v4 with dark mode design system
-- Radix UI component library (15+ accessible components)
+- Vite as build tool and dev server
 - D3.js and d3-sankey for data visualization
-- React Resizable Panels for split-pane layout
-- Framer Motion for animations
+- Component-based architecture with CSS modules
 
 **Key Components:**
-1. **App.tsx** - Main application container with ResizablePanel layout, managing graph data, persona filters, and run state
-2. **ControlsBar** - Modern top controls bar with toggle groups for Env (Dev/Prod), Data (Demo/Farm), persona filters (CFO/CRO/COO/CTO), metrics display, and Run Pipeline button
-3. **SankeyGraph** - Enhanced D3-powered Sankey diagram with:
-   - Gradient-colored links (emerald → cyan → violet)
-   - Glow effects and smooth animations
-   - Persona-based filtering with fade/highlight transitions
-   - Pill-shaped nodes with floating labels
-   - 4-layer flow visualization: L0 (pipe) → L1 (sources) → L2 (ontology) → L3 (BLL personas)
-4. **MonitorPanel** - Tabbed monitoring interface with:
-   - Persona Views: Cards showing metrics, trends, insights, and alerts for each selected persona
-   - Sources: List of connected data sources with status indicators
-   - Ontology: View of ontology concepts with in/out connection counts
-5. **NarrationPanel** - Real-time execution log with:
-   - Timeline visualization with status dots
-   - Color-coded source badges (LLM, RAG, Engine, Monitor)
-   - Live 2-second polling of narration API
-   - Auto-scrolling message stream
-
-**UI/UX Design:**
-- **AutonomOS Design System**: Dark mode with Slate 950 background, cyan/emerald/violet accent colors
-- **Typography**: Multi-font system with Quicksand (display), Inter (body), JetBrains Mono (code), Space Grotesk (headings)
-- **Resizable Layout**: Split-pane interface with 70/30 default split (Sankey graph / Monitor+Narration sidebar)
-- **Glassmorphism Effects**: Backdrop blur and transparency for modern depth
-- **Toast Notifications**: Non-blocking feedback using Radix UI Toast for pipeline status
-- **Responsive Animations**: Smooth transitions on persona filtering, panel resizing, and data updates
+1. **App.tsx** - Main application container managing state for graph data, metrics, and active views
+2. **ControlPanel** - User controls for selecting data mode (Demo/Farm), run mode (Dev/Prod), and personas (CFO/CRO/COO/CTO)
+3. **SankeyGraph** - D3-powered Sankey diagram visualizing data flow through 4 layers: L0 (pipe) → L1 (sources) → L2 (ontology) → L3 (persona endpoints)
+4. **NarrationPanel** - Real-time message stream showing processing steps with auto-refresh
+5. **MonitorPanel** - Enterprise monitoring view for system health and status
 
 **Design Decisions:**
-- Migrated from CSS modules to Tailwind CSS for faster development and consistency
-- Radix UI provides accessible, unstyled primitives styled with Tailwind
-- Resizable panels allow users to adjust workspace layout
-- Persona filtering applies both to Sankey graph visualization and Monitor panel data views
-- Real-time narration polling (2-second intervals) during pipeline execution
-- Toast system replaces alerts for better UX
+- Tabbed interface to switch between graph visualization and monitoring views
+- Gradient background with glassmorphism effects for modern UI aesthetic
+- Real-time polling (2-second intervals) for narration updates during processing
+- Responsive layout using flexbox for different screen sizes
 
 ### Backend Architecture
 

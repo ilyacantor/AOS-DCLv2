@@ -57,8 +57,6 @@ class DCLEngine:
         metrics.processing_ms = processing_time
         
         render_start = time.time()
-        persona_views = self._generate_persona_views(personas, sources, ontology, mappings)
-        
         snapshot = GraphSnapshot(
             nodes=graph["nodes"],
             links=graph["links"],
@@ -71,8 +69,7 @@ class DCLEngine:
                     "ontology_concepts": len(ontology),
                     "mappings": len(mappings),
                     "personas": [p.value for p in personas]
-                },
-                "persona_views": persona_views
+                }
             }
         )
         
@@ -187,13 +184,12 @@ class DCLEngine:
             bll_id = f"bll_{persona.value.lower()}"
             nodes.append(GraphNode(
                 id=bll_id,
-                label=persona.value,
+                label=f"BLL {persona.value}",
                 level="L3",
                 kind="bll",
                 group="Business Logic",
                 status="ok",
-                metrics={"persona": persona.value},
-                persona_id=persona.value
+                metrics={"persona": persona.value}
             ))
             
             relevant_concepts = persona_mappings.get(persona, [])
@@ -212,134 +208,3 @@ class DCLEngine:
                     ))
         
         return {"nodes": nodes, "links": links}
-    
-    def _generate_persona_views(
-        self,
-        personas: List[Persona],
-        sources: List[SourceSystem],
-        ontology: List[OntologyConcept],
-        mappings: List[Mapping]
-    ) -> List[Dict]:
-        """Generate persona-specific views with metrics, insights, and alerts"""
-        import random
-        
-        persona_configs = {
-            Persona.CFO: {
-                "title": "Chief Financial Officer View",
-                "focus_areas": ["Revenue", "Cost", "P&L"],
-                "key_entities": ["revenue", "cost"],
-                "sample_metrics": [
-                    {"label": "Total Revenue", "value": 2450000, "unit": "$", "trend": "up", "delta": 8.5},
-                    {"label": "Operating Cost", "value": 1820000, "unit": "$", "trend": "down", "delta": 3.2},
-                    {"label": "Profit Margin", "value": 25.7, "unit": "%", "trend": "up", "delta": 2.1},
-                    {"label": "Data Quality", "value": 94, "unit": "%", "trend": "flat", "delta": 0}
-                ],
-                "sample_insights": [
-                    "Revenue variance increased 8.5% this quarter",
-                    "Operating costs reduced by 3.2% year-over-year"
-                ],
-                "sample_alerts": [
-                    "2 revenue fields missing from NetSuite integration"
-                ]
-            },
-            Persona.CRO: {
-                "title": "Chief Revenue Officer View",
-                "focus_areas": ["Accounts", "Opportunities", "Pipeline"],
-                "key_entities": ["account", "opportunity", "revenue"],
-                "sample_metrics": [
-                    {"label": "Active Accounts", "value": 1847, "unit": "", "trend": "up", "delta": 12.3},
-                    {"label": "Pipeline Value", "value": 4200000, "unit": "$", "trend": "up", "delta": 15.7},
-                    {"label": "Win Rate", "value": 32.5, "unit": "%", "trend": "up", "delta": 4.2},
-                    {"label": "Data Coverage", "value": 96, "unit": "%", "trend": "up", "delta": 1.5}
-                ],
-                "sample_insights": [
-                    "Pipeline value up 15.7% month-over-month",
-                    "Win rate improved to 32.5% from 28.3%"
-                ],
-                "sample_alerts": []
-            },
-            Persona.COO: {
-                "title": "Chief Operating Officer View",
-                "focus_areas": ["Operations", "Usage", "Health"],
-                "key_entities": ["usage", "health"],
-                "sample_metrics": [
-                    {"label": "System Uptime", "value": 99.8, "unit": "%", "trend": "flat", "delta": 0},
-                    {"label": "Active Users", "value": 8420, "unit": "", "trend": "up", "delta": 6.8},
-                    {"label": "Avg Response", "value": 145, "unit": "ms", "trend": "down", "delta": 8.3},
-                    {"label": "Data Freshness", "value": 92, "unit": "%", "trend": "up", "delta": 2.1}
-                ],
-                "sample_insights": [
-                    "Active users grew 6.8% this period",
-                    "System uptime maintained at 99.8%"
-                ],
-                "sample_alerts": [
-                    "1 usage data source showing increased latency"
-                ]
-            },
-            Persona.CTO: {
-                "title": "Chief Technology Officer View",
-                "focus_areas": ["Infrastructure", "Resources", "Costs"],
-                "key_entities": ["aws_resource", "usage", "cost"],
-                "sample_metrics": [
-                    {"label": "Active Resources", "value": 342, "unit": "", "trend": "up", "delta": 5.2},
-                    {"label": "Infra Cost", "value": 45200, "unit": "$", "trend": "up", "delta": 3.7},
-                    {"label": "CPU Utilization", "value": 68, "unit": "%", "trend": "up", "delta": 4.1},
-                    {"label": "Schema Coverage", "value": 89, "unit": "%", "trend": "up", "delta": 3.2}
-                ],
-                "sample_insights": [
-                    "Infrastructure costs increased 3.7% due to scaling",
-                    "CPU utilization trending up to 68% capacity"
-                ],
-                "sample_alerts": [
-                    "Cost allocation incomplete for 3 AWS resource types"
-                ]
-            }
-        }
-        
-        views = []
-        for persona in personas:
-            config = persona_configs.get(persona)
-            if not config:
-                continue
-            
-            metrics = [
-                {
-                    "id": f"{persona.value.lower()}_metric_{i}",
-                    "label": m["label"],
-                    "value": m["value"],
-                    "unit": m.get("unit"),
-                    "trend": m["trend"],
-                    "trend_delta_pct": m.get("delta")
-                }
-                for i, m in enumerate(config["sample_metrics"])
-            ]
-            
-            insights = [
-                {
-                    "id": f"{persona.value.lower()}_insight_{i}",
-                    "severity": "info",
-                    "message": insight
-                }
-                for i, insight in enumerate(config["sample_insights"])
-            ]
-            
-            alerts = [
-                {
-                    "id": f"{persona.value.lower()}_alert_{i}",
-                    "severity": "medium",
-                    "message": alert
-                }
-                for i, alert in enumerate(config["sample_alerts"])
-            ]
-            
-            views.append({
-                "persona_id": persona.value,
-                "title": config["title"],
-                "focus_areas": config["focus_areas"],
-                "key_entities": config["key_entities"],
-                "metrics": metrics,
-                "insights": insights,
-                "alerts": alerts
-            })
-        
-        return views

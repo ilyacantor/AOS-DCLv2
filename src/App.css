@@ -1,0 +1,132 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #0f172a;
+}
+
+.app-header {
+  background: rgba(30, 41, 59, 0.6);
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #334155;
+  backdrop-filter: blur(10px);
+}
+
+.app-header h1 {
+  margin: 0;
+  color: #22d3ee;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.app-header p {
+  margin: 0.25rem 0 0;
+  color: #94a3b8;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.metrics-bar {
+  background: rgba(30, 41, 59, 0.4);
+  padding: 1rem 2rem;
+  display: flex;
+  gap: 2rem;
+  border-bottom: 1px solid #334155;
+}
+
+.metric {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.metric-label {
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.metric-value {
+  color: #22d3ee;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.tabs {
+  background: rgba(30, 41, 59, 0.4);
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 2rem;
+  border-bottom: 1px solid #334155;
+}
+
+.tab {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  font-family: 'Quicksand', sans-serif;
+}
+
+.tab:hover {
+  color: #22d3ee;
+}
+
+.tab.active {
+  color: #22d3ee;
+  border-bottom-color: #22d3ee;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.content-area {
+  flex: 2;
+  min-width: 0;
+}
+
+.narration-area {
+  flex: 1;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.graph-container,
+.monitor-container {
+  height: 100%;
+  background: rgba(30, 41, 59, 0.6);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #334155;
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.1);
+}
+
+.placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 1.25rem;
+}
+
+@media (max-width: 1024px) {
+  .main-content {
+    flex-direction: column;
+  }
+
+  .narration-area {
+    max-width: none;
+    min-height: 300px;
+  }
+}

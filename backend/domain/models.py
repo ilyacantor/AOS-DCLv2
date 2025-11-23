@@ -66,7 +66,6 @@ class GraphNode(BaseModel):
     group: Optional[str] = None
     status: Optional[str] = "ok"
     metrics: Optional[Dict[str, Any]] = None
-    persona_id: Optional[str] = None
 
 
 class GraphLink(BaseModel):
