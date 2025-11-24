@@ -194,11 +194,11 @@ function App() {
                    </TabsList>
                  </div>
                  
-                 <div className="flex-1">
-                   <TabsContent value="monitor" className="h-full mt-0">
+                 <div className="flex-1 flex flex-col min-h-0">
+                   <TabsContent value="monitor" className="flex-1 flex flex-col mt-0">
                      <MonitorPanel data={graphData} selectedPersonas={selectedPersonas} runId={runId} />
                    </TabsContent>
-                   <TabsContent value="narration" className="h-full mt-0">
+                   <TabsContent value="narration" className="flex-1 flex flex-col mt-0">
                      <NarrationPanel runId={runId} />
                    </TabsContent>
                  </div>
