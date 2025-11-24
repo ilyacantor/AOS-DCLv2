@@ -63,6 +63,21 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
       links
     });
     
+    const layerPositions = {
+      'L0': { x0: 20, x1: 40 },
+      'L1': { x0: size.width * 0.25, x1: size.width * 0.25 + 20 },
+      'L2': { x0: size.width * 0.58, x1: size.width * 0.58 + 20 },
+      'L3': { x0: size.width * 0.88, x1: size.width * 0.88 + 20 }
+    };
+    
+    sNodes.forEach((node: any) => {
+      const layerPos = layerPositions[node.level as keyof typeof layerPositions];
+      if (layerPos) {
+        node.x0 = layerPos.x0;
+        node.x1 = layerPos.x1;
+      }
+    });
+    
     return { nodes: sNodes, links: sLinks };
   }, [data, size]);
 
