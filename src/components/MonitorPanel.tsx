@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { GraphSnapshot, PersonaId, GraphNode } from '../types';
+import { GraphSnapshot, PersonaId } from '../types';
 import { Badge } from './Badge';
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, Info, Database, Zap, CheckCircle2 } from 'lucide-react';
 
@@ -52,7 +52,6 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
       <div className="px-4 pt-4 pb-2 border-b">
         <div className="flex gap-2">
           <button onClick={() => setActiveTab('views')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'views' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Persona Views</button>
-          <button onClick={() => setActiveTab('mappings')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'mappings' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Mappings</button>
           <button onClick={() => setActiveTab('sources')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'sources' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Sources</button>
           <button onClick={() => setActiveTab('ontology')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'ontology' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Ontology</button>
           <button onClick={() => setActiveTab('rag')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'rag' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>RAG History</button>
@@ -123,76 +122,6 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
               </div>
             ))}
           </>
-        )}
-
-        {activeTab === 'mappings' && (
-          <div className="space-y-4">
-            {(() => {
-              const sourceNodes = data.nodes.filter(n => n.level === 'L1');
-              const nodeMap = Object.fromEntries(data.nodes.map(n => [n.id, n]));
-              
-              const mappingsBySource = sourceNodes.reduce((acc, source) => {
-                const mappings = data.links
-                  .filter(link => {
-                    const srcNode = typeof link.source === 'string' ? nodeMap[link.source] : link.source;
-                    const tgtNode = typeof link.target === 'string' ? nodeMap[link.target] : link.target;
-                    return srcNode?.id === source.id && tgtNode?.level === 'L2';
-                  })
-                  .map(link => {
-                    const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id;
-                    const targetNode = nodeMap[targetId];
-                    return {
-                      ontologyConcept: targetNode?.label || 'Unknown',
-                      confidence: link.confidence || 0,
-                      infoSummary: (link as any).info_summary || `→ ${targetNode?.label || 'Unknown'}`
-                    };
-                  })
-                  .sort((a, b) => a.ontologyConcept.localeCompare(b.ontologyConcept));
-                
-                if (mappings.length > 0) {
-                  acc.push({ source, mappings });
-                }
-                return acc;
-              }, [] as Array<{ source: GraphNode; mappings: Array<{ ontologyConcept: string; confidence: number; infoSummary: string }> }>);
-
-              return (
-                <>
-                  {mappingsBySource.map(({ source, mappings }) => (
-                    <div key={source.id} className="bg-card/50 rounded">
-                      <div className="p-3 border-b bg-secondary/20">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-semibold text-sm">{source.label}</h3>
-                            <p className="text-xs text-muted-foreground">{source.group}</p>
-                          </div>
-                          <Badge className="text-xs">{mappings.length} mappings</Badge>
-                        </div>
-                      </div>
-                      <div className="divide-y">
-                        {mappings.map((mapping, idx) => {
-                          const confidenceColor = 
-                            mapping.confidence >= 0.9 ? 'text-green-400' :
-                            mapping.confidence >= 0.75 ? 'text-yellow-400' :
-                            'text-orange-400';
-                          
-                          return (
-                            <div key={idx} className="p-2 px-3 hover:bg-secondary/10 transition-colors">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-xs font-mono flex-1">{mapping.infoSummary}</span>
-                                <span className={`text-xs font-mono font-medium ${confidenceColor}`}>
-                                  {(mapping.confidence * 100).toFixed(0)}%
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </>
-              );
-            })()}
-          </div>
         )}
 
         {activeTab === 'sources' && (

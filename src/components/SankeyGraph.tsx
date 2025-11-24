@@ -43,7 +43,7 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
       .nodeAlign(sankeyLeft)
       .nodeWidth(20)
       .nodePadding(30)
-      .extent([[20, 20], [size.width - 20, size.height - 20]]);
+      .extent([[20, 20], [size.width - 60, size.height - 20]]);
 
     const { nodes: sNodes, links: sLinks } = sankeyGenerator({
       nodes,

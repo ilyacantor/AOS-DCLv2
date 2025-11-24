@@ -170,12 +170,14 @@ function App() {
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel defaultSize={70} minSize={40}>
-            <div className="h-full w-full p-4">
-              <div className="h-full w-full rounded-xl border bg-card/30 overflow-hidden shadow-inner">
-                <SankeyGraph 
-                  data={graphData} 
-                  selectedPersonas={selectedPersonas} 
-                />
+            <div className="h-full w-full relative">
+              <div className="absolute inset-0 p-4">
+                <div className="h-full w-full rounded-xl border bg-card/30 overflow-hidden shadow-inner">
+                  <SankeyGraph 
+                    data={graphData} 
+                    selectedPersonas={selectedPersonas} 
+                  />
+                </div>
               </div>
             </div>
           </ResizablePanel>
