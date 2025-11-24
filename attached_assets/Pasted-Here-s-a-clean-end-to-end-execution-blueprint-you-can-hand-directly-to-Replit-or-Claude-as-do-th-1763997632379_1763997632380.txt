@@ -1,0 +1,401 @@
+Here’s a clean, end-to-end execution blueprint you can hand directly to Replit (or Claude) as “do this, in this order” for the DCL mapping + persona system.
+
+You can literally copy-paste sections into a Replit MAX prompt.
+
+---
+
+## 0. Scope & Objective
+
+**Objective:**
+Refactor the DCL so that:
+
+* Persona views are **data-driven and adaptive**, not hard-wired lists.
+* The LLM/RAG mapping already in the codebase becomes a **cold-path Semantic Mapper** (batch), not something hit on every request.
+* The DCL runtime (graph + personas) is **purely deterministic**, reading from stored mappings/persona configs.
+* The synthetic data farm is used as a **hostile test harness** to validate “smartness”.
+* The internal design lines up with the “AI Startup Ecosystem” logic:
+
+  * **Discovery → Ontology → Orchestration → Domain Personas/Agents.**
+
+**Constraints / Guardrails:**
+
+* Do **not** break existing DCL basic behavior (graph rendering, API contracts). Only change *how* mappings/persona relevance are produced/consumed.
+* No LLM calls in hot paths (UI clicks, persona switches, graph refresh).
+* Keep changes localized; avoid touching AAM/AOD except where they feed schemas into the mapper.
+
+---
+
+## 1. Repository Recon (Replit Tasks)
+
+**Goal:** get an accurate map of where DCL, ontology, and LLM/RAG logic live.
+
+**Tasks for Replit:**
+
+1. **Search for DCL core:**
+
+   * Find:
+
+     * `dcl_engine.py`
+     * `app/dcl_engine/app.py`
+     * Any `LiveSankeyGraph` or DCL graph components in `frontend/src/`.
+   * Summarize responsibilities and size (lines of code).
+
+2. **Find ontology & persona definitions:**
+
+   * Locate `ontology.py` (or equivalent).
+   * Locate where `Persona` enum or persona classes are defined.
+   * Locate where `persona_mappings = { Persona.CFO: [...], ... }` are currently hard-coded.
+
+3. **Find mapping + LLM/RAG logic:**
+
+   * Search for:
+
+     * “RAG”, “LLM”, “openai”, “anthropic”, “embedding”, “vector”.
+     * Any `MappingService`, `schema_mapping`, `field_mapping` classes.
+   * Identify **all call sites** where LLM/RAG are invoked for DCL mapping.
+
+4. **Document current pipeline in a short ARCH note** (for human sanity):
+
+   * Create `docs/ARCH-DCL-CURRENT.md` summarizing:
+
+     * How schema is ingested.
+     * How ontology concepts are defined.
+     * How field→concept mapping is done today.
+     * How persona filtering works today.
+     * Where LLM/RAG are currently used.
+
+---
+
+## 2. High-Level Architectural Split
+
+We want three clear layers:
+
+1. **Semantic Mapper (cold path / batch):**
+
+   * Takes schemas + samples.
+   * Runs heuristics + RAG + LLM.
+   * Outputs persistent `field_concept_mappings` + explanations.
+
+2. **Semantic Model (data only):**
+
+   * DB tables / JSON configs:
+
+     * `ontology_concepts`
+     * `field_concept_mappings`
+     * `persona_profiles`
+     * `persona_concept_relevance`
+
+3. **DCL Engine (hot path / runtime):**
+
+   * Builds graphs and persona views using only stored data.
+   * No direct LLM calls, no vector queries.
+
+**Tasks for Replit:**
+
+1. Create a short doc `docs/ARCH-DCL-TARGET.md` that describes this 3-layer split (as above) to anchor future work.
+2. Confirm which DB abstraction is used (SQLAlchemy, raw SQL, etc.) so we design tables accordingly.
+
+---
+
+## 3. Introduce Core Data Structures (DB + Config)
+
+### 3.1. DB Tables (or models)
+
+**Goal:** define minimal schemas that DCL runtime will rely on.
+
+**Tasks for Replit:**
+
+1. Add new tables/models (names can be adjusted to fit existing conventions):
+
+   * `ontology_concepts`
+
+     * `id` (PK)
+     * `name` (e.g. “revenue”, “cost”, “usage”)
+     * `description`
+     * `cluster` (e.g. “Finance”, “Growth”, “Infra”, “Ops”) – aligns with AI Startup Ecosystem categories
+     * `metadata` (JSONB – synonyms, example fields, etc.)
+
+   * `field_concept_mappings`
+
+     * `id` (PK)
+     * `source_id` (FK to data source / connection)
+     * `table_name`
+     * `field_name`
+     * `concept_id` (FK to `ontology_concepts`)
+     * `confidence` (float)
+     * `reason` (text/JSON)
+     * `created_at`, `updated_at`
+     * `version` (optional)
+
+   * `persona_profiles`
+
+     * `id` (PK)
+     * `persona_key` (e.g. “CFO”, “CRO”, “COO”, “CTO”)
+     * `display_name`
+     * `description` (text – what they care about)
+     * `metadata` (JSONB)
+
+   * `persona_concept_relevance`
+
+     * `id` (PK)
+     * `persona_id` (FK)
+     * `concept_id` (FK)
+     * `relevance` (float 0–1)
+
+2. Create migrations / schema updates consistent with current migration tooling.
+
+3. Add placeholders in code for reading from these tables (even before we populate them).
+
+### 3.2. Config Files for Ontology & Personas
+
+**Goal:** keep definitions editable without code changes.
+
+**Tasks for Replit:**
+
+1. Create config files, e.g.:
+
+   * `config/ontology_concepts.yaml`
+   * `config/persona_profiles.yaml`
+
+2. Populate them with:
+
+   * The existing 8 concepts (account, opportunity, revenue, cost, aws_resource, health, usage, date), plus:
+
+     * A **cluster** tag mapping roughly to:
+
+       * Finance (revenue, cost, invoices, ARR/MRR)
+       * Growth (accounts, opportunity, pipeline)
+       * Infra (aws_resource, infra_cost)
+       * Ops / Health (health, usage, SLAs)
+     * This aligns with the AI Startup Ecosystem axes (Data/Infra/Workflow/Domain buckets).
+
+3. Implement a one-time sync script (or startup hook) that:
+
+   * Reads these YAMLs.
+   * Upserts into `ontology_concepts` and `persona_profiles`.
+
+---
+
+## 4. Extract Existing LLM/RAG Mapping into `semantic_mapper/`
+
+**Goal:** move all LLM/RAG mapping logic behind a clear module boundary.
+
+**Tasks for Replit:**
+
+1. Create a new package/folder, e.g. `semantic_mapper/` with modules like:
+
+   * `ingest_schema.py`
+   * `build_embeddings.py`
+   * `llm_mapper.py`
+   * `persist_mappings.py`
+   * `runner.py` (or similar for orchestration)
+
+2. For every place in the code where DCL currently:
+
+   * Calls LLM/RAG to map fields → ontology,
+   * Or does dynamic, non-deterministic mapping,
+     **refactor** so that:
+   * The logic moves into `semantic_mapper/`.
+   * The functions now write into `field_concept_mappings` instead of returning mappings directly to the DCL engine.
+
+3. Add a **single public entrypoint** for this module, something like:
+
+   * “Run semantic mapping for `source_id`” with inputs:
+
+     * `source_id`
+     * schema/tables/fields
+     * sample rows as needed
+
+4. Ensure:
+
+   * This mapper can be triggered via background job or admin endpoint.
+   * It does **not** run on every persona click.
+
+---
+
+## 5. Implement the Mapping Pipeline (Cold Path)
+
+Use the pattern we discussed:
+
+1. **Heuristic stage:**
+
+   * Use existing string/regex/type rules to propose candidate concepts per field.
+   * Assign a heuristic confidence.
+
+2. **RAG stage (if the repo already has embeddings):**
+
+   * For each field, build a small description (field name, table name, type, sample values).
+   * Embed field descriptions + ontology concepts.
+   * Compute similarity scores to refine candidate concepts.
+
+3. **LLM refinement (if already present):**
+
+   * For ambiguous cases or top candidates, call the LLM to:
+
+     * Pick the best concept.
+     * Provide a short reason.
+     * Return a confidence score.
+
+4. **Persist:**
+
+   * Write one or more `field_concept_mappings` rows per field.
+
+**Tasks for Replit:**
+
+1. Take the existing LLM/RAG mapping helpers and plug them into this 3-stage pipeline inside `semantic_mapper/`.
+2. Make sure the pipeline:
+
+   * Is idempotent (can run multiple times).
+   * Cleans up or versions previous mappings when re-run.
+3. Expose a simple way to trigger it:
+
+   * When a new source is connected.
+   * From a CLI/management endpoint in dev (“remap source X”).
+
+---
+
+## 6. Redesign Persona Logic to Use Stored Data
+
+We want to replace:
+
+```python
+persona_mappings = {
+    Persona.CFO: ["revenue", "cost"],
+    ...
+}
+```
+
+with a **relevance matrix** based on `persona_concept_relevance`.
+
+**Tasks for Replit:**
+
+1. Locate all usages of the hard-coded `persona_mappings` dictionary.
+
+2. Replace them with new logic:
+
+   * For the current tenant/source:
+
+     1. Query `field_concept_mappings` to determine **available concepts** (concepts that actually have mappings).
+     2. Query `persona_concept_relevance` for the current persona.
+     3. Compute `visible_concepts` as:
+
+        * intersection of available concepts and persona-relevant concepts, sorted by relevance.
+        * If the intersection is small/empty, fall back to:
+
+          * top available concepts by:
+
+            * `relevance * mapping_coverage_score`.
+
+3. Ensure there is **no direct concept name list** hard-coded in DCL engine anymore.
+
+4. Add a small helper module, e.g. `persona_view.py`, that encapsulates this logic so it’s not scattered across the codebase.
+
+---
+
+## 7. Make DCL Graph Builder Use New Mappings
+
+**Goal:** DCL graph builder should rely entirely on `field_concept_mappings` and persona-filtered concept sets.
+
+**Tasks for Replit:**
+
+1. In the DCL graph builder (where the Sankey/graph is constructed):
+
+   * Replace any logic that:
+
+     * Inspects raw schema directly to decide concept membership.
+     * Calls LLM/RAG live.
+   * With logic that:
+
+     * Reads `field_concept_mappings` for the current source(s).
+     * Groups fields by `concept_id`.
+     * For the selected persona, restricts nodes to `visible_concepts` from `persona_view.py`.
+
+2. Ensure the output JSON structure to the frontend remains compatible (or adjust frontend accordingly if there’s a type change).
+
+3. Add support to attach **explanations** to nodes:
+
+   * For each concept node, optionally include a short explanation based on:
+
+     * The concept description.
+     * Sample mapping reasons from `field_concept_mappings`.
+
+---
+
+## 8. Integrate Synthetic Data Farm as Test Harness
+
+**Goal:** use the farm to validate “smartness” and non-brittle behavior.
+
+**Tasks for Replit:**
+
+1. Confirm where the farm data is wired into DCL (connection, DB, etc.).
+
+2. Ensure semantic mapping runs on the farm sources via `semantic_mapper`.
+
+3. Define a small set of tests (could be code + manual) such as:
+
+   * For CTO persona + farm:
+
+     * DCL returns a non-empty graph.
+     * The graph includes at least 2 concepts mapped from infra/usage-like fields (even if names don’t match exactly).
+   * For CFO persona + farm:
+
+     * Concepts related to invoices / amounts show up as finance concepts (`revenue`, `billing`, `cash_flows` etc.).
+
+4. If there is an automated test harness, add tests that:
+
+   * Hit the DCL persona endpoint.
+   * Assert:
+
+     * Non-empty result.
+     * Concepts returned belong to the persona’s top relevant clusters.
+
+---
+
+## 9. UI/UX: Explanations & Debug View
+
+**Goal:** make the new intelligence visible and debuggable, without lots of new features.
+
+**Tasks for Replit:**
+
+1. In the DCL frontend (graph view):
+
+   * For each node, allow a hover tooltip that can show:
+
+     * Concept name.
+     * Cluster (Finance / Growth / Infra / Ops).
+     * A short explanation: “Derived from fields: invoice_amount (invoices), hours_used (usage_logs).”
+
+2. Add an optional **“Mapping Debug” panel** (can be behind a feature flag) that shows:
+
+   * For a selected concept:
+
+     * Fields contributing.
+     * Confidence scores.
+     * Reasons (text from the mapper).
+
+This uses the data we’re already persisting; no new LLM calls needed.
+
+---
+
+## 10. Hardening & Acceptance Criteria
+
+**Final acceptance criteria** for this project:
+
+1. **No hard-coded persona→concept lists** remain in the code.
+2. DCL runtime does **not** call LLM/RAG or any external model at request time.
+3. All persona filtering logic goes through:
+
+   * `field_concept_mappings`
+   * `persona_concept_relevance`
+4. For the synthetic data farm:
+
+   * CFO, CRO, COO, CTO personas all produce **non-empty**, intelligible graphs, even when field names do not literally match ontology names.
+5. There is clear documentation:
+
+   * `ARCH-DCL-CURRENT.md` (before)
+   * `ARCH-DCL-TARGET.md` (after)
+   * Short README for `semantic_mapper/` explaining inputs/outputs and when it runs.
+
+---
+
+If you’d like, I can now compress this into a **single Replit MAX prompt** (with “You are Replit agent X, follow this plan…”) so you can drop it in as-is and let it work through the phases.
