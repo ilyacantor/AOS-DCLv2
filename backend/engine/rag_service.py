@@ -8,7 +8,8 @@ from backend.engine.narration_service import NarrationService
 
 class RAGService:
     
-    def __init__(self, run_id: str, narration: NarrationService):
+    def __init__(self, run_mode: str, run_id: str, narration: NarrationService):
+        self.run_mode = run_mode
         self.run_id = run_id
         self.narration = narration
         self.pinecone_enabled = bool(os.getenv("PINECONE_API_KEY"))
@@ -111,13 +112,13 @@ class RAGService:
             
             index = pc.Index(index_name)
             
-            if self.openai_enabled:
+            if self.run_mode == "Prod" and self.openai_enabled:
                 vectors = self._create_embeddings_openai(mappings)
             else:
                 self.narration.add_message(
                     self.run_id,
                     "RAG",
-                    "OpenAI API key not found - storing metadata only"
+                    "Dev mode: storing metadata with mock embeddings (fast)"
                 )
                 vectors = self._create_mock_embeddings(mappings)
             
