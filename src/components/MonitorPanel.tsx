@@ -168,7 +168,7 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
                           <Badge className="text-xs">{mappings.length} mappings</Badge>
                         </div>
                       </div>
-                      <div className="divide-y max-h-64 overflow-y-auto">
+                      <div className="divide-y">
                         {mappings.map((mapping, idx) => {
                           const confidenceColor = 
                             mapping.confidence >= 0.9 ? 'text-green-400' :
