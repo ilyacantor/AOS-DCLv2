@@ -14,6 +14,7 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
   const [ragMessages, setRagMessages] = useState<any[]>([]);
   const [ragMetrics, setRagMetrics] = useState({ llm_calls: 0, rag_reads: 0, rag_writes: 0 });
   const [expandedSections, setExpandedSections] = useState<Record<string, { sources: boolean; ontologies: boolean }>>({});
+  const [expandedOntologies, setExpandedOntologies] = useState<Record<string, boolean>>({});
 
   const toggleSection = (personaId: string, section: 'sources' | 'ontologies') => {
     setExpandedSections(prev => ({
@@ -24,6 +25,36 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
         [section]: !(prev[personaId]?.[section] ?? false)
       }
     }));
+  };
+
+  const toggleOntology = (ontologyId: string) => {
+    setExpandedOntologies(prev => ({
+      ...prev,
+      [ontologyId]: !prev[ontologyId]
+    }));
+  };
+
+  const getOntologySourceFields = (ontologyId: string) => {
+    if (!data) return [];
+    
+    const incomingLinks = data.links.filter(link => {
+      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      return targetId === ontologyId;
+    });
+    
+    return incomingLinks.map(link => {
+      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+      const sourceNode = data.nodes.find(n => n.id === sourceId);
+      return {
+        id: link.id,
+        sourceId,
+        sourceLabel: sourceNode?.label || sourceId,
+        sourceGroup: sourceNode?.group || '',
+        confidence: link.confidence,
+        value: link.value,
+        infoSummary: link.infoSummary
+      };
+    });
   };
 
   const getPersonaConnections = (personaId: PersonaId) => {
@@ -201,21 +232,50 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
                             <div className="text-xs text-muted-foreground italic p-2">No ontology concepts mapped</div>
                           ) : (
                             connections.ontologies.map(onto => {
-                              const inLinks = data?.links.filter(l => {
-                                const targetId = typeof l.target === 'string' ? l.target : l.target.id;
-                                return targetId === onto.id;
-                              }).length || 0;
-                              const metrics = onto.metrics || {};
+                              const sourceFields = getOntologySourceFields(onto.id);
+                              const isExpanded = expandedOntologies[onto.id] ?? false;
                               
                               return (
-                                <div key={onto.id} className="flex items-center justify-between p-2 rounded bg-secondary/10 text-xs">
-                                  <div className="flex flex-col">
-                                    <span className="font-medium font-mono">{onto.label}</span>
-                                    {metrics.explanation && (
-                                      <span className="text-[10px] text-muted-foreground">{metrics.explanation}</span>
-                                    )}
-                                  </div>
-                                  <span className="text-[10px] text-muted-foreground">{inLinks} inputs</span>
+                                <div key={onto.id} className="space-y-1">
+                                  <button
+                                    onClick={() => toggleOntology(onto.id)}
+                                    className="w-full flex items-center justify-between p-2 rounded bg-secondary/10 hover:bg-secondary/20 transition-colors text-xs"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                      <span className="font-medium font-mono">{onto.label}</span>
+                                    </div>
+                                    <Badge variant="outline" className="h-4 text-[9px] px-1">{sourceFields.length} fields</Badge>
+                                  </button>
+                                  
+                                  {isExpanded && (
+                                    <div className="ml-5 space-y-1">
+                                      {sourceFields.length === 0 ? (
+                                        <div className="text-[10px] text-muted-foreground italic p-1.5">No source fields mapped</div>
+                                      ) : (
+                                        sourceFields.map(field => (
+                                          <div key={field.id} className="flex items-center justify-between p-1.5 rounded bg-secondary/5 border border-border/20 text-[10px]">
+                                            <div className="flex flex-col">
+                                              <span className="font-medium">{field.sourceLabel}</span>
+                                              <span className="text-muted-foreground">{field.sourceGroup}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              {field.confidence !== undefined && (
+                                                <span className={`px-1 py-0.5 rounded text-[9px] ${
+                                                  field.confidence >= 0.8 ? 'bg-green-500/20 text-green-300' :
+                                                  field.confidence >= 0.5 ? 'bg-yellow-500/20 text-yellow-300' :
+                                                  'bg-red-500/20 text-red-300'
+                                                }`}>
+                                                  {Math.round(field.confidence * 100)}%
+                                                </span>
+                                              )}
+                                              <span className="text-muted-foreground">{field.value} records</span>
+                                            </div>
+                                          </div>
+                                        ))
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })
