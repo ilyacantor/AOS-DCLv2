@@ -48,7 +48,7 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
   const activePersonaViews = data.meta.personaViews?.filter(pv => selectedPersonas.includes(pv.personaId)) || [];
 
   return (
-    <div className="flex-1 flex flex-col bg-sidebar/30">
+    <div className="h-full flex flex-col bg-sidebar/30">
       <div className="px-4 pt-4 pb-2 border-b">
         <div className="flex gap-2">
           <button onClick={() => setActiveTab('views')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'views' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Persona Views</button>
@@ -59,7 +59,7 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {activeTab === 'views' && (
           <>
             {activePersonaViews.length === 0 && (
