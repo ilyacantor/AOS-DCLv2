@@ -33,7 +33,7 @@ class DCLEngine:
             sources = SchemaLoader.load_demo_schemas()
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Demo sources")
         else:
-            sources = SchemaLoader.load_farm_schemas()
+            sources = SchemaLoader.load_farm_schemas(self.narration, run_id)
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Farm sources")
         
         ontology = get_ontology()
