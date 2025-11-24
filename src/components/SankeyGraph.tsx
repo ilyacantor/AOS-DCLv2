@@ -14,9 +14,22 @@ const LEVEL_COLORS = {
   L3: '#8b5cf6',
 };
 
+interface TooltipState {
+  visible: boolean;
+  x: number;
+  y: number;
+  content: string;
+}
+
 export function SankeyGraph({ data }: SankeyGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 600 });
+  const [tooltip, setTooltip] = useState<TooltipState>({
+    visible: false,
+    x: 0,
+    y: 0,
+    content: ''
+  });
 
   useEffect(() => {
     const handleResize = () => {
@@ -83,6 +96,39 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
         <g className="links">
           {graphData.links.map((link: any, idx: number) => {
             const gradientId = `gradient-${link.id || `${link.source.id}-${link.target.id}-${idx}`}`;
+            
+            const handleMouseEnter = (event: React.MouseEvent<SVGPathElement>) => {
+              const containerRect = containerRef.current?.getBoundingClientRect();
+              
+              if (containerRect) {
+                const x = event.clientX - containerRect.left;
+                const y = event.clientY - containerRect.top;
+                
+                const sourceLabel = link.source.label || link.source.id;
+                const targetLabel = link.target.label || link.target.id;
+                const confidence = link.confidence || '';
+                const mappingInfo = link.info_summary || '';
+                
+                let content = `${sourceLabel} → ${targetLabel}`;
+                if (mappingInfo) {
+                  content += `\n${mappingInfo}`;
+                }
+                if (confidence && confidence !== 'high' && confidence !== '') {
+                  content += `\nConfidence: ${confidence}`;
+                }
+                
+                setTooltip({
+                  visible: true,
+                  x,
+                  y: y - 10,
+                  content
+                });
+              }
+            };
+            
+            const handleMouseLeave = () => {
+              setTooltip(prev => ({ ...prev, visible: false }));
+            };
 
             return (
               <path
@@ -92,6 +138,10 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
                 strokeWidth={Math.max(1, link.width || 1)}
                 fill="none"
                 opacity="0.6"
+                className="cursor-pointer hover:opacity-100 transition-opacity"
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                style={{ pointerEvents: 'stroke' }}
               />
             );
           })}
@@ -144,6 +194,22 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
           })}
         </g>
       </svg>
+      
+      {tooltip.visible && (
+        <div
+          className="absolute pointer-events-none z-50 px-3 py-2 bg-[#1e293b]/95 border border-white/20 rounded-lg shadow-xl backdrop-blur-sm"
+          style={{
+            left: tooltip.x,
+            top: tooltip.y,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          <div className="text-xs font-medium text-white/90 whitespace-pre-line">
+            {tooltip.content}
+          </div>
+          <div className="absolute left-1/2 -bottom-1 -translate-x-1/2 w-2 h-2 bg-[#1e293b]/95 border-b border-r border-white/20 rotate-45" />
+        </div>
+      )}
     </div>
   );
 }
