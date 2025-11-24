@@ -10,6 +10,8 @@ interface ControlsBarProps {
   togglePersona: (p: PersonaId) => void;
   onRun: () => void;
   metrics?: GraphSnapshot['meta']['runMetrics'];
+  isRunning: boolean;
+  elapsedTime: number;
 }
 
 export function ControlsBar({
@@ -20,7 +22,9 @@ export function ControlsBar({
   selectedPersonas,
   togglePersona,
   onRun,
-  metrics
+  metrics,
+  isRunning,
+  elapsedTime
 }: ControlsBarProps) {
   return (
     <div className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center px-6 justify-between shrink-0 z-10 relative">
@@ -74,25 +78,33 @@ export function ControlsBar({
       </div>
 
       <div className="flex items-center gap-4">
-        {metrics && (
+        {(metrics || isRunning) && (
           <div className="flex items-center gap-3 text-xs text-muted-foreground mr-2">
             <div className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded">
               <Cpu className="w-3 h-3" />
-              <span>LLM: <span className="text-foreground font-mono">{metrics.llm_calls || 0}</span></span>
+              <span>LLM: <span className="text-foreground font-mono">{metrics?.llm_calls || 0}</span></span>
             </div>
             <div className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded">
               <Database className="w-3 h-3" />
-              <span>RAG: <span className="text-foreground font-mono">{metrics.rag_reads || 0}</span></span>
+              <span>RAG: <span className="text-foreground font-mono">{metrics?.rag_reads || 0}</span></span>
             </div>
             <div className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded">
               <Clock className="w-3 h-3" />
-              <span>{((metrics.processing_ms || 0) / 1000).toFixed(2)}s</span>
+              <span className="text-foreground font-mono">
+                {isRunning 
+                  ? `${(elapsedTime / 1000).toFixed(2)}s` 
+                  : `${((metrics?.processing_ms || 0) / 1000).toFixed(2)}s`}
+              </span>
             </div>
           </div>
         )}
-        <button onClick={onRun} className="gap-2 shadow-lg shadow-primary/20 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 transition-opacity flex items-center">
+        <button 
+          onClick={onRun} 
+          disabled={isRunning}
+          className="gap-2 shadow-lg shadow-primary/20 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 transition-opacity flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           <Play className="w-3.5 h-3.5 fill-current" />
-          Run Pipeline
+          {isRunning ? 'Running...' : 'Run Pipeline'}
         </button>
       </div>
     </div>

@@ -15,11 +15,24 @@ function App() {
   const [dataMode, setDataMode] = useState<'Demo' | 'Farm'>('Demo');
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>([]);
   const [runId, setRunId] = useState<string | undefined>(undefined);
+  const [isRunning, setIsRunning] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!isRunning) return;
+    
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      setElapsedTime(Date.now() - startTime);
+    }, 100);
+    
+    return () => clearInterval(interval);
+  }, [isRunning]);
 
   const generatePersonaViews = (graphData: any, personas: PersonaId[]) => {
     if (!graphData || personas.length === 0) return [];
@@ -97,6 +110,8 @@ function App() {
   };
 
   const handleRun = async () => {
+    setIsRunning(true);
+    setElapsedTime(0);
     toast({ title: 'Pipeline Started', description: `Running in ${runMode} mode on ${dataMode} data...` });
     
     try {
@@ -122,9 +137,11 @@ function App() {
       };
       setGraphData(graphWithViews);
       setRunId(data.run_id);
+      setIsRunning(false);
       toast({ title: 'Pipeline Complete', description: 'New graph snapshot generated.' });
     } catch (e) {
       console.error(e);
+      setIsRunning(false);
       toast({ title: 'Error', description: 'Failed to run pipeline', variant: 'destructive' });
     }
   };
@@ -146,6 +163,8 @@ function App() {
         togglePersona={togglePersona}
         onRun={handleRun}
         metrics={graphData?.meta.runMetrics}
+        isRunning={isRunning}
+        elapsedTime={elapsedTime}
       />
 
       <div className="flex-1 overflow-hidden">
