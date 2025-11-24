@@ -140,7 +140,6 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
                 .forEach(link => {
                   const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
                   const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id;
-                  const sourceNode = nodeMap[sourceId];
                   const targetNode = nodeMap[targetId];
                   
                   if (!sourceToMappings.has(sourceId)) {
