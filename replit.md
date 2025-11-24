@@ -76,11 +76,13 @@ Preferred communication style: Simple, everyday language.
    - **Ontology module** - Defines core ontology concepts (Account, Opportunity, Revenue, Cost, AWS Resource, Health, Usage)
 
 **Processing Flow:**
-1. Load schemas based on mode (Demo from `schemas/` directory or Farm from external API)
+1. Load schemas based on mode:
+   - **Demo mode**: Load from local `schemas/` directory (9 legacy sources: salesforce, hubspot, mongodb, supabase, snowflake, sap, netsuite, dynamics, legacy_sql)
+   - **Farm mode**: Fetch from AOS-Farm synthetic data platform via HTTP (5 sources: assets, customers, invoices, events, CRM mock)
 2. Load ontology concepts defining unified data model
 3. Create mappings from source fields to ontology using heuristics (field name matching, semantic hints)
 4. Runtime mode behavior:
-   - **Dev mode**: Store high-confidence mapping "lessons" in Pinecone vector DB for future retrieval (86 lessons stored per run)
+   - **Dev mode**: Store high-confidence mapping "lessons" in Pinecone vector DB for future retrieval
    - **Prod mode**: Enhance mappings with LLM calls (Gemini/OpenAI) and RAG lookups (Pinecone)
 5. Build GraphSnapshot with 4-layer structure for Sankey visualization
 6. Return graph data and performance metrics
@@ -91,6 +93,21 @@ Preferred communication style: Simple, everyday language.
 - Dev/Prod modes enable cost control (Dev uses only heuristics, Prod adds expensive LLM/RAG operations)
 - In-memory narration service for simplicity (would use message queue in production at scale)
 - Confidence scoring for mappings to identify weak links
+
+**Farm Mode Integration (November 2025):**
+- **HTTP Integration**: Uses httpx library to fetch real-time synthetic data from AOS-Farm platform at https://autonomos.farm/
+- **Environment Variable**: FARM_API_URL (default: https://autonomos.farm)
+- **Data Sources**: 5 Farm API endpoints automatically discovered and loaded:
+  1. Enterprise Assets (`/api/synthetic`) - Applications, services, hosts (requires Farm test scenarios to generate)
+  2. CRM Customers (`/api/synthetic/customers?generate=true`) - Auto-generates customer data with 11+ fields
+  3. ERP Invoices (`/api/synthetic/invoices?generate=true`) - Auto-generates invoices linked to customers via FK
+  4. Time-Series Events (`/api/synthetic/events?generate=force`) - Logs, network flows, auth events
+  5. Mock CRM API (`/api/synthetic/crm/accounts`) - Simulated external CRM system (derives from assets)
+- **Schema Inference**: Automatically infers TableSchema/FieldSchema from JSON responses by unioning keys across all sample records
+- **Error Handling**: Graceful handling of empty datasets - sources with no data show 0 fields but remain visible in graph
+- **Narration**: Real-time status messages for each source ("Loaded X sample records, inferred Y fields" or "Empty dataset returned")
+- **Tenant Isolation**: Farm uses IP-based session tenants - no manual auth required for MVP
+- **Data Availability**: Customers and invoices auto-generate on first request; assets/events require Farm test scenarios to be run first
 
 ### Data Storage Solutions
 
