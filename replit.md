@@ -32,11 +32,12 @@ Preferred communication style: Simple, everyday language.
 2. **ControlPanel** - User controls for selecting data mode (Demo/Farm), run mode (Dev/Prod), and personas (CFO/CRO/COO/CTO)
 3. **SankeyGraph** - D3-powered Sankey diagram visualizing data flow through 4 layers: L0 (pipe) → L1 (sources) → L2 (ontology) → L3 (persona endpoints)
 4. **NarrationPanel** - Real-time message stream showing processing steps with auto-refresh
-5. **MonitorPanel** - Enterprise monitoring view with 4 tabs:
+5. **MonitorPanel** - Enterprise monitoring view with 5 tabs:
    - Persona Views: Business metrics filtered by selected personas
+   - Mappings: Text-based view showing source fields → ontology concept mappings grouped by source system, with confidence scores
    - Sources: List of connected data sources with status
    - Ontology: Core concepts with input/output link counts
-   - RAG History: NEW - Vector database status, RAG metrics (LLM calls, reads, writes), and operation logs
+   - RAG History: Vector database status, RAG metrics (LLM calls, reads, writes), and operation logs
 
 **Design Decisions:**
 - Tabbed interface to switch between graph visualization and monitoring views
@@ -80,8 +81,8 @@ Preferred communication style: Simple, everyday language.
 2. Load ontology concepts defining unified data model
 3. Create mappings from source fields to ontology using heuristics (field name matching, semantic hints)
 4. Runtime mode behavior:
-   - **Dev mode**: Store high-confidence mapping "lessons" in Pinecone vector DB for future retrieval (86 lessons stored per run)
-   - **Prod mode**: Enhance mappings with LLM calls (Gemini/OpenAI) and RAG lookups (Pinecone)
+   - **Dev mode**: Store high-confidence mapping "lessons" in Pinecone vector DB using mock embeddings (fast, ~1.8s per run, 65 unique lessons after deduplication)
+   - **Prod mode**: Enhance mappings with LLM calls (Gemini/OpenAI) and RAG lookups using real OpenAI embeddings (Pinecone)
 5. Build GraphSnapshot with 4-layer structure for Sankey visualization
 6. Return graph data and performance metrics
 
