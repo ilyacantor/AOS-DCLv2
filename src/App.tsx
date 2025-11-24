@@ -4,7 +4,6 @@ import { ControlsBar } from './components/ControlsBar';
 import { MonitorPanel } from './components/MonitorPanel';
 import { NarrationPanel } from './components/NarrationPanel';
 import { SankeyGraph } from './components/SankeyGraph';
-import { MappingsPanel } from './components/MappingsPanel';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/resizable';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import { Toaster } from './components/ui/toaster';
@@ -99,14 +98,15 @@ function App() {
       const graphWithViews = {
         ...data.graph,
         meta: {
-          ...data.graph.meta,
+          ...(data.graph.meta ?? {}),
           personaViews: generatePersonaViews(data.graph, []),
         },
       };
       setGraphData(graphWithViews);
       setRunId(data.run_id);
     } catch (e) {
-      console.error(e);
+      console.error('Failed to load data:', e);
+      toast({ title: 'Error', description: 'Failed to load initial data', variant: 'destructive' });
     }
   };
 
@@ -131,7 +131,7 @@ function App() {
       const graphWithViews = {
         ...data.graph,
         meta: {
-          ...data.graph.meta,
+          ...(data.graph.meta ?? {}),
           personaViews: generatePersonaViews(data.graph, selectedPersonas),
           runMetrics: data.run_metrics,
         },
@@ -141,7 +141,7 @@ function App() {
       setIsRunning(false);
       toast({ title: 'Pipeline Complete', description: 'New graph snapshot generated.' });
     } catch (e) {
-      console.error(e);
+      console.error('Failed to run pipeline:', e);
       setIsRunning(false);
       toast({ title: 'Error', description: 'Failed to run pipeline', variant: 'destructive' });
     }
@@ -171,26 +171,16 @@ function App() {
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel defaultSize={70} minSize={40}>
-            <ResizablePanelGroup direction="vertical">
-              <ResizablePanel defaultSize={65} minSize={30}>
-                <div className="h-full w-full relative">
-                  <div className="absolute inset-0 p-4">
-                    <div className="h-full w-full rounded-xl border bg-card/30 overflow-hidden shadow-inner">
-                      <SankeyGraph 
-                        data={graphData} 
-                        selectedPersonas={selectedPersonas} 
-                      />
-                    </div>
-                  </div>
+            <div className="h-full w-full relative">
+              <div className="absolute inset-0 p-4">
+                <div className="h-full w-full rounded-xl border bg-card/30 overflow-hidden shadow-inner">
+                  <SankeyGraph 
+                    data={graphData} 
+                    selectedPersonas={selectedPersonas} 
+                  />
                 </div>
-              </ResizablePanel>
-              
-              <ResizableHandle className="bg-border/50 h-1.5 hover:bg-primary/50 transition-colors" />
-              
-              <ResizablePanel defaultSize={35} minSize={20}>
-                <MappingsPanel data={graphData} />
-              </ResizablePanel>
-            </ResizablePanelGroup>
+              </div>
+            </div>
           </ResizablePanel>
           
           <ResizableHandle className="bg-border/50 w-1.5 hover:bg-primary/50 transition-colors" />
