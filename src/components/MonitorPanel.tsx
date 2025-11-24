@@ -124,6 +124,86 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
           </>
         )}
 
+        {activeTab === 'mappings' && (
+          <div className="space-y-4">
+            {(() => {
+              const nodeMap = Object.fromEntries((data?.nodes || []).map(n => [n.id, n]));
+              const sourceToMappings = new Map<string, any[]>();
+              
+              // Group mappings by source system
+              data.links
+                .filter(link => {
+                  const srcNode = typeof link.source === 'string' ? nodeMap[link.source] : link.source;
+                  const tgtNode = typeof link.target === 'string' ? nodeMap[link.target] : link.target;
+                  return srcNode?.level === 'L1' && tgtNode?.level === 'L2';
+                })
+                .forEach(link => {
+                  const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
+                  const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id;
+                  const sourceNode = nodeMap[sourceId];
+                  const targetNode = nodeMap[targetId];
+                  
+                  if (!sourceToMappings.has(sourceId)) {
+                    sourceToMappings.set(sourceId, []);
+                  }
+                  
+                  sourceToMappings.get(sourceId)!.push({
+                    targetConcept: targetNode?.label || 'Unknown',
+                    confidence: link.confidence || 0,
+                    infoSummary: (link as any).info_summary || `Mapped to ${targetNode?.label || 'Unknown'}`
+                  });
+                });
+              
+              const sortedSources = Array.from(sourceToMappings.entries())
+                .map(([sourceId, mappings]) => ({
+                  source: nodeMap[sourceId],
+                  mappings: mappings.sort((a, b) => b.confidence - a.confidence)
+                }))
+                .sort((a, b) => a.source.label.localeCompare(b.source.label));
+              
+              if (sortedSources.length === 0) {
+                return (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    No mappings available. Run the pipeline to see field mappings.
+                  </div>
+                );
+              }
+              
+              return sortedSources.map(({ source, mappings }) => (
+                <div key={source.id} className="bg-card/50 rounded-lg border border-border/50">
+                  <div className="p-3 border-b border-border/30 bg-secondary/20">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-sm">{source.label}</span>
+                        <span className="text-xs text-muted-foreground ml-2">({source.group})</span>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {mappings.length} mapping{mappings.length !== 1 ? 's' : ''}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    {mappings.map((mapping, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-xs py-1.5 px-2 rounded bg-secondary/10 hover:bg-secondary/20 transition-colors">
+                        <div className="flex-1 font-mono">
+                          {mapping.infoSummary}
+                        </div>
+                        <div className={`ml-3 px-2 py-0.5 rounded text-[10px] font-medium ${
+                          mapping.confidence >= 0.9 ? 'bg-green-500/20 text-green-300' :
+                          mapping.confidence >= 0.75 ? 'bg-yellow-500/20 text-yellow-300' :
+                          'bg-orange-500/20 text-orange-300'
+                        }`}>
+                          {(mapping.confidence * 100).toFixed(0)}%
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        )}
+
         {activeTab === 'sources' && (
           <div className="bg-card/50 rounded divide-y">
             {data.nodes.filter(n => n.level === 'L1').map(node => (
