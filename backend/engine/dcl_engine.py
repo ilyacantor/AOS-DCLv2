@@ -138,47 +138,53 @@ class DCLEngine:
             
             source_mapping_count[source.id] = 0
         
-        ontology_mapping_count = {}
-        for concept in ontology:
-            concept_id = f"ontology_{concept.id}"
-            nodes.append(GraphNode(
-                id=concept_id,
-                label=concept.name,
-                level="L2",
-                kind="ontology",
-                group="Ontology",
-                status="ok",
-                metrics={"description": concept.description}
-            ))
-            ontology_mapping_count[concept.id] = 0
-        
-        for mapping in mappings:
-            source_id = f"source_{mapping.source_system}"
-            concept_id = f"ontology_{mapping.ontology_concept}"
-            
-            if source_id and concept_id:
-                link_id = f"link_{mapping.source_system}_{mapping.ontology_concept}_{uuid.uuid4().hex[:8]}"
-                links.append(GraphLink(
-                    id=link_id,
-                    source=source_id,
-                    target=concept_id,
-                    value=mapping.confidence,
-                    confidence=mapping.confidence,
-                    flow_type="mapping",
-                    info_summary=f"{mapping.source_field} → {mapping.ontology_concept} ({mapping.method}, {mapping.confidence:.2f})"
-                ))
-                
-                if mapping.source_system in source_mapping_count:
-                    source_mapping_count[mapping.source_system] += 1
-                if mapping.ontology_concept in ontology_mapping_count:
-                    ontology_mapping_count[mapping.ontology_concept] += 1
-        
         persona_mappings = {
             Persona.CFO: ["revenue", "cost"],
             Persona.CRO: ["account", "opportunity", "revenue"],
             Persona.COO: ["usage", "health"],
             Persona.CTO: ["aws_resource", "usage", "cost"]
         }
+        
+        relevant_concept_ids = set()
+        for persona in personas:
+            relevant_concept_ids.update(persona_mappings.get(persona, []))
+        
+        ontology_mapping_count = {}
+        for concept in ontology:
+            if concept.id in relevant_concept_ids:
+                concept_id = f"ontology_{concept.id}"
+                nodes.append(GraphNode(
+                    id=concept_id,
+                    label=concept.name,
+                    level="L2",
+                    kind="ontology",
+                    group="Ontology",
+                    status="ok",
+                    metrics={"description": concept.description}
+                ))
+                ontology_mapping_count[concept.id] = 0
+        
+        for mapping in mappings:
+            if mapping.ontology_concept in relevant_concept_ids:
+                source_id = f"source_{mapping.source_system}"
+                concept_id = f"ontology_{mapping.ontology_concept}"
+                
+                if source_id and concept_id:
+                    link_id = f"link_{mapping.source_system}_{mapping.ontology_concept}_{uuid.uuid4().hex[:8]}"
+                    links.append(GraphLink(
+                        id=link_id,
+                        source=source_id,
+                        target=concept_id,
+                        value=mapping.confidence,
+                        confidence=mapping.confidence,
+                        flow_type="mapping",
+                        info_summary=f"{mapping.source_field} → {mapping.ontology_concept} ({mapping.method}, {mapping.confidence:.2f})"
+                    ))
+                    
+                    if mapping.source_system in source_mapping_count:
+                        source_mapping_count[mapping.source_system] += 1
+                    if mapping.ontology_concept in ontology_mapping_count:
+                        ontology_mapping_count[mapping.ontology_concept] += 1
         
         for persona in personas:
             bll_id = f"bll_{persona.value.lower()}"
