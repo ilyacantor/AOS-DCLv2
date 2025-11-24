@@ -52,6 +52,7 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
       <div className="px-4 pt-4 pb-2 border-b">
         <div className="flex gap-2">
           <button onClick={() => setActiveTab('views')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'views' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Persona Views</button>
+          <button onClick={() => setActiveTab('mappings')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'mappings' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Mappings</button>
           <button onClick={() => setActiveTab('sources')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'sources' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Sources</button>
           <button onClick={() => setActiveTab('ontology')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'ontology' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Ontology</button>
           <button onClick={() => setActiveTab('rag')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'rag' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>RAG History</button>
