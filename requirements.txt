@@ -24,3 +24,5 @@ python-dotenv
 python-multipart
 sqlalchemy
 uvicorn
+psycopg2-binary
+pyyaml

@@ -1,0 +1,84 @@
+personas:
+  - persona_key: CFO
+    display_name: Chief Financial Officer
+    description: Focuses on financial metrics, revenue, costs, and profitability
+    metadata:
+      responsibilities:
+        - Financial planning and analysis
+        - Budget management
+        - Revenue tracking
+        - Cost optimization
+      primary_cluster: Finance
+    concept_relevance:
+      - concept_id: revenue
+        relevance: 1.0
+      - concept_id: cost
+        relevance: 1.0
+      - concept_id: account
+        relevance: 0.6
+      - concept_id: date
+        relevance: 0.5
+
+  - persona_key: CRO
+    display_name: Chief Revenue Officer
+    description: Focuses on sales pipeline, customer acquisition, and revenue growth
+    metadata:
+      responsibilities:
+        - Revenue growth
+        - Sales pipeline management
+        - Customer acquisition
+        - Account expansion
+      primary_cluster: Growth
+    concept_relevance:
+      - concept_id: account
+        relevance: 1.0
+      - concept_id: opportunity
+        relevance: 1.0
+      - concept_id: revenue
+        relevance: 0.9
+      - concept_id: health
+        relevance: 0.6
+      - concept_id: date
+        relevance: 0.5
+
+  - persona_key: COO
+    display_name: Chief Operating Officer
+    description: Focuses on operational metrics, usage patterns, and system health
+    metadata:
+      responsibilities:
+        - Operational efficiency
+        - Resource utilization
+        - System health monitoring
+        - Process optimization
+      primary_cluster: Ops
+    concept_relevance:
+      - concept_id: usage
+        relevance: 1.0
+      - concept_id: health
+        relevance: 1.0
+      - concept_id: account
+        relevance: 0.7
+      - concept_id: date
+        relevance: 0.6
+
+  - persona_key: CTO
+    display_name: Chief Technology Officer
+    description: Focuses on infrastructure, cloud resources, technical costs, and system usage
+    metadata:
+      responsibilities:
+        - Infrastructure management
+        - Cloud resource optimization
+        - Technical architecture
+        - System scalability
+      primary_cluster: Infra
+    concept_relevance:
+      - concept_id: aws_resource
+        relevance: 1.0
+      - concept_id: usage
+        relevance: 0.9
+      - concept_id: cost
+        relevance: 0.8
+      - concept_id: health
+        relevance: 0.6
+      - concept_id: date
+        relevance: 0.5

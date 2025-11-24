@@ -9,12 +9,15 @@ from backend.engine.schema_loader import SchemaLoader
 from backend.engine.ontology import get_ontology
 from backend.engine.mapping_service import MappingService
 from backend.engine.narration_service import NarrationService
+from backend.engine.persona_view import PersonaView
+from backend.semantic_mapper import SemanticMapper
 
 
 class DCLEngine:
     
     def __init__(self):
         self.narration = NarrationService()
+        self.persona_view = PersonaView()
     
     def build_graph_snapshot(
         self,
@@ -39,17 +42,22 @@ class DCLEngine:
         ontology = get_ontology()
         self.narration.add_message(run_id, "Engine", f"Loaded {len(ontology)} ontology concepts")
         
-        mapping_service = MappingService(run_mode, run_id, self.narration)
-        mappings = mapping_service.create_mappings(sources, ontology)
+        semantic_mapper = SemanticMapper()
+        source_ids = [s.id for s in sources]
+        stored_mappings = []
+        for sid in source_ids:
+            stored_mappings.extend(semantic_mapper.get_stored_mappings(sid))
         
-        metrics.llm_calls = mapping_service.metrics.llm_calls
-        metrics.rag_reads = mapping_service.metrics.rag_reads
-        metrics.rag_writes = mapping_service.metrics.rag_writes
-        
-        self.narration.add_message(
-            run_id, "Engine", 
-            f"Created {len(mappings)} mappings (LLM: {metrics.llm_calls}, RAG reads: {metrics.rag_reads}, RAG writes: {metrics.rag_writes})"
-        )
+        if stored_mappings:
+            self.narration.add_message(run_id, "Engine", f"Using {len(stored_mappings)} stored mappings from database")
+            mappings = stored_mappings
+        else:
+            self.narration.add_message(run_id, "Engine", "No stored mappings found - running semantic mapper to create and persist mappings")
+            mappings, stats = semantic_mapper.run_mapping(sources, mode="heuristic", clear_existing=False)
+            self.narration.add_message(
+                run_id, "Engine",
+                f"Created and persisted {stats['mappings_created']} mappings using heuristics"
+            )
         
         graph = self._build_graph(mode, sources, ontology, mappings, personas, run_id)
         
@@ -138,30 +146,14 @@ class DCLEngine:
             
             source_mapping_count[source.id] = 0
         
-        persona_mappings = {
-            Persona.CFO: ["revenue", "cost"],
-            Persona.CRO: ["account", "opportunity", "revenue"],
-            Persona.COO: ["usage", "health"],
-            Persona.CTO: ["aws_resource", "usage", "cost"]
-        }
-        
-        relevant_concept_ids = set()
-        for persona in personas:
-            relevant_concept_ids.update(persona_mappings.get(persona, []))
+        relevant_concept_ids = self.persona_view.get_all_relevant_concept_ids(personas)
         
         ontology_mapping_count = {}
+        concept_field_mappings = {}
         for concept in ontology:
             if concept.id in relevant_concept_ids:
                 concept_id = f"ontology_{concept.id}"
-                nodes.append(GraphNode(
-                    id=concept_id,
-                    label=concept.name,
-                    level="L2",
-                    kind="ontology",
-                    group="Ontology",
-                    status="ok",
-                    metrics={"description": concept.description}
-                ))
+                concept_field_mappings[concept.id] = []
                 ontology_mapping_count[concept.id] = 0
         
         for mapping in mappings:
@@ -185,6 +177,36 @@ class DCLEngine:
                         source_mapping_count[mapping.source_system] += 1
                     if mapping.ontology_concept in ontology_mapping_count:
                         ontology_mapping_count[mapping.ontology_concept] += 1
+                    if mapping.ontology_concept in concept_field_mappings:
+                        concept_field_mappings[mapping.ontology_concept].append({
+                            "field": mapping.source_field,
+                            "table": mapping.source_table,
+                            "source": mapping.source_system,
+                            "confidence": mapping.confidence
+                        })
+        
+        for concept in ontology:
+            if concept.id in relevant_concept_ids:
+                concept_id = f"ontology_{concept.id}"
+                field_list = concept_field_mappings.get(concept.id, [])
+                contributing_fields = [f"{m['table']}.{m['field']}" for m in field_list[:3]]
+                
+                nodes.append(GraphNode(
+                    id=concept_id,
+                    label=concept.name,
+                    level="L2",
+                    kind="ontology",
+                    group="Ontology",
+                    status="ok",
+                    metrics={
+                        "description": concept.description,
+                        "input_count": ontology_mapping_count.get(concept.id, 0),
+                        "explanation": f"Derived from {len(field_list)} field(s)" if field_list else "No mappings",
+                        "contributing_fields": contributing_fields
+                    }
+                ))
+        
+        persona_concepts = self.persona_view.get_relevant_concepts(personas)
         
         for persona in personas:
             bll_id = f"bll_{persona.value.lower()}"
@@ -198,7 +220,7 @@ class DCLEngine:
                 metrics={"persona": persona.value}
             ))
             
-            relevant_concepts = persona_mappings.get(persona, [])
+            relevant_concepts = persona_concepts.get(persona.value, [])
             for concept_id in relevant_concepts:
                 concept_node_id = f"ontology_{concept_id}"
                 if ontology_mapping_count.get(concept_id, 0) > 0:

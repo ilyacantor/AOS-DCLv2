@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from typing import List, Literal, Optional
 from backend.domain import Persona, GraphSnapshot, RunMetrics
 from backend.engine import DCLEngine
+from backend.engine.schema_loader import SchemaLoader
+from backend.semantic_mapper import SemanticMapper
 
 app = FastAPI(title="DCL Engine API")
 
@@ -77,6 +79,45 @@ def get_monitor(run_id: str):
             "conflicts": []
         }
     }
+
+
+class MappingRequest(BaseModel):
+    mode: Literal["Demo", "Farm"] = "Demo"
+    mapping_mode: Literal["heuristic", "full"] = "heuristic"
+    clear_existing: bool = False
+
+
+class MappingResponse(BaseModel):
+    status: str
+    mappings_created: int
+    sources_processed: int
+    stats: dict
+
+
+@app.post("/api/dcl/batch-mapping", response_model=MappingResponse)
+def run_batch_mapping(request: MappingRequest):
+    
+    try:
+        if request.mode == "Demo":
+            sources = SchemaLoader.load_demo_schemas()
+        else:
+            sources = SchemaLoader.load_farm_schemas(engine.narration, str(uuid.uuid4()))
+        
+        semantic_mapper = SemanticMapper()
+        mappings, stats = semantic_mapper.run_mapping(
+            sources=sources,
+            mode=request.mapping_mode,
+            clear_existing=request.clear_existing
+        )
+        
+        return MappingResponse(
+            status="success",
+            mappings_created=stats['mappings_created'],
+            sources_processed=stats['sources_processed'],
+            stats=stats
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

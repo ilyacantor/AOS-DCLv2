@@ -1,0 +1,137 @@
+concepts:
+  - id: account
+    name: Account
+    description: Business account or customer entity
+    cluster: Growth
+    metadata:
+      example_fields:
+        - account_id
+        - account_name
+        - company
+        - customer_id
+        - client_id
+      expected_type: string
+      synonyms:
+        - customer
+        - client
+        - organization
+
+  - id: opportunity
+    name: Opportunity
+    description: Sales opportunity or deal
+    cluster: Growth
+    metadata:
+      example_fields:
+        - opportunity_id
+        - deal_id
+        - opportunity_name
+        - pipeline_id
+      expected_type: string
+      synonyms:
+        - deal
+        - pipeline
+        - sales_opp
+
+  - id: revenue
+    name: Revenue
+    description: Revenue or monetary amount
+    cluster: Finance
+    metadata:
+      example_fields:
+        - amount
+        - revenue
+        - total
+        - value
+        - price
+        - mrr
+        - arr
+      expected_type: float
+      synonyms:
+        - income
+        - sales
+        - billing
+
+  - id: cost
+    name: Cost
+    description: Cost or expense amount
+    cluster: Finance
+    metadata:
+      example_fields:
+        - cost
+        - spend
+        - expense
+        - price
+        - budget
+      expected_type: float
+      synonyms:
+        - expense
+        - spending
+        - expenditure
+
+  - id: aws_resource
+    name: AWS Resource
+    description: AWS cloud resource identifier
+    cluster: Infra
+    metadata:
+      example_fields:
+        - resource_id
+        - instance_id
+        - resource_type
+        - arn
+        - ec2_id
+      expected_type: string
+      synonyms:
+        - cloud_resource
+        - infrastructure
+        - instance
+
+  - id: health
+    name: Health Score
+    description: Account health or status metric
+    cluster: Ops
+    metadata:
+      example_fields:
+        - health_score
+        - status
+        - health
+        - score
+        - rating
+      expected_type: float
+      synonyms:
+        - wellness
+        - status_score
+        - health_metric
+
+  - id: usage
+    name: Usage Metrics
+    description: Usage or consumption metrics
+    cluster: Ops
+    metadata:
+      example_fields:
+        - usage
+        - consumption
+        - utilization
+        - activity
+        - volume
+      expected_type: float
+      synonyms:
+        - consumption
+        - activity
+        - throughput
+
+  - id: date
+    name: Date/Timestamp
+    description: Date or timestamp field
+    cluster: Ops
+    metadata:
+      example_fields:
+        - date
+        - timestamp
+        - created_at
+        - updated_at
+        - time
+      expected_type: datetime
+      synonyms:
+        - timestamp
+        - datetime
+        - time
