@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { GraphSnapshot, PersonaId } from '../types';
 import { Badge } from './Badge';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, Info, Database, Zap, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, Info, Database, Zap, CheckCircle2, ChevronDown, ChevronRight, Layers, Server } from 'lucide-react';
 
 interface MonitorPanelProps {
   data: GraphSnapshot | null;
@@ -13,6 +13,47 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
   const [activeTab, setActiveTab] = useState('views');
   const [ragMessages, setRagMessages] = useState<any[]>([]);
   const [ragMetrics, setRagMetrics] = useState({ llm_calls: 0, rag_reads: 0, rag_writes: 0 });
+  const [expandedSections, setExpandedSections] = useState<Record<string, { sources: boolean; ontologies: boolean }>>({});
+
+  const toggleSection = (personaId: string, section: 'sources' | 'ontologies') => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [personaId]: {
+        sources: prev[personaId]?.sources ?? false,
+        ontologies: prev[personaId]?.ontologies ?? false,
+        [section]: !(prev[personaId]?.[section] ?? false)
+      }
+    }));
+  };
+
+  const getPersonaConnections = (personaId: PersonaId) => {
+    if (!data) return { sources: [], ontologies: [] };
+    
+    const personaNodeId = `bll_${personaId.toLowerCase()}`;
+    const l2Nodes = data.nodes.filter(n => n.level === 'L2');
+    const l1Nodes = data.nodes.filter(n => n.level === 'L1');
+    
+    const connectedOntologies = l2Nodes.filter(l2 => {
+      return data.links.some(link => {
+        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+        return sourceId === l2.id && targetId === personaNodeId;
+      });
+    });
+    
+    const connectedSources = l1Nodes.filter(l1 => {
+      return data.links.some(link => {
+        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+        return sourceId === l1.id && connectedOntologies.some(o => o.id === targetId);
+      });
+    });
+    
+    return {
+      sources: connectedSources,
+      ontologies: connectedOntologies
+    };
+  };
   
   useEffect(() => {
     if (!runId) return;
@@ -102,6 +143,88 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
                     </div>
                   ))}
                 </div>
+
+                {(() => {
+                  const connections = getPersonaConnections(view.personaId);
+                  const isSourcesExpanded = expandedSections[view.personaId]?.sources ?? false;
+                  const isOntologiesExpanded = expandedSections[view.personaId]?.ontologies ?? false;
+                  
+                  return (
+                    <div className="space-y-2 pt-2 border-t border-border/30">
+                      <button
+                        onClick={() => toggleSection(view.personaId, 'sources')}
+                        className="w-full flex items-center justify-between p-2 rounded bg-secondary/20 hover:bg-secondary/40 transition-colors text-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Server className="w-4 h-4 text-cyan-400" />
+                          <span>Data Sources</span>
+                          <Badge variant="outline" className="h-5 text-[10px] px-1.5">{connections.sources.length}</Badge>
+                        </div>
+                        {isSourcesExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      </button>
+                      
+                      {isSourcesExpanded && (
+                        <div className="ml-6 space-y-1">
+                          {connections.sources.length === 0 ? (
+                            <div className="text-xs text-muted-foreground italic p-2">No data sources connected</div>
+                          ) : (
+                            connections.sources.map(source => (
+                              <div key={source.id} className="flex items-center justify-between p-2 rounded bg-secondary/10 text-xs">
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{source.label}</span>
+                                  <span className="text-[10px] text-muted-foreground">{source.group}</span>
+                                </div>
+                                <Badge className={source.status === 'ok' ? 'h-5 text-[10px]' : 'h-5 text-[10px] bg-red-500'}>
+                                  {source.status === 'ok' ? 'OK' : 'Error'}
+                                </Badge>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => toggleSection(view.personaId, 'ontologies')}
+                        className="w-full flex items-center justify-between p-2 rounded bg-secondary/20 hover:bg-secondary/40 transition-colors text-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Layers className="w-4 h-4 text-violet-400" />
+                          <span>Ontologies</span>
+                          <Badge variant="outline" className="h-5 text-[10px] px-1.5">{connections.ontologies.length}</Badge>
+                        </div>
+                        {isOntologiesExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      </button>
+                      
+                      {isOntologiesExpanded && (
+                        <div className="ml-6 space-y-1">
+                          {connections.ontologies.length === 0 ? (
+                            <div className="text-xs text-muted-foreground italic p-2">No ontology concepts mapped</div>
+                          ) : (
+                            connections.ontologies.map(onto => {
+                              const inLinks = data?.links.filter(l => {
+                                const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+                                return targetId === onto.id;
+                              }).length || 0;
+                              const metrics = onto.metrics || {};
+                              
+                              return (
+                                <div key={onto.id} className="flex items-center justify-between p-2 rounded bg-secondary/10 text-xs">
+                                  <div className="flex flex-col">
+                                    <span className="font-medium font-mono">{onto.label}</span>
+                                    {metrics.explanation && (
+                                      <span className="text-[10px] text-muted-foreground">{metrics.explanation}</span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-muted-foreground">{inLinks} inputs</span>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {(view.insights.length > 0 || view.alerts.length > 0) && (
                   <div className="space-y-2 pt-2">
