@@ -13,6 +13,14 @@ The application features:
 - Enterprise monitoring dashboard
 - Dev/Prod runtime modes with different LLM strategies
 
+## Recent Changes (November 2025)
+
+- Fixed EnterpriseDashboard `conceptSet` undefined error
+- Added support for both snake_case and camelCase API properties (flow_type/flowType)
+- Renamed `sample_limit` to `source_limit` for clarity (controls number of sources, not records)
+- Added console logging for debugging data load lifecycle
+- Data load verified working: 24 nodes (9 sources, 7 ontology, 4 personas, 4 BLL), 140 links (111 mappings)
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
