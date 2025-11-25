@@ -44,21 +44,35 @@ class DCLEngine:
         self.narration.add_message(run_id, "Engine", f"Loaded {len(ontology)} ontology concepts")
         
         semantic_mapper = SemanticMapper()
-        source_ids = [s.id for s in sources]
+        
         stored_mappings = []
-        for sid in source_ids:
-            stored_mappings.extend(semantic_mapper.get_stored_mappings(sid))
+        sources_with_mappings = set()
+        sources_needing_mappings = []
+        
+        for source in sources:
+            source_stored = semantic_mapper.get_stored_mappings(source.id)
+            if source_stored:
+                stored_mappings.extend(source_stored)
+                sources_with_mappings.add(source.id)
+            else:
+                sources_needing_mappings.append(source)
         
         if stored_mappings:
-            self.narration.add_message(run_id, "Engine", f"Using {len(stored_mappings)} stored mappings from database")
-            mappings = stored_mappings
-        else:
-            self.narration.add_message(run_id, "Engine", "No stored mappings found - running semantic mapper to create and persist mappings")
-            mappings, stats = semantic_mapper.run_mapping(sources, mode="heuristic", clear_existing=False)
+            self.narration.add_message(run_id, "Engine", f"Loaded {len(stored_mappings)} stored mappings for {len(sources_with_mappings)} sources")
+        
+        if sources_needing_mappings:
+            self.narration.add_message(
+                run_id, "Engine", 
+                f"Running semantic mapper for {len(sources_needing_mappings)} sources without stored mappings: {[s.id for s in sources_needing_mappings]}"
+            )
+            new_mappings, stats = semantic_mapper.run_mapping(sources_needing_mappings, mode="heuristic", clear_existing=False)
+            stored_mappings.extend(new_mappings)
             self.narration.add_message(
                 run_id, "Engine",
-                f"Created and persisted {stats['mappings_created']} mappings using heuristics"
+                f"Created and persisted {stats['mappings_created']} new mappings using heuristics"
             )
+        
+        mappings = stored_mappings
         
         graph = self._build_graph(mode, sources, ontology, mappings, personas, run_id)
         
