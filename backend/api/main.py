@@ -38,8 +38,8 @@ class RunResponse(BaseModel):
     run_id: str
 
 
-@app.get("/")
-def root():
+@app.get("/api/health")
+def health():
     return {"status": "DCL Engine API is running", "version": "1.0.0"}
 
 
@@ -127,17 +127,26 @@ def run_batch_mapping(request: MappingRequest):
 
 DIST_DIR = Path(__file__).parent.parent.parent / "dist"
 
-if DIST_DIR.exists():
+if DIST_DIR.exists() and (DIST_DIR / "assets").exists():
     app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
-    
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        if full_path.startswith("api/"):
-            raise HTTPException(status_code=404, detail="API route not found")
-        index_file = DIST_DIR / "index.html"
-        if index_file.exists():
-            return FileResponse(index_file)
-        raise HTTPException(status_code=404, detail="Frontend not built")
+
+
+@app.get("/")
+async def serve_root():
+    index_file = DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    return {"status": "DCL Engine API is running", "version": "1.0.0", "note": "Frontend not built"}
+
+
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="API route not found")
+    index_file = DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    raise HTTPException(status_code=404, detail="Frontend not built")
 
 
 if __name__ == "__main__":
