@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react';
 import { GraphSnapshot, PersonaId } from '../types';
 import { Badge } from './Badge';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, Info, Database, Zap, CheckCircle2, ChevronDown, ChevronRight, Layers, Server } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, Info, Database, Zap, CheckCircle2, ChevronDown, ChevronRight, Layers, Server, Table2, FileText } from 'lucide-react';
 
 interface MonitorPanelProps {
   data: GraphSnapshot | null;
   selectedPersonas: PersonaId[];
   runId?: string;
+}
+
+interface SourceHierarchy {
+  [source: string]: {
+    [table: string]: Array<{
+      field: string;
+      confidence: number;
+    }>;
+  };
 }
 
 export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProps) {
@@ -15,6 +24,8 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
   const [ragMetrics, setRagMetrics] = useState({ llm_calls: 0, rag_reads: 0, rag_writes: 0 });
   const [expandedSections, setExpandedSections] = useState<Record<string, { sources: boolean; ontologies: boolean }>>({});
   const [expandedOntologies, setExpandedOntologies] = useState<Record<string, boolean>>({});
+  const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
+  const [expandedTables, setExpandedTables] = useState<Record<string, boolean>>({});
 
   const toggleSection = (personaId: string, section: 'sources' | 'ontologies') => {
     setExpandedSections(prev => ({
@@ -34,27 +45,25 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
     }));
   };
 
-  const getOntologySourceFields = (ontologyId: string) => {
-    if (!data) return [];
-    
-    const incomingLinks = data.links.filter(link => {
-      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-      return targetId === ontologyId;
-    });
-    
-    return incomingLinks.map(link => {
-      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-      const sourceNode = data.nodes.find(n => n.id === sourceId);
-      return {
-        id: link.id,
-        sourceId,
-        sourceLabel: sourceNode?.label || sourceId,
-        sourceGroup: sourceNode?.group || '',
-        confidence: link.confidence,
-        value: link.value,
-        infoSummary: link.infoSummary
-      };
-    });
+  const toggleSource = (key: string) => {
+    setExpandedSources(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const toggleTable = (key: string) => {
+    setExpandedTables(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const getOntologySourceHierarchy = (ontologyId: string): SourceHierarchy | null => {
+    if (!data) return null;
+    const node = data.nodes.find(n => n.id === ontologyId);
+    if (!node?.metrics?.source_hierarchy) return null;
+    return node.metrics.source_hierarchy as unknown as SourceHierarchy;
   };
 
   const getPersonaConnections = (personaId: PersonaId) => {
@@ -232,8 +241,13 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
                             <div className="text-xs text-muted-foreground italic p-2">No ontology concepts mapped</div>
                           ) : (
                             connections.ontologies.map(onto => {
-                              const sourceFields = getOntologySourceFields(onto.id);
+                              const hierarchy = getOntologySourceHierarchy(onto.id);
                               const isExpanded = expandedOntologies[onto.id] ?? false;
+                              const sourceCount = hierarchy ? Object.keys(hierarchy).length : 0;
+                              const totalFields = hierarchy 
+                                ? Object.values(hierarchy).reduce((acc, tables) => 
+                                    acc + Object.values(tables).reduce((a, fields) => a + fields.length, 0), 0)
+                                : 0;
                               
                               return (
                                 <div key={onto.id} className="space-y-1">
@@ -245,34 +259,97 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
                                       {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                                       <span className="font-medium font-mono">{onto.label}</span>
                                     </div>
-                                    <Badge variant="outline" className="h-4 text-[9px] px-1">{sourceFields.length} fields</Badge>
+                                    <div className="flex items-center gap-1">
+                                      <Badge variant="outline" className="h-4 text-[9px] px-1">{sourceCount} sources</Badge>
+                                      <Badge variant="outline" className="h-4 text-[9px] px-1">{totalFields} fields</Badge>
+                                    </div>
                                   </button>
                                   
-                                  {isExpanded && (
+                                  {isExpanded && hierarchy && (
                                     <div className="ml-5 space-y-1">
-                                      {sourceFields.length === 0 ? (
+                                      {Object.keys(hierarchy).length === 0 ? (
                                         <div className="text-[10px] text-muted-foreground italic p-1.5">No source fields mapped</div>
                                       ) : (
-                                        sourceFields.map(field => (
-                                          <div key={field.id} className="flex items-center justify-between p-1.5 rounded bg-secondary/5 border border-border/20 text-[10px]">
-                                            <div className="flex flex-col">
-                                              <span className="font-medium">{field.sourceLabel}</span>
-                                              <span className="text-muted-foreground">{field.sourceGroup}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                              {field.confidence !== undefined && (
-                                                <span className={`px-1 py-0.5 rounded text-[9px] ${
-                                                  field.confidence >= 0.8 ? 'bg-green-500/20 text-green-300' :
-                                                  field.confidence >= 0.5 ? 'bg-yellow-500/20 text-yellow-300' :
-                                                  'bg-red-500/20 text-red-300'
-                                                }`}>
-                                                  {Math.round(field.confidence * 100)}%
-                                                </span>
+                                        Object.entries(hierarchy).map(([sourceName, tables]) => {
+                                          const sourceKey = `${onto.id}_${sourceName}`;
+                                          const isSourceExpanded = expandedSources[sourceKey] ?? false;
+                                          const tableCount = Object.keys(tables).length;
+                                          const fieldCount = Object.values(tables).reduce((a, f) => a + f.length, 0);
+                                          
+                                          return (
+                                            <div key={sourceKey} className="space-y-1">
+                                              <button
+                                                onClick={() => toggleSource(sourceKey)}
+                                                className="w-full flex items-center justify-between p-1.5 rounded bg-cyan-500/10 hover:bg-cyan-500/20 transition-colors text-[10px] border border-cyan-500/20"
+                                              >
+                                                <div className="flex items-center gap-2">
+                                                  {isSourceExpanded ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRight className="w-2.5 h-2.5" />}
+                                                  <Server className="w-3 h-3 text-cyan-400" />
+                                                  <span className="font-medium capitalize">{sourceName}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                  <Badge variant="outline" className="h-3.5 text-[8px] px-1">{tableCount} tables</Badge>
+                                                  <Badge variant="outline" className="h-3.5 text-[8px] px-1">{fieldCount} fields</Badge>
+                                                </div>
+                                              </button>
+                                              
+                                              {isSourceExpanded && (
+                                                <div className="ml-4 space-y-1">
+                                                  {Object.entries(tables).map(([tableName, fields]) => {
+                                                    const tableKey = `${sourceKey}_${tableName}`;
+                                                    const isTableExpanded = expandedTables[tableKey] ?? false;
+                                                    const avgConf = fields.reduce((a, f) => a + f.confidence, 0) / fields.length;
+                                                    
+                                                    return (
+                                                      <div key={tableKey} className="space-y-1">
+                                                        <button
+                                                          onClick={() => toggleTable(tableKey)}
+                                                          className="w-full flex items-center justify-between p-1.5 rounded bg-violet-500/10 hover:bg-violet-500/20 transition-colors text-[10px] border border-violet-500/20"
+                                                        >
+                                                          <div className="flex items-center gap-2">
+                                                            {isTableExpanded ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRight className="w-2.5 h-2.5" />}
+                                                            <Table2 className="w-3 h-3 text-violet-400" />
+                                                            <span className="font-medium font-mono">{tableName}</span>
+                                                          </div>
+                                                          <div className="flex items-center gap-1">
+                                                            <Badge variant="outline" className="h-3.5 text-[8px] px-1">{fields.length} fields</Badge>
+                                                            <span className={`px-1 py-0.5 rounded text-[8px] ${
+                                                              avgConf >= 0.8 ? 'bg-green-500/20 text-green-300' :
+                                                              avgConf >= 0.5 ? 'bg-yellow-500/20 text-yellow-300' :
+                                                              'bg-red-500/20 text-red-300'
+                                                            }`}>
+                                                              {Math.round(avgConf * 100)}%
+                                                            </span>
+                                                          </div>
+                                                        </button>
+                                                        
+                                                        {isTableExpanded && (
+                                                          <div className="ml-4 space-y-0.5">
+                                                            {fields.map((field, idx) => (
+                                                              <div key={idx} className="flex items-center justify-between p-1 rounded bg-secondary/5 border border-border/10 text-[9px]">
+                                                                <div className="flex items-center gap-1.5">
+                                                                  <FileText className="w-2.5 h-2.5 text-muted-foreground" />
+                                                                  <span className="font-mono">{field.field}</span>
+                                                                </div>
+                                                                <span className={`px-1 py-0.5 rounded text-[8px] ${
+                                                                  field.confidence >= 0.8 ? 'bg-green-500/20 text-green-300' :
+                                                                  field.confidence >= 0.5 ? 'bg-yellow-500/20 text-yellow-300' :
+                                                                  'bg-red-500/20 text-red-300'
+                                                                }`}>
+                                                                  {Math.round(field.confidence * 100)}%
+                                                                </span>
+                                                              </div>
+                                                            ))}
+                                                          </div>
+                                                        )}
+                                                      </div>
+                                                    );
+                                                  })}
+                                                </div>
                                               )}
-                                              <span className="text-muted-foreground">{field.value} records</span>
                                             </div>
-                                          </div>
-                                        ))
+                                          );
+                                        })
                                       )}
                                     </div>
                                   )}

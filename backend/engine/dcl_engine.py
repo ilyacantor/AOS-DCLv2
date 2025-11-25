@@ -196,6 +196,19 @@ class DCLEngine:
                 field_list = concept_field_mappings.get(concept.id, [])
                 contributing_fields = [f"{m['table']}.{m['field']}" for m in field_list[:3]]
                 
+                source_hierarchy = {}
+                for m in field_list:
+                    src = m['source']
+                    tbl = m['table']
+                    if src not in source_hierarchy:
+                        source_hierarchy[src] = {}
+                    if tbl not in source_hierarchy[src]:
+                        source_hierarchy[src][tbl] = []
+                    source_hierarchy[src][tbl].append({
+                        "field": m['field'],
+                        "confidence": m['confidence']
+                    })
+                
                 nodes.append(GraphNode(
                     id=concept_id,
                     label=concept.name,
@@ -207,7 +220,8 @@ class DCLEngine:
                         "description": concept.description,
                         "input_count": mapping_count,
                         "explanation": f"Derived from {len(field_list)} field(s)",
-                        "contributing_fields": contributing_fields
+                        "contributing_fields": contributing_fields,
+                        "source_hierarchy": source_hierarchy
                     }
                 ))
         
