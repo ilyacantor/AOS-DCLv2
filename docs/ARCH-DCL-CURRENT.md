@@ -1,7 +1,7 @@
 # DCL Architecture - Current State (Post-Refactoring)
 
-**Last Updated:** November 24, 2025  
-**Version:** 2.0 (Semantic Mapping Architecture)
+**Last Updated:** November 25, 2025  
+**Version:** 2.1 (Semantic Mapping Architecture + Interactive Drill-Down)
 
 ## Overview
 
@@ -151,6 +151,90 @@ The system now:
 - Narration service
 - Monitor panel
 
+## Frontend Features (November 2025)
+
+### Interactive Drill-Down (Monitor Panel)
+
+The Monitor panel provides a 3-level drill-down for exploring data lineage:
+
+**Persona Views Tab:**
+1. **Level 1 - Ontology Concepts:** Click to expand and see contributing sources
+2. **Level 2 - Source Systems:** Click to expand and see tables with mapped fields
+3. **Level 3 - Fields:** Click for full mapping details
+
+**Detail Panel Modal:**
+- Click info icons on any level to view:
+  - Source details: type, status, table count, total fields
+  - Table details: parent source, mapped fields with confidence
+  - Field details: full path (source→table→field), confidence bar, mapping explanation
+
+**Key Design:** Only mapped fields are shown (not raw schema), reflecting actual data flow through DCL.
+
+### Source Hierarchy Data Structure
+
+The backend provides `source_hierarchy` in L2 ontology node metrics:
+
+```json
+{
+  "source_hierarchy": {
+    "salesforce": {
+      "accounts": [
+        {"field": "account_name", "confidence": 0.95},
+        {"field": "account_id", "confidence": 0.92}
+      ]
+    },
+    "dynamics": {
+      "customers": [
+        {"field": "customername", "confidence": 0.88}
+      ]
+    }
+  }
+}
+```
+
+This enables the UI to show exactly which source→table→field combinations contribute to each ontology concept.
+
+## Source Data Requirements
+
+For DCL to properly map and visualize data sources, the following information is needed:
+
+### Required Fields
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `source_id` | Unique identifier for the source system | `salesforce`, `dynamics_erp`, `snowflake_dw` |
+| `source_type` | Category of the source | `crm`, `erp`, `datawarehouse`, `nosql`, `api` |
+| `vendor` | Platform/vendor name | `Salesforce`, `Microsoft Dynamics`, `Snowflake` |
+| `tables` | List of table schemas | See below |
+
+### Table Schema
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `table_name` | Name of the table/collection | `accounts`, `invoices`, `customers` |
+| `fields` | List of field definitions | See below |
+
+### Field Schema
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `field_name` | Name of the field/column | `account_name`, `total_amount` |
+| `field_type` | Data type | `string`, `number`, `date`, `boolean` |
+| `semantic_hints` | Optional hints for mapping | `is_identifier`, `is_currency`, `is_date` |
+
+### Why Vendor/Platform ID Matters
+
+Different vendors have distinct conventions that affect mapping accuracy:
+
+| Vendor | Account Field | Date Format | ID Pattern |
+|--------|--------------|-------------|------------|
+| Salesforce | `AccountName` | `CreatedDate` | `001...` (15/18 char) |
+| Dynamics | `accountname` | `createdon` | GUID |
+| HubSpot | `company_name` | `created_at` | Integer |
+| PostgreSQL | `account_name` | `created_at` | Serial/UUID |
+
+With vendor identification, DCL can apply vendor-specific mapping heuristics instead of generic pattern matching, significantly improving accuracy.
+
 ## Future Enhancements
 
 1. **Full 3-Stage Pipeline:** Add RAG and LLM stages to semantic mapper
@@ -158,3 +242,4 @@ The system now:
 3. **Confidence Thresholds:** Filter low-confidence mappings
 4. **Conflict Resolution:** Handle multiple concepts matching same field
 5. **Cluster-Based Views:** Allow filtering by concept cluster (Finance, Growth, Infra, Ops)
+6. **Vendor-Specific Mapping:** Apply platform-specific conventions based on source vendor ID
