@@ -105,17 +105,28 @@ Preferred communication style: Simple, everyday language.
 - **HTTP Integration**: Uses httpx library to fetch real-time synthetic data from AOS-Farm platform at https://autonomos.farm/
 - **Environment Variable**: FARM_API_URL (default: https://autonomos.farm)
 - **Configurable Sample Limit**: UI dropdown to select records per source (5, 10, 25, 50, 100) - appears only in Farm mode
-- **Data Sources**: 5 Farm API endpoints automatically discovered and loaded:
-  1. Enterprise Assets (`/api/synthetic`) - Applications, services, hosts (requires Farm test scenarios to generate)
-  2. CRM Customers (`/api/synthetic/customers?generate=true`) - Auto-generates customer data with 11+ fields
-  3. ERP Invoices (`/api/synthetic/invoices?generate=true`) - Auto-generates invoices linked to customers via FK
-  4. Time-Series Events (`/api/synthetic/events?generate=force`) - Logs, network flows, auth events
-  5. Mock CRM API (`/api/synthetic/crm/accounts`) - Simulated external CRM system (derives from assets)
-- **Schema Inference**: Automatically infers TableSchema/FieldSchema from JSON responses by unioning keys across all sample records
-- **Error Handling**: Graceful handling of empty datasets - sources with no data show 0 fields but remain visible in graph
-- **Narration**: Real-time status messages for each source ("Loaded X sample records, inferred Y fields" or "Empty dataset returned")
+
+**Vendor-Based Source Identification (November 2025):**
+- Farm data now includes `sourceSystem` field identifying the originating vendor
+- DCL groups records by vendor instead of by endpoint, creating separate SourceSystem objects
+- Supported vendors with proper display names and types:
+  - **CRM**: Salesforce, Dynamics 365, HubSpot, Zoho CRM
+  - **ERP**: NetSuite, SAP, Oracle
+  - **Accounting**: Xero, QuickBooks
+  - **DataWarehouse**: Snowflake, Databricks, BigQuery
+  - **Database**: PostgreSQL, MySQL, Supabase
+  - **NoSQL**: MongoDB
+- Enables vendor-specific mapping heuristics for improved accuracy
+- Sankey graph shows actual vendor names (e.g., "NetSuite", "Oracle", "SAP") instead of generic labels
+
+**Data Sources**: 5 Farm API endpoints:
+  1. Enterprise Assets (`/api/synthetic`) - Applications, services, hosts
+  2. CRM Customers (`/api/synthetic/customers`) - Customer data with vendor identification
+  3. ERP Invoices (`/api/synthetic/invoices`) - Invoices with vendor identification
+  4. Time-Series Events (`/api/synthetic/events`) - Logs, network flows, auth events
+  5. Mock CRM API (`/api/synthetic/crm/accounts`) - Simulated external CRM system
+- **Schema Inference**: Automatically infers TableSchema/FieldSchema from JSON responses
 - **Tenant Isolation**: Farm uses IP-based session tenants - no manual auth required for MVP
-- **Data Availability**: Customers and invoices auto-generate on first request; assets/events require Farm test scenarios to be run first
 
 ### Data Storage Solutions
 
