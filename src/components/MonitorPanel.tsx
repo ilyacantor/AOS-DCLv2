@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { GraphSnapshot, PersonaId } from '../types';
 import { Badge } from './Badge';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, Info, Database, Zap, CheckCircle2, ChevronDown, ChevronRight, Layers, Server, Table2, FileText } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, Info, Database, Zap, CheckCircle2, ChevronDown, ChevronRight, Layers, Server, Table2, FileText, X, ArrowRight } from 'lucide-react';
 
 interface MonitorPanelProps {
   data: GraphSnapshot | null;
@@ -18,6 +18,16 @@ interface SourceHierarchy {
   };
 }
 
+interface DetailSelection {
+  type: 'source' | 'table' | 'field';
+  ontologyId: string;
+  ontologyLabel: string;
+  sourceName: string;
+  tableName?: string;
+  fieldName?: string;
+  confidence?: number;
+}
+
 export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProps) {
   const [activeTab, setActiveTab] = useState('views');
   const [ragMessages, setRagMessages] = useState<any[]>([]);
@@ -26,6 +36,7 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
   const [expandedOntologies, setExpandedOntologies] = useState<Record<string, boolean>>({});
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
   const [expandedTables, setExpandedTables] = useState<Record<string, boolean>>({});
+  const [selectedDetail, setSelectedDetail] = useState<DetailSelection | null>(null);
 
   const toggleSection = (personaId: string, section: 'sources' | 'ontologies') => {
     setExpandedSections(prev => ({
@@ -64,6 +75,12 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
     const node = data.nodes.find(n => n.id === ontologyId);
     if (!node?.metrics?.source_hierarchy) return null;
     return node.metrics.source_hierarchy as unknown as SourceHierarchy;
+  };
+
+  const getSourceNode = (sourceName: string) => {
+    if (!data) return null;
+    const expectedId = `source_${sourceName}`;
+    return data.nodes.find(n => n.level === 'L1' && n.id === expectedId);
   };
 
   const getPersonaConnections = (personaId: PersonaId) => {
@@ -128,13 +145,181 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
 
   const activePersonaViews = data.meta.personaViews?.filter(pv => selectedPersonas.includes(pv.personaId)) || [];
 
+  const DetailPanel = () => {
+    if (!selectedDetail) return null;
+    
+    const sourceNode = getSourceNode(selectedDetail.sourceName);
+    const hierarchy = getOntologySourceHierarchy(selectedDetail.ontologyId);
+    
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSelectedDetail(null)}>
+        <div className="bg-card border border-border rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <div className="flex items-center gap-2">
+              {selectedDetail.type === 'source' && <Server className="w-5 h-5 text-cyan-400" />}
+              {selectedDetail.type === 'table' && <Table2 className="w-5 h-5 text-violet-400" />}
+              {selectedDetail.type === 'field' && <FileText className="w-5 h-5 text-emerald-400" />}
+              <h3 className="font-semibold">
+                {selectedDetail.type === 'source' && selectedDetail.sourceName}
+                {selectedDetail.type === 'table' && selectedDetail.tableName}
+                {selectedDetail.type === 'field' && selectedDetail.fieldName}
+              </h3>
+            </div>
+            <button onClick={() => setSelectedDetail(null)} className="p-1 hover:bg-secondary rounded">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <div className="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Layers className="w-3 h-3" />
+              <span>Maps to</span>
+              <ArrowRight className="w-3 h-3" />
+              <Badge variant="outline">{selectedDetail.ontologyLabel}</Badge>
+            </div>
+            
+            {selectedDetail.type === 'source' && sourceNode && (
+              <>
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Source Details</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="bg-secondary/30 rounded p-2">
+                      <div className="text-[10px] text-muted-foreground uppercase">Type</div>
+                      <div className="font-medium">{sourceNode.group}</div>
+                    </div>
+                    <div className="bg-secondary/30 rounded p-2">
+                      <div className="text-[10px] text-muted-foreground uppercase">Status</div>
+                      <div className="font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-green-400" />
+                        {sourceNode.status === 'ok' ? 'Connected' : 'Error'}
+                      </div>
+                    </div>
+                    <div className="bg-secondary/30 rounded p-2">
+                      <div className="text-[10px] text-muted-foreground uppercase">Tables</div>
+                      <div className="font-medium">{sourceNode.metrics?.tables || 0}</div>
+                    </div>
+                    <div className="bg-secondary/30 rounded p-2">
+                      <div className="text-[10px] text-muted-foreground uppercase">Total Fields</div>
+                      <div className="font-medium">{sourceNode.metrics?.fields || 0}</div>
+                    </div>
+                  </div>
+                </div>
+                
+                {hierarchy && hierarchy[selectedDetail.sourceName] && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-muted-foreground">Tables in this mapping</h4>
+                    <div className="space-y-1">
+                      {Object.entries(hierarchy[selectedDetail.sourceName]).map(([tableName, fields]) => (
+                        <div key={tableName} className="flex items-center justify-between p-2 bg-violet-500/10 rounded border border-violet-500/20 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Table2 className="w-3 h-3 text-violet-400" />
+                            <span className="font-mono">{tableName}</span>
+                          </div>
+                          <Badge variant="outline" className="text-[10px]">{fields.length} fields</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            
+            {selectedDetail.type === 'table' && hierarchy && selectedDetail.tableName && (
+              <>
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Table Details</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="bg-secondary/30 rounded p-2">
+                      <div className="text-[10px] text-muted-foreground uppercase">Source</div>
+                      <div className="font-medium capitalize">{selectedDetail.sourceName}</div>
+                    </div>
+                    <div className="bg-secondary/30 rounded p-2">
+                      <div className="text-[10px] text-muted-foreground uppercase">Mapped Fields</div>
+                      <div className="font-medium">
+                        {hierarchy[selectedDetail.sourceName]?.[selectedDetail.tableName]?.length || 0}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Field Mappings</h4>
+                  <div className="space-y-1">
+                    {hierarchy[selectedDetail.sourceName]?.[selectedDetail.tableName]?.map((field, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-secondary/20 rounded text-sm">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-3 h-3 text-muted-foreground" />
+                          <span className="font-mono">{field.field}</span>
+                        </div>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                          field.confidence >= 0.8 ? 'bg-green-500/20 text-green-300' :
+                          field.confidence >= 0.5 ? 'bg-yellow-500/20 text-yellow-300' :
+                          'bg-red-500/20 text-red-300'
+                        }`}>
+                          {Math.round(field.confidence * 100)}% confidence
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+            
+            {selectedDetail.type === 'field' && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground">Field Details</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="bg-secondary/30 rounded p-2">
+                    <div className="text-[10px] text-muted-foreground uppercase">Source</div>
+                    <div className="font-medium capitalize">{selectedDetail.sourceName}</div>
+                  </div>
+                  <div className="bg-secondary/30 rounded p-2">
+                    <div className="text-[10px] text-muted-foreground uppercase">Table</div>
+                    <div className="font-medium font-mono">{selectedDetail.tableName}</div>
+                  </div>
+                  <div className="bg-secondary/30 rounded p-2 col-span-2">
+                    <div className="text-[10px] text-muted-foreground uppercase">Mapping Confidence</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full ${
+                            (selectedDetail.confidence || 0) >= 0.8 ? 'bg-green-500' :
+                            (selectedDetail.confidence || 0) >= 0.5 ? 'bg-yellow-500' :
+                            'bg-red-500'
+                          }`}
+                          style={{ width: `${(selectedDetail.confidence || 0) * 100}%` }}
+                        />
+                      </div>
+                      <span className="font-medium">{Math.round((selectedDetail.confidence || 0) * 100)}%</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded">
+                  <div className="flex items-start gap-2 text-xs">
+                    <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-blue-400" />
+                    <div>
+                      <p className="text-blue-200">
+                        This field from <span className="font-medium">{selectedDetail.tableName}</span> is mapped to 
+                        the <span className="font-medium">{selectedDetail.ontologyLabel}</span> ontology concept 
+                        with {Math.round((selectedDetail.confidence || 0) * 100)}% confidence.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="h-full flex flex-col bg-sidebar/30">
       <div className="px-4 pt-4 pb-2 border-b">
         <div className="flex gap-2">
           <button onClick={() => setActiveTab('views')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'views' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Persona Views</button>
-          <button onClick={() => setActiveTab('sources')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'sources' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Sources</button>
-          <button onClick={() => setActiveTab('ontology')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'ontology' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Ontology</button>
           <button onClick={() => setActiveTab('rag')} className={`text-sm px-3 py-1 rounded-md transition-colors ${activeTab === 'rag' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>RAG History</button>
         </div>
       </div>
@@ -214,9 +399,14 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
                                   <span className="font-medium">{source.label}</span>
                                   <span className="text-[10px] text-muted-foreground">{source.group}</span>
                                 </div>
-                                <Badge className={source.status === 'ok' ? 'h-5 text-[10px]' : 'h-5 text-[10px] bg-red-500'}>
-                                  {source.status === 'ok' ? 'OK' : 'Error'}
-                                </Badge>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {source.metrics?.tables || 0} tables, {source.metrics?.fields || 0} fields
+                                  </span>
+                                  <Badge className={source.status === 'ok' ? 'h-5 text-[10px]' : 'h-5 text-[10px] bg-red-500'}>
+                                    {source.status === 'ok' ? 'OK' : 'Error'}
+                                  </Badge>
+                                </div>
                               </div>
                             ))
                           )}
@@ -278,20 +468,34 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
                                           
                                           return (
                                             <div key={sourceKey} className="space-y-1">
-                                              <button
-                                                onClick={() => toggleSource(sourceKey)}
-                                                className="w-full flex items-center justify-between p-1.5 rounded bg-cyan-500/10 hover:bg-cyan-500/20 transition-colors text-[10px] border border-cyan-500/20"
-                                              >
-                                                <div className="flex items-center gap-2">
-                                                  {isSourceExpanded ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRight className="w-2.5 h-2.5" />}
-                                                  <Server className="w-3 h-3 text-cyan-400" />
-                                                  <span className="font-medium capitalize">{sourceName}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                  <Badge variant="outline" className="h-3.5 text-[8px] px-1">{tableCount} tables</Badge>
-                                                  <Badge variant="outline" className="h-3.5 text-[8px] px-1">{fieldCount} fields</Badge>
-                                                </div>
-                                              </button>
+                                              <div className="flex items-center gap-1">
+                                                <button
+                                                  onClick={() => toggleSource(sourceKey)}
+                                                  className="flex-1 flex items-center justify-between p-1.5 rounded-l bg-cyan-500/10 hover:bg-cyan-500/20 transition-colors text-[10px] border border-cyan-500/20 border-r-0"
+                                                >
+                                                  <div className="flex items-center gap-2">
+                                                    {isSourceExpanded ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRight className="w-2.5 h-2.5" />}
+                                                    <Server className="w-3 h-3 text-cyan-400" />
+                                                    <span className="font-medium capitalize">{sourceName}</span>
+                                                  </div>
+                                                  <div className="flex items-center gap-1">
+                                                    <Badge variant="outline" className="h-3.5 text-[8px] px-1">{tableCount} tables</Badge>
+                                                    <Badge variant="outline" className="h-3.5 text-[8px] px-1">{fieldCount} fields</Badge>
+                                                  </div>
+                                                </button>
+                                                <button
+                                                  onClick={() => setSelectedDetail({
+                                                    type: 'source',
+                                                    ontologyId: onto.id,
+                                                    ontologyLabel: onto.label,
+                                                    sourceName
+                                                  })}
+                                                  className="p-1.5 rounded-r bg-cyan-500/10 hover:bg-cyan-500/30 transition-colors border border-cyan-500/20 border-l-0"
+                                                  title="View details"
+                                                >
+                                                  <Info className="w-3 h-3 text-cyan-400" />
+                                                </button>
+                                              </div>
                                               
                                               {isSourceExpanded && (
                                                 <div className="ml-4 space-y-1">
@@ -302,31 +506,58 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
                                                     
                                                     return (
                                                       <div key={tableKey} className="space-y-1">
-                                                        <button
-                                                          onClick={() => toggleTable(tableKey)}
-                                                          className="w-full flex items-center justify-between p-1.5 rounded bg-violet-500/10 hover:bg-violet-500/20 transition-colors text-[10px] border border-violet-500/20"
-                                                        >
-                                                          <div className="flex items-center gap-2">
-                                                            {isTableExpanded ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRight className="w-2.5 h-2.5" />}
-                                                            <Table2 className="w-3 h-3 text-violet-400" />
-                                                            <span className="font-medium font-mono">{tableName}</span>
-                                                          </div>
-                                                          <div className="flex items-center gap-1">
-                                                            <Badge variant="outline" className="h-3.5 text-[8px] px-1">{fields.length} fields</Badge>
-                                                            <span className={`px-1 py-0.5 rounded text-[8px] ${
-                                                              avgConf >= 0.8 ? 'bg-green-500/20 text-green-300' :
-                                                              avgConf >= 0.5 ? 'bg-yellow-500/20 text-yellow-300' :
-                                                              'bg-red-500/20 text-red-300'
-                                                            }`}>
-                                                              {Math.round(avgConf * 100)}%
-                                                            </span>
-                                                          </div>
-                                                        </button>
+                                                        <div className="flex items-center gap-1">
+                                                          <button
+                                                            onClick={() => toggleTable(tableKey)}
+                                                            className="flex-1 flex items-center justify-between p-1.5 rounded-l bg-violet-500/10 hover:bg-violet-500/20 transition-colors text-[10px] border border-violet-500/20 border-r-0"
+                                                          >
+                                                            <div className="flex items-center gap-2">
+                                                              {isTableExpanded ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRight className="w-2.5 h-2.5" />}
+                                                              <Table2 className="w-3 h-3 text-violet-400" />
+                                                              <span className="font-medium font-mono">{tableName}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                              <Badge variant="outline" className="h-3.5 text-[8px] px-1">{fields.length} fields</Badge>
+                                                              <span className={`px-1 py-0.5 rounded text-[8px] ${
+                                                                avgConf >= 0.8 ? 'bg-green-500/20 text-green-300' :
+                                                                avgConf >= 0.5 ? 'bg-yellow-500/20 text-yellow-300' :
+                                                                'bg-red-500/20 text-red-300'
+                                                              }`}>
+                                                                {Math.round(avgConf * 100)}%
+                                                              </span>
+                                                            </div>
+                                                          </button>
+                                                          <button
+                                                            onClick={() => setSelectedDetail({
+                                                              type: 'table',
+                                                              ontologyId: onto.id,
+                                                              ontologyLabel: onto.label,
+                                                              sourceName,
+                                                              tableName
+                                                            })}
+                                                            className="p-1.5 rounded-r bg-violet-500/10 hover:bg-violet-500/30 transition-colors border border-violet-500/20 border-l-0"
+                                                            title="View details"
+                                                          >
+                                                            <Info className="w-3 h-3 text-violet-400" />
+                                                          </button>
+                                                        </div>
                                                         
                                                         {isTableExpanded && (
                                                           <div className="ml-4 space-y-0.5">
                                                             {fields.map((field, idx) => (
-                                                              <div key={idx} className="flex items-center justify-between p-1 rounded bg-secondary/5 border border-border/10 text-[9px]">
+                                                              <button
+                                                                key={idx}
+                                                                onClick={() => setSelectedDetail({
+                                                                  type: 'field',
+                                                                  ontologyId: onto.id,
+                                                                  ontologyLabel: onto.label,
+                                                                  sourceName,
+                                                                  tableName,
+                                                                  fieldName: field.field,
+                                                                  confidence: field.confidence
+                                                                })}
+                                                                className="w-full flex items-center justify-between p-1 rounded bg-secondary/5 hover:bg-secondary/20 border border-border/10 text-[9px] transition-colors"
+                                                              >
                                                                 <div className="flex items-center gap-1.5">
                                                                   <FileText className="w-2.5 h-2.5 text-muted-foreground" />
                                                                   <span className="font-mono">{field.field}</span>
@@ -338,7 +569,7 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
                                                                 }`}>
                                                                   {Math.round(field.confidence * 100)}%
                                                                 </span>
-                                                              </div>
+                                                              </button>
                                                             ))}
                                                           </div>
                                                         )}
@@ -382,36 +613,6 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
               </div>
             ))}
           </>
-        )}
-
-
-        {activeTab === 'sources' && (
-          <div className="bg-card/50 rounded divide-y">
-            {data.nodes.filter(n => n.level === 'L1').map(node => (
-              <div key={node.id} className="p-3 flex items-center justify-between text-sm hover:bg-secondary/20 transition-colors">
-                <div className="flex flex-col">
-                  <span className="font-medium">{node.label}</span>
-                  <span className="text-[10px] text-muted-foreground">{node.group}</span>
-                </div>
-                <Badge className={node.status === 'ok' ? '' : 'bg-red-500'}>{node.status === 'ok' ? 'Connected' : 'Error'}</Badge>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'ontology' && (
-          <div className="bg-card/50 rounded divide-y">
-            {data.nodes.filter(n => n.level === 'L2').map(node => (
-              <div key={node.id} className="p-3 flex items-center justify-between text-sm hover:bg-secondary/20 transition-colors">
-                <span className="font-medium font-mono text-xs">{node.label}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground">
-                    {data.links.filter(l => (typeof l.target === 'string' ? l.target : (l.target as any).id) === node.id).length} in / {data.links.filter(l => (typeof l.source === 'string' ? l.source : (l.source as any).id) === node.id).length} out
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
         )}
 
         {activeTab === 'rag' && (
@@ -479,6 +680,8 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
           </div>
         )}
       </div>
+      
+      <DetailPanel />
     </div>
   );
 }
