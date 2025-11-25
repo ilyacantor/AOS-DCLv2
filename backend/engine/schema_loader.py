@@ -88,6 +88,25 @@ class SchemaLoader:
         
         return sources
     
+    VENDOR_METADATA = {
+        "salesforce": {"name": "Salesforce", "type": "CRM"},
+        "dynamics": {"name": "Dynamics 365", "type": "CRM"},
+        "hubspot": {"name": "HubSpot", "type": "CRM"},
+        "zoho": {"name": "Zoho CRM", "type": "CRM"},
+        "netsuite": {"name": "NetSuite", "type": "ERP"},
+        "sap": {"name": "SAP", "type": "ERP"},
+        "oracle": {"name": "Oracle", "type": "ERP"},
+        "xero": {"name": "Xero", "type": "Accounting"},
+        "quickbooks": {"name": "QuickBooks", "type": "Accounting"},
+        "snowflake": {"name": "Snowflake", "type": "DataWarehouse"},
+        "databricks": {"name": "Databricks", "type": "DataWarehouse"},
+        "bigquery": {"name": "BigQuery", "type": "DataWarehouse"},
+        "mongodb": {"name": "MongoDB", "type": "NoSQL"},
+        "postgres": {"name": "PostgreSQL", "type": "Database"},
+        "mysql": {"name": "MySQL", "type": "Database"},
+        "supabase": {"name": "Supabase", "type": "Database"},
+    }
+
     @staticmethod
     def load_farm_schemas(narration=None, run_id: Optional[str] = None, sample_limit: int = 5) -> List[SourceSystem]:
         farm_url = os.getenv("FARM_API_URL", "https://autonomos.farm")
@@ -95,68 +114,108 @@ class SchemaLoader:
         if narration and run_id:
             narration.add_message(run_id, "SchemaLoader", f"Fetching Farm schemas from {farm_url} (limit={sample_limit})")
         
-        farm_sources = [
+        farm_endpoints = [
             {
-                "id": "farm_assets",
-                "name": "Enterprise Assets",
-                "type": "Assets",
                 "endpoint": "/api/synthetic",
                 "table_name": "assets",
-                "generate_params": {}
+                "generate_params": {},
+                "fallback_vendor": "farm_assets",
+                "fallback_type": "Assets"
             },
             {
-                "id": "farm_customers",
-                "name": "CRM Customers",
-                "type": "CRM",
                 "endpoint": "/api/synthetic/customers",
                 "table_name": "customers",
-                "generate_params": {"generate": "true", "scale": "medium"}
+                "generate_params": {"generate": "true", "scale": "medium"},
+                "fallback_vendor": "farm_customers",
+                "fallback_type": "CRM"
             },
             {
-                "id": "farm_invoices",
-                "name": "ERP Invoices",
-                "type": "ERP",
                 "endpoint": "/api/synthetic/invoices",
                 "table_name": "invoices",
-                "generate_params": {"generate": "true"}
+                "generate_params": {"generate": "true"},
+                "fallback_vendor": "farm_invoices",
+                "fallback_type": "ERP"
             },
             {
-                "id": "farm_events",
-                "name": "Time-Series Events",
-                "type": "Events",
                 "endpoint": "/api/synthetic/events",
                 "table_name": "events",
-                "generate_params": {"generate": "force", "eventType": "log", "pattern": "hourly"}
+                "generate_params": {"generate": "force", "eventType": "log", "pattern": "hourly"},
+                "fallback_vendor": "farm_events",
+                "fallback_type": "Events"
             },
             {
-                "id": "farm_crm_mock",
-                "name": "Mock CRM API",
-                "type": "CRM",
                 "endpoint": "/api/synthetic/crm/accounts",
                 "table_name": "accounts",
-                "generate_params": {}
+                "generate_params": {},
+                "fallback_vendor": "farm_crm_mock",
+                "fallback_type": "CRM"
             }
         ]
         
-        sources = []
+        vendor_records: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
         
-        for source_config in farm_sources:
-            source_system = SchemaLoader._fetch_farm_source(farm_url, source_config, narration, run_id, sample_limit)
-            sources.append(source_system)
+        for endpoint_config in farm_endpoints:
+            records = SchemaLoader._fetch_farm_endpoint(
+                farm_url, endpoint_config, narration, run_id, sample_limit
+            )
+            
+            if not records:
+                continue
+            
+            for record in records:
+                vendor = record.get("sourceSystem", endpoint_config["fallback_vendor"])
+                table_name = endpoint_config["table_name"]
+                
+                if vendor not in vendor_records:
+                    vendor_records[vendor] = {}
+                if table_name not in vendor_records[vendor]:
+                    vendor_records[vendor][table_name] = []
+                vendor_records[vendor][table_name].append(record)
+        
+        sources = []
+        for vendor_id, tables_data in vendor_records.items():
+            vendor_meta = SchemaLoader.VENDOR_METADATA.get(vendor_id, {})
+            vendor_name = vendor_meta.get("name", vendor_id.replace("_", " ").title())
+            vendor_type = vendor_meta.get("type", "Unknown")
+            
+            tables = []
+            for table_name, records in tables_data.items():
+                table_schema = SchemaLoader._infer_table_schema_from_json(
+                    records, vendor_id, table_name, len(records)
+                )
+                tables.append(table_schema)
+            
+            source = SourceSystem(
+                id=vendor_id,
+                name=vendor_name,
+                type=vendor_type,
+                tags=["farm", "synthetic", vendor_type.lower()],
+                tables=tables
+            )
+            sources.append(source)
+            
+            if narration and run_id:
+                total_fields = sum(len(t.fields) for t in tables)
+                narration.add_message(
+                    run_id, "SchemaLoader", 
+                    f"Vendor {vendor_name}: {len(tables)} tables, {total_fields} fields"
+                )
         
         if narration and run_id:
-            narration.add_message(run_id, "SchemaLoader", f"Loaded {len(sources)} Farm sources (including empty ones)")
+            narration.add_message(run_id, "SchemaLoader", f"Loaded {len(sources)} vendor sources from Farm")
         
         return sources
     
     @staticmethod
-    def _fetch_farm_source(base_url: str, config: Dict[str, Any], narration=None, run_id: Optional[str] = None, sample_limit: int = 5) -> SourceSystem:
+    def _fetch_farm_endpoint(
+        base_url: str, 
+        config: Dict[str, Any], 
+        narration=None, 
+        run_id: Optional[str] = None, 
+        sample_limit: int = 5
+    ) -> List[Dict[str, Any]]:
         endpoint = config["endpoint"]
         params = {**config.get("generate_params", {}), "limit": sample_limit}
-        
-        sample_records = []
-        total_count = 0
-        error_message = None
         
         try:
             with httpx.Client(timeout=30.0) as client:
@@ -165,56 +224,29 @@ class SchemaLoader:
                 data = response.json()
                 
                 if isinstance(data, list):
-                    sample_records = data
-                    total_count = len(data)
+                    return data
                 elif isinstance(data, dict) and "data" in data:
-                    sample_records = data["data"]
-                    total_count = data.get("total", len(sample_records))
+                    return data["data"]
                 elif isinstance(data, dict) and "error" in data:
-                    error_message = f"API returned error: {data['error']}"
                     if narration and run_id:
-                        narration.add_message(run_id, "SchemaLoader", f"Farm source {config['id']}: {error_message}")
+                        narration.add_message(run_id, "SchemaLoader", f"Farm {endpoint}: {data['error']}")
+                    return []
                 else:
-                    error_message = f"Unexpected response format: {type(data)}"
-                    if narration and run_id:
-                        narration.add_message(run_id, "SchemaLoader", f"Farm source {config['id']}: {error_message}")
-                
-                if not sample_records:
-                    if narration and run_id:
-                        narration.add_message(run_id, "SchemaLoader", f"Farm source {config['id']}: Empty dataset returned, creating minimal schema")
-                
+                    return []
+                    
         except httpx.HTTPStatusError as e:
-            error_message = f"HTTP {e.response.status_code} error: {str(e)}"
             if narration and run_id:
-                narration.add_message(run_id, "SchemaLoader", f"Farm source {config['id']}: {error_message}")
-        except httpx.TimeoutException as e:
-            error_message = f"Request timeout: {str(e)}"
+                narration.add_message(run_id, "SchemaLoader", f"Farm {endpoint}: HTTP {e.response.status_code}")
+            return []
+        except httpx.TimeoutException:
             if narration and run_id:
-                narration.add_message(run_id, "SchemaLoader", f"Farm source {config['id']}: {error_message}")
+                narration.add_message(run_id, "SchemaLoader", f"Farm {endpoint}: Timeout")
+            return []
         except Exception as e:
-            error_message = f"Unexpected error: {str(e)}"
             if narration and run_id:
-                narration.add_message(run_id, "SchemaLoader", f"Farm source {config['id']}: {error_message}")
-        
-        table_schema = SchemaLoader._infer_table_schema_from_json(
-            sample_records,
-            config["id"],
-            config["table_name"],
-            total_count
-        )
-        
-        source_system = SourceSystem(
-            id=config["id"],
-            name=config["name"],
-            type=config["type"],
-            tags=["farm", "synthetic", config["type"].lower()],
-            tables=[table_schema]
-        )
-        
-        if narration and run_id and sample_records:
-            narration.add_message(run_id, "SchemaLoader", f"Farm source {config['id']}: Loaded {len(sample_records)} sample records, inferred {len(table_schema.fields)} fields")
-        
-        return source_system
+                narration.add_message(run_id, "SchemaLoader", f"Farm {endpoint}: {str(e)}")
+            return []
+    
     
     @staticmethod
     def _infer_table_schema_from_json(
