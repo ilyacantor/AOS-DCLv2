@@ -188,6 +188,10 @@ class DCLEngine:
         
         for concept in ontology:
             if concept.id in relevant_concept_ids:
+                mapping_count = ontology_mapping_count.get(concept.id, 0)
+                if mapping_count == 0:
+                    continue
+                
                 concept_id = f"ontology_{concept.id}"
                 field_list = concept_field_mappings.get(concept.id, [])
                 contributing_fields = [f"{m['table']}.{m['field']}" for m in field_list[:3]]
@@ -201,8 +205,8 @@ class DCLEngine:
                     status="ok",
                     metrics={
                         "description": concept.description,
-                        "input_count": ontology_mapping_count.get(concept.id, 0),
-                        "explanation": f"Derived from {len(field_list)} field(s)" if field_list else "No mappings",
+                        "input_count": mapping_count,
+                        "explanation": f"Derived from {len(field_list)} field(s)",
                         "contributing_fields": contributing_fields
                     }
                 ))
