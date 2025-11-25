@@ -53,7 +53,7 @@ class Mapping(BaseModel):
     source_system: str
     ontology_concept: str
     confidence: float = Field(ge=0.0, le=1.0)
-    method: Literal["heuristic", "rag", "llm"]
+    method: Literal["heuristic", "rag", "llm", "llm_validated"]
     status: Literal["ok", "conflict", "warning"] = "ok"
     rationale: Optional[str] = None
 

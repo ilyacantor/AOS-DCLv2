@@ -158,7 +158,8 @@ Respond in JSON format:
         self,
         mappings: List[Dict[str, Any]],
         ontology_concepts: List[Dict[str, Any]],
-        confidence_threshold: float = 0.85
+        confidence_threshold: float = 0.80,
+        max_validations: int = 10
     ) -> Tuple[List[ValidationResult], Dict[str, Any]]:
         
         results = []
@@ -166,22 +167,28 @@ Respond in JSON format:
             'total_validated': 0,
             'corrections_made': 0,
             'skipped_high_confidence': 0,
+            'skipped_limit_reached': 0,
             'errors': 0
         }
         
-        for mapping in mappings:
-            confidence = mapping.get('confidence', 0)
-            
-            if confidence >= confidence_threshold:
-                stats['skipped_high_confidence'] += 1
-                continue
-            
+        low_confidence_mappings = [
+            m for m in mappings 
+            if m.get('confidence', 0) < confidence_threshold
+        ]
+        low_confidence_mappings.sort(key=lambda x: x.get('confidence', 0))
+        
+        stats['skipped_high_confidence'] = len(mappings) - len(low_confidence_mappings)
+        
+        to_validate = low_confidence_mappings[:max_validations]
+        stats['skipped_limit_reached'] = max(0, len(low_confidence_mappings) - max_validations)
+        
+        for mapping in to_validate:
             result = self.validate_mapping(
                 field_name=mapping.get('field_name', mapping.get('source_field', '')),
                 table_name=mapping.get('table_name', mapping.get('source_table', '')),
                 source_id=mapping.get('source_id', mapping.get('source_system', '')),
                 current_concept=mapping.get('concept_id', mapping.get('ontology_concept', '')),
-                confidence=confidence,
+                confidence=mapping.get('confidence', 0),
                 ontology_concepts=ontology_concepts
             )
             
