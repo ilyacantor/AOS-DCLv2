@@ -108,11 +108,12 @@ class SchemaLoader:
     }
 
     @staticmethod
-    def load_farm_schemas(narration=None, run_id: Optional[str] = None, sample_limit: int = 5) -> List[SourceSystem]:
+    def load_farm_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 5) -> List[SourceSystem]:
         farm_url = os.getenv("FARM_API_URL", "https://autonomos.farm")
+        sample_per_endpoint = 20
         
         if narration and run_id:
-            narration.add_message(run_id, "SchemaLoader", f"Fetching Farm schemas from {farm_url} (limit={sample_limit})")
+            narration.add_message(run_id, "SchemaLoader", f"Fetching Farm schemas from {farm_url} (source_limit={source_limit})")
         
         farm_endpoints = [
             {
@@ -156,7 +157,7 @@ class SchemaLoader:
         
         for endpoint_config in farm_endpoints:
             records = SchemaLoader._fetch_farm_endpoint(
-                farm_url, endpoint_config, narration, run_id, sample_limit
+                farm_url, endpoint_config, narration, run_id, sample_per_endpoint
             )
             
             if not records:
@@ -200,6 +201,11 @@ class SchemaLoader:
                     run_id, "SchemaLoader", 
                     f"Vendor {vendor_name}: {len(tables)} tables, {total_fields} fields"
                 )
+        
+        if len(sources) > source_limit:
+            sources = sources[:source_limit]
+            if narration and run_id:
+                narration.add_message(run_id, "SchemaLoader", f"Limited to {source_limit} sources (from {len(vendor_records)} available)")
         
         if narration and run_id:
             narration.add_message(run_id, "SchemaLoader", f"Loaded {len(sources)} vendor sources from Farm")

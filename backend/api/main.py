@@ -26,7 +26,7 @@ class RunRequest(BaseModel):
     mode: Literal["Demo", "Farm"] = "Demo"
     run_mode: Literal["Dev", "Prod"] = "Dev"
     personas: Optional[List[Persona]] = None
-    sample_limit: Optional[int] = 5  # Number of records to fetch per Farm source
+    source_limit: Optional[int] = 5  # Number of sources to fetch from Farm
 
 
 class RunResponse(BaseModel):
@@ -52,7 +52,7 @@ def run_dcl(request: RunRequest):
             run_mode=request.run_mode,
             personas=personas,
             run_id=run_id,
-            sample_limit=request.sample_limit or 5
+            source_limit=request.source_limit or 5
         )
         
         return RunResponse(

@@ -1,36 +1,40 @@
 import { GraphSnapshot, PersonaId } from '../types';
-import { Play, Activity, Database, Cpu, Clock } from 'lucide-react';
+import { Play, Activity, Database, Cpu, Clock, LayoutGrid, GitBranch } from 'lucide-react';
 
 interface ControlsBarProps {
   runMode: 'Dev' | 'Prod';
   setRunMode: (m: 'Dev' | 'Prod') => void;
   dataMode: 'Demo' | 'Farm';
   setDataMode: (m: 'Demo' | 'Farm') => void;
-  sampleLimit: number;
-  setSampleLimit: (n: number) => void;
+  sourceLimit: number;
+  setSourceLimit: (n: number) => void;
   selectedPersonas: PersonaId[];
   togglePersona: (p: PersonaId) => void;
   onRun: () => void;
   metrics?: GraphSnapshot['meta']['runMetrics'];
   isRunning: boolean;
   elapsedTime: number;
+  mainView: 'graph' | 'dashboard';
+  setMainView: (v: 'graph' | 'dashboard') => void;
 }
 
-const SAMPLE_LIMITS = [5, 10, 25, 50, 100];
+const SOURCE_LIMITS = [5, 10, 20, 50, 100];
 
 export function ControlsBar({
   runMode,
   setRunMode,
   dataMode,
   setDataMode,
-  sampleLimit,
-  setSampleLimit,
+  sourceLimit,
+  setSourceLimit,
   selectedPersonas,
   togglePersona,
   onRun,
   metrics,
   isRunning,
-  elapsedTime
+  elapsedTime,
+  mainView,
+  setMainView
 }: ControlsBarProps) {
   return (
     <div className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center px-6 justify-between shrink-0 z-10 relative">
@@ -60,13 +64,13 @@ export function ControlsBar({
           </div>
           {dataMode === 'Farm' && (
             <select
-              value={sampleLimit}
-              onChange={(e) => setSampleLimit(Number(e.target.value))}
+              value={sourceLimit}
+              onChange={(e) => setSourceLimit(Number(e.target.value))}
               className="h-7 px-2 text-xs rounded-md border bg-background text-foreground cursor-pointer"
-              title="Records per source"
+              title="Number of sources"
             >
-              {SAMPLE_LIMITS.map(n => (
-                <option key={n} value={n}>{n} rec</option>
+              {SOURCE_LIMITS.map(n => (
+                <option key={n} value={n}>{n} src</option>
               ))}
             </select>
           )}
@@ -75,7 +79,31 @@ export function ControlsBar({
         <div className="h-6 w-px bg-border" />
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">View</span>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Display</span>
+          <div className="gap-0 rounded-lg border p-0.5 flex">
+            <button 
+              onClick={() => setMainView('graph')} 
+              className={`h-7 px-3 text-xs rounded-md transition-colors flex items-center gap-1.5 ${mainView === 'graph' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}
+              title="Sankey Graph (best for <20 sources)"
+            >
+              <GitBranch className="w-3 h-3" />
+              Graph
+            </button>
+            <button 
+              onClick={() => setMainView('dashboard')} 
+              className={`h-7 px-3 text-xs rounded-md transition-colors flex items-center gap-1.5 ${mainView === 'dashboard' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}
+              title="Enterprise Dashboard (scales to 100s of sources)"
+            >
+              <LayoutGrid className="w-3 h-3" />
+              Dashboard
+            </button>
+          </div>
+        </div>
+
+        <div className="h-6 w-px bg-border" />
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Persona</span>
           <div className="flex gap-1">
             {(['CFO', 'CRO', 'COO', 'CTO'] as PersonaId[]).map(p => (
               <button

@@ -4,6 +4,7 @@ import { ControlsBar } from './components/ControlsBar';
 import { MonitorPanel } from './components/MonitorPanel';
 import { NarrationPanel } from './components/NarrationPanel';
 import { SankeyGraph } from './components/SankeyGraph';
+import { EnterpriseDashboard } from './components/EnterpriseDashboard';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/resizable';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import { Toaster } from './components/ui/toaster';
@@ -13,11 +14,12 @@ function App() {
   const [graphData, setGraphData] = useState<GraphSnapshot | null>(null);
   const [runMode, setRunMode] = useState<'Dev' | 'Prod'>('Dev');
   const [dataMode, setDataMode] = useState<'Demo' | 'Farm'>('Demo');
-  const [sampleLimit, setSampleLimit] = useState<number>(5);
+  const [sourceLimit, setSourceLimit] = useState<number>(5);
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>([]);
   const [runId, setRunId] = useState<string | undefined>(undefined);
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [mainView, setMainView] = useState<'graph' | 'dashboard'>('graph');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -124,7 +126,7 @@ function App() {
           mode: dataMode, 
           run_mode: runMode, 
           personas: selectedPersonas,
-          sample_limit: sampleLimit
+          source_limit: sourceLimit
         }),
       });
       
@@ -162,55 +164,75 @@ function App() {
         setRunMode={setRunMode}
         dataMode={dataMode}
         setDataMode={setDataMode}
-        sampleLimit={sampleLimit}
-        setSampleLimit={setSampleLimit}
+        sourceLimit={sourceLimit}
+        setSourceLimit={setSourceLimit}
         selectedPersonas={selectedPersonas}
         togglePersona={togglePersona}
         onRun={handleRun}
         metrics={graphData?.meta.runMetrics}
         isRunning={isRunning}
         elapsedTime={elapsedTime}
+        mainView={mainView}
+        setMainView={setMainView}
       />
 
       <div className="flex-1 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal">
-          <ResizablePanel defaultSize={70} minSize={40}>
-            <div className="h-full w-full relative">
-              <div className="absolute inset-0 p-4">
-                <div className="h-full w-full rounded-xl border bg-card/30 overflow-hidden shadow-inner">
-                  <SankeyGraph 
-                    data={graphData} 
-                    selectedPersonas={selectedPersonas} 
-                  />
+        {mainView === 'dashboard' ? (
+          <ResizablePanelGroup direction="horizontal">
+            <ResizablePanel defaultSize={75} minSize={50}>
+              <div className="h-full w-full">
+                <EnterpriseDashboard data={graphData} runId={runId} />
+              </div>
+            </ResizablePanel>
+            
+            <ResizableHandle className="bg-border/50 w-1.5 hover:bg-primary/50 transition-colors" />
+            
+            <ResizablePanel defaultSize={25} minSize={15}>
+              <div className="h-full border-l bg-sidebar">
+                <NarrationPanel runId={runId} />
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          <ResizablePanelGroup direction="horizontal">
+            <ResizablePanel defaultSize={70} minSize={40}>
+              <div className="h-full w-full relative">
+                <div className="absolute inset-0 p-4">
+                  <div className="h-full w-full rounded-xl border bg-card/30 overflow-hidden shadow-inner">
+                    <SankeyGraph 
+                      data={graphData} 
+                      selectedPersonas={selectedPersonas} 
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          </ResizablePanel>
-          
-          <ResizableHandle className="bg-border/50 w-1.5 hover:bg-primary/50 transition-colors" />
-          
-          <ResizablePanel defaultSize={30} minSize={20}>
-            <div className="h-full border-l bg-sidebar flex flex-col min-h-0">
-              <Tabs defaultValue="monitor" className="flex-1 flex flex-col min-h-0">
-                 <div className="border-b px-4 pt-2 shrink-0">
-                   <TabsList className="w-full">
-                     <TabsTrigger value="monitor" className="flex-1">Monitor</TabsTrigger>
-                     <TabsTrigger value="narration" className="flex-1">Narration</TabsTrigger>
-                   </TabsList>
-                 </div>
-                 
-                 <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                   <TabsContent value="monitor" className="flex-1 flex flex-col mt-0 min-h-0">
-                     <MonitorPanel data={graphData} selectedPersonas={selectedPersonas} runId={runId} />
-                   </TabsContent>
-                   <TabsContent value="narration" className="flex-1 flex flex-col mt-0 min-h-0">
-                     <NarrationPanel runId={runId} />
-                   </TabsContent>
-                 </div>
-              </Tabs>
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+            </ResizablePanel>
+            
+            <ResizableHandle className="bg-border/50 w-1.5 hover:bg-primary/50 transition-colors" />
+            
+            <ResizablePanel defaultSize={30} minSize={20}>
+              <div className="h-full border-l bg-sidebar flex flex-col min-h-0">
+                <Tabs defaultValue="monitor" className="flex-1 flex flex-col min-h-0">
+                   <div className="border-b px-4 pt-2 shrink-0">
+                     <TabsList className="w-full">
+                       <TabsTrigger value="monitor" className="flex-1">Monitor</TabsTrigger>
+                       <TabsTrigger value="narration" className="flex-1">Narration</TabsTrigger>
+                     </TabsList>
+                   </div>
+                   
+                   <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                     <TabsContent value="monitor" className="flex-1 flex flex-col mt-0 min-h-0">
+                       <MonitorPanel data={graphData} selectedPersonas={selectedPersonas} runId={runId} />
+                     </TabsContent>
+                     <TabsContent value="narration" className="flex-1 flex flex-col mt-0 min-h-0">
+                       <NarrationPanel runId={runId} />
+                     </TabsContent>
+                   </div>
+                </Tabs>
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        )}
       </div>
       <Toaster />
     </div>

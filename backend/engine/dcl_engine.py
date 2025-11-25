@@ -27,7 +27,7 @@ class DCLEngine:
         run_mode: Literal["Dev", "Prod"],
         personas: List[Persona],
         run_id: str,
-        sample_limit: int = 5
+        source_limit: int = 5
     ) -> tuple[GraphSnapshot, RunMetrics]:
         
         start_time = time.time()
@@ -39,8 +39,8 @@ class DCLEngine:
             sources = SchemaLoader.load_demo_schemas()
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Demo sources")
         else:
-            sources = SchemaLoader.load_farm_schemas(self.narration, run_id, sample_limit=sample_limit)
-            self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Farm sources (sample_limit={sample_limit})")
+            sources = SchemaLoader.load_farm_schemas(self.narration, run_id, source_limit=source_limit)
+            self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Farm sources (source_limit={source_limit})")
         
         ontology = get_ontology()
         self.narration.add_message(run_id, "Engine", f"Loaded {len(ontology)} ontology concepts")
