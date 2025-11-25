@@ -32,11 +32,18 @@ Preferred communication style: Simple, everyday language.
 2. **ControlPanel** - User controls for selecting data mode (Demo/Farm), run mode (Dev/Prod), and personas (CFO/CRO/COO/CTO)
 3. **SankeyGraph** - D3-powered Sankey diagram visualizing data flow through 4 layers: L0 (pipe) → L1 (sources) → L2 (ontology) → L3 (persona endpoints)
 4. **NarrationPanel** - Real-time message stream showing processing steps with auto-refresh
-5. **MonitorPanel** - Enterprise monitoring view with 4 tabs:
-   - Persona Views: Business metrics filtered by selected personas
-   - Sources: List of connected data sources with status
-   - Ontology: Core concepts with input/output link counts
-   - RAG History: NEW - Vector database status, RAG metrics (LLM calls, reads, writes), and operation logs
+5. **MonitorPanel** - Enterprise monitoring view with 2 tabs:
+   - Persona Views: Business metrics filtered by selected personas with 3-level interactive drill-down (Ontology → Source/Table → Fields)
+   - Narration: Real-time processing messages stream
+
+   **Interactive Drill-Down (November 2025):**
+   - Click on ontology concepts to expand and see contributing source systems
+   - Click on sources to expand and see tables with mapped fields
+   - Click info icons on any level to open a detail panel modal showing:
+     - Source details: type, status, table count, total fields
+     - Table details: parent source, mapped fields with confidence scores
+     - Field details: full path (source→table→field), confidence bar, mapping explanation
+   - Only mapped fields are shown (not raw schema), reflecting actual data flow
 
 **Design Decisions:**
 - Tabbed interface to switch between graph visualization and monitoring views
