@@ -69,5 +69,5 @@ FARM_API_URL = "https://autonomos.farm"
 [deployment]
 deploymentTarget = "autoscale"
 run = ["python", "-m", "uvicorn", "backend.api.main:app", "--host", "0.0.0.0", "--port", "5000"]
-build = ["bash", "-c", "npm install && npm run build"]
+build = ["bash", "-c", "pip install -r requirements.txt && npm ci && npm run build"]
 
