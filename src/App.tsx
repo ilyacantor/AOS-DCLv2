@@ -190,20 +190,20 @@ function App() {
           <ResizableHandle className="bg-border/50 w-1.5 hover:bg-primary/50 transition-colors" />
           
           <ResizablePanel defaultSize={30} minSize={20}>
-            <div className="h-full border-l bg-sidebar flex flex-col">
-              <Tabs defaultValue="monitor" className="flex-1 flex flex-col">
-                 <div className="border-b px-4 pt-2">
+            <div className="h-full border-l bg-sidebar flex flex-col min-h-0">
+              <Tabs defaultValue="monitor" className="flex-1 flex flex-col min-h-0">
+                 <div className="border-b px-4 pt-2 shrink-0">
                    <TabsList className="w-full">
                      <TabsTrigger value="monitor" className="flex-1">Monitor</TabsTrigger>
                      <TabsTrigger value="narration" className="flex-1">Narration</TabsTrigger>
                    </TabsList>
                  </div>
                  
-                 <div className="flex-1 overflow-hidden flex flex-col">
-                   <TabsContent value="monitor" className="flex-1 flex flex-col mt-0 overflow-hidden">
+                 <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                   <TabsContent value="monitor" className="flex-1 flex flex-col mt-0 min-h-0">
                      <MonitorPanel data={graphData} selectedPersonas={selectedPersonas} runId={runId} />
                    </TabsContent>
-                   <TabsContent value="narration" className="flex-1 flex flex-col mt-0 overflow-hidden">
+                   <TabsContent value="narration" className="flex-1 flex flex-col mt-0 min-h-0">
                      <NarrationPanel runId={runId} />
                    </TabsContent>
                  </div>
