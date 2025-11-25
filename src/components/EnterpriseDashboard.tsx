@@ -40,12 +40,15 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
     const sourceSet = new Set<string>();
 
     data.links.forEach(link => {
-      if (link.flowType === 'mapping' && link.infoSummary) {
+      const flowType = link.flowType || link.flow_type;
+      const infoSummary = link.infoSummary || link.info_summary;
+      
+      if (flowType === 'mapping' && infoSummary) {
         const sourceNode = data.nodes.find(n => n.id === link.source);
         const targetNode = data.nodes.find(n => n.id === link.target);
         
         if (sourceNode && targetNode) {
-          const parts = link.infoSummary.split(' → ');
+          const parts = infoSummary.split(' → ');
           const fieldPart = parts[0] || '';
           const confidence = link.confidence || 0;
           
@@ -58,7 +61,7 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
             sourceField: fieldPart.includes('.') ? fieldPart.split('.').slice(1).join('.') : fieldPart,
             targetConcept: targetNode.label,
             confidence,
-            method: link.infoSummary.includes('llm') ? 'llm' : 'heuristic'
+            method: infoSummary.includes('llm') ? 'llm' : 'heuristic'
           });
         }
       }
@@ -71,7 +74,6 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
     return {
       mappings: mappingItems,
       sources: Array.from(sourceSet).sort(),
-      concepts: Array.from(conceptSet).sort(),
       stats: { total: mappingItems.length, high, medium, low }
     };
   }, [data]);

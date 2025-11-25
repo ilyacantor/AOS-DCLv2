@@ -89,6 +89,7 @@ function App() {
   };
 
   const loadData = async () => {
+    console.log('[App] loadData started');
     try {
       const res = await fetch('/api/dcl/run', {
         method: 'POST',
@@ -96,8 +97,10 @@ function App() {
         body: JSON.stringify({ mode: 'Demo', run_mode: 'Dev', personas: [] }),
       });
       
+      console.log('[App] fetch response:', res.status);
       if (!res.ok) throw new Error('Failed to load graph');
       const data = await res.json();
+      console.log('[App] data received, nodes:', data.graph?.nodes?.length, 'links:', data.graph?.links?.length);
       const graphWithViews = {
         ...data.graph,
         meta: {
@@ -107,8 +110,9 @@ function App() {
       };
       setGraphData(graphWithViews);
       setRunId(data.run_id);
+      console.log('[App] graphData set');
     } catch (e) {
-      console.error('Failed to load data:', e);
+      console.error('[App] Failed to load data:', e);
       toast({ title: 'Error', description: 'Failed to load initial data', variant: 'destructive' });
     }
   };

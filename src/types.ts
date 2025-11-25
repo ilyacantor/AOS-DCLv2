@@ -25,7 +25,9 @@ export interface GraphLink {
   value: number;
   confidence?: number;
   flowType?: string;
+  flow_type?: string;
   infoSummary?: string;
+  info_summary?: string;
   width?: number;
 }
 
