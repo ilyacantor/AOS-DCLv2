@@ -1,5 +1,6 @@
 import time
 import uuid
+import os
 from typing import List, Literal, Dict, Any, Optional
 from backend.domain import (
     Persona, SourceSystem, GraphSnapshot, GraphNode, GraphLink, 
@@ -11,6 +12,7 @@ from backend.engine.mapping_service import MappingService
 from backend.engine.narration_service import NarrationService
 from backend.engine.persona_view import PersonaView
 from backend.semantic_mapper import SemanticMapper
+from backend.eval.mapping_evaluator import MappingEvaluator
 
 
 class DCLEngine:
@@ -73,6 +75,70 @@ class DCLEngine:
             )
         
         mappings = stored_mappings
+        
+        evaluator = MappingEvaluator()
+        mapping_dicts = [
+            {'source_id': m.source_system, 'table_name': m.source_table, 
+             'field_name': m.source_field, 'concept_id': m.ontology_concept, 
+             'confidence': m.confidence}
+            for m in mappings
+        ]
+        issues = evaluator.evaluate_mappings(mapping_dicts)
+        eval_summary = evaluator.get_summary()
+        
+        if eval_summary['total_issues'] > 0:
+            self.narration.add_message(
+                run_id, "Eval",
+                f"Mapping evaluation: {eval_summary['total_issues']} issues found ({eval_summary['high_severity']} high, {eval_summary['medium_severity']} medium)"
+            )
+        else:
+            self.narration.add_message(run_id, "Eval", "Mapping evaluation: All mappings passed validation")
+        
+        if run_mode == "Prod":
+            llm_available = bool(os.getenv('OPENAI_API_KEY') or os.getenv('AI_INTEGRATIONS_OPENAI_API_KEY'))
+            
+            if llm_available:
+                self.narration.add_message(run_id, "LLM", "Prod mode: Running LLM validation on low-confidence mappings...")
+                
+                try:
+                    from backend.llm.mapping_validator import validate_mappings_prod_mode
+                    
+                    ontology_dicts = [
+                        {'id': c.id, 'name': c.name, 'description': c.description}
+                        for c in ontology
+                    ]
+                    
+                    def narration_callback(msg):
+                        self.narration.add_message(run_id, "LLM", msg)
+                    
+                    corrected_dicts, llm_stats = validate_mappings_prod_mode(
+                        mapping_dicts, ontology_dicts, narration_callback
+                    )
+                    
+                    metrics.llm_calls = llm_stats.get('total_validated', 0)
+                    
+                    if llm_stats.get('corrections_made', 0) > 0:
+                        corrected_mappings = []
+                        for m_dict in corrected_dicts:
+                            corrected_mappings.append(Mapping(
+                                id=f"{m_dict['source_id']}_{m_dict['table_name']}_{m_dict['field_name']}_{m_dict.get('concept_id', m_dict.get('ontology_concept'))}",
+                                source_field=m_dict['field_name'],
+                                source_table=m_dict['table_name'],
+                                source_system=m_dict['source_id'],
+                                ontology_concept=m_dict.get('concept_id', m_dict.get('ontology_concept')),
+                                confidence=m_dict['confidence'],
+                                method=m_dict.get('method', 'llm_validated'),
+                                status="ok"
+                            ))
+                        mappings = corrected_mappings
+                        
+                except Exception as e:
+                    self.narration.add_message(run_id, "LLM", f"LLM validation error: {str(e)}")
+            else:
+                self.narration.add_message(
+                    run_id, "LLM", 
+                    "Prod mode: LLM validation skipped - OPENAI_API_KEY not configured"
+                )
         
         graph = self._build_graph(mode, sources, ontology, mappings, personas, run_id)
         
