@@ -6,6 +6,8 @@ interface ControlsBarProps {
   setRunMode: (m: 'Dev' | 'Prod') => void;
   dataMode: 'Demo' | 'Farm';
   setDataMode: (m: 'Demo' | 'Farm') => void;
+  sampleLimit: number;
+  setSampleLimit: (n: number) => void;
   selectedPersonas: PersonaId[];
   togglePersona: (p: PersonaId) => void;
   onRun: () => void;
@@ -14,11 +16,15 @@ interface ControlsBarProps {
   elapsedTime: number;
 }
 
+const SAMPLE_LIMITS = [5, 10, 25, 50, 100];
+
 export function ControlsBar({
   runMode,
   setRunMode,
   dataMode,
   setDataMode,
+  sampleLimit,
+  setSampleLimit,
   selectedPersonas,
   togglePersona,
   onRun,
@@ -52,6 +58,18 @@ export function ControlsBar({
             <button onClick={() => setDataMode('Demo')} className={`h-7 px-3 text-xs rounded-md transition-colors ${dataMode === 'Demo' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Demo</button>
             <button onClick={() => setDataMode('Farm')} className={`h-7 px-3 text-xs rounded-md transition-colors ${dataMode === 'Farm' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}>Farm</button>
           </div>
+          {dataMode === 'Farm' && (
+            <select
+              value={sampleLimit}
+              onChange={(e) => setSampleLimit(Number(e.target.value))}
+              className="h-7 px-2 text-xs rounded-md border bg-background text-foreground cursor-pointer"
+              title="Records per source"
+            >
+              {SAMPLE_LIMITS.map(n => (
+                <option key={n} value={n}>{n} rec</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="h-6 w-px bg-border" />

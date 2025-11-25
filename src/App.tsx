@@ -13,6 +13,7 @@ function App() {
   const [graphData, setGraphData] = useState<GraphSnapshot | null>(null);
   const [runMode, setRunMode] = useState<'Dev' | 'Prod'>('Dev');
   const [dataMode, setDataMode] = useState<'Demo' | 'Farm'>('Demo');
+  const [sampleLimit, setSampleLimit] = useState<number>(5);
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>([]);
   const [runId, setRunId] = useState<string | undefined>(undefined);
   const [isRunning, setIsRunning] = useState(false);
@@ -122,7 +123,8 @@ function App() {
         body: JSON.stringify({ 
           mode: dataMode, 
           run_mode: runMode, 
-          personas: selectedPersonas 
+          personas: selectedPersonas,
+          sample_limit: sampleLimit
         }),
       });
       
@@ -160,6 +162,8 @@ function App() {
         setRunMode={setRunMode}
         dataMode={dataMode}
         setDataMode={setDataMode}
+        sampleLimit={sampleLimit}
+        setSampleLimit={setSampleLimit}
         selectedPersonas={selectedPersonas}
         togglePersona={togglePersona}
         onRun={handleRun}

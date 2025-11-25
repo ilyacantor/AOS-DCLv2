@@ -89,11 +89,11 @@ class SchemaLoader:
         return sources
     
     @staticmethod
-    def load_farm_schemas(narration=None, run_id: Optional[str] = None) -> List[SourceSystem]:
+    def load_farm_schemas(narration=None, run_id: Optional[str] = None, sample_limit: int = 5) -> List[SourceSystem]:
         farm_url = os.getenv("FARM_API_URL", "https://autonomos.farm")
         
         if narration and run_id:
-            narration.add_message(run_id, "SchemaLoader", f"Fetching Farm schemas from {farm_url}")
+            narration.add_message(run_id, "SchemaLoader", f"Fetching Farm schemas from {farm_url} (limit={sample_limit})")
         
         farm_sources = [
             {
@@ -141,7 +141,7 @@ class SchemaLoader:
         sources = []
         
         for source_config in farm_sources:
-            source_system = SchemaLoader._fetch_farm_source(farm_url, source_config, narration, run_id)
+            source_system = SchemaLoader._fetch_farm_source(farm_url, source_config, narration, run_id, sample_limit)
             sources.append(source_system)
         
         if narration and run_id:
@@ -150,9 +150,9 @@ class SchemaLoader:
         return sources
     
     @staticmethod
-    def _fetch_farm_source(base_url: str, config: Dict[str, Any], narration=None, run_id: Optional[str] = None) -> SourceSystem:
+    def _fetch_farm_source(base_url: str, config: Dict[str, Any], narration=None, run_id: Optional[str] = None, sample_limit: int = 5) -> SourceSystem:
         endpoint = config["endpoint"]
-        params = {**config.get("generate_params", {}), "limit": 5}
+        params = {**config.get("generate_params", {}), "limit": sample_limit}
         
         sample_records = []
         total_count = 0

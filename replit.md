@@ -97,6 +97,7 @@ Preferred communication style: Simple, everyday language.
 **Farm Mode Integration (November 2025):**
 - **HTTP Integration**: Uses httpx library to fetch real-time synthetic data from AOS-Farm platform at https://autonomos.farm/
 - **Environment Variable**: FARM_API_URL (default: https://autonomos.farm)
+- **Configurable Sample Limit**: UI dropdown to select records per source (5, 10, 25, 50, 100) - appears only in Farm mode
 - **Data Sources**: 5 Farm API endpoints automatically discovered and loaded:
   1. Enterprise Assets (`/api/synthetic`) - Applications, services, hosts (requires Farm test scenarios to generate)
   2. CRM Customers (`/api/synthetic/customers?generate=true`) - Auto-generates customer data with 11+ fields
