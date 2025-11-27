@@ -110,7 +110,7 @@ class SchemaLoader:
     @staticmethod
     def load_farm_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 5) -> List[SourceSystem]:
         farm_url = os.getenv("FARM_API_URL", "https://autonomos.farm")
-        sample_per_endpoint = 20
+        sample_per_endpoint = max(50, source_limit * 5)
         
         if narration and run_id:
             narration.add_message(run_id, "SchemaLoader", f"Fetching Farm schemas from {farm_url} (source_limit={source_limit})")
