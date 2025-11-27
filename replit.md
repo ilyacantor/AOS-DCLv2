@@ -15,6 +15,40 @@ The application features:
 
 ## Recent Changes (November 2025)
 
+### Source Normalization (Latest)
+- **NEW: SourceNormalizer service** (`backend/engine/source_normalizer.py`)
+  - Fetches and caches 34 canonical source definitions from Farm's `/api/sources/registry`
+  - Normalizes messy raw source identifiers to canonical sources using:
+    - Exact match (e.g., `salesforce_crm` → `salesforce_crm`)
+    - Alias match (e.g., `salesforce`, `sfdc`, `sf` → `salesforce_crm`)
+    - Pattern match (e.g., `/^sf[-_]?/` → `salesforce_crm`)
+    - Fuzzy match (Levenshtein distance for close matches)
+    - Discovery mode for unrecognized sources (creates provisional entries with `pending_triage` status)
+  - Returns `NormalizationResult` with confidence scores and resolution type
+
+- **Updated Domain Models** - SourceSystem now includes:
+  - `canonical_id`: Normalized source identifier
+  - `raw_id`: Original raw identifier(s) from Farm
+  - `discovery_status`: `canonical`, `pending_triage`, `custom`, or `rejected`
+  - `resolution_type`: `exact`, `alias`, `pattern`, `fuzzy`, or `discovered`
+  - `trust_score`: Registry-defined trust score (0-100)
+  - `data_quality_score`: Registry-defined quality score (0-100)
+  - `vendor`: Source vendor name (e.g., "Salesforce", "Oracle")
+  - `category`: Source category (e.g., "crm", "erp", "billing")
+
+- **Updated SchemaLoader** - Now uses `/api/browser/*` endpoints:
+  - `/api/browser/customers` for customer data
+  - `/api/browser/invoices` for invoice data
+  - Applies normalization to all raw `sourceSystem` strings
+  - No longer truncates sources - supports unlimited source count
+  - Preserves all raw IDs when multiple map to same canonical
+
+- **Updated EnterpriseDashboard** - Source Registry display:
+  - Shows all sources with trust scores and discovery status
+  - Visual indicators: shield icon for canonical, question mark for pending triage
+  - Color-coded trust scores (green ≥80, yellow 60-79, red <60)
+
+### Earlier Changes
 - Fixed EnterpriseDashboard `conceptSet` undefined error
 - Added support for both snake_case and camelCase API properties (flow_type/flowType)
 - Renamed `sample_limit` to `source_limit` for clarity (controls number of sources, not records)

@@ -4,16 +4,20 @@ import json
 from typing import List, Dict, Any, Optional
 import pandas as pd
 import httpx
-from backend.domain import SourceSystem, TableSchema, FieldSchema
+from backend.domain import SourceSystem, TableSchema, FieldSchema, DiscoveryStatus, ResolutionType
+from backend.engine.source_normalizer import get_normalizer, NormalizationResult
 
 
 class SchemaLoader:
     
     @staticmethod
-    def load_demo_schemas() -> List[SourceSystem]:
+    def load_demo_schemas(narration=None, run_id: Optional[str] = None) -> List[SourceSystem]:
         schemas_path = "schemas/schemas"
         if not os.path.exists(schemas_path):
             return []
+        
+        normalizer = get_normalizer()
+        normalizer.load_registry(narration, run_id)
         
         sources = []
         
@@ -77,154 +81,160 @@ class SchemaLoader:
                     continue
             
             if tables:
+                norm_result = normalizer.normalize(sys_name, narration, run_id)
+                canonical = norm_result.canonical_source
+                
                 source = SourceSystem(
-                    id=sys_name,
-                    name=sys_name.title(),
-                    type=sys_type,
-                    tags=["demo", sys_type.lower()],
-                    tables=tables
+                    id=norm_result.canonical_id,
+                    name=canonical.name,
+                    type=canonical.category.upper() if canonical.category else sys_type,
+                    tags=["demo", canonical.category or sys_type.lower()],
+                    tables=tables,
+                    canonical_id=norm_result.canonical_id,
+                    raw_id=sys_name,
+                    discovery_status=DiscoveryStatus(canonical.discovery_status.value),
+                    resolution_type=ResolutionType(norm_result.resolution_type.value),
+                    trust_score=canonical.trust_score,
+                    data_quality_score=canonical.data_quality_score,
+                    vendor=canonical.vendor,
+                    category=canonical.category,
+                    entities=canonical.entities,
                 )
                 sources.append(source)
         
+        if narration and run_id:
+            narration.add_message(run_id, "SchemaLoader", f"Loaded {len(sources)} demo sources with normalization")
+        
         return sources
-    
-    VENDOR_METADATA = {
-        "salesforce": {"name": "Salesforce", "type": "CRM"},
-        "dynamics": {"name": "Dynamics 365", "type": "CRM"},
-        "hubspot": {"name": "HubSpot", "type": "CRM"},
-        "zoho": {"name": "Zoho CRM", "type": "CRM"},
-        "netsuite": {"name": "NetSuite", "type": "ERP"},
-        "sap": {"name": "SAP", "type": "ERP"},
-        "oracle": {"name": "Oracle", "type": "ERP"},
-        "xero": {"name": "Xero", "type": "Accounting"},
-        "quickbooks": {"name": "QuickBooks", "type": "Accounting"},
-        "snowflake": {"name": "Snowflake", "type": "DataWarehouse"},
-        "databricks": {"name": "Databricks", "type": "DataWarehouse"},
-        "bigquery": {"name": "BigQuery", "type": "DataWarehouse"},
-        "mongodb": {"name": "MongoDB", "type": "NoSQL"},
-        "postgres": {"name": "PostgreSQL", "type": "Database"},
-        "mysql": {"name": "MySQL", "type": "Database"},
-        "supabase": {"name": "Supabase", "type": "Database"},
-    }
 
     @staticmethod
-    def load_farm_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 5) -> List[SourceSystem]:
+    def load_farm_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 50) -> List[SourceSystem]:
         farm_url = os.getenv("FARM_API_URL", "https://autonomos.farm")
-        sample_per_endpoint = max(50, source_limit * 5)
         
         if narration and run_id:
-            narration.add_message(run_id, "SchemaLoader", f"Fetching Farm schemas from {farm_url} (source_limit={source_limit})")
+            narration.add_message(run_id, "SchemaLoader", f"Fetching Farm data from {farm_url}/api/browser/*")
         
-        farm_endpoints = [
-            {
-                "endpoint": "/api/synthetic",
-                "table_name": "assets",
-                "generate_params": {},
-                "fallback_vendor": "farm_assets",
-                "fallback_type": "Assets"
-            },
-            {
-                "endpoint": "/api/synthetic/customers",
-                "table_name": "customers",
-                "generate_params": {"generate": "true", "scale": "medium"},
-                "fallback_vendor": "farm_customers",
-                "fallback_type": "CRM"
-            },
-            {
-                "endpoint": "/api/synthetic/invoices",
-                "table_name": "invoices",
-                "generate_params": {"generate": "true"},
-                "fallback_vendor": "farm_invoices",
-                "fallback_type": "ERP"
-            },
-            {
-                "endpoint": "/api/synthetic/events",
-                "table_name": "events",
-                "generate_params": {"generate": "force", "eventType": "log", "pattern": "hourly"},
-                "fallback_vendor": "farm_events",
-                "fallback_type": "Events"
-            },
-            {
-                "endpoint": "/api/synthetic/crm/accounts",
-                "table_name": "accounts",
-                "generate_params": {},
-                "fallback_vendor": "farm_crm_mock",
-                "fallback_type": "CRM"
-            }
+        normalizer = get_normalizer()
+        registry_count = normalizer.load_registry(narration, run_id)
+        
+        if narration and run_id:
+            narration.add_message(run_id, "SchemaLoader", f"Registry loaded: {registry_count} canonical sources")
+        
+        browser_endpoints = [
+            {"endpoint": "/api/browser/customers", "table_name": "customers", "entity_type": "Customer"},
+            {"endpoint": "/api/browser/invoices", "table_name": "invoices", "entity_type": "Invoice"},
         ]
         
-        vendor_records: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
+        source_records: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
+        source_norm_cache: Dict[str, NormalizationResult] = {}
         
-        for endpoint_config in farm_endpoints:
-            records = SchemaLoader._fetch_farm_endpoint(
-                farm_url, endpoint_config, narration, run_id, sample_per_endpoint
+        for endpoint_config in browser_endpoints:
+            records = SchemaLoader._fetch_browser_endpoint(
+                farm_url, endpoint_config, narration, run_id, limit=500
             )
             
             if not records:
                 continue
             
+            if narration and run_id:
+                narration.add_message(
+                    run_id, "SchemaLoader", 
+                    f"Fetched {len(records)} records from {endpoint_config['endpoint']}"
+                )
+            
             for record in records:
-                vendor = record.get("sourceSystem", endpoint_config["fallback_vendor"])
+                raw_source = record.get("sourceSystem", "unknown")
                 table_name = endpoint_config["table_name"]
                 
-                if vendor not in vendor_records:
-                    vendor_records[vendor] = {}
-                if table_name not in vendor_records[vendor]:
-                    vendor_records[vendor][table_name] = []
-                vendor_records[vendor][table_name].append(record)
+                if raw_source not in source_norm_cache:
+                    norm_result = normalizer.normalize(raw_source, narration, run_id)
+                    source_norm_cache[raw_source] = norm_result
+                
+                canonical_id = source_norm_cache[raw_source].canonical_id
+                
+                if canonical_id not in source_records:
+                    source_records[canonical_id] = {}
+                if table_name not in source_records[canonical_id]:
+                    source_records[canonical_id][table_name] = []
+                source_records[canonical_id][table_name].append(record)
         
         sources = []
-        for vendor_id, tables_data in vendor_records.items():
-            vendor_meta = SchemaLoader.VENDOR_METADATA.get(vendor_id, {})
-            vendor_name = vendor_meta.get("name", vendor_id.replace("_", " ").title())
-            vendor_type = vendor_meta.get("type", "Unknown")
+        for canonical_id, tables_data in source_records.items():
+            raw_sources = [raw for raw, norm in source_norm_cache.items() 
+                          if norm.canonical_id == canonical_id]
+            first_raw = raw_sources[0] if raw_sources else canonical_id
+            norm_result = source_norm_cache.get(first_raw)
+            
+            if not norm_result:
+                continue
+            
+            canonical = norm_result.canonical_source
             
             tables = []
             for table_name, records in tables_data.items():
                 table_schema = SchemaLoader._infer_table_schema_from_json(
-                    records, vendor_id, table_name, len(records)
+                    records, canonical_id, table_name, len(records)
                 )
                 tables.append(table_schema)
             
+            all_raw_ids = ", ".join(sorted(set(raw_sources))) if len(raw_sources) > 1 else first_raw
+            
             source = SourceSystem(
-                id=vendor_id,
-                name=vendor_name,
-                type=vendor_type,
-                tags=["farm", "synthetic", vendor_type.lower()],
-                tables=tables
+                id=canonical_id,
+                name=canonical.name,
+                type=canonical.category.upper() if canonical.category else "Unknown",
+                tags=["farm", "browser", canonical.category or "unknown"] + raw_sources,
+                tables=tables,
+                canonical_id=canonical_id,
+                raw_id=all_raw_ids,
+                discovery_status=DiscoveryStatus(canonical.discovery_status.value),
+                resolution_type=ResolutionType(norm_result.resolution_type.value),
+                trust_score=canonical.trust_score,
+                data_quality_score=canonical.data_quality_score,
+                vendor=canonical.vendor,
+                category=canonical.category,
+                entities=canonical.entities,
             )
             sources.append(source)
             
             if narration and run_id:
                 total_fields = sum(len(t.fields) for t in tables)
+                total_records = sum(len(records) for records in tables_data.values())
+                status_icon = "✓" if canonical.discovery_status.value == "canonical" else "?"
                 narration.add_message(
                     run_id, "SchemaLoader", 
-                    f"Vendor {vendor_name}: {len(tables)} tables, {total_fields} fields"
+                    f"{status_icon} {canonical.name}: {len(tables)} tables, {total_fields} fields, {total_records} records"
                 )
         
-        if len(sources) > source_limit:
-            sources = sources[:source_limit]
-            if narration and run_id:
-                narration.add_message(run_id, "SchemaLoader", f"Limited to {source_limit} sources (from {len(vendor_records)} available)")
+        sources.sort(key=lambda s: (
+            0 if s.discovery_status == DiscoveryStatus.CANONICAL else 1,
+            -s.trust_score,
+            s.name
+        ))
         
+        norm_stats = normalizer.get_stats()
         if narration and run_id:
-            narration.add_message(run_id, "SchemaLoader", f"Loaded {len(sources)} vendor sources from Farm")
+            narration.add_message(
+                run_id, "SchemaLoader", 
+                f"Normalization complete: {norm_stats['registry_sources']} canonical, "
+                f"{norm_stats['discovered_sources']} discovered, {len(sources)} total sources"
+            )
         
         return sources
     
     @staticmethod
-    def _fetch_farm_endpoint(
+    def _fetch_browser_endpoint(
         base_url: str, 
         config: Dict[str, Any], 
         narration=None, 
         run_id: Optional[str] = None, 
-        sample_limit: int = 5
+        limit: int = 500
     ) -> List[Dict[str, Any]]:
         endpoint = config["endpoint"]
-        params = {**config.get("generate_params", {}), "limit": sample_limit}
+        params = {"limit": limit}
         
         try:
-            with httpx.Client(timeout=30.0) as client:
+            with httpx.Client(timeout=60.0) as client:
                 response = client.get(f"{base_url}{endpoint}", params=params)
                 response.raise_for_status()
                 data = response.json()
@@ -235,24 +245,23 @@ class SchemaLoader:
                     return data["data"]
                 elif isinstance(data, dict) and "error" in data:
                     if narration and run_id:
-                        narration.add_message(run_id, "SchemaLoader", f"Farm {endpoint}: {data['error']}")
+                        narration.add_message(run_id, "SchemaLoader", f"Browser {endpoint}: {data['error']}")
                     return []
                 else:
                     return []
                     
         except httpx.HTTPStatusError as e:
             if narration and run_id:
-                narration.add_message(run_id, "SchemaLoader", f"Farm {endpoint}: HTTP {e.response.status_code}")
+                narration.add_message(run_id, "SchemaLoader", f"Browser {endpoint}: HTTP {e.response.status_code}")
             return []
         except httpx.TimeoutException:
             if narration and run_id:
-                narration.add_message(run_id, "SchemaLoader", f"Farm {endpoint}: Timeout")
+                narration.add_message(run_id, "SchemaLoader", f"Browser {endpoint}: Timeout")
             return []
         except Exception as e:
             if narration and run_id:
-                narration.add_message(run_id, "SchemaLoader", f"Farm {endpoint}: {str(e)}")
+                narration.add_message(run_id, "SchemaLoader", f"Browser {endpoint}: {str(e)}")
             return []
-    
     
     @staticmethod
     def _infer_table_schema_from_json(

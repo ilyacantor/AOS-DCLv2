@@ -11,6 +11,21 @@ class Persona(str, Enum):
     CTO = "CTO"
 
 
+class DiscoveryStatus(str, Enum):
+    CANONICAL = "canonical"
+    PENDING_TRIAGE = "pending_triage"
+    CUSTOM = "custom"
+    REJECTED = "rejected"
+
+
+class ResolutionType(str, Enum):
+    EXACT = "exact"
+    ALIAS = "alias"
+    PATTERN = "pattern"
+    FUZZY = "fuzzy"
+    DISCOVERED = "discovered"
+
+
 class FieldSchema(BaseModel):
     name: str
     type: str
@@ -36,6 +51,15 @@ class SourceSystem(BaseModel):
     type: str
     tags: List[str] = Field(default_factory=list)
     tables: List[TableSchema] = Field(default_factory=list)
+    canonical_id: Optional[str] = None
+    raw_id: Optional[str] = None
+    discovery_status: DiscoveryStatus = DiscoveryStatus.CANONICAL
+    resolution_type: Optional[ResolutionType] = None
+    trust_score: int = 50
+    data_quality_score: int = 50
+    vendor: Optional[str] = None
+    category: Optional[str] = None
+    entities: List[str] = Field(default_factory=list)
 
 
 class OntologyConcept(BaseModel):

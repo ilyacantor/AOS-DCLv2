@@ -3,6 +3,23 @@ export type PersonaId = 'CFO' | 'CRO' | 'COO' | 'CTO';
 export type Severity = 'info' | 'low' | 'medium' | 'high' | 'critical';
 export type Trend = 'up' | 'down' | 'flat' | 'unknown';
 
+export type DiscoveryStatus = 'canonical' | 'pending_triage' | 'custom' | 'rejected';
+export type ResolutionType = 'exact' | 'alias' | 'pattern' | 'fuzzy' | 'discovered';
+
+export interface SourceMetrics {
+  tables?: number;
+  fields?: number;
+  type?: string;
+  canonical_id?: string;
+  raw_id?: string;
+  discovery_status?: DiscoveryStatus;
+  resolution_type?: ResolutionType;
+  trust_score?: number;
+  data_quality_score?: number;
+  vendor?: string;
+  category?: string;
+}
+
 export interface GraphNode {
   id: string;
   label: string;
@@ -10,7 +27,7 @@ export interface GraphNode {
   kind: 'pipe' | 'source' | 'ontology' | 'bll';
   group?: string;
   status?: string;
-  metrics?: Record<string, number>;
+  metrics?: SourceMetrics & Record<string, unknown>;
   personaId?: PersonaId;
   x0?: number;
   y0?: number;

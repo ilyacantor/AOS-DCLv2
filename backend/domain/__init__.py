@@ -1,5 +1,7 @@
 from .models import (
     Persona,
+    DiscoveryStatus,
+    ResolutionType,
     FieldSchema,
     TableSchema,
     SourceSystem,
@@ -13,6 +15,8 @@ from .models import (
 
 __all__ = [
     "Persona",
+    "DiscoveryStatus",
+    "ResolutionType",
     "FieldSchema",
     "TableSchema",
     "SourceSystem",

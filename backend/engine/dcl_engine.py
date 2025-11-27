@@ -36,7 +36,7 @@ class DCLEngine:
         self.narration.add_message(run_id, "Engine", f"Starting DCL engine in {mode} mode, {run_mode} run mode")
         
         if mode == "Demo":
-            sources = SchemaLoader.load_demo_schemas()
+            sources = SchemaLoader.load_demo_schemas(self.narration, run_id)
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Demo sources")
         else:
             sources = SchemaLoader.load_farm_schemas(self.narration, run_id, source_limit=source_limit)
@@ -202,17 +202,32 @@ class DCLEngine:
             table_count = len(source.tables)
             field_count = sum(len(t.fields) for t in source.tables)
             
+            discovery_status = getattr(source, 'discovery_status', None)
+            discovery_value = discovery_status.value if discovery_status else "canonical"
+            status = "ok" if discovery_value == "canonical" else "pending"
+            
+            resolution_type = getattr(source, 'resolution_type', None)
+            resolution_value = resolution_type.value if resolution_type else "exact"
+            
             nodes.append(GraphNode(
                 id=source_id,
                 label=source.name,
                 level="L1",
                 kind="source",
                 group=source.type,
-                status="ok",
+                status=status,
                 metrics={
                     "tables": table_count,
                     "fields": field_count,
-                    "type": source.type
+                    "type": source.type,
+                    "canonical_id": getattr(source, 'canonical_id', source.id),
+                    "raw_id": getattr(source, 'raw_id', source.id),
+                    "discovery_status": discovery_value,
+                    "resolution_type": resolution_value,
+                    "trust_score": getattr(source, 'trust_score', 50),
+                    "data_quality_score": getattr(source, 'data_quality_score', 50),
+                    "vendor": getattr(source, 'vendor', None),
+                    "category": getattr(source, 'category', None),
                 }
             ))
             

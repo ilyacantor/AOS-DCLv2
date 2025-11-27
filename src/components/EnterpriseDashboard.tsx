@@ -10,7 +10,10 @@ import {
   Filter,
   ChevronDown,
   Layers,
-  GitBranch
+  GitBranch,
+  Shield,
+  HelpCircle,
+  Building2
 } from 'lucide-react';
 
 interface EnterpriseDashboardProps {
@@ -33,11 +36,22 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
   const [confidenceFilter, setConfidenceFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
 
-  const { mappings, sources, stats } = useMemo(() => {
-    if (!data) return { mappings: [], sources: [], stats: { total: 0, high: 0, medium: 0, low: 0 } };
+  const { mappings, sources, sourceNodes, stats } = useMemo(() => {
+    if (!data) return { mappings: [], sources: [], sourceNodes: [], stats: { total: 0, high: 0, medium: 0, low: 0, canonical: 0, pending: 0 } };
 
     const mappingItems: MappingItem[] = [];
     const sourceSet = new Set<string>();
+    
+    const srcNodes = data.nodes
+      .filter(n => n.level === 'L1' && n.kind === 'source')
+      .sort((a, b) => {
+        const trustA = a.metrics?.trust_score ?? 50;
+        const trustB = b.metrics?.trust_score ?? 50;
+        return trustB - trustA;
+      });
+    
+    const canonicalCount = srcNodes.filter(n => n.metrics?.discovery_status === 'canonical').length;
+    const pendingCount = srcNodes.filter(n => n.metrics?.discovery_status === 'pending_triage').length;
 
     data.links.forEach(link => {
       const flowType = link.flowType || link.flow_type;
@@ -74,7 +88,8 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
     return {
       mappings: mappingItems,
       sources: Array.from(sourceSet).sort(),
-      stats: { total: mappingItems.length, high, medium, low }
+      sourceNodes: srcNodes,
+      stats: { total: mappingItems.length, high, medium, low, canonical: canonicalCount, pending: pendingCount }
     };
   }, [data]);
 
@@ -129,13 +144,20 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <div className="grid grid-cols-4 gap-3 p-4 border-b shrink-0">
+      <div className="grid grid-cols-5 gap-3 p-4 border-b shrink-0">
         <div className="bg-card rounded-lg p-3 border">
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
             <Layers className="w-3.5 h-3.5" />
             <span>Sources</span>
           </div>
-          <div className="text-2xl font-bold">{sources.length}</div>
+          <div className="text-2xl font-bold">{sourceNodes.length}</div>
+        </div>
+        <div className="bg-card rounded-lg p-3 border">
+          <div className="flex items-center gap-2 text-green-400 text-xs mb-1">
+            <Shield className="w-3.5 h-3.5" />
+            <span>Canonical</span>
+          </div>
+          <div className="text-2xl font-bold text-green-400">{stats.canonical}</div>
         </div>
         <div className="bg-card rounded-lg p-3 border">
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
@@ -159,6 +181,51 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
           <div className="text-2xl font-bold text-yellow-400">{stats.medium + stats.low}</div>
         </div>
       </div>
+
+      {sourceNodes.length > 0 && (
+        <div className="p-3 border-b shrink-0 bg-card/20">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Source Registry</span>
+            {stats.pending > 0 && (
+              <span className="flex items-center gap-1 text-yellow-400">
+                <HelpCircle className="w-3 h-3" />
+                {stats.pending} pending triage
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {sourceNodes.map(node => {
+              const trustScore = node.metrics?.trust_score ?? 50;
+              const discoveryStatus = node.metrics?.discovery_status;
+              const vendor = node.metrics?.vendor;
+              const isCanonical = discoveryStatus === 'canonical';
+              
+              return (
+                <div 
+                  key={node.id}
+                  className={`flex items-center gap-2 px-2 py-1 rounded text-xs border ${
+                    isCanonical 
+                      ? 'bg-green-500/10 border-green-500/30' 
+                      : 'bg-yellow-500/10 border-yellow-500/30'
+                  }`}
+                  title={`${node.label}\nVendor: ${vendor || 'Unknown'}\nTrust: ${trustScore}%\nStatus: ${discoveryStatus || 'unknown'}`}
+                >
+                  {isCanonical ? (
+                    <Shield className="w-3 h-3 text-green-400" />
+                  ) : (
+                    <HelpCircle className="w-3 h-3 text-yellow-400" />
+                  )}
+                  <span className="font-medium">{node.label}</span>
+                  <span className={`font-mono ${trustScore >= 80 ? 'text-green-400' : trustScore >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                    {trustScore}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-3 p-3 border-b shrink-0 bg-card/30">
         <div className="relative flex-1">
