@@ -32,17 +32,21 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
   });
 
   useEffect(() => {
-    const handleResize = () => {
-      if (containerRef.current) {
-        const { width, height } = containerRef.current.getBoundingClientRect();
+    const container = containerRef.current;
+    if (!container) return;
+    
+    const updateSize = () => {
+      const { width, height } = container.getBoundingClientRect();
+      if (width > 0 && height > 0) {
         setSize({ width, height });
       }
     };
     
-    window.addEventListener('resize', handleResize);
-    handleResize();
+    const resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(container);
+    setTimeout(updateSize, 100);
     
-    return () => window.removeEventListener('resize', handleResize);
+    return () => resizeObserver.disconnect();
   }, []);
 
   const graphData = useMemo(() => {
