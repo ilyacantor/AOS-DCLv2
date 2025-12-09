@@ -217,7 +217,7 @@ class SchemaLoader:
         
         # Apply source_limit after sorting (prioritizes canonical + high trust sources)
         total_available = len(sources)
-        if source_limit and source_limit < len(sources):
+        if source_limit and source_limit < total_available:
             sources = sources[:source_limit]
             if narration and run_id:
                 narration.add_message(
