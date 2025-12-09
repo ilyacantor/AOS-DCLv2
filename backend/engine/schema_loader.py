@@ -212,12 +212,22 @@ class SchemaLoader:
             s.name
         ))
         
+        # Apply source_limit after sorting (prioritizes canonical + high trust sources)
+        total_available = len(sources)
+        if source_limit and source_limit < len(sources):
+            sources = sources[:source_limit]
+            if narration and run_id:
+                narration.add_message(
+                    run_id, "SchemaLoader", 
+                    f"Limited to {source_limit} sources (from {total_available} available)"
+                )
+        
         norm_stats = normalizer.get_stats()
         if narration and run_id:
             narration.add_message(
                 run_id, "SchemaLoader", 
                 f"Normalization complete: {norm_stats['registry_sources']} canonical, "
-                f"{norm_stats['discovered_sources']} discovered, {len(sources)} total sources"
+                f"{norm_stats['discovered_sources']} discovered, {len(sources)} returned"
             )
         
         return sources
