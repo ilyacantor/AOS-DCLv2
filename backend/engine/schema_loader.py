@@ -123,6 +123,9 @@ class SchemaLoader:
         browser_endpoints = [
             {"endpoint": "/api/browser/customers", "table_name": "customers", "entity_type": "Customer"},
             {"endpoint": "/api/browser/invoices", "table_name": "invoices", "entity_type": "Invoice"},
+            {"endpoint": "/api/synthetic", "table_name": "assets", "entity_type": "Asset"},
+            {"endpoint": "/api/synthetic/events", "table_name": "events", "entity_type": "Event"},
+            {"endpoint": "/api/synthetic/crm/accounts", "table_name": "crm_accounts", "entity_type": "Account"},
         ]
         
         source_records: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
