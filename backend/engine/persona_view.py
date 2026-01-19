@@ -2,7 +2,7 @@ import os
 import psycopg2
 from typing import List, Dict, Set, Optional
 from backend.domain import Persona
-from backend.utils.logging import get_logger
+from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 

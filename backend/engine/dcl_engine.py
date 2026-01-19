@@ -13,7 +13,7 @@ from backend.engine.narration_service import NarrationService
 from backend.engine.persona_view import PersonaView
 from backend.semantic_mapper import SemanticMapper
 from backend.eval.mapping_evaluator import MappingEvaluator
-from backend.utils.logging import get_logger
+from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 

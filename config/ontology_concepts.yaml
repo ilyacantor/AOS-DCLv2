@@ -1,4 +1,56 @@
 concepts:
+  - id: invoice
+    name: Invoice
+    description: Invoice or billing record
+    cluster: Finance
+    metadata:
+      example_fields:
+        - invoice_id
+        - invoice_number
+        - bill_id
+        - statement_id
+        - invoice_date
+        - due_date
+      expected_type: string
+      synonyms:
+        - bill
+        - statement
+        - billing_record
+
+  - id: vendor
+    name: Vendor
+    description: Supplier or vendor entity
+    cluster: Ops
+    metadata:
+      example_fields:
+        - vendor_id
+        - vendor_name
+        - supplier_id
+        - supplier_name
+        - merchant_id
+        - payee
+      expected_type: string
+      synonyms:
+        - supplier
+        - merchant
+        - payee
+        - seller
+
+  - id: payment_status
+    name: Payment Status
+    description: Payment or transaction status
+    cluster: Finance
+    metadata:
+      example_fields:
+        - payment_status
+        - status
+        - payment_state
+        - transaction_status
+      expected_type: string
+      synonyms:
+        - transaction_status
+        - billing_status
+
   - id: account
     name: Account
     description: Business account or customer entity

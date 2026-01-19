@@ -6,7 +6,7 @@ import pandas as pd
 import httpx
 from backend.domain import SourceSystem, TableSchema, FieldSchema, DiscoveryStatus, ResolutionType
 from backend.engine.source_normalizer import get_normalizer, NormalizationResult
-from backend.utils.logging import get_logger
+from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 

@@ -11,7 +11,7 @@ from backend.domain import Persona, GraphSnapshot, RunMetrics
 from backend.engine import DCLEngine
 from backend.engine.schema_loader import SchemaLoader
 from backend.semantic_mapper import SemanticMapper
-from backend.utils.logging import get_logger
+from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 

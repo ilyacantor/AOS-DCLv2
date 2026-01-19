@@ -1,0 +1,94 @@
+This is the "Value Realization" phase. We are going to turn that buffered Redis stream into a live node on your Sankey Diagram.
+
+We need to bridge the gap between the **Stream** (Invoice Data) and the **Graph** (Schema Visualization).
+
+**The Strategy:**
+
+1. **The Consumer becomes a Mapper:** Instead of just printing Trace IDs, the Consumer will *infer* the schema from the incoming JSON and run the `HeuristicMapper` against it.
+2. **State Update:** It will register this new "MuleSoft Stream" as a valid Source System in the DCL database/memory.
+3. **The Result:** The Frontend (which polls the backend) will suddenly see a new "MuleSoft" node appear and connect to "Revenue" nodes.
+
+Here is the **Master Directive for Phase 2**.
+
+---
+
+# 🤖 Master Directive: Phase 2 - Connecting the Brain
+
+**Global Context**
+
+> We have a "Toxic Stream" flowing from Farm  Sidecar  Redis.
+> Now we must upgrade the **Consumer** to process this data.
+> It needs to:
+> 1. **Infer Schema:** Look at the JSON payload and figure out the fields (`amount`, `vendor`, `status`).
+> 2. **Map Semantics:** Use the DCL's `HeuristicMapper` to link `amount`  `Cost`.
+> 3. **Update Graph:** Register this new source so the UI displays it.
+> 
+> 
+
+---
+
+## 🧠 SECTION A: DCL AGENT INSTRUCTIONS
+
+**Target Repo:** `aos-dcl`
+**Objective:** Upgrade the Consumer to Map and Visualize data.
+
+**1. Update the Ontology (Config)**
+
+* **File:** `config/ontology_concepts.yaml`
+* **Action:** Ensure we have concepts that match the Invoice stream. Add these if missing:
+```yaml
+concepts:
+  - id: invoice_record
+    name: Invoice
+    cluster: Finance
+    synonyms: ["bill", "statement", "invoice"]
+  - id: vendor
+    name: Vendor
+    cluster: Ops
+    synonyms: ["supplier", "merchant", "payee"]
+
+```
+
+
+* **Action:** Run `python backend/utils/config_sync.py` to load these into the DB (if your architecture requires it).
+
+**2. Upgrade the Consumer (`backend/ingest/run_consumer.py`)**
+
+* **Import:** Bring in the `HeuristicMapper` and your Domain Models (`SourceSystem`, `FieldSchema`).
+* **Logic Upgrade:**
+* **Stateful Tracking:** The Consumer needs to know if it has seen this Source before. Keep a set: `seen_sources = set()`.
+* **On Record Receive:**
+1. **Extract Source ID:** Get `source_id` from the `AOS_Envelope` metadata (e.g., `mulesoft_mock`).
+2. **Schema Inference (One-Time):** If `source_id` is NOT in `seen_sources`:
+* Analyze the `payload` keys (flatten nested JSON like `vendor.name`).
+* Create a `SourceSystem` object (e.g., name="MuleSoft Stream").
+* Create `FieldSchema` objects for the keys.
+* **Run Mapper:** Call `heuristic_mapper.map_source(source_system)` to generate mappings.
+* **Persist:** Save these mappings to the DB/In-Memory Store so the `DCLEngine` can read them.
+* Mark `source_id` as seen.
+
+
+3. **Metric Update:** Increment a "Record Count" for this source (optional, for UI stats).
+
+
+
+
+
+**3. Verify the "Hot Path" (`backend/engine/dcl_engine.py`)**
+
+* Ensure the `DCLEngine` reads from the *same* storage (DB or shared memory) that the Consumer is writing to.
+* *Note:* If the Consumer runs as a separate process (it does), it MUST write to the PostgreSQL DB for the API process to see the new mappings.
+* **Constraint:** If your demo is purely in-memory, you might need to run the Consumer in a thread *inside* the main API process for Phase 2. **Prefer DB persistence if available.**
+
+---
+
+## 🧪 EXECUTION CHECKLIST
+
+1. **Restart DCL:** Ensure the new Ontology Config is loaded.
+2. **Run Farm Stream:** Start the chaos stream.
+3. **Run Sidecar:** Start ingestion to Redis.
+4. **Run Consumer:** Start the new Mapping Consumer.
+5. **Check UI:**
+* Open the DCL Dashboard (localhost:5000).
+* **Result:** A new Node labeled **"mulesoft_mock"** (or similar) should appear in the "L1 Sources" column.
+* **Result:** It should have flow lines connecting to **"Invoice"** or **"Cost"** in the "L2 Ontology" column.
