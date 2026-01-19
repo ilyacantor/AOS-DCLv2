@@ -90,7 +90,7 @@ externalPort = 8000
 [userenv]
 
 [userenv.shared]
-FARM_API_URL = "https://autonomos.farm"
+FARM_API_URL = "https://63971109-a901-48bc-a71f-89583b2e11d4-00-1do0vncksilxt.janeway.replit.dev"
 RUN_MODE = "dev"
 ENABLE_CHAOS = "true"
 

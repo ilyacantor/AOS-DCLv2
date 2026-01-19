@@ -6,6 +6,21 @@ The DCL (Data Connectivity Layer) Engine is a full-stack application designed to
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Environment Configuration
+
+### Development Setup
+- `FARM_API_URL` - Points to Farm dev URL (e.g., `https://xxx.janeway.replit.dev`)
+- `RUN_MODE=dev` - Heuristic mapping only, no LLM/RAG operations
+- `ENABLE_CHAOS=true` - Enables chaos mode for testing drift detection
+
+The Ingest Pipeline automatically constructs the streaming endpoint:
+- Stream: `{FARM_API_URL}/api/stream/synthetic/mulesoft?chaos=true`
+- Repair: `{FARM_API_URL}/api/source/salesforce/invoice/{invoice_id}`
+
+### Production Setup
+- `FARM_API_URL=https://autonomos.farm` - Production Farm URL
+- `RUN_MODE=prod` - Full LLM/RAG operations enabled
+
 ## System Architecture
 
 ### Frontend Architecture
