@@ -1,4 +1,5 @@
 import os
+import json
 import uuid
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
@@ -6,7 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Dict, Any
+import redis
 from backend.domain import Persona, GraphSnapshot, RunMetrics
 from backend.engine import DCLEngine
 from backend.engine.schema_loader import SchemaLoader
@@ -75,6 +77,79 @@ def run_dcl(request: RunRequest):
 def get_narration(run_id: str):
     messages = engine.narration.get_messages(run_id)
     return {"run_id": run_id, "messages": messages}
+
+
+REDIS_CONFIG_KEY = "dcl.ingest.config"
+
+def _get_redis():
+    """Get Redis client for config storage."""
+    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+    return redis.from_url(redis_url, decode_responses=True)
+
+
+class ProvisionPolicy(BaseModel):
+    repair_enabled: bool = True
+
+
+class ProvisionRequest(BaseModel):
+    connector_id: str
+    source_type: str
+    target_url: str
+    policy: Optional[ProvisionPolicy] = None
+
+
+class ProvisionResponse(BaseModel):
+    status: str
+    connector_id: str
+    message: str
+
+
+@app.post("/api/ingest/provision", response_model=ProvisionResponse)
+def provision_connector(request: ProvisionRequest):
+    """
+    Receive connector configuration from AOD and reconfigure the Ingest Sidecar.
+    
+    This is the "Handshake" endpoint that allows AOD to dynamically provision
+    data connectors without manual configuration.
+    """
+    try:
+        r = _get_redis()
+        
+        config = {
+            "connector_id": request.connector_id,
+            "source_type": request.source_type,
+            "target_url": request.target_url,
+            "policy": request.policy.model_dump() if request.policy else {"repair_enabled": True},
+            "provisioned_at": __import__("datetime").datetime.now().isoformat(),
+            "version": str(uuid.uuid4())[:8]
+        }
+        
+        r.set(REDIS_CONFIG_KEY, json.dumps(config))
+        
+        logger.info(f"[Provision] Connector {request.connector_id} provisioned: {request.target_url}")
+        
+        return ProvisionResponse(
+            status="provisioned",
+            connector_id=request.connector_id,
+            message=f"Sidecar will pick up new config on next poll. Target: {request.target_url}"
+        )
+    except Exception as e:
+        logger.error(f"Provisioning failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ingest/config")
+def get_ingest_config():
+    """Get current ingest configuration."""
+    try:
+        r = _get_redis()
+        config_str = r.get(REDIS_CONFIG_KEY)
+        if config_str:
+            return json.loads(config_str)
+        return {"status": "no_config", "message": "No connector provisioned yet"}
+    except Exception as e:
+        logger.error(f"Failed to get config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/dcl/monitor/{run_id}")
