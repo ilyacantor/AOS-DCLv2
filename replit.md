@@ -13,9 +13,35 @@ The application features:
 - Enterprise monitoring dashboard
 - Dev/Prod runtime modes with different LLM strategies
 
+## Recent Changes (January 2026)
+
+### Phase 1: Resilient Ingest Pipeline (Latest)
+- **NEW: Ingest Sidecar** (`backend/ingest/ingest_agent.py`)
+  - Fault-tolerant streaming ingestion from Farm's MuleSoft mock endpoint
+  - Circuit breaker pattern with tenacity (exponential backoff, 5 retries, 60s cooldown)
+  - JSON validation - drops malformed records without crashing
+  - AOS_Envelope wrapping with trace_id, ingest_ts, and source metadata
+  - Redis Stream buffering to `dcl.ingest.raw`
+  - Environment config: `SOURCE_URL`, `REDIS_URL`, `SOURCE_NAME`
+
+- **NEW: Ingest Consumer** (`backend/ingest/consumer.py`)
+  - Redis Consumer Group for reliable message delivery
+  - Logs processed records with trace_id for debugging
+  - Stub for future semantic mapping integration
+
+- **NEW: Redis Server**
+  - System package installed (redis-server)
+  - Workflow configured on port 6379
+  - Used for event streaming between Sidecar and DCL Engine
+
+- **Run Commands:**
+  - Start Redis: `redis-server --port 6379` (workflow)
+  - Start Sidecar: `python backend/ingest/run_sidecar.py`
+  - Start Consumer: `python backend/ingest/run_consumer.py`
+
 ## Recent Changes (November 2025)
 
-### Source Normalization (Latest)
+### Source Normalization
 - **NEW: SourceNormalizer service** (`backend/engine/source_normalizer.py`)
   - Fetches and caches 34 canonical source definitions from Farm's `/api/sources/registry`
   - Normalizes messy raw source identifiers to canonical sources using:
