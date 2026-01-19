@@ -26,11 +26,15 @@ export function computeLayerPositions(
   const estimateLabelWidth = (n: GraphNode) =>
     Math.min(n.label.length * 6.5, label.maxWidth);
 
+  // Safe max that handles empty arrays
+  const safeMax = (arr: number[], fallback: number) =>
+    arr.length > 0 ? Math.max(...arr) : fallback;
+
   const maxLabelWidths = {
-    L0: Math.max(...nodes.filter(n => n.level === 'L0').map(estimateLabelWidth), 40),
-    L1: Math.max(...nodes.filter(n => n.level === 'L1').map(estimateLabelWidth), 60),
-    L2: Math.max(...nodes.filter(n => n.level === 'L2').map(estimateLabelWidth), 80),
-    L3: Math.max(...nodes.filter(n => n.level === 'L3').map(estimateLabelWidth), 60),
+    L0: safeMax(nodes.filter(n => n.level === 'L0').map(estimateLabelWidth), 40),
+    L1: safeMax(nodes.filter(n => n.level === 'L1').map(estimateLabelWidth), 60),
+    L2: safeMax(nodes.filter(n => n.level === 'L2').map(estimateLabelWidth), 80),
+    L3: safeMax(nodes.filter(n => n.level === 'L3').map(estimateLabelWidth), 60),
   };
 
   // Minimum spacing between layers to prevent overlap
@@ -116,7 +120,7 @@ export function buildTooltipContent(link: SankeyLink): TooltipContent {
   const sourceLabel = link.source?.label || link.source?.id || 'Unknown';
   const targetLabel = link.target?.label || link.target?.id || 'Unknown';
   const confidence = link.confidence;
-  const mappingInfo = link.infoSummary || link.info_summary;
+  const mappingInfo = link.infoSummary;
 
   return {
     sourceLabel,

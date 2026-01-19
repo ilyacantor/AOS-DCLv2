@@ -37,9 +37,7 @@ export interface SankeyLink {
   index: number;
   confidence?: number | string;
   flowType?: string;
-  flow_type?: string;
   infoSummary?: string;
-  info_summary?: string;
 }
 
 /**

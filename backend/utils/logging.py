@@ -6,6 +6,8 @@ import logging
 import sys
 from typing import Optional
 
+_initialized = False
+
 
 def setup_logging(
     level: int = logging.INFO,
@@ -13,14 +15,13 @@ def setup_logging(
 ) -> logging.Logger:
     """
     Configure logging for the DCL application.
-
-    Args:
-        level: The logging level (default: INFO)
-        format_string: Optional custom format string
-
-    Returns:
-        The root logger instance
+    Only runs once, subsequent calls return existing logger.
     """
+    global _initialized
+
+    if _initialized:
+        return logging.getLogger("dcl")
+
     if format_string is None:
         format_string = (
             "%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s"
@@ -40,21 +41,14 @@ def setup_logging(
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
 
+    _initialized = True
     return logging.getLogger("dcl")
 
 
 def get_logger(name: str) -> logging.Logger:
     """
     Get a logger for a specific module.
-
-    Args:
-        name: The module name (typically __name__)
-
-    Returns:
-        A configured logger instance
+    Initializes logging on first call.
     """
+    setup_logging()  # Ensure initialized
     return logging.getLogger(f"dcl.{name}")
-
-
-# Initialize logging on module import
-logger = setup_logging()
