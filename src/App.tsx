@@ -5,6 +5,7 @@ import { MonitorPanel } from './components/MonitorPanel';
 import { NarrationPanel } from './components/NarrationPanel';
 import { SankeyGraph } from './components/SankeyGraph';
 import { EnterpriseDashboard } from './components/EnterpriseDashboard';
+import { TelemetryRibbon } from './components/TelemetryRibbon';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/resizable';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import { Toaster } from './components/ui/toaster';
@@ -179,6 +180,8 @@ function App() {
         mainView={mainView}
         setMainView={setMainView}
       />
+
+      {dataMode === 'Farm' && <TelemetryRibbon />}
 
       <div className="flex-1 overflow-hidden">
         {mainView === 'dashboard' ? (

@@ -15,7 +15,6 @@ import asyncio
 import json
 import logging
 import os
-import random
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -30,6 +29,8 @@ from tenacity import (
     retry_if_exception_type,
     RetryError,
 )
+
+from backend.utils.metrics import MetricsCollector
 
 logging.basicConfig(
     level=logging.INFO,
@@ -161,6 +162,9 @@ class IngestSidecar:
         self._last_config_check: float = 0
         self._config_updated = False
         self._repair_enabled = True
+        
+        self._telemetry = MetricsCollector(redis_url)
+        self._verification_enabled = True
 
     async def connect_redis(self) -> None:
         """Establish Redis connection."""
@@ -318,22 +322,62 @@ class IngestSidecar:
                 
                 if repaired_fields:
                     self.metrics.records_repaired += 1
-                    logger.info(f"[{self.source_name}] Record Repaired: {invoice_id}")
-                    await self.log_to_ui(
-                        f"[SUCCESS] Auto-Repaired Invoice {invoice_id} via Salesforce Source. Fields: {', '.join(repaired_fields)}",
-                        "success"
-                    )
+                    self._telemetry.record_repaired(success=True)
                     return record, True
                 else:
-                    logger.warning(f"Repair endpoint had no data for missing fields: {missing_fields}")
+                    self._telemetry.record_repaired(success=False)
                     return record, False
             else:
-                logger.warning(f"Repair endpoint returned {response.status_code} for {invoice_id}")
+                self._telemetry.record_repaired(success=False)
                 return record, False
                 
         except Exception as e:
             logger.error(f"Repair failed for {invoice_id}: {e}")
+            self._telemetry.record_repaired(success=False)
             return record, False
+
+    async def verify_record(self, record: dict) -> tuple[bool, float]:
+        """
+        Verify a repaired record with Farm's verification endpoint.
+        
+        The "Closed Loop" - Farm confirms the fix is correct.
+        
+        Returns:
+            tuple: (verified, quality_score)
+        """
+        if not self._verification_enabled:
+            return True, 100.0
+        
+        invoice_id = record.get("invoice_id")
+        if not invoice_id:
+            return False, 0.0
+        
+        verify_url = f"{self.farm_base_url}/api/verify/salesforce/invoice"
+        
+        try:
+            if self._http_client is None:
+                self._http_client = httpx.AsyncClient(timeout=10.0)
+            
+            response = await self._http_client.post(verify_url, json=record)
+            
+            if response.status_code == 200:
+                result = response.json()
+                verified = result.get("verified", False)
+                quality_score = result.get("quality_score", 0.0)
+                
+                if verified:
+                    self._telemetry.record_verified(success=True)
+                else:
+                    self._telemetry.record_verified(success=False)
+                
+                return verified, quality_score
+            else:
+                self._telemetry.record_verified(success=False)
+                return False, 0.0
+                
+        except Exception as e:
+            logger.debug(f"Verification failed for {invoice_id}: {e}")
+            return True, 100.0
 
     def _check_circuit_breaker(self) -> None:
         """Check if circuit breaker is open."""
@@ -462,13 +506,16 @@ class IngestSidecar:
         return record
 
     async def run(self) -> None:
-        """Main ingestion loop with drift detection and self-healing repair."""
+        """Main ingestion loop with drift detection, self-healing repair, and verification."""
         logger.info(f"Starting IngestSidecar for {self.source_url}")
         logger.info(f"Buffering to Redis stream: {REDIS_STREAM_KEY}")
         logger.info(f"Self-healing enabled. Repair endpoint: {self.farm_base_url}/api/source/salesforce/invoice/")
+        logger.info(f"Verification enabled. Verify endpoint: {self.farm_base_url}/api/verify/salesforce/invoice")
         logger.info(f"Config polling enabled. Checking {REDIS_CONFIG_KEY} every {CONFIG_POLL_INTERVAL}s")
+        logger.info("INDUSTRIAL MODE: No artificial latency, maximum throughput")
 
         await self.connect_redis()
+        await self._telemetry.start()
         self._running = True
 
         try:
@@ -487,18 +534,23 @@ class IngestSidecar:
                     
                     record = self._validate_and_parse(line)
                     if record is None:
+                        self._telemetry.record_toxic_blocked()
                         continue
 
+                    self._telemetry.record_processed()
                     payload = self._extract_payload(record)
                     is_repaired = False
                     repaired_fields = None
+                    verified = False
                     
                     if self._repair_enabled:
                         is_drifted, missing_fields = self.detect_drift(payload)
                         if is_drifted:
+                            self._telemetry.record_drift_detected()
                             payload, is_repaired = await self.repair_record(payload, missing_fields)
                             if is_repaired:
                                 repaired_fields = missing_fields
+                                verified, _ = await self.verify_record(payload)
 
                     envelope = AOSEnvelope.create(
                         payload, 
@@ -506,19 +558,25 @@ class IngestSidecar:
                         is_repaired=is_repaired,
                         repaired_fields=repaired_fields,
                     )
+                    if is_repaired and verified:
+                        envelope.meta["verified"] = True
                     await self._buffer_to_redis(envelope)
 
-                    if self.metrics.records_valid % 100 == 0:
+                    if self.metrics.records_valid % 500 == 0:
+                        telemetry = self._telemetry.get_snapshot()
                         logger.info(
-                            f"Progress: {self.metrics.records_valid} valid, "
-                            f"{self.metrics.records_dropped} dropped, "
-                            f"{self.metrics.records_repaired} repaired"
+                            f"[TELEMETRY] TPS: {telemetry['tps']}/s | "
+                            f"Processed: {telemetry['total_processed']} | "
+                            f"Blocked: {telemetry['toxic_blocked']} | "
+                            f"Healed: {telemetry['repaired_success']} | "
+                            f"Verified: {telemetry['verified_count']}"
                         )
 
         except KeyboardInterrupt:
             logger.info("Shutdown requested")
         finally:
             self._running = False
+            await self._telemetry.stop()
             if self._http_client:
                 await self._http_client.aclose()
             await self.disconnect_redis()

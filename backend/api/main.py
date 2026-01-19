@@ -165,6 +165,42 @@ def get_monitor(run_id: str):
     }
 
 
+REDIS_TELEMETRY_KEY = "dcl.telemetry"
+
+
+@app.get("/api/ingest/telemetry")
+def get_telemetry():
+    """
+    Get live telemetry metrics from the Ingest Pipeline.
+    
+    Returns TPS, processed counts, blocked/healed/verified statistics.
+    """
+    try:
+        r = _get_redis()
+        telemetry_str = r.get(REDIS_TELEMETRY_KEY)
+        if telemetry_str:
+            return json.loads(telemetry_str)
+        return {
+            "ts": 0,
+            "metrics": {
+                "total_processed": 0,
+                "toxic_blocked": 0,
+                "drift_detected": 0,
+                "repaired_success": 0,
+                "repair_failed": 0,
+                "verified_count": 0,
+                "verified_failed": 0,
+                "tps": 0.0,
+                "quality_score": 100.0,
+                "repair_rate": 100.0,
+                "uptime_seconds": 0.0
+            }
+        }
+    except Exception as e:
+        logger.error(f"Failed to get telemetry: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 class MappingRequest(BaseModel):
     mode: Literal["Demo", "Farm"] = "Demo"
     mapping_mode: Literal["heuristic", "full"] = "heuristic"
