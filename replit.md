@@ -133,6 +133,29 @@ EXPECTED_INVOICE_FIELDS = ["invoice_id", "total_amount", "vendor", "payment_stat
 2. Successful repairs show "Record Repaired" and increment `records_repaired` counter
 3. Redis records will have `is_repaired: true` and `repaired_fields: [...]` in metadata
 
+## Phase 3.6: Humanized Repair Pacing (January 2026)
+
+### Why This Matters
+Real-time software often runs *too fast* for human demos. When drift is detected and repaired in milliseconds, the logs appear together, making it feel "scripted" or "fake." Real API calls to Salesforce have network latency.
+
+### Simulated Latency
+The Sidecar now adds realistic network latency to the repair process:
+
+1. **Log First:** Push `[WARN] Drift Detected...` immediately to Redis
+2. **Simulate Network:** `await asyncio.sleep(random.uniform(1.5, 3.0))`
+3. **Perform Repair:** Call Farm's Source of Truth API
+4. **Log Second:** Push `[SUCCESS] Auto-Repaired...` after completion
+
+**UI Effect:**
+- Since the operation takes ~2 seconds and the UI polls every ~2 seconds
+- The WARN log appears in Poll N
+- The SUCCESS log appears in Poll N+1
+- This creates the feeling of **Real-Time Processing**
+
+**User Experience:**
+1. See Yellow "Drift Detected" → *Pause of 2 seconds (Suspense)* → See Green "Repaired"
+2. This leverages the "Uncanny Valley" of demos - if too fast, we don't trust it
+
 ## Phase 3.5: Visibility Layer (January 2026)
 
 ### Self-Healing Log Broadcast to Dashboard
