@@ -36,3 +36,31 @@ Currently, there is no authentication implemented, operating under an internal t
 5.  **Pandas & NumPy**: For CSV parsing, data processing, and schema inference.
 6.  **httpx**: Asynchronous HTTP client for Farm mode API calls to the synthetic data service.
 7.  **Vite Dev Server**: Frontend development server with hot reload and proxy configuration for backend integration.
+
+## Phase 2: Value Realization (January 2026)
+
+### Stream-to-Graph Integration
+The Consumer has been upgraded to bridge the gap between the Redis stream and the Sankey visualization:
+
+1. **Schema Inference**: Automatically infers field types and schema from JSON payloads
+2. **Semantic Mapping**: Uses HeuristicMapper to link fields to ontology concepts (e.g., `invoice_id` → `Invoice`, `total_amount` → `Revenue`)
+3. **Database Persistence**: Stores mappings in PostgreSQL for DCLEngine visibility
+4. **Live Node Registration**: Stream sources appear in the Sankey diagram with proper flow connections
+
+**Key Mappings for Invoice Stream:**
+- `invoice_id`, `invoice_date`, `due_date` → `Invoice` concept (Finance cluster)
+- `total_amount`, `subtotal`, `tax_amount` → `Revenue` concept (Finance cluster)
+- `vendor.*` fields → `Vendor` concept (Ops cluster)
+- `payment_status` → `Payment Status` concept (Finance cluster)
+- `currency` → `Currency` concept
+- `sync_timestamp` → `Date/Timestamp` concept
+
+**New Ontology Concepts Added:**
+- `invoice` - Invoice or billing record (Finance)
+- `vendor` - Supplier or vendor entity (Ops)
+- `payment_status` - Payment or transaction status (Finance)
+
+**Run Commands:**
+- Start Sidecar: `python backend/ingest/run_sidecar.py`
+- Start Consumer: `python backend/ingest/run_consumer.py`
+- View in UI: Switch to "Farm" mode and click "Run Pipeline"
