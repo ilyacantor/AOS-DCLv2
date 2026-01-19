@@ -1,14 +1,41 @@
 import { useState, useEffect } from 'react';
 import { Badge } from './Badge';
-import { Bot, Database, Activity, Terminal } from 'lucide-react';
+import { Bot, Database, Activity, Terminal, Zap } from 'lucide-react';
 
 interface Message {
   id: string;
   seq: number;
   timestamp: string;
-  source: 'Engine' | 'RAG' | 'LLM' | 'Monitor';
+  source: 'Engine' | 'RAG' | 'LLM' | 'Monitor' | 'Ingest';
   text: string;
+  type?: 'info' | 'warn' | 'success' | 'error';
 }
+
+const getMessageColor = (type?: string, text?: string) => {
+  if (text?.includes('[WARN]') || type === 'warn') {
+    return 'text-yellow-400';
+  }
+  if (text?.includes('[SUCCESS]') || type === 'success') {
+    return 'text-green-400';
+  }
+  if (text?.includes('[ERROR]') || type === 'error') {
+    return 'text-red-400';
+  }
+  return 'text-foreground/90';
+};
+
+const getDotColor = (type?: string, text?: string) => {
+  if (text?.includes('[WARN]') || type === 'warn') {
+    return 'bg-yellow-400';
+  }
+  if (text?.includes('[SUCCESS]') || type === 'success') {
+    return 'bg-green-400';
+  }
+  if (text?.includes('[ERROR]') || type === 'error') {
+    return 'bg-red-400';
+  }
+  return 'bg-border';
+};
 
 interface NarrationPanelProps {
   runId?: string;
@@ -26,13 +53,15 @@ export function NarrationPanel({ runId }: NarrationPanelProps) {
         const response = await fetch(`/api/dcl/narration/${runId}`);
         const data = await response.json();
         const apiMessages = data.messages || [];
-        setMessages(apiMessages.map((m: any, idx: number) => ({
+        const mappedMessages = apiMessages.map((m: any, idx: number) => ({
           id: m.id || `msg-${idx}`,
           seq: m.number || idx + 1,
           timestamp: m.timestamp,
           source: m.source,
-          text: m.message
-        })));
+          text: m.message,
+          type: m.type
+        }));
+        setMessages(mappedMessages.reverse());
       } catch (error) {
         console.error('Error fetching narration:', error);
       }
@@ -54,7 +83,7 @@ export function NarrationPanel({ runId }: NarrationPanelProps) {
         <div className="space-y-6 relative pl-4 border-l border-border/50 ml-2">
           {messages.map((msg) => (
             <div key={msg.id} className="relative group">
-              <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-border ring-4 ring-background" />
+              <div className={`absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full ${getDotColor(msg.type, msg.text)} ring-4 ring-background`} />
               
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
@@ -67,10 +96,11 @@ export function NarrationPanel({ runId }: NarrationPanelProps) {
                     {msg.source === 'RAG' && <Database className="w-3 h-3" />}
                     {msg.source === 'Engine' && <Terminal className="w-3 h-3" />}
                     {msg.source === 'Monitor' && <Activity className="w-3 h-3" />}
+                    {msg.source === 'Ingest' && <Zap className="w-3 h-3" />}
                     <span>{msg.source}</span>
                   </Badge>
                 </div>
-                <p className="text-sm text-foreground/90 leading-snug">
+                <p className={`text-sm leading-snug ${getMessageColor(msg.type, msg.text)}`}>
                   {msg.text}
                 </p>
               </div>
