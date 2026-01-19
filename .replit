@@ -75,7 +75,7 @@ externalPort = 8000
 [userenv]
 
 [userenv.shared]
-FARM_API_URL = "https://autonomos.farm"
+FARM_API_URL = "https://76e34f41-bf5c-472f-b3ef-fba343165178-00-8ykfyky4oicj.worf.replit.dev/"
 
 [deployment]
 deploymentTarget = "autoscale"
