@@ -39,12 +39,16 @@ logger = logging.getLogger("IngestSidecar")
 REDIS_STREAM_KEY = "dcl.ingest.raw"
 
 
+EXPECTED_INVOICE_FIELDS = ["invoice_id", "total_amount", "vendor", "payment_status"]
+
+
 @dataclass
 class IngestMetrics:
     """Tracks ingestion statistics."""
     records_received: int = 0
     records_valid: int = 0
     records_dropped: int = 0
+    records_repaired: int = 0
     circuit_breaker_trips: int = 0
     start_time: float = field(default_factory=time.time)
 
@@ -63,6 +67,7 @@ class IngestMetrics:
             "records_received": self.records_received,
             "records_valid": self.records_valid,
             "records_dropped": self.records_dropped,
+            "records_repaired": self.records_repaired,
             "circuit_breaker_trips": self.circuit_breaker_trips,
             "uptime_seconds": round(self.uptime_seconds, 2),
             "drop_rate": round(self.drop_rate, 4),
@@ -79,15 +84,22 @@ class AOSEnvelope:
     payload: dict
 
     @classmethod
-    def create(cls, payload: dict, source: str) -> "AOSEnvelope":
-        return cls(
-            meta={
-                "ingest_ts": int(time.time() * 1000),
-                "source": source,
-                "trace_id": str(uuid.uuid4()),
-            },
-            payload=payload,
-        )
+    def create(
+        cls,
+        payload: dict,
+        source: str,
+        is_repaired: bool = False,
+        repaired_fields: Optional[list] = None,
+    ) -> "AOSEnvelope":
+        meta = {
+            "ingest_ts": int(time.time() * 1000),
+            "source": source,
+            "trace_id": str(uuid.uuid4()),
+            "is_repaired": is_repaired,
+        }
+        if is_repaired and repaired_fields:
+            meta["repaired_fields"] = repaired_fields
+        return cls(meta=meta, payload=payload)
 
     def to_dict(self) -> dict:
         return {
@@ -111,6 +123,7 @@ class IngestSidecar:
     Implements:
     - Circuit breaker pattern with exponential backoff
     - JSON validation (drops malformed records)
+    - Drift detection and self-healing repair
     - AOS_Envelope wrapping
     - Redis Stream buffering
     """
@@ -122,15 +135,20 @@ class IngestSidecar:
         source_name: str = "mulesoft_mock",
         max_retries: int = 5,
         cooldown_seconds: int = 60,
+        farm_base_url: Optional[str] = None,
     ):
         self.source_url = source_url
         self.redis_url = redis_url
         self.source_name = source_name
         self.max_retries = max_retries
         self.cooldown_seconds = cooldown_seconds
+        self.farm_base_url = farm_base_url or os.environ.get(
+            "FARM_API_URL", "https://autonomos.farm"
+        ).rstrip("/")
 
         self.metrics = IngestMetrics()
         self._redis: Optional[redis.Redis] = None
+        self._http_client: Optional[httpx.AsyncClient] = None
         self._running = False
         self._circuit_open = False
         self._circuit_open_until: float = 0
@@ -148,6 +166,68 @@ class IngestSidecar:
             await self._redis.aclose()
             self._redis = None
             logger.info("Disconnected from Redis")
+
+    def detect_drift(self, record: dict) -> tuple[bool, list[str]]:
+        """
+        Detect if a record has missing expected fields (Drift).
+        
+        Returns:
+            tuple: (is_drifted, list of missing fields)
+        """
+        missing_fields = []
+        for field in EXPECTED_INVOICE_FIELDS:
+            if field not in record:
+                missing_fields.append(field)
+        return len(missing_fields) > 0, missing_fields
+
+    async def repair_record(self, record: dict, missing_fields: list[str]) -> tuple[dict, bool]:
+        """
+        Repair a drifted record by fetching missing data from the Source of Truth.
+        
+        Calls the Farm's repair endpoint to get the complete record,
+        then merges missing fields into the original record.
+        
+        Returns:
+            tuple: (repaired_record, was_repaired)
+        """
+        invoice_id = record.get("invoice_id")
+        if not invoice_id:
+            logger.warning("Cannot repair record without invoice_id")
+            return record, False
+        
+        repair_url = f"{self.farm_base_url}/api/source/salesforce/invoice/{invoice_id}"
+        
+        try:
+            if self._http_client is None:
+                self._http_client = httpx.AsyncClient(timeout=10.0)
+            
+            logger.info(f"[{self.source_name}] Drift Detected for {invoice_id}. Fetching repair...")
+            response = await self._http_client.get(repair_url)
+            
+            if response.status_code == 200:
+                repair_data = response.json()
+                
+                repaired_fields = []
+                for field in missing_fields:
+                    if field in repair_data:
+                        record[field] = repair_data[field]
+                        repaired_fields.append(field)
+                        logger.info(f"  Patched field: {field}")
+                
+                if repaired_fields:
+                    self.metrics.records_repaired += 1
+                    logger.info(f"[{self.source_name}] Record Repaired: {invoice_id}")
+                    return record, True
+                else:
+                    logger.warning(f"Repair endpoint had no data for missing fields: {missing_fields}")
+                    return record, False
+            else:
+                logger.warning(f"Repair endpoint returned {response.status_code} for {invoice_id}")
+                return record, False
+                
+        except Exception as e:
+            logger.error(f"Repair failed for {invoice_id}: {e}")
+            return record, False
 
     def _check_circuit_breaker(self) -> None:
         """Check if circuit breaker is open."""
@@ -267,9 +347,10 @@ class IngestSidecar:
         )
 
     async def run(self) -> None:
-        """Main ingestion loop."""
+        """Main ingestion loop with drift detection and self-healing repair."""
         logger.info(f"Starting IngestSidecar for {self.source_url}")
         logger.info(f"Buffering to Redis stream: {REDIS_STREAM_KEY}")
+        logger.info(f"Self-healing enabled. Repair endpoint: {self.farm_base_url}/api/source/salesforce/invoice/")
 
         await self.connect_redis()
         self._running = True
@@ -280,19 +361,36 @@ class IngestSidecar:
                 if record is None:
                     continue
 
-                envelope = AOSEnvelope.create(record, self.source_name)
+                is_repaired = False
+                repaired_fields = None
+                
+                is_drifted, missing_fields = self.detect_drift(record)
+                if is_drifted:
+                    record, is_repaired = await self.repair_record(record, missing_fields)
+                    if is_repaired:
+                        repaired_fields = missing_fields
+
+                envelope = AOSEnvelope.create(
+                    record, 
+                    self.source_name,
+                    is_repaired=is_repaired,
+                    repaired_fields=repaired_fields,
+                )
                 await self._buffer_to_redis(envelope)
 
                 if self.metrics.records_valid % 100 == 0:
                     logger.info(
                         f"Progress: {self.metrics.records_valid} valid, "
-                        f"{self.metrics.records_dropped} dropped"
+                        f"{self.metrics.records_dropped} dropped, "
+                        f"{self.metrics.records_repaired} repaired"
                     )
 
         except KeyboardInterrupt:
             logger.info("Shutdown requested")
         finally:
             self._running = False
+            if self._http_client:
+                await self._http_client.aclose()
             await self.disconnect_redis()
             logger.info(f"Final metrics: {self.metrics.to_dict()}")
 
