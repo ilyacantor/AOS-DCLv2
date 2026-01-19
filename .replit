@@ -91,6 +91,8 @@ externalPort = 8000
 
 [userenv.shared]
 FARM_API_URL = "https://autonomos.farm"
+RUN_MODE = "dev"
+ENABLE_CHAOS = "true"
 
 [deployment]
 deploymentTarget = "autoscale"
