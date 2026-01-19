@@ -104,3 +104,14 @@ EXPECTED_INVOICE_FIELDS = ["invoice_id", "total_amount", "vendor", "payment_stat
 - Progress logs now show: "100 valid, 0 dropped, 5 repaired"
 
 **Why This Matters:** This proves Active Ingest (AAM) - data isn't just moved, it's improved in transit.
+
+**Chaos Mode Configuration:**
+- Set `ENABLE_CHAOS=true` (default) to enable chaos mode
+- Stream URL automatically appends `?chaos=true`
+- Chaos control messages (latency spikes, etc.) are filtered out from drift detection
+- Only invoice records with missing expected fields trigger repair
+
+**Testing:**
+1. Watch Ingest Pipeline logs for "Drift Detected" messages
+2. Successful repairs show "Record Repaired" and increment `records_repaired` counter
+3. Redis records will have `is_repaired: true` and `repaired_fields: [...]` in metadata

@@ -167,6 +167,14 @@ class IngestSidecar:
             self._redis = None
             logger.info("Disconnected from Redis")
 
+    def _is_invoice_record(self, record: dict) -> bool:
+        """Check if this is an invoice record (not a chaos control message)."""
+        if "_chaos" in record:
+            return False
+        if "record_type" not in record and "invoice_id" not in record:
+            return False
+        return True
+
     def detect_drift(self, record: dict) -> tuple[bool, list[str]]:
         """
         Detect if a record has missing expected fields (Drift).
@@ -174,6 +182,9 @@ class IngestSidecar:
         Returns:
             tuple: (is_drifted, list of missing fields)
         """
+        if not self._is_invoice_record(record):
+            return False, []
+        
         missing_fields = []
         for field in EXPECTED_INVOICE_FIELDS:
             if field not in record:
@@ -414,10 +425,17 @@ async def main():
     farm_base_url = os.environ.get("FARM_API_URL", "https://autonomos.farm")
     farm_base_url = farm_base_url.rstrip("/")
     
-    source_url = os.environ.get(
+    enable_chaos = os.environ.get("ENABLE_CHAOS", "true").lower() == "true"
+    chaos_param = "?chaos=true" if enable_chaos else ""
+    
+    base_source_url = os.environ.get(
         "SOURCE_URL",
         f"{farm_base_url}/api/stream/synthetic/mulesoft"
     )
+    if enable_chaos and "chaos" not in base_source_url:
+        source_url = f"{base_source_url}{chaos_param}"
+    else:
+        source_url = base_source_url
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
     source_name = os.environ.get("SOURCE_NAME", "mulesoft_mock")
 
