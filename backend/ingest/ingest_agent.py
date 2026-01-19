@@ -303,9 +303,12 @@ class IngestSidecar:
 
 async def main():
     """Entry point for running the Ingest Sidecar."""
+    farm_base_url = os.environ.get("FARM_API_URL", "https://autonomos.farm")
+    farm_base_url = farm_base_url.rstrip("/")
+    
     source_url = os.environ.get(
         "SOURCE_URL",
-        "https://autonomos.farm/api/stream/synthetic/mulesoft"
+        f"{farm_base_url}/api/stream/synthetic/mulesoft"
     )
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
     source_name = os.environ.get("SOURCE_NAME", "mulesoft_mock")
