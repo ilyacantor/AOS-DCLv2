@@ -1,0 +1,110 @@
+You are absolutely right. I over-indexed on "Explaining it to a novice" (slow, narrated) and missed the core requirement: **Demonstrating Enterprise Power** (fast, massive, validated).
+
+The AOD demo worked because it showed **Scale** (thousands of assets) and **Proof** (Reconciliation). A few polite log messages do not convey "Industrial Strength."
+
+We need to pivot immediately from "Story Mode" to **"Load Test Mode."**
+
+**The New Visual Goal:**
+
+1. **Velocity:** Remove the artificial delays. We want to process 100+ records/sec, not 1 record every 2 seconds.
+2. **Telemetry:** Replace the "Chat Log" with **Live Counters** (TPS, Total Processed, Toxic Blocked, Self-Healed).
+3. **The "Closed Loop" (The AOD Factor):** You want the Farm to confirm the fix. We will add a **Verification Step** where the Sidecar sends the repaired record *back* to the Farm to get a "Verified: True" stamp, just like the AOD Reconciliation report.
+
+Here is the directive to build **Phase 5: The Industrial Dashboard**.
+
+---
+
+# 🤖 Master Directive: Phase 5 - The Industrial Upgrade
+
+**Global Context**
+
+> **The Problem:** The current demo is too slow and chatty. It lacks the "Shock and Awe" of high-volume processing.
+> **The Fix:**
+> 1. **Unleash the Speed:** Remove all artificial latency.
+> 2. **Add Telemetry:** Broadcast live metrics (TPS, Counts) to the Dashboard.
+> 3. **Closed-Loop Verification:** After repairing, the Sidecar must ask Farm: *"Is this right now?"* and report the result.
+> 
+> 
+
+---
+
+## 🚜 SECTION A: FARM AGENT INSTRUCTIONS
+
+**Target Repo:** `aos-farm`
+**Objective:** Enable High-Speed Stream & Verification.
+
+**1. Create Verification Endpoint**
+
+* **File:** `src/api/routes.py`
+* **Endpoint:** `POST /api/verify/salesforce/invoice`
+* **Logic:**
+* Accept a JSON invoice record.
+* Compare it against the Ground Truth (using the ID).
+* **Return:** `{ "verified": true, "quality_score": 100 }` (or false/mismatch details).
+* **Why:** This gives us the "Farm says it's right" signal you requested.
+
+
+
+**2. Unleash the Stream**
+
+* **File:** `src/api/stream.py`
+* **Action:** Ensure `speed=fast` has **zero sleep**. It should blast JSON as fast as Python can serialize.
+
+---
+
+## 🧠 SECTION B: DCL AGENT INSTRUCTIONS
+
+**Target Repo:** `aos-dcl`
+**Objective:** Upgrade Sidecar to "Industrial Mode" and visualize it.
+
+**1. Remove Latency (The Un-Humanize)**
+
+* **File:** `backend/ingest/run_sidecar.py`
+* **Action:** **Delete** `time.sleep()`. Let it rip.
+
+**2. Implement "Closed Loop" Verification**
+
+* **Method:** `repair_record`
+* **Logic:**
+1. Detect Drift  Fetch Repair (Existing).
+2. **New Step:** Call Farm `POST /api/verify/...` with the fixed record.
+3. **Tag:** Add `verified: true` to the AOS Envelope.
+
+
+
+**3. Implement Live Telemetry (Redis)**
+
+* **File:** `backend/utils/metrics.py` (New)
+* **Logic:**
+* Create a class `MetricsCollector`.
+* Track: `total_processed`, `toxic_blocked`, `drift_detected`, `repaired_success`, `verified_count`.
+* **Broadcast:** Every 0.5s, push a summary JSON to Redis Channel `dcl.telemetry`.
+
+
+
+**4. Upgrade Dashboard (The "War Room" View)**
+
+* **File:** `frontend/src/components/MonitorPanel.tsx` (or similar).
+* **Action:** Add a **Telemetry Ribbon** at the top of the Monitor Panel.
+* **Visuals:**
+* **Throughput:** `[ 142 rec/sec ]` (Speedometer style).
+* **Quality Shield:** `[ 100% Verified ]` (Green Badge).
+* **Drift/Repair:** `[ 🚫 450 Blocked ]` | `[ 🩹 1,200 Healed ]`.
+
+
+* **Action:** Make the Narration Log a **"Terminal Mode"** (auto-scroll, smaller font) so it looks like a matrix stream, not a chat.
+
+---
+
+## 🧪 EXECUTION CHECKLIST
+
+1. **Restart Farm & DCL.**
+2. **Trigger:** `?speed=fast&chaos=true` (The Firehose).
+3. **Visual Expectation:**
+* **Speed:** The "Processed" counter should spin like a slot machine.
+* **Volume:** You should see thousands of records handled in seconds.
+* **Validation:** A prominent **"Verified by Farm"** indicator showing that despite the chaos, the output quality is 100%.
+
+
+
+**Why this fixes it:** It moves from "Tell" to "Show." You aren't reading about a repair; you are watching a high-speed assembly line rejecting defects and fixing parts in real-time.

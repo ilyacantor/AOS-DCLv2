@@ -298,16 +298,6 @@ class IngestSidecar:
             if self._http_client is None:
                 self._http_client = httpx.AsyncClient(timeout=10.0)
             
-            logger.info(f"[{self.source_name}] Drift Detected for {invoice_id}. Fetching repair...")
-            await self.log_to_ui(
-                f"[WARN] Drift detected in Invoice {invoice_id}. Missing: {', '.join(missing_fields)}",
-                "warn"
-            )
-            
-            latency = random.uniform(1.5, 3.0)
-            logger.info(f"  Simulating {latency:.1f}s round-trip to Salesforce Source of Truth...")
-            await asyncio.sleep(latency)
-            
             response = await self._http_client.get(repair_url)
             
             if response.status_code == 200:
