@@ -180,11 +180,12 @@ class IngestSidecar:
         if self._redis is None:
             return
         
-        from datetime import datetime
+        from datetime import datetime, timezone, timedelta
+        pst = timezone(timedelta(hours=-8))
         log_entry = json.dumps({
             "msg": message,
             "type": log_type,
-            "ts": datetime.now().isoformat()
+            "ts": datetime.now(pst).isoformat()
         })
         
         try:

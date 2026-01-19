@@ -1,6 +1,8 @@
 from typing import List, Dict
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import json
+
+PST = timezone(timedelta(hours=-8))
 import os
 import logging
 import redis
@@ -35,7 +37,7 @@ class NarrationService:
                     data = json.loads(log_entry)
                     parsed_logs.append({
                         "number": 0,
-                        "timestamp": data.get("ts", datetime.now().isoformat()),
+                        "timestamp": data.get("ts", datetime.now(PST).isoformat()),
                         "source": "Ingest",
                         "message": data.get("msg", ""),
                         "type": data.get("type", "info")
@@ -53,7 +55,7 @@ class NarrationService:
         
         self.messages[run_id].append({
             "number": len(self.messages[run_id]) + 1,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(PST).isoformat(),
             "source": source,
             "message": message
         })
