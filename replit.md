@@ -97,6 +97,8 @@ EXPECTED_INVOICE_FIELDS = ["invoice_id", "total_amount", "vendor", "payment_stat
 **Gap Fill Repair:**
 - `repair_record(record, missing_fields)` calls Farm's Source of Truth API
 - Endpoint: `GET /api/source/salesforce/invoice/{invoice_id}`
+- Response structure: `{"source": "salesforce_master", "invoice": {"vendor": {...}, ...}}`
+- DCL extracts fields from `response.invoice` (nested) or `response` (root fallback)
 - Merges missing fields from repair response into the record
 - Tags envelope with `is_repaired: true` and `repaired_fields: [...]`
 

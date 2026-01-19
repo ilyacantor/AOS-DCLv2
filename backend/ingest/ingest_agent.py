@@ -247,9 +247,15 @@ class IngestSidecar:
             if response.status_code == 200:
                 repair_data = response.json()
                 
+                invoice_data = repair_data.get("invoice", repair_data)
+                
                 repaired_fields = []
                 for field in missing_fields:
-                    if field in repair_data:
+                    if field in invoice_data:
+                        record[field] = invoice_data[field]
+                        repaired_fields.append(field)
+                        logger.info(f"  Patched field: {field}")
+                    elif field in repair_data:
                         record[field] = repair_data[field]
                         repaired_fields.append(field)
                         logger.info(f"  Patched field: {field}")
