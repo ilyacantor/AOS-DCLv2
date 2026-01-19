@@ -11,6 +11,9 @@ from backend.domain import Persona, GraphSnapshot, RunMetrics
 from backend.engine import DCLEngine
 from backend.engine.schema_loader import SchemaLoader
 from backend.semantic_mapper import SemanticMapper
+from backend.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 app = FastAPI(title="DCL Engine API")
 
@@ -64,6 +67,7 @@ def run_dcl(request: RunRequest):
             run_id=run_id
         )
     except Exception as e:
+        logger.error(f"DCL run failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -122,6 +126,7 @@ def run_batch_mapping(request: MappingRequest):
             stats=stats
         )
     except Exception as e:
+        logger.error(f"Batch mapping failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -6,6 +6,9 @@ import pandas as pd
 import httpx
 from backend.domain import SourceSystem, TableSchema, FieldSchema, DiscoveryStatus, ResolutionType
 from backend.engine.source_normalizer import get_normalizer, NormalizationResult
+from backend.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class SchemaLoader:
@@ -78,6 +81,7 @@ class SchemaLoader:
                     tables.append(table)
                 
                 except Exception as e:
+                    logger.warning(f"Failed to load CSV schema {csv_path}: {e}")
                     continue
             
             if tables:

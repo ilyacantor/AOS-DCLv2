@@ -10,12 +10,12 @@ export interface SourceMetrics {
   tables?: number;
   fields?: number;
   type?: string;
-  canonical_id?: string;
-  raw_id?: string;
-  discovery_status?: DiscoveryStatus;
-  resolution_type?: ResolutionType;
-  trust_score?: number;
-  data_quality_score?: number;
+  canonicalId?: string;
+  rawId?: string;
+  discoveryStatus?: DiscoveryStatus;
+  resolutionType?: ResolutionType;
+  trustScore?: number;
+  dataQualityScore?: number;
   vendor?: string;
   category?: string;
 }
@@ -35,6 +35,18 @@ export interface GraphNode {
   y1?: number;
 }
 
+/**
+ * Structured mapping information for graph links.
+ * Available when flowType === 'mapping'.
+ */
+export interface MappingDetail {
+  sourceField: string;
+  sourceTable: string;
+  targetConcept: string;
+  method: 'heuristic' | 'rag' | 'llm' | 'llm_validated';
+  confidence: number;
+}
+
 export interface GraphLink {
   id: string;
   source: string | GraphNode;
@@ -42,9 +54,8 @@ export interface GraphLink {
   value: number;
   confidence?: number;
   flowType?: string;
-  flow_type?: string;
   infoSummary?: string;
-  info_summary?: string;
+  mappingDetail?: MappingDetail;
   width?: number;
 }
 
@@ -83,6 +94,14 @@ export interface PersonaView {
   alerts: PersonaAlert[];
 }
 
+export interface RunMetrics {
+  llmCalls: number;
+  ragReads: number;
+  ragWrites: number;
+  processingMs: number;
+  renderMs: number;
+}
+
 export interface GraphSnapshot {
   nodes: GraphNode[];
   links: GraphLink[];
@@ -92,12 +111,6 @@ export interface GraphSnapshot {
     generatedAt: string;
     stats?: Record<string, unknown>;
     personaViews?: PersonaView[];
-    runMetrics?: {
-      llm_calls: number;
-      rag_reads: number;
-      rag_writes: number;
-      processing_ms: number;
-      render_ms: number;
-    };
+    runMetrics?: RunMetrics;
   };
 }

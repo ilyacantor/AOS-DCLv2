@@ -3,8 +3,8 @@ import uuid
 import os
 from typing import List, Literal, Dict, Any, Optional
 from backend.domain import (
-    Persona, SourceSystem, GraphSnapshot, GraphNode, GraphLink, 
-    RunMetrics, Mapping, OntologyConcept
+    Persona, SourceSystem, GraphSnapshot, GraphNode, GraphLink,
+    RunMetrics, Mapping, MappingDetail, OntologyConcept
 )
 from backend.engine.schema_loader import SchemaLoader
 from backend.engine.ontology import get_ontology
@@ -13,6 +13,9 @@ from backend.engine.narration_service import NarrationService
 from backend.engine.persona_view import PersonaView
 from backend.semantic_mapper import SemanticMapper
 from backend.eval.mapping_evaluator import MappingEvaluator
+from backend.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class DCLEngine:
@@ -133,6 +136,7 @@ class DCLEngine:
                         mappings = corrected_mappings
                         
                 except Exception as e:
+                    logger.error(f"LLM validation failed for run {run_id}: {e}", exc_info=True)
                     self.narration.add_message(run_id, "LLM", f"LLM validation error: {str(e)}")
             else:
                 self.narration.add_message(
@@ -266,7 +270,16 @@ class DCLEngine:
                         value=mapping.confidence,
                         confidence=mapping.confidence,
                         flow_type="mapping",
-                        info_summary=f"{mapping.source_field} → {mapping.ontology_concept} ({mapping.method}, {mapping.confidence:.2f})"
+                        # Keep info_summary for backward compatibility
+                        info_summary=f"{mapping.source_field} → {mapping.ontology_concept} ({mapping.method}, {mapping.confidence:.2f})",
+                        # New structured field
+                        mapping_detail=MappingDetail(
+                            source_field=mapping.source_field,
+                            source_table=mapping.source_table,
+                            target_concept=mapping.ontology_concept,
+                            method=mapping.method,
+                            confidence=mapping.confidence
+                        )
                     ))
                     
                     if mapping.source_system in source_mapping_count:

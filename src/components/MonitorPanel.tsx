@@ -134,9 +134,9 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
   useEffect(() => {
     if (data?.meta?.runMetrics) {
       setRagMetrics({
-        llm_calls: data.meta.runMetrics.llm_calls || 0,
-        rag_reads: data.meta.runMetrics.rag_reads || 0,
-        rag_writes: data.meta.runMetrics.rag_writes || 0,
+        llm_calls: data.meta.runMetrics.llmCalls || 0,
+        rag_reads: data.meta.runMetrics.ragReads || 0,
+        rag_writes: data.meta.runMetrics.ragWrites || 0,
       });
     }
   }, [data]);

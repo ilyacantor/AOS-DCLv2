@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
-import { GraphSnapshot } from '../types';
-import { 
-  Database, 
-  ArrowRight, 
-  CheckCircle2, 
-  AlertCircle, 
+import { GraphSnapshot, GraphLink } from '../types';
+import {
+  Database,
+  ArrowRight,
+  CheckCircle2,
+  AlertCircle,
   AlertTriangle,
   Search,
   Filter,
@@ -31,6 +31,47 @@ interface MappingItem {
   method: string;
 }
 
+/**
+ * Extract mapping item from a link using structured mappingDetail (preferred)
+ * or falling back to string parsing for backward compatibility.
+ */
+function extractMappingFromLink(
+  link: GraphLink,
+  sourceLabel: string,
+  targetLabel: string
+): MappingItem | null {
+  // Prefer structured mappingDetail if available
+  if (link.mappingDetail) {
+    return {
+      id: link.id,
+      sourceSystem: sourceLabel,
+      sourceTable: link.mappingDetail.sourceTable,
+      sourceField: link.mappingDetail.sourceField,
+      targetConcept: link.mappingDetail.targetConcept,
+      confidence: link.mappingDetail.confidence,
+      method: link.mappingDetail.method,
+    };
+  }
+
+  // Fallback: parse infoSummary for backward compatibility
+  const infoSummary = link.infoSummary;
+  if (!infoSummary) return null;
+
+  const parts = infoSummary.split(' → ');
+  const fieldPart = parts[0] || '';
+  const confidence = link.confidence || 0;
+
+  return {
+    id: link.id,
+    sourceSystem: sourceLabel,
+    sourceTable: fieldPart.includes('.') ? fieldPart.split('.')[0] : 'default',
+    sourceField: fieldPart.includes('.') ? fieldPart.split('.').slice(1).join('.') : fieldPart,
+    targetConcept: targetLabel,
+    confidence,
+    method: infoSummary.includes('llm') ? 'llm' : 'heuristic',
+  };
+}
+
 export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [confidenceFilter, setConfidenceFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
@@ -41,42 +82,43 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
 
     const mappingItems: MappingItem[] = [];
     const sourceSet = new Set<string>();
-    
+
+    // Use camelCase properties (with fallback for snake_case during transition)
     const srcNodes = data.nodes
       .filter(n => n.level === 'L1' && n.kind === 'source')
       .sort((a, b) => {
-        const trustA = a.metrics?.trust_score ?? 50;
-        const trustB = b.metrics?.trust_score ?? 50;
+        const metrics = a.metrics as Record<string, unknown> | undefined;
+        const metricsB = b.metrics as Record<string, unknown> | undefined;
+        const trustA = (metrics?.trustScore ?? metrics?.trust_score ?? 50) as number;
+        const trustB = (metricsB?.trustScore ?? metricsB?.trust_score ?? 50) as number;
         return trustB - trustA;
       });
-    
-    const canonicalCount = srcNodes.filter(n => n.metrics?.discovery_status === 'canonical').length;
-    const pendingCount = srcNodes.filter(n => n.metrics?.discovery_status === 'pending_triage').length;
+
+    const canonicalCount = srcNodes.filter(n => {
+      const metrics = n.metrics as Record<string, unknown> | undefined;
+      const status = metrics?.discoveryStatus ?? metrics?.discovery_status;
+      return status === 'canonical';
+    }).length;
+
+    const pendingCount = srcNodes.filter(n => {
+      const metrics = n.metrics as Record<string, unknown> | undefined;
+      const status = metrics?.discoveryStatus ?? metrics?.discovery_status;
+      return status === 'pending_triage';
+    }).length;
 
     data.links.forEach(link => {
-      const flowType = link.flowType || link.flow_type;
-      const infoSummary = link.infoSummary || link.info_summary;
-      
-      if (flowType === 'mapping' && infoSummary) {
+      const flowType = link.flowType;
+
+      if (flowType === 'mapping') {
         const sourceNode = data.nodes.find(n => n.id === link.source);
         const targetNode = data.nodes.find(n => n.id === link.target);
-        
+
         if (sourceNode && targetNode) {
-          const parts = infoSummary.split(' → ');
-          const fieldPart = parts[0] || '';
-          const confidence = link.confidence || 0;
-          
-          sourceSet.add(sourceNode.label);
-          
-          mappingItems.push({
-            id: link.id,
-            sourceSystem: sourceNode.label,
-            sourceTable: fieldPart.includes('.') ? fieldPart.split('.')[0] : 'default',
-            sourceField: fieldPart.includes('.') ? fieldPart.split('.').slice(1).join('.') : fieldPart,
-            targetConcept: targetNode.label,
-            confidence,
-            method: infoSummary.includes('llm') ? 'llm' : 'heuristic'
-          });
+          const mappingItem = extractMappingFromLink(link, sourceNode.label, targetNode.label);
+          if (mappingItem) {
+            sourceSet.add(sourceNode.label);
+            mappingItems.push(mappingItem);
+          }
         }
       }
     });
@@ -95,19 +137,19 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
 
   const filteredMappings = useMemo(() => {
     return mappings.filter(m => {
-      const matchesSearch = searchTerm === '' || 
+      const matchesSearch = searchTerm === '' ||
         m.sourceSystem.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.sourceTable.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.sourceField.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.targetConcept.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesConfidence = confidenceFilter === 'all' ||
         (confidenceFilter === 'high' && m.confidence >= 0.85) ||
         (confidenceFilter === 'medium' && m.confidence >= 0.6 && m.confidence < 0.85) ||
         (confidenceFilter === 'low' && m.confidence < 0.6);
-      
+
       const matchesSource = sourceFilter === 'all' || m.sourceSystem === sourceFilter;
-      
+
       return matchesSearch && matchesConfidence && matchesSource;
     });
   }, [mappings, searchTerm, confidenceFilter, sourceFilter]);
@@ -196,17 +238,18 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
           </div>
           <div className="flex flex-wrap gap-2">
             {sourceNodes.map(node => {
-              const trustScore = node.metrics?.trust_score ?? 50;
-              const discoveryStatus = node.metrics?.discovery_status;
-              const vendor = node.metrics?.vendor;
+              const metrics = node.metrics as Record<string, unknown> | undefined;
+              const trustScore = (metrics?.trustScore ?? metrics?.trust_score ?? 50) as number;
+              const discoveryStatus = (metrics?.discoveryStatus ?? metrics?.discovery_status) as string | undefined;
+              const vendor = metrics?.vendor as string | undefined;
               const isCanonical = discoveryStatus === 'canonical';
-              
+
               return (
-                <div 
+                <div
                   key={node.id}
                   className={`flex items-center gap-2 px-2 py-1 rounded text-xs border ${
-                    isCanonical 
-                      ? 'bg-green-500/10 border-green-500/30' 
+                    isCanonical
+                      ? 'bg-green-500/10 border-green-500/30'
                       : 'bg-yellow-500/10 border-yellow-500/30'
                   }`}
                   title={`${node.label}\nVendor: ${vendor || 'Unknown'}\nTrust: ${trustScore}%\nStatus: ${discoveryStatus || 'unknown'}`}
@@ -238,20 +281,20 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
             className="w-full pl-9 pr-3 py-2 text-sm bg-background border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-muted-foreground" />
           <select
             value={confidenceFilter}
-            onChange={(e) => setConfidenceFilter(e.target.value as any)}
+            onChange={(e) => setConfidenceFilter(e.target.value as 'all' | 'high' | 'medium' | 'low')}
             className="px-3 py-2 text-sm bg-background border rounded-md cursor-pointer"
           >
             <option value="all">All Confidence</option>
-            <option value="high">High (≥85%)</option>
+            <option value="high">High (&ge;85%)</option>
             <option value="medium">Medium (60-84%)</option>
             <option value="low">Low (&lt;60%)</option>
           </select>
-          
+
           <select
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
@@ -273,14 +316,14 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
             </div>
           ) : (
             filteredMappings.map((mapping) => (
-              <div 
+              <div
                 key={mapping.id}
                 className={`flex items-center gap-3 px-4 py-2.5 hover:bg-card/50 transition-colors ${getConfidenceBg(mapping.confidence)} border-l-2`}
               >
                 <div className="shrink-0">
                   {getConfidenceIcon(mapping.confidence)}
                 </div>
-                
+
                 <div className="flex items-center gap-2 flex-1 min-w-0 text-sm">
                   <span className="font-medium text-primary truncate max-w-[120px]" title={mapping.sourceSystem}>
                     {mapping.sourceSystem}
@@ -293,18 +336,18 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
                   <span className="font-mono text-xs bg-secondary/50 px-1.5 py-0.5 rounded truncate max-w-[140px]" title={mapping.sourceField}>
                     {mapping.sourceField}
                   </span>
-                  
+
                   <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0 mx-1" />
-                  
+
                   <span className="font-semibold text-accent-foreground bg-accent/20 px-2 py-0.5 rounded truncate max-w-[120px]" title={mapping.targetConcept}>
                     {mapping.targetConcept}
                   </span>
                 </div>
-                
+
                 <div className={`shrink-0 font-mono text-xs font-bold ${getConfidenceColor(mapping.confidence)}`}>
                   {(mapping.confidence * 100).toFixed(0)}%
                 </div>
-                
+
                 <div className="shrink-0 text-xs text-muted-foreground bg-secondary/30 px-1.5 py-0.5 rounded">
                   {mapping.method}
                 </div>
