@@ -26,6 +26,10 @@ args = "Backend API"
 task = "workflow.run"
 args = "Redis Server"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Ingest Pipeline"
+
 [[workflows.workflow]]
 name = "Frontend Dev Server"
 author = "agent"
@@ -56,6 +60,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "redis-server --port 6379"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "Ingest Pipeline"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -c \"import subprocess; import time; s = subprocess.Popen(['python', 'backend/ingest/run_sidecar.py']); time.sleep(2); c = subprocess.Popen(['python', 'backend/ingest/run_consumer.py']); s.wait(); c.wait()\""
 
 [workflows.workflow.metadata]
 outputType = "console"
