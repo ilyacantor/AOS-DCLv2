@@ -115,3 +115,42 @@ EXPECTED_INVOICE_FIELDS = ["invoice_id", "total_amount", "vendor", "payment_stat
 1. Watch Ingest Pipeline logs for "Drift Detected" messages
 2. Successful repairs show "Record Repaired" and increment `records_repaired` counter
 3. Redis records will have `is_repaired: true` and `repaired_fields: [...]` in metadata
+
+## Phase 3.5: Visibility Layer (January 2026)
+
+### Self-Healing Log Broadcast to Dashboard
+
+The Ingest Pipeline now broadcasts drift detection and repair events to the UI via Redis:
+
+**Architecture:**
+1. IngestSidecar and Consumer use `log_to_ui()` to push log entries to Redis List `dcl.logs`
+2. NarrationService reads from `dcl.logs` on each poll
+3. Dashboard Narration tab displays real-time Ingest events alongside DCL Engine steps
+
+**Redis Log Key:** `dcl.logs`
+
+**Log Entry Format:**
+```json
+{
+  "msg": "[WARN] Drift Detected: invoice INV-123456 missing fields: vendor",
+  "type": "warn",
+  "ts": "2026-01-19T19:12:52.123456"
+}
+```
+
+**Log Types:**
+- `warn` - Drift detected (missing fields)
+- `success` - Record repaired successfully
+- `info` - Consumer processed repaired record
+- `error` - Repair failed
+
+**Broadcast Events:**
+- Sidecar: `[WARN] Drift Detected: invoice {id} missing fields: {fields}`
+- Sidecar: `[SUCCESS] Record Repaired: invoice {id}. Fields restored: {fields}`
+- Sidecar: `[ERROR] Repair Failed: invoice {id}. Reason: {reason}`
+- Consumer: `[INFO] Consumer processed Repaired Record {id}. Fields restored: {fields}`
+
+**How to View:**
+1. Start Ingest Pipeline workflow
+2. Run pipeline in Farm mode from the UI
+3. Watch Dashboard Narration tab for Ingest events with yellow/green highlights

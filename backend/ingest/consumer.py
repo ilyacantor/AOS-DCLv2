@@ -28,6 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger("IngestConsumer")
 
 REDIS_STREAM_KEY = "dcl.ingest.raw"
+REDIS_LOG_KEY = "dcl.logs"
 CONSUMER_GROUP = "dcl_engine"
 CONSUMER_NAME = "consumer_1"
 
@@ -187,6 +188,30 @@ class IngestConsumer:
             self._redis = None
             logger.info("Disconnected from Redis")
 
+    async def log_to_ui(self, message: str, log_type: str = "info") -> None:
+        """
+        Push a log message to Redis List for UI consumption.
+        
+        Args:
+            message: The log message to display
+            log_type: One of 'info', 'warn', 'success', 'error'
+        """
+        if self._redis is None:
+            return
+        
+        from datetime import datetime
+        log_entry = json.dumps({
+            "msg": message,
+            "type": log_type,
+            "ts": datetime.now().isoformat()
+        })
+        
+        try:
+            await self._redis.rpush(REDIS_LOG_KEY, log_entry)
+            await self._redis.ltrim(REDIS_LOG_KEY, -500, -1)
+        except Exception as e:
+            logger.debug(f"Failed to push log to UI: {e}")
+
     def _register_source(self, source_id: str, payload: Dict[str, Any]) -> None:
         """Register a new source by inferring schema and creating mappings."""
         logger.info(f"Registering new source: {source_id}")
@@ -292,6 +317,16 @@ class IngestConsumer:
             trace_id = meta.get("trace_id", "unknown")
             source_id = meta.get("source", "unknown")
             payload = envelope.get("payload", {})
+            
+            is_repaired = meta.get("is_repaired", False)
+            if is_repaired:
+                invoice_id = payload.get("invoice_id", "unknown")
+                repaired_fields = meta.get("repaired_fields", [])
+                logger.info(f"Consumer processed Repaired Record: {invoice_id}")
+                await self.log_to_ui(
+                    f"[INFO] Consumer processed Repaired Record {invoice_id}. Fields restored: {', '.join(repaired_fields) if repaired_fields else 'N/A'}",
+                    "info"
+                )
 
             if source_id not in self._seen_sources:
                 self._register_source(source_id, payload)

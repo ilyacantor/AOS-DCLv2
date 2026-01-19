@@ -37,6 +37,7 @@ logging.basicConfig(
 logger = logging.getLogger("IngestSidecar")
 
 REDIS_STREAM_KEY = "dcl.ingest.raw"
+REDIS_LOG_KEY = "dcl.logs"
 
 
 EXPECTED_INVOICE_FIELDS = ["invoice_id", "total_amount", "vendor", "payment_status"]
@@ -167,6 +168,30 @@ class IngestSidecar:
             self._redis = None
             logger.info("Disconnected from Redis")
 
+    async def log_to_ui(self, message: str, log_type: str = "info") -> None:
+        """
+        Push a log message to Redis List for UI consumption.
+        
+        Args:
+            message: The log message to display
+            log_type: One of 'info', 'warn', 'success', 'error'
+        """
+        if self._redis is None:
+            return
+        
+        from datetime import datetime
+        log_entry = json.dumps({
+            "msg": message,
+            "type": log_type,
+            "ts": datetime.now().isoformat()
+        })
+        
+        try:
+            await self._redis.rpush(REDIS_LOG_KEY, log_entry)
+            await self._redis.ltrim(REDIS_LOG_KEY, -500, -1)
+        except Exception as e:
+            logger.debug(f"Failed to push log to UI: {e}")
+
     def _is_invoice_record(self, record: dict) -> bool:
         """Check if this is an invoice record (not a chaos control message)."""
         if "_chaos" in record:
@@ -213,6 +238,10 @@ class IngestSidecar:
                 self._http_client = httpx.AsyncClient(timeout=10.0)
             
             logger.info(f"[{self.source_name}] Drift Detected for {invoice_id}. Fetching repair...")
+            await self.log_to_ui(
+                f"[WARN] Drift detected in Invoice {invoice_id}. Missing: {', '.join(missing_fields)}",
+                "warn"
+            )
             response = await self._http_client.get(repair_url)
             
             if response.status_code == 200:
@@ -228,6 +257,10 @@ class IngestSidecar:
                 if repaired_fields:
                     self.metrics.records_repaired += 1
                     logger.info(f"[{self.source_name}] Record Repaired: {invoice_id}")
+                    await self.log_to_ui(
+                        f"[SUCCESS] Auto-Repaired Invoice {invoice_id} via Salesforce Source. Fields: {', '.join(repaired_fields)}",
+                        "success"
+                    )
                     return record, True
                 else:
                     logger.warning(f"Repair endpoint had no data for missing fields: {missing_fields}")

@@ -1,0 +1,71 @@
+Master Directive: Phase 3.5 - The Visibility Layer
+Global Context
+
+The Issue: Phase 3 (Repair) is working, but the UI is silent. The CEO cannot see the repairs. The Fix: The Sidecar and Consumer must broadcast their actions to the Dashboard via Redis. Constraint: Do not use in-memory lists (processes are separate). Use Redis List dcl.logs.
+
+🧠 SECTION A: DCL AGENT INSTRUCTIONS
+Target Repo: aos-dcl Objective: Pipe background logs to the Frontend.
+
+1. Upgrade NarrationService (The UI Feeder)
+
+File: backend/engine/narration_service.py
+
+Current State: Likely uses a Python list in memory.
+
+New State:
+
+Read: In get_messages(), also fetch items from Redis List dcl.logs.
+
+Format: Convert them to the format the UI expects (timestamp, message, type="info/success/error").
+
+2. Upgrade IngestSidecar (The Reporter)
+
+File: src/ingest/ingest_agent.py
+
+Action: Add a log_to_ui(message, type) method.
+
+Logic:
+
+Push JSON to Redis List dcl.logs: {"msg": "...", "type": "success", "ts": ...}.
+
+Triggers:
+
+When detect_drift is True: Log [WARN] Drift detected in Invoice INV-123. Missing: vendor_id.
+
+When repair_record finishes: Log [SUCCESS] Auto-Repaired Invoice INV-123 via Salesforce Source.
+
+3. Upgrade Consumer (The Confirmer)
+
+File: backend/ingest/run_consumer.py
+
+Action:
+
+When processing an envelope, check meta.get('is_repaired').
+
+If True, Log: [INFO] Consumer processed Repaired Record INV-123.
+
+4. Verification
+
+Restart the API.
+
+The Dashboard's "Narration" tab (bottom right panel) should now start scrolling with live updates from the Sidecar.
+
+🚜 SECTION B: FARM AGENT INSTRUCTIONS
+Status: Standby.
+
+You have done your job (Repair Endpoint + Chaos Stream).
+
+Keep the stream running with ?chaos=true so the Sidecar has something to repair and report.
+
+🧪 EXECUTION CHECKLIST (For the CEO)
+Look at the DCL Dashboard (Monitor Panel -> Narration Tab).
+
+Wait for a Chaos event (~10 seconds).
+
+Expectation:
+
+You should see a Yellow log: "Drift detected..."
+
+Followed immediately by a Green log: "Auto-Repaired Invoice..."
+
+Why this matters: This proves the system is Self-Healing in real-time, right on your screen.
