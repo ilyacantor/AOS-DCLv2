@@ -64,3 +64,43 @@ The Consumer has been upgraded to bridge the gap between the Redis stream and th
 - Start Sidecar: `python backend/ingest/run_sidecar.py`
 - Start Consumer: `python backend/ingest/run_consumer.py`
 - View in UI: Switch to "Farm" mode and click "Run Pipeline"
+
+## Phase 3: Active Repair Agent (January 2026)
+
+### Self-Healing Capability
+The Ingest Sidecar now implements "Detect & Repair" - automatically fixing drifted records in transit.
+
+**Expected Invoice Schema:**
+```python
+EXPECTED_INVOICE_FIELDS = ["invoice_id", "total_amount", "vendor", "payment_status"]
+```
+
+**Drift Detection:**
+- `detect_drift(record)` checks if expected fields are missing
+- Returns list of missing fields for repair
+
+**Gap Fill Repair:**
+- `repair_record(record, missing_fields)` calls Farm's Source of Truth API
+- Endpoint: `GET /api/source/salesforce/invoice/{invoice_id}`
+- Merges missing fields from repair response into the record
+- Tags envelope with `is_repaired: true` and `repaired_fields: [...]`
+
+**Updated AOS_Envelope Metadata:**
+```json
+{
+  "meta": {
+    "ingest_ts": 1768848236575,
+    "source": "mulesoft_mock",
+    "trace_id": "uuid",
+    "is_repaired": true,
+    "repaired_fields": ["vendor"]
+  },
+  "payload": { ... }
+}
+```
+
+**Metrics Tracking:**
+- `records_repaired` count added to IngestMetrics
+- Progress logs now show: "100 valid, 0 dropped, 5 repaired"
+
+**Why This Matters:** This proves Active Ingest (AAM) - data isn't just moved, it's improved in transit.

@@ -346,6 +346,15 @@ class IngestSidecar:
             maxlen=10000,
         )
 
+    def _extract_payload(self, record: dict) -> dict:
+        """
+        Extract the payload from a record.
+        Handles both raw payloads and already-wrapped envelopes.
+        """
+        if "meta" in record and "payload" in record:
+            return record["payload"]
+        return record
+
     async def run(self) -> None:
         """Main ingestion loop with drift detection and self-healing repair."""
         logger.info(f"Starting IngestSidecar for {self.source_url}")
@@ -361,17 +370,18 @@ class IngestSidecar:
                 if record is None:
                     continue
 
+                payload = self._extract_payload(record)
                 is_repaired = False
                 repaired_fields = None
                 
-                is_drifted, missing_fields = self.detect_drift(record)
+                is_drifted, missing_fields = self.detect_drift(payload)
                 if is_drifted:
-                    record, is_repaired = await self.repair_record(record, missing_fields)
+                    payload, is_repaired = await self.repair_record(payload, missing_fields)
                     if is_repaired:
                         repaired_fields = missing_fields
 
                 envelope = AOSEnvelope.create(
-                    record, 
+                    payload, 
                     self.source_name,
                     is_repaired=is_repaired,
                     repaired_fields=repaired_fields,
