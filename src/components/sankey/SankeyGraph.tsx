@@ -148,11 +148,6 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
     setTooltip((prev) => ({ ...prev, visible: false }));
   }, []);
 
-  // Update container rect on scroll/resize
-  const handleMouseMove = useCallback(() => {
-    updateContainerRect();
-  }, [updateContainerRect]);
-
   // Loading state
   if (!data || !graphData) {
     return (
@@ -166,7 +161,6 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
     <div
       ref={containerRef}
       className="w-full h-full bg-[#020617] overflow-hidden relative select-none"
-      onMouseMove={handleMouseMove}
     >
       <svg
         width={size.width}
