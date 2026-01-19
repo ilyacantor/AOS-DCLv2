@@ -89,7 +89,7 @@ export function NarrationPanel({ runId }: NarrationPanelProps) {
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-[10px] text-muted-foreground">#{msg.seq}</span>
                   <span className="font-mono text-[10px] text-muted-foreground opacity-50">
-                    {new Date(msg.timestamp).toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' })} PST
+                    {new Date(msg.timestamp).toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour12: true, hour: 'numeric', minute:'2-digit', second:'2-digit' })} PST
                   </span>
                   <Badge variant="outline" className="h-4 text-[10px] px-1 gap-1 font-normal bg-background/50 flex items-center">
                     {msg.source === 'LLM' && <Bot className="w-3 h-3" />}
