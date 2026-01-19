@@ -171,21 +171,42 @@ class IngestSidecar:
             f"Total trips: {self.metrics.circuit_breaker_trips}"
         )
 
+    async def _connect_to_stream_with_retry(self, client: httpx.AsyncClient):
+        """
+        Connect to the source stream with tenacity retry logic.
+        Uses exponential backoff (5 retries), trips circuit breaker on exhaustion.
+        """
+        @retry(
+            stop=stop_after_attempt(self.max_retries),
+            wait=wait_exponential(multiplier=1, min=2, max=30),
+            retry=retry_if_exception_type((httpx.TimeoutException, httpx.ConnectError)),
+            before_sleep=lambda retry_state: logger.warning(
+                f"Connection failed, retrying in {retry_state.next_action.sleep:.1f}s... "
+                f"(attempt {retry_state.attempt_number}/{self.max_retries})"
+            ),
+        )
+        async def _do_connect():
+            response = await client.send(
+                client.build_request("GET", self.source_url),
+                stream=True,
+            )
+            response.raise_for_status()
+            return response
+        
+        return await _do_connect()
+
     async def _stream_with_retry(self) -> AsyncIterator[str]:
         """
-        Stream data from source with retry logic.
-        Uses tenacity for exponential backoff.
+        Stream data from source with tenacity-based retry logic.
+        Uses exponential backoff (5 retries) and 60s circuit breaker cooldown.
         """
-        consecutive_failures = 0
-
         while self._running:
             try:
                 self._check_circuit_breaker()
 
                 async with httpx.AsyncClient(timeout=30.0) as client:
-                    async with client.stream("GET", self.source_url) as response:
-                        response.raise_for_status()
-                        consecutive_failures = 0
+                    try:
+                        response = await self._connect_to_stream_with_retry(client)
                         logger.info(f"Connected to stream: {self.source_url}")
 
                         async for line in response.aiter_lines():
@@ -194,23 +215,18 @@ class IngestSidecar:
                             if line.strip():
                                 yield line
 
+                        await response.aclose()
+
+                    except RetryError as e:
+                        self._trip_circuit_breaker()
+                        logger.warning(
+                            f"Max retries exhausted after {self.max_retries} attempts. "
+                            f"Circuit breaker tripped for {self.cooldown_seconds}s."
+                        )
+
             except CircuitBreakerOpen as e:
                 logger.warning(str(e))
                 await asyncio.sleep(5)
-
-            except (httpx.TimeoutException, httpx.ConnectError) as e:
-                consecutive_failures += 1
-                logger.warning(
-                    f"Connection failed ({consecutive_failures}/{self.max_retries}): {e}"
-                )
-
-                if consecutive_failures >= self.max_retries:
-                    self._trip_circuit_breaker()
-                    consecutive_failures = 0
-                else:
-                    wait_time = min(2 ** consecutive_failures, 30)
-                    logger.info(f"Retrying in {wait_time}s...")
-                    await asyncio.sleep(wait_time)
 
             except httpx.HTTPStatusError as e:
                 logger.error(f"HTTP error: {e.response.status_code}")
