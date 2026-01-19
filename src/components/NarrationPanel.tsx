@@ -81,8 +81,8 @@ export function NarrationPanel({ runId }: NarrationPanelProps) {
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-2 font-mono text-[11px] leading-tight">
         {messages.map((msg) => (
           <div key={msg.id} className="py-0.5 flex gap-2">
-            <span className="text-green-500/50 w-16 shrink-0">
-              {new Date(msg.timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' })}
+            <span className="text-green-500/50 w-20 shrink-0">
+              {new Date(msg.timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' })} PST
             </span>
             <span className={`${getMessageColor(msg.type, msg.text)} break-all`}>
               {msg.text}
