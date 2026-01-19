@@ -148,20 +148,20 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
     setTooltip((prev) => ({ ...prev, visible: false }));
   }, []);
 
-  // Loading state
-  if (!data || !graphData) {
-    return (
-      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-        Loading visualization...
-      </div>
-    );
-  }
+  // Always render container with ref for consistent size measurement
+  const isLoading = !data || !graphData;
 
   return (
     <div
       ref={containerRef}
       className="w-full h-full bg-[#020617] overflow-hidden relative select-none"
     >
+      {isLoading ? (
+        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+          Loading visualization...
+        </div>
+      ) : (
+      <>
       <svg
         width={size.width}
         height={size.height}
@@ -245,9 +245,9 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
           })}
         </g>
       </svg>
-
-      {/* Tooltip overlay */}
       <SankeyTooltip tooltip={tooltip} />
+      </>
+      )}
     </div>
   );
 }
