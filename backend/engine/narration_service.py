@@ -2,9 +2,11 @@ from typing import List, Dict
 from datetime import datetime
 import json
 import os
+import logging
 import redis
 
 
+logger = logging.getLogger("NarrationService")
 REDIS_LOG_KEY = "dcl.logs"
 
 
@@ -13,7 +15,6 @@ class NarrationService:
     def __init__(self):
         self.messages: Dict[str, List[Dict]] = {}
         self._redis_client = None
-        self._last_log_index = 0
     
     def _get_redis(self):
         """Lazy initialization of Redis client."""
@@ -23,12 +24,10 @@ class NarrationService:
         return self._redis_client
     
     def _fetch_ingest_logs(self) -> List[Dict]:
-        """Fetch new logs from Redis List dcl.logs."""
+        """Fetch latest logs from Redis List dcl.logs."""
         try:
             r = self._get_redis()
-            logs = r.lrange(REDIS_LOG_KEY, self._last_log_index, -1)
-            if logs:
-                self._last_log_index += len(logs)
+            logs = r.lrange(REDIS_LOG_KEY, -100, -1)
             
             parsed_logs = []
             for log_entry in logs:
@@ -44,7 +43,8 @@ class NarrationService:
                 except json.JSONDecodeError:
                     continue
             return parsed_logs
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error fetching ingest logs: {e}")
             return []
     
     def add_message(self, run_id: str, source: str, message: str):
