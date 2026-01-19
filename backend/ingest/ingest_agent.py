@@ -39,7 +39,9 @@ logger = logging.getLogger("IngestSidecar")
 
 REDIS_STREAM_KEY = "dcl.ingest.raw"
 REDIS_LOG_KEY = "dcl.logs"
+REDIS_CONFIG_KEY = "dcl.ingest.config"
 
+CONFIG_POLL_INTERVAL = 5
 
 EXPECTED_INVOICE_FIELDS = ["invoice_id", "total_amount", "vendor", "payment_status"]
 
@@ -154,6 +156,11 @@ class IngestSidecar:
         self._running = False
         self._circuit_open = False
         self._circuit_open_until: float = 0
+        
+        self._config_version: Optional[str] = None
+        self._last_config_check: float = 0
+        self._config_updated = False
+        self._repair_enabled = True
 
     async def connect_redis(self) -> None:
         """Establish Redis connection."""
@@ -193,6 +200,58 @@ class IngestSidecar:
             await self._redis.ltrim(REDIS_LOG_KEY, -500, -1)
         except Exception as e:
             logger.debug(f"Failed to push log to UI: {e}")
+
+    async def check_config_update(self) -> bool:
+        """
+        Poll Redis for dynamic config updates from AOD provisioning.
+        
+        Returns:
+            True if config was updated, False otherwise
+        """
+        if self._redis is None:
+            return False
+        
+        now = time.time()
+        if now - self._last_config_check < CONFIG_POLL_INTERVAL:
+            return False
+        
+        self._last_config_check = now
+        
+        try:
+            config_str = await self._redis.get(REDIS_CONFIG_KEY)
+            if not config_str:
+                return False
+            
+            config = json.loads(config_str)
+            new_version = config.get("version")
+            
+            if new_version and new_version != self._config_version:
+                old_url = self.source_url
+                self.source_url = config.get("target_url", self.source_url)
+                self.source_name = config.get("source_type", self.source_name)
+                self._repair_enabled = config.get("policy", {}).get("repair_enabled", True)
+                self._config_version = new_version
+                
+                logger.info("=" * 60)
+                logger.info("[HANDSHAKE] Dynamic Config Update from AOD!")
+                logger.info(f"  Connector: {config.get('connector_id')}")
+                logger.info(f"  Old URL: {old_url}")
+                logger.info(f"  New URL: {self.source_url}")
+                logger.info(f"  Repair Enabled: {self._repair_enabled}")
+                logger.info("=" * 60)
+                
+                await self.log_to_ui(
+                    f"[INFO] Handshake: AOD provisioned connector '{config.get('connector_id')}'. Switching to: {self.source_url}",
+                    "info"
+                )
+                
+                self._config_updated = True
+                return True
+                
+        except Exception as e:
+            logger.debug(f"Config check failed: {e}")
+        
+        return False
 
     def _is_invoice_record(self, record: dict) -> bool:
         """Check if this is an invoice record (not a chaos control message)."""
@@ -417,40 +476,54 @@ class IngestSidecar:
         logger.info(f"Starting IngestSidecar for {self.source_url}")
         logger.info(f"Buffering to Redis stream: {REDIS_STREAM_KEY}")
         logger.info(f"Self-healing enabled. Repair endpoint: {self.farm_base_url}/api/source/salesforce/invoice/")
+        logger.info(f"Config polling enabled. Checking {REDIS_CONFIG_KEY} every {CONFIG_POLL_INTERVAL}s")
 
         await self.connect_redis()
         self._running = True
 
         try:
-            async for line in self._stream_with_retry():
-                record = self._validate_and_parse(line)
-                if record is None:
-                    continue
-
-                payload = self._extract_payload(record)
-                is_repaired = False
-                repaired_fields = None
+            while self._running:
+                config_updated = await self.check_config_update()
+                if config_updated or self._config_updated:
+                    self._config_updated = False
+                    logger.info(f"Connecting to new stream: {self.source_url}")
                 
-                is_drifted, missing_fields = self.detect_drift(payload)
-                if is_drifted:
-                    payload, is_repaired = await self.repair_record(payload, missing_fields)
-                    if is_repaired:
-                        repaired_fields = missing_fields
+                async for line in self._stream_with_retry():
+                    await self.check_config_update()
+                    
+                    if self._config_updated:
+                        logger.info("Config updated. Reconnecting to new stream...")
+                        break
+                    
+                    record = self._validate_and_parse(line)
+                    if record is None:
+                        continue
 
-                envelope = AOSEnvelope.create(
-                    payload, 
-                    self.source_name,
-                    is_repaired=is_repaired,
-                    repaired_fields=repaired_fields,
-                )
-                await self._buffer_to_redis(envelope)
+                    payload = self._extract_payload(record)
+                    is_repaired = False
+                    repaired_fields = None
+                    
+                    if self._repair_enabled:
+                        is_drifted, missing_fields = self.detect_drift(payload)
+                        if is_drifted:
+                            payload, is_repaired = await self.repair_record(payload, missing_fields)
+                            if is_repaired:
+                                repaired_fields = missing_fields
 
-                if self.metrics.records_valid % 100 == 0:
-                    logger.info(
-                        f"Progress: {self.metrics.records_valid} valid, "
-                        f"{self.metrics.records_dropped} dropped, "
-                        f"{self.metrics.records_repaired} repaired"
+                    envelope = AOSEnvelope.create(
+                        payload, 
+                        self.source_name,
+                        is_repaired=is_repaired,
+                        repaired_fields=repaired_fields,
                     )
+                    await self._buffer_to_redis(envelope)
+
+                    if self.metrics.records_valid % 100 == 0:
+                        logger.info(
+                            f"Progress: {self.metrics.records_valid} valid, "
+                            f"{self.metrics.records_dropped} dropped, "
+                            f"{self.metrics.records_repaired} repaired"
+                        )
 
         except KeyboardInterrupt:
             logger.info("Shutdown requested")
