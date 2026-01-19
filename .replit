@@ -4,7 +4,7 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["glibcLocales", "libxcrypt", "libyaml", "unzip"]
+packages = ["glibcLocales", "libxcrypt", "libyaml", "redis", "unzip"]
 
 [workflows]
 runButton = "Project"
@@ -21,6 +21,10 @@ args = "Frontend Dev Server"
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Backend API"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Redis Server"
 
 [[workflows.workflow]]
 name = "Frontend Dev Server"
@@ -45,30 +49,33 @@ args = "python run_backend.py"
 [workflows.workflow.metadata]
 outputType = "console"
 
+[[workflows.workflow]]
+name = "Redis Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "redis-server --port 6379"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 8000
-externalPort = 8000
-
-[[ports]]
-localPort = 36495
-externalPort = 3002
-
-[[ports]]
-localPort = 40219
+localPort = 6379
 externalPort = 3000
 
 [[ports]]
-localPort = 42423
-externalPort = 3001
+localPort = 8000
+externalPort = 8000
 
 [userenv]
 
 [userenv.shared]
-FARM_API_URL = "https://autonomos.farm"
+FARM_API_URL = "https://76e34f41-bf5c-472f-b3ef-fba343165178-00-8ykfyky4oicj.worf.replit.dev/"
 
 [deployment]
 deploymentTarget = "autoscale"

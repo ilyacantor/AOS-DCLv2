@@ -64,18 +64,18 @@ export function ControlsBar({
       <div className="flex items-center gap-2 sm:gap-3 text-xs text-muted-foreground flex-wrap">
         <div className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded">
           <Cpu className="w-3 h-3" />
-          <span>LLM: <span className="text-foreground font-mono">{metrics?.llm_calls || 0}</span></span>
+          <span>LLM: <span className="text-foreground font-mono">{metrics?.llmCalls || 0}</span></span>
         </div>
         <div className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded">
           <Database className="w-3 h-3" />
-          <span>RAG: <span className="text-foreground font-mono">{metrics?.rag_reads || 0}</span></span>
+          <span>RAG: <span className="text-foreground font-mono">{metrics?.ragReads || 0}</span></span>
         </div>
         <div className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded">
           <Clock className="w-3 h-3" />
           <span className="text-foreground font-mono">
-            {isRunning 
-              ? `${(elapsedTime / 1000).toFixed(2)}s` 
-              : `${((metrics?.processing_ms || 0) / 1000).toFixed(2)}s`}
+            {isRunning
+              ? `${(elapsedTime / 1000).toFixed(2)}s`
+              : `${((metrics?.processingMs || 0) / 1000).toFixed(2)}s`}
           </span>
         </div>
       </div>
