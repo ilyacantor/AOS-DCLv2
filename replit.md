@@ -194,3 +194,76 @@ The Ingest Pipeline now broadcasts drift detection and repair events to the UI v
 1. Start Ingest Pipeline workflow
 2. Run pipeline in Farm mode from the UI
 3. Watch Dashboard Narration tab for Ingest events with yellow/green highlights
+
+## Phase 4: Autonomous Handshake (January 2026)
+
+### Dynamic Connector Provisioning
+
+DCL now supports dynamic reconfiguration via the "Handshake" pattern. AOD can provision connectors without manual DCL configuration.
+
+**The Flow:**
+1. AOD detects a data route (e.g., MuleSoft stream)
+2. AOD POSTs connector config to DCL's provisioning endpoint
+3. DCL stores config in Redis
+4. Sidecar polls Redis every 5 seconds for config updates
+5. Sidecar reconnects to the new stream URL automatically
+
+**Provisioning Endpoint:**
+```
+POST /api/ingest/provision
+```
+
+**Request Payload:**
+```json
+{
+  "connector_id": "mule_auto_01",
+  "source_type": "mulesoft_stream",
+  "target_url": "https://autonomos.farm/api/stream/synthetic/mulesoft?chaos=true",
+  "policy": { "repair_enabled": true }
+}
+```
+
+**Response:**
+```json
+{
+  "status": "provisioned",
+  "connector_id": "mule_auto_01",
+  "message": "Sidecar will pick up new config on next poll. Target: ..."
+}
+```
+
+**Config Retrieval Endpoint:**
+```
+GET /api/ingest/config
+```
+
+Returns current ingest configuration including connector_id, target_url, policy, and version.
+
+**Redis Keys:**
+- `dcl.ingest.config` - Stores dynamic connector configuration (JSON)
+- `dcl.ingest.raw` - Redis Stream for ingested records
+- `dcl.logs` - Redis List for UI log messages
+
+**Sidecar Behavior:**
+- Polls `dcl.ingest.config` every 5 seconds
+- Detects config changes via version comparison
+- Logs "[HANDSHAKE] Dynamic Config Update from AOD!" when reconfiguring
+- Respects `policy.repair_enabled` flag (can disable self-healing)
+- Broadcasts handshake events to UI via `dcl.logs`
+
+**Testing:**
+1. Start Ingest Pipeline workflow
+2. Call provisioning endpoint:
+   ```bash
+   curl -X POST http://localhost:8000/api/ingest/provision \
+     -H "Content-Type: application/json" \
+     -d '{"connector_id": "test_01", "source_type": "mulesoft", "target_url": "https://farm.url/stream", "policy": {"repair_enabled": true}}'
+   ```
+3. Watch Ingest Pipeline logs for "[HANDSHAKE]" message
+4. See handshake event in Dashboard Narration tab
+
+**Why This Matters:** 
+- Zero-touch connector provisioning from AOD
+- Dynamic stream switching without restart
+- Policy-driven repair toggling
+- Complete AOS ecosystem integration
