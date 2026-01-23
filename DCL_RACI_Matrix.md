@@ -2,91 +2,119 @@
 
 ## Component: DCL (Data Connectivity Layer)
 
-**Last Updated:** January 23, 2026
+**Last Updated:** January 23, 2026  
+**Architecture Version:** Self-Healing Mesh & Zero-Trust
 
-## System Architecture Context
+## Global Architecture Pivot
 
-| Component | Responsibility |
-|-----------|---------------|
-| **AAM** | Acquires and maintains connections to enterprise integration fabric (iPaaS, API managers, streams, warehouses). Routes pipes to DCL. |
-| **DCL** | Ingests schemas and data from routed pipes, performs semantic mapping to unified ontology, serves visualization and telemetry. |
-| **Farm** | Provides synthetic data streams, source of truth for verification, chaos injection for testing. |
+This RACI reflects the refactored AOS platform boundaries:
+
+| Component | Role | Boundary |
+|-----------|------|----------|
+| **AAM** | The Mesh | Owns Self-Healing, Repair, Raw Data Handling |
+| **DCL** | The Brain | Metadata-Only (schemas, mappings, ontology) |
+| **FARM** | The Verifier | Test Oracle Only (verification, synthetic data) |
+| **AOA** | The Orchestrator | Owns Execution, Infrastructure |
+
+## DCL Scope (Metadata-Only)
+
+DCL handles ONLY metadata - never raw payload data:
+- Schema structures (field names, types)
+- Semantic mappings (field → concept)
+- Ontology concepts
+- Persona relevance
+- Graph visualization
 
 ## Feature Status Summary
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Demo Schema Loading | FUNCTIONAL | 18 nodes, 97 links |
-| Farm Schema Fetching | FUNCTIONAL | 21 nodes, 112 links |
-| Stream Source Loading | FUNCTIONAL | Real-time from Farm |
-| Source Normalization | FUNCTIONAL | Registry from Farm API |
-| Heuristic Mapping | FUNCTIONAL | 127+ mappings created |
+| Demo Schema Loading | FUNCTIONAL | Metadata-only |
+| Farm Schema Fetching | FUNCTIONAL | Metadata-only |
+| Source Normalization | FUNCTIONAL | Metadata-only |
+| Heuristic Mapping | FUNCTIONAL | 127+ mappings |
 | RAG Enhancement (Prod) | FUNCTIONAL | Pinecone integration |
-| LLM Refinement (Prod) | FUNCTIONAL | Gemini/OpenAI integration |
+| LLM Refinement (Prod) | FUNCTIONAL | Gemini/OpenAI |
 | Graph Building | FUNCTIONAL | 4-layer Sankey |
 | Persona Filtering | FUNCTIONAL | CFO/CRO/COO/CTO |
-| Narration Service | FUNCTIONAL | 100+ messages |
-| Ingest Sidecar | FUNCTIONAL | 10.4 TPS |
-| Drift Detection | FUNCTIONAL | 30 toxic blocked |
-| Self-Healing Repair | PARTIAL | Code exists, Farm API returns 503 |
-| Verification with Farm | PARTIAL | Code exists, depends on repair |
-| Telemetry Broadcasting | FUNCTIONAL | Every 0.5s to Redis |
-| Connector Provisioning | FUNCTIONAL | Dynamic provisioning via AAM |
-| Sankey Visualization | FUNCTIONAL | Interactive 4-layer graph |
-| Telemetry Ribbon | FUNCTIONAL | Live counters in Farm mode |
-| Terminal Narration | FUNCTIONAL | Matrix-style auto-scroll |
+| Narration Service | FUNCTIONAL | Status updates |
+| Sankey Visualization | FUNCTIONAL | Interactive |
+| ~~Raw Data Buffering~~ | DEPRECATED | Moving to AAM |
+| ~~Stream Consumption~~ | DEPRECATED | Moving to AAM |
+| ~~Self-Healing Repair~~ | DEPRECATED | Moving to AAM |
 
 ## RACI Matrix
 
-| Activity/Process | DCL | AAM | Farm |
-|-----------------|-----|-----|------|
-| **Connection Management** |
-| Acquire Enterprise Connections | I | A/R | I |
-| Maintain iPaaS/API Connections | I | A/R | I |
-| Route Pipe to DCL | C | A/R | I |
-| **Schema Ingestion** |
-| Demo Schema Loading | A/R | I | I |
-| Farm Schema Fetching | R | I | A |
-| Stream Source Loading | R | C | A |
-| **Source Normalization** |
-| Registry Loading | R | I | A |
-| Alias Resolution | A/R | I | C |
-| Pattern Matching | A/R | I | I |
-| Discovery Mode (New Sources) | R | C | A |
-| **Semantic Mapping** |
-| Heuristic Mapping | A/R | I | I |
-| RAG Enhancement (Prod) | A/R | I | I |
-| LLM Refinement (Prod) | A/R | I | I |
-| Mapping Persistence | A/R | I | I |
-| **Pipeline Execution** |
-| Graph Building | A/R | I | I |
-| Persona Filtering | A/R | I | I |
-| Narration Broadcasting | A/R | I | I |
-| Run Metrics Collection | A/R | I | I |
-| **Ingest Pipeline** |
-| Stream Consumption (Sidecar) | A/R | C | C |
-| Drift Detection | A/R | I | C |
-| Self-Healing Repair | R | I | A |
-| Verification with Farm | C | I | A/R |
-| Record Buffering | A/R | I | I |
-| **Telemetry** |
-| Metrics Collection | A/R | I | I |
-| Telemetry Broadcasting | A/R | I | I |
-| TPS/Quality Calculation | A/R | I | C |
-| **Connector Provisioning** |
-| Provision Endpoint | R | A | I |
-| Config Storage | A/R | C | I |
-| Dynamic Reconnection | A/R | C | C |
-| Policy Enforcement | R | A | I |
-| **Visualization** |
-| Sankey Graph Rendering | A/R | I | I |
-| Monitor Dashboard | A/R | I | I |
-| Telemetry Ribbon | A/R | I | I |
-| Terminal Narration | A/R | I | I |
+### Connection & Pipe Management
+
+| Activity | AAM | DCL | FARM | AOA |
+|----------|-----|-----|------|-----|
+| Acquire Enterprise Connections | A/R | I | I | C |
+| Maintain iPaaS/API Connections | A/R | I | I | C |
+| Route Pipe to DCL | A/R | C | I | C |
+| Connection Health Monitoring | A/R | I | I | C |
+
+### Data Handling (Zero-Trust Boundary)
+
+| Activity | AAM | DCL | FARM | AOA |
+|----------|-----|-----|------|-----|
+| Raw Data Stream Consumption | A/R | I | I | C |
+| Drift Detection | A/R | I | C | C |
+| Self-Healing Repair | A/R | I | C | C |
+| Payload Sanitization | A/R | I | I | C |
+| Metadata Extraction | A/R | C | I | I |
+
+### Schema & Semantic Processing (DCL Domain)
+
+| Activity | AAM | DCL | FARM | AOA |
+|----------|-----|-----|------|-----|
+| Schema Metadata Ingestion | C | A/R | I | I |
+| Source Normalization | I | A/R | C | I |
+| Heuristic Mapping | I | A/R | I | I |
+| RAG Enhancement | I | A/R | I | I |
+| LLM Refinement | I | A/R | I | I |
+| Mapping Persistence | I | A/R | I | I |
+
+### Pipeline Execution
+
+| Activity | AAM | DCL | FARM | AOA |
+|----------|-----|-----|------|-----|
+| Graph Building | I | A/R | I | I |
+| Persona Filtering | I | A/R | I | I |
+| Narration Broadcasting | I | A/R | I | C |
+| Metrics Collection | C | A/R | I | C |
+
+### Verification (FARM Oracle)
+
+| Activity | AAM | DCL | FARM | AOA |
+|----------|-----|-----|------|-----|
+| Synthetic Data Generation | I | I | A/R | I |
+| Chaos Injection | I | I | A/R | C |
+| Source of Truth Lookup | C | I | A/R | I |
+| Verification Response | C | I | A/R | C |
+
+### Orchestration & Infrastructure (AOA Domain)
+
+| Activity | AAM | DCL | FARM | AOA |
+|----------|-----|-----|------|-----|
+| Workflow Orchestration | C | I | I | A/R |
+| Infrastructure Management | C | I | I | A/R |
+| Pipeline Scheduling | C | C | I | A/R |
+| Cross-Component Coordination | C | C | C | A/R |
+
+### Visualization (DCL Domain)
+
+| Activity | AAM | DCL | FARM | AOA |
+|----------|-----|-----|------|-----|
+| Sankey Graph Rendering | I | A/R | I | I |
+| Monitor Dashboard | I | A/R | I | I |
+| Telemetry Display | I | A/R | I | I |
+| Terminal Narration | I | A/R | I | I |
 
 ## Legend
+
 - **R** = Responsible (does the work)
-- **A** = Accountable (final authority/approval - exactly one per row)
+- **A** = Accountable (final authority - exactly one per row)
 - **C** = Consulted (provides input)
 - **I** = Informed (kept updated)
 
@@ -94,29 +122,23 @@
 
 | Integration | DCL Role | Partner | Partner Role | Status |
 |-------------|----------|---------|--------------|--------|
-| Pipe Routing | Consumer | AAM | Provider | FUNCTIONAL |
+| Schema Metadata | Consumer | AAM | Provider | PENDING PIVOT |
 | Connector Provisioning | Provider | AAM | Consumer | FUNCTIONAL |
-| Farm Registry API | Consumer | Farm | Provider | FUNCTIONAL |
-| Farm Stream API | Consumer | Farm | Provider | FUNCTIONAL |
-| Farm Source of Truth API | Consumer | Farm | Provider | PARTIAL (503) |
-| Farm Verify API | Consumer | Farm | Provider | PARTIAL (503) |
+| Verification Oracle | Consumer | FARM | Provider | FUNCTIONAL |
+| Execution Commands | Consumer | AOA | Provider | PENDING |
 
-## Verified Metrics (Live)
+## Migration Status
 
-| Metric | Value |
-|--------|-------|
-| Records Processed | 1,950+ |
-| TPS | 10.4 |
-| Toxic Blocked | 30 |
-| Drift Detected | 19 |
-| Sources Loaded | 11 (Demo) + 5 (Farm) |
-| Mappings Created | 127+ |
-| Ontology Concepts | 8 |
-| Personas | 4 (CFO, CRO, COO, CTO) |
+| Change | From | To | Status |
+|--------|------|-----|--------|
+| Raw data buffering | DCL | AAM | PENDING |
+| Stream consumption | DCL | AAM | PENDING |
+| Self-healing repair | DCL | AAM | PENDING |
+| Infrastructure ops | FARM | AOA | PENDING |
 
 ## Notes
-- AAM acquires and maintains connections to enterprise integration fabric
-- AAM routes pipes to DCL for schema ingestion and semantic mapping
-- DCL operates in Dev (heuristic-only) or Prod (LLM/RAG-enabled) modes
-- Farm provides Source of Truth for drift repair and verification
-- Self-healing and verification depend on Farm's SoT API being available
+
+- DCL must NOT handle raw payload data (security risk)
+- AAM owns the Zero-Trust boundary for raw data
+- FARM is strictly a verification oracle
+- AOA coordinates execution across components

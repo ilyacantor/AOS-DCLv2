@@ -1,19 +1,43 @@
 # DCL Architecture - Current State
 
 **Last Updated:** January 23, 2026  
-**Version:** 3.0 (Industrial Dashboard + Connector Provisioning)
+**Version:** 4.0 (Self-Healing Mesh & Zero-Trust - Metadata-Only)
+
+## Architecture Pivot Notice
+
+DCL is being refactored to align with the "Self-Healing Mesh" and "Zero-Trust" vision.
+
+**Key Change:** DCL is now **Metadata-Only**. Raw data handling moves to AAM.
 
 ## Overview
 
-The DCL (Data Connectivity Layer) Engine is a full-stack application designed to ingest and unify schemas and sample data from diverse sources into a common ontology using AI and heuristics. It visualizes data flow via an interactive Sankey diagram and supports two data modes: Demo (legacy sources) and Farm (synthetic data).
+DCL (Data Connectivity Layer) is "The Brain" of the AOS platform - responsible for schema understanding, semantic mapping, and visualization. DCL handles ONLY metadata (schemas, field definitions, mappings, ontology) - never raw payload data.
 
 ## System Architecture Context
 
-| Component | Responsibility |
-|-----------|---------------|
-| **AAM** | Acquires and maintains connections to enterprise integration fabric (iPaaS, API managers, streams, warehouses). Routes pipes to DCL. |
-| **DCL** | Ingests schemas and data from routed pipes, performs semantic mapping to unified ontology, serves visualization and telemetry. |
-| **Farm** | Provides synthetic data streams, source of truth for verification, chaos injection for testing. |
+| Component | Role | Boundary |
+|-----------|------|----------|
+| **AAM** | The Mesh | Owns Self-Healing, Repair, Raw Data Handling, Zero-Trust Boundary |
+| **DCL** | The Brain | Metadata-Only (schemas, mappings, ontology, visualization) |
+| **FARM** | The Verifier | Test Oracle Only (verification, synthetic data, chaos) |
+| **AOA** | The Orchestrator | Owns Execution, Infrastructure, Workflow Coordination |
+
+## DCL Scope (Metadata-Only)
+
+**IN SCOPE:**
+- Schema structures (field names, types, relationships)
+- Semantic mappings (field → ontology concept)
+- Ontology concept management
+- Persona relevance scoring
+- Graph building and visualization
+- Narration and status updates
+
+**OUT OF SCOPE (Moved to AAM):**
+- Raw data stream consumption
+- Raw data buffering
+- Drift detection on payloads
+- Self-healing repair
+- Payload sanitization
 
 ## Architectural Layers
 
