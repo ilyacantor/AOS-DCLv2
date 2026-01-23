@@ -31,7 +31,14 @@ The DCL (Data Connectivity Layer) Engine is a full-stack application designed to
   - **API Layer**: RESTful endpoints, CORS, validation
   - **Domain Layer**: Core models (SourceSystem, TableSchema, OntologyConcept, Mapping, Persona)
   - **Engine Layer**: DCLEngine orchestrator, SchemaLoader, MappingService, RAGService, NarrationService
-  - **Ingest Layer**: Sidecar (stream consumer), Consumer (semantic mapping), MetricsCollector
+  - **Core Layer** (NEW): Zero-Trust components for metadata-only architecture
+  - **Ingest Layer**: DEPRECATED - Sidecar/Consumer to migrate to AAM
+
+### Zero-Trust Core Components (backend/core/)
+- **MetadataEventBuffer**: Replaces raw payload buffering - stores only event IDs, trace IDs, schema fingerprints
+- **DownstreamConsumerContract**: Abstract interface for BLL consumers (subscribe_to_change_events, query_ontology, get_graph_topology)
+- **TopologyAPI**: Service absorbing visualization from AAM - ingests GetConnectionHealth and exposes unified graph
+- **SecurityConstraints**: Build/runtime guards preventing payload.body writes (@enforce_metadata_only, SecureLogger, validate_no_disk_payload_writes)
 
 ### Data Storage
 - **PostgreSQL**: Schema persistence, mapping storage, source registration
@@ -52,11 +59,18 @@ The DCL (Data Connectivity Layer) Engine is a full-stack application designed to
 | `/api/dcl/graph` | GET | Get current graph snapshot |
 | `/api/dcl/narration/{session_id}` | GET | Poll narration messages |
 
-### Ingest Pipeline
+### Ingest Pipeline (DEPRECATED - migrating to AAM)
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/ingest/provision` | POST | AOD handshake - provision new connector |
 | `/api/ingest/telemetry` | GET | Live industrial metrics |
+
+### Topology API (NEW)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/topology` | GET | Unified topology graph (merges DCL semantic graph with AAM health) |
+| `/api/topology/health` | GET | Connection health data from mesh |
+| `/api/topology/stats` | GET | Topology service statistics |
 
 ## Node List (24 Nodes)
 
