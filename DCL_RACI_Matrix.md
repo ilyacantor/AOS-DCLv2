@@ -2,7 +2,7 @@
 
 ## Component: DCL (Data Connectivity Layer)
 
-**Last Verified:** January 23, 2026
+**Last Updated:** January 23, 2026
 
 ## System Architecture Context
 
@@ -11,7 +11,6 @@
 | **AAM** | Acquires and maintains connections to enterprise integration fabric (iPaaS, API managers, streams, warehouses). Routes pipes to DCL. |
 | **DCL** | Ingests schemas and data from routed pipes, performs semantic mapping to unified ontology, serves visualization and telemetry. |
 | **Farm** | Provides synthetic data streams, source of truth for verification, chaos injection for testing. |
-| **AOD** | Autonomous Operations Director - does NOT communicate directly with DCL. |
 
 ## Feature Status Summary
 
@@ -39,55 +38,55 @@
 
 ## RACI Matrix
 
-| Activity/Process | DCL Engine | AAM | Farm | Database |
-|-----------------|------------|-----|------|----------|
+| Activity/Process | DCL | AAM | Farm |
+|-----------------|-----|-----|------|
 | **Connection Management** |
-| Acquire Enterprise Connections | I | R/A | I | C |
-| Maintain iPaaS/API Connections | I | R/A | I | C |
-| Route Pipe to DCL | C | R/A | I | I |
+| Acquire Enterprise Connections | I | A/R | I |
+| Maintain iPaaS/API Connections | I | A/R | I |
+| Route Pipe to DCL | C | A/R | I |
 | **Schema Ingestion** |
-| Demo Schema Loading | R/A | I | I | C |
-| Farm Schema Fetching | R | I | A | C |
-| Stream Source Loading | R | C | A | C |
+| Demo Schema Loading | A/R | I | I |
+| Farm Schema Fetching | R | I | A |
+| Stream Source Loading | R | C | A |
 | **Source Normalization** |
-| Registry Loading | R | I | A | C |
-| Alias Resolution | R/A | I | C | I |
-| Pattern Matching | R/A | I | I | I |
-| Discovery Mode (New Sources) | R | C | C | C |
+| Registry Loading | R | I | A |
+| Alias Resolution | A/R | I | C |
+| Pattern Matching | A/R | I | I |
+| Discovery Mode (New Sources) | R | C | A |
 | **Semantic Mapping** |
-| Heuristic Mapping | R/A | I | I | C |
-| RAG Enhancement (Prod) | R | I | I | A |
-| LLM Refinement (Prod) | R | I | I | C |
-| Mapping Persistence | R | I | I | A |
+| Heuristic Mapping | A/R | I | I |
+| RAG Enhancement (Prod) | A/R | I | I |
+| LLM Refinement (Prod) | A/R | I | I |
+| Mapping Persistence | A/R | I | I |
 | **Pipeline Execution** |
-| Graph Building | R/A | I | I | C |
-| Persona Filtering | R/A | I | I | I |
-| Narration Broadcasting | R | I | I | A |
-| Run Metrics Collection | R/A | I | I | C |
+| Graph Building | A/R | I | I |
+| Persona Filtering | A/R | I | I |
+| Narration Broadcasting | A/R | I | I |
+| Run Metrics Collection | A/R | I | I |
 | **Ingest Pipeline** |
-| Stream Consumption (Sidecar) | R/A | C | C | C |
-| Drift Detection | R/A | I | C | I |
-| Self-Healing Repair | R | I | A | C |
-| Verification with Farm | C | I | R/A | I |
-| Record Buffering | R | I | I | A |
+| Stream Consumption (Sidecar) | A/R | C | C |
+| Drift Detection | A/R | I | C |
+| Self-Healing Repair | R | I | A |
+| Verification with Farm | C | I | A/R |
+| Record Buffering | A/R | I | I |
 | **Telemetry** |
-| Metrics Collection | R/A | I | I | C |
-| Telemetry Broadcasting | R | I | I | A |
-| TPS/Quality Calculation | R/A | I | C | I |
+| Metrics Collection | A/R | I | I |
+| Telemetry Broadcasting | A/R | I | I |
+| TPS/Quality Calculation | A/R | I | C |
 | **Connector Provisioning** |
-| Provision Endpoint | R/A | R | I | C |
-| Config Storage | R | C | I | A |
-| Dynamic Reconnection | R/A | C | C | C |
-| Policy Enforcement | R | A | I | I |
+| Provision Endpoint | R | A | I |
+| Config Storage | A/R | C | I |
+| Dynamic Reconnection | A/R | C | C |
+| Policy Enforcement | R | A | I |
 | **Visualization** |
-| Sankey Graph Rendering | R/A | I | I | I |
-| Monitor Dashboard | R/A | I | I | I |
-| Telemetry Ribbon | R/A | I | I | I |
-| Terminal Narration | R/A | I | I | I |
+| Sankey Graph Rendering | A/R | I | I |
+| Monitor Dashboard | A/R | I | I |
+| Telemetry Ribbon | A/R | I | I |
+| Terminal Narration | A/R | I | I |
 
 ## Legend
 - **R** = Responsible (does the work)
-- **A** = Accountable (final authority/approval)
+- **A** = Accountable (final authority/approval - exactly one per row)
 - **C** = Consulted (provides input)
 - **I** = Informed (kept updated)
 
@@ -101,9 +100,6 @@
 | Farm Stream API | Consumer | Farm | Provider | FUNCTIONAL |
 | Farm Source of Truth API | Consumer | Farm | Provider | PARTIAL (503) |
 | Farm Verify API | Consumer | Farm | Provider | PARTIAL (503) |
-| Redis Telemetry | Publisher | - | - | FUNCTIONAL |
-| Redis Logs | Publisher | - | - | FUNCTIONAL |
-| PostgreSQL | Consumer | - | Provider | FUNCTIONAL |
 
 ## Verified Metrics (Live)
 
