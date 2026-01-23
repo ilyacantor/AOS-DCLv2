@@ -102,10 +102,10 @@ The DCL (Data Connectivity Layer) Engine is a full-stack application designed to
 | `OPENAI_API_KEY` | OpenAI API key |
 | `PINECONE_API_KEY` | Pinecone API key |
 
-## Phase 4: Autonomous Handshake (January 2026)
+## Phase 4: Connector Provisioning (January 2026)
 
 ### Dynamic Connector Provisioning
-AOD (Autonomous Operations Director) can dynamically provision connectors without manual intervention.
+AAM (Asset & Availability Management) acquires and maintains connections to enterprise integration fabric (iPaaS, API managers, streams, warehouses) and routes pipes to DCL.
 
 **Provision Endpoint:**
 ```bash
@@ -119,7 +119,7 @@ POST /api/ingest/provision
 ```
 
 **Handshake Flow:**
-1. AOD calls POST /api/ingest/provision
+1. AAM calls POST /api/ingest/provision to route pipe to DCL
 2. Backend stores config in Redis (`dcl.ingest.config`)
 3. Sidecar polls every 5 seconds, detects version change
 4. Sidecar logs "[HANDSHAKE]" and reconnects to new stream

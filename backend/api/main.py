@@ -107,9 +107,9 @@ class ProvisionResponse(BaseModel):
 @app.post("/api/ingest/provision", response_model=ProvisionResponse)
 def provision_connector(request: ProvisionRequest):
     """
-    Receive connector configuration from AOD and reconfigure the Ingest Sidecar.
+    Receive connector configuration from AAM and reconfigure the Ingest Sidecar.
     
-    This is the "Handshake" endpoint that allows AOD to dynamically provision
+    This is the "Handshake" endpoint that allows AAM to dynamically provision
     data connectors without manual configuration.
     """
     try:

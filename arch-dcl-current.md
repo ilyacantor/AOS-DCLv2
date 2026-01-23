@@ -96,8 +96,8 @@ The DCL (Data Connectivity Layer) Engine is a 4-layer data unification platform 
 - Interactive Sankey visualization
 - Persona-driven data routing
 
-### Phase 4: Autonomous Handshake
-- Dynamic connector provisioning from AOD
+### Phase 4: Connector Provisioning
+- Dynamic connector provisioning from AAM
 - Redis-based configuration polling
 - Policy-driven repair toggling
 - Zero-touch stream switching
@@ -115,7 +115,7 @@ The DCL (Data Connectivity Layer) Engine is a 4-layer data unification platform 
 |-----|------|---------|
 | `dcl.logs` | Pub/Sub | Narration message broadcast |
 | `dcl.ingest.raw` | Stream | Raw ingested records |
-| `dcl.ingest.config` | Hash | Dynamic connector config (AOD) |
+| `dcl.ingest.config` | Hash | Dynamic connector config (AAM) |
 | `dcl.telemetry` | String | Live metrics JSON |
 
 ## Telemetry Metrics

@@ -207,7 +207,7 @@ class IngestSidecar:
 
     async def check_config_update(self) -> bool:
         """
-        Poll Redis for dynamic config updates from AOD provisioning.
+        Poll Redis for dynamic config updates from AAM provisioning.
         
         Returns:
             True if config was updated, False otherwise
@@ -237,7 +237,7 @@ class IngestSidecar:
                 self._config_version = new_version
                 
                 logger.info("=" * 60)
-                logger.info("[HANDSHAKE] Dynamic Config Update from AOD!")
+                logger.info("[HANDSHAKE] Dynamic Config Update from AAM!")
                 logger.info(f"  Connector: {config.get('connector_id')}")
                 logger.info(f"  Old URL: {old_url}")
                 logger.info(f"  New URL: {self.source_url}")
@@ -245,7 +245,7 @@ class IngestSidecar:
                 logger.info("=" * 60)
                 
                 await self.log_to_ui(
-                    f"[INFO] Handshake: AOD provisioned connector '{config.get('connector_id')}'. Switching to: {self.source_url}",
+                    f"[INFO] Handshake: AAM provisioned connector '{config.get('connector_id')}'. Switching to: {self.source_url}",
                     "info"
                 )
                 
