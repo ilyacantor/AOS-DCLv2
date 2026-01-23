@@ -1,19 +1,26 @@
 # DCL Engine
-## Unify Your Data. Visualize Your Enterprise.
 
 ---
 
-### The Challenge
+## Core Function
 
-Enterprise data lives in **11+ disconnected systems** — CRMs, ERPs, databases, warehouses. Each team sees a fragment. Nobody sees the whole picture.
+**DCL answers one question:**
+
+> "What does this field mean to the business?"
+
+It maps raw technical fields (`acct_id`, `cust_rev_ytd`, `opp_stage`) to business concepts (`Account`, `Revenue`, `Opportunity`) — then shows you who uses what.
 
 ---
 
-### The Solution: DCL Engine
+## The Problem It Solves
 
-**One semantic layer. One visual truth.**
+You have 11 source systems. Each uses different names for the same thing:
+- Salesforce calls it `AccountId`
+- SAP calls it `KUNNR`  
+- NetSuite calls it `customer_internal_id`
+- Your data warehouse calls it `dim_customer_key`
 
-DCL automatically discovers, maps, and visualizes how your data flows from source systems to business outcomes — in real time.
+**They all mean "Customer Account."** But nobody documented that. Until now.
 
 ---
 
