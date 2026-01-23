@@ -1,26 +1,35 @@
 """
 DCL Core Module - Zero-Trust Architecture Components
 
+**ARCHITECTURE PIVOT (January 2026): Fabric Plane Mesh**
+
 This module contains the core architectural components for DCL
 aligned with the Self-Healing Mesh & Zero-Trust vision.
 
 Components:
-- MetadataEventBuffer: In-memory buffer for metadata-only events
-- PayloadSecurityGuard: Prevents raw payload data from being stored
+- FabricPlane: Abstraction for the 4 Fabric Planes (iPaaS, API Gateway, Event Bus, Data Warehouse)
+- FabricPointerBuffer: Pointer-only buffering (offsets, cursors) - NEVER payloads
 - DownstreamConsumerContract: Abstract interface for BLL consumers
 - TopologyAPI: Graph visualization service
+
+Pointer Buffering Strategy:
+- DCL buffers ONLY Fabric Pointers (offsets, cursors)
+- Just-in-Time fetching: payload retrieved from Fabric Plane only when semantic mapper requests
+- Leverages Fabric durability (Kafka, Snowflake) for Zero-Trust compliance
 
 DCL Scope (Metadata-Only):
 - Schema structures (field names, types)
 - Semantic mappings (field → concept)
 - Ontology management
 - Graph visualization
+- Pointer buffering (NOT payload buffering)
 
 Out of Scope (Moved to AAM):
 - Raw data stream consumption
 - Raw data buffering
 - Self-healing repair
 - Payload sanitization
+- Fabric Plane connection management
 """
 
 from backend.core.metadata_buffer import (
@@ -58,6 +67,27 @@ from backend.core.security_constraints import (
     MetadataOnlyDict,
 )
 
+from backend.core.fabric_plane import (
+    FabricPlaneType,
+    FabricProvider,
+    FabricPointer,
+    KafkaPointer,
+    SnowflakePointer,
+    BigQueryPointer,
+    EventBridgePointer,
+    IPaaSPointer,
+    APIGatewayPointer,
+    FabricPlaneClient,
+    PLANE_TO_PROVIDERS,
+    get_pointer_class,
+)
+
+from backend.core.pointer_buffer import (
+    BufferedPointer,
+    FabricPointerBuffer,
+    fabric_pointer_buffer,
+)
+
 __all__ = [
     "MetadataEvent",
     "MetadataEventBuffer",
@@ -82,4 +112,19 @@ __all__ = [
     "validate_no_disk_payload_writes",
     "assert_metadata_only_mode",
     "MetadataOnlyDict",
+    "FabricPlaneType",
+    "FabricProvider",
+    "FabricPointer",
+    "KafkaPointer",
+    "SnowflakePointer",
+    "BigQueryPointer",
+    "EventBridgePointer",
+    "IPaaSPointer",
+    "APIGatewayPointer",
+    "FabricPlaneClient",
+    "PLANE_TO_PROVIDERS",
+    "get_pointer_class",
+    "BufferedPointer",
+    "FabricPointerBuffer",
+    "fabric_pointer_buffer",
 ]

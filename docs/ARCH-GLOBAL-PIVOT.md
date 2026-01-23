@@ -1,11 +1,36 @@
 # AOS Platform - Global Architecture Pivot
 
 **Last Updated:** January 23, 2026  
-**Version:** 1.0 - Self-Healing Mesh & Zero-Trust Vision
+**Version:** 2.0 - Fabric Plane Mesh Architecture
 
 ## Executive Summary
 
-The AOS platform is being refactored to align with the "Self-Healing Mesh" and "Zero-Trust" vision. This document defines the new component boundaries and responsibilities.
+The AOS platform is being refactored to align with the "Fabric Plane Mesh" architecture. 
+
+**CRITICAL CONSTRAINT:** AAM (The Mesh) does NOT connect directly to individual SaaS applications (e.g., Salesforce, HubSpot) unless running in "Preset 6 (Scrappy)" mode. AAM connects ONLY to "Fabric Planes" that aggregate data.
+
+## The 4 Fabric Planes
+
+| Plane | Examples | Purpose |
+|-------|----------|---------|
+| **iPaaS** | Workato, MuleSoft | Control plane for integration flows |
+| **API_GATEWAY** | Kong, Apigee | Direct managed API access |
+| **EVENT_BUS** | Kafka, EventBridge | Streaming backbone |
+| **DATA_WAREHOUSE** | Snowflake, BigQuery | Source of Truth storage |
+
+## Pointer Buffering Strategy (DCL)
+
+**Previous:** "Don't buffer PII" (Generic)  
+**New Reality:** The Fabric Plane allows us to be specific. We don't buffer data or metadata - we buffer **Pointers (Offsets)** only.
+
+| Fabric Plane | Pointer Format |
+|--------------|----------------|
+| Kafka | `{ topic, partition, offset }` |
+| Snowflake | `{ table, stream_id, row_cursor }` |
+| EventBridge | `{ event_bus_name, event_id }` |
+| BigQuery | `{ project, dataset, table, read_session }` |
+
+**Just-in-Time Fetching:** The ingestion worker fetches the actual payload from the Fabric Plane ONLY at the exact moment the semantic mapper requests it. This leverages Fabric durability and guarantees Zero-Trust compliance.
 
 ## Architectural Drift (Previous State)
 

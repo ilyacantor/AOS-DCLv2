@@ -35,10 +35,26 @@ The DCL (Data Connectivity Layer) Engine is a full-stack application designed to
   - **Ingest Layer**: DEPRECATED - Sidecar/Consumer to migrate to AAM
 
 ### Zero-Trust Core Components (backend/core/)
-- **MetadataEventBuffer**: Replaces raw payload buffering - stores only event IDs, trace IDs, schema fingerprints
-- **DownstreamConsumerContract**: Abstract interface for BLL consumers (subscribe_to_change_events, query_ontology, get_graph_topology)
-- **TopologyAPI**: Service absorbing visualization from AAM - ingests GetConnectionHealth and exposes unified graph
-- **SecurityConstraints**: Build/runtime guards preventing payload.body writes (@enforce_metadata_only, SecureLogger, validate_no_disk_payload_writes)
+
+**Fabric Plane Mesh (January 2026 Pivot):**
+AAM connects to 4 Fabric Planes (not individual SaaS apps):
+- **iPaaS** (Workato, MuleSoft) - Integration flow control
+- **API_GATEWAY** (Kong, Apigee) - Managed API access
+- **EVENT_BUS** (Kafka, EventBridge) - Streaming backbone
+- **DATA_WAREHOUSE** (Snowflake, BigQuery) - Source of Truth
+
+**Pointer Buffering Strategy:**
+DCL buffers ONLY Fabric Pointers (offsets, cursors) - NEVER payloads:
+- Kafka: `{ topic, partition, offset }`
+- Snowflake: `{ table, stream_id, row_cursor }`
+- Just-in-Time fetching: payload retrieved only when semantic mapper requests
+
+**Core Components:**
+- **FabricPointerBuffer**: Pointer-only buffering with JIT fetch capability
+- **FabricPlane Types**: KafkaPointer, SnowflakePointer, BigQueryPointer, EventBridgePointer
+- **DownstreamConsumerContract**: Abstract interface for BLL consumers
+- **TopologyAPI**: Service absorbing visualization from AAM health data
+- **SecurityConstraints**: Build/runtime guards preventing payload.body writes
 
 ### Data Storage
 - **PostgreSQL**: Schema persistence, mapping storage, source registration
