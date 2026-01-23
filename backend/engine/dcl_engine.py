@@ -55,12 +55,14 @@ class DCLEngine:
         
         semantic_mapper = SemanticMapper()
         
+        all_mappings_grouped = semantic_mapper.get_all_mappings_grouped()
+        
         stored_mappings = []
         sources_with_mappings = set()
         sources_needing_mappings = []
         
         for source in sources:
-            source_stored = semantic_mapper.get_stored_mappings(source.id)
+            source_stored = all_mappings_grouped.get(source.id, [])
             if source_stored:
                 stored_mappings.extend(source_stored)
                 sources_with_mappings.add(source.id)

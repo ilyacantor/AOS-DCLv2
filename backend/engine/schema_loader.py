@@ -14,8 +14,20 @@ logger = get_logger(__name__)
 
 class SchemaLoader:
     
+    _demo_cache: Optional[List[SourceSystem]] = None
+    _stream_cache: Optional[List[SourceSystem]] = None
+    _cache_time: float = 0
+    _CACHE_TTL: float = 300.0
+    
     @staticmethod
     def load_demo_schemas(narration=None, run_id: Optional[str] = None) -> List[SourceSystem]:
+        import time
+        now = time.time()
+        if SchemaLoader._demo_cache is not None and (now - SchemaLoader._cache_time) < SchemaLoader._CACHE_TTL:
+            if narration and run_id:
+                narration.add_message(run_id, "SchemaLoader", f"Using cached demo schemas ({len(SchemaLoader._demo_cache)} sources)")
+            return SchemaLoader._demo_cache
+        
         schemas_path = "schemas/schemas"
         if not os.path.exists(schemas_path):
             return []
@@ -109,6 +121,10 @@ class SchemaLoader:
         
         if narration and run_id:
             narration.add_message(run_id, "SchemaLoader", f"Loaded {len(sources)} demo sources with normalization")
+        
+        import time
+        SchemaLoader._demo_cache = sources
+        SchemaLoader._cache_time = time.time()
         
         return sources
 

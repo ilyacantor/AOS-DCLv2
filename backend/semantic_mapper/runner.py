@@ -40,3 +40,6 @@ class SemanticMapper:
     
     def get_stored_mappings(self, source_id: str = None) -> List[Mapping]:
         return self.persistence.load_mappings(source_id)
+    
+    def get_all_mappings_grouped(self) -> dict:
+        return self.persistence.load_all_mappings_grouped()
