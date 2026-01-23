@@ -241,6 +241,50 @@ def run_batch_mapping(request: MappingRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+from backend.core.topology_api import topology_api, ConnectionHealth, ConnectionStatus
+
+
+class TopologyResponse(BaseModel):
+    nodes: List[Dict[str, Any]]
+    links: List[Dict[str, Any]]
+    metadata: Dict[str, Any]
+
+
+@app.get("/api/topology", response_model=TopologyResponse)
+async def get_topology(include_health: bool = True):
+    """
+    Get the unified topology graph.
+    
+    Merges DCL semantic graph with AAM health data.
+    This is the TopologyAPI service that absorbs visualization from AAM.
+    """
+    try:
+        return await topology_api.get_topology(include_health=include_health)
+    except Exception as e:
+        logger.error(f"Failed to get topology: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/topology/health")
+async def get_connection_health(connector_id: Optional[str] = None):
+    """
+    Get connection health data from the mesh.
+    
+    This ingests data from AAM's GetConnectionHealth endpoint.
+    """
+    try:
+        return await topology_api.get_connection_health(connector_id)
+    except Exception as e:
+        logger.error(f"Failed to get connection health: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/topology/stats")
+def get_topology_stats():
+    """Get topology service statistics."""
+    return topology_api.get_stats()
+
+
 DIST_DIR = Path(__file__).parent.parent.parent / "dist"
 
 if DIST_DIR.exists() and (DIST_DIR / "assets").exists():

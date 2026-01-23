@@ -1,0 +1,56 @@
+Here are the specific, actionable prompts to feed into your AI coding agents (e.g., Cursor, Windsurf, or GitHub Copilot).
+
+These prompts are designed to move beyond the RACI matrix and force a code refactor that repairs the "Split-Brain" architecture, enforces the "Zero-Trust" security model, and establishes the missing contracts for the future Business Logic Layer (BLL).
+
+0. Global Context Injection
+Paste this first to align all agents on the new architectural North Star.
+
+Plaintext
+# GLOBAL ARCHITECTURE PIVOT
+We are refactoring the AOS platform to align with the "Self-Healing Mesh" and "Zero-Trust" vision.
+The previous code implementation suffered from architectural drift:
+1. AAM (The Mesh) was passive; it must now own "Self-Healing" and "Repair."
+2. FARM (The Verifier) became a God Object handling Ops; it must now strictly be a "Test Oracle."
+3. DCL (The Brain) was buffering raw data (Security Risk); it must now be "Metadata-Only."
+4. AOA (The Orchestrator) must pick up the infrastructure duties dropped by FARM and own "Execution."
+
+All subsequent refactoring tasks must adhere to these four boundary changes.
+1. Agent Target: AAM (Adaptive API Mesh)
+Mission: Reclaim "Self-Healing" autonomy. AAM must detect and repair breaks, not just report them.
+
+Prompt: Act as the Lead Architect for the Adaptive API Mesh (AAM).
+
+Current State: The codebase currently functions as a "dumb pipe," detecting schema drift (DriftDetector) but delegating the repair logic to the external FARM component. This creates circular dependencies and violates the "Self-Healing" architectural promise.
+
+Your Mission: Refactor the ConnectorManager to be autonomous and self-healing.
+
+Refactoring Directives:
+
+Centralize Repair Logic: Move the SelfHealingRepair and DynamicReconnection logic from the external FARM service directly into AAM's ConnectionLifecycleManager. When drift is detected, AAM must essentially "heal itself" (e.g., trigger re-mapping or version negotiation) without waiting for an external command.
+
+Implement Hot-Swap Provisioning: Create a ConnectorProvisioner interface within AAM. You must be able to instantiate or restart a connector instance on the fly if a connection goes stale.
+
+Governance Handshake: Implement a PolicyConsumer middleware. This should ingest the "Policy Manifest" from AOD (e.g., "Block PII") and enforce it at the request/response interceptor level.
+
+Purge UI: Delete OperatorDashboard and SankeyRenderer modules from your repo. You are a headless mesh. Expose your state via a gRPC endpoint (GetConnectionHealth) so DCL can visualize it.
+
+Constraint: Do not rely on FARM for any operational logic. FARM is strictly for verification/QA.
+
+2. Agent Target: DCL (Data Connectivity Layer)
+Mission: Enforce Zero-Trust (Metadata only) and stub the BLL Contract.
+
+Prompt: Act as the Principal Engineer for the Data Connectivity Layer (DCL).
+
+Current State: The IngestPipeline currently includes a RecordBuffer that persists sensitive customer data (payloads) to disk to handle pressure. This violates our "Metadata-Only" security posture. We also lack a clean interface for downstream consumers.
+
+Your Mission: Enforce Zero-Trust strictness and define the interface for downstream consumers.
+
+Refactoring Directives:
+
+Refactor Buffering: Rewrite RecordBuffer to MetadataEventBuffer. Ensure that actual data payloads are processed via in-memory streams or pointers and are never serialized to disk. If buffering is required for rate-limiting, store only the Request IDs/Header Metadata, not the Body.
+
+Define BLL Interface (Stub): We are not implementing the Business Logic Layer yet, but we need the contract. Create an abstract Interface/Protocol named DownstreamConsumerContract. Define methods like subscribe_to_change_events(topic) and query_ontology(snapshot_id). This creates a clean boundary for future Agents to plug into without modifying DCL core.
+
+Absorb Visualization: Implement a TopologyAPI service. This should ingest the GetConnectionHealth data from AAM and expose a JSON graph structure (nodes/edges) for the frontend to render.
+
+Constraint: Code must fail the build if it attempts to write payload.body to system logs or disk.
