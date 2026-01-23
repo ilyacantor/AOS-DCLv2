@@ -14,7 +14,12 @@ class MappingPersistence:
             raise ValueError("DATABASE_URL not set")
     
     def _get_connection(self):
-        if MappingPersistence._connection is None or MappingPersistence._connection.closed:
+        try:
+            if MappingPersistence._connection is None or MappingPersistence._connection.closed:
+                MappingPersistence._connection = psycopg2.connect(self.database_url)
+            else:
+                MappingPersistence._connection.cursor().execute("SELECT 1")
+        except (psycopg2.OperationalError, psycopg2.InterfaceError):
             MappingPersistence._connection = psycopg2.connect(self.database_url)
         return MappingPersistence._connection
     

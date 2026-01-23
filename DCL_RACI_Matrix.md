@@ -2,6 +2,34 @@
 
 ## Component: DCL (Data Connectivity Layer)
 
+**Last Verified:** January 23, 2026
+
+## Feature Status Summary
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Demo Schema Loading | FUNCTIONAL | 18 nodes, 97 links |
+| Farm Schema Fetching | FUNCTIONAL | 21 nodes, 112 links |
+| Stream Source Loading | FUNCTIONAL | Real-time from Farm |
+| Source Normalization | FUNCTIONAL | Registry from Farm API |
+| Heuristic Mapping | FUNCTIONAL | 127+ mappings created |
+| RAG Enhancement (Prod) | FUNCTIONAL | Pinecone integration |
+| LLM Refinement (Prod) | FUNCTIONAL | Gemini/OpenAI integration |
+| Graph Building | FUNCTIONAL | 4-layer Sankey |
+| Persona Filtering | FUNCTIONAL | CFO/CRO/COO/CTO |
+| Narration Service | FUNCTIONAL | 100+ messages |
+| Ingest Sidecar | FUNCTIONAL | 10.4 TPS |
+| Drift Detection | FUNCTIONAL | 30 toxic blocked |
+| Self-Healing Repair | PARTIAL | Code exists, Farm API returns 503 |
+| Verification with Farm | PARTIAL | Code exists, depends on repair |
+| Telemetry Broadcasting | FUNCTIONAL | Every 0.5s to Redis |
+| AOD Handshake | FUNCTIONAL | Dynamic provisioning works |
+| Sankey Visualization | FUNCTIONAL | Interactive 4-layer graph |
+| Telemetry Ribbon | FUNCTIONAL | Live counters in Farm mode |
+| Terminal Narration | FUNCTIONAL | Matrix-style auto-scroll |
+
+## RACI Matrix
+
 | Activity/Process | DCL Engine | Farm | AOD | User/Operator | Database |
 |-----------------|------------|------|-----|---------------|----------|
 | **Schema Ingestion** |
@@ -52,19 +80,33 @@
 
 ## Key Integration Points
 
-| Integration | DCL Role | Partner Role |
-|-------------|----------|--------------|
-| Farm Registry API | Consumer | Provider |
-| Farm Stream API | Consumer | Provider |
-| Farm Source of Truth API | Consumer | Provider |
-| Farm Verify API | Consumer | Provider |
-| AOD Provision API | Provider | Consumer |
-| Redis Telemetry | Publisher | - |
-| Redis Logs | Publisher | - |
-| PostgreSQL | Consumer | Provider |
+| Integration | DCL Role | Partner Role | Status |
+|-------------|----------|--------------|--------|
+| Farm Registry API | Consumer | Provider | FUNCTIONAL |
+| Farm Stream API | Consumer | Provider | FUNCTIONAL |
+| Farm Source of Truth API | Consumer | Provider | PARTIAL (503) |
+| Farm Verify API | Consumer | Provider | PARTIAL (503) |
+| AOD Provision API | Provider | Consumer | FUNCTIONAL |
+| Redis Telemetry | Publisher | - | FUNCTIONAL |
+| Redis Logs | Publisher | - | FUNCTIONAL |
+| PostgreSQL | Consumer | Provider | FUNCTIONAL |
+
+## Verified Metrics (Live)
+
+| Metric | Value |
+|--------|-------|
+| Records Processed | 1,950+ |
+| TPS | 10.4 |
+| Toxic Blocked | 30 |
+| Drift Detected | 19 |
+| Sources Loaded | 11 (Demo) + 5 (Farm) |
+| Mappings Created | 127+ |
+| Ontology Concepts | 8 |
+| Personas | 4 (CFO, CRO, COO, CTO) |
 
 ## Notes
 - DCL operates in Dev (heuristic-only) or Prod (LLM/RAG-enabled) modes
 - Farm provides Source of Truth for drift repair and verification
 - AOD provisions connectors dynamically via handshake pattern
 - All telemetry flows through Redis for real-time dashboard updates
+- Self-healing and verification depend on Farm's SoT API being available (currently returning 503)
