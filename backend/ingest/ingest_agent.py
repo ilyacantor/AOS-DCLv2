@@ -1,6 +1,15 @@
 """
 Ingest Sidecar Agent for DCL Engine.
 
+**DEPRECATED**: This module is scheduled for migration to AAM (Asset & Availability Management).
+Per ARCH-GLOBAL-PIVOT.md, DCL must be metadata-only. Raw payload buffering and self-healing
+logic will move to AAM. This code remains temporarily for backward compatibility.
+
+Migration Status: PENDING (January 2026)
+Target: AAM self-healing mesh
+See: docs/ARCH-GLOBAL-PIVOT.md for architecture details
+
+Original Description:
 This module implements a fault-tolerant ingestion pipeline that:
 1. Connects to Farm's streaming endpoint
 2. Validates incoming JSON data (drops malformed records)
@@ -10,6 +19,14 @@ This module implements a fault-tolerant ingestion pipeline that:
 The Sidecar implements "The Airlock" pattern - isolating the core DCL
 from toxic enterprise data streams.
 """
+import warnings
+
+warnings.warn(
+    "IngestSidecar is DEPRECATED and will move to AAM. "
+    "DCL must be metadata-only per ARCH-GLOBAL-PIVOT.md",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 import asyncio
 import json

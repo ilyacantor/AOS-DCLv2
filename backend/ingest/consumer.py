@@ -1,10 +1,27 @@
 """
 DCL Ingest Consumer - Redis Stream Consumer with Semantic Mapping.
 
+**DEPRECATED**: This module is scheduled for migration to AAM (Asset & Availability Management).
+Per ARCH-GLOBAL-PIVOT.md, DCL must be metadata-only. Raw payload processing and semantic
+inference from payloads will move to AAM. This code remains temporarily for backward compatibility.
+
+Migration Status: PENDING (January 2026)
+Target: AAM self-healing mesh
+See: docs/ARCH-GLOBAL-PIVOT.md for architecture details
+
+Original Description:
 This module reads from the Redis stream `dcl.ingest.raw`, infers schema
 from JSON payloads, and runs the HeuristicMapper to create semantic mappings.
 The mappings are persisted to PostgreSQL for the DCLEngine to visualize.
 """
+import warnings
+
+warnings.warn(
+    "IngestConsumer is DEPRECATED and will move to AAM. "
+    "DCL must be metadata-only per ARCH-GLOBAL-PIVOT.md",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 import asyncio
 import json

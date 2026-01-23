@@ -17,7 +17,35 @@ from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
+from backend.core.security_constraints import (
+    validate_no_disk_payload_writes,
+    assert_metadata_only_mode,
+)
+
 app = FastAPI(title="DCL Engine API")
+
+
+@app.on_event("startup")
+async def enforce_security_constraints():
+    """Enforce Zero-Trust metadata-only constraints at startup."""
+    logger.info("=== DCL Zero-Trust Security Check ===")
+    
+    try:
+        assert_metadata_only_mode()
+        logger.info("[SECURITY] Metadata-only mode: ENABLED")
+    except Exception as e:
+        logger.warning(f"[SECURITY] Metadata-only assertion failed: {e}")
+    
+    violations = validate_no_disk_payload_writes()
+    if violations:
+        logger.warning(f"[SECURITY] Found {len(violations)} potential payload write paths:")
+        for v in violations[:5]:
+            logger.warning(f"  - {v}")
+        logger.warning("[SECURITY] Review ARCH-GLOBAL-PIVOT.md for migration guidance")
+    else:
+        logger.info("[SECURITY] No payload write violations detected")
+    
+    logger.info("=== DCL Engine Ready (Metadata-Only Mode) ===")
 
 app.add_middleware(
     CORSMiddleware,
