@@ -1,5 +1,7 @@
 # DCL Engine - Data Connectivity Layer
 
+**Last Updated:** January 23, 2026
+
 ## Overview
 The DCL (Data Connectivity Layer) Engine is a full-stack application designed to ingest and unify schemas and sample data from diverse sources into a common ontology using AI and heuristics. It visualizes data flow via an interactive Sankey diagram and supports two data modes: Demo (legacy sources) and Farm (synthetic data). The system provides persona-driven business logic for roles like CFO, CRO, COO, and CTO. Its core capabilities include multi-source schema ingestion, AI-powered ontology unification, RAG for intelligent mapping, real-time process narration, and enterprise monitoring with flexible runtime modes.
 

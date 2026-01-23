@@ -1,11 +1,19 @@
-# DCL Architecture - Current State (Post-Refactoring)
+# DCL Architecture - Current State
 
-**Last Updated:** November 25, 2025  
-**Version:** 2.1 (Semantic Mapping Architecture + Interactive Drill-Down)
+**Last Updated:** January 23, 2026  
+**Version:** 3.0 (Industrial Dashboard + Connector Provisioning)
 
 ## Overview
 
-The DCL (Data Connectivity Layer) Engine is now a **3-layer architecture** that separates batch semantic mapping (cold path) from runtime graph generation (hot path). The system uses database-driven configuration for ontology concepts, persona profiles, and field-to-concept mappings.
+The DCL (Data Connectivity Layer) Engine is a full-stack application designed to ingest and unify schemas and sample data from diverse sources into a common ontology using AI and heuristics. It visualizes data flow via an interactive Sankey diagram and supports two data modes: Demo (legacy sources) and Farm (synthetic data).
+
+## System Architecture Context
+
+| Component | Responsibility |
+|-----------|---------------|
+| **AAM** | Acquires and maintains connections to enterprise integration fabric (iPaaS, API managers, streams, warehouses). Routes pipes to DCL. |
+| **DCL** | Ingests schemas and data from routed pipes, performs semantic mapping to unified ontology, serves visualization and telemetry. |
+| **Farm** | Provides synthetic data streams, source of truth for verification, chaos injection for testing. |
 
 ## Architectural Layers
 
@@ -13,11 +21,11 @@ The DCL (Data Connectivity Layer) Engine is now a **3-layer architecture** that 
 
 **Location:** `backend/semantic_mapper/`
 
-**Purpose:** Analyze source schemas and create persistent field→concept mappings using heuristics, RAG, and LLM.
+**Purpose:** Analyze source schemas and create persistent field-to-concept mappings using heuristics, RAG, and LLM.
 
 **Components:**
 - `heuristic_mapper.py` - Stage 1: Pattern matching using ontology metadata
-- `persist_mappings.py` - Database persistence layer
+- `persist_mappings.py` - Database persistence layer with connection pooling
 - `runner.py` - Orchestrates the mapping pipeline
 
 **Execution Triggers:**
@@ -32,10 +40,10 @@ The DCL (Data Connectivity Layer) Engine is now a **3-layer architecture** that 
 **Location:** PostgreSQL database
 
 **Tables:**
-- `ontology_concepts` - Core concepts (account, revenue, cost, etc.) with cluster tags (Finance, Growth, Infra, Ops)
-- `field_concept_mappings` - Persistent mappings from source fields to ontology concepts with confidence scores
+- `ontology_concepts` - Core concepts (account, revenue, cost, etc.) with cluster tags
+- `field_concept_mappings` - Persistent mappings from source fields to ontology concepts
 - `persona_profiles` - CFO, CRO, COO, CTO definitions
-- `persona_concept_relevance` - Which concepts each persona cares about (0.0-1.0 relevance scores)
+- `persona_concept_relevance` - Which concepts each persona cares about (0.0-1.0 relevance)
 
 **Configuration:**
 - `config/ontology_concepts.yaml` - Ontology definition with synonyms and example fields
@@ -58,73 +66,182 @@ The DCL (Data Connectivity Layer) Engine is now a **3-layer architecture** that 
 
 **Key Change:** NO LLM/RAG calls at runtime - all intelligence is pre-computed and stored.
 
+### 4. Ingest Pipeline (Stream Processing)
+
+**Location:** `backend/ingest/`
+
+**Components:**
+- `ingest_agent.py` - Sidecar that consumes Farm streams and buffers to Redis
+- `consumer.py` - Consumes from Redis, performs semantic mapping
+- `run_sidecar.py` / `run_consumer.py` - Entry points
+
+**Features:**
+- Real-time stream consumption at 10+ TPS
+- Drift detection and toxic record blocking
+- Self-healing repair (calls Farm Source of Truth API)
+- Verification with Farm (closed-loop confirmation)
+- MetricsCollector for telemetry broadcasting
+
 ## Data Flow
 
 ```
 ┌─────────────────────────────────────┐
-│  Semantic Mapper (Batch / Cold)     │
-│  - Heuristic matching                │
-│  - RAG enhancement (optional)        │
-│  - LLM refinement (optional)         │
-│  └─> field_concept_mappings          │
+│  AAM (Asset & Availability Mgmt)    │
+│  - Acquires enterprise connections  │
+│  - Routes pipes to DCL              │
+└─────────────────────────────────────┘
+              ↓ POST /api/ingest/provision
+┌─────────────────────────────────────┐
+│  Ingest Sidecar (Stream)            │
+│  - Consumes from Farm/iPaaS         │
+│  - Drift detection                  │
+│  - Self-healing repair              │
+│  └─> Redis stream: dcl.ingest.raw   │
 └─────────────────────────────────────┘
               ↓
 ┌─────────────────────────────────────┐
-│  Database (Persistent Storage)       │
-│  - ontology_concepts                 │
-│  - field_concept_mappings            │
-│  - persona_profiles                  │
-│  - persona_concept_relevance         │
+│  Ingest Consumer                    │
+│  - Semantic mapping                 │
+│  - Source registration              │
+│  - Telemetry collection             │
 └─────────────────────────────────────┘
               ↓
 ┌─────────────────────────────────────┐
-│  DCL Engine (Runtime / Hot)          │
-│  - Read stored mappings              │
-│  - Filter by persona relevance       │
-│  - Build graph snapshot              │
-│  - Add explanations                  │
+│  Database (Persistent Storage)      │
+│  - ontology_concepts                │
+│  - field_concept_mappings           │
+│  - persona_profiles                 │
+│  - persona_concept_relevance        │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│  DCL Engine (Runtime / Hot)         │
+│  - Read stored mappings             │
+│  - Filter by persona relevance      │
+│  - Build graph snapshot             │
+│  - Add explanations                 │
 └─────────────────────────────────────┘
 ```
 
-## Persona-Driven Filtering
+## Connector Provisioning (Phase 4)
 
-**Before:** Hardcoded dictionary mapping personas to concept lists
+AAM dynamically provisions connectors by calling DCL's provision endpoint.
 
-```python
-persona_mappings = {
-    Persona.CFO: ["revenue", "cost"],
-    ...
+**Endpoint:** `POST /api/ingest/provision`
+
+```json
+{
+  "connector_id": "mule_auto_01",
+  "source_type": "mulesoft",
+  "target_url": "https://farm.url/api/stream/synthetic/mulesoft?chaos=true",
+  "policy": { "repair_enabled": true }
 }
 ```
 
-**After:** Database-driven relevance matrix
+**Handshake Flow:**
+1. AAM calls POST /api/ingest/provision to route pipe to DCL
+2. Backend stores config in Redis (`dcl.ingest.config`)
+3. Sidecar polls every 5 seconds, detects version change
+4. Sidecar logs "[HANDSHAKE]" and reconnects to new stream
+5. Policy settings (repair_enabled) take effect immediately
 
-The system now:
-1. Queries `persona_concept_relevance` for selected personas
-2. Filters ontology nodes to only show relevant concepts
-3. Only creates edges to/from relevant concepts
-4. Adaptively includes concepts based on available data
+## Industrial Dashboard (Phase 5)
 
-**Example:**
-- CTO selects with Farm data → Shows aws_resource, usage, cost concepts
-- If no mappings exist for those concepts → Shows clean L1 nodes with no misleading edges
-- If CFO+CRO both selected → Shows union of their relevant concepts
+Pivots from "Story Mode" (slow, narrated) to "Industrial Mode" (fast, massive, validated).
+
+**Key Changes:**
+1. **Velocity** - Removed all artificial delays (no more 1.5-3s latency)
+2. **Telemetry** - Live counters replace chat logs
+3. **Closed-Loop Verification** - Farm confirms repairs are correct
+
+**Telemetry Endpoint:** `GET /api/ingest/telemetry`
+
+```json
+{
+  "ts": 1768853167248,
+  "metrics": {
+    "total_processed": 1523,
+    "toxic_blocked": 12,
+    "drift_detected": 45,
+    "repaired_success": 42,
+    "repair_failed": 3,
+    "verified_count": 42,
+    "verified_failed": 0,
+    "tps": 142.5,
+    "quality_score": 100.0,
+    "repair_rate": 93.3,
+    "uptime_seconds": 35.2
+  }
+}
+```
+
+**Dashboard Features:**
+- TelemetryRibbon shows: TPS, Processed, Blocked, Healed, Verified, Quality Score
+- Terminal Mode narration: monospace, matrix-style green text, auto-scroll
+- Updates every 500ms
+
+## Redis Keys
+
+| Key | Type | Purpose |
+|-----|------|---------|
+| `dcl.logs` | Pub/Sub | Narration message broadcast |
+| `dcl.ingest.raw` | Stream | Raw ingested records |
+| `dcl.ingest.config` | Hash | Dynamic connector config (AAM) |
+| `dcl.telemetry` | String | Live metrics JSON |
 
 ## API Endpoints
 
-### Runtime Endpoints (Fast)
+### Core Pipeline
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/dcl/run` | POST | Execute pipeline (params: data_mode, run_mode, personas) |
+| `/api/dcl/graph` | GET | Get current graph snapshot |
+| `/api/dcl/narration/{session_id}` | GET | Poll narration messages |
 
-**POST /api/dcl/run**
-- Builds graph snapshot using stored mappings
-- Personas filter which concepts are shown
-- No LLM calls, deterministic output
+### Ingest Pipeline
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/ingest/provision` | POST | AAM handshake - provision new connector |
+| `/api/ingest/telemetry` | GET | Live industrial metrics |
 
-### Batch Endpoints (Slow)
+### Batch Endpoints
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/dcl/batch-mapping` | POST | Trigger semantic mapper on sources |
 
-**POST /api/dcl/batch-mapping**
-- Triggers semantic mapper on sources
-- Creates/updates field→concept mappings
-- Should be run when sources change
+## Node Inventory (24 Nodes)
+
+### L0 - Pipeline (1 node)
+- `pipe_demo` / `pipe_farm` - Pipeline entry point
+
+### L1 - Sources (11 nodes)
+- `source_salesforce_crm` - Salesforce CRM
+- `source_hubspot_crm` - HubSpot CRM
+- `source_dynamics_crm` - Microsoft Dynamics CRM
+- `source_sap_erp` - SAP ERP
+- `source_netsuite_erp` - NetSuite ERP
+- `source_mongodb_customer_db` - MongoDB Customer DB
+- `source_supabase_app_db` - Supabase App DB
+- `source_dw_dim_customer` - Data Warehouse Dim Customer
+- `source_discovered_legacy_sql` - Legacy SQL (discovered)
+- `source_mulesoft_mock` - MuleSoft ERP Sync
+- `source_mulesoft_stream` - MuleSoft Stream (Farm)
+
+### L2 - Ontology (8 concepts)
+- `ontology_account` - Account
+- `ontology_opportunity` - Opportunity
+- `ontology_revenue` - Revenue
+- `ontology_cost` - Cost
+- `ontology_date` - Date/Timestamp
+- `ontology_health` - Health Score
+- `ontology_usage` - Usage Metrics
+- `ontology_aws_resource` - AWS Resource
+
+### L3 - Business Logic Layer (4 personas)
+- `bll_cfo` - CFO persona
+- `bll_cro` - CRO persona
+- `bll_coo` - COO persona
+- `bll_cto` - CTO persona
 
 ## Key Benefits
 
@@ -133,107 +250,7 @@ The system now:
 3. **Adaptability:** Persona views automatically adapt to available data
 4. **Explainability:** Ontology nodes include "derived from X fields" explanations
 5. **Maintainability:** Config-driven ontology and personas (YAML → DB)
-
-## Migration Summary
-
-**What Changed:**
-- ✅ Removed hardcoded `persona_mappings` dictionary
-- ✅ Added 4 database tables for semantic model
-- ✅ Created `semantic_mapper/` module for batch mapping
-- ✅ Added `PersonaView` class for DB-driven persona logic
-- ✅ DCL engine now reads stored mappings instead of computing live
-- ✅ Added batch mapping API endpoint
-
-**What Stayed the Same:**
-- Graph structure (L0 → L1 → L2 → L3)
-- Frontend rendering logic
-- Demo/Farm mode support
-- Narration service
-- Monitor panel
-
-## Frontend Features (November 2025)
-
-### Interactive Drill-Down (Monitor Panel)
-
-The Monitor panel provides a 3-level drill-down for exploring data lineage:
-
-**Persona Views Tab:**
-1. **Level 1 - Ontology Concepts:** Click to expand and see contributing sources
-2. **Level 2 - Source Systems:** Click to expand and see tables with mapped fields
-3. **Level 3 - Fields:** Click for full mapping details
-
-**Detail Panel Modal:**
-- Click info icons on any level to view:
-  - Source details: type, status, table count, total fields
-  - Table details: parent source, mapped fields with confidence
-  - Field details: full path (source→table→field), confidence bar, mapping explanation
-
-**Key Design:** Only mapped fields are shown (not raw schema), reflecting actual data flow through DCL.
-
-### Source Hierarchy Data Structure
-
-The backend provides `source_hierarchy` in L2 ontology node metrics:
-
-```json
-{
-  "source_hierarchy": {
-    "salesforce": {
-      "accounts": [
-        {"field": "account_name", "confidence": 0.95},
-        {"field": "account_id", "confidence": 0.92}
-      ]
-    },
-    "dynamics": {
-      "customers": [
-        {"field": "customername", "confidence": 0.88}
-      ]
-    }
-  }
-}
-```
-
-This enables the UI to show exactly which source→table→field combinations contribute to each ontology concept.
-
-## Source Data Requirements
-
-For DCL to properly map and visualize data sources, the following information is needed:
-
-### Required Fields
-
-| Field | Description | Example |
-|-------|-------------|---------|
-| `source_id` | Unique identifier for the source system | `salesforce`, `dynamics_erp`, `snowflake_dw` |
-| `source_type` | Category of the source | `crm`, `erp`, `datawarehouse`, `nosql`, `api` |
-| `vendor` | Platform/vendor name | `Salesforce`, `Microsoft Dynamics`, `Snowflake` |
-| `tables` | List of table schemas | See below |
-
-### Table Schema
-
-| Field | Description | Example |
-|-------|-------------|---------|
-| `table_name` | Name of the table/collection | `accounts`, `invoices`, `customers` |
-| `fields` | List of field definitions | See below |
-
-### Field Schema
-
-| Field | Description | Example |
-|-------|-------------|---------|
-| `field_name` | Name of the field/column | `account_name`, `total_amount` |
-| `field_type` | Data type | `string`, `number`, `date`, `boolean` |
-| `semantic_hints` | Optional hints for mapping | `is_identifier`, `is_currency`, `is_date` |
-
-### Why Vendor/Platform ID Matters
-
-Different vendors have distinct conventions that affect mapping accuracy:
-
-| Vendor | Account Field | Date Format | ID Pattern |
-|--------|--------------|-------------|------------|
-| Salesforce | `AccountName` | `CreatedDate` | `001...` (15/18 char) |
-| Dynamics | `accountname` | `createdon` | GUID |
-| HubSpot | `company_name` | `created_at` | Integer |
-| PostgreSQL | `account_name` | `created_at` | Serial/UUID |
-
-With vendor identification, DCL can apply vendor-specific mapping heuristics instead of generic pattern matching, significantly improving accuracy.
+6. **Industrial Scale:** 10+ TPS with real-time telemetry
 
 ## Future Enhancements
 

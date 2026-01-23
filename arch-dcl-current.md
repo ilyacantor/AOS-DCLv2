@@ -1,5 +1,7 @@
 # DCL Engine Architecture - Current State
 
+**Last Updated:** January 23, 2026
+
 ## System Overview
 
 The DCL (Data Connectivity Layer) Engine is a 4-layer data unification platform that:
