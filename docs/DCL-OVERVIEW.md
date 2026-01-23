@@ -46,10 +46,69 @@ L0 Pipeline → L1 Sources (11) → L2 Ontology (8 concepts) → L3 Personas (4)
 | Mode | Method | Accuracy |
 |------|--------|----------|
 | Dev (Heuristic) | Pattern matching, field name analysis | ~85% |
-| Prod (RAG + LLM) | Pinecone vectors + Gemini/OpenAI refinement | ~95% |
+| Prod (RAG + LLM) | Pinecone vectors + OpenAI validation | ~95% |
 
 **Maps:** Source fields → Ontology concepts  
 **Example:** `salesforce.Account.Name` → `ontology_account`
+
+---
+
+## Inference / RAG Capabilities
+
+### What RAG Actually Does
+
+RAG in DCL is used **only for mapping enhancement** - NOT for querying data.
+
+#### 1. Lesson Storage (RAGService)
+Stores high-confidence mappings as "lessons" in Pinecone:
+```
+Input: { field: "customer_name", concept: "account", confidence: 0.92 }
+Output: Vector embedding stored in Pinecone index "dcl-mapping-lessons"
+```
+
+**Embedding Model:** OpenAI `text-embedding-3-small` (1536 dimensions)
+
+#### 2. LLM Validation (MappingValidator)
+Validates low-confidence mappings using GPT-4o-mini:
+
+| Step | Action |
+|------|--------|
+| 1 | Filter mappings with confidence < 0.80 |
+| 2 | Sort by lowest confidence first |
+| 3 | Send top 10 to LLM for validation |
+| 4 | LLM returns corrections with reasoning |
+| 5 | Update mappings with validated concepts |
+
+**Example Correction:**
+```
+Field: GL_ACCOUNT (in INVOICES table)
+Original mapping: "account" (Customer Account)
+LLM correction: "gl_account" (General Ledger) 
+Reason: "GL_ACCOUNT in financial context refers to General Ledger, not Customer"
+```
+
+#### 3. What RAG Does NOT Do
+| Misconception | Reality |
+|---------------|---------|
+| "Query data with natural language" | RAG is for mapping, not data querying |
+| "Search across structured data" | No query interface exists |
+| "Semantic search over records" | DCL doesn't access record data |
+| "AI-powered data exploration" | Only validates field-to-concept mappings |
+
+### LLM Usage Summary
+
+| Service | Model | Purpose |
+|---------|-------|---------|
+| RAGService | OpenAI `text-embedding-3-small` | Generate embeddings for lessons |
+| MappingValidator | OpenAI `gpt-4o-mini` | Validate ambiguous mappings |
+| (Planned) | Gemini 2.5 Flash | Schema understanding |
+
+### Keys Required
+| Key | Used For |
+|-----|----------|
+| `OPENAI_API_KEY` | Embeddings + Validation |
+| `PINECONE_API_KEY` | Vector storage |
+| `GEMINI_API_KEY` | (Reserved for schema understanding)
 
 ### 4. Ontology Concepts (8 Fixed)
 | Concept | Business Meaning |
