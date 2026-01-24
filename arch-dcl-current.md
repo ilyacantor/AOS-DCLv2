@@ -99,7 +99,6 @@ record.data   # NEVER
 | `SankeyGraph.tsx` | D3-based 4-layer flow visualization |
 | `NarrationPanel.tsx` | Terminal-style real-time logs |
 | `MonitorPanel.tsx` | Persona-specific metrics dashboard |
-| `TelemetryRibbon.tsx` | Live industrial counters (Farm mode) |
 
 ### Backend Layers
 

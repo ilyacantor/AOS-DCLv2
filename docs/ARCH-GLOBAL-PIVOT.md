@@ -174,23 +174,28 @@ The AOS platform is being refactored to align with the "Fabric Plane Mesh" archi
 
 ## Migration Path for DCL
 
-### Current State (To Be Removed)
-- `backend/ingest/ingest_agent.py` - Raw data stream consumption
-- `backend/ingest/consumer.py` - Raw data processing
-- Redis stream `dcl.ingest.raw` - Raw data buffering
+### Removed (January 24, 2026)
+The following ingest components have been fully removed from DCL:
+- ~~`backend/ingest/ingest_agent.py`~~ - DELETED
+- ~~`backend/ingest/consumer.py`~~ - DELETED
+- ~~`backend/ingest/run_sidecar.py`~~ - DELETED
+- ~~`backend/ingest/run_consumer.py`~~ - DELETED
+- ~~Redis stream `dcl.ingest.raw`~~ - REMOVED
+- ~~`/api/ingest/*` endpoints~~ - Return HTTP 410 Gone with `{"error": "MOVED_TO_AAM"}`
 
-### Target State (Metadata-Only)
+### Current State (Metadata-Only) ✓
 - Schema metadata ingestion only
 - Field-to-concept mapping
 - Graph building from mappings
 - No raw payload handling
+- Pointer buffering (offsets/cursors only)
 
-### Migration Steps
-1. Move stream consumption to AAM
-2. Move self-healing repair to AAM
-3. DCL receives only schema metadata from AAM
-4. Remove raw data Redis streams from DCL
-5. Update APIs to metadata-only contracts
+### Migration Status: COMPLETE
+1. ✓ Stream consumption moved to AAM
+2. ✓ Self-healing repair moved to AAM
+3. ✓ DCL receives only schema metadata from AAM
+4. ✓ Raw data Redis streams removed from DCL
+5. ✓ APIs updated to metadata-only contracts
 
 ## Compliance Checklist
 
@@ -198,6 +203,6 @@ The AOS platform is being refactored to align with the "Fabric Plane Mesh" archi
 |-------------|-------|--------|
 | AAM owns all self-healing | AAM | PENDING |
 | FARM is oracle-only | FARM | PENDING |
-| DCL handles metadata-only | DCL | PENDING |
+| DCL handles metadata-only | DCL | **COMPLETE** |
 | AOA owns execution | AOA | PENDING |
-| Zero-trust data boundaries | ALL | PENDING |
+| Zero-trust data boundaries | ALL | IN PROGRESS |
