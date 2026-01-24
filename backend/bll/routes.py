@@ -70,7 +70,7 @@ async def execute(request: Request):
     """
     try:
         body = await request.json()
-        logger.info(f"Raw execute request body: {body}")
+        print(f"[BLL] Raw execute request body: {body}")
         
         normalized = {}
         normalized["definition_id"] = body.get("definition_id") or body.get("definitionId")
@@ -83,21 +83,29 @@ async def execute(request: Request):
         normalized["time_window"] = body.get("time_window") or body.get("timeWindow")
         
         if not normalized["definition_id"]:
+            print(f"[BLL] Missing definition_id in request: {body}")
             raise HTTPException(
                 status_code=422, 
                 detail="Missing required field: definition_id (or definitionId)"
             )
         
+        print(f"[BLL] Normalized request: {normalized}")
         exec_request = ExecuteRequest(**normalized)
-        return execute_definition(exec_request)
+        result = execute_definition(exec_request)
+        print(f"[BLL] Execute success, returning {len(result.data)} rows")
+        return result
     except HTTPException:
         raise
     except FileNotFoundError as e:
+        print(f"[BLL] File not found: {e}")
         raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
+        print(f"[BLL] Value error: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.exception("Execution failed")
+        import traceback
+        print(f"[BLL] Execution failed: {e}")
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Execution failed: {str(e)}")
 
 
