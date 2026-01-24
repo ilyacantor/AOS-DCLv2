@@ -1,0 +1,66 @@
+[
+  {
+    "id": "netsuite_revenue_recognized",
+    "source_system": "NetSuite",
+    "maps_to": "revenue_recognized",
+    "binding_type": "event",
+    "quality_score": 0.92,
+    "dims_available_json": ["customer", "service_line", "region", "currency"]
+  },
+  {
+    "id": "netsuite_invoice_posted",
+    "source_system": "NetSuite",
+    "maps_to": "invoice_posted",
+    "binding_type": "event",
+    "quality_score": 0.88,
+    "dims_available_json": ["customer", "service_line"]
+  },
+  {
+    "id": "salesforce_contract_signed",
+    "source_system": "Salesforce",
+    "maps_to": "contract_signed",
+    "binding_type": "event",
+    "quality_score": 0.85,
+    "dims_available_json": ["customer", "service_line", "region"]
+  },
+  {
+    "id": "psa_revenue_recognized",
+    "source_system": "PSA",
+    "maps_to": "revenue_recognized",
+    "binding_type": "event",
+    "quality_score": 0.78,
+    "dims_available_json": ["customer", "service_line"]
+  },
+  {
+    "id": "erp_mapping_changed",
+    "source_system": "ERP",
+    "maps_to": "mapping_changed",
+    "binding_type": "event",
+    "quality_score": 0.65,
+    "dims_available_json": ["service_line"]
+  },
+  {
+    "id": "netsuite_customer",
+    "source_system": "NetSuite",
+    "maps_to": "customer",
+    "binding_type": "entity",
+    "quality_score": 0.95,
+    "dims_available_json": []
+  },
+  {
+    "id": "salesforce_customer",
+    "source_system": "Salesforce",
+    "maps_to": "customer",
+    "binding_type": "entity",
+    "quality_score": 0.90,
+    "dims_available_json": []
+  },
+  {
+    "id": "netsuite_service_line",
+    "source_system": "NetSuite",
+    "maps_to": "service_line",
+    "binding_type": "entity",
+    "quality_score": 0.88,
+    "dims_available_json": []
+  }
+]

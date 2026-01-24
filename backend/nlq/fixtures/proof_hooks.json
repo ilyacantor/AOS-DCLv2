@@ -1,0 +1,47 @@
+[
+  {
+    "id": "services_revenue_netsuite",
+    "definition_id": "services_revenue",
+    "pointer_template_json": {
+      "system": "NetSuite",
+      "type": "saved_search",
+      "ref_template": "saved_search:{search_id}",
+      "query_hash_template": "sha256:{hash}",
+      "description": "NetSuite saved search for services revenue"
+    },
+    "availability_score": 0.90
+  },
+  {
+    "id": "services_revenue_psa",
+    "definition_id": "services_revenue",
+    "pointer_template_json": {
+      "system": "PSA",
+      "type": "report",
+      "ref_template": "report:billable_hours_qoq",
+      "description": "PSA billable hours report for services revenue validation"
+    },
+    "availability_score": 0.75
+  },
+  {
+    "id": "total_revenue_netsuite",
+    "definition_id": "total_revenue",
+    "pointer_template_json": {
+      "system": "NetSuite",
+      "type": "saved_search",
+      "ref_template": "saved_search:total_rev_{period}",
+      "description": "NetSuite total revenue saved search"
+    },
+    "availability_score": 0.92
+  },
+  {
+    "id": "arr_salesforce",
+    "definition_id": "arr",
+    "pointer_template_json": {
+      "system": "Salesforce",
+      "type": "report",
+      "ref_template": "report:arr_by_customer",
+      "description": "Salesforce ARR by customer report"
+    },
+    "availability_score": 0.80
+  }
+]

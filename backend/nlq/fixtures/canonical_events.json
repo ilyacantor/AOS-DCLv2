@@ -1,0 +1,80 @@
+[
+  {
+    "id": "revenue_recognized",
+    "schema_json": {
+      "fields": [
+        {"name": "event_id", "type": "string"},
+        {"name": "customer_id", "type": "string"},
+        {"name": "service_line", "type": "string"},
+        {"name": "region", "type": "string"},
+        {"name": "amount", "type": "decimal"},
+        {"name": "currency", "type": "string"},
+        {"name": "recognition_date", "type": "date"},
+        {"name": "contract_id", "type": "string"}
+      ]
+    },
+    "time_semantics": "event_time",
+    "description": "Revenue recognition event when services revenue is booked"
+  },
+  {
+    "id": "invoice_posted",
+    "schema_json": {
+      "fields": [
+        {"name": "invoice_id", "type": "string"},
+        {"name": "customer_id", "type": "string"},
+        {"name": "service_line", "type": "string"},
+        {"name": "amount", "type": "decimal"},
+        {"name": "invoice_date", "type": "date"},
+        {"name": "due_date", "type": "date"},
+        {"name": "status", "type": "string"}
+      ]
+    },
+    "time_semantics": "event_time",
+    "description": "Invoice posting event for billing"
+  },
+  {
+    "id": "mapping_changed",
+    "schema_json": {
+      "fields": [
+        {"name": "change_id", "type": "string"},
+        {"name": "entity_type", "type": "string"},
+        {"name": "old_value", "type": "string"},
+        {"name": "new_value", "type": "string"},
+        {"name": "change_date", "type": "date"},
+        {"name": "change_reason", "type": "string"}
+      ]
+    },
+    "time_semantics": "processing_time",
+    "description": "Mapping or classification change event"
+  },
+  {
+    "id": "contract_signed",
+    "schema_json": {
+      "fields": [
+        {"name": "contract_id", "type": "string"},
+        {"name": "customer_id", "type": "string"},
+        {"name": "total_value", "type": "decimal"},
+        {"name": "start_date", "type": "date"},
+        {"name": "end_date", "type": "date"},
+        {"name": "service_line", "type": "string"}
+      ]
+    },
+    "time_semantics": "event_time",
+    "description": "Contract signing event"
+  },
+  {
+    "id": "payment_received",
+    "schema_json": {
+      "fields": [
+        {"name": "payment_id", "type": "string"},
+        {"name": "invoice_id", "type": "string"},
+        {"name": "customer_id", "type": "string"},
+        {"name": "amount", "type": "decimal"},
+        {"name": "payment_date", "type": "date"},
+        {"name": "payment_method", "type": "string"}
+      ]
+    },
+    "time_semantics": "event_time",
+    "description": "Payment received from customer"
+  }
+]

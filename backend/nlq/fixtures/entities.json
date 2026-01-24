@@ -1,0 +1,50 @@
+[
+  {
+    "id": "customer",
+    "identifiers_json": {
+      "primary": "customer_id",
+      "aliases": ["account_id", "client_id", "cust_id"]
+    },
+    "description": "Customer or account entity"
+  },
+  {
+    "id": "service_line",
+    "identifiers_json": {
+      "primary": "service_line",
+      "aliases": ["product_line", "offering", "service_type", "revenue_type"]
+    },
+    "description": "Service line or product category"
+  },
+  {
+    "id": "region",
+    "identifiers_json": {
+      "primary": "region",
+      "aliases": ["geo", "territory", "market", "country"]
+    },
+    "description": "Geographic region"
+  },
+  {
+    "id": "contract",
+    "identifiers_json": {
+      "primary": "contract_id",
+      "aliases": ["agreement_id", "deal_id", "subscription_id"]
+    },
+    "description": "Contract or agreement entity"
+  },
+  {
+    "id": "currency",
+    "identifiers_json": {
+      "primary": "currency",
+      "aliases": ["currency_code", "ccy", "fx_code"]
+    },
+    "description": "Currency for financial transactions"
+  },
+  {
+    "id": "period",
+    "identifiers_json": {
+      "primary": "fiscal_period",
+      "aliases": ["month", "quarter", "year", "fiscal_month", "fiscal_quarter"]
+    },
+    "description": "Time period for financial reporting"
+  }
+]

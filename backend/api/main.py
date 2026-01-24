@@ -180,6 +180,98 @@ def run_batch_mapping(request: MappingRequest):
 
 from backend.core.topology_api import topology_api, ConnectionHealth, ConnectionStatus
 
+# =============================================================================
+# NLQ Answerability Circles Endpoints
+# =============================================================================
+
+from backend.nlq import (
+    AnswerabilityRequest,
+    AnswerabilityResponse,
+    ExplainRequest,
+    ExplainResponse,
+    AnswerabilityScorer,
+    NLQPersistence,
+)
+from backend.nlq.explainer import HypothesisExplainer
+
+# Initialize NLQ components
+nlq_persistence = NLQPersistence()
+answerability_scorer = AnswerabilityScorer(persistence=nlq_persistence)
+hypothesis_explainer = HypothesisExplainer(persistence=nlq_persistence)
+
+
+@app.post("/api/nlq/answerability_rank", response_model=AnswerabilityResponse)
+def rank_answerability(request: AnswerabilityRequest):
+    """
+    Rank hypotheses for a natural language question.
+
+    Returns 2-3 "answer circles" (hypotheses) with:
+    - size = probability_of_answer
+    - rank = left→right order (most likely answerable first)
+    - color = confidence (evidence quality: hot/warm/cool)
+
+    No LLM calls in the hot path. Uses deterministic rules + stored metadata.
+
+    Example request:
+    {
+        "question": "Services revenue (25% of total) is down 50% QoQ — what's happening?",
+        "tenant_id": "t_123",
+        "context": {
+            "time_window": "QoQ",
+            "metric_hint": "services_revenue"
+        }
+    }
+    """
+    try:
+        # Rank hypotheses
+        circles = answerability_scorer.rank_hypotheses(
+            question=request.question,
+            tenant_id=request.tenant_id,
+            context=request.context,
+        )
+
+        # Check if clarification needed
+        needs_context = answerability_scorer.get_needs_context(circles)
+
+        return AnswerabilityResponse(
+            question=request.question,
+            circles=circles,
+            needs_context=needs_context,
+        )
+    except Exception as e:
+        logger.error(f"Answerability ranking failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/nlq/explain", response_model=ExplainResponse)
+def explain_hypothesis(request: ExplainRequest):
+    """
+    Get a deterministic explanation for a hypothesis.
+
+    Returns a short explanation with:
+    - headline: Summary of the finding
+    - why: List of supporting facts with confidence
+    - go_deeper: Bridge analysis and drilldown options
+    - proof: Source system pointers and query hashes
+    - next: Suggested next actions
+
+    For MVP, facts and proof are stubbed. No real query execution.
+
+    Example request:
+    {
+        "question": "Services revenue is down 50% QoQ — what's happening?",
+        "tenant_id": "t_123",
+        "hypothesis_id": "h_volume",
+        "plan_id": "plan_services_rev_bridge"
+    }
+    """
+    try:
+        response = hypothesis_explainer.explain(request)
+        return response
+    except Exception as e:
+        logger.error(f"Explanation generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 class TopologyResponse(BaseModel):
     nodes: List[Dict[str, Any]]

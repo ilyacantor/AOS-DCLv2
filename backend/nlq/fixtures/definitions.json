@@ -1,0 +1,79 @@
+[
+  {
+    "id": "services_revenue",
+    "version": 1,
+    "inputs_json": {
+      "events": ["revenue_recognized"],
+      "filters": {
+        "service_line": ["Professional Services", "Consulting", "Implementation"]
+      }
+    },
+    "grain_json": {
+      "time": "monthly",
+      "entity": "customer"
+    },
+    "allowed_dims_json": ["customer", "service_line", "region", "period"],
+    "quality_score": 0.88,
+    "description": "Revenue from professional services, consulting, and implementation"
+  },
+  {
+    "id": "total_revenue",
+    "version": 1,
+    "inputs_json": {
+      "events": ["revenue_recognized"]
+    },
+    "grain_json": {
+      "time": "monthly",
+      "entity": "customer"
+    },
+    "allowed_dims_json": ["customer", "service_line", "region", "period"],
+    "quality_score": 0.92,
+    "description": "Total recognized revenue across all service lines"
+  },
+  {
+    "id": "subscription_revenue",
+    "version": 1,
+    "inputs_json": {
+      "events": ["revenue_recognized"],
+      "filters": {
+        "service_line": ["Subscription", "SaaS", "License"]
+      }
+    },
+    "grain_json": {
+      "time": "monthly",
+      "entity": "customer"
+    },
+    "allowed_dims_json": ["customer", "service_line", "region", "period"],
+    "quality_score": 0.90,
+    "description": "Recurring subscription and license revenue"
+  },
+  {
+    "id": "arr",
+    "version": 1,
+    "inputs_json": {
+      "events": ["contract_signed", "revenue_recognized"],
+      "calculation": "annualized_run_rate"
+    },
+    "grain_json": {
+      "time": "monthly",
+      "entity": "customer"
+    },
+    "allowed_dims_json": ["customer", "service_line", "region"],
+    "quality_score": 0.85,
+    "description": "Annual Recurring Revenue"
+  },
+  {
+    "id": "dso",
+    "version": 1,
+    "inputs_json": {
+      "events": ["invoice_posted", "payment_received"]
+    },
+    "grain_json": {
+      "time": "monthly",
+      "entity": "customer"
+    },
+    "allowed_dims_json": ["customer", "region"],
+    "quality_score": 0.75,
+    "description": "Days Sales Outstanding - average collection period"
+  }
+]
