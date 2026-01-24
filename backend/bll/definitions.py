@@ -30,13 +30,15 @@ _register(Definition(
         ColumnSchema(name="avg_monthly_cost", dtype="float", description="Average monthly cost"),
     ],
     sources=[
-        SourceReference(source_id="netsuite", table_id="cloud_spend", 
+        SourceReference(source_id="netsuite", table_id="cloud_spend",
                        columns=["VendorName", "ServiceCategory", "Monthly_Cost"]),
         SourceReference(source_id="sap", table_id="cloud_invoices",
                        columns=["VENDOR_CODE", "ServiceCategory", "Monthly_Cost"]),
     ],
     dimensions=["vendor_name", "service_category"],
     metrics=["total_spend", "transaction_count", "avg_monthly_cost"],
+    keywords=["saas spend", "cloud spend", "software spend", "vendor spend",
+              "total spend", "spending by vendor", "cloud costs", "saas costs"],
 ))
 
 
@@ -59,6 +61,8 @@ _register(Definition(
     ],
     dimensions=["vendor_name"],
     metrics=["current_month_spend", "previous_month_spend", "delta_absolute", "delta_percent"],
+    keywords=["vendor delta", "month over month", "mom", "cost change", "spending change",
+              "vendor changes", "cost delta", "spend delta", "what changed"],
 ))
 
 
@@ -90,6 +94,8 @@ _register(Definition(
     ],
     dimensions=["service", "region"],
     metrics=["monthly_cost"],
+    keywords=["unallocated spend", "untagged resources", "unowned spend", "orphan spend",
+              "unassigned cost", "missing tags", "no owner", "no cost center"],
 ))
 
 
@@ -113,6 +119,8 @@ _register(Definition(
     ],
     dimensions=["severity", "compliance_level"],
     metrics=["finding_count", "affected_resources"],
+    keywords=["findings", "security findings", "compliance findings", "severity",
+              "critical findings", "high severity", "vulnerabilities", "issues"],
 ))
 
 
@@ -142,6 +150,8 @@ _register(Definition(
     ],
     dimensions=["service", "gap_type"],
     metrics=["monthly_cost"],
+    keywords=["identity gap", "ownership gap", "unowned resources", "no owner",
+              "missing owner", "orphan resources", "ownership", "identity"],
 ))
 
 
@@ -174,6 +184,8 @@ _register(Definition(
     ],
     dimensions=["resource_type", "service", "instance_state"],
     metrics=["monthly_cost", "days_idle"],
+    keywords=["zombie", "zombies", "idle resources", "unused resources", "wasted spend",
+              "underutilized", "stopped instances", "idle", "not used"],
 ))
 
 
@@ -252,6 +264,8 @@ _register(Definition(
     ],
     dimensions=["stage", "pipeline"],
     metrics=["amount"],
+    keywords=["pipeline", "sales pipeline", "deal pipeline", "opportunities",
+              "deals", "forecast", "sales forecast", "pipeline value"],
 ))
 
 
@@ -275,6 +289,152 @@ _register(Definition(
     ],
     dimensions=["industry"],
     metrics=["annual_revenue", "employee_count"],
+    keywords=["top customers", "biggest customers", "largest customers", "customers by revenue",
+              "top accounts", "best customers", "high value customers", "customer revenue"],
+))
+
+
+# =============================================================================
+# SRE / Platform Metrics (DORA, SLO, Incidents)
+# =============================================================================
+
+_register(Definition(
+    definition_id="infra.slo_attainment",
+    name="SLO Attainment",
+    description="Service Level Objective attainment percentage across services",
+    category=DefinitionCategory.INFRA,
+    version="1.0.0",
+    output_schema=[
+        ColumnSchema(name="service_name", dtype="string", description="Service name"),
+        ColumnSchema(name="slo_name", dtype="string", description="SLO name"),
+        ColumnSchema(name="target_percent", dtype="float", description="Target percentage"),
+        ColumnSchema(name="actual_percent", dtype="float", description="Actual attainment"),
+        ColumnSchema(name="error_budget_remaining", dtype="float", description="Remaining error budget"),
+    ],
+    sources=[
+        SourceReference(source_id="datadog", table_id="slo_metrics",
+                       columns=["service", "slo_name", "target", "actual", "error_budget"]),
+    ],
+    dimensions=["service_name", "slo_name"],
+    metrics=["target_percent", "actual_percent", "error_budget_remaining"],
+    keywords=["slo", "slo attainment", "service level objective", "service level",
+              "uptime", "availability", "reliability", "error budget", "sla",
+              "how is our slo", "slo trending", "slo performance"],
+))
+
+
+_register(Definition(
+    definition_id="infra.deploy_frequency",
+    name="Deployment Frequency",
+    description="DORA metric: How often code is deployed to production",
+    category=DefinitionCategory.INFRA,
+    version="1.0.0",
+    output_schema=[
+        ColumnSchema(name="service_name", dtype="string", description="Service name"),
+        ColumnSchema(name="deploy_count", dtype="integer", description="Number of deployments"),
+        ColumnSchema(name="period", dtype="string", description="Time period"),
+        ColumnSchema(name="avg_per_day", dtype="float", description="Average deploys per day"),
+    ],
+    sources=[
+        SourceReference(source_id="github", table_id="deployments",
+                       columns=["service", "deployed_at", "environment"]),
+    ],
+    dimensions=["service_name", "period"],
+    metrics=["deploy_count", "avg_per_day"],
+    keywords=["deploy frequency", "deployment frequency", "dora", "deployments",
+              "how often deploy", "release frequency", "deploys per day", "cd metrics"],
+))
+
+
+_register(Definition(
+    definition_id="infra.lead_time",
+    name="Lead Time for Changes",
+    description="DORA metric: Time from code commit to production deployment",
+    category=DefinitionCategory.INFRA,
+    version="1.0.0",
+    output_schema=[
+        ColumnSchema(name="service_name", dtype="string", description="Service name"),
+        ColumnSchema(name="avg_lead_time_hours", dtype="float", description="Average lead time in hours"),
+        ColumnSchema(name="p50_lead_time_hours", dtype="float", description="Median lead time"),
+        ColumnSchema(name="p95_lead_time_hours", dtype="float", description="95th percentile lead time"),
+    ],
+    sources=[
+        SourceReference(source_id="github", table_id="deployments",
+                       columns=["service", "commit_time", "deployed_at"]),
+    ],
+    dimensions=["service_name"],
+    metrics=["avg_lead_time_hours", "p50_lead_time_hours", "p95_lead_time_hours"],
+    keywords=["lead time", "lead time for changes", "dora", "time to deploy",
+              "commit to production", "cycle time", "deployment time"],
+))
+
+
+_register(Definition(
+    definition_id="infra.change_failure_rate",
+    name="Change Failure Rate",
+    description="DORA metric: Percentage of deployments causing failures",
+    category=DefinitionCategory.INFRA,
+    version="1.0.0",
+    output_schema=[
+        ColumnSchema(name="service_name", dtype="string", description="Service name"),
+        ColumnSchema(name="total_deploys", dtype="integer", description="Total deployments"),
+        ColumnSchema(name="failed_deploys", dtype="integer", description="Failed deployments"),
+        ColumnSchema(name="failure_rate", dtype="float", description="Failure rate percentage"),
+    ],
+    sources=[
+        SourceReference(source_id="github", table_id="deployments",
+                       columns=["service", "deployed_at", "rollback_needed"]),
+    ],
+    dimensions=["service_name"],
+    metrics=["total_deploys", "failed_deploys", "failure_rate"],
+    keywords=["change failure rate", "failure rate", "dora", "failed deployments",
+              "rollbacks", "deployment failures", "deploy failures"],
+))
+
+
+_register(Definition(
+    definition_id="infra.mttr",
+    name="Mean Time to Recovery",
+    description="DORA metric: Average time to recover from failures",
+    category=DefinitionCategory.INFRA,
+    version="1.0.0",
+    output_schema=[
+        ColumnSchema(name="service_name", dtype="string", description="Service name"),
+        ColumnSchema(name="incident_count", dtype="integer", description="Number of incidents"),
+        ColumnSchema(name="avg_mttr_minutes", dtype="float", description="Average MTTR in minutes"),
+        ColumnSchema(name="p95_mttr_minutes", dtype="float", description="95th percentile MTTR"),
+    ],
+    sources=[
+        SourceReference(source_id="pagerduty", table_id="incidents",
+                       columns=["service", "created_at", "resolved_at", "severity"]),
+    ],
+    dimensions=["service_name"],
+    metrics=["incident_count", "avg_mttr_minutes", "p95_mttr_minutes"],
+    keywords=["mttr", "mean time to recovery", "recovery time", "dora",
+              "incident recovery", "time to resolve", "resolution time"],
+))
+
+
+_register(Definition(
+    definition_id="infra.incidents",
+    name="Incident Summary",
+    description="Incident count and severity breakdown across services",
+    category=DefinitionCategory.INFRA,
+    version="1.0.0",
+    output_schema=[
+        ColumnSchema(name="service_name", dtype="string", description="Service name"),
+        ColumnSchema(name="severity", dtype="string", description="Incident severity"),
+        ColumnSchema(name="incident_count", dtype="integer", description="Number of incidents"),
+        ColumnSchema(name="avg_duration_minutes", dtype="float", description="Average duration"),
+    ],
+    sources=[
+        SourceReference(source_id="pagerduty", table_id="incidents",
+                       columns=["service", "severity", "created_at", "resolved_at"]),
+    ],
+    dimensions=["service_name", "severity"],
+    metrics=["incident_count", "avg_duration_minutes"],
+    keywords=["incidents", "outages", "pages", "alerts", "incident count",
+              "sev1", "sev2", "critical incidents", "production incidents"],
 ))
 
 
