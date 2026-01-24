@@ -80,9 +80,9 @@ class RegistryExecuteRequest(BaseModel):
 
 
 PRIORITY_PHRASES = {
-    "finops.arr": ["arr", "annual recurring revenue", "recurring revenue", "mrr"],
-    "finops.burn_rate": ["burn rate", "burn", "runway"],
-    "finops.saas_spend": ["saas spend", "cloud spend"],
+    "finops.arr": ["arr", "annual recurring revenue", "recurring revenue", "mrr", "current arr", "total arr", "our arr"],
+    "finops.burn_rate": ["burn rate", "burn", "runway", "current burn"],
+    "finops.saas_spend": ["saas spend", "cloud spend", "total spend"],
     "crm.top_customers": ["top customers", "top 5", "top 10", "largest customers", "biggest customers", "customer revenue"],
     "crm.pipeline": ["pipeline", "sales pipeline", "funnel"],
     "aod.zombies_overview": ["zombie", "zombies"],
@@ -126,9 +126,9 @@ def _score_definition(question: str, definition_id: str) -> tuple[float, list[st
         return 0.0, []
     
     if priority_matched:
-        base_score = min(0.8 + len(matches) * 0.05, 1.0)
+        base_score = min(0.85 + len(matches) * 0.05, 1.0)
     else:
-        base_score = min(len(matches) / 4.0, 0.7)
+        base_score = min(len(matches) / 3.0, 0.75)
     
     return round(base_score, 4), matches
 
