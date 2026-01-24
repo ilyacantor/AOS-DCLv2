@@ -1,0 +1,7 @@
+resource_id,metric_name,metric_value,timestamp,unit
+i-abc123,cpu_utilization,45.2,2026-01-24T10:00:00,percent
+i-abc123,memory_utilization,62.1,2026-01-24T10:00:00,percent
+db-xyz789,connections,125,2026-01-24T10:00:00,count
+db-xyz789,iops,3500,2026-01-24T10:00:00,count
+bucket-main,storage_used,1250,2026-01-24T10:00:00,GB
+fn-api,invocations,45000,2026-01-24T10:00:00,count

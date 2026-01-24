@@ -1,0 +1,8 @@
+account_id,health_score,nps_score,last_login,support_tickets_open,usage_trend
+ACC001,85,9,2026-01-23,0,increasing
+ACC002,72,7,2026-01-20,1,stable
+ACC003,91,10,2026-01-24,0,increasing
+ACC004,65,6,2026-01-15,2,decreasing
+ACC005,78,8,2026-01-22,0,stable
+ACC006,88,9,2026-01-24,0,increasing
+ACC007,82,8,2026-01-21,1,stable

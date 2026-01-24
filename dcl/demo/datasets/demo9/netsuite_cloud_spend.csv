@@ -1,0 +1,11 @@
+vendor,category,monthly_cost,annual_cost,contract_end,owner,cost_center
+Salesforce,CRM,8500,102000,2026-12-31,Sales,CC-100
+Slack,Collaboration,3200,38400,2026-06-30,IT,CC-200
+AWS,Cloud Infrastructure,45000,540000,2026-12-31,Engineering,CC-300
+Snowflake,Data Warehouse,12000,144000,2027-01-15,Data,CC-400
+Datadog,Monitoring,5500,66000,2026-09-30,Engineering,CC-300
+GitHub,DevTools,2800,33600,2026-08-15,Engineering,CC-300
+Figma,Design,1500,18000,2026-07-01,Product,CC-500
+Notion,Documentation,800,9600,2026-04-30,All,CC-200
+Zoom,Video Conferencing,2200,26400,2026-11-30,IT,CC-200
+HubSpot,Marketing,6000,72000,2026-10-15,Marketing,CC-600

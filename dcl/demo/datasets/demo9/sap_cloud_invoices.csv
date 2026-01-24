@@ -1,0 +1,5 @@
+invoice_id,vendor,amount,invoice_date,due_date,cost_center,status
+INV001,AWS,45000,2026-01-01,2026-01-31,CC-300,Paid
+INV002,Snowflake,12000,2026-01-01,2026-01-31,CC-400,Paid
+INV003,Datadog,5500,2026-01-01,2026-01-31,CC-300,Pending
+INV004,GitHub,2800,2026-01-01,2026-01-31,CC-300,Paid
