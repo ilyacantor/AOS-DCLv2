@@ -72,7 +72,12 @@ class RunResponse(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"status": "DCL Engine API is running", "version": "1.0.0"}
+    from backend.bll.definitions import list_definitions
+    return {
+        "status": "DCL Engine API is running",
+        "version": "1.0.0",
+        "bll_definitions": len(list_definitions()),  # Should be 16 after update
+    }
 
 
 @app.post("/api/dcl/run", response_model=RunResponse)
