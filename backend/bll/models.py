@@ -63,14 +63,16 @@ class TimeWindow(BaseModel):
 
 
 class ExecuteRequest(BaseModel):
-    dataset_id: str = "demo9"
-    definition_id: str
+    dataset_id: str = Field(default="demo9", alias="datasetId")
+    definition_id: str = Field(alias="definitionId")
     version: Optional[str] = None
-    time_window: Optional[TimeWindow] = None
+    time_window: Optional[TimeWindow] = Field(default=None, alias="timeWindow")
     dimensions: Optional[List[str]] = None
     filters: Optional[List[FilterSpec]] = None
     limit: int = 1000
     offset: int = 0
+    
+    model_config = {"populate_by_name": True}
 
 
 class QualityMetrics(BaseModel):

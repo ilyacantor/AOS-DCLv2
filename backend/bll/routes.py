@@ -2,7 +2,8 @@
 BLL Contract API Routes - REST endpoints for BLL consumption contracts.
 """
 import os
-from fastapi import APIRouter, HTTPException
+import logging
+from fastapi import APIRouter, HTTPException, Request
 
 from .models import (
     ExecuteRequest, ExecuteResponse, ProofResponse, 
@@ -13,6 +14,7 @@ from .executor import execute_definition, generate_proof, DATASET_ID
 
 
 router = APIRouter(prefix="/api/bll", tags=["BLL Contracts"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/dataset")
@@ -50,20 +52,52 @@ def get_definition_by_id(definition_id: str):
     return definition
 
 
+@router.post("/execute/debug")
+async def execute_debug(request: Request):
+    """Debug endpoint to see raw request body."""
+    body = await request.json()
+    logger.info(f"Raw execute request body: {body}")
+    return {"received": body, "expected_format": {"definition_id": "string", "dataset_id": "string (default: demo9)"}}
+
+
 @router.post("/execute", response_model=ExecuteResponse)
-def execute(request: ExecuteRequest):
+async def execute(request: Request):
     """
     Execute a definition against a dataset.
     
     Returns data, metadata, quality metrics, and lineage information.
+    Accepts both snake_case and camelCase field names.
     """
     try:
-        return execute_definition(request)
+        body = await request.json()
+        logger.info(f"Raw execute request body: {body}")
+        
+        normalized = {}
+        normalized["definition_id"] = body.get("definition_id") or body.get("definitionId")
+        normalized["dataset_id"] = body.get("dataset_id") or body.get("datasetId") or "demo9"
+        normalized["version"] = body.get("version")
+        normalized["limit"] = body.get("limit", 1000)
+        normalized["offset"] = body.get("offset", 0)
+        normalized["dimensions"] = body.get("dimensions")
+        normalized["filters"] = body.get("filters")
+        normalized["time_window"] = body.get("time_window") or body.get("timeWindow")
+        
+        if not normalized["definition_id"]:
+            raise HTTPException(
+                status_code=422, 
+                detail="Missing required field: definition_id (or definitionId)"
+            )
+        
+        exec_request = ExecuteRequest(**normalized)
+        return execute_definition(exec_request)
+    except HTTPException:
+        raise
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        logger.exception("Execution failed")
         raise HTTPException(status_code=500, detail=f"Execution failed: {str(e)}")
 
 
