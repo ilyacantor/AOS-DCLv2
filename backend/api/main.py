@@ -201,6 +201,10 @@ from backend.nlq import (
     ProofHook,
 )
 from backend.nlq.explainer import HypothesisExplainer
+from backend.nlq.routes_registry import router as registry_router
+
+# Include the registry router
+app.include_router(registry_router)
 
 # Initialize NLQ components
 nlq_persistence = NLQPersistence()
