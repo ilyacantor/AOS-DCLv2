@@ -1,7 +1,7 @@
 # DCL Architecture - Current State (Post-Refactoring)
 
-**Last Updated:** November 25, 2025  
-**Version:** 2.1 (Semantic Mapping Architecture + Interactive Drill-Down)
+**Last Updated:** January 24, 2026  
+**Version:** 2.2 (Semantic Mapping + BLL Consumption Contracts + NLQ)
 
 ## Overview
 
@@ -235,11 +235,213 @@ Different vendors have distinct conventions that affect mapping accuracy:
 
 With vendor identification, DCL can apply vendor-specific mapping heuristics instead of generic pattern matching, significantly improving accuracy.
 
+---
+
+## BLL Consumption Contracts (January 2026)
+
+The Business Logic Layer (BLL) provides stable HTTP endpoints for executing predefined business definitions against DCL data.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    BLL Consumption Layer                         │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │
+│  │  Definitions │    │   Executor   │    │    Proof     │       │
+│  │   Registry   │    │   Service    │    │   Service    │       │
+│  ├──────────────┤    ├──────────────┤    ├──────────────┤       │
+│  │ • 10 seeded  │    │ • Load CSVs  │    │ • Lineage    │       │
+│  │ • FinOps/AOD │    │ • Join/Filter│    │ • Breadcrumbs│       │
+│  │ • CRM defs   │    │ • Aggregate  │    │ • SQL equiv  │       │
+│  └──────────────┘    └──────────────┘    └──────────────┘       │
+├─────────────────────────────────────────────────────────────────┤
+│                         Demo Dataset                             │
+│  dcl/demo/datasets/demo9/ - 9 sources, 16 tables (local CSVs)   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Location
+
+- **Definitions:** `backend/bll/definitions.py`
+- **Models:** `backend/bll/models.py`
+- **Executor:** `backend/bll/executor.py`
+- **Routes:** `backend/bll/routes.py`
+
+### Seeded Definitions (10)
+
+| Definition ID | Category | Purpose |
+|--------------|----------|---------|
+| `finops.saas_spend` | FinOps | SaaS spending by vendor/category |
+| `finops.top_vendor_deltas_mom` | FinOps | Month-over-month vendor cost changes |
+| `finops.unallocated_spend` | FinOps | Unallocated cloud spend |
+| `finops.arr` | FinOps | Annual recurring revenue |
+| `finops.burn_rate` | FinOps | Monthly burn rate analysis |
+| `aod.findings_by_severity` | AOD | Security findings by severity |
+| `aod.identity_gap_financially_anchored` | AOD | Resources with missing ownership |
+| `aod.zombies_overview` | AOD | Idle/underutilized resources |
+| `crm.pipeline` | CRM | Sales pipeline deals |
+| `crm.top_customers` | CRM | Top customers by revenue |
+
+### API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/bll/definitions` | GET | List all available definitions |
+| `/api/bll/definitions/{id}` | GET | Get specific definition details |
+| `/api/bll/execute` | POST | Execute definition, returns data+metadata+quality+lineage |
+| `/api/bll/proof/{id}` | GET | Get execution proof with breadcrumbs |
+
+### Execute Response Structure
+
+```json
+{
+  "data": [...],
+  "metadata": {
+    "dataset_id": "demo9",
+    "definition_id": "finops.arr",
+    "version": "1.0.0",
+    "executed_at": "2026-01-24T...",
+    "execution_time_ms": 45,
+    "row_count": 7
+  },
+  "quality": {
+    "completeness": 0.95,
+    "freshness_hours": 24,
+    "row_count": 7,
+    "null_percentage": 5.0
+  },
+  "lineage": [...],
+  "summary": {
+    "answer": "Your current ARR is $3.38M across 7 deals.",
+    "aggregations": {"total_arr": 3380000, "deal_count": 7}
+  }
+}
+```
+
+### Demo Mode vs Production
+
+| Aspect | Demo Mode | Production Mode |
+|--------|-----------|-----------------|
+| Data Source | Local CSVs in `dcl/demo/datasets/demo9/` | Fabric Plane pointers |
+| Execution | Pandas loads CSVs directly | JIT fetch from Fabric Planes |
+| Dataset ID | `demo9` (default) | Configured per tenant |
+
+**Key Principle:** BLL consumers use the same contract API regardless of mode.
+
+---
+
+## NLQ (Natural Language Query) Layer (January 2026)
+
+NLQ enables question-based definition matching with computed answers through a comprehensive semantic layer infrastructure.
+
+> **Full Documentation:** See [SEMANTIC-LAYER.md](./SEMANTIC-LAYER.md) for complete NLQ architecture.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      NLQ Semantic Layer                          │
+├─────────────────────────────────────────────────────────────────┤
+│  Question: "What is our current ARR?"                            │
+│                          ↓                                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  Answerability Scorer (Deterministic Hypothesis Ranking)  │   │
+│  │  - 45 Canonical Events (business event types)             │   │
+│  │  - 33 Entities (dimensions for grouping/filtering)        │   │
+│  │  - 41 Metric Definitions (reusable specifications)        │   │
+│  │  - Source Bindings (mappings to canonical events)         │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                          ↓                                       │
+│  Best Match: finops.arr (99% confidence)                         │
+│                          ↓                                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  BLL Executor                                             │   │
+│  │  - Execute definition against dataset                     │   │
+│  │  - Compute summary with aggregations                      │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                          ↓                                       │
+│  Answer: "Your current ARR is $3.38M across 7 deals."            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Location
+
+- **Services:** `backend/nlq/` (17 Python modules)
+  - `registry.py` - Definition registration and search
+  - `hypothesis.py` - Hypothesis generation and ranking
+  - `scorer.py` - Answerability scoring
+  - `executor.py` - Query execution
+  - `lineage.py` - Dependency graphs and impact analysis
+  - `consistency.py` - Validation services
+  - `proof.py` - Proof chain resolution
+  - `compiler.py` - SQL compilation
+  - `explainer.py` - Human-readable explanations
+- **Fixtures:** `backend/nlq/fixtures/` (6 JSON files)
+  - `canonical_events.json` - 45 business event types
+  - `entities.json` - 33 entity dimensions
+  - `definitions.json` - 41 metric definitions
+  - `bindings.json` - Source-to-event mappings
+  - `definition_versions.json` - Version history
+  - `proof_hooks.json` - Proof chain hooks
+- **Routes:** `backend/nlq/routes_registry.py`
+
+### Core Principle
+
+**No LLM in the hot path.** All scoring uses deterministic rules + stored metadata.
+
+### API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/nlq/answerability_rank` | POST | Rank definitions by question match |
+| `/api/nlq/registry/execute` | POST | Execute best-matching definition |
+| `/api/nlq/registry/definitions` | GET | List all definitions with metadata |
+| `/api/nlq/registry/events` | GET | List canonical events |
+| `/api/nlq/registry/entities` | GET | List entity dimensions |
+
+### Answerability Rank Response
+
+```json
+{
+  "definition_id": "finops.arr",
+  "confidence_score": 0.99,
+  "hypothesis_matches": ["arr", "revenue", "annual recurring revenue"]
+}
+```
+
+### Computed Summary
+
+The executor generates human-readable answers based on definition type:
+
+| Definition Type | Example Answer |
+|-----------------|----------------|
+| ARR/Revenue | "Your current ARR is $3.38M across 7 deals." |
+| Burn Rate | "Your current burn rate is approximately $42K/month." |
+| Spend/Cost | "Total spend is $150K across 45 transactions." |
+| Customers | "Top 9 customers with $224M in total revenue." |
+| Pipeline | "Pipeline contains 12 deals worth $2.1M." |
+| Zombies | "Found 8 idle/zombie resources costing $12K." |
+
+### Current Limitations
+
+1. **No parameter extraction** - "Top 5 customers" returns all customers, not 5
+2. **Hardcoded fixtures** - Must manually update JSON files for new definitions
+
+---
+
 ## Future Enhancements
 
+### Semantic Mapping
 1. **Full 3-Stage Pipeline:** Add RAG and LLM stages to semantic mapper
 2. **Automatic Remapping:** Trigger batch mapping when sources change
 3. **Confidence Thresholds:** Filter low-confidence mappings
 4. **Conflict Resolution:** Handle multiple concepts matching same field
 5. **Cluster-Based Views:** Allow filtering by concept cluster (Finance, Growth, Infra, Ops)
 6. **Vendor-Specific Mapping:** Apply platform-specific conventions based on source vendor ID
+
+### BLL/NLQ
+1. **Parameter Extraction:** Parse "top 5", "last month", filters from questions
+2. **Semantic Matching:** Use embeddings for better question→definition matching
+3. **Dynamic Definitions:** Allow runtime definition creation
+4. **Production Mode:** Implement Fabric Plane pointer-based execution
