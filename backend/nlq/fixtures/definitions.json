@@ -1,0 +1,576 @@
+[
+  {
+    "id": "recognized_revenue",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Total recognized revenue (ASC 606 compliant)",
+    "default_time_semantics_json": {
+      "event": "revenue_recognized",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "billings",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Total invoiced billings",
+    "default_time_semantics_json": {
+      "event": "invoice_posted",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "cash_collected",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Cash collected from customers",
+    "default_time_semantics_json": {
+      "event": "payment_received",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "refunds",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Total refunds issued",
+    "default_time_semantics_json": {
+      "event": "refund_issued",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "ar_balance",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Accounts receivable balance (event-sourced)",
+    "default_time_semantics_json": {
+      "event": "invoice_posted",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "dso",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Days Sales Outstanding",
+    "default_time_semantics_json": {
+      "event": "payment_applied",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "cogs",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Cost of Goods Sold",
+    "default_time_semantics_json": {
+      "event": "cost_allocated",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "opex",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Operating Expenses",
+    "default_time_semantics_json": {
+      "event": "expense_incurred",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "gross_margin",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Gross Margin (Revenue - COGS)",
+    "default_time_semantics_json": {
+      "event": "revenue_recognized",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "burn_rate",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Net cash burn rate",
+    "default_time_semantics_json": {
+      "event": "expense_incurred",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "nrr",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Net Revenue Retention",
+    "default_time_semantics_json": {
+      "event": "subscription_changed",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "arr",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Annual Recurring Revenue",
+    "default_time_semantics_json": {
+      "event": "subscription_started",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "mrr",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Monthly Recurring Revenue",
+    "default_time_semantics_json": {
+      "event": "subscription_started",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "services_revenue",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Revenue from professional services",
+    "default_time_semantics_json": {
+      "event": "revenue_recognized",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "deploy_frequency",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cto",
+    "description": "Deployment frequency (DORA metric)",
+    "default_time_semantics_json": {
+      "event": "deployment_completed",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "lead_time_for_changes",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cto",
+    "description": "Lead time for changes (DORA metric)",
+    "default_time_semantics_json": {
+      "event": "deployment_completed",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "change_failure_rate",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cto",
+    "description": "Change failure rate (DORA metric)",
+    "default_time_semantics_json": {
+      "event": "deployment_completed",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "mttr",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cto",
+    "description": "Mean Time to Recovery (DORA metric)",
+    "default_time_semantics_json": {
+      "event": "incident_resolved",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "incident_rate",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cto",
+    "description": "Incident rate by severity",
+    "default_time_semantics_json": {
+      "event": "incident_opened",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "slo_attainment",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cto",
+    "description": "SLO attainment percentage",
+    "default_time_semantics_json": {
+      "event": "slo_breached",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "cloud_cost_per_service",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cto",
+    "description": "Cloud cost allocated per service",
+    "default_time_semantics_json": {
+      "event": "cloud_cost_incurred",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "security_finding_mttr",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cto",
+    "description": "Security finding mean time to remediation",
+    "default_time_semantics_json": {
+      "event": "security_finding_resolved",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "open_findings_by_severity",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cto",
+    "description": "Open security findings by severity",
+    "default_time_semantics_json": {
+      "event": "security_finding_raised",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "throughput",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "coo",
+    "description": "Work item throughput (completed items)",
+    "default_time_semantics_json": {
+      "event": "work_item_completed",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "cycle_time",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "coo",
+    "description": "Work item cycle time",
+    "default_time_semantics_json": {
+      "event": "work_item_state_changed",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "wip",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "coo",
+    "description": "Work in progress count",
+    "default_time_semantics_json": {
+      "event": "work_item_state_changed",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "sla_compliance",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "coo",
+    "description": "SLA compliance rate",
+    "default_time_semantics_json": {
+      "event": "sla_met",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "backlog_health",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "coo",
+    "description": "Backlog health (created vs completed)",
+    "default_time_semantics_json": {
+      "event": "work_item_created",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "support_load",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "coo",
+    "description": "Support ticket load",
+    "default_time_semantics_json": {
+      "event": "ticket_opened",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "capacity_utilization",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "coo",
+    "description": "Team capacity utilization",
+    "default_time_semantics_json": {
+      "event": "capacity_updated",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "onboarding_time",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "coo",
+    "description": "Customer onboarding time",
+    "default_time_semantics_json": {
+      "event": "customer_onboarded",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "revenue_growth",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "ceo",
+    "description": "Revenue growth rate (QoQ/YoY)",
+    "default_time_semantics_json": {
+      "event": "revenue_recognized",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "churn_rate",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "ceo",
+    "description": "Customer/revenue churn rate",
+    "default_time_semantics_json": {
+      "event": "subscription_canceled",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "gross_margin_pct",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "ceo",
+    "description": "Gross margin percentage",
+    "default_time_semantics_json": {
+      "event": "revenue_recognized",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "burn_multiple",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "ceo",
+    "description": "Burn multiple (burn / net new ARR)",
+    "default_time_semantics_json": {
+      "event": "expense_incurred",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "runway",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "ceo",
+    "description": "Cash runway in months",
+    "default_time_semantics_json": {
+      "event": "payment_received",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "reliability_score",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "ceo",
+    "description": "Overall reliability score (SLO + incidents)",
+    "default_time_semantics_json": {
+      "event": "incident_resolved",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "execution_predictability",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "ceo",
+    "description": "Execution predictability score",
+    "default_time_semantics_json": {
+      "event": "work_item_completed",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "customer_health",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "ceo",
+    "description": "Overall customer health score",
+    "default_time_semantics_json": {
+      "event": "ticket_resolved",
+      "time_field": "effective_at",
+      "calendar": "calendar"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "bookings",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Total bookings (deals won)",
+    "default_time_semantics_json": {
+      "event": "deal_won",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "pipeline",
+    "tenant_id": "default",
+    "kind": "metric",
+    "pack": "cfo",
+    "description": "Sales pipeline value",
+    "default_time_semantics_json": {
+      "event": "opportunity_created",
+      "time_field": "effective_at",
+      "calendar": "fiscal"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  }
+]

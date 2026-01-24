@@ -1,258 +1,447 @@
-# DCL Architecture - Current State
+# DCL Architecture - Current State (Post-Refactoring)
 
-**Last Updated:** January 24, 2026
+**Last Updated:** January 24, 2026  
+**Version:** 2.2 (Semantic Mapping + BLL Consumption Contracts + NLQ)
 
 ## Overview
 
-DCL (Data Connectivity Layer) is a **metadata-only semantic mapping engine** with two major subsystems:
+The DCL (Data Connectivity Layer) Engine is now a **3-layer architecture** that separates batch semantic mapping (cold path) from runtime graph generation (hot path). The system uses database-driven configuration for ontology concepts, persona profiles, and field-to-concept mappings.
 
-1. **Semantic Mapping Engine** - Transforms source schemas into ontology concepts
-2. **NLQ Semantic Layer** - Provides natural language query answerability through deterministic hypothesis ranking
+## Architectural Layers
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         DCL Architecture                                 │
-├────────────────────────────────┬────────────────────────────────────────┤
-│     Semantic Mapping Engine    │         NLQ Semantic Layer             │
-├────────────────────────────────┼────────────────────────────────────────┤
-│  ├── SchemaLoader              │  ├── DefinitionRegistry                │
-│  ├── SourceNormalizer          │  ├── ConsistencyValidator              │
-│  ├── MappingService            │  ├── LineageService                    │
-│  ├── RAGService                │  ├── SchemaEnforcer                    │
-│  ├── PersonaView               │  ├── QueryExecutor                     │
-│  └── NarrationService          │  └── ProofResolver                     │
-├────────────────────────────────┴────────────────────────────────────────┤
-│                          Shared Infrastructure                          │
-├─────────────────────────────────────────────────────────────────────────┤
-│  ├── NLQPersistence (JSON/PostgreSQL)                                   │
-│  ├── Database Models (SQLAlchemy)                                       │
-│  └── Zero-Trust Security Layer                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+### 1. Semantic Mapper (Cold Path / Batch)
 
----
+**Location:** `backend/semantic_mapper/`
 
-## 1. Semantic Mapping Engine
+**Purpose:** Analyze source schemas and create persistent field→concept mappings using heuristics, RAG, and LLM.
 
-The original DCL pipeline that maps source fields to ontology concepts.
+**Components:**
+- `heuristic_mapper.py` - Stage 1: Pattern matching using ontology metadata
+- `persist_mappings.py` - Database persistence layer
+- `runner.py` - Orchestrates the mapping pipeline
 
-### Pipeline Flow
+**Execution Triggers:**
+- Manual via `/api/dcl/batch-mapping` endpoint
+- On source connection (future)
+- Scheduled refresh (future)
 
-```
-L0 Pipeline → L1 Sources (11) → L2 Ontology (8 concepts) → L3 Personas (4)
-```
+**Output:** Rows in `field_concept_mappings` table
 
-### Components
+### 2. Semantic Model (Data Layer)
 
-| Component | Purpose |
-|-----------|---------|
-| `SchemaLoader` | Load schemas from CSV or Farm API |
-| `SourceNormalizer` | Register and deduplicate sources |
-| `MappingService` | Heuristic field-to-concept mapping |
-| `RAGService` | Vector-based semantic matching (Prod) |
-| `PersonaView` | Filter graph by business role |
-| `NarrationService` | Real-time status broadcasting |
+**Location:** PostgreSQL database
 
-### Data Model
+**Tables:**
+- `ontology_concepts` - Core concepts (account, revenue, cost, etc.) with cluster tags (Finance, Growth, Infra, Ops)
+- `field_concept_mappings` - Persistent mappings from source fields to ontology concepts with confidence scores
+- `persona_profiles` - CFO, CRO, COO, CTO definitions
+- `persona_concept_relevance` - Which concepts each persona cares about (0.0-1.0 relevance scores)
 
-```
-ontology_concepts (8)     → Business concepts (Revenue, Cost, etc.)
-field_concept_mappings    → Source field → Concept mappings
-persona_profiles (4)      → CFO, CRO, COO, CTO
-persona_concept_relevance → Which concepts matter to which persona
-```
+**Configuration:**
+- `config/ontology_concepts.yaml` - Ontology definition with synonyms and example fields
+- `config/persona_profiles.yaml` - Persona descriptions and concept relevance mappings
+- `backend/utils/config_sync.py` - Syncs YAML configs to database on startup
 
----
+### 3. DCL Engine (Hot Path / Runtime)
 
-## 2. NLQ Semantic Layer
+**Location:** `backend/engine/dcl_engine.py`
 
-The new semantic layer providing hypothesis ranking for natural language questions.
+**Purpose:** Build graph snapshots using stored mappings and persona-filtered concepts.
 
-### Core Principle
+**Flow:**
+1. Load source schemas (Demo or Farm mode)
+2. Check for stored mappings in database
+3. Fall back to creating new mappings if none exist
+4. Filter ontology concepts by selected persona relevance
+5. Build 4-layer graph (L0: pipe → L1: sources → L2: ontology → L3: personas)
+6. Return graph snapshot with explanations and metrics
 
-**No LLM in the hot path.** All answerability scoring uses deterministic rules + stored metadata.
+**Key Change:** NO LLM/RAG calls at runtime - all intelligence is pre-computed and stored.
 
-### Components
-
-| Component | Purpose | Location |
-|-----------|---------|----------|
-| `DefinitionRegistry` | Catalog management, search, publish workflow | `registry.py` |
-| `ConsistencyValidator` | Orphan detection, cycles, binding coverage | `consistency.py` |
-| `LineageService` | Dependency graph, impact analysis | `lineage.py` |
-| `SchemaEnforcer` | Validate events, bindings, specs | `schema_enforcer.py` |
-| `QueryExecutor` | Execute queries with caching | `executor.py` |
-| `ProofResolver` | Source system URL generation | `proof.py` |
-| `AnswerabilityScorer` | Rank hypotheses by probability | `scorer.py` |
-| `HypothesisGenerator` | Generate hypotheses from specs | `hypothesis.py` |
-
-### Data Model
+## Data Flow
 
 ```
-canonical_events (45)     → Business events (revenue_recognized, invoice_posted)
-entities (33)             → Dimensions (customer, service_line, region)
-definitions (40)          → Metrics organized by pack (CFO/CTO/COO/CEO)
-definition_versions       → Versioned specs with measure operations
-bindings (20)             → Source system → Canonical event mappings
-proof_hooks               → Links to source system evidence
+┌─────────────────────────────────────┐
+│  Semantic Mapper (Batch / Cold)     │
+│  - Heuristic matching                │
+│  - RAG enhancement (optional)        │
+│  - LLM refinement (optional)         │
+│  └─> field_concept_mappings          │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│  Database (Persistent Storage)       │
+│  - ontology_concepts                 │
+│  - field_concept_mappings            │
+│  - persona_profiles                  │
+│  - persona_concept_relevance         │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│  DCL Engine (Runtime / Hot)          │
+│  - Read stored mappings              │
+│  - Filter by persona relevance       │
+│  - Build graph snapshot              │
+│  - Add explanations                  │
+└─────────────────────────────────────┘
 ```
 
-### Metric Packs
+## Persona-Driven Filtering
 
-| Pack | Metrics | Examples |
-|------|---------|----------|
-| CFO | 16 | recognized_revenue, arr, dso, burn_rate |
-| CTO | 9 | deploy_frequency, mttr, slo_attainment |
-| COO | 8 | throughput, cycle_time, sla_compliance |
-| CEO | 8 | revenue_growth, churn_rate, runway |
+**Before:** Hardcoded dictionary mapping personas to concept lists
 
----
+```python
+persona_mappings = {
+    Persona.CFO: ["revenue", "cost"],
+    ...
+}
+```
+
+**After:** Database-driven relevance matrix
+
+The system now:
+1. Queries `persona_concept_relevance` for selected personas
+2. Filters ontology nodes to only show relevant concepts
+3. Only creates edges to/from relevant concepts
+4. Adaptively includes concepts based on available data
+
+**Example:**
+- CTO selects with Farm data → Shows aws_resource, usage, cost concepts
+- If no mappings exist for those concepts → Shows clean L1 nodes with no misleading edges
+- If CFO+CRO both selected → Shows union of their relevant concepts
 
 ## API Endpoints
 
+### Runtime Endpoints (Fast)
+
+**POST /api/dcl/run**
+- Builds graph snapshot using stored mappings
+- Personas filter which concepts are shown
+- No LLM calls, deterministic output
+
+### Batch Endpoints (Slow)
+
+**POST /api/dcl/batch-mapping**
+- Triggers semantic mapper on sources
+- Creates/updates field→concept mappings
+- Should be run when sources change
+
+## Key Benefits
+
+1. **Performance:** Runtime graph building is 10-100x faster (no LLM calls)
+2. **Determinism:** Same sources + personas always produce same graph
+3. **Adaptability:** Persona views automatically adapt to available data
+4. **Explainability:** Ontology nodes include "derived from X fields" explanations
+5. **Maintainability:** Config-driven ontology and personas (YAML → DB)
+
+## Migration Summary
+
+**What Changed:**
+- ✅ Removed hardcoded `persona_mappings` dictionary
+- ✅ Added 4 database tables for semantic model
+- ✅ Created `semantic_mapper/` module for batch mapping
+- ✅ Added `PersonaView` class for DB-driven persona logic
+- ✅ DCL engine now reads stored mappings instead of computing live
+- ✅ Added batch mapping API endpoint
+
+**What Stayed the Same:**
+- Graph structure (L0 → L1 → L2 → L3)
+- Frontend rendering logic
+- Demo/Farm mode support
+- Narration service
+- Monitor panel
+
+## Frontend Features (November 2025)
+
+### Interactive Drill-Down (Monitor Panel)
+
+The Monitor panel provides a 3-level drill-down for exploring data lineage:
+
+**Persona Views Tab:**
+1. **Level 1 - Ontology Concepts:** Click to expand and see contributing sources
+2. **Level 2 - Source Systems:** Click to expand and see tables with mapped fields
+3. **Level 3 - Fields:** Click for full mapping details
+
+**Detail Panel Modal:**
+- Click info icons on any level to view:
+  - Source details: type, status, table count, total fields
+  - Table details: parent source, mapped fields with confidence
+  - Field details: full path (source→table→field), confidence bar, mapping explanation
+
+**Key Design:** Only mapped fields are shown (not raw schema), reflecting actual data flow through DCL.
+
+### Source Hierarchy Data Structure
+
+The backend provides `source_hierarchy` in L2 ontology node metrics:
+
+```json
+{
+  "source_hierarchy": {
+    "salesforce": {
+      "accounts": [
+        {"field": "account_name", "confidence": 0.95},
+        {"field": "account_id", "confidence": 0.92}
+      ]
+    },
+    "dynamics": {
+      "customers": [
+        {"field": "customername", "confidence": 0.88}
+      ]
+    }
+  }
+}
+```
+
+This enables the UI to show exactly which source→table→field combinations contribute to each ontology concept.
+
+## Source Data Requirements
+
+For DCL to properly map and visualize data sources, the following information is needed:
+
+### Required Fields
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `source_id` | Unique identifier for the source system | `salesforce`, `dynamics_erp`, `snowflake_dw` |
+| `source_type` | Category of the source | `crm`, `erp`, `datawarehouse`, `nosql`, `api` |
+| `vendor` | Platform/vendor name | `Salesforce`, `Microsoft Dynamics`, `Snowflake` |
+| `tables` | List of table schemas | See below |
+
+### Table Schema
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `table_name` | Name of the table/collection | `accounts`, `invoices`, `customers` |
+| `fields` | List of field definitions | See below |
+
+### Field Schema
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `field_name` | Name of the field/column | `account_name`, `total_amount` |
+| `field_type` | Data type | `string`, `number`, `date`, `boolean` |
+| `semantic_hints` | Optional hints for mapping | `is_identifier`, `is_currency`, `is_date` |
+
+### Why Vendor/Platform ID Matters
+
+Different vendors have distinct conventions that affect mapping accuracy:
+
+| Vendor | Account Field | Date Format | ID Pattern |
+|--------|--------------|-------------|------------|
+| Salesforce | `AccountName` | `CreatedDate` | `001...` (15/18 char) |
+| Dynamics | `accountname` | `createdon` | GUID |
+| HubSpot | `company_name` | `created_at` | Integer |
+| PostgreSQL | `account_name` | `created_at` | Serial/UUID |
+
+With vendor identification, DCL can apply vendor-specific mapping heuristics instead of generic pattern matching, significantly improving accuracy.
+
+---
+
+## BLL Consumption Contracts (January 2026)
+
+The Business Logic Layer (BLL) provides stable HTTP endpoints for executing predefined business definitions against DCL data.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    BLL Consumption Layer                         │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │
+│  │  Definitions │    │   Executor   │    │    Proof     │       │
+│  │   Registry   │    │   Service    │    │   Service    │       │
+│  ├──────────────┤    ├──────────────┤    ├──────────────┤       │
+│  │ • 10 seeded  │    │ • Load CSVs  │    │ • Lineage    │       │
+│  │ • FinOps/AOD │    │ • Join/Filter│    │ • Breadcrumbs│       │
+│  │ • CRM defs   │    │ • Aggregate  │    │ • SQL equiv  │       │
+│  └──────────────┘    └──────────────┘    └──────────────┘       │
+├─────────────────────────────────────────────────────────────────┤
+│                         Demo Dataset                             │
+│  dcl/demo/datasets/demo9/ - 9 sources, 16 tables (local CSVs)   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Location
+
+- **Definitions:** `backend/bll/definitions.py`
+- **Models:** `backend/bll/models.py`
+- **Executor:** `backend/bll/executor.py`
+- **Routes:** `backend/bll/routes.py`
+
+### Seeded Definitions (10)
+
+| Definition ID | Category | Purpose |
+|--------------|----------|---------|
+| `finops.saas_spend` | FinOps | SaaS spending by vendor/category |
+| `finops.top_vendor_deltas_mom` | FinOps | Month-over-month vendor cost changes |
+| `finops.unallocated_spend` | FinOps | Unallocated cloud spend |
+| `finops.arr` | FinOps | Annual recurring revenue |
+| `finops.burn_rate` | FinOps | Monthly burn rate analysis |
+| `aod.findings_by_severity` | AOD | Security findings by severity |
+| `aod.identity_gap_financially_anchored` | AOD | Resources with missing ownership |
+| `aod.zombies_overview` | AOD | Idle/underutilized resources |
+| `crm.pipeline` | CRM | Sales pipeline deals |
+| `crm.top_customers` | CRM | Top customers by revenue |
+
+### API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/bll/definitions` | GET | List all available definitions |
+| `/api/bll/definitions/{id}` | GET | Get specific definition details |
+| `/api/bll/execute` | POST | Execute definition, returns data+metadata+quality+lineage |
+| `/api/bll/proof/{id}` | GET | Get execution proof with breadcrumbs |
+
+### Execute Response Structure
+
+```json
+{
+  "data": [...],
+  "metadata": {
+    "dataset_id": "demo9",
+    "definition_id": "finops.arr",
+    "version": "1.0.0",
+    "executed_at": "2026-01-24T...",
+    "execution_time_ms": 45,
+    "row_count": 7
+  },
+  "quality": {
+    "completeness": 0.95,
+    "freshness_hours": 24,
+    "row_count": 7,
+    "null_percentage": 5.0
+  },
+  "lineage": [...],
+  "summary": {
+    "answer": "Your current ARR is $3.38M across 7 deals.",
+    "aggregations": {"total_arr": 3380000, "deal_count": 7}
+  }
+}
+```
+
+### Demo Mode vs Production
+
+| Aspect | Demo Mode | Production Mode |
+|--------|-----------|-----------------|
+| Data Source | Local CSVs in `dcl/demo/datasets/demo9/` | Fabric Plane pointers |
+| Execution | Pandas loads CSVs directly | JIT fetch from Fabric Planes |
+| Dataset ID | `demo9` (default) | Configured per tenant |
+
+**Key Principle:** BLL consumers use the same contract API regardless of mode.
+
+---
+
+## NLQ (Natural Language Query) Layer (January 2026)
+
+NLQ enables question-based definition matching with computed answers through a comprehensive semantic layer infrastructure.
+
+> **Full Documentation:** See [SEMANTIC-LAYER.md](./SEMANTIC-LAYER.md) for complete NLQ architecture.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      NLQ Semantic Layer                          │
+├─────────────────────────────────────────────────────────────────┤
+│  Question: "What is our current ARR?"                            │
+│                          ↓                                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  Answerability Scorer (Deterministic Hypothesis Ranking)  │   │
+│  │  - 45 Canonical Events (business event types)             │   │
+│  │  - 33 Entities (dimensions for grouping/filtering)        │   │
+│  │  - 41 Metric Definitions (reusable specifications)        │   │
+│  │  - Source Bindings (mappings to canonical events)         │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                          ↓                                       │
+│  Best Match: finops.arr (99% confidence)                         │
+│                          ↓                                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  BLL Executor                                             │   │
+│  │  - Execute definition against dataset                     │   │
+│  │  - Compute summary with aggregations                      │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                          ↓                                       │
+│  Answer: "Your current ARR is $3.38M across 7 deals."            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Location
+
+- **Services:** `backend/nlq/` (17 Python modules)
+  - `registry.py` - Definition registration and search
+  - `hypothesis.py` - Hypothesis generation and ranking
+  - `scorer.py` - Answerability scoring
+  - `executor.py` - Query execution
+  - `lineage.py` - Dependency graphs and impact analysis
+  - `consistency.py` - Validation services
+  - `proof.py` - Proof chain resolution
+  - `compiler.py` - SQL compilation
+  - `explainer.py` - Human-readable explanations
+- **Fixtures:** `backend/nlq/fixtures/` (6 JSON files)
+  - `canonical_events.json` - 45 business event types
+  - `entities.json` - 33 entity dimensions
+  - `definitions.json` - 41 metric definitions
+  - `bindings.json` - Source-to-event mappings
+  - `definition_versions.json` - Version history
+  - `proof_hooks.json` - Proof chain hooks
+- **Routes:** `backend/nlq/routes_registry.py`
+
+### Core Principle
+
+**No LLM in the hot path.** All scoring uses deterministic rules + stored metadata.
+
+### API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/nlq/answerability_rank` | POST | Rank definitions by question match |
+| `/api/nlq/registry/execute` | POST | Execute best-matching definition |
+| `/api/nlq/registry/definitions` | GET | List all definitions with metadata |
+| `/api/nlq/registry/events` | GET | List canonical events |
+| `/api/nlq/registry/entities` | GET | List entity dimensions |
+
+### Answerability Rank Response
+
+```json
+{
+  "definition_id": "finops.arr",
+  "confidence_score": 0.99,
+  "hypothesis_matches": ["arr", "revenue", "annual recurring revenue"]
+}
+```
+
+### Computed Summary
+
+The executor generates human-readable answers based on definition type:
+
+| Definition Type | Example Answer |
+|-----------------|----------------|
+| ARR/Revenue | "Your current ARR is $3.38M across 7 deals." |
+| Burn Rate | "Your current burn rate is approximately $42K/month." |
+| Spend/Cost | "Total spend is $150K across 45 transactions." |
+| Customers | "Top 9 customers with $224M in total revenue." |
+| Pipeline | "Pipeline contains 12 deals worth $2.1M." |
+| Zombies | "Found 8 idle/zombie resources costing $12K." |
+
+### Current Limitations
+
+1. **No parameter extraction** - "Top 5 customers" returns all customers, not 5
+2. **Hardcoded fixtures** - Must manually update JSON files for new definitions
+
+---
+
+## Future Enhancements
+
 ### Semantic Mapping
+1. **Full 3-Stage Pipeline:** Add RAG and LLM stages to semantic mapper
+2. **Automatic Remapping:** Trigger batch mapping when sources change
+3. **Confidence Thresholds:** Filter low-confidence mappings
+4. **Conflict Resolution:** Handle multiple concepts matching same field
+5. **Cluster-Based Views:** Allow filtering by concept cluster (Finance, Growth, Infra, Ops)
+6. **Vendor-Specific Mapping:** Apply platform-specific conventions based on source vendor ID
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/dcl/run` | POST | Execute mapping pipeline |
-| `/api/dcl/narration/{run_id}` | GET | Poll narration messages |
-| `/api/dcl/batch-mapping` | POST | Run mapping on sources |
-| `/api/topology` | GET | Get graph structure |
-
-### NLQ Answerability
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/nlq/answerability_rank` | POST | Rank hypotheses for question |
-| `/api/nlq/explain` | POST | Get explanation for hypothesis |
-
-### NLQ Registration
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/nlq/events` | GET/POST | Manage canonical events |
-| `/api/nlq/entities` | GET/POST | Manage entities |
-| `/api/nlq/definitions` | GET/POST | Manage definitions |
-| `/api/nlq/bindings` | GET/POST | Manage bindings |
-
-### NLQ Registry (New)
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/nlq/registry/definitions` | GET | List with filtering |
-| `/api/nlq/registry/definitions/search` | GET | Full-text search |
-| `/api/nlq/registry/definitions/{id}` | GET | Get detail with lineage |
-| `/api/nlq/registry/definitions/{id}/publish` | POST | Publish workflow |
-| `/api/nlq/registry/consistency/check` | GET | Run all checks |
-| `/api/nlq/registry/lineage/graph` | GET | Full dependency graph |
-| `/api/nlq/registry/lineage/impact` | POST | Impact analysis |
-| `/api/nlq/registry/schema/validate` | GET | Validate all schemas |
-| `/api/nlq/registry/execute` | POST | Execute queries |
-| `/api/nlq/registry/proof/chain/{id}` | GET | Full proof chain |
-
----
-
-## Database Schema
-
-### Existing Tables (Semantic Mapping)
-
-```sql
-ontology_concepts         -- 8 business concepts
-field_concept_mappings    -- Field to concept mappings
-persona_profiles          -- 4 personas
-persona_concept_relevance -- Persona to concept relevance
-```
-
-### New Tables (NLQ Semantic Layer)
-
-```sql
-canonical_events          -- Event types with schemas
-entities                  -- Business dimensions
-bindings                  -- Source system mappings
-definitions               -- Metric/view definitions
-definition_versions       -- Versioned specs
-proof_hooks               -- Source evidence links
-lineage_edges             -- Dependency graph
-query_executions          -- Audit log
-consistency_checks        -- Validation results
-```
-
----
-
-## Zero-Trust Architecture
-
-DCL operates in **metadata-only mode**:
-
-### What DCL Stores
-- Schema structures (field names, types)
-- Semantic mappings (field → concept)
-- Definition specs (events, measures, filters)
-- Lineage graphs (dependencies)
-- Proof pointers (not actual records)
-
-### What DCL Does NOT Store
-- Raw record data
-- Customer PII
-- Actual field values
-- Payloads of any kind
-
-### Fabric Pointer Buffering
-When data is needed, DCL performs Just-in-Time fetch from Fabric Planes:
-- Kafka: `{ topic, partition, offset }`
-- Snowflake: `{ database, schema, table, stream_id }`
-
----
-
-## Technology Stack
-
-| Component | Technology |
-|-----------|------------|
-| Backend | FastAPI + Python 3.11 |
-| Frontend | React 18 + TypeScript + Vite |
-| Visualization | D3.js (d3-sankey) |
-| Database | PostgreSQL (SQLAlchemy + Alembic) |
-| Cache | Redis |
-| Vector DB | Pinecone (mapping only) |
-| LLM | OpenAI GPT-4o-mini (mapping validation) |
-
----
-
-## File Structure
-
-```
-backend/
-├── engine/                 # DCL Engine (semantic mapping)
-│   ├── __init__.py
-│   ├── dcl_engine.py
-│   ├── persona_view.py
-│   └── schema_loader.py
-├── nlq/                    # NLQ Semantic Layer
-│   ├── models.py           # Pydantic models
-│   ├── persistence.py      # JSON/DB persistence
-│   ├── db_models.py        # SQLAlchemy models
-│   ├── db_persistence.py   # Database operations
-│   ├── scorer.py           # Answerability scoring
-│   ├── validator.py        # Definition validation
-│   ├── compiler.py         # SQL compilation
-│   ├── hypothesis.py       # Hypothesis generation
-│   ├── explainer.py        # Explanation generation
-│   ├── registry.py         # Definition registry
-│   ├── consistency.py      # Consistency validation
-│   ├── lineage.py          # Lineage/impact service
-│   ├── schema_enforcer.py  # Schema validation
-│   ├── executor.py         # Query execution
-│   ├── proof.py            # Proof resolution
-│   ├── routes_registry.py  # Registry API routes
-│   ├── fixtures/           # JSON fixtures
-│   └── migrations/         # Alembic migrations
-└── api/
-    └── main.py             # FastAPI application
-```
-
----
-
-## Related Documentation
-
-- [DCL-OVERVIEW.md](DCL-OVERVIEW.md) - What DCL actually does
-- [ARCH-DCL-TARGET.md](ARCH-DCL-TARGET.md) - Original refactoring goals
-- [SEMANTIC-LAYER.md](SEMANTIC-LAYER.md) - Detailed semantic layer documentation
-- [ARCH-GLOBAL-PIVOT.md](ARCH-GLOBAL-PIVOT.md) - Zero-Trust architecture
+### BLL/NLQ
+1. **Parameter Extraction:** Parse "top 5", "last month", filters from questions
+2. **Semantic Matching:** Use embeddings for better question→definition matching
+3. **Dynamic Definitions:** Allow runtime definition creation
+4. **Production Mode:** Implement Fabric Plane pointer-based execution
