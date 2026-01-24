@@ -1,0 +1,124 @@
+DCL Debug Trace
+7 steps
+received
+11:52:23 AM
+{
+  "question": "What is our current ARR?",
+  "consumer_type": "nlq",
+  "dcl_base_url": "https://aab3c90e-30cf-4951-8ddd-e8c2f4334aa7-00-ytm76ihwy3bl.picard.replit.dev/"
+}
+dcl_rank_request
+11:52:23 AM
+{
+  "endpoint": "https://aab3c90e-30cf-4951-8ddd-e8c2f4334aa7-00-ytm76ihwy3bl.picard.replit.dev//api/nlq/answerability_rank",
+  "payload": {
+    "question": "What is our current ARR?"
+  }
+}
+dcl_rank_response
+11:52:23 AM
+{
+  "definition_id": "finops.arr",
+  "confidence_score": 0.6428571428571428,
+  "hypothesis_matches": [
+    "arr"
+  ]
+}
+policy_check
+11:52:23 AM
+{
+  "allowed": true,
+  "caveats": [
+    "Answer based on available data bindings"
+  ],
+  "consumer_type": "nlq",
+  "confidence_threshold": null
+}
+dcl_execute_request
+11:52:23 AM
+{
+  "endpoint": "https://aab3c90e-30cf-4951-8ddd-e8c2f4334aa7-00-ytm76ihwy3bl.picard.replit.dev//api/nlq/registry/execute",
+  "payload": {
+    "definition_id": "finops.arr",
+    "dims": [],
+    "time_window": "MoM"
+  }
+}
+dcl_execute_response
+11:52:23 AM
+{
+  "success": true,
+  "row_count": null,
+  "data_preview": "[{'Id': 'SF-O001', 'AccountId': 'SF-A001', 'Name': 'Enterprise License', 'Amount': 380000, 'CloseDate': '2024-04-10', 'StageName': 'Qualification', 'OpportunityId': '', 'OpportunityName': '', 'Stage':",
+  "metadata": {
+    "dataset_id": "demo9",
+    "definition_id": "finops.arr",
+    "version": "1.0.0",
+    "executed_at": "2026-01-24T19:52:23.369606",
+    "execution_time_ms": 5,
+    "row_count": 7,
+    "result_schema": [
+      {
+        "name": "Id",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "AccountId",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "Name",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "Amount",
+        "dtype": "int64",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "CloseDate",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "StageName",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "OpportunityId",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "OpportunityName",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "Stage",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      }
+    ]
+  }
+}
+answer_assembled
+11:52:23 AM
+{
+  "answer_id": "93b27e88-8f80-44e4-9f9b-7cf8bc96bf5f",
+  "summary_preview": "Retrieved 7 rows for finops.arr.",
+  "proof_count": 2
+}
