@@ -1,9 +1,11 @@
 # DCL Engine - Data Connectivity Layer
 
-**Last Updated:** January 23, 2026
+**Last Updated:** January 24, 2026
 
 ## Overview
-The DCL (Data Connectivity Layer) Engine is a full-stack application designed to ingest and unify schemas and sample data from diverse sources into a common ontology using AI and heuristics. It visualizes data flow via an interactive Sankey diagram and supports two data modes: Demo (legacy sources) and Farm (synthetic data). The system provides persona-driven business logic for roles like CFO, CRO, COO, and CTO. Its core capabilities include multi-source schema ingestion, AI-powered ontology unification, RAG for intelligent mapping, real-time process narration, and enterprise monitoring with flexible runtime modes.
+The DCL (Data Connectivity Layer) Engine is a **metadata-only semantic mapping engine** that maps raw technical fields from source systems to business concepts and visualizes who uses what. It answers one question: "What does this field mean to the business?"
+
+DCL does NOT: Store raw data, process payloads, track lineage, or perform ETL.
 
 ## User Preferences
 - Preferred communication style: Simple, everyday language
@@ -22,7 +24,6 @@ The DCL (Data Connectivity Layer) Engine is a full-stack application designed to
   - `SankeyGraph.tsx` - Interactive 4-layer visualization (L0→L1→L2→L3)
   - `NarrationPanel.tsx` - Terminal-style real-time processing logs
   - `MonitorPanel.tsx` - Persona-specific metrics dashboard
-  - `TelemetryRibbon.tsx` - Live industrial metrics (Farm mode only)
 
 ### Backend Architecture
 - **Framework**: FastAPI + Python 3.11 + Pydantic V2
@@ -31,8 +32,8 @@ The DCL (Data Connectivity Layer) Engine is a full-stack application designed to
   - **API Layer**: RESTful endpoints, CORS, validation
   - **Domain Layer**: Core models (SourceSystem, TableSchema, OntologyConcept, Mapping, Persona)
   - **Engine Layer**: DCLEngine orchestrator, SchemaLoader, MappingService, RAGService, NarrationService
-  - **Core Layer** (NEW): Zero-Trust components for metadata-only architecture
-  - **Ingest Layer**: DEPRECATED - Sidecar/Consumer to migrate to AAM
+  - **Core Layer**: Zero-Trust components for metadata-only architecture
+  - **LLM Layer**: Mapping validation with GPT-4o-mini
 
 ### Zero-Trust Core Components (backend/core/)
 
@@ -58,11 +59,7 @@ DCL buffers ONLY Fabric Pointers (offsets, cursors) - NEVER payloads:
 
 ### Data Storage
 - **PostgreSQL**: Schema persistence, mapping storage, source registration
-- **Redis**: Real-time streams and pub/sub
-  - `dcl.logs` - Narration broadcast
-  - `dcl.ingest.raw` - Raw ingested records
-  - `dcl.ingest.config` - Dynamic connector configuration (AOD handshake)
-  - `dcl.telemetry` - Live metrics broadcast
+- **Redis**: Real-time pub/sub for narration (`dcl.logs`)
 - **Pinecone**: Vector database for RAG semantic matching (Prod mode)
 - **Local CSV**: Demo mode schema files
 
@@ -72,21 +69,18 @@ DCL buffers ONLY Fabric Pointers (offsets, cursors) - NEVER payloads:
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/dcl/run` | POST | Execute pipeline (params: data_mode, run_mode, personas) |
-| `/api/dcl/graph` | GET | Get current graph snapshot |
 | `/api/dcl/narration/{session_id}` | GET | Poll narration messages |
 
-### Ingest Pipeline (DEPRECATED - migrating to AAM)
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/ingest/provision` | POST | AOD handshake - provision new connector |
-| `/api/ingest/telemetry` | GET | Live industrial metrics |
-
-### Topology API (NEW)
+### Topology API
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/topology` | GET | Unified topology graph (merges DCL semantic graph with AAM health) |
 | `/api/topology/health` | GET | Connection health data from mesh |
 | `/api/topology/stats` | GET | Topology service statistics |
+
+### Legacy Ingest (REMOVED)
+All `/api/ingest/*` endpoints return HTTP 410 Gone with `{"error": "MOVED_TO_AAM"}`.
+Ingest functionality has been fully migrated to AAM (Asset & Availability Management).
 
 ## Node List (24 Nodes)
 
@@ -127,71 +121,10 @@ DCL buffers ONLY Fabric Pointers (offsets, cursors) - NEVER payloads:
 |----------|-------------|
 | `FARM_API_URL` | AOS-Farm API base URL |
 | `RUN_MODE` | `dev` (heuristic) or `prod` (LLM/RAG) |
-| `ENABLE_CHAOS` | Enable drift injection for testing |
 | `DATABASE_URL` | PostgreSQL connection string |
 | `REDIS_URL` | Redis connection string |
-| `GEMINI_API_KEY` | Google Gemini API key |
-| `OPENAI_API_KEY` | OpenAI API key |
+| `OPENAI_API_KEY` | OpenAI API key (embeddings + validation) |
 | `PINECONE_API_KEY` | Pinecone API key |
-
-## Phase 4: Connector Provisioning (January 2026)
-
-### Dynamic Connector Provisioning
-AAM (Asset & Availability Management) acquires and maintains connections to enterprise integration fabric (iPaaS, API managers, streams, warehouses) and routes pipes to DCL.
-
-**Provision Endpoint:**
-```bash
-POST /api/ingest/provision
-{
-  "connector_id": "mule_auto_01",
-  "source_type": "mulesoft",
-  "target_url": "https://farm.url/api/stream/synthetic/mulesoft?chaos=true",
-  "policy": { "repair_enabled": true }
-}
-```
-
-**Handshake Flow:**
-1. AAM calls POST /api/ingest/provision to route pipe to DCL
-2. Backend stores config in Redis (`dcl.ingest.config`)
-3. Sidecar polls every 5 seconds, detects version change
-4. Sidecar logs "[HANDSHAKE]" and reconnects to new stream
-5. Policy settings (repair_enabled) take effect immediately
-
-## Phase 5: Industrial Dashboard (January 2026)
-
-### Industrial Mode
-Pivots from "Story Mode" (slow, narrated) to "Industrial Mode" (fast, massive, validated).
-
-**Key Changes:**
-1. **Velocity** - Removed all artificial delays (no more 1.5-3s latency)
-2. **Telemetry** - Live counters replace chat logs
-3. **Closed-Loop Verification** - Farm confirms repairs are correct
-
-**Telemetry Endpoint:**
-```json
-GET /api/ingest/telemetry
-{
-  "ts": 1768853167248,
-  "metrics": {
-    "total_processed": 1523,
-    "toxic_blocked": 12,
-    "drift_detected": 45,
-    "repaired_success": 42,
-    "repair_failed": 3,
-    "verified_count": 42,
-    "verified_failed": 0,
-    "tps": 142.5,
-    "quality_score": 100.0,
-    "repair_rate": 93.3,
-    "uptime_seconds": 35.2
-  }
-}
-```
-
-**Dashboard Features:**
-- TelemetryRibbon shows: TPS, Processed, Blocked, Healed, Verified, Quality Score
-- Terminal Mode narration: monospace, matrix-style green text, auto-scroll
-- Updates every 500ms
 
 ## File Structure
 ```
@@ -201,29 +134,29 @@ GET /api/ingest/telemetry
 │   ├── engine/
 │   │   ├── dcl_engine.py     # Main orchestrator
 │   │   ├── schema_loader.py  # CSV/Farm schema loading
-│   │   ├── mapping_service.py # Heuristic + LLM mapping
+│   │   ├── mapping_service.py # Heuristic mapping
 │   │   └── rag_service.py    # Pinecone RAG
-│   ├── ingest/
-│   │   ├── ingest_agent.py   # Sidecar (stream → Redis)
-│   │   └── consumer.py       # Consumer (Redis → semantic mapping)
-│   └── utils/
-│       └── metrics.py        # MetricsCollector for telemetry
+│   ├── core/
+│   │   ├── fabric_plane.py   # Fabric Plane types
+│   │   ├── pointer_buffer.py # Pointer buffering
+│   │   ├── downstream_contract.py # BLL interface
+│   │   └── topology_api.py   # Topology service
+│   └── llm/
+│       └── mapping_validator.py # GPT-4o-mini validation
 ├── src/
 │   ├── App.tsx               # Main React app
 │   └── components/
 │       ├── ControlPanel.tsx
 │       ├── SankeyGraph.tsx
 │       ├── NarrationPanel.tsx
-│       ├── MonitorPanel.tsx
-│       └── TelemetryRibbon.tsx
+│       └── MonitorPanel.tsx
 ├── data/schemas/             # Demo mode CSV files
 └── run_backend.py            # Backend entry point
 ```
 
 ## External Dependencies
-- **Google Gemini**: Schema understanding (Gemini 2.5 Flash)
-- **OpenAI**: Mapping validation (GPT-4-mini)
+- **OpenAI**: Mapping validation (GPT-4o-mini), embeddings (text-embedding-3-small)
 - **Pinecone**: Vector database for RAG
 - **PostgreSQL**: Schema and mapping persistence
-- **Redis**: Real-time streaming and pub/sub
+- **Redis**: Narration broadcast
 - **httpx**: Async HTTP client for Farm API

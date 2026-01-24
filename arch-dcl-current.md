@@ -116,7 +116,6 @@ record.data   # NEVER
 | **Core** | `core/downstream_contract.py` | Abstract BLL consumer interface |
 | **Core** | `core/topology_api.py` | Merged DCL + AAM visualization |
 | **LLM** | `llm/mapping_validator.py` | GPT-4o-mini validation |
-| **Ingest** | `ingest/*` | **DEPRECATED** - migrating to AAM |
 
 ### Core Layer Components (backend/core/)
 
@@ -196,7 +195,7 @@ GET  /api/dcl/narration/{session_id}
      Returns: { "messages": [...] }
 ```
 
-### Topology Endpoints (NEW)
+### Topology Endpoints
 ```
 GET  /api/topology
      Returns: Unified topology graph (DCL semantic + AAM health)
@@ -208,11 +207,9 @@ GET  /api/topology/stats
      Returns: Topology service statistics
 ```
 
-### Ingest Endpoints (DEPRECATED)
-```
-POST /api/ingest/provision    # Migrating to AAM
-GET  /api/ingest/telemetry    # Migrating to AAM
-```
+### Legacy Ingest Endpoints (REMOVED)
+All `/api/ingest/*` endpoints return HTTP 410 Gone with `{"error": "MOVED_TO_AAM"}`.
+Ingest functionality has been fully migrated to AAM (Asset & Availability Management).
 
 ## Node Inventory
 
@@ -230,9 +227,8 @@ GET  /api/ingest/telemetry    # Migrating to AAM
 | Key | Type | Purpose |
 |-----|------|---------|
 | `dcl.logs` | Pub/Sub | Narration message broadcast |
-| `dcl.ingest.raw` | Stream | **DEPRECATED** |
-| `dcl.ingest.config` | Hash | **DEPRECATED** |
-| `dcl.telemetry` | String | Live metrics JSON |
+
+*Note: Ingest-related keys (`dcl.ingest.raw`, `dcl.ingest.config`, `dcl.telemetry`) have been removed. Ingest is now handled by AAM.*
 
 ## Technology Stack
 
