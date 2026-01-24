@@ -99,11 +99,19 @@ class ExecuteMetadata(BaseModel):
     result_schema: List[ColumnSchema]
 
 
+class ComputedSummary(BaseModel):
+    """Pre-computed aggregations and answer summary."""
+    answer: str  # Human-readable answer like "Your current ARR is $1,230,000"
+    aggregations: Dict[str, Any] = {}  # e.g., {"total_arr": 1230000, "deal_count": 7}
+    currency: Optional[str] = "USD"
+
+
 class ExecuteResponse(BaseModel):
     data: List[Dict[str, Any]]
     metadata: ExecuteMetadata
     quality: QualityMetrics
     lineage: List[LineageReference]
+    summary: Optional[ComputedSummary] = None  # Computed answer for NLQ
 
 
 class ProofBreadcrumb(BaseModel):

@@ -26,7 +26,7 @@ import pandas as pd
 from .models import (
     Definition, ExecuteRequest, ExecuteResponse, ExecuteMetadata,
     QualityMetrics, LineageReference, ProofResponse, ProofBreadcrumb,
-    ColumnSchema, FilterSpec
+    ColumnSchema, FilterSpec, ComputedSummary
 )
 from .definitions import get_definition
 
@@ -55,6 +55,98 @@ def _load_table(file_path: str) -> pd.DataFrame:
     if not os.path.exists(file_path):
         return pd.DataFrame()
     return pd.read_csv(file_path)
+
+
+def _format_currency(amount: float) -> str:
+    """Format a number as currency."""
+    if amount >= 1_000_000:
+        return f"${amount/1_000_000:,.2f}M"
+    elif amount >= 1_000:
+        return f"${amount/1_000:,.1f}K"
+    else:
+        return f"${amount:,.2f}"
+
+
+def _compute_summary(df: pd.DataFrame, definition: Definition) -> ComputedSummary:
+    """Compute aggregations and generate human-readable answer based on definition type."""
+    aggregations: dict[str, Any] = {}
+    answer = ""
+    
+    amount_cols = [c for c in df.columns if any(x in c.lower() for x in 
+                   ['amount', 'revenue', 'cost', 'spend', 'value', 'monthly_cost', 'annual'])]
+    
+    defn_id = definition.definition_id.lower()
+    
+    if 'arr' in defn_id or 'revenue' in defn_id:
+        if amount_cols:
+            total = df[amount_cols[0]].sum()
+            aggregations['total_arr'] = float(total)
+            aggregations['deal_count'] = len(df)
+            answer = f"Your current ARR is {_format_currency(total)} across {len(df)} deals/opportunities."
+        else:
+            aggregations['row_count'] = len(df)
+            answer = f"Found {len(df)} revenue records."
+    
+    elif 'burn' in defn_id:
+        if amount_cols:
+            total = df[amount_cols[0]].sum()
+            monthly_avg = total / 12 if total > 0 else 0
+            aggregations['total_spend'] = float(total)
+            aggregations['monthly_avg'] = float(monthly_avg)
+            answer = f"Your current burn rate is approximately {_format_currency(monthly_avg)}/month ({_format_currency(total)} total)."
+        else:
+            answer = f"Found {len(df)} cost records."
+    
+    elif 'spend' in defn_id or 'cost' in defn_id:
+        if amount_cols:
+            total = df[amount_cols[0]].sum()
+            aggregations['total_spend'] = float(total)
+            aggregations['transaction_count'] = len(df)
+            answer = f"Total spend is {_format_currency(total)} across {len(df)} transactions."
+        else:
+            answer = f"Found {len(df)} spend records."
+    
+    elif 'customer' in defn_id or 'account' in defn_id:
+        aggregations['customer_count'] = len(df)
+        if amount_cols:
+            total = df[amount_cols[0]].sum()
+            aggregations['total_revenue'] = float(total)
+            answer = f"Top {len(df)} customers with {_format_currency(total)} in total revenue."
+        else:
+            answer = f"Found {len(df)} customers."
+    
+    elif 'pipeline' in defn_id or 'deal' in defn_id:
+        aggregations['deal_count'] = len(df)
+        if amount_cols:
+            total = df[amount_cols[0]].sum()
+            aggregations['pipeline_value'] = float(total)
+            answer = f"Pipeline contains {len(df)} deals worth {_format_currency(total)}."
+        else:
+            answer = f"Pipeline contains {len(df)} deals."
+    
+    elif 'zombie' in defn_id or 'idle' in defn_id:
+        aggregations['resource_count'] = len(df)
+        if amount_cols:
+            total = df[amount_cols[0]].sum()
+            aggregations['wasted_spend'] = float(total)
+            answer = f"Found {len(df)} idle/zombie resources costing {_format_currency(total)}."
+        else:
+            answer = f"Found {len(df)} idle/zombie resources."
+    
+    elif 'finding' in defn_id or 'security' in defn_id:
+        aggregations['finding_count'] = len(df)
+        answer = f"Found {len(df)} security findings."
+    
+    else:
+        aggregations['row_count'] = len(df)
+        if amount_cols:
+            total = df[amount_cols[0]].sum()
+            aggregations['total'] = float(total)
+            answer = f"Retrieved {len(df)} records with total value {_format_currency(total)}."
+        else:
+            answer = f"Retrieved {len(df)} records."
+    
+    return ComputedSummary(answer=answer, aggregations=aggregations)
 
 
 def _apply_filter(df: pd.DataFrame, f: FilterSpec) -> pd.DataFrame:
@@ -128,6 +220,8 @@ def execute_definition(request: ExecuteRequest) -> ExecuteResponse:
     total_rows = len(result_df)
     result_df = result_df.iloc[request.offset:request.offset + request.limit]
     
+    summary = _compute_summary(result_df, definition)
+    
     result_df = result_df.fillna("")
     data = result_df.to_dict(orient="records")
     
@@ -159,7 +253,8 @@ def execute_definition(request: ExecuteRequest) -> ExecuteResponse:
             row_count=total_rows,
             null_percentage=null_percentage
         ),
-        lineage=lineage
+        lineage=lineage,
+        summary=summary
     )
 
 
