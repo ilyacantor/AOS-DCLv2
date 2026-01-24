@@ -53,6 +53,7 @@ class Definition(BaseModel):
     default_filters: Optional[List[FilterSpec]] = None
     dimensions: List[str] = Field(default_factory=list)
     metrics: List[str] = Field(default_factory=list)
+    keywords: List[str] = Field(default_factory=list)  # Keywords for NLQ matching
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -134,3 +135,4 @@ class DefinitionListItem(BaseModel):
     category: DefinitionCategory
     version: str
     description: str
+    keywords: List[str] = Field(default_factory=list)

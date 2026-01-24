@@ -37,7 +37,8 @@ def list_all_definitions():
             name=d.name,
             category=d.category,
             version=d.version,
-            description=d.description
+            description=d.description,
+            keywords=d.keywords
         )
         for d in definitions
     ]

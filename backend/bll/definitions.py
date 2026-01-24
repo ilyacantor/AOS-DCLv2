@@ -180,7 +180,7 @@ _register(Definition(
 _register(Definition(
     definition_id="finops.arr",
     name="Annual Recurring Revenue",
-    description="Total annual recurring revenue from subscription contracts and deals",
+    description="Total annual recurring revenue (ARR) from subscription contracts, deals, and opportunities. Use this for questions about current ARR, revenue, MRR, bookings, or contract value.",
     category=DefinitionCategory.FINOPS,
     version="1.0.0",
     output_schema=[
@@ -201,13 +201,16 @@ _register(Definition(
     ],
     dimensions=["source", "stage"],
     metrics=["amount", "arr_contribution"],
+    keywords=["arr", "annual recurring revenue", "revenue", "mrr", "monthly recurring revenue", 
+              "current arr", "total arr", "bookings", "contract value", "acv", "tcv", 
+              "subscription revenue", "recurring", "what is our arr"],
 ))
 
 
 _register(Definition(
     definition_id="finops.burn_rate",
     name="Burn Rate Analysis",
-    description="Monthly cash burn rate and runway analysis across all cost centers",
+    description="Monthly cash burn rate and runway analysis. Use this for questions about burn rate, runway, cash consumption, or monthly spending trends.",
     category=DefinitionCategory.FINOPS,
     version="1.0.0",
     output_schema=[
@@ -224,6 +227,8 @@ _register(Definition(
     ],
     dimensions=["month", "category", "cost_center"],
     metrics=["total_spend"],
+    keywords=["burn rate", "burn", "runway", "cash burn", "monthly burn", "consumption", 
+              "spending rate", "current burn rate", "what is our burn rate"],
 ))
 
 
