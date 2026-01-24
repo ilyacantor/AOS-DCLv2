@@ -69,6 +69,7 @@ externalPort = 3001
 
 [userenv.shared]
 FARM_API_URL = "https://autonomos.farm"
+DCL_DATASET_ID = "demo9"
 
 [deployment]
 deploymentTarget = "autoscale"

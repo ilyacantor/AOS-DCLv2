@@ -26,3 +26,5 @@ sqlalchemy
 uvicorn
 psycopg2-binary
 pyyaml
+httpx
+pytest

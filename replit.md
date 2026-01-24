@@ -13,7 +13,36 @@ The application features:
 - Enterprise monitoring dashboard
 - Dev/Prod runtime modes with different LLM strategies
 
-## Recent Changes (November 2025)
+## Recent Changes (January 2026)
+
+### BLL Consumption Contracts (January 24, 2026)
+Added stable HTTP endpoints for Business Logic Layer (BLL) consumption:
+
+**Endpoints:**
+- `GET /api/bll/definitions` - List all available definitions
+- `GET /api/bll/definitions/{id}` - Get specific definition details
+- `POST /api/bll/execute` - Execute definition against dataset, returns data+metadata+quality+lineage
+- `GET /api/bll/proof/{id}` - Get execution proof with source/join/filter breadcrumbs
+
+**Demo Dataset (demo9):**
+- Manifest: `dcl/demo/datasets/demo9/manifest.json`
+- 9 sources, 16 tables from local CSVs
+- Environment variable: `DCL_DATASET_ID` (default: demo9)
+
+**Seeded Definitions:**
+- `finops.saas_spend` - SaaS spending by vendor/category
+- `finops.top_vendor_deltas_mom` - Month-over-month vendor cost changes
+- `finops.unallocated_spend` - Unallocated cloud spend
+- `aod.findings_by_severity` - Security findings by severity
+- `aod.identity_gap_financially_anchored` - Resources with missing ownership
+- `aod.zombies_overview` - Idle/underutilized resources
+
+**Architecture Note:**
+Demo mode uses Pandas to load CSVs and simulate Fabric Plane responses.
+Production mode would use pointer-based JIT fetching from actual Fabric Planes.
+BLL consumers use the same contract API regardless of mode.
+
+## Previous Changes (November 2025)
 
 ### Source Normalization (Latest)
 - **NEW: SourceNormalizer service** (`backend/engine/source_normalizer.py`)

@@ -1,0 +1,209 @@
+{
+  "dataset_id": "demo9",
+  "version": "1.0.0",
+  "description": "DCL Demo Dataset with 9 enterprise source systems",
+  "created_at": "2026-01-24T00:00:00Z",
+  "time_range": {
+    "start": "2024-01-01T00:00:00Z",
+    "end": "2025-12-31T23:59:59Z"
+  },
+  "sources": [
+    {
+      "source_id": "dynamics",
+      "display_name": "Microsoft Dynamics 365",
+      "category": "crm",
+      "tables": [
+        {
+          "table_id": "accounts",
+          "file": "schemas/schemas/dynamics/accounts.csv",
+          "schema_hash": "dynamics_accounts_v1",
+          "columns": ["AccountID", "AccountName", "Industry", "AnnualRevenue", "EmployeeCount"],
+          "join_keys": ["AccountID"],
+          "record_count": 5
+        },
+        {
+          "table_id": "opportunities",
+          "file": "schemas/schemas/dynamics/opportunities.csv",
+          "schema_hash": "dynamics_opps_v1",
+          "columns": ["OpportunityID", "AccountID", "OpportunityName", "Amount", "CloseDate"],
+          "join_keys": ["OpportunityID", "AccountID"],
+          "record_count": 5
+        }
+      ]
+    },
+    {
+      "source_id": "hubspot",
+      "display_name": "HubSpot CRM",
+      "category": "crm",
+      "tables": [
+        {
+          "table_id": "deals",
+          "file": "schemas/schemas/hubspot/Deals.csv",
+          "schema_hash": "hubspot_deals_v1",
+          "columns": ["DealID", "DealName", "Amount", "Stage", "CloseDate", "Pipeline"],
+          "join_keys": ["DealID"],
+          "record_count": 50
+        }
+      ]
+    },
+    {
+      "source_id": "legacy_sql",
+      "display_name": "Legacy SQL Database",
+      "category": "database",
+      "tables": [
+        {
+          "table_id": "cloud_resources",
+          "file": "schemas/schemas/legacy_sql/CloudResources.csv",
+          "schema_hash": "legacy_resources_v1",
+          "columns": ["ResourceID", "Type", "CloudService", "AwsRegion", "AccountID", "CreatedAt"],
+          "join_keys": ["ResourceID", "AccountID"],
+          "record_count": 7
+        },
+        {
+          "table_id": "usage_metrics",
+          "file": "schemas/schemas/legacy_sql/UsageMetrics.csv",
+          "schema_hash": "legacy_usage_v1",
+          "columns": ["MetricID", "ResourceID", "MetricName", "MetricValue", "Unit", "Timestamp"],
+          "join_keys": ["MetricID", "ResourceID"],
+          "record_count": 16
+        }
+      ]
+    },
+    {
+      "source_id": "mongodb",
+      "display_name": "MongoDB Customer DB",
+      "category": "nosql",
+      "tables": [
+        {
+          "table_id": "account_usage",
+          "file": "schemas/schemas/mongodb/account_usage.csv",
+          "schema_hash": "mongo_usage_v1",
+          "columns": ["id", "account_id", "feature", "usage_count", "last_used"],
+          "join_keys": ["id", "account_id"],
+          "record_count": 5
+        }
+      ]
+    },
+    {
+      "source_id": "netsuite",
+      "display_name": "NetSuite ERP",
+      "category": "erp",
+      "tables": [
+        {
+          "table_id": "cloud_spend",
+          "file": "schemas/schemas/netsuite/CloudSpend.csv",
+          "schema_hash": "netsuite_spend_v1",
+          "columns": ["TransactionID", "VendorName", "VendorID", "ServiceCategory", "Monthly_Cost", "Currency", "PurchaseDate", "CostCenter", "UsageType", "Region", "PaymentTerms", "InvoiceNumber", "PurchaseOrderNumber", "ApprovalStatus", "Department"],
+          "join_keys": ["TransactionID", "VendorID"],
+          "record_count": 15
+        },
+        {
+          "table_id": "cloud_vendor_contracts",
+          "file": "schemas/schemas/netsuite/CloudVendorContracts.csv",
+          "schema_hash": "netsuite_contracts_v1",
+          "columns": ["ContractID", "VendorID", "VendorName", "StartDate", "EndDate", "AnnualValue"],
+          "join_keys": ["ContractID", "VendorID"],
+          "record_count": 5
+        }
+      ]
+    },
+    {
+      "source_id": "salesforce",
+      "display_name": "Salesforce CRM",
+      "category": "crm",
+      "tables": [
+        {
+          "table_id": "account",
+          "file": "schemas/schemas/salesforce/Account.csv",
+          "schema_hash": "sf_account_v1",
+          "columns": ["Id", "Name", "Industry", "AnnualRevenue", "NumberOfEmployees"],
+          "join_keys": ["Id"],
+          "record_count": 5
+        },
+        {
+          "table_id": "opportunity",
+          "file": "schemas/schemas/salesforce/Opportunity.csv",
+          "schema_hash": "sf_opp_v1",
+          "columns": ["Id", "AccountId", "Name", "Amount", "CloseDate"],
+          "join_keys": ["Id", "AccountId"],
+          "record_count": 5
+        }
+      ]
+    },
+    {
+      "source_id": "sap",
+      "display_name": "SAP ERP",
+      "category": "erp",
+      "tables": [
+        {
+          "table_id": "billing_items",
+          "file": "schemas/schemas/sap/BILLING_ITEMS.csv",
+          "schema_hash": "sap_billing_v1",
+          "columns": ["BILLING_DOC", "ITEM_NUM", "MATERIAL", "QUANTITY", "NET_VALUE", "CURRENCY"],
+          "join_keys": ["BILLING_DOC", "ITEM_NUM"],
+          "record_count": 10
+        },
+        {
+          "table_id": "cloud_invoices",
+          "file": "schemas/schemas/sap/CLOUD_INVOICES.csv",
+          "schema_hash": "sap_invoices_v1",
+          "columns": ["INVOICE_NUM", "VENDOR_CODE", "INVOICE_DATE", "Monthly_Cost", "CURRENCY", "ServiceCategory", "UsageType", "PAYMENT_TERM", "STATUS", "DUE_DATE", "PAID_DATE", "COMPANY_CODE", "COST_CENTER", "GL_ACCOUNT", "FISCAL_YEAR", "FISCAL_PERIOD"],
+          "join_keys": ["INVOICE_NUM", "VENDOR_CODE"],
+          "record_count": 15
+        }
+      ]
+    },
+    {
+      "source_id": "snowflake",
+      "display_name": "Snowflake Data Warehouse",
+      "category": "data_warehouse",
+      "tables": [
+        {
+          "table_id": "aws_costs",
+          "file": "schemas/schemas/snowflake/AWS_COSTS.csv",
+          "schema_hash": "sf_aws_costs_v1",
+          "columns": ["COST_ID", "RESOURCE_ID", "DATE", "BILLING_PERIOD", "AWS_ACCOUNT", "SERVICE_CATEGORY", "USAGE_TYPE", "OPERATION", "PRICING_TERM", "ON_DEMAND_COST", "RESERVED_COST", "SAVINGS_PLAN_COST", "SPOT_COST", "MONTHLY_COST", "DATA_TRANSFER_COST", "SUPPORT_COST", "TAX_AMOUNT", "USAGE_QUANTITY", "UNIT_PRICE", "CURRENCY", "AMORTIZED_COST", "BLENDED_COST", "UNBLENDED_COST", "REGION", "AVAILABILITY_ZONE", "PURCHASE_OPTION"],
+          "join_keys": ["COST_ID", "RESOURCE_ID"],
+          "record_count": 15
+        },
+        {
+          "table_id": "aws_resources",
+          "file": "schemas/schemas/snowflake/AWS_RESOURCES.csv",
+          "schema_hash": "sf_aws_resources_v1",
+          "columns": ["RESOURCE_ID", "RESOURCE_TYPE", "SERVICE", "AWS_REGION", "ACCOUNT_NUM", "ENVIRONMENT", "COST_CENTER", "INSTANCE_TYPE", "VCPUS", "MEMORY_GB", "OWNER", "PROJECT", "COMPLIANCE_LEVEL"],
+          "join_keys": ["RESOURCE_ID", "ACCOUNT_NUM"],
+          "record_count": 50
+        },
+        {
+          "table_id": "resource_metrics",
+          "file": "schemas/schemas/snowflake/RESOURCE_METRICS.csv",
+          "schema_hash": "sf_metrics_v1",
+          "columns": ["METRIC_ID", "RESOURCE_ID", "METRIC_NAME", "METRIC_VALUE", "UNIT", "TIMESTAMP"],
+          "join_keys": ["METRIC_ID", "RESOURCE_ID"],
+          "record_count": 50
+        }
+      ]
+    },
+    {
+      "source_id": "supabase",
+      "display_name": "Supabase App DB",
+      "category": "database",
+      "tables": [
+        {
+          "table_id": "account_health",
+          "file": "schemas/schemas/supabase/account_health.csv",
+          "schema_hash": "supa_health_v1",
+          "columns": ["id", "account_id", "health_score", "risk_level", "details", "last_updated"],
+          "join_keys": ["id", "account_id"],
+          "record_count": 5
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "total_tables": 16,
+    "total_sources": 9,
+    "primary_use_cases": ["finops", "aod", "crm_analytics"],
+    "supported_personas": ["CFO", "CRO", "COO", "CTO"]
+  }
+}

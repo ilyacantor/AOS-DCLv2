@@ -11,6 +11,7 @@ from backend.domain import Persona, GraphSnapshot, RunMetrics
 from backend.engine import DCLEngine
 from backend.engine.schema_loader import SchemaLoader
 from backend.semantic_mapper import SemanticMapper
+from backend.bll.routes import router as bll_router
 
 app = FastAPI(title="DCL Engine API")
 
@@ -21,6 +22,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(bll_router)
 
 engine = DCLEngine()
 
