@@ -257,6 +257,171 @@ def rank_answerability(request: AnswerabilityRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# =============================================================================
+# NLQ Ask Endpoint (Ranking + Param Extraction + BLL Execution)
+# =============================================================================
+
+from backend.nlq.param_extractor import extract_params, apply_limit_clamp, ExecutionArgs
+from backend.bll.executor import execute_definition as bll_execute
+from backend.bll.models import ExecuteRequest as BLLExecuteRequest
+from backend.bll.definitions import get_definition as get_bll_definition, list_definitions as list_bll_definitions
+
+
+class NLQAskRequest(BaseModel):
+    """Request to ask a natural language question."""
+    question: str
+    tenant_id: str = "default"
+    dataset_id: str = "demo9"
+
+
+class NLQAskResponse(BaseModel):
+    """Response from NLQ ask endpoint."""
+    question: str
+    definition_id: str
+    confidence_score: float
+    execution_args: Dict[str, Any]
+    data: List[Dict[str, Any]]
+    metadata: Dict[str, Any]
+    summary: Optional[Dict[str, Any]] = None
+    caveats: List[str] = []
+
+
+def _match_question_to_definition(question: str) -> tuple[str, float, list[str]]:
+    """
+    Match a question to the best BLL definition using keyword matching.
+    Returns (definition_id, confidence_score, matched_keywords).
+    """
+    question_lower = question.lower()
+    best_match = None
+    best_score = 0.0
+    best_keywords = []
+    
+    for defn in list_bll_definitions():
+        score = 0.0
+        matched = []
+        
+        # Check keywords
+        for kw in defn.keywords:
+            if kw.lower() in question_lower:
+                score += 0.25
+                matched.append(kw)
+        
+        # Check definition name
+        if defn.name.lower() in question_lower:
+            score += 0.3
+            matched.append(defn.name)
+        
+        # Check category-specific terms
+        category_terms = {
+            "finops": ["spend", "cost", "revenue", "arr", "burn", "saas"],
+            "aod": ["zombie", "finding", "security", "identity", "idle"],
+            "crm": ["customer", "deal", "pipeline", "account", "opportunity"],
+        }
+        for term in category_terms.get(defn.category.value, []):
+            if term in question_lower:
+                score += 0.15
+                if term not in matched:
+                    matched.append(term)
+        
+        # Priority boost for high-confidence matches
+        if score > 0.5:
+            score = min(score + 0.2, 1.0)
+        
+        if score > best_score:
+            best_score = score
+            best_match = defn.definition_id
+            best_keywords = matched
+    
+    # Default fallback
+    if not best_match:
+        best_match = "finops.arr"
+        best_score = 0.1
+    
+    return best_match, min(best_score, 0.99), best_keywords
+
+
+@app.post("/api/nlq/ask", response_model=NLQAskResponse)
+def nlq_ask(request: NLQAskRequest):
+    """
+    Ask a natural language question and get an answer.
+    
+    Flow:
+    1. Match question to best BLL definition (keyword-based)
+    2. Extract parameters from question (top N, by revenue, etc.)
+    3. Execute definition with extracted parameters
+    4. Return data + computed summary
+    
+    Example:
+    {
+        "question": "Show me the top 5 customers by revenue"
+    }
+    
+    Returns:
+    - definition_id: matched definition
+    - confidence_score: match confidence (0.0-1.0)
+    - execution_args: extracted parameters (limit, order_by, etc.)
+    - data: query results (limited to extracted top-N)
+    - summary: human-readable answer
+    - caveats: any limitations applied
+    """
+    try:
+        question = request.question
+        
+        # Step 1: Match question to definition
+        definition_id, confidence, matched_keywords = _match_question_to_definition(question)
+        logger.info(f"[NLQ] Matched '{question}' to {definition_id} (conf={confidence:.2f})")
+        
+        # Step 2: Extract parameters from question
+        exec_args = extract_params(question)
+        
+        # Apply limit clamping (max 100)
+        if exec_args.limit:
+            exec_args.limit = apply_limit_clamp(exec_args.limit, max_limit=100)
+        
+        logger.info(f"[NLQ] Extracted params: {exec_args.to_dict()}")
+        
+        # Step 3: Execute definition with extracted parameters
+        bll_request = BLLExecuteRequest(
+            dataset_id=request.dataset_id,
+            definition_id=definition_id,
+            limit=exec_args.limit or 1000,
+            offset=0,
+        )
+        
+        result = bll_execute(bll_request)
+        
+        # Step 4: Build response with caveats
+        caveats = []
+        if exec_args.limit:
+            caveats.append(f"Limited to top {exec_args.limit}")
+        if exec_args.order_by:
+            order_desc = ", ".join([f"{o['field']} {o['direction']}" for o in exec_args.order_by])
+            caveats.append(f"Sorted by {order_desc}")
+        if not caveats:
+            caveats.append("Based on available data bindings")
+        
+        return NLQAskResponse(
+            question=question,
+            definition_id=definition_id,
+            confidence_score=confidence,
+            execution_args=exec_args.to_dict(),
+            data=result.data,
+            metadata={
+                "dataset_id": result.metadata.dataset_id,
+                "definition_id": result.metadata.definition_id,
+                "row_count": len(result.data),  # Actual returned rows
+                "total_available": result.metadata.row_count,  # Pre-limit count
+                "execution_time_ms": result.metadata.execution_time_ms,
+                "matched_keywords": matched_keywords,
+            },
+            summary=result.summary.model_dump() if result.summary else None,
+            caveats=caveats,
+        )
+    except Exception as e:
+        logger.error(f"NLQ ask failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"DCL execution failed: {str(e)}")
+
+
 @app.post("/api/nlq/explain", response_model=ExplainResponse)
 def explain_hypothesis(request: ExplainRequest):
     """

@@ -1,0 +1,100 @@
+Yep — that output is **exactly** what we’d expect from the current state:
+
+* ✅ NLQ is matching the right definition (`crm.top_customers`) at high confidence
+* ✅ Executor is running it and generating a summary
+* ❌ The system is **not binding “top 5” → `limit=5`**, so it returns *all* customers (11), then the summarizer dutifully reports “Top 11…”
+
+This is the documented limitation in your current DCL/NLQ design (“No parameter extraction”).  
+
+---
+
+## What’s happening in the pipeline today
+
+Right now it’s effectively:
+
+1. Question → `answerability_rank` → `crm.top_customers`
+2. Execute `crm.top_customers` with **default params** (limit unset)
+3. Summarize → “Top 11 customers…”
+
+So you’re *close*: matching is solved; execution is solved; **parameterization is the missing middle.**
+
+---
+
+## The fix (one thing): add Param Extraction → ExecutionArgs
+
+Add a step in DCL NLQ (not BLL) that outputs:
+
+```json
+{
+  "definition_id": "crm.top_customers",
+  "execution_args": {
+    "limit": 5,
+    "order_by": [{"field": "revenue", "direction": "desc"}]
+  }
+}
+```
+
+Then pass those args into execution.
+
+---
+
+## “Top N” should be deterministic and cheap
+
+This does **not** require embeddings or LLMs.
+
+Rules:
+
+* Regex: `top\s+(\d+)` → `limit = N`
+* If question says “by revenue” → `order_by = revenue desc`
+* If definition already has a default order_by, keep it unless question overrides
+
+**Important:** definitions should declare which params they allow:
+
+* `allowed_params: ["limit", "order_by", "time_window", "filters"]`
+* `default_limit` (optional)
+
+Then extraction can’t invent unsupported knobs.
+
+---
+
+## How you know you’ve fixed it (one killer test)
+
+Add an API test that asserts row count:
+
+**Input:** “Show me the top 5 customers by revenue”
+**Assert:** response metadata `row_count == 5` AND data length == 5.
+
+Also test “top 1” and “top 20” (20 should clamp to available rows or a max limit).
+
+---
+
+## Quick triage: where to patch (conceptually)
+
+In DCL repo, whichever route does:
+
+* `rank(question) -> definition_id`
+* then immediately calls execute
+
+…needs to become:
+
+* `rank(question) -> definition_id`
+* `extract_params(question, definition_spec) -> execution_args`
+* `execute(definition_id, execution_args)`
+
+You already have NLQ modules that are the natural home for this (`compiler`, `executor`, `routes_registry`). 
+
+---
+
+## One practical note
+
+Right now your “caveat” is generic (“based on available data bindings”). Once params exist, caveats become meaningful:
+
+* “Limited to top 5”
+* “Sorted by revenue desc”
+* “Time window defaulted to last full month” (when time parsing exists)
+
+That’s the next step after top-N.
+
+---
+
+If you paste the **exact endpoint you’re calling** to get that response (e.g., `/api/nlq/registry/execute` vs something else) and the JSON request body, I’ll tell you the *exact* place to hook param extraction with minimal churn.
