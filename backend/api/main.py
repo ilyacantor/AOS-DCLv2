@@ -279,6 +279,22 @@ class NLQAskRequest(BaseModel):
     dataset_id: str = "demo9"
 
 
+class NLQExtractParamsRequest(BaseModel):
+    """Request to extract execution parameters from a question."""
+    question: str
+
+
+class NLQExtractParamsResponse(BaseModel):
+    """Response with extracted execution parameters."""
+    question: str
+    limit: Optional[int] = None
+    order_by: Optional[List[Dict[str, str]]] = None
+    time_window: Optional[str] = None
+    filters: Optional[Dict[str, Any]] = None
+    extraction_confidence: float = 1.0  # How confident we are in the extraction
+    raw_params: Dict[str, Any] = {}  # Full ExecutionArgs dict
+
+
 class NLQAskResponse(BaseModel):
     """Response from NLQ ask endpoint."""
     question: str
@@ -439,6 +455,85 @@ def _match_question_to_definition(question: str) -> tuple[str, float, list[str]]
         best_keywords = ["fallback:default"]
 
     return best_match, best_score, best_keywords
+
+
+# =============================================================================
+# NLQ Parameter Extraction Endpoint
+# =============================================================================
+
+@app.post("/api/nlq/extract_params", response_model=NLQExtractParamsResponse)
+def nlq_extract_params(request: NLQExtractParamsRequest):
+    """
+    Extract execution parameters from a natural language question.
+
+    This is a standalone endpoint that BLL can call to get extracted parameters
+    without executing a query. Use this with answerability_rank + execute flow.
+
+    Extracts:
+    - limit: "top 5", "first 10", etc.
+    - order_by: "by revenue", "sorted by cost", etc.
+    - time_window: "last month", "this quarter", "YTD", etc.
+    - filters: (reserved for future use)
+
+    Example:
+    {
+        "question": "Show me the top 5 customers by revenue"
+    }
+
+    Returns:
+    {
+        "question": "Show me the top 5 customers by revenue",
+        "limit": 5,
+        "order_by": [{"field": "revenue", "direction": "desc"}],
+        "time_window": null,
+        "filters": null,
+        "extraction_confidence": 1.0,
+        "raw_params": {"limit": 5, "order_by": [...]}
+    }
+    """
+    try:
+        question = request.question
+
+        # Extract all parameters using the param_extractor module
+        exec_args = extract_params(question)
+
+        # Apply limit clamping (max 100 for safety)
+        if exec_args.limit:
+            exec_args.limit = apply_limit_clamp(exec_args.limit, max_limit=100)
+
+        # Calculate extraction confidence based on how many params were found
+        confidence = 1.0
+        if exec_args.has_params():
+            # High confidence if we found explicit parameters
+            confidence = 0.95
+        else:
+            # No parameters found - either question doesn't have any, or we missed them
+            confidence = 0.8
+
+        logger.info(f"[NLQ] Extracted params from '{question}': {exec_args.to_dict()}")
+
+        return NLQExtractParamsResponse(
+            question=question,
+            limit=exec_args.limit,
+            order_by=exec_args.order_by,
+            time_window=exec_args.time_window,
+            filters=exec_args.filters,
+            extraction_confidence=confidence,
+            raw_params=exec_args.to_dict(),
+        )
+    except Exception as e:
+        logger.error(f"Parameter extraction failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Parameter extraction failed: {str(e)}")
+
+
+@app.get("/api/nlq/extract_params")
+def nlq_extract_params_get(question: str):
+    """
+    GET version of extract_params for easy testing.
+
+    Example: GET /api/nlq/extract_params?question=Show%20me%20top%205%20customers
+    """
+    return nlq_extract_params(NLQExtractParamsRequest(question=question))
 
 
 @app.post("/api/nlq/ask", response_model=NLQAskResponse)
