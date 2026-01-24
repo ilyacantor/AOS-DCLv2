@@ -5,23 +5,23 @@
     "source_system": "NetSuite",
     "canonical_event_id": "revenue_recognized",
     "mapping_json": {
-      "transaction_id": "event_id",
-      "customer": "customer_id",
-      "item_category": "service_line",
-      "location": "region",
-      "amount": "amount",
+      "tranid": "event_id",
+      "entity": "customer_id",
+      "custcol_service_line": "service_line",
+      "subsidiary": "region",
+      "amount": "recognized_amount",
       "currency": "currency",
-      "tran_date": "recognized_at",
-      "related_contract": "contract_id"
+      "trandate": "occurred_at",
+      "postingperiod": "effective_at"
     },
     "dims_coverage_json": {
       "customer": true,
       "service_line": true,
       "region": true,
-      "currency": true
+      "contract": false
     },
-    "quality_score": 0.92,
-    "freshness_score": 0.95,
+    "quality_score": 0.95,
+    "freshness_score": 0.92,
     "updated_at": "2024-01-15T00:00:00Z"
   },
   {
@@ -30,65 +30,368 @@
     "source_system": "NetSuite",
     "canonical_event_id": "invoice_posted",
     "mapping_json": {
-      "invoice_number": "invoice_id",
-      "customer": "customer_id",
-      "item_category": "service_line",
-      "amount": "amount",
-      "tran_date": "invoice_date",
-      "due_date": "due_date",
-      "status": "status"
+      "internalid": "invoice_id",
+      "entity": "customer_id",
+      "amount": "posted_amount",
+      "currency": "currency",
+      "trandate": "occurred_at",
+      "postingperiod": "effective_at"
     },
     "dims_coverage_json": {
       "customer": true,
-      "service_line": true,
-      "region": false
+      "region": true
     },
-    "quality_score": 0.88,
+    "quality_score": 0.95,
+    "freshness_score": 0.95,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "netsuite_payment_received",
+    "tenant_id": "default",
+    "source_system": "NetSuite",
+    "canonical_event_id": "payment_received",
+    "mapping_json": {
+      "internalid": "payment_id",
+      "entity": "customer_id",
+      "payment": "cash_amount",
+      "currency": "currency",
+      "paymentmethod": "payment_method",
+      "trandate": "effective_at"
+    },
+    "dims_coverage_json": {
+      "customer": true
+    },
+    "quality_score": 0.92,
     "freshness_score": 0.90,
     "updated_at": "2024-01-15T00:00:00Z"
   },
   {
-    "id": "salesforce_contract_signed",
+    "id": "netsuite_vendor_bill",
+    "tenant_id": "default",
+    "source_system": "NetSuite",
+    "canonical_event_id": "vendor_bill_posted",
+    "mapping_json": {
+      "internalid": "vendor_bill_id",
+      "entity": "vendor_id",
+      "department": "cost_center_id",
+      "amount": "bill_amount",
+      "currency": "currency",
+      "trandate": "effective_at"
+    },
+    "dims_coverage_json": {
+      "vendor": true,
+      "cost_center": true
+    },
+    "quality_score": 0.90,
+    "freshness_score": 0.88,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "salesforce_opportunity_created",
     "tenant_id": "default",
     "source_system": "Salesforce",
-    "canonical_event_id": "contract_signed",
+    "canonical_event_id": "opportunity_created",
     "mapping_json": {
-      "opportunity_id": "contract_id",
-      "account_id": "customer_id",
-      "amount": "total_value",
-      "close_date": "start_date",
-      "contract_end": "end_date",
-      "product_family": "service_line"
+      "Id": "opportunity_id",
+      "AccountId": "customer_id",
+      "Amount": "expected_amount",
+      "CurrencyIsoCode": "currency",
+      "StageName": "stage",
+      "CloseDate": "close_date",
+      "CreatedDate": "effective_at"
     },
     "dims_coverage_json": {
       "customer": true,
-      "service_line": true,
-      "region": true
+      "stage": true
+    },
+    "quality_score": 0.90,
+    "freshness_score": 0.95,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "salesforce_deal_won",
+    "tenant_id": "default",
+    "source_system": "Salesforce",
+    "canonical_event_id": "deal_won",
+    "mapping_json": {
+      "Id": "opportunity_id",
+      "AccountId": "customer_id",
+      "Amount": "deal_amount",
+      "CurrencyIsoCode": "currency",
+      "Type": "deal_type",
+      "CloseDate": "effective_at"
+    },
+    "dims_coverage_json": {
+      "customer": true,
+      "deal_type": true
+    },
+    "quality_score": 0.90,
+    "freshness_score": 0.95,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "chargebee_subscription_started",
+    "tenant_id": "default",
+    "source_system": "Chargebee",
+    "canonical_event_id": "subscription_started",
+    "mapping_json": {
+      "id": "subscription_id",
+      "customer_id": "customer_id",
+      "mrr": "mrr",
+      "currency_code": "currency",
+      "started_at": "effective_at"
+    },
+    "dims_coverage_json": {
+      "customer": true,
+      "subscription": true
+    },
+    "quality_score": 0.88,
+    "freshness_score": 0.92,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "chargebee_subscription_changed",
+    "tenant_id": "default",
+    "source_system": "Chargebee",
+    "canonical_event_id": "subscription_changed",
+    "mapping_json": {
+      "id": "subscription_id",
+      "customer_id": "customer_id",
+      "change_type": "change_type",
+      "mrr_delta": "delta_mrr",
+      "currency_code": "currency",
+      "changed_at": "effective_at"
+    },
+    "dims_coverage_json": {
+      "customer": true,
+      "subscription": true
+    },
+    "quality_score": 0.88,
+    "freshness_score": 0.92,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "chargebee_subscription_canceled",
+    "tenant_id": "default",
+    "source_system": "Chargebee",
+    "canonical_event_id": "subscription_canceled",
+    "mapping_json": {
+      "id": "subscription_id",
+      "customer_id": "customer_id",
+      "mrr": "ending_mrr",
+      "cancel_reason": "cancel_reason",
+      "currency_code": "currency",
+      "cancelled_at": "effective_at"
+    },
+    "dims_coverage_json": {
+      "customer": true,
+      "subscription": true
+    },
+    "quality_score": 0.88,
+    "freshness_score": 0.92,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "jira_work_item_created",
+    "tenant_id": "default",
+    "source_system": "Jira",
+    "canonical_event_id": "work_item_created",
+    "mapping_json": {
+      "key": "work_item_id",
+      "fields.project.key": "project_id",
+      "fields.issuetype.name": "work_item_type",
+      "fields.priority.name": "priority",
+      "fields.customfield_storypoints": "estimate_points",
+      "fields.created": "effective_at"
+    },
+    "dims_coverage_json": {
+      "project": true,
+      "team": false,
+      "work_item_type": true
+    },
+    "quality_score": 0.85,
+    "freshness_score": 0.90,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "jira_work_item_completed",
+    "tenant_id": "default",
+    "source_system": "Jira",
+    "canonical_event_id": "work_item_completed",
+    "mapping_json": {
+      "key": "work_item_id",
+      "changelog.cycleTime": "cycle_time_hours",
+      "fields.customfield_storypoints": "actual_points",
+      "fields.resolutiondate": "effective_at"
+    },
+    "dims_coverage_json": {
+      "project": true,
+      "team": false
+    },
+    "quality_score": 0.85,
+    "freshness_score": 0.90,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "github_deployment_completed",
+    "tenant_id": "default",
+    "source_system": "GitHub",
+    "canonical_event_id": "deployment_completed",
+    "mapping_json": {
+      "id": "deployment_id",
+      "repository.full_name": "repo_id",
+      "environment": "environment",
+      "sha": "version",
+      "state": "status",
+      "updated_at": "effective_at"
+    },
+    "dims_coverage_json": {
+      "repo": true,
+      "environment": true,
+      "service": false
+    },
+    "quality_score": 0.90,
+    "freshness_score": 0.95,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "pagerduty_incident_opened",
+    "tenant_id": "default",
+    "source_system": "PagerDuty",
+    "canonical_event_id": "incident_opened",
+    "mapping_json": {
+      "id": "incident_id",
+      "service.id": "service_id",
+      "urgency": "severity",
+      "created_at": "effective_at"
+    },
+    "dims_coverage_json": {
+      "service": true,
+      "severity": true
+    },
+    "quality_score": 0.92,
+    "freshness_score": 0.98,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "pagerduty_incident_resolved",
+    "tenant_id": "default",
+    "source_system": "PagerDuty",
+    "canonical_event_id": "incident_resolved",
+    "mapping_json": {
+      "id": "incident_id",
+      "service.id": "service_id",
+      "time_to_resolve_minutes": "ttr_minutes",
+      "resolved_at": "effective_at"
+    },
+    "dims_coverage_json": {
+      "service": true
+    },
+    "quality_score": 0.92,
+    "freshness_score": 0.98,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "aws_cloud_cost",
+    "tenant_id": "default",
+    "source_system": "AWS Cost Explorer",
+    "canonical_event_id": "cloud_cost_incurred",
+    "mapping_json": {
+      "lineItemId": "event_id",
+      "resourceId": "resource_id",
+      "linkedAccountId": "cost_center_id",
+      "productName": "cost_category",
+      "blendedCost": "cost_amount",
+      "currencyCode": "currency",
+      "usageStartDate": "effective_at"
+    },
+    "dims_coverage_json": {
+      "cloud_resource": true,
+      "cost_center": true,
+      "service": false
+    },
+    "quality_score": 0.95,
+    "freshness_score": 0.85,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "zendesk_ticket_opened",
+    "tenant_id": "default",
+    "source_system": "Zendesk",
+    "canonical_event_id": "ticket_opened",
+    "mapping_json": {
+      "id": "ticket_id",
+      "requester_id": "customer_id",
+      "priority": "priority",
+      "tags": "category",
+      "created_at": "effective_at"
+    },
+    "dims_coverage_json": {
+      "customer": true,
+      "priority": true
+    },
+    "quality_score": 0.88,
+    "freshness_score": 0.95,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "zendesk_ticket_resolved",
+    "tenant_id": "default",
+    "source_system": "Zendesk",
+    "canonical_event_id": "ticket_resolved",
+    "mapping_json": {
+      "id": "ticket_id",
+      "solve_time_minutes": "resolution_hours",
+      "first_response_time_minutes": "first_response_hours",
+      "solved_at": "effective_at"
+    },
+    "dims_coverage_json": {},
+    "quality_score": 0.88,
+    "freshness_score": 0.95,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "snyk_security_finding_raised",
+    "tenant_id": "default",
+    "source_system": "Snyk",
+    "canonical_event_id": "security_finding_raised",
+    "mapping_json": {
+      "id": "finding_id",
+      "project.id": "service_id",
+      "severity": "severity",
+      "type": "category",
+      "identifiers.CVE": "cve_id",
+      "introducedDate": "effective_at"
+    },
+    "dims_coverage_json": {
+      "service": true,
+      "severity": true
+    },
+    "quality_score": 0.90,
+    "freshness_score": 0.92,
+    "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "expensify_expense_incurred",
+    "tenant_id": "default",
+    "source_system": "Expensify",
+    "canonical_event_id": "expense_incurred",
+    "mapping_json": {
+      "reportID": "expense_id",
+      "employeeEmail": "employee_id",
+      "costCenter": "cost_center_id",
+      "amount": "amount",
+      "currency": "currency",
+      "category": "expense_category",
+      "created": "effective_at"
+    },
+    "dims_coverage_json": {
+      "employee": true,
+      "cost_center": true
     },
     "quality_score": 0.85,
     "freshness_score": 0.88,
-    "updated_at": "2024-01-14T00:00:00Z"
-  },
-  {
-    "id": "psa_revenue_recognized",
-    "tenant_id": "default",
-    "source_system": "PSA",
-    "canonical_event_id": "revenue_recognized",
-    "mapping_json": {
-      "project_id": "event_id",
-      "client_id": "customer_id",
-      "project_type": "service_line",
-      "billable_amount": "amount",
-      "recognition_date": "recognized_at"
-    },
-    "dims_coverage_json": {
-      "customer": true,
-      "service_line": true,
-      "region": false
-    },
-    "quality_score": 0.78,
-    "freshness_score": 0.72,
-    "updated_at": "2024-01-10T00:00:00Z"
+    "updated_at": "2024-01-15T00:00:00Z"
   },
   {
     "id": "erp_mapping_changed",
@@ -96,18 +399,16 @@
     "source_system": "ERP",
     "canonical_event_id": "mapping_changed",
     "mapping_json": {
-      "audit_id": "change_id",
+      "audit_id": "event_id",
       "table_name": "entity_type",
+      "record_id": "entity_id",
+      "column_name": "field_changed",
       "old_val": "old_value",
       "new_val": "new_value",
-      "change_timestamp": "change_date",
+      "change_timestamp": "effective_at",
       "reason_code": "change_reason"
     },
-    "dims_coverage_json": {
-      "customer": false,
-      "service_line": true,
-      "region": false
-    },
+    "dims_coverage_json": {},
     "quality_score": 0.65,
     "freshness_score": 0.60,
     "updated_at": "2024-01-08T00:00:00Z"

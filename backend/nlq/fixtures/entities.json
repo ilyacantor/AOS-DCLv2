@@ -6,7 +6,34 @@
       "primary": "customer_id",
       "aliases": ["account_id", "client_id", "cust_id"]
     },
-    "description": "Customer or account entity"
+    "description": "Customer or client organization"
+  },
+  {
+    "id": "account",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "account_id",
+      "aliases": ["acct_id", "customer_id"]
+    },
+    "description": "Account (may be 1:1 or 1:many with customer)"
+  },
+  {
+    "id": "product",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "product_id",
+      "aliases": ["sku", "item_id", "product_code"]
+    },
+    "description": "Product or SKU"
+  },
+  {
+    "id": "service",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "service_id",
+      "aliases": ["service_name", "offering_id"]
+    },
+    "description": "Service offering (maps to product for service businesses)"
   },
   {
     "id": "service_line",
@@ -18,6 +45,105 @@
     "description": "Service line or product category"
   },
   {
+    "id": "contract",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "contract_id",
+      "aliases": ["agreement_id", "deal_id", "order_id"]
+    },
+    "description": "Contract or master agreement"
+  },
+  {
+    "id": "subscription",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "subscription_id",
+      "aliases": ["sub_id", "recurring_id"]
+    },
+    "description": "Subscription (child of contract for recurring)"
+  },
+  {
+    "id": "invoice",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "invoice_id",
+      "aliases": ["inv_id", "bill_id", "document_id"]
+    },
+    "description": "Invoice document"
+  },
+  {
+    "id": "invoice_line",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "invoice_line_id",
+      "aliases": ["line_id", "inv_line_id"]
+    },
+    "description": "Invoice line item"
+  },
+  {
+    "id": "payment",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "payment_id",
+      "aliases": ["pmt_id", "receipt_id", "transaction_id"]
+    },
+    "description": "Payment received"
+  },
+  {
+    "id": "refund",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "refund_id",
+      "aliases": ["credit_id", "return_id"]
+    },
+    "description": "Refund or credit"
+  },
+  {
+    "id": "vendor",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "vendor_id",
+      "aliases": ["supplier_id", "vnd_id"]
+    },
+    "description": "Vendor or supplier"
+  },
+  {
+    "id": "vendor_bill",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "vendor_bill_id",
+      "aliases": ["ap_invoice_id", "bill_id"]
+    },
+    "description": "Vendor bill (AP)"
+  },
+  {
+    "id": "expense",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "expense_id",
+      "aliases": ["exp_id", "expense_report_id"]
+    },
+    "description": "Expense item or report"
+  },
+  {
+    "id": "cost_center",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "cost_center_id",
+      "aliases": ["cc_id", "department_id", "org_unit_id"]
+    },
+    "description": "Cost center or organizational unit for allocation"
+  },
+  {
+    "id": "project",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "project_id",
+      "aliases": ["proj_id", "engagement_id"]
+    },
+    "description": "Project for cost/revenue tracking"
+  },
+  {
     "id": "region",
     "tenant_id": "default",
     "identifiers_json": {
@@ -25,15 +151,6 @@
       "aliases": ["geo", "territory", "market", "country"]
     },
     "description": "Geographic region"
-  },
-  {
-    "id": "contract",
-    "tenant_id": "default",
-    "identifiers_json": {
-      "primary": "contract_id",
-      "aliases": ["agreement_id", "deal_id", "subscription_id"]
-    },
-    "description": "Contract or agreement entity"
   },
   {
     "id": "currency",
@@ -52,5 +169,131 @@
       "aliases": ["month", "quarter", "year", "fiscal_month", "fiscal_quarter"]
     },
     "description": "Time period for financial reporting"
+  },
+  {
+    "id": "work_item",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "work_item_id",
+      "aliases": ["issue_id", "ticket_id", "story_id", "task_id"]
+    },
+    "description": "Work item (epic/story/task/bug)"
+  },
+  {
+    "id": "ticket",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "ticket_id",
+      "aliases": ["case_id", "support_id", "incident_id"]
+    },
+    "description": "Support ticket or case"
+  },
+  {
+    "id": "sla",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "sla_id",
+      "aliases": ["service_level_id"]
+    },
+    "description": "Service level agreement"
+  },
+  {
+    "id": "employee",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "employee_id",
+      "aliases": ["emp_id", "user_id", "resource_id"]
+    },
+    "description": "Employee or resource"
+  },
+  {
+    "id": "team",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "team_id",
+      "aliases": ["squad_id", "group_id"]
+    },
+    "description": "Team or squad"
+  },
+  {
+    "id": "deployment",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "deployment_id",
+      "aliases": ["deploy_id", "release_id"]
+    },
+    "description": "Deployment or release"
+  },
+  {
+    "id": "build",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "build_id",
+      "aliases": ["pipeline_id", "ci_id"]
+    },
+    "description": "Build or CI pipeline run"
+  },
+  {
+    "id": "repo",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "repo_id",
+      "aliases": ["repository_id", "repo_name"]
+    },
+    "description": "Code repository"
+  },
+  {
+    "id": "incident",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "incident_id",
+      "aliases": ["inc_id", "alert_id"]
+    },
+    "description": "Production incident"
+  },
+  {
+    "id": "slo",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "slo_id",
+      "aliases": ["sli_id", "objective_id"]
+    },
+    "description": "Service level objective"
+  },
+  {
+    "id": "cloud_resource",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "resource_id",
+      "aliases": ["arn", "resource_arn", "instance_id"]
+    },
+    "description": "Cloud resource (compute, storage, etc.)"
+  },
+  {
+    "id": "security_finding",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "finding_id",
+      "aliases": ["vulnerability_id", "cve_id"]
+    },
+    "description": "Security finding or vulnerability"
+  },
+  {
+    "id": "opportunity",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "opportunity_id",
+      "aliases": ["opp_id", "deal_id"]
+    },
+    "description": "Sales opportunity"
+  },
+  {
+    "id": "lead",
+    "tenant_id": "default",
+    "identifiers_json": {
+      "primary": "lead_id",
+      "aliases": ["prospect_id"]
+    },
+    "description": "Sales lead"
   }
 ]
