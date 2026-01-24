@@ -72,79 +72,95 @@ def _compute_summary(df: pd.DataFrame, definition: Definition) -> ComputedSummar
     aggregations: dict[str, Any] = {}
     answer = ""
     
-    amount_cols = [c for c in df.columns if any(x in c.lower() for x in 
-                   ['amount', 'revenue', 'cost', 'spend', 'value', 'monthly_cost', 'annual'])]
+    amount_cols = []
+    for c in df.columns:
+        if any(x in c.lower() for x in ['amount', 'revenue', 'monthly_cost', 'annual', 'net_value']):
+            if df[c].dtype in ['int64', 'float64'] or pd.api.types.is_numeric_dtype(df[c]):
+                amount_cols.append(c)
     
     defn_id = definition.definition_id.lower()
     
-    if 'arr' in defn_id or 'revenue' in defn_id:
-        if amount_cols:
-            total = df[amount_cols[0]].sum()
-            aggregations['total_arr'] = float(total)
+    try:
+        if 'arr' in defn_id or 'revenue' in defn_id:
+            if amount_cols:
+                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['total_arr'] = float(total)
+                aggregations['deal_count'] = len(df)
+                answer = f"Your current ARR is {_format_currency(total)} across {len(df)} deals/opportunities."
+            else:
+                aggregations['row_count'] = len(df)
+                answer = f"Found {len(df)} revenue records."
+        
+        elif 'delta' in defn_id or 'mom' in defn_id or 'change' in defn_id:
+            aggregations['row_count'] = len(df)
+            if amount_cols:
+                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['total_value'] = float(total)
+                answer = f"Month-over-month analysis shows {len(df)} records with {_format_currency(total)} total."
+            else:
+                answer = f"Month-over-month analysis returned {len(df)} records."
+        
+        elif 'burn' in defn_id:
+            if amount_cols:
+                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                monthly_avg = total / 12 if total > 0 else 0
+                aggregations['total_spend'] = float(total)
+                aggregations['monthly_avg'] = float(monthly_avg)
+                answer = f"Your current burn rate is approximately {_format_currency(monthly_avg)}/month ({_format_currency(total)} total)."
+            else:
+                answer = f"Found {len(df)} cost records."
+        
+        elif 'spend' in defn_id or 'cost' in defn_id:
+            if amount_cols:
+                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['total_spend'] = float(total)
+                aggregations['transaction_count'] = len(df)
+                answer = f"Total spend is {_format_currency(total)} across {len(df)} transactions."
+            else:
+                answer = f"Found {len(df)} spend records."
+        
+        elif 'customer' in defn_id or 'account' in defn_id:
+            aggregations['customer_count'] = len(df)
+            if amount_cols:
+                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['total_revenue'] = float(total)
+                answer = f"Top {len(df)} customers with {_format_currency(total)} in total revenue."
+            else:
+                answer = f"Found {len(df)} customers."
+        
+        elif 'pipeline' in defn_id or 'deal' in defn_id:
             aggregations['deal_count'] = len(df)
-            answer = f"Your current ARR is {_format_currency(total)} across {len(df)} deals/opportunities."
+            if amount_cols:
+                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['pipeline_value'] = float(total)
+                answer = f"Pipeline contains {len(df)} deals worth {_format_currency(total)}."
+            else:
+                answer = f"Pipeline contains {len(df)} deals."
+        
+        elif 'zombie' in defn_id or 'idle' in defn_id:
+            aggregations['resource_count'] = len(df)
+            if amount_cols:
+                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['wasted_spend'] = float(total)
+                answer = f"Found {len(df)} idle/zombie resources costing {_format_currency(total)}."
+            else:
+                answer = f"Found {len(df)} idle/zombie resources."
+        
+        elif 'finding' in defn_id or 'security' in defn_id:
+            aggregations['finding_count'] = len(df)
+            answer = f"Found {len(df)} security findings."
+        
         else:
             aggregations['row_count'] = len(df)
-            answer = f"Found {len(df)} revenue records."
-    
-    elif 'burn' in defn_id:
-        if amount_cols:
-            total = df[amount_cols[0]].sum()
-            monthly_avg = total / 12 if total > 0 else 0
-            aggregations['total_spend'] = float(total)
-            aggregations['monthly_avg'] = float(monthly_avg)
-            answer = f"Your current burn rate is approximately {_format_currency(monthly_avg)}/month ({_format_currency(total)} total)."
-        else:
-            answer = f"Found {len(df)} cost records."
-    
-    elif 'spend' in defn_id or 'cost' in defn_id:
-        if amount_cols:
-            total = df[amount_cols[0]].sum()
-            aggregations['total_spend'] = float(total)
-            aggregations['transaction_count'] = len(df)
-            answer = f"Total spend is {_format_currency(total)} across {len(df)} transactions."
-        else:
-            answer = f"Found {len(df)} spend records."
-    
-    elif 'customer' in defn_id or 'account' in defn_id:
-        aggregations['customer_count'] = len(df)
-        if amount_cols:
-            total = df[amount_cols[0]].sum()
-            aggregations['total_revenue'] = float(total)
-            answer = f"Top {len(df)} customers with {_format_currency(total)} in total revenue."
-        else:
-            answer = f"Found {len(df)} customers."
-    
-    elif 'pipeline' in defn_id or 'deal' in defn_id:
-        aggregations['deal_count'] = len(df)
-        if amount_cols:
-            total = df[amount_cols[0]].sum()
-            aggregations['pipeline_value'] = float(total)
-            answer = f"Pipeline contains {len(df)} deals worth {_format_currency(total)}."
-        else:
-            answer = f"Pipeline contains {len(df)} deals."
-    
-    elif 'zombie' in defn_id or 'idle' in defn_id:
-        aggregations['resource_count'] = len(df)
-        if amount_cols:
-            total = df[amount_cols[0]].sum()
-            aggregations['wasted_spend'] = float(total)
-            answer = f"Found {len(df)} idle/zombie resources costing {_format_currency(total)}."
-        else:
-            answer = f"Found {len(df)} idle/zombie resources."
-    
-    elif 'finding' in defn_id or 'security' in defn_id:
-        aggregations['finding_count'] = len(df)
-        answer = f"Found {len(df)} security findings."
-    
-    else:
+            if amount_cols:
+                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['total'] = float(total)
+                answer = f"Retrieved {len(df)} records with total value {_format_currency(total)}."
+            else:
+                answer = f"Retrieved {len(df)} records."
+    except Exception as e:
         aggregations['row_count'] = len(df)
-        if amount_cols:
-            total = df[amount_cols[0]].sum()
-            aggregations['total'] = float(total)
-            answer = f"Retrieved {len(df)} records with total value {_format_currency(total)}."
-        else:
-            answer = f"Retrieved {len(df)} records."
+        answer = f"Retrieved {len(df)} records."
     
     return ComputedSummary(answer=answer, aggregations=aggregations)
 
