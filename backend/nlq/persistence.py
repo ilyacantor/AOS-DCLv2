@@ -21,6 +21,8 @@ from backend.nlq.models import (
     Entity,
     Binding,
     Definition,
+    DefinitionVersion,
+    DefinitionVersionSpec,
     ProofHook,
 )
 
@@ -128,14 +130,9 @@ class NLQPersistence:
         return [Binding(**item) for item in data]
 
     def get_bindings_for_event(self, event_id: str, tenant_id: str = "default") -> List[Binding]:
-        """Get bindings that map to a specific event."""
+        """Get bindings that map to a specific canonical event."""
         bindings = self.get_bindings(tenant_id)
-        return [b for b in bindings if b.maps_to == event_id and b.binding_type == "event"]
-
-    def get_bindings_for_entity(self, entity_id: str, tenant_id: str = "default") -> List[Binding]:
-        """Get bindings that map to a specific entity."""
-        bindings = self.get_bindings(tenant_id)
-        return [b for b in bindings if b.maps_to == entity_id and b.binding_type == "entity"]
+        return [b for b in bindings if b.canonical_event_id == event_id]
 
     def get_binding_quality(self, event_id: str, tenant_id: str = "default") -> float:
         """Get the average binding quality for an event."""
@@ -144,13 +141,36 @@ class NLQPersistence:
             return 0.0
         return sum(b.quality_score for b in bindings) / len(bindings)
 
+    def get_binding_freshness(self, event_id: str, tenant_id: str = "default") -> float:
+        """Get the average binding freshness for an event."""
+        bindings = self.get_bindings_for_event(event_id, tenant_id)
+        if not bindings:
+            return 0.0
+        return sum(b.freshness_score for b in bindings) / len(bindings)
+
     def get_available_dims(self, event_id: str, tenant_id: str = "default") -> List[str]:
         """Get all available dimensions for an event across bindings."""
         bindings = self.get_bindings_for_event(event_id, tenant_id)
         dims = set()
         for b in bindings:
-            dims.update(b.dims_available_json)
+            # Use dims_coverage_json which maps dim -> bool
+            for dim, covered in b.dims_coverage_json.items():
+                if covered:
+                    dims.add(dim)
         return list(dims)
+
+    def get_dims_coverage(self, event_id: str, tenant_id: str = "default") -> Dict[str, bool]:
+        """Get dimension coverage across all bindings for an event."""
+        bindings = self.get_bindings_for_event(event_id, tenant_id)
+        coverage: Dict[str, bool] = {}
+        for b in bindings:
+            for dim, covered in b.dims_coverage_json.items():
+                # If any binding covers this dim, mark as covered
+                if covered:
+                    coverage[dim] = True
+                elif dim not in coverage:
+                    coverage[dim] = False
+        return coverage
 
     # =========================================================================
     # Definitions
@@ -172,6 +192,53 @@ class NLQPersistence:
     def definition_exists(self, definition_id: str, tenant_id: str = "default") -> bool:
         """Check if a definition exists."""
         return self.get_definition(definition_id, tenant_id) is not None
+
+    # =========================================================================
+    # Definition Versions
+    # =========================================================================
+
+    def get_definition_versions(self, tenant_id: str = "default") -> List[DefinitionVersion]:
+        """Get all definition versions for a tenant."""
+        data = self._load_fixture("definition_versions")
+        versions = []
+        for item in data:
+            # Parse the spec if it exists
+            spec_data = item.get("spec", {})
+            spec = DefinitionVersionSpec(**spec_data)
+            versions.append(DefinitionVersion(
+                id=item["id"],
+                definition_id=item["definition_id"],
+                version=item.get("version", "v1"),
+                status=item.get("status", "published"),
+                spec=spec,
+                published_at=item.get("published_at"),
+            ))
+        return versions
+
+    def get_definition_version(
+        self,
+        definition_id: str,
+        version: str = "v1",
+        tenant_id: str = "default"
+    ) -> Optional[DefinitionVersion]:
+        """Get a specific definition version."""
+        versions = self.get_definition_versions(tenant_id)
+        for v in versions:
+            if v.definition_id == definition_id and v.version == version:
+                return v
+        return None
+
+    def get_published_version(
+        self,
+        definition_id: str,
+        tenant_id: str = "default"
+    ) -> Optional[DefinitionVersion]:
+        """Get the published version of a definition."""
+        versions = self.get_definition_versions(tenant_id)
+        for v in versions:
+            if v.definition_id == definition_id and v.status == "published":
+                return v
+        return None
 
     # =========================================================================
     # Proof Hooks
@@ -272,3 +339,15 @@ class NLQPersistence:
         for dim_id in dim_ids:
             result[dim_id] = dim_id in available_dims
         return result
+
+    def get_dims_missing_for_events(
+        self, requested_dims: List[str], event_ids: List[str], tenant_id: str = "default"
+    ) -> List[str]:
+        """
+        Get list of dimensions that are missing coverage for the given events.
+
+        Returns:
+            List of dimension IDs that are not covered by any binding
+        """
+        dims_check = self.check_dims_available(requested_dims, event_ids, tenant_id)
+        return [dim for dim, available in dims_check.items() if not available]

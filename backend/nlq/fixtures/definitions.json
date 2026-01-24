@@ -1,79 +1,62 @@
 [
   {
     "id": "services_revenue",
-    "version": 1,
-    "inputs_json": {
-      "events": ["revenue_recognized"],
-      "filters": {
-        "service_line": ["Professional Services", "Consulting", "Implementation"]
-      }
+    "kind": "metric",
+    "description": "Revenue from professional services, consulting, and implementation",
+    "default_time_semantics_json": {
+      "event": "revenue_recognized",
+      "time_field": "recognized_at",
+      "calendar": "fiscal"
     },
-    "grain_json": {
-      "time": "monthly",
-      "entity": "customer"
-    },
-    "allowed_dims_json": ["customer", "service_line", "region", "period"],
-    "quality_score": 0.88,
-    "description": "Revenue from professional services, consulting, and implementation"
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
   },
   {
     "id": "total_revenue",
-    "version": 1,
-    "inputs_json": {
-      "events": ["revenue_recognized"]
+    "kind": "metric",
+    "description": "Total recognized revenue across all service lines",
+    "default_time_semantics_json": {
+      "event": "revenue_recognized",
+      "time_field": "recognized_at",
+      "calendar": "fiscal"
     },
-    "grain_json": {
-      "time": "monthly",
-      "entity": "customer"
-    },
-    "allowed_dims_json": ["customer", "service_line", "region", "period"],
-    "quality_score": 0.92,
-    "description": "Total recognized revenue across all service lines"
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
   },
   {
     "id": "subscription_revenue",
-    "version": 1,
-    "inputs_json": {
-      "events": ["revenue_recognized"],
-      "filters": {
-        "service_line": ["Subscription", "SaaS", "License"]
-      }
+    "kind": "metric",
+    "description": "Recurring subscription and license revenue",
+    "default_time_semantics_json": {
+      "event": "revenue_recognized",
+      "time_field": "recognized_at",
+      "calendar": "fiscal"
     },
-    "grain_json": {
-      "time": "monthly",
-      "entity": "customer"
-    },
-    "allowed_dims_json": ["customer", "service_line", "region", "period"],
-    "quality_score": 0.90,
-    "description": "Recurring subscription and license revenue"
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
   },
   {
     "id": "arr",
-    "version": 1,
-    "inputs_json": {
-      "events": ["contract_signed", "revenue_recognized"],
-      "calculation": "annualized_run_rate"
+    "kind": "metric",
+    "description": "Annual Recurring Revenue",
+    "default_time_semantics_json": {
+      "event": "contract_signed",
+      "time_field": "start_date",
+      "calendar": "fiscal"
     },
-    "grain_json": {
-      "time": "monthly",
-      "entity": "customer"
-    },
-    "allowed_dims_json": ["customer", "service_line", "region"],
-    "quality_score": 0.85,
-    "description": "Annual Recurring Revenue"
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
   },
   {
     "id": "dso",
-    "version": 1,
-    "inputs_json": {
-      "events": ["invoice_posted", "payment_received"]
+    "kind": "metric",
+    "description": "Days Sales Outstanding - average collection period",
+    "default_time_semantics_json": {
+      "event": "invoice_posted",
+      "time_field": "invoice_date",
+      "calendar": "calendar"
     },
-    "grain_json": {
-      "time": "monthly",
-      "entity": "customer"
-    },
-    "allowed_dims_json": ["customer", "region"],
-    "quality_score": 0.75,
-    "description": "Days Sales Outstanding - average collection period"
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
   }
 ]

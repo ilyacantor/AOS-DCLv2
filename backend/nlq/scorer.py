@@ -1,10 +1,16 @@
 """
 Answerability Scorer for NLQ Circles.
 
-Implements deterministic scoring for hypothesis ranking:
-- score = 0.50*(definition_exists) + 0.25*(required_events_bound) + 0.15*(required_dims_available) + 0.10*(proof_hook_available)
-- confidence = 0.60*(binding_quality) + 0.40*(definition_quality)
-- color mapping: hot (score>=0.70, confidence>=0.70), warm (score>=0.40), cool (otherwise)
+Implements deterministic scoring for hypothesis ranking using the DefinitionValidator.
+
+Scoring formula (from spec):
+- probability_of_answer = 0.55*coverage_score + 0.25*freshness_score + 0.20*proof_score
+- confidence = 0.70*coverage_score + 0.30*proof_score
+
+Color mapping:
+- hot: prob >= 0.70 AND confidence >= 0.70
+- warm: prob >= 0.40
+- cool: otherwise
 """
 
 import re
@@ -16,8 +22,10 @@ from backend.nlq.models import (
     CircleRequirements,
     ContextHints,
     Definition,
+    ValidationResult,
 )
 from backend.nlq.persistence import NLQPersistence
+from backend.nlq.validator import DefinitionValidator
 
 logger = get_logger(__name__)
 
@@ -169,27 +177,26 @@ class QuestionParser:
 
 class AnswerabilityScorer:
     """
-    Calculates answerability scores for hypotheses.
+    Calculates answerability scores for hypotheses using DefinitionValidator.
 
-    Scoring formula:
-    - score = 0.50*(definition_exists) + 0.25*(required_events_bound) + 0.15*(required_dims_available) + 0.10*(proof_hook_available)
-    - confidence = 0.60*(binding_quality) + 0.40*(definition_quality)
+    Scoring formula (from spec):
+    - probability_of_answer = 0.55*coverage_score + 0.25*freshness_score + 0.20*proof_score
+    - confidence = 0.70*coverage_score + 0.30*proof_score
 
     Color mapping:
-    - hot: score >= 0.70 AND confidence >= 0.70
-    - warm: score >= 0.40
+    - hot: prob >= 0.70 AND confidence >= 0.70
+    - warm: prob >= 0.40
     - cool: otherwise
     """
 
-    # Scoring weights
-    WEIGHT_DEFINITION = 0.50
-    WEIGHT_EVENTS = 0.25
-    WEIGHT_DIMS = 0.15
-    WEIGHT_PROOF = 0.10
+    # Probability weights (from spec)
+    WEIGHT_COVERAGE = 0.55
+    WEIGHT_FRESHNESS = 0.25
+    WEIGHT_PROOF = 0.20
 
-    # Confidence weights
-    CONF_BINDING = 0.60
-    CONF_DEFINITION = 0.40
+    # Confidence weights (from spec)
+    CONF_COVERAGE = 0.70
+    CONF_PROOF = 0.30
 
     # Color thresholds
     HOT_SCORE_THRESHOLD = 0.70
@@ -204,6 +211,7 @@ class AnswerabilityScorer:
             persistence: NLQPersistence instance. Creates default if not provided.
         """
         self.persistence = persistence or NLQPersistence()
+        self.validator = DefinitionValidator(persistence=self.persistence)
         self.parser = QuestionParser()
 
     def score_hypothesis(
@@ -211,9 +219,9 @@ class AnswerabilityScorer:
         hypothesis: HypothesisTemplate,
         definition: Optional[Definition],
         tenant_id: str = "default",
-    ) -> Tuple[float, float, List[str]]:
+    ) -> Tuple[float, float, List[str], ValidationResult]:
         """
-        Score a single hypothesis.
+        Score a single hypothesis using the DefinitionValidator.
 
         Args:
             hypothesis: The hypothesis template to score
@@ -221,85 +229,73 @@ class AnswerabilityScorer:
             tenant_id: Tenant ID
 
         Returns:
-            Tuple of (score, confidence, why_ranked_reasons)
+            Tuple of (probability, confidence, why_ranked_reasons, validation_result)
         """
         why_ranked = []
 
-        # Component scores
-        definition_score = 0.0
-        events_score = 0.0
-        dims_score = 0.0
-        proof_score = 0.0
-        binding_quality = 0.0
-        definition_quality = 0.0
-
-        # Definition exists
-        if definition:
-            definition_score = 1.0
-            definition_quality = definition.quality_score
-            why_ranked.append(f"definition {definition.id} exists")
-        else:
+        # If no definition, return low scores
+        if not definition:
             why_ranked.append("no matching definition found")
+            return 0.0, 0.0, why_ranked, ValidationResult(ok=False)
 
-        # Check required events
-        event_bindings = self.persistence.check_event_binding(
-            hypothesis.required_events, tenant_id
+        why_ranked.append(f"definition {definition.id} exists")
+
+        # Use the validator to get detailed validation result
+        validation = self.validator.validate(
+            definition_id=definition.id,
+            version="v1",
+            requested_dims=hypothesis.required_dims,
+            tenant_id=tenant_id,
         )
-        bound_events = sum(1 for bound in event_bindings.values() if bound)
-        total_events = len(hypothesis.required_events)
-        if total_events > 0:
-            events_score = bound_events / total_events
 
-        if bound_events > 0:
+        # Build why_ranked from validation result
+        if validation.missing_events:
+            why_ranked.append(f"missing events: {', '.join(validation.missing_events)}")
+        else:
+            # Get bound events
+            event_bindings = self.persistence.check_event_binding(
+                hypothesis.required_events, tenant_id
+            )
             bound_names = [e for e, b in event_bindings.items() if b]
-            why_ranked.append(f"events {', '.join(bound_names)} bound")
+            if bound_names:
+                why_ranked.append(f"events {', '.join(bound_names)} bound")
 
-            # Calculate binding quality from bound events
-            qualities = []
-            for event_id in bound_names:
-                q = self.persistence.get_binding_quality(event_id, tenant_id)
-                if q > 0:
-                    qualities.append(q)
-            if qualities:
-                binding_quality = sum(qualities) / len(qualities)
-
-        # Check required dimensions
-        dims_available = self.persistence.check_dims_available(
-            hypothesis.required_dims, hypothesis.required_events, tenant_id
-        )
-        available_dims = sum(1 for avail in dims_available.values() if avail)
-        total_dims = len(hypothesis.required_dims)
-        if total_dims > 0:
-            dims_score = available_dims / total_dims
-
-        if available_dims > 0:
+        if validation.missing_dims:
+            why_ranked.append(f"missing dims: {', '.join(validation.missing_dims)}")
+        else:
+            # Get available dims
+            dims_available = self.persistence.check_dims_available(
+                hypothesis.required_dims, hypothesis.required_events, tenant_id
+            )
             avail_names = [d for d, a in dims_available.items() if a]
-            why_ranked.append(f"dims {', '.join(avail_names)} available")
+            if avail_names:
+                why_ranked.append(f"dims {', '.join(avail_names)} available")
 
-        # Check proof hooks
-        if definition:
-            proof_score = self.persistence.get_proof_availability(definition.id, tenant_id)
-            if proof_score > 0:
-                why_ranked.append(f"proof hooks available (score: {proof_score:.2f})")
+        if validation.weak_bindings:
+            weak_systems = [wb.source_system for wb in validation.weak_bindings[:2]]
+            why_ranked.append(f"weak bindings: {', '.join(weak_systems)}")
 
-        # Calculate final scores
-        score = (
-            self.WEIGHT_DEFINITION * definition_score +
-            self.WEIGHT_EVENTS * events_score +
-            self.WEIGHT_DIMS * dims_score +
-            self.WEIGHT_PROOF * proof_score
+        if validation.proof_score > 0:
+            why_ranked.append(f"proof hooks available (score: {validation.proof_score:.2f})")
+
+        # Calculate probability using spec formula
+        probability = (
+            self.WEIGHT_COVERAGE * validation.coverage_score +
+            self.WEIGHT_FRESHNESS * validation.freshness_score +
+            self.WEIGHT_PROOF * validation.proof_score
         )
 
+        # Calculate confidence using spec formula
         confidence = (
-            self.CONF_BINDING * binding_quality +
-            self.CONF_DEFINITION * definition_quality
+            self.CONF_COVERAGE * validation.coverage_score +
+            self.CONF_PROOF * validation.proof_score
         )
 
         # Clamp to [0, 1]
-        score = max(0.0, min(1.0, score))
+        probability = max(0.0, min(1.0, probability))
         confidence = max(0.0, min(1.0, confidence))
 
-        return score, confidence, why_ranked
+        return probability, confidence, why_ranked, validation
 
     def get_color(self, score: float, confidence: float) -> str:
         """
@@ -360,13 +356,14 @@ class AnswerabilityScorer:
         metric_name = parsed.get("metric_hint", "metric").replace("_", " ")
 
         for h in hypotheses:
-            score, confidence, why_ranked = self.score_hypothesis(
+            probability, confidence, why_ranked, validation = self.score_hypothesis(
                 h, definition, tenant_id
             )
 
-            # Apply base probability as a multiplier
-            probability = score * h.base_probability + (1 - h.base_probability) * score
-            probability = max(0.0, min(1.0, probability))
+            # Apply base probability as a weight factor
+            # Higher base_probability hypotheses get a slight boost
+            weighted_probability = probability * (0.7 + 0.3 * h.base_probability)
+            weighted_probability = max(0.0, min(1.0, weighted_probability))
 
             # Format label
             label = h.label_template.format(metric=metric_name)
@@ -379,12 +376,13 @@ class AnswerabilityScorer:
             scored_hypotheses.append({
                 "id": h.id,
                 "label": label,
-                "probability": probability,
+                "probability": weighted_probability,
                 "confidence": confidence,
                 "why_ranked": why_ranked,
                 "required_events": h.required_events,
                 "required_dims": h.required_dims,
                 "plan_id": plan_id,
+                "validation": validation,
             })
 
         # Sort by probability descending

@@ -9,12 +9,18 @@
         {"name": "region", "type": "string"},
         {"name": "amount", "type": "decimal"},
         {"name": "currency", "type": "string"},
-        {"name": "recognition_date", "type": "date"},
+        {"name": "recognized_at", "type": "timestamp"},
         {"name": "contract_id", "type": "string"}
       ]
     },
-    "time_semantics": "event_time",
-    "description": "Revenue recognition event when services revenue is booked"
+    "time_semantics_json": {
+      "event_time": "recognized_at",
+      "processing_time": "created_at",
+      "calendar": "fiscal"
+    },
+    "description": "Revenue recognition event when services revenue is booked",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
   },
   {
     "id": "invoice_posted",
@@ -29,8 +35,14 @@
         {"name": "status", "type": "string"}
       ]
     },
-    "time_semantics": "event_time",
-    "description": "Invoice posting event for billing"
+    "time_semantics_json": {
+      "event_time": "invoice_date",
+      "processing_time": "created_at",
+      "calendar": "fiscal"
+    },
+    "description": "Invoice posting event for billing",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
   },
   {
     "id": "mapping_changed",
@@ -44,8 +56,14 @@
         {"name": "change_reason", "type": "string"}
       ]
     },
-    "time_semantics": "processing_time",
-    "description": "Mapping or classification change event"
+    "time_semantics_json": {
+      "event_time": "change_date",
+      "processing_time": "created_at",
+      "calendar": "calendar"
+    },
+    "description": "Mapping or classification change event",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
   },
   {
     "id": "contract_signed",
@@ -59,8 +77,14 @@
         {"name": "service_line", "type": "string"}
       ]
     },
-    "time_semantics": "event_time",
-    "description": "Contract signing event"
+    "time_semantics_json": {
+      "event_time": "start_date",
+      "processing_time": "created_at",
+      "calendar": "fiscal"
+    },
+    "description": "Contract signing event",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
   },
   {
     "id": "payment_received",
@@ -74,7 +98,13 @@
         {"name": "payment_method", "type": "string"}
       ]
     },
-    "time_semantics": "event_time",
-    "description": "Payment received from customer"
+    "time_semantics_json": {
+      "event_time": "payment_date",
+      "processing_time": "created_at",
+      "calendar": "calendar"
+    },
+    "description": "Payment received from customer",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
   }
 ]

@@ -1,0 +1,123 @@
+[
+  {
+    "id": "services_revenue_v1",
+    "definition_id": "services_revenue",
+    "version": "v1",
+    "status": "published",
+    "spec": {
+      "required_events": ["revenue_recognized"],
+      "measure": {
+        "op": "sum",
+        "field": "amount"
+      },
+      "filters": {
+        "service_line": {
+          "op": "in",
+          "values": ["Professional Services", "Consulting", "Implementation"]
+        }
+      },
+      "allowed_grains": ["month", "quarter"],
+      "allowed_dims": ["customer", "service_line", "region"],
+      "joins": {
+        "customer_id": "customer",
+        "service_line": "service_line",
+        "region": "region"
+      },
+      "time_field": "recognized_at"
+    },
+    "published_at": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "total_revenue_v1",
+    "definition_id": "total_revenue",
+    "version": "v1",
+    "status": "published",
+    "spec": {
+      "required_events": ["revenue_recognized"],
+      "measure": {
+        "op": "sum",
+        "field": "amount"
+      },
+      "filters": {},
+      "allowed_grains": ["month", "quarter", "year"],
+      "allowed_dims": ["customer", "service_line", "region"],
+      "joins": {
+        "customer_id": "customer",
+        "service_line": "service_line",
+        "region": "region"
+      },
+      "time_field": "recognized_at"
+    },
+    "published_at": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "subscription_revenue_v1",
+    "definition_id": "subscription_revenue",
+    "version": "v1",
+    "status": "published",
+    "spec": {
+      "required_events": ["revenue_recognized"],
+      "measure": {
+        "op": "sum",
+        "field": "amount"
+      },
+      "filters": {
+        "service_line": {
+          "op": "in",
+          "values": ["Subscription", "SaaS", "License"]
+        }
+      },
+      "allowed_grains": ["month", "quarter"],
+      "allowed_dims": ["customer", "service_line", "region"],
+      "joins": {
+        "customer_id": "customer",
+        "service_line": "service_line"
+      },
+      "time_field": "recognized_at"
+    },
+    "published_at": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "arr_v1",
+    "definition_id": "arr",
+    "version": "v1",
+    "status": "published",
+    "spec": {
+      "required_events": ["contract_signed", "revenue_recognized"],
+      "measure": {
+        "op": "annualized_sum",
+        "field": "total_value"
+      },
+      "filters": {},
+      "allowed_grains": ["month", "quarter"],
+      "allowed_dims": ["customer", "service_line", "region"],
+      "joins": {
+        "customer_id": "customer",
+        "service_line": "service_line"
+      },
+      "time_field": "start_date"
+    },
+    "published_at": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "dso_v1",
+    "definition_id": "dso",
+    "version": "v1",
+    "status": "published",
+    "spec": {
+      "required_events": ["invoice_posted", "payment_received"],
+      "measure": {
+        "op": "avg_days_between",
+        "field": ["invoice_date", "payment_date"]
+      },
+      "filters": {},
+      "allowed_grains": ["month", "quarter"],
+      "allowed_dims": ["customer", "region"],
+      "joins": {
+        "customer_id": "customer"
+      },
+      "time_field": "invoice_date"
+    },
+    "published_at": "2024-01-01T00:00:00Z"
+  }
+]

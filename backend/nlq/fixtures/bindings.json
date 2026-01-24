@@ -2,65 +2,109 @@
   {
     "id": "netsuite_revenue_recognized",
     "source_system": "NetSuite",
-    "maps_to": "revenue_recognized",
-    "binding_type": "event",
+    "canonical_event_id": "revenue_recognized",
+    "mapping_json": {
+      "transaction_id": "event_id",
+      "customer": "customer_id",
+      "item_category": "service_line",
+      "location": "region",
+      "amount": "amount",
+      "currency": "currency",
+      "tran_date": "recognized_at",
+      "related_contract": "contract_id"
+    },
+    "dims_coverage_json": {
+      "customer": true,
+      "service_line": true,
+      "region": true,
+      "currency": true
+    },
     "quality_score": 0.92,
-    "dims_available_json": ["customer", "service_line", "region", "currency"]
+    "freshness_score": 0.95,
+    "updated_at": "2024-01-15T00:00:00Z"
   },
   {
     "id": "netsuite_invoice_posted",
     "source_system": "NetSuite",
-    "maps_to": "invoice_posted",
-    "binding_type": "event",
+    "canonical_event_id": "invoice_posted",
+    "mapping_json": {
+      "invoice_number": "invoice_id",
+      "customer": "customer_id",
+      "item_category": "service_line",
+      "amount": "amount",
+      "tran_date": "invoice_date",
+      "due_date": "due_date",
+      "status": "status"
+    },
+    "dims_coverage_json": {
+      "customer": true,
+      "service_line": true,
+      "region": false
+    },
     "quality_score": 0.88,
-    "dims_available_json": ["customer", "service_line"]
+    "freshness_score": 0.90,
+    "updated_at": "2024-01-15T00:00:00Z"
   },
   {
     "id": "salesforce_contract_signed",
     "source_system": "Salesforce",
-    "maps_to": "contract_signed",
-    "binding_type": "event",
+    "canonical_event_id": "contract_signed",
+    "mapping_json": {
+      "opportunity_id": "contract_id",
+      "account_id": "customer_id",
+      "amount": "total_value",
+      "close_date": "start_date",
+      "contract_end": "end_date",
+      "product_family": "service_line"
+    },
+    "dims_coverage_json": {
+      "customer": true,
+      "service_line": true,
+      "region": true
+    },
     "quality_score": 0.85,
-    "dims_available_json": ["customer", "service_line", "region"]
+    "freshness_score": 0.88,
+    "updated_at": "2024-01-14T00:00:00Z"
   },
   {
     "id": "psa_revenue_recognized",
     "source_system": "PSA",
-    "maps_to": "revenue_recognized",
-    "binding_type": "event",
+    "canonical_event_id": "revenue_recognized",
+    "mapping_json": {
+      "project_id": "event_id",
+      "client_id": "customer_id",
+      "project_type": "service_line",
+      "billable_amount": "amount",
+      "recognition_date": "recognized_at"
+    },
+    "dims_coverage_json": {
+      "customer": true,
+      "service_line": true,
+      "region": false
+    },
     "quality_score": 0.78,
-    "dims_available_json": ["customer", "service_line"]
+    "freshness_score": 0.72,
+    "updated_at": "2024-01-10T00:00:00Z"
   },
   {
     "id": "erp_mapping_changed",
     "source_system": "ERP",
-    "maps_to": "mapping_changed",
-    "binding_type": "event",
+    "canonical_event_id": "mapping_changed",
+    "mapping_json": {
+      "audit_id": "change_id",
+      "table_name": "entity_type",
+      "old_val": "old_value",
+      "new_val": "new_value",
+      "change_timestamp": "change_date",
+      "reason_code": "change_reason"
+    },
+    "dims_coverage_json": {
+      "customer": false,
+      "service_line": true,
+      "region": false
+    },
     "quality_score": 0.65,
-    "dims_available_json": ["service_line"]
-  },
-  {
-    "id": "netsuite_customer",
-    "source_system": "NetSuite",
-    "maps_to": "customer",
-    "binding_type": "entity",
-    "quality_score": 0.95,
-    "dims_available_json": []
-  },
-  {
-    "id": "salesforce_customer",
-    "source_system": "Salesforce",
-    "maps_to": "customer",
-    "binding_type": "entity",
-    "quality_score": 0.90,
-    "dims_available_json": []
-  },
-  {
-    "id": "netsuite_service_line",
-    "source_system": "NetSuite",
-    "maps_to": "service_line",
-    "binding_type": "entity",
-    "quality_score": 0.88,
-    "dims_available_json": []
+    "freshness_score": 0.60,
+    "updated_at": "2024-01-08T00:00:00Z"
   }
 ]

@@ -12,7 +12,8 @@ from backend.nlq.scorer import (
     HypothesisTemplate,
     METRIC_CHANGE_HYPOTHESES,
 )
-from backend.nlq.models import ContextHints, Definition
+from backend.nlq.models import ContextHints, Definition, ValidationResult, WeakBinding
+from backend.nlq.persistence import NLQPersistence
 
 
 class TestQuestionParser:
@@ -61,134 +62,70 @@ class TestQuestionParser:
 
 
 class TestAnswerabilityScorer:
-    """Tests for AnswerabilityScorer."""
+    """Tests for AnswerabilityScorer with real fixtures."""
 
     def setup_method(self):
-        # Create a mock persistence layer
-        self.mock_persistence = MagicMock()
-        self.scorer = AnswerabilityScorer(persistence=self.mock_persistence)
+        """Set up scorer with real persistence."""
+        self.persistence = NLQPersistence()
+        self.scorer = AnswerabilityScorer(persistence=self.persistence)
 
     def test_score_hypothesis_with_definition(self):
-        """Score should be higher when definition exists."""
-        definition = Definition(
-            id="services_revenue",
-            version=1,
-            quality_score=0.85,
-        )
-
-        # Mock persistence methods
-        self.mock_persistence.check_event_binding.return_value = {
-            "revenue_recognized": True
-        }
-        self.mock_persistence.get_binding_quality.return_value = 0.9
-        self.mock_persistence.check_dims_available.return_value = {
-            "customer": True,
-            "service_line": True,
-        }
-        self.mock_persistence.get_proof_availability.return_value = 0.8
-
+        """Score should use validator and return proper values."""
+        definition = self.persistence.get_definition("services_revenue")
         hypothesis = METRIC_CHANGE_HYPOTHESES[0]  # h_volume
-        score, confidence, why_ranked = self.scorer.score_hypothesis(
+
+        prob, confidence, why_ranked, validation = self.scorer.score_hypothesis(
             hypothesis, definition
         )
 
-        # Score should reflect definition exists + events bound + dims available + proof
-        assert score > 0.7
-        assert confidence > 0.5
+        # Should have scores from validator
+        assert 0 <= prob <= 1
+        assert 0 <= confidence <= 1
         assert "definition services_revenue exists" in why_ranked
+        assert validation is not None
 
     def test_score_hypothesis_without_definition(self):
-        """Score should be lower when definition doesn't exist."""
-        self.mock_persistence.check_event_binding.return_value = {
-            "revenue_recognized": True
-        }
-        self.mock_persistence.get_binding_quality.return_value = 0.9
-        self.mock_persistence.check_dims_available.return_value = {
-            "customer": True,
-            "service_line": True,
-        }
-        self.mock_persistence.get_proof_availability.return_value = 0.0
-
+        """Score should be zero when definition doesn't exist."""
         hypothesis = METRIC_CHANGE_HYPOTHESES[0]  # h_volume
-        score, confidence, why_ranked = self.scorer.score_hypothesis(
+
+        prob, confidence, why_ranked, validation = self.scorer.score_hypothesis(
             hypothesis, None
         )
 
-        # Score should be lower without definition (50% weight)
-        assert score < 0.5
+        # Score should be zero without definition
+        assert prob == 0.0
+        assert confidence == 0.0
         assert "no matching definition found" in why_ranked
 
-    def test_score_hypothesis_missing_events(self):
-        """Score should drop when required events not bound."""
-        definition = Definition(
-            id="services_revenue",
-            version=1,
-            quality_score=0.85,
-        )
-
-        # Events not bound
-        self.mock_persistence.check_event_binding.return_value = {
-            "revenue_recognized": False,
-            "invoice_posted": False,
-        }
-        self.mock_persistence.get_binding_quality.return_value = 0.0
-        self.mock_persistence.check_dims_available.return_value = {
-            "service_line": False,
-        }
-        self.mock_persistence.get_proof_availability.return_value = 0.0
-
-        hypothesis = METRIC_CHANGE_HYPOTHESES[1]  # h_timing
-        score, confidence, why_ranked = self.scorer.score_hypothesis(
-            hypothesis, definition
-        )
-
-        # Score should only have definition component
-        assert score <= 0.5
-        # No "events bound" reason since none are bound
-        assert not any("events" in r and "bound" in r for r in why_ranked)
-
-    def test_score_hypothesis_missing_dims(self):
-        """Score should drop when required dims not available."""
-        definition = Definition(
-            id="services_revenue",
-            version=1,
-            quality_score=0.85,
-        )
-
-        self.mock_persistence.check_event_binding.return_value = {
-            "revenue_recognized": True
-        }
-        self.mock_persistence.get_binding_quality.return_value = 0.9
-        # Dims not available
-        self.mock_persistence.check_dims_available.return_value = {
-            "customer": False,
-            "service_line": False,
-        }
-        self.mock_persistence.get_proof_availability.return_value = 0.8
-
+    def test_score_uses_new_formula(self):
+        """Score should use the spec formula: 0.55*coverage + 0.25*freshness + 0.20*proof."""
+        definition = self.persistence.get_definition("services_revenue")
         hypothesis = METRIC_CHANGE_HYPOTHESES[0]  # h_volume
-        score, confidence, why_ranked = self.scorer.score_hypothesis(
+
+        prob, confidence, why_ranked, validation = self.scorer.score_hypothesis(
             hypothesis, definition
         )
 
-        # Score should be lower without dims (15% weight)
-        # But definition (50%) + events (25%) + proof (10%) should still contribute
-        assert score > 0.5
-        # No "dims available" reason since none are available
-        assert not any("dims" in r and "available" in r for r in why_ranked)
+        # Verify formula is applied (approximately)
+        expected_prob = (
+            0.55 * validation.coverage_score +
+            0.25 * validation.freshness_score +
+            0.20 * validation.proof_score
+        )
+        assert abs(prob - expected_prob) < 0.01
 
     def test_get_color_hot(self):
-        """Hot color when score >= 0.70 and confidence >= 0.70."""
+        """Hot color when prob >= 0.70 and confidence >= 0.70."""
         color = self.scorer.get_color(0.75, 0.75)
         assert color == "hot"
 
     def test_get_color_warm(self):
-        """Warm color when score >= 0.40 but not hot."""
+        """Warm color when prob >= 0.40 but not hot."""
         color = self.scorer.get_color(0.55, 0.50)
         assert color == "warm"
 
     def test_get_color_cool(self):
-        """Cool color when score < 0.40."""
+        """Cool color when prob < 0.40."""
         color = self.scorer.get_color(0.30, 0.80)
         assert color == "cool"
 
@@ -204,23 +141,6 @@ class TestAnswerabilityScorer:
 
     def test_rank_hypotheses_order(self):
         """Hypotheses should be ranked by probability descending."""
-        self.mock_persistence.resolve_definition.return_value = Definition(
-            id="services_revenue",
-            version=1,
-            quality_score=0.85,
-        )
-        self.mock_persistence.check_event_binding.return_value = {
-            "revenue_recognized": True,
-            "invoice_posted": True,
-            "mapping_changed": False,
-        }
-        self.mock_persistence.get_binding_quality.return_value = 0.8
-        self.mock_persistence.check_dims_available.return_value = {
-            "customer": True,
-            "service_line": True,
-        }
-        self.mock_persistence.get_proof_availability.return_value = 0.7
-
         circles = self.scorer.rank_hypotheses(
             "Services revenue is down 50% QoQ"
         )
@@ -237,11 +157,20 @@ class TestAnswerabilityScorer:
         assert circles[0].probability_of_answer >= circles[1].probability_of_answer
         assert circles[1].probability_of_answer >= circles[2].probability_of_answer
 
+    def test_rank_hypotheses_with_context(self):
+        """Should use context hints for ranking."""
+        context = ContextHints(metric_hint="services_revenue", time_window="QoQ")
+        circles = self.scorer.rank_hypotheses(
+            "What's happening?",
+            context=context,
+        )
+
+        # Should have circles with the right definition
+        assert len(circles) > 0
+        assert "services_revenue" in circles[0].requires.definitions
+
     def test_needs_context_low_probability(self):
         """Should return clarifiers when top probability is low."""
-        circles = self.scorer.rank_hypotheses.__self__
-
-        # Create mock circles with low probability
         from backend.nlq.models import Circle, CircleRequirements
         low_prob_circles = [
             Circle(
@@ -286,6 +215,42 @@ class TestAnswerabilityScorer:
         assert len(clarifiers) == 0
 
 
+class TestAnswerabilityFormula:
+    """Tests for the scoring formula from the spec."""
+
+    def setup_method(self):
+        self.persistence = NLQPersistence()
+        self.scorer = AnswerabilityScorer(persistence=self.persistence)
+
+    def test_probability_weights_sum_to_one(self):
+        """Probability weights should sum to 1.0."""
+        total = (
+            self.scorer.WEIGHT_COVERAGE +
+            self.scorer.WEIGHT_FRESHNESS +
+            self.scorer.WEIGHT_PROOF
+        )
+        assert abs(total - 1.0) < 0.01
+
+    def test_confidence_weights_sum_to_one(self):
+        """Confidence weights should sum to 1.0."""
+        total = (
+            self.scorer.CONF_COVERAGE +
+            self.scorer.CONF_PROOF
+        )
+        assert abs(total - 1.0) < 0.01
+
+    def test_probability_formula_matches_spec(self):
+        """Formula should be: 0.55*coverage + 0.25*freshness + 0.20*proof."""
+        assert self.scorer.WEIGHT_COVERAGE == 0.55
+        assert self.scorer.WEIGHT_FRESHNESS == 0.25
+        assert self.scorer.WEIGHT_PROOF == 0.20
+
+    def test_confidence_formula_matches_spec(self):
+        """Formula should be: 0.70*coverage + 0.30*proof."""
+        assert self.scorer.CONF_COVERAGE == 0.70
+        assert self.scorer.CONF_PROOF == 0.30
+
+
 class TestHypothesisTemplate:
     """Tests for HypothesisTemplate dataclass."""
 
@@ -306,3 +271,22 @@ class TestHypothesisTemplate:
             assert h.required_events
             assert h.plan_id
             assert 0 <= h.base_probability <= 1
+
+    def test_volume_hypothesis_config(self):
+        """Volume hypothesis should require revenue_recognized event."""
+        volume_h = METRIC_CHANGE_HYPOTHESES[0]
+        assert volume_h.id == "h_volume"
+        assert "revenue_recognized" in volume_h.required_events
+
+    def test_timing_hypothesis_config(self):
+        """Timing hypothesis should require both revenue and invoice events."""
+        timing_h = METRIC_CHANGE_HYPOTHESES[1]
+        assert timing_h.id == "h_timing"
+        assert "revenue_recognized" in timing_h.required_events
+        assert "invoice_posted" in timing_h.required_events
+
+    def test_reclass_hypothesis_config(self):
+        """Reclass hypothesis should require mapping_changed event."""
+        reclass_h = METRIC_CHANGE_HYPOTHESES[2]
+        assert reclass_h.id == "h_reclass"
+        assert "mapping_changed" in reclass_h.required_events

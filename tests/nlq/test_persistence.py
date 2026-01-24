@@ -32,7 +32,7 @@ class TestNLQPersistence:
         event = self.persistence.get_event("revenue_recognized")
         assert event is not None
         assert event.id == "revenue_recognized"
-        assert event.time_semantics is not None
+        assert event.time_semantics_json is not None
 
     def test_get_event_not_found(self):
         """Should return None for non-existent event."""
@@ -69,8 +69,9 @@ class TestNLQPersistence:
         # Check binding properties
         for binding in bindings:
             assert binding.source_system
-            assert binding.maps_to
+            assert binding.canonical_event_id
             assert 0 <= binding.quality_score <= 1
+            assert 0 <= binding.freshness_score <= 1
 
     def test_get_bindings_for_event(self):
         """Should filter bindings by event ID."""
@@ -78,8 +79,20 @@ class TestNLQPersistence:
         assert len(bindings) > 0
 
         for binding in bindings:
-            assert binding.maps_to == "revenue_recognized"
-            assert binding.binding_type == "event"
+            assert binding.canonical_event_id == "revenue_recognized"
+
+    def test_get_binding_freshness(self):
+        """Should calculate average binding freshness for event."""
+        freshness = self.persistence.get_binding_freshness("revenue_recognized")
+        assert 0 <= freshness <= 1
+        assert freshness > 0  # Should have at least one binding
+
+    def test_get_dims_coverage(self):
+        """Should get dimension coverage for event."""
+        coverage = self.persistence.get_dims_coverage("revenue_recognized")
+        assert isinstance(coverage, dict)
+        assert coverage.get("customer", False) is True
+        assert coverage.get("service_line", False) is True
 
     def test_get_binding_quality(self):
         """Should calculate average binding quality for event."""
@@ -112,13 +125,38 @@ class TestNLQPersistence:
         definition = self.persistence.get_definition("services_revenue")
         assert definition is not None
         assert definition.id == "services_revenue"
-        assert definition.quality_score > 0
+        assert definition.kind == "metric"
 
-    def test_definition_has_inputs(self):
-        """Definition should have input specification."""
+    def test_definition_has_time_semantics(self):
+        """Definition should have time semantics."""
         definition = self.persistence.get_definition("services_revenue")
         assert definition is not None
-        assert "events" in definition.inputs_json
+        assert definition.default_time_semantics_json is not None
+
+    def test_get_definition_versions(self):
+        """Should load definition versions from fixtures."""
+        versions = self.persistence.get_definition_versions()
+        assert len(versions) > 0
+
+        for version in versions:
+            assert version.definition_id
+            assert version.version
+            assert version.status in ["draft", "published", "deprecated"]
+
+    def test_get_definition_version(self):
+        """Should get specific definition version."""
+        version = self.persistence.get_definition_version("services_revenue", "v1")
+        assert version is not None
+        assert version.definition_id == "services_revenue"
+        assert version.status == "published"
+        assert len(version.spec.required_events) > 0
+
+    def test_get_published_version(self):
+        """Should get published version of definition."""
+        version = self.persistence.get_published_version("services_revenue")
+        assert version is not None
+        assert version.status == "published"
+        assert "revenue_recognized" in version.spec.required_events
 
     def test_get_proof_hooks(self):
         """Should load proof hooks from fixtures."""
@@ -188,6 +226,17 @@ class TestNLQPersistence:
         assert result["customer"] is True
         assert result["service_line"] is True
         assert result["nonexistent_dim"] is False
+
+    def test_get_dims_missing_for_events(self):
+        """Should get list of missing dimensions."""
+        missing = self.persistence.get_dims_missing_for_events(
+            requested_dims=["customer", "service_line", "nonexistent_dim"],
+            event_ids=["revenue_recognized"],
+        )
+
+        assert "nonexistent_dim" in missing
+        assert "customer" not in missing
+        assert "service_line" not in missing
 
     def test_cache_clearing(self):
         """Should clear cache correctly."""
