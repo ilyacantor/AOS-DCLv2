@@ -8,7 +8,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Literal, Optional, Dict, Any
-import redis
 from backend.domain import Persona, GraphSnapshot, RunMetrics
 from backend.engine import DCLEngine
 from backend.engine.schema_loader import SchemaLoader
@@ -107,77 +106,17 @@ def get_narration(run_id: str):
     return {"run_id": run_id, "messages": messages}
 
 
-REDIS_CONFIG_KEY = "dcl.ingest.config"
-
-def _get_redis():
-    """Get Redis client for config storage."""
-    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
-    return redis.from_url(redis_url, decode_responses=True)
-
-
-class ProvisionPolicy(BaseModel):
-    repair_enabled: bool = True
-
-
-class ProvisionRequest(BaseModel):
-    connector_id: str
-    source_type: str
-    target_url: str
-    policy: Optional[ProvisionPolicy] = None
-
-
-class ProvisionResponse(BaseModel):
-    status: str
-    connector_id: str
-    message: str
-
-
-@app.post("/api/ingest/provision", response_model=ProvisionResponse)
-def provision_connector(request: ProvisionRequest):
-    """
-    Receive connector configuration from AAM and reconfigure the Ingest Sidecar.
-    
-    This is the "Handshake" endpoint that allows AAM to dynamically provision
-    data connectors without manual configuration.
-    """
-    try:
-        r = _get_redis()
-        
-        config = {
-            "connector_id": request.connector_id,
-            "source_type": request.source_type,
-            "target_url": request.target_url,
-            "policy": request.policy.model_dump() if request.policy else {"repair_enabled": True},
-            "provisioned_at": __import__("datetime").datetime.now().isoformat(),
-            "version": str(uuid.uuid4())[:8]
-        }
-        
-        r.set(REDIS_CONFIG_KEY, json.dumps(config))
-        
-        logger.info(f"[Provision] Connector {request.connector_id} provisioned: {request.target_url}")
-        
-        return ProvisionResponse(
-            status="provisioned",
-            connector_id=request.connector_id,
-            message=f"Sidecar will pick up new config on next poll. Target: {request.target_url}"
-        )
-    except Exception as e:
-        logger.error(f"Provisioning failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/api/ingest/provision")
+@app.get("/api/ingest/provision")
+def ingest_provision_gone():
+    """Ingest pipeline moved to AAM."""
+    raise HTTPException(status_code=410, detail={"error": "MOVED_TO_AAM"})
 
 
 @app.get("/api/ingest/config")
-def get_ingest_config():
-    """Get current ingest configuration."""
-    try:
-        r = _get_redis()
-        config_str = r.get(REDIS_CONFIG_KEY)
-        if config_str:
-            return json.loads(config_str)
-        return {"status": "no_config", "message": "No connector provisioned yet"}
-    except Exception as e:
-        logger.error(f"Failed to get config: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+def ingest_config_gone():
+    """Ingest pipeline moved to AAM."""
+    raise HTTPException(status_code=410, detail={"error": "MOVED_TO_AAM"})
 
 
 @app.get("/api/dcl/monitor/{run_id}")
@@ -193,40 +132,10 @@ def get_monitor(run_id: str):
     }
 
 
-REDIS_TELEMETRY_KEY = "dcl.telemetry"
-
-
 @app.get("/api/ingest/telemetry")
-def get_telemetry():
-    """
-    Get live telemetry metrics from the Ingest Pipeline.
-    
-    Returns TPS, processed counts, blocked/healed/verified statistics.
-    """
-    try:
-        r = _get_redis()
-        telemetry_str = r.get(REDIS_TELEMETRY_KEY)
-        if telemetry_str:
-            return json.loads(telemetry_str)
-        return {
-            "ts": 0,
-            "metrics": {
-                "total_processed": 0,
-                "toxic_blocked": 0,
-                "drift_detected": 0,
-                "repaired_success": 0,
-                "repair_failed": 0,
-                "verified_count": 0,
-                "verified_failed": 0,
-                "tps": 0.0,
-                "quality_score": 100.0,
-                "repair_rate": 100.0,
-                "uptime_seconds": 0.0
-            }
-        }
-    except Exception as e:
-        logger.error(f"Failed to get telemetry: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+def ingest_telemetry_gone():
+    """Ingest pipeline moved to AAM."""
+    raise HTTPException(status_code=410, detail={"error": "MOVED_TO_AAM"})
 
 
 class MappingRequest(BaseModel):
