@@ -1,6 +1,7 @@
 [
   {
     "id": "netsuite_revenue_recognized",
+    "tenant_id": "default",
     "source_system": "NetSuite",
     "canonical_event_id": "revenue_recognized",
     "mapping_json": {
@@ -25,6 +26,7 @@
   },
   {
     "id": "netsuite_invoice_posted",
+    "tenant_id": "default",
     "source_system": "NetSuite",
     "canonical_event_id": "invoice_posted",
     "mapping_json": {
@@ -47,6 +49,7 @@
   },
   {
     "id": "salesforce_contract_signed",
+    "tenant_id": "default",
     "source_system": "Salesforce",
     "canonical_event_id": "contract_signed",
     "mapping_json": {
@@ -68,6 +71,7 @@
   },
   {
     "id": "psa_revenue_recognized",
+    "tenant_id": "default",
     "source_system": "PSA",
     "canonical_event_id": "revenue_recognized",
     "mapping_json": {
@@ -88,6 +92,7 @@
   },
   {
     "id": "erp_mapping_changed",
+    "tenant_id": "default",
     "source_system": "ERP",
     "canonical_event_id": "mapping_changed",
     "mapping_json": {

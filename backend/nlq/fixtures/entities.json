@@ -1,6 +1,7 @@
 [
   {
     "id": "customer",
+    "tenant_id": "default",
     "identifiers_json": {
       "primary": "customer_id",
       "aliases": ["account_id", "client_id", "cust_id"]
@@ -9,6 +10,7 @@
   },
   {
     "id": "service_line",
+    "tenant_id": "default",
     "identifiers_json": {
       "primary": "service_line",
       "aliases": ["product_line", "offering", "service_type", "revenue_type"]
@@ -17,6 +19,7 @@
   },
   {
     "id": "region",
+    "tenant_id": "default",
     "identifiers_json": {
       "primary": "region",
       "aliases": ["geo", "territory", "market", "country"]
@@ -25,6 +28,7 @@
   },
   {
     "id": "contract",
+    "tenant_id": "default",
     "identifiers_json": {
       "primary": "contract_id",
       "aliases": ["agreement_id", "deal_id", "subscription_id"]
@@ -33,6 +37,7 @@
   },
   {
     "id": "currency",
+    "tenant_id": "default",
     "identifiers_json": {
       "primary": "currency",
       "aliases": ["currency_code", "ccy", "fx_code"]
@@ -41,6 +46,7 @@
   },
   {
     "id": "period",
+    "tenant_id": "default",
     "identifiers_json": {
       "primary": "fiscal_period",
       "aliases": ["month", "quarter", "year", "fiscal_month", "fiscal_quarter"]

@@ -1,6 +1,7 @@
 [
   {
     "id": "services_revenue_v1",
+    "tenant_id": "default",
     "definition_id": "services_revenue",
     "version": "v1",
     "status": "published",
@@ -29,6 +30,7 @@
   },
   {
     "id": "total_revenue_v1",
+    "tenant_id": "default",
     "definition_id": "total_revenue",
     "version": "v1",
     "status": "published",
@@ -52,6 +54,7 @@
   },
   {
     "id": "subscription_revenue_v1",
+    "tenant_id": "default",
     "definition_id": "subscription_revenue",
     "version": "v1",
     "status": "published",
@@ -79,6 +82,7 @@
   },
   {
     "id": "arr_v1",
+    "tenant_id": "default",
     "definition_id": "arr",
     "version": "v1",
     "status": "published",
@@ -101,6 +105,7 @@
   },
   {
     "id": "dso_v1",
+    "tenant_id": "default",
     "definition_id": "dso",
     "version": "v1",
     "status": "published",

@@ -1,6 +1,7 @@
 [
   {
     "id": "services_revenue",
+    "tenant_id": "default",
     "kind": "metric",
     "description": "Revenue from professional services, consulting, and implementation",
     "default_time_semantics_json": {
@@ -13,6 +14,7 @@
   },
   {
     "id": "total_revenue",
+    "tenant_id": "default",
     "kind": "metric",
     "description": "Total recognized revenue across all service lines",
     "default_time_semantics_json": {
@@ -25,6 +27,7 @@
   },
   {
     "id": "subscription_revenue",
+    "tenant_id": "default",
     "kind": "metric",
     "description": "Recurring subscription and license revenue",
     "default_time_semantics_json": {
@@ -37,6 +40,7 @@
   },
   {
     "id": "arr",
+    "tenant_id": "default",
     "kind": "metric",
     "description": "Annual Recurring Revenue",
     "default_time_semantics_json": {
@@ -49,6 +53,7 @@
   },
   {
     "id": "dso",
+    "tenant_id": "default",
     "kind": "metric",
     "description": "Days Sales Outstanding - average collection period",
     "default_time_semantics_json": {

@@ -23,11 +23,13 @@ class CanonicalEvent(BaseModel):
 
     Table: canonical_events
     - id (string, PK): e.g. revenue_recognized, invoice_posted
+    - tenant_id (string): Tenant identifier for isolation
     - schema_json (jsonb): fields/types
     - time_semantics_json (jsonb): which timestamp means what
     - created_at, updated_at
     """
     id: str
+    tenant_id: str = "default"
     schema_json: Dict[str, Any] = Field(default_factory=dict)
     time_semantics_json: Dict[str, Any] = Field(default_factory=dict)
     description: Optional[str] = None
@@ -43,9 +45,11 @@ class Entity(BaseModel):
 
     Table: entities
     - id (string, PK): customer, service_line, project, contract
+    - tenant_id (string): Tenant identifier for isolation
     - identifiers_json (jsonb): cross-system identifier expectations
     """
     id: str
+    tenant_id: str = "default"
     identifiers_json: Dict[str, Any] = Field(default_factory=dict)
     description: Optional[str] = None
 
@@ -56,6 +60,7 @@ class Binding(BaseModel):
 
     Table: bindings
     - id (pk)
+    - tenant_id (string): Tenant identifier for isolation
     - source_system (string): netsuite, salesforce, etc.
     - canonical_event_id (fk)
     - mapping_json (jsonb): source_field → canonical_field
@@ -65,6 +70,7 @@ class Binding(BaseModel):
     - updated_at
     """
     id: str
+    tenant_id: str = "default"
     source_system: str
     canonical_event_id: str  # Maps to canonical event
     mapping_json: Dict[str, str] = Field(default_factory=dict)  # source_field → canonical_field
@@ -80,12 +86,14 @@ class Definition(BaseModel):
 
     Table: definitions
     - id (string, PK): services_revenue, services_bookings, etc.
+    - tenant_id (string): Tenant identifier for isolation
     - kind: metric|view
     - description
     - default_time_semantics_json (jsonb)
     - created_at, updated_at
     """
     id: str
+    tenant_id: str = "default"
     kind: Literal["metric", "view"] = "metric"
     description: Optional[str] = None
     default_time_semantics_json: Dict[str, Any] = Field(default_factory=dict)
@@ -114,6 +122,7 @@ class DefinitionVersion(BaseModel):
 
     Table: definition_versions
     - id (pk)
+    - tenant_id (string): Tenant identifier for isolation
     - definition_id (fk)
     - version (string): v1, v2...
     - status (draft|published|deprecated)
@@ -121,6 +130,7 @@ class DefinitionVersion(BaseModel):
     - published_at (nullable)
     """
     id: str
+    tenant_id: str = "default"
     definition_id: str
     version: str = "v1"
     status: Literal["draft", "published", "deprecated"] = "published"
@@ -134,11 +144,13 @@ class ProofHook(BaseModel):
 
     Table: proof_hooks
     - id (pk)
+    - tenant_id (string): Tenant identifier for isolation
     - definition_id (fk)
     - pointer_template_json (jsonb): how to point to source record IDs
     - availability_score (0..1)
     """
     id: str
+    tenant_id: str = "default"
     definition_id: str
     pointer_template_json: Dict[str, Any] = Field(default_factory=dict)
     availability_score: float = Field(ge=0.0, le=1.0, default=0.5)

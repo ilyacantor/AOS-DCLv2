@@ -1,6 +1,7 @@
 [
   {
     "id": "revenue_recognized",
+    "tenant_id": "default",
     "schema_json": {
       "fields": [
         {"name": "event_id", "type": "string"},
@@ -24,6 +25,7 @@
   },
   {
     "id": "invoice_posted",
+    "tenant_id": "default",
     "schema_json": {
       "fields": [
         {"name": "invoice_id", "type": "string"},
@@ -46,6 +48,7 @@
   },
   {
     "id": "mapping_changed",
+    "tenant_id": "default",
     "schema_json": {
       "fields": [
         {"name": "change_id", "type": "string"},
@@ -67,6 +70,7 @@
   },
   {
     "id": "contract_signed",
+    "tenant_id": "default",
     "schema_json": {
       "fields": [
         {"name": "contract_id", "type": "string"},
@@ -88,6 +92,7 @@
   },
   {
     "id": "payment_received",
+    "tenant_id": "default",
     "schema_json": {
       "fields": [
         {"name": "payment_id", "type": "string"},

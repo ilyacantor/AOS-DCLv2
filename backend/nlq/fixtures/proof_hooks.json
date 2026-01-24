@@ -1,6 +1,7 @@
 [
   {
     "id": "services_revenue_netsuite",
+    "tenant_id": "default",
     "definition_id": "services_revenue",
     "pointer_template_json": {
       "system": "NetSuite",
@@ -13,6 +14,7 @@
   },
   {
     "id": "services_revenue_psa",
+    "tenant_id": "default",
     "definition_id": "services_revenue",
     "pointer_template_json": {
       "system": "PSA",
@@ -24,6 +26,7 @@
   },
   {
     "id": "total_revenue_netsuite",
+    "tenant_id": "default",
     "definition_id": "total_revenue",
     "pointer_template_json": {
       "system": "NetSuite",
@@ -35,6 +38,7 @@
   },
   {
     "id": "arr_salesforce",
+    "tenant_id": "default",
     "definition_id": "arr",
     "pointer_template_json": {
       "system": "Salesforce",

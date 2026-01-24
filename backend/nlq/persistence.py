@@ -85,7 +85,9 @@ class NLQPersistence:
     def get_events(self, tenant_id: str = "default") -> List[CanonicalEvent]:
         """Get all canonical events for a tenant."""
         data = self._load_fixture("canonical_events")
-        return [CanonicalEvent(**item) for item in data]
+        events = [CanonicalEvent(**item) for item in data]
+        # Filter by tenant_id (items without tenant_id default to "default")
+        return [e for e in events if e.tenant_id == tenant_id]
 
     def get_event(self, event_id: str, tenant_id: str = "default") -> Optional[CanonicalEvent]:
         """Get a specific canonical event by ID."""
@@ -106,7 +108,8 @@ class NLQPersistence:
     def get_entities(self, tenant_id: str = "default") -> List[Entity]:
         """Get all entities for a tenant."""
         data = self._load_fixture("entities")
-        return [Entity(**item) for item in data]
+        entities = [Entity(**item) for item in data]
+        return [e for e in entities if e.tenant_id == tenant_id]
 
     def get_entity(self, entity_id: str, tenant_id: str = "default") -> Optional[Entity]:
         """Get a specific entity by ID."""
@@ -127,7 +130,8 @@ class NLQPersistence:
     def get_bindings(self, tenant_id: str = "default") -> List[Binding]:
         """Get all bindings for a tenant."""
         data = self._load_fixture("bindings")
-        return [Binding(**item) for item in data]
+        bindings = [Binding(**item) for item in data]
+        return [b for b in bindings if b.tenant_id == tenant_id]
 
     def get_bindings_for_event(self, event_id: str, tenant_id: str = "default") -> List[Binding]:
         """Get bindings that map to a specific canonical event."""
@@ -179,7 +183,8 @@ class NLQPersistence:
     def get_definitions(self, tenant_id: str = "default") -> List[Definition]:
         """Get all definitions for a tenant."""
         data = self._load_fixture("definitions")
-        return [Definition(**item) for item in data]
+        definitions = [Definition(**item) for item in data]
+        return [d for d in definitions if d.tenant_id == tenant_id]
 
     def get_definition(self, definition_id: str, tenant_id: str = "default") -> Optional[Definition]:
         """Get a specific definition by ID."""
@@ -205,15 +210,18 @@ class NLQPersistence:
             # Parse the spec if it exists
             spec_data = item.get("spec", {})
             spec = DefinitionVersionSpec(**spec_data)
+            item_tenant = item.get("tenant_id", "default")
             versions.append(DefinitionVersion(
                 id=item["id"],
+                tenant_id=item_tenant,
                 definition_id=item["definition_id"],
                 version=item.get("version", "v1"),
                 status=item.get("status", "published"),
                 spec=spec,
                 published_at=item.get("published_at"),
             ))
-        return versions
+        # Filter by tenant_id
+        return [v for v in versions if v.tenant_id == tenant_id]
 
     def get_definition_version(
         self,
@@ -247,7 +255,8 @@ class NLQPersistence:
     def get_proof_hooks(self, tenant_id: str = "default") -> List[ProofHook]:
         """Get all proof hooks for a tenant."""
         data = self._load_fixture("proof_hooks")
-        return [ProofHook(**item) for item in data]
+        hooks = [ProofHook(**item) for item in data]
+        return [h for h in hooks if h.tenant_id == tenant_id]
 
     def get_proof_hooks_for_definition(
         self, definition_id: str, tenant_id: str = "default"
@@ -351,3 +360,181 @@ class NLQPersistence:
         """
         dims_check = self.check_dims_available(requested_dims, event_ids, tenant_id)
         return [dim for dim, available in dims_check.items() if not available]
+
+    # =========================================================================
+    # Registration/Write Methods
+    # =========================================================================
+
+    def _save_fixture(self, name: str, data: List[Dict[str, Any]]) -> None:
+        """Save data to a JSON fixture file."""
+        fixture_path = self.fixtures_dir / f"{name}.json"
+        try:
+            with open(fixture_path, "w") as f:
+                json.dump(data, f, indent=2)
+            # Invalidate cache
+            if name in self._cache:
+                del self._cache[name]
+        except IOError as e:
+            logger.error(f"Failed to save fixture {fixture_path}: {e}")
+            raise
+
+    def register_binding(self, binding: Binding) -> Binding:
+        """
+        Register or update a binding.
+
+        Args:
+            binding: The binding to register
+
+        Returns:
+            The registered binding
+        """
+        data = self._load_fixture("bindings")
+        # Update existing or append new
+        found = False
+        for i, item in enumerate(data):
+            if item.get("id") == binding.id and item.get("tenant_id", "default") == binding.tenant_id:
+                data[i] = binding.model_dump()
+                found = True
+                break
+        if not found:
+            data.append(binding.model_dump())
+        self._save_fixture("bindings", data)
+        return binding
+
+    def delete_binding(self, binding_id: str, tenant_id: str = "default") -> bool:
+        """
+        Delete a binding.
+
+        Args:
+            binding_id: ID of binding to delete
+            tenant_id: Tenant ID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        data = self._load_fixture("bindings")
+        original_len = len(data)
+        data = [
+            item for item in data
+            if not (item.get("id") == binding_id and item.get("tenant_id", "default") == tenant_id)
+        ]
+        if len(data) < original_len:
+            self._save_fixture("bindings", data)
+            return True
+        return False
+
+    def register_event(self, event: CanonicalEvent) -> CanonicalEvent:
+        """
+        Register or update a canonical event.
+
+        Args:
+            event: The event to register
+
+        Returns:
+            The registered event
+        """
+        data = self._load_fixture("canonical_events")
+        found = False
+        for i, item in enumerate(data):
+            if item.get("id") == event.id and item.get("tenant_id", "default") == event.tenant_id:
+                data[i] = event.model_dump()
+                found = True
+                break
+        if not found:
+            data.append(event.model_dump())
+        self._save_fixture("canonical_events", data)
+        return event
+
+    def register_entity(self, entity: Entity) -> Entity:
+        """
+        Register or update an entity.
+
+        Args:
+            entity: The entity to register
+
+        Returns:
+            The registered entity
+        """
+        data = self._load_fixture("entities")
+        found = False
+        for i, item in enumerate(data):
+            if item.get("id") == entity.id and item.get("tenant_id", "default") == entity.tenant_id:
+                data[i] = entity.model_dump()
+                found = True
+                break
+        if not found:
+            data.append(entity.model_dump())
+        self._save_fixture("entities", data)
+        return entity
+
+    def register_definition(self, definition: Definition) -> Definition:
+        """
+        Register or update a definition.
+
+        Args:
+            definition: The definition to register
+
+        Returns:
+            The registered definition
+        """
+        data = self._load_fixture("definitions")
+        found = False
+        for i, item in enumerate(data):
+            if item.get("id") == definition.id and item.get("tenant_id", "default") == definition.tenant_id:
+                data[i] = definition.model_dump()
+                found = True
+                break
+        if not found:
+            data.append(definition.model_dump())
+        self._save_fixture("definitions", data)
+        return definition
+
+    def register_definition_version(self, version: DefinitionVersion) -> DefinitionVersion:
+        """
+        Register or update a definition version.
+
+        Args:
+            version: The definition version to register
+
+        Returns:
+            The registered definition version
+        """
+        data = self._load_fixture("definition_versions")
+        found = False
+        for i, item in enumerate(data):
+            if (item.get("id") == version.id and
+                item.get("tenant_id", "default") == version.tenant_id):
+                # Convert spec to dict for JSON serialization
+                version_dict = version.model_dump()
+                version_dict["spec"] = version.spec.model_dump()
+                data[i] = version_dict
+                found = True
+                break
+        if not found:
+            version_dict = version.model_dump()
+            version_dict["spec"] = version.spec.model_dump()
+            data.append(version_dict)
+        self._save_fixture("definition_versions", data)
+        return version
+
+    def register_proof_hook(self, hook: ProofHook) -> ProofHook:
+        """
+        Register or update a proof hook.
+
+        Args:
+            hook: The proof hook to register
+
+        Returns:
+            The registered proof hook
+        """
+        data = self._load_fixture("proof_hooks")
+        found = False
+        for i, item in enumerate(data):
+            if item.get("id") == hook.id and item.get("tenant_id", "default") == hook.tenant_id:
+                data[i] = hook.model_dump()
+                found = True
+                break
+        if not found:
+            data.append(hook.model_dump())
+        self._save_fixture("proof_hooks", data)
+        return hook
