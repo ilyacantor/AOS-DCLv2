@@ -177,6 +177,102 @@ _register(Definition(
 ))
 
 
+_register(Definition(
+    definition_id="finops.arr",
+    name="Annual Recurring Revenue",
+    description="Total annual recurring revenue from subscription contracts and deals",
+    category=DefinitionCategory.FINOPS,
+    version="1.0.0",
+    output_schema=[
+        ColumnSchema(name="source", dtype="string", description="CRM source system"),
+        ColumnSchema(name="deal_name", dtype="string", description="Deal or opportunity name"),
+        ColumnSchema(name="amount", dtype="float", description="Deal amount"),
+        ColumnSchema(name="stage", dtype="string", description="Deal stage"),
+        ColumnSchema(name="close_date", dtype="string", description="Expected close date"),
+        ColumnSchema(name="arr_contribution", dtype="float", description="ARR contribution"),
+    ],
+    sources=[
+        SourceReference(source_id="hubspot", table_id="deals",
+                       columns=["DealName", "Amount", "Stage", "CloseDate"]),
+        SourceReference(source_id="salesforce", table_id="opportunity",
+                       columns=["Name", "Amount", "CloseDate"]),
+        SourceReference(source_id="dynamics", table_id="opportunities",
+                       columns=["OpportunityName", "Amount", "CloseDate"]),
+    ],
+    dimensions=["source", "stage"],
+    metrics=["amount", "arr_contribution"],
+))
+
+
+_register(Definition(
+    definition_id="finops.burn_rate",
+    name="Burn Rate Analysis",
+    description="Monthly cash burn rate and runway analysis across all cost centers",
+    category=DefinitionCategory.FINOPS,
+    version="1.0.0",
+    output_schema=[
+        ColumnSchema(name="month", dtype="string", description="Billing month"),
+        ColumnSchema(name="total_spend", dtype="float", description="Total monthly spend"),
+        ColumnSchema(name="category", dtype="string", description="Spend category"),
+        ColumnSchema(name="cost_center", dtype="string", description="Cost center"),
+    ],
+    sources=[
+        SourceReference(source_id="netsuite", table_id="cloud_spend",
+                       columns=["Monthly_Cost", "CostCenter", "PurchaseDate"]),
+        SourceReference(source_id="snowflake", table_id="aws_costs",
+                       columns=["MONTHLY_COST", "BILLING_PERIOD", "SERVICE_CATEGORY"]),
+    ],
+    dimensions=["month", "category", "cost_center"],
+    metrics=["total_spend"],
+))
+
+
+_register(Definition(
+    definition_id="crm.pipeline",
+    name="Sales Pipeline",
+    description="Current sales pipeline with deal stages, amounts, and forecasted revenue",
+    category=DefinitionCategory.FINOPS,
+    version="1.0.0",
+    output_schema=[
+        ColumnSchema(name="deal_id", dtype="string", description="Deal identifier"),
+        ColumnSchema(name="deal_name", dtype="string", description="Deal name"),
+        ColumnSchema(name="amount", dtype="float", description="Deal value"),
+        ColumnSchema(name="stage", dtype="string", description="Current stage"),
+        ColumnSchema(name="close_date", dtype="string", description="Expected close date"),
+        ColumnSchema(name="pipeline", dtype="string", description="Pipeline name"),
+    ],
+    sources=[
+        SourceReference(source_id="hubspot", table_id="deals",
+                       columns=["DealID", "DealName", "Amount", "Stage", "CloseDate", "Pipeline"]),
+    ],
+    dimensions=["stage", "pipeline"],
+    metrics=["amount"],
+))
+
+
+_register(Definition(
+    definition_id="crm.top_customers",
+    name="Top Customers by Revenue",
+    description="Highest revenue customers ranked by annual revenue",
+    category=DefinitionCategory.FINOPS,
+    version="1.0.0",
+    output_schema=[
+        ColumnSchema(name="account_name", dtype="string", description="Account/customer name"),
+        ColumnSchema(name="industry", dtype="string", description="Industry vertical"),
+        ColumnSchema(name="annual_revenue", dtype="float", description="Annual revenue"),
+        ColumnSchema(name="employee_count", dtype="integer", description="Number of employees"),
+    ],
+    sources=[
+        SourceReference(source_id="salesforce", table_id="account",
+                       columns=["Name", "Industry", "AnnualRevenue", "NumberOfEmployees"]),
+        SourceReference(source_id="dynamics", table_id="accounts",
+                       columns=["AccountName", "Industry", "AnnualRevenue", "EmployeeCount"]),
+    ],
+    dimensions=["industry"],
+    metrics=["annual_revenue", "employee_count"],
+))
+
+
 def get_definition(definition_id: str) -> Definition | None:
     return DEFINITIONS.get(definition_id)
 

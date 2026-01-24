@@ -12,6 +12,7 @@ from backend.engine import DCLEngine
 from backend.engine.schema_loader import SchemaLoader
 from backend.semantic_mapper import SemanticMapper
 from backend.bll.routes import router as bll_router
+from backend.nlq.routes import router as nlq_router
 
 app = FastAPI(title="DCL Engine API")
 
@@ -24,6 +25,7 @@ app.add_middleware(
 )
 
 app.include_router(bll_router)
+app.include_router(nlq_router)
 
 engine = DCLEngine()
 

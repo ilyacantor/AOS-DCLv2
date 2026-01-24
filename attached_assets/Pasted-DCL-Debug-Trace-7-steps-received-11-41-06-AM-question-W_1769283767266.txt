@@ -1,0 +1,239 @@
+DCL Debug Trace
+7 steps
+received
+11:41:06 AM
+{
+  "question": "What is our current ARR?",
+  "consumer_type": "nlq",
+  "dcl_base_url": "https://aab3c90e-30cf-4951-8ddd-e8c2f4334aa7-00-ytm76ihwy3bl.picard.replit.dev/"
+}
+dcl_rank_request
+11:41:06 AM
+{
+  "endpoint": "https://aab3c90e-30cf-4951-8ddd-e8c2f4334aa7-00-ytm76ihwy3bl.picard.replit.dev//api/nlq/answerability_rank",
+  "payload": {
+    "question": "What is our current ARR?"
+  }
+}
+dcl_rank_response
+11:41:06 AM
+{
+  "definition_id": "finops.saas_spend",
+  "confidence_score": 0.44285714285714284,
+  "hypothesis_matches": [
+    "spend"
+  ]
+}
+policy_check
+11:41:06 AM
+{
+  "allowed": true,
+  "caveats": [
+    "Low confidence answer (44.29%)",
+    "Answer based on available data bindings"
+  ],
+  "consumer_type": "nlq",
+  "confidence_threshold": null
+}
+dcl_execute_request
+11:41:06 AM
+{
+  "endpoint": "https://aab3c90e-30cf-4951-8ddd-e8c2f4334aa7-00-ytm76ihwy3bl.picard.replit.dev//api/nlq/registry/execute",
+  "payload": {
+    "definition_id": "finops.saas_spend",
+    "dims": [],
+    "time_window": "MoM"
+  }
+}
+dcl_execute_response
+11:41:06 AM
+{
+  "success": true,
+  "row_count": null,
+  "data_preview": "[{'TransactionID': 'NS-CS-1000', 'VendorName': 'AWS', 'VendorID': 'VND-AWS-001', 'ServiceCategory': 'ALB-LoadBalancer', 'Monthly_Cost': 47836.0, 'Currency': 'USD', 'PurchaseDate': '2025-09-22', 'CostC",
+  "metadata": {
+    "dataset_id": "demo9",
+    "definition_id": "finops.saas_spend",
+    "version": "1.0.0",
+    "executed_at": "2026-01-24T19:41:06.645096",
+    "execution_time_ms": 11,
+    "row_count": 30,
+    "result_schema": [
+      {
+        "name": "TransactionID",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "VendorName",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "VendorID",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "ServiceCategory",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "Monthly_Cost",
+        "dtype": "float64",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "Currency",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "PurchaseDate",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "CostCenter",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "UsageType",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "Region",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "PaymentTerms",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "InvoiceNumber",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "PurchaseOrderNumber",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "ApprovalStatus",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "Department",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "INVOICE_NUM",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "VENDOR_CODE",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "INVOICE_DATE",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "CURRENCY",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "PAYMENT_TERM",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "STATUS",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "DUE_DATE",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "PAID_DATE",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "COMPANY_CODE",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "COST_CENTER",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "GL_ACCOUNT",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "FISCAL_YEAR",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      },
+      {
+        "name": "FISCAL_PERIOD",
+        "dtype": "object",
+        "nullable": true,
+        "description": null
+      }
+    ]
+  }
+}
+answer_assembled
+11:41:06 AM
+{
+  "answer_id": "5d1df743-bc5e-4181-be46-cfe2aa5fa855",
+  "summary_preview": "Retrieved 30 rows for finops.saas_spend.",
+  "proof_count": 2
+}
