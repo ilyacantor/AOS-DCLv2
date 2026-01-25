@@ -208,10 +208,12 @@ from backend.nlq import (
 from backend.nlq.explainer import HypothesisExplainer
 from backend.nlq.routes_registry import router as registry_router
 from backend.bll.routes import router as bll_router
+from backend.farm.routes import router as farm_router
 
 # Include routers
 app.include_router(registry_router)
 app.include_router(bll_router)
+app.include_router(farm_router)
 
 # Initialize NLQ components
 nlq_persistence = NLQPersistence()
