@@ -637,11 +637,18 @@ def nlq_ask(request: NLQAskRequest):
         logger.info(f"[NLQ] Extracted params: {exec_args.to_dict()}")
 
         # Step 3: Execute definition with extracted parameters
+        # Convert order_by dicts to OrderBySpec objects
+        from backend.bll.models import OrderBySpec
+        order_by_specs = None
+        if exec_args.order_by:
+            order_by_specs = [OrderBySpec(field=o["field"], direction=o["direction"]) for o in exec_args.order_by]
+
         bll_request = BLLExecuteRequest(
             dataset_id=request.dataset_id,
             definition_id=definition_id,
             limit=exec_args.limit or 1000,
             offset=0,
+            order_by=order_by_specs,
         )
 
         result = bll_execute(bll_request)

@@ -74,6 +74,12 @@ class TimeWindow(BaseModel):
     end: Optional[datetime] = None
 
 
+class OrderBySpec(BaseModel):
+    """Sort specification."""
+    field: str
+    direction: str = "desc"  # "asc" or "desc"
+
+
 class ExecuteRequest(BaseModel):
     dataset_id: str = Field(default="demo9", alias="datasetId")
     definition_id: str = Field(alias="definitionId")
@@ -81,6 +87,7 @@ class ExecuteRequest(BaseModel):
     time_window: Optional[TimeWindow] = Field(default=None, alias="timeWindow")
     dimensions: Optional[List[str]] = None
     filters: Optional[List[FilterSpec]] = None
+    order_by: Optional[List[OrderBySpec]] = Field(default=None, alias="orderBy")
     limit: int = 1000
     offset: int = 0
     

@@ -1,0 +1,68 @@
+You’re right to be skeptical. **“Add sorting support to NLQ engine” is usually the wrong move** if it’s being done as a generic feature, because it creates two problems:
+
+1. **It blurs responsibilities** (NLQ starts behaving like a query engine / BI layer)
+2. **It’s not realistic IRL** unless the downstream execution layer already supports sorting deterministically and at scale.
+
+### The clean rule
+
+**NLQ should not implement generic query semantics (sorting/paging) unless it’s required for correctness.**
+
+Sorting is usually:
+
+* a **presentation concern** (how to show results),
+* or an **execution concern** (DB/warehouse ORDER BY),
+  not a semantic concern.
+
+### When sorting *is* legitimate in NLQ/DCL
+
+Only in these cases:
+
+1. **Correctness requires it**
+   Example: “top N” depends on a sort order.
+   But even here, NLQ shouldn’t “add sorting as a feature”; it should compile **TopN** into a plan that includes an order_by clause that the executor already knows how to apply.
+
+2. **The definition spec requires deterministic ordering**
+   For example, a definition that returns “largest deltas” must have deterministic tie-breaking. That belongs in the definition spec (default order_by), not bolted into NLQ.
+
+### When sorting is *not* realistic IRL
+
+* Sorting huge result sets in the NLQ service itself (pandas sorting, in-memory sort)
+* Adding generic `sort_by` parameters as a convenience without downstream guarantees
+* Mixing “semantic matching” with “query execution features”
+
+In production, sorting should happen where the data is:
+
+* Snowflake/warehouse
+* OLAP engine
+* or a BLL/serving layer with proper indexing/caching
+
+### What to tell the agent (copy/paste)
+
+> Don’t add generic sorting support to the NLQ engine. That’s not realistic IRL and it muddies the boundary.
+> NLQ’s job is: resolve intent → compile plan (including required order_by only when needed, like top-N) → execute via the proper executor.
+> If ordering is needed, encode it as:
+>
+> * default order_by in the definition spec, or
+> * TopN operator in the plan
+>   and have the executor/warehouse apply it.
+>   No general-purpose sorting/pagination features inside NLQ.
+
+### The practical compromise (if they already coded something)
+
+If the agent already implemented sorting:
+
+* keep it **behind a narrow interface**:
+
+  * only allow `order_by` fields that the definition declares
+  * only enable it for top-N / delta ranking cases
+  * no arbitrary sorts, no paging, no “SQL builder” vibe
+
+### The north star
+
+**NLQ = compiler**
+**Execution = data engine**
+**BLL = consumer formatting + inference**
+
+So your instinct is correct: don’t let NLQ turn into a BI runtime.
+
+If you paste what they added (API shape or code snippet), I’ll tell you whether it’s “narrow and OK” (TopN support) or “feature creep” (generic sorting/paging).
