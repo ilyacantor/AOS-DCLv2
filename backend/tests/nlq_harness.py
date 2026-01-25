@@ -270,6 +270,22 @@ class ParamsSuite:
 class IntentSuite:
     """Test suite for intent matching - tests question → definition mapping."""
 
+    # Keywords that are ambiguous across multiple definitions - skip these when testing
+    # These keywords correctly map to multiple definitions, so testing them against
+    # a single definition would be unfair
+    AMBIGUOUS_KEYWORDS = {
+        # "dora" applies to all 4 DORA metrics
+        "dora", "dora metrics", "four keys",
+        # Generic spend/cost terms apply to multiple finops definitions
+        "spend", "spending", "cost", "costs", "expense",
+        # "no owner" applies to both unallocated_spend and identity_gap
+        "no owner",
+        # "revenue" applies to both ARR and top_customers
+        "revenue",
+        # "incident" applies to both incidents and mttr
+        "incident",
+    }
+
     def __init__(self, seed: int = 42):
         self.rng = random.Random(seed)
         self.metadata = _build_defn_metadata()
@@ -281,6 +297,21 @@ class IntentSuite:
             from backend.bll.definitions import list_definitions
             self._definitions = {d.definition_id: d for d in list_definitions()}
         return self._definitions
+
+    def _get_unambiguous_keywords(self, defn) -> List[str]:
+        """Get keywords that uniquely identify this definition."""
+        if not defn.keywords:
+            return [defn.name.lower()]
+
+        # Filter out ambiguous keywords
+        unambiguous = [kw for kw in defn.keywords
+                       if kw.lower() not in self.AMBIGUOUS_KEYWORDS]
+
+        # If all keywords are ambiguous, use the most specific one (longest phrase)
+        if not unambiguous and defn.keywords:
+            unambiguous = [max(defn.keywords, key=len)]
+
+        return unambiguous or [defn.name.lower()]
 
     def generate(self, n: int) -> List[GeneratedTest]:
         """Generate n test cases for intent matching using definition keywords."""
@@ -304,12 +335,9 @@ class IntentSuite:
             defn = definitions[defn_id]
             meta = self.metadata[defn_id]
 
-            # Use one of the definition's keywords
-            if defn.keywords:
-                keyword = self.rng.choice(defn.keywords)
-            else:
-                # Fallback to definition name
-                keyword = defn.name.lower()
+            # Use unambiguous keywords only
+            keywords = self._get_unambiguous_keywords(defn)
+            keyword = self.rng.choice(keywords)
 
             # Generate question using keyword
             template = self.rng.choice(keyword_templates)
@@ -436,28 +464,52 @@ def run_params_suite(tests: List[GeneratedTest]) -> SuiteResult:
     )
 
 
+@dataclass
+class IntentTestResult(TestResult):
+    """Extended test result with confusion data."""
+    top_candidates: List[Tuple[str, float]] = field(default_factory=list)
+    is_ambiguous: bool = False
+    triggered_by: List[str] = field(default_factory=list)
+
+
 def run_intent_suite(tests: List[GeneratedTest]) -> SuiteResult:
-    """Run intent matching tests."""
-    from backend.nlq.intent_matcher import match_question_to_definition
+    """Run intent matching tests with confusion reporting."""
+    from backend.nlq.intent_matcher import match_question_with_details
 
     results = []
     coverage = defaultdict(lambda: defaultdict(int))
+    confusion_report = []  # Detailed failure analysis
 
     for test in tests:
         try:
-            definition_id, confidence, _ = match_question_to_definition(test.question)
+            match_result = match_question_with_details(test.question, top_k=5)
 
             passed = True
             error = None
 
-            if test.expected_definition and definition_id != test.expected_definition:
+            if test.expected_definition and match_result.best_match != test.expected_definition:
                 passed = False
-                error = f"Intent mismatch: expected {test.expected_definition}, got {definition_id}"
+                error = f"Intent mismatch: expected {test.expected_definition}, got {match_result.best_match}"
+
+                # Build confusion report entry
+                top_k_summary = [(c.definition_id, round(c.score, 3)) for c in match_result.top_candidates[:5]]
+                triggered = match_result.top_candidates[0].triggered_by if match_result.top_candidates else []
+
+                confusion_report.append({
+                    "question": test.question,
+                    "expected": test.expected_definition,
+                    "got": match_result.best_match,
+                    "confidence": round(match_result.confidence, 3),
+                    "top_candidates": top_k_summary,
+                    "triggered_by": triggered,
+                    "is_ambiguous": match_result.is_ambiguous,
+                    "ambiguity_gap": round(match_result.ambiguity_gap, 3),
+                })
 
             results.append(TestResult(
                 test=test,
                 passed=passed,
-                actual_definition=definition_id,
+                actual_definition=match_result.best_match,
                 error=error,
             ))
 
@@ -474,6 +526,17 @@ def run_intent_suite(tests: List[GeneratedTest]) -> SuiteResult:
 
     passed_count = sum(1 for r in results if r.passed)
     failed = [r for r in results if not r.passed]
+
+    # Print confusion report for failures
+    if confusion_report:
+        print("\n\033[93mConfusion Report:\033[0m")
+        for entry in confusion_report[:10]:
+            print(f"\n  Question: \"{entry['question']}\"")
+            print(f"  Expected: {entry['expected']} → Got: {entry['got']} ({entry['confidence']:.0%})")
+            print(f"  Triggered by: {entry['triggered_by']}")
+            print(f"  Top candidates: {entry['top_candidates'][:3]}")
+            if entry['is_ambiguous']:
+                print(f"  \033[93m⚠ AMBIGUOUS (gap: {entry['ambiguity_gap']:.2f})\033[0m")
 
     return SuiteResult(
         suite_name="intent",

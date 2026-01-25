@@ -38,7 +38,8 @@ _register(Definition(
     dimensions=["vendor_name", "service_category"],
     metrics=["total_spend", "transaction_count", "avg_monthly_cost"],
     keywords=["saas spend", "cloud spend", "software spend", "vendor spend",
-              "total spend", "spending by vendor", "cloud costs", "saas costs"],
+              "total spend", "spending by vendor", "cloud costs", "saas costs",
+              "how much are we spending", "current spend", "spend summary"],
 ))
 
 
@@ -62,8 +63,10 @@ _register(Definition(
     dimensions=["vendor_name"],
     metrics=["current_month_spend", "previous_month_spend", "delta_absolute", "delta_percent"],
     keywords=["vendor delta", "month over month", "mom", "cost change", "spending change",
-              "vendor changes", "cost delta", "spend delta", "what changed",
-              "cost changes over time", "spending delta", "vendor cost changes"],
+              "vendor changes", "cost delta", "spend delta", "what changed in spend",
+              "cost changes over time", "spending delta", "vendor cost changes",
+              "month over month changes", "cost difference", "spending difference",
+              "what costs changed", "spend variance", "cost variance"],
 ))
 
 
@@ -95,8 +98,9 @@ _register(Definition(
     ],
     dimensions=["service", "region"],
     metrics=["monthly_cost"],
-    keywords=["unallocated spend", "untagged resources", "unowned spend", "orphan spend",
-              "unassigned cost", "missing tags", "no owner", "no cost center"],
+    keywords=["unallocated spend", "untagged resources", "untagged spend", "orphan spend",
+              "unassigned cost", "missing tags", "no cost center", "spend without tags",
+              "unassigned spend", "spend missing cost center"],
 ))
 
 
@@ -152,7 +156,8 @@ _register(Definition(
     dimensions=["service", "gap_type"],
     metrics=["monthly_cost"],
     keywords=["identity gap", "ownership gap", "unowned resources", "no owner",
-              "missing owner", "orphan resources", "ownership", "identity"],
+              "missing owner", "orphan resources", "resources without owner",
+              "who owns this", "ownership missing", "resource ownership"],
 ))
 
 
@@ -185,8 +190,9 @@ _register(Definition(
     ],
     dimensions=["resource_type", "service", "instance_state"],
     metrics=["monthly_cost", "days_idle"],
-    keywords=["zombie", "zombies", "idle resources", "unused resources", "wasted spend",
-              "underutilized", "stopped instances", "idle", "not used"],
+    keywords=["zombie", "zombies", "idle resources", "unused resources", "wasted resources",
+              "underutilized", "stopped instances", "idle", "not used", "zombie resources",
+              "idle spend", "wasted cloud spend", "resources not being used"],
 ))
 
 
@@ -291,7 +297,9 @@ _register(Definition(
     dimensions=["industry"],
     metrics=["annual_revenue", "employee_count"],
     keywords=["top customers", "biggest customers", "largest customers", "customers by revenue",
-              "top accounts", "best customers", "high value customers", "customer revenue"],
+              "top accounts", "best customers", "high value customers", "customer revenue",
+              "largest accounts", "biggest accounts", "our largest customers",
+              "who are our top customers", "customer list by revenue"],
 ))
 
 
@@ -413,7 +421,8 @@ _register(Definition(
     dimensions=["service", "severity", "team"],
     metrics=["mttr_minutes"],
     keywords=["mttr", "mean time to recovery", "recovery time", "dora",
-              "incident recovery", "time to resolve", "resolution time"],
+              "incident recovery", "time to resolve", "resolution time",
+              "how long to recover", "average recovery time", "time to fix incidents"],
 ))
 
 

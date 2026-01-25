@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
 """
-NLQ Test Harness - Autonomous testing for NLQ quality.
+NLQ Manual Smoke Test - Ad-hoc testing for NLQ quality debugging.
 
-Runs a series of test queries against DCL and evaluates:
+⚠️  NOTE: This is a MANUAL smoke test with hardcoded test cases.
+    For CI/regression testing, use the generative harness instead:
+
+    python -m backend.tests.nlq_harness --suite all
+
+    The generative harness generates tests from the definitions registry
+    and is the authoritative test suite for NLQ quality.
+
+This script runs a curated set of test queries against DCL for manual debugging.
+It evaluates:
 1. Intent matching - did we match the right definition?
 2. Summary quality - is the answer meaningful (not generic)?
 3. Parameter extraction - did we extract limit, order_by correctly?
 4. Data presence - did we get data back?
 
 Usage:
-    python -m backend.tests.nlq_test_harness [--fix] [--verbose] [--direct]
-
-The harness will:
-- Run all test cases
-- Report pass/fail with details
-- Optionally attempt fixes for common issues
+    python tools/nlq_manual_smoke_test.py [--fix] [--verbose] [--direct]
 
 Modes:
 - Default: Hit DCL API at localhost:8000
