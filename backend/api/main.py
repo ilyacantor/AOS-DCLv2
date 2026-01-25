@@ -295,6 +295,14 @@ class NLQExtractParamsResponse(BaseModel):
     raw_params: Dict[str, Any] = {}  # Full ExecutionArgs dict
 
 
+class NLQClarificationCandidate(BaseModel):
+    """A candidate definition for clarification."""
+    definition_id: str
+    name: str
+    description: str
+    score: float
+
+
 class NLQAskResponse(BaseModel):
     """Response from NLQ ask endpoint."""
     question: str
@@ -305,6 +313,10 @@ class NLQAskResponse(BaseModel):
     metadata: Dict[str, Any]
     summary: Optional[Dict[str, Any]] = None
     caveats: List[str] = []
+    # Clarification fields (when needs_clarification=True)
+    needs_clarification: bool = False
+    clarification_prompt: Optional[str] = None
+    candidates: Optional[List[NLQClarificationCandidate]] = None
 
 
 import re
@@ -560,22 +572,68 @@ def nlq_ask(request: NLQAskRequest):
     - summary: human-readable answer
     - caveats: any limitations applied
     """
+    from backend.nlq.intent_matcher import match_question_with_details, AMBIGUOUS_GROUPS
+    from backend.bll.definitions import get_definition
+
     try:
         question = request.question
-        
-        # Step 1: Match question to definition
-        definition_id, confidence, matched_keywords = _match_question_to_definition(question)
-        logger.info(f"[NLQ] Matched '{question}' to {definition_id} (conf={confidence:.2f})")
-        
+
+        # Step 1: Match question to definition with ambiguity detection
+        match_result = match_question_with_details(question, top_k=5)
+        definition_id = match_result.best_match
+        confidence = match_result.confidence
+        matched_keywords = match_result.matched_keywords
+
+        logger.info(f"[NLQ] Matched '{question}' to {definition_id} (conf={confidence:.2f}, ambiguous={match_result.is_ambiguous})")
+
+        # Step 1.5: Check for ambiguity - return NEEDS_CLARIFICATION if ambiguous
+        if match_result.is_ambiguous and len(match_result.top_candidates) >= 2:
+            # Build clarification response with top candidates
+            candidates = []
+            for candidate in match_result.top_candidates[:4]:
+                defn = get_definition(candidate.definition_id)
+                if defn:
+                    candidates.append(NLQClarificationCandidate(
+                        definition_id=candidate.definition_id,
+                        name=defn.name,
+                        description=defn.description,
+                        score=round(candidate.score, 3),
+                    ))
+
+            # Check for known ambiguous group clarification message
+            clarification_msg = "Your question matches multiple definitions. Which one did you mean?"
+            question_lower = question.lower()
+            for group_key, group_info in AMBIGUOUS_GROUPS.items():
+                if group_key in question_lower:
+                    clarification_msg = group_info.get("clarification", clarification_msg)
+                    break
+
+            return NLQAskResponse(
+                question=question,
+                definition_id=definition_id,  # Default/best guess
+                confidence_score=confidence,
+                execution_args={},
+                data=[],  # No data when clarification needed
+                metadata={
+                    "dataset_id": request.dataset_id,
+                    "ambiguity_gap": round(match_result.ambiguity_gap, 3),
+                },
+                summary=None,
+                caveats=["Ambiguous query - clarification needed"],
+                needs_clarification=True,
+                clarification_prompt=clarification_msg,
+                candidates=candidates,
+            )
+
         # Step 2: Extract parameters from question
         exec_args = extract_params(question)
-        
+
         # Apply limit clamping (max 100)
         if exec_args.limit:
             exec_args.limit = apply_limit_clamp(exec_args.limit, max_limit=100)
-        
+
         logger.info(f"[NLQ] Extracted params: {exec_args.to_dict()}")
-        
+
         # Step 3: Execute definition with extracted parameters
         bll_request = BLLExecuteRequest(
             dataset_id=request.dataset_id,
@@ -583,9 +641,9 @@ def nlq_ask(request: NLQAskRequest):
             limit=exec_args.limit or 1000,
             offset=0,
         )
-        
+
         result = bll_execute(bll_request)
-        
+
         # Step 4: Build response with caveats
         caveats = []
         if exec_args.limit:
@@ -595,7 +653,7 @@ def nlq_ask(request: NLQAskRequest):
             caveats.append(f"Sorted by {order_desc}")
         if not caveats:
             caveats.append("Based on available data bindings")
-        
+
         return NLQAskResponse(
             question=question,
             definition_id=definition_id,
@@ -612,6 +670,7 @@ def nlq_ask(request: NLQAskRequest):
             },
             summary=result.summary.model_dump() if result.summary else None,
             caveats=caveats,
+            needs_clarification=False,
         )
     except Exception as e:
         logger.error(f"NLQ ask failed: {e}", exc_info=True)
