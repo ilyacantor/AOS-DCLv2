@@ -3199,6 +3199,180 @@
       "latency_ms": 5,
       "status": "success",
       "tenant_id": "default"
+    },
+    {
+      "id": "bfe30e96-d0f6-4250-8791-ae6a02d38e25",
+      "timestamp": "2026-01-25T15:44:31.503765Z",
+      "question": "What is our current ARR?",
+      "dataset_id": "demo9",
+      "definition_id": "finops.arr",
+      "extracted_params": {},
+      "response": {
+        "question": "What is our current ARR?",
+        "definition_id": "finops.arr",
+        "confidence_score": 1.058,
+        "execution_args": {},
+        "data": [
+          {
+            "DealName": "MegaCorp Enterprise",
+            "Amount": 1500000,
+            "Stage": "Discovery",
+            "CloseDate": "2026-04-01",
+            "Pipeline": "Enterprise Pipeline",
+            "Name": "",
+            "AccountId": "",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "Enterprise Plus Contract",
+            "Amount": 890000,
+            "Stage": "Negotiation",
+            "CloseDate": "2026-02-28",
+            "Pipeline": "Sales Pipeline",
+            "Name": "",
+            "AccountId": "",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "",
+            "Amount": 720000,
+            "Stage": "Closed Won",
+            "CloseDate": "2025-12-20",
+            "Pipeline": "",
+            "Name": "Global Systems Renewal",
+            "AccountId": "ACC003",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "",
+            "Amount": 680000,
+            "Stage": "Closed Won",
+            "CloseDate": "2025-12-01",
+            "Pipeline": "",
+            "Name": "FutureSoft License",
+            "AccountId": "ACC007",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "",
+            "Amount": 580000,
+            "Stage": "",
+            "CloseDate": "2026-01-08",
+            "Pipeline": "",
+            "Name": "",
+            "AccountId": "",
+            "OpportunityName": "TechGiant Renewal",
+            "Status": "Won",
+            "AccountName": "TechGiant Ltd"
+          },
+          {
+            "DealName": "",
+            "Amount": 520000,
+            "Stage": "Closed Won",
+            "CloseDate": "2025-11-30",
+            "Pipeline": "",
+            "Name": "InnovateTech AI Suite",
+            "AccountId": "ACC006",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "",
+            "Amount": 450000,
+            "Stage": "Closed Won",
+            "CloseDate": "2026-01-15",
+            "Pipeline": "",
+            "Name": "Acme Corp Enterprise Deal",
+            "AccountId": "ACC001",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "",
+            "Amount": 380000,
+            "Stage": "Closed Won",
+            "CloseDate": "2025-12-15",
+            "Pipeline": "",
+            "Name": "CloudNine Platform",
+            "AccountId": "ACC005",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "",
+            "Amount": 340000,
+            "Stage": "",
+            "CloseDate": "2026-01-20",
+            "Pipeline": "",
+            "Name": "",
+            "AccountId": "",
+            "OpportunityName": "DataCorp Upsell",
+            "Status": "Won",
+            "AccountName": "DataCorp Inc"
+          },
+          {
+            "DealName": "",
+            "Amount": 280000,
+            "Stage": "Closed Won",
+            "CloseDate": "2026-01-10",
+            "Pipeline": "",
+            "Name": "TechStart Expansion",
+            "AccountId": "ACC002",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          }
+        ],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "finops.arr",
+          "row_count": 10,
+          "total_available": 12,
+          "execution_time_ms": 11,
+          "matched_keywords": [
+            "kw:arr",
+            "kw:current arr",
+            "kw~:total arr",
+            "desc:2words",
+            "id~:arr"
+          ],
+          "effective_limit": 10
+        },
+        "summary": {
+          "aggregations": {
+            "population_total": 6610000.0,
+            "population_count": 12,
+            "shown_total": 6340000.0,
+            "deal_count": 10,
+            "share_of_total_pct": 95.91527987897126,
+            "topn_total": 6340000.0
+          },
+          "warnings": [],
+          "debug_summary": "Top 10 revenue items: $6.34M (96% of $6.61M total ARR). Revenue is concentrated in top 10 accounts.",
+          "currency": "USD",
+          "answer": "Top 10 revenue items: $6.34M (96% of $6.61M total ARR). Revenue is concentrated in top 10 accounts."
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 11,
+      "status": "success",
+      "tenant_id": "default"
     }
   ]
 }
