@@ -454,6 +454,12 @@ export function AskPage() {
     navigator.clipboard.writeText(curl);
   };
 
+  const handleClear = () => {
+    setQuery('');
+    setResult(null);
+    setError(null);
+  };
+
   return (
     <div className="h-full flex bg-background">
       {/* Main Content */}
@@ -477,14 +483,27 @@ export function AskPage() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Ask a question..."
-                  className="w-full px-4 py-3 text-lg rounded-xl border border-border bg-card shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-shadow"
+                  className="w-full px-4 py-3 pr-20 text-lg rounded-xl border border-border bg-card shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-shadow"
                   disabled={isLoading}
                 />
-                {isLoading && (
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  {isLoading && (
                     <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  </div>
-                )}
+                  )}
+                  {!isLoading && (query || result || error) && (
+                    <button
+                      type="button"
+                      onClick={handleClear}
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                      title="Clear"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
             </form>
 
@@ -509,7 +528,15 @@ export function AskPage() {
           <div className="max-w-3xl mx-auto">
             {error && (
               <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive">
-                <div className="font-medium">Error</div>
+                <div className="flex items-center justify-between">
+                  <div className="font-medium">Error</div>
+                  <button
+                    onClick={handleClear}
+                    className="text-xs px-2 py-1 rounded border border-destructive/30 hover:bg-destructive/20 transition-colors"
+                  >
+                    Dismiss
+                  </button>
+                </div>
                 <div className="text-sm mt-1">{error}</div>
               </div>
             )}
@@ -524,11 +551,19 @@ export function AskPage() {
                 )}
 
                 {/* Metadata Bar */}
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span>Definition: {result.definition_id}</span>
-                  <span>Confidence: {(result.confidence_score * 100).toFixed(0)}%</span>
-                  <span>Rows: {result.data.length}</span>
-                  <span>{result.metadata.execution_time_ms}ms</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span>Definition: {result.definition_id}</span>
+                    <span>Confidence: {(result.confidence_score * 100).toFixed(0)}%</span>
+                    <span>Rows: {result.data.length}</span>
+                    <span>{result.metadata.execution_time_ms}ms</span>
+                  </div>
+                  <button
+                    onClick={handleClear}
+                    className="text-xs px-2 py-1 rounded border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    Clear Results
+                  </button>
                 </div>
 
                 {/* Caveats */}
