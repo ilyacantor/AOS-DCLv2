@@ -381,6 +381,9 @@ def _compute_summary(
             pop_count = len(pop_df)
             aggregations['finding_count'] = row_count
             aggregations['population_count'] = pop_count
+            aggregations['population_total'] = float(pop_count)  # For findings, count is the "total"
+            aggregations['share_of_total_pct'] = float((row_count / pop_count * 100) if pop_count > 0 else 100)
+
             if 'severity' in pop_df.columns:
                 pop_severity_counts = pop_df['severity'].value_counts().to_dict()
                 aggregations['population_severity_breakdown'] = pop_severity_counts
@@ -391,7 +394,7 @@ def _compute_summary(
                 pop_high = pop_severity_counts.get('high', 0)
 
                 if is_top_n:
-                    answer = f"Showing top {row_count} findings. Total: {pop_count} findings ({pop_critical} critical, {pop_high} high)."
+                    answer = f"Showing top {row_count} of {pop_count} findings ({pop_critical} critical, {pop_high} high across all)."
                     if pop_critical > 0:
                         answer += " Critical findings require immediate remediation."
                 else:
@@ -400,7 +403,8 @@ def _compute_summary(
                     else:
                         answer = f"Security findings: {pop_count} total. No critical or high severity issues found."
             else:
-                answer = f"Found {row_count} security findings out of {pop_count} total."
+                answer = f"Found {row_count} of {pop_count} security findings."
+            limitations.append("Security findings reflect point-in-time scan results")
 
         # SLO Attainment - with interpretation
         elif 'slo' in defn_id:
