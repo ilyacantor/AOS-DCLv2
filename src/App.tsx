@@ -12,15 +12,17 @@ import { useToast } from './hooks/use-toast';
 
 type MainView = 'ask' | 'graph' | 'dashboard';
 
+const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO'];
+
 function App() {
   const [graphData, setGraphData] = useState<GraphSnapshot | null>(null);
   const [runMode, setRunMode] = useState<'Dev' | 'Prod'>('Dev');
   const [dataMode, setDataMode] = useState<'Demo' | 'Farm'>('Demo');
-  const [sourceLimit] = useState<number>(5);
-  const [selectedPersonas] = useState<PersonaId[]>([]);
+  const [sourceLimit, setSourceLimit] = useState<number>(5);
+  const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>([]);
   const [runId, setRunId] = useState<string | undefined>(undefined);
   const [isRunning, setIsRunning] = useState(false);
-  const [, setElapsedTime] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(0);
   const [mainView, setMainView] = useState<MainView>('ask');
   const { toast } = useToast();
 
@@ -160,6 +162,19 @@ function App() {
     }
   };
 
+  const togglePersona = (p: PersonaId) => {
+    setSelectedPersonas(prev =>
+      prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
+    );
+  };
+
+  // Format elapsed time for display
+  const formatElapsedTime = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
+    const tenths = Math.floor((ms % 1000) / 100);
+    return `${seconds}.${tenths}s`;
+  };
+
   // Top-level navigation tabs
   const navTabs: { id: MainView; label: string }[] = [
     { id: 'ask', label: 'Ask' },
@@ -198,32 +213,90 @@ function App() {
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Only show controls bar for graph/dashboard views */}
+          {/* Controls for graph/dashboard views */}
           {mainView !== 'ask' && (
-            <div className="flex items-center gap-2 text-sm">
-              <select
-                value={dataMode}
-                onChange={(e) => setDataMode(e.target.value as 'Demo' | 'Farm')}
-                className="px-2 py-1 text-xs rounded border border-border bg-background"
-              >
-                <option value="Demo">Demo</option>
-                <option value="Farm">Farm</option>
-              </select>
-              <select
-                value={runMode}
-                onChange={(e) => setRunMode(e.target.value as 'Dev' | 'Prod')}
-                className="px-2 py-1 text-xs rounded border border-border bg-background"
-              >
-                <option value="Dev">Dev</option>
-                <option value="Prod">Prod</option>
-              </select>
-              <button
-                onClick={handleRun}
-                disabled={isRunning}
-                className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-              >
-                {isRunning ? `Running...` : 'Run'}
-              </button>
+            <div className="flex items-center gap-3 text-sm">
+              {/* Data Mode */}
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-muted-foreground">Data:</span>
+                <select
+                  value={dataMode}
+                  onChange={(e) => setDataMode(e.target.value as 'Demo' | 'Farm')}
+                  className="px-2 py-1 text-xs rounded border border-border bg-background"
+                >
+                  <option value="Demo">Demo</option>
+                  <option value="Farm">Farm</option>
+                </select>
+              </div>
+
+              {/* Run Mode */}
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-muted-foreground">Mode:</span>
+                <select
+                  value={runMode}
+                  onChange={(e) => setRunMode(e.target.value as 'Dev' | 'Prod')}
+                  className="px-2 py-1 text-xs rounded border border-border bg-background"
+                >
+                  <option value="Dev">Dev</option>
+                  <option value="Prod">Prod</option>
+                </select>
+              </div>
+
+              {/* Source Limit (only for Farm mode) */}
+              {dataMode === 'Farm' && (
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">Sources:</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={sourceLimit}
+                    onChange={(e) => setSourceLimit(parseInt(e.target.value) || 5)}
+                    className="w-12 px-1 py-1 text-xs rounded border border-border bg-background text-center"
+                  />
+                </div>
+              )}
+
+              {/* Persona Selector */}
+              <div className="flex items-center gap-1 pl-2 border-l border-border">
+                <span className="text-xs text-muted-foreground">Personas:</span>
+                <div className="flex gap-1">
+                  {ALL_PERSONAS.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => togglePersona(p)}
+                      className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                        selectedPersonas.includes(p)
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-accent/50 text-muted-foreground hover:bg-accent'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Run Button & Timer */}
+              <div className="flex items-center gap-2 pl-2 border-l border-border">
+                <button
+                  onClick={handleRun}
+                  disabled={isRunning}
+                  className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {isRunning ? 'Running...' : 'Run'}
+                </button>
+                {isRunning && (
+                  <span className="text-xs font-mono text-muted-foreground min-w-[3rem]">
+                    {formatElapsedTime(elapsedTime)}
+                  </span>
+                )}
+                {!isRunning && graphData?.meta.runMetrics && (
+                  <span className="text-xs text-muted-foreground">
+                    {graphData.meta.runMetrics.processingMs}ms
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
