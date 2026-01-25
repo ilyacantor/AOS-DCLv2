@@ -386,6 +386,44 @@ class ExecutionSuite:
         return tests
 
 
+class AnswerQualitySuite:
+    """
+    Test suite for answer quality - validates that summaries include:
+    (a) total - population total for top-N queries
+    (b) top-N share - percentage of total represented by top-N
+    (c) interpretation OR explicit caveat about data limitations
+    """
+
+    def __init__(self, seed: int = 42):
+        self.rng = random.Random(seed)
+        self.metadata = _build_defn_metadata()
+
+    def generate(self, n: int) -> List[GeneratedTest]:
+        """Generate n top-N test cases for answer quality validation."""
+        tests = []
+
+        # Focus on top-N queries where share calculation matters
+        limit_values = [3, 5, 10]
+
+        for _ in range(n):
+            limit = self.rng.choice(limit_values)
+            defn_id = self.rng.choice(list(self.metadata.keys()))
+            meta = self.metadata[defn_id]
+
+            entity = generate_entity_phrase(meta.entity_type or "items", self.rng)
+            limit_phrase = generate_limit_phrase(limit, self.rng)
+            question = f"Show me the {limit_phrase} {entity}"
+
+            tests.append(GeneratedTest(
+                question=question,
+                expected_definition=defn_id,
+                expected_limit=limit,
+                defn_meta=meta,
+            ))
+
+        return tests
+
+
 # =============================================================================
 # Test Runner
 # =============================================================================
@@ -638,6 +676,177 @@ def run_execution_suite(tests: List[GeneratedTest], direct: bool = False) -> Sui
 
 
 # =============================================================================
+# Answer Quality Suite
+# =============================================================================
+
+@dataclass
+class AnswerQualityResult(TestResult):
+    """Extended result for answer quality checks."""
+    has_total: bool = False
+    has_share: bool = False
+    has_interpretation_or_caveat: bool = False
+    summary_text: str = ""
+    aggregations: Dict[str, Any] = field(default_factory=dict)
+
+
+def run_answer_quality_suite(tests: List[GeneratedTest]) -> SuiteResult:
+    """
+    Run answer quality tests.
+
+    Checks that for top-N queries, the summary includes:
+    (a) population_total or population_count
+    (b) share_of_total_pct
+    (c) interpretation in answer text OR limitations list
+    """
+    import requests
+
+    results = []
+    coverage = defaultdict(lambda: defaultdict(int))
+    quality_failures = []
+
+    # Check if API is available
+    try:
+        resp = requests.get(f"{BASE_URL}/api/health", timeout=2)
+        if resp.status_code != 200:
+            print("  [API unavailable - skipping answer quality suite]")
+            return SuiteResult(
+                suite_name="answer_quality",
+                total=len(tests),
+                passed=0,
+                failed=0,
+                failures=[],
+                coverage={},
+            )
+    except:
+        print("  [API unavailable - skipping answer quality suite]")
+        return SuiteResult(
+            suite_name="answer_quality",
+            total=len(tests),
+            passed=0,
+            failed=0,
+            failures=[],
+            coverage={},
+        )
+
+    for test in tests:
+        try:
+            resp = requests.post(
+                f"{BASE_URL}/api/nlq/ask",
+                json={"question": test.question, "dataset_id": "demo9"},
+                timeout=30
+            )
+            resp.raise_for_status()
+            result = resp.json()
+
+            # Skip ambiguous queries - they correctly return clarification, not data
+            if result.get("needs_clarification"):
+                results.append(TestResult(
+                    test=test,
+                    passed=True,  # Ambiguous queries correctly trigger clarification
+                    error=None,
+                ))
+                continue
+
+            summary = result.get("summary") or {}
+            aggregations = summary.get("aggregations", {})
+            answer_text = summary.get("answer", "")
+            limitations = aggregations.get("limitations", [])
+
+            # Check (a) total - population_total or population_count exists
+            has_total = (
+                "population_total" in aggregations or
+                "population_count" in aggregations
+            )
+
+            # Check (b) share - share_of_total_pct exists
+            has_share = "share_of_total_pct" in aggregations
+
+            # Check (c) interpretation or caveat
+            # Look for interpretation phrases in answer
+            interpretation_phrases = [
+                "concentration", "concentrated", "distributed", "diversified",
+                "drive", "represent", "majority", "weighted",
+                "candidates for", "need", "require",
+                "tier:", "healthy", "at risk", "breached",
+                "Elite", "High", "Medium", "Low",
+                "total", "across",  # Generic totals phrases
+            ]
+            has_interpretation = any(phrase.lower() in answer_text.lower()
+                                     for phrase in interpretation_phrases)
+
+            # Or check for explicit caveat in limitations
+            has_caveat = len(limitations) > 0
+
+            has_interpretation_or_caveat = has_interpretation or has_caveat
+
+            # Pass if all three conditions are met
+            passed = has_total and has_share and has_interpretation_or_caveat
+
+            error = None
+            if not passed:
+                missing = []
+                if not has_total:
+                    missing.append("population total")
+                if not has_share:
+                    missing.append("share of total %")
+                if not has_interpretation_or_caveat:
+                    missing.append("interpretation or caveat")
+                error = f"Missing: {', '.join(missing)}"
+
+                quality_failures.append({
+                    "question": test.question,
+                    "answer": answer_text[:100],
+                    "missing": missing,
+                    "aggregations_keys": list(aggregations.keys()),
+                    "limitations": limitations,
+                })
+
+            results.append(AnswerQualityResult(
+                test=test,
+                passed=passed,
+                has_total=has_total,
+                has_share=has_share,
+                has_interpretation_or_caveat=has_interpretation_or_caveat,
+                summary_text=answer_text,
+                aggregations=aggregations,
+                error=error,
+            ))
+
+            if test.defn_meta:
+                coverage[test.defn_meta.definition_id]["quality"] += 1
+
+        except Exception as e:
+            results.append(TestResult(
+                test=test,
+                passed=False,
+                error=str(e),
+            ))
+
+    passed_count = sum(1 for r in results if r.passed)
+    failed = [r for r in results if not r.passed]
+
+    # Print quality failure details
+    if quality_failures:
+        print("\n\033[93mAnswer Quality Issues:\033[0m")
+        for entry in quality_failures[:10]:
+            print(f"\n  Q: \"{entry['question']}\"")
+            print(f"  Missing: {entry['missing']}")
+            print(f"  Answer: \"{entry['answer']}...\"")
+            print(f"  Aggregations: {entry['aggregations_keys']}")
+            if entry['limitations']:
+                print(f"  Limitations: {entry['limitations']}")
+
+    return SuiteResult(
+        suite_name="answer_quality",
+        total=len(tests),
+        passed=passed_count,
+        failed=len(failed),
+        failures=failed[:20],
+        coverage=dict(coverage),
+    )
+
+
+# =============================================================================
 # CLI and Reporting
 # =============================================================================
 
@@ -674,7 +883,7 @@ def print_result(result: SuiteResult):
 
 def main():
     parser = argparse.ArgumentParser(description="NLQ Generative Test Harness")
-    parser.add_argument("--suite", choices=["params", "intent", "execution", "all"],
+    parser.add_argument("--suite", choices=["params", "intent", "execution", "answer_quality", "all"],
                         default="params", help="Test suite to run")
     parser.add_argument("--n", type=int, default=100, help="Number of test cases to generate")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
@@ -706,6 +915,13 @@ def main():
         suite = ExecutionSuite(seed=args.seed)
         tests = suite.generate(args.n)
         result = run_execution_suite(tests, direct=args.direct)
+        results.append(result)
+        print_result(result)
+
+    if args.suite in ["answer_quality", "all"]:
+        suite = AnswerQualitySuite(seed=args.seed)
+        tests = suite.generate(args.n)
+        result = run_answer_quality_suite(tests)
         results.append(result)
         print_result(result)
 

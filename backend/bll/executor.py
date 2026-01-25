@@ -67,20 +67,34 @@ def _format_currency(amount: float) -> str:
         return f"${amount:,.2f}"
 
 
-def _compute_summary(df: pd.DataFrame, definition: Definition) -> ComputedSummary:
+def _compute_summary(
+    df: pd.DataFrame,
+    definition: Definition,
+    full_population_df: pd.DataFrame | None = None,
+    applied_limit: int | None = None
+) -> ComputedSummary:
     """
     Compute aggregations and generate human-readable answer based on definition type.
 
-    Quality guidelines:
-    - Lists include interpretation when possible
-    - Totals compared to baselines when available
-    - Rankings explain impact if dataset supports it
-    - Metrics reference their definition when ambiguity exists
-    - Data limitations explicitly noted
+    Quality guidelines for top-N queries:
+    - Compute totals on FULL POPULATION, not just top-N
+    - Show top-N share of total (e.g., "top 5 represent 45% of total revenue")
+    - Include 1-sentence interpretation
+    - Add caveat if context is missing (demo data, limited scope)
+
+    Args:
+        df: The result rows (possibly limited to top-N)
+        definition: The BLL definition being executed
+        full_population_df: The full dataset BEFORE limit was applied (for share calculation)
+        applied_limit: The limit that was applied (e.g., 5 for "top 5")
     """
     aggregations: dict[str, Any] = {}
     answer = ""
     limitations: list[str] = []
+
+    # Use full population for totals if available
+    pop_df = full_population_df if full_population_df is not None else df
+    is_top_n = applied_limit is not None and len(df) <= applied_limit and full_population_df is not None
 
     amount_cols = []
     for c in df.columns:
@@ -93,70 +107,140 @@ def _compute_summary(df: pd.DataFrame, definition: Definition) -> ComputedSummar
 
     try:
         if 'arr' in defn_id or 'revenue' in defn_id:
+            pop_count = len(pop_df)
             if amount_cols:
-                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
-                aggregations['total_arr'] = float(total)
+                pop_total = pd.to_numeric(pop_df[amount_cols[0]], errors='coerce').sum()
+                shown_total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['population_total'] = float(pop_total)
+                aggregations['population_count'] = pop_count
+                aggregations['shown_total'] = float(shown_total)
                 aggregations['deal_count'] = row_count
-                # Interpretation: ARR with context
-                answer = f"Your current ARR is {_format_currency(total)} across {row_count} deals/opportunities."
-                # Note limitation if sample is small
-                if row_count < 10:
-                    limitations.append(f"Based on {row_count} records; may not reflect full ARR")
+
+                share_pct = (shown_total / pop_total * 100) if pop_total > 0 else 0
+                aggregations['share_of_total_pct'] = float(share_pct)
+
+                if is_top_n:
+                    answer = f"Top {row_count} revenue items: {_format_currency(shown_total)} ({share_pct:.0f}% of {_format_currency(pop_total)} total ARR)."
+                    if share_pct > 50:
+                        answer += f" Revenue is concentrated in top {row_count} accounts."
+                else:
+                    answer = f"Your current ARR is {_format_currency(pop_total)} across {pop_count} deals/opportunities."
+
+                if pop_count < 10:
+                    limitations.append(f"Based on {pop_count} records in demo data; production may differ")
             else:
                 aggregations['row_count'] = row_count
                 answer = f"Found {row_count} revenue records."
                 limitations.append("No amount column found for aggregation")
 
         elif 'delta' in defn_id or 'mom' in defn_id or 'change' in defn_id:
+            pop_count = len(pop_df)
             aggregations['row_count'] = row_count
-            if amount_cols and 'delta' in ''.join(df.columns).lower():
-                # Try to find delta columns
-                delta_cols = [c for c in df.columns if 'delta' in c.lower()]
-                if delta_cols:
-                    delta_sum = pd.to_numeric(df[delta_cols[0]], errors='coerce').sum()
-                    aggregations['net_delta'] = float(delta_sum)
-                    direction = "increased" if delta_sum > 0 else "decreased" if delta_sum < 0 else "unchanged"
-                    answer = f"Month-over-month: costs {direction} by {_format_currency(abs(delta_sum))} across {row_count} vendors."
+            aggregations['population_count'] = pop_count
+
+            delta_cols = [c for c in pop_df.columns if 'delta' in c.lower()]
+            if delta_cols:
+                pop_delta_sum = pd.to_numeric(pop_df[delta_cols[0]], errors='coerce').sum()
+                shown_delta_sum = pd.to_numeric(df[delta_cols[0]], errors='coerce').sum()
+                aggregations['population_total'] = float(abs(pop_delta_sum))
+                aggregations['shown_total'] = float(abs(shown_delta_sum))
+
+                share_pct = (abs(shown_delta_sum) / abs(pop_delta_sum) * 100) if pop_delta_sum != 0 else 100
+                aggregations['share_of_total_pct'] = float(share_pct)
+
+                direction = "increased" if pop_delta_sum > 0 else "decreased" if pop_delta_sum < 0 else "unchanged"
+                if is_top_n:
+                    answer = f"Top {row_count} changes: {_format_currency(abs(shown_delta_sum))} ({share_pct:.0f}% of total change). Net: costs {direction} by {_format_currency(abs(pop_delta_sum))}."
                 else:
-                    total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
-                    aggregations['total_value'] = float(total)
-                    answer = f"Month-over-month analysis: {row_count} vendors with {_format_currency(total)} total spend."
+                    answer = f"Month-over-month: costs {direction} by {_format_currency(abs(pop_delta_sum))} across {pop_count} vendors."
+            elif amount_cols:
+                pop_total = pd.to_numeric(pop_df[amount_cols[0]], errors='coerce').sum()
+                shown_total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['population_total'] = float(pop_total)
+                aggregations['shown_total'] = float(shown_total)
+
+                share_pct = (shown_total / pop_total * 100) if pop_total > 0 else 100
+                aggregations['share_of_total_pct'] = float(share_pct)
+
+                if is_top_n:
+                    answer = f"Top {row_count} vendors: {_format_currency(shown_total)} ({share_pct:.0f}% of {_format_currency(pop_total)} total spend)."
+                else:
+                    answer = f"Month-over-month analysis: {pop_count} vendors with {_format_currency(pop_total)} total spend."
             else:
-                answer = f"Month-over-month analysis: {row_count} records."
+                aggregations['share_of_total_pct'] = 100.0  # Default
+                answer = f"Month-over-month analysis: {pop_count} records."
                 limitations.append("Delta columns not available; showing raw records")
 
         elif 'burn' in defn_id:
+            pop_count = len(pop_df)
             if amount_cols:
-                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
-                monthly_avg = total / 12 if total > 0 else 0
-                aggregations['total_spend'] = float(total)
+                pop_total = pd.to_numeric(pop_df[amount_cols[0]], errors='coerce').sum()
+                shown_total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                monthly_avg = pop_total / 12 if pop_total > 0 else 0
+                aggregations['population_total'] = float(pop_total)
+                aggregations['shown_total'] = float(shown_total)
                 aggregations['monthly_avg'] = float(monthly_avg)
-                answer = f"Burn rate: approximately {_format_currency(monthly_avg)}/month ({_format_currency(total)} annualized)."
+                aggregations['population_count'] = pop_count
+
+                share_pct = (shown_total / pop_total * 100) if pop_total > 0 else 0
+                aggregations['share_of_total_pct'] = float(share_pct)
+
+                if is_top_n:
+                    answer = f"Top {row_count} burn items: {_format_currency(shown_total)} ({share_pct:.0f}% of {_format_currency(pop_total)} total annual spend)."
+                    answer += f" Monthly burn rate: ~{_format_currency(monthly_avg)}/month."
+                else:
+                    answer = f"Burn rate: approximately {_format_currency(monthly_avg)}/month ({_format_currency(pop_total)} annualized)."
                 limitations.append("Burn rate estimated from available spend data; actual runway depends on cash reserves")
             else:
                 answer = f"Found {row_count} cost records."
                 limitations.append("No cost column found for burn calculation")
 
         elif 'unallocated' in defn_id:
-            # Unallocated spend - explain what it means
+            pop_count = len(pop_df)
             aggregations['resource_count'] = row_count
+            aggregations['population_count'] = pop_count
             if amount_cols:
-                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
-                aggregations['unallocated_spend'] = float(total)
-                answer = f"Unallocated spend: {_format_currency(total)} across {row_count} resources without cost center assignment."
-                if total > 10000:
-                    answer += " Consider tagging these resources to improve cost attribution."
+                pop_total = pd.to_numeric(pop_df[amount_cols[0]], errors='coerce').sum()
+                shown_total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['population_unallocated_spend'] = float(pop_total)
+                aggregations['shown_unallocated_spend'] = float(shown_total)
+
+                share_pct = (shown_total / pop_total * 100) if pop_total > 0 else 0
+                aggregations['share_of_total_pct'] = float(share_pct)
+
+                if is_top_n:
+                    answer = f"Top {row_count} unallocated items: {_format_currency(shown_total)} ({share_pct:.0f}% of {_format_currency(pop_total)} total unallocated)."
+                    answer += f" {pop_count} resources total need cost center assignment."
+                else:
+                    answer = f"Unallocated spend: {_format_currency(pop_total)} across {pop_count} resources without cost center assignment."
+                    if pop_total > 10000:
+                        answer += " Consider tagging these resources to improve cost attribution."
             else:
-                answer = f"Found {row_count} unallocated resources."
+                answer = f"Found {row_count} unallocated resources out of {pop_count} total."
             limitations.append("Definition: Resources lacking cost center or project tags")
 
         elif 'spend' in defn_id or 'cost' in defn_id:
+            pop_count = len(pop_df)
             if amount_cols:
-                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
-                aggregations['total_spend'] = float(total)
+                pop_total = pd.to_numeric(pop_df[amount_cols[0]], errors='coerce').sum()
+                shown_total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['population_total'] = float(pop_total)
+                aggregations['population_count'] = pop_count
+                aggregations['shown_total'] = float(shown_total)
                 aggregations['transaction_count'] = row_count
-                avg_per_txn = total / row_count if row_count > 0 else 0
-                answer = f"Total spend: {_format_currency(total)} across {row_count} transactions (avg {_format_currency(avg_per_txn)} each)."
+                avg_per_txn = shown_total / row_count if row_count > 0 else 0
+
+                share_pct = (shown_total / pop_total * 100) if pop_total > 0 else 0
+                aggregations['share_of_total_pct'] = float(share_pct)
+
+                if is_top_n:
+                    answer = f"Top {row_count} spend items: {_format_currency(shown_total)} ({share_pct:.0f}% of {_format_currency(pop_total)} total spend)."
+                    if share_pct > 50:
+                        answer += f" Spend is concentrated in top items."
+                    else:
+                        answer += f" Spend is distributed across {pop_count} total items."
+                else:
+                    answer = f"Total spend: {_format_currency(pop_total)} across {pop_count} transactions (avg {_format_currency(avg_per_txn)} each)."
             else:
                 answer = f"Found {row_count} spend records."
                 limitations.append("No cost column found for aggregation")
@@ -164,30 +248,78 @@ def _compute_summary(df: pd.DataFrame, definition: Definition) -> ComputedSummar
         elif 'customer' in defn_id or 'account' in defn_id:
             aggregations['customer_count'] = row_count
             if amount_cols:
-                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
-                avg_revenue = total / row_count if row_count > 0 else 0
-                aggregations['total_revenue'] = float(total)
+                # Compute totals on FULL population
+                pop_total = pd.to_numeric(pop_df[amount_cols[0]], errors='coerce').sum()
+                pop_count = len(pop_df)
+                aggregations['population_total'] = float(pop_total)
+                aggregations['population_count'] = pop_count
+
+                # Compute for displayed rows
+                shown_total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                avg_revenue = shown_total / row_count if row_count > 0 else 0
+                aggregations['shown_total'] = float(shown_total)
                 aggregations['avg_per_customer'] = float(avg_revenue)
-                # Ranking with impact
-                answer = f"Top {row_count} customers: {_format_currency(total)} total revenue (avg {_format_currency(avg_revenue)} per customer)."
+
+                # Calculate share of total
+                share_pct = (shown_total / pop_total * 100) if pop_total > 0 else 0
+                aggregations['share_of_total_pct'] = float(share_pct)
+
+                # Build answer with interpretation
+                if is_top_n:
+                    answer = f"Top {row_count} customers represent {_format_currency(shown_total)} ({share_pct:.0f}% of {_format_currency(pop_total)} total portfolio)."
+                    # Interpretation
+                    if share_pct > 50:
+                        answer += f" High concentration: top {row_count} drive majority of revenue."
+                    elif share_pct > 25:
+                        answer += f" Moderate concentration in top accounts."
+                    else:
+                        answer += f" Revenue is well-distributed across customer base."
+                else:
+                    answer = f"Total revenue: {_format_currency(pop_total)} across {pop_count} customers (avg {_format_currency(avg_revenue)} each)."
+
                 # Top customer concentration
-                if row_count >= 1 and amount_cols:
+                if row_count >= 1:
                     top_val = pd.to_numeric(df[amount_cols[0]], errors='coerce').iloc[0] if len(df) > 0 else 0
-                    if total > 0:
-                        top_pct = (top_val / total) * 100
-                        if top_pct > 25:
-                            answer += f" Top customer represents {top_pct:.0f}% of shown revenue."
+                    if pop_total > 0:
+                        top_pct = (top_val / pop_total) * 100
+                        aggregations['top_customer_pct'] = float(top_pct)
+                        if top_pct > 20:
+                            answer += f" Largest customer ({_format_currency(top_val)}) is {top_pct:.0f}% of total."
             else:
                 answer = f"Found {row_count} customers."
                 limitations.append("No revenue column for ranking impact")
 
+            # Demo data caveat
+            if pop_count < 20:
+                limitations.append(f"Based on {pop_count} customers in demo dataset; production data may differ")
+
         elif 'pipeline' in defn_id or 'deal' in defn_id:
             aggregations['deal_count'] = row_count
             if amount_cols:
-                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
-                aggregations['pipeline_value'] = float(total)
-                avg_deal = total / row_count if row_count > 0 else 0
-                answer = f"Pipeline: {row_count} deals worth {_format_currency(total)} (avg deal size: {_format_currency(avg_deal)})."
+                # Full population totals
+                pop_total = pd.to_numeric(pop_df[amount_cols[0]], errors='coerce').sum()
+                pop_count = len(pop_df)
+                aggregations['population_total'] = float(pop_total)
+                aggregations['population_count'] = pop_count
+
+                # Shown deals
+                shown_total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                avg_deal = shown_total / row_count if row_count > 0 else 0
+                aggregations['shown_total'] = float(shown_total)
+                aggregations['avg_deal_size'] = float(avg_deal)
+
+                share_pct = (shown_total / pop_total * 100) if pop_total > 0 else 0
+                aggregations['share_of_total_pct'] = float(share_pct)
+
+                if is_top_n:
+                    answer = f"Top {row_count} deals: {_format_currency(shown_total)} ({share_pct:.0f}% of {_format_currency(pop_total)} total pipeline)."
+                    if share_pct > 50:
+                        answer += f" Pipeline heavily weighted toward top opportunities."
+                    else:
+                        answer += f" Pipeline is diversified across {pop_count} total deals."
+                else:
+                    answer = f"Pipeline: {pop_count} deals worth {_format_currency(pop_total)} (avg deal: {_format_currency(avg_deal)})."
+
                 # Stage breakdown if available
                 if 'Stage' in df.columns or 'stage' in df.columns:
                     stage_col = 'Stage' if 'Stage' in df.columns else 'stage'
@@ -197,53 +329,99 @@ def _compute_summary(df: pd.DataFrame, definition: Definition) -> ComputedSummar
                 answer = f"Pipeline contains {row_count} deals."
                 limitations.append("No amount column for pipeline value")
 
+            if len(pop_df) < 20:
+                limitations.append(f"Based on {len(pop_df)} deals in demo dataset")
+
         elif 'zombie' in defn_id or 'idle' in defn_id:
+            pop_count = len(pop_df)
             aggregations['resource_count'] = row_count
+            aggregations['population_count'] = pop_count
             if amount_cols:
-                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
-                aggregations['wasted_spend'] = float(total)
-                answer = f"Zombie resources: {row_count} idle instances costing {_format_currency(total)}/month. These are candidates for termination or rightsizing."
+                pop_total = pd.to_numeric(pop_df[amount_cols[0]], errors='coerce').sum()
+                shown_total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['population_wasted_spend'] = float(pop_total)
+                aggregations['shown_wasted_spend'] = float(shown_total)
+
+                share_pct = (shown_total / pop_total * 100) if pop_total > 0 else 0
+                aggregations['share_of_total_pct'] = float(share_pct)
+
+                if is_top_n:
+                    answer = f"Top {row_count} zombie resources: {_format_currency(shown_total)}/month ({share_pct:.0f}% of {_format_currency(pop_total)} total waste)."
+                    answer += f" {pop_count} total idle resources identified."
+                else:
+                    answer = f"Zombie resources: {pop_count} idle instances costing {_format_currency(pop_total)}/month."
+                answer += " Candidates for termination or rightsizing."
             else:
-                answer = f"Found {row_count} zombie/idle resources."
+                answer = f"Found {row_count} zombie/idle resources out of {pop_count} total."
             limitations.append("Definition: Resources with no meaningful activity in the observation period")
 
         elif 'identity_gap' in defn_id or 'ownership' in defn_id:
+            pop_count = len(pop_df)
             aggregations['resource_count'] = row_count
+            aggregations['population_count'] = pop_count
             if amount_cols:
-                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
-                aggregations['unowned_spend'] = float(total)
-                answer = f"Ownership gaps: {row_count} resources without clear owners, representing {_format_currency(total)} in spend."
+                pop_total = pd.to_numeric(pop_df[amount_cols[0]], errors='coerce').sum()
+                shown_total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['population_unowned_spend'] = float(pop_total)
+                aggregations['shown_unowned_spend'] = float(shown_total)
+
+                share_pct = (shown_total / pop_total * 100) if pop_total > 0 else 0
+                aggregations['share_of_total_pct'] = float(share_pct)
+
+                if is_top_n:
+                    answer = f"Top {row_count} ownership gaps: {_format_currency(shown_total)} ({share_pct:.0f}% of {_format_currency(pop_total)} total unowned spend)."
+                    answer += f" {pop_count} resources total need owner assignment."
+                else:
+                    answer = f"Ownership gaps: {pop_count} resources without clear owners, representing {_format_currency(pop_total)} in spend."
             else:
-                answer = f"Found {row_count} resources with ownership gaps."
+                answer = f"Found {row_count} resources with ownership gaps out of {pop_count} total."
             limitations.append("Definition: Resources lacking owner tag or assignment")
 
         elif 'finding' in defn_id or 'security' in defn_id:
+            pop_count = len(pop_df)
             aggregations['finding_count'] = row_count
-            if 'severity' in df.columns:
-                severity_counts = df['severity'].value_counts().to_dict()
-                aggregations['severity_breakdown'] = severity_counts
-                critical = severity_counts.get('critical', 0)
-                high = severity_counts.get('high', 0)
-                if critical > 0 or high > 0:
-                    answer = f"Security findings: {row_count} total ({critical} critical, {high} high priority). Critical/high findings require immediate attention."
+            aggregations['population_count'] = pop_count
+            if 'severity' in pop_df.columns:
+                pop_severity_counts = pop_df['severity'].value_counts().to_dict()
+                aggregations['population_severity_breakdown'] = pop_severity_counts
+                shown_severity_counts = df['severity'].value_counts().to_dict() if 'severity' in df.columns else {}
+                aggregations['severity_breakdown'] = shown_severity_counts
+
+                pop_critical = pop_severity_counts.get('critical', 0)
+                pop_high = pop_severity_counts.get('high', 0)
+
+                if is_top_n:
+                    answer = f"Showing top {row_count} findings. Total: {pop_count} findings ({pop_critical} critical, {pop_high} high)."
+                    if pop_critical > 0:
+                        answer += " Critical findings require immediate remediation."
                 else:
-                    answer = f"Security findings: {row_count} total. No critical or high severity issues found."
+                    if pop_critical > 0 or pop_high > 0:
+                        answer = f"Security findings: {pop_count} total ({pop_critical} critical, {pop_high} high priority). Critical/high findings require immediate attention."
+                    else:
+                        answer = f"Security findings: {pop_count} total. No critical or high severity issues found."
             else:
-                answer = f"Found {row_count} security findings."
+                answer = f"Found {row_count} security findings out of {pop_count} total."
 
         # SLO Attainment - with interpretation
         elif 'slo' in defn_id:
+            pop_count = len(pop_df)
             aggregations['service_count'] = row_count
+            aggregations['population_count'] = pop_count
+            aggregations['population_total'] = float(pop_count)  # For SLO, count is the "total"
+            aggregations['share_of_total_pct'] = float((row_count / pop_count * 100) if pop_count > 0 else 100)
+
             avg_attainment = None
-            if 'actual' in df.columns:
-                avg_attainment = pd.to_numeric(df['actual'], errors='coerce').mean()
+            if 'actual' in pop_df.columns:
+                avg_attainment = pd.to_numeric(pop_df['actual'], errors='coerce').mean()
                 aggregations['avg_attainment'] = float(avg_attainment)
-            if 'status' in df.columns:
-                status_counts = df['status'].value_counts().to_dict()
-                aggregations['status_breakdown'] = status_counts
-                passing = status_counts.get('passing', 0)
-                at_risk = status_counts.get('at_risk', 0)
-                breached = status_counts.get('breached', 0)
+            if 'status' in pop_df.columns:
+                pop_status_counts = pop_df['status'].value_counts().to_dict()
+                shown_status_counts = df['status'].value_counts().to_dict() if 'status' in df.columns else {}
+                aggregations['population_status_breakdown'] = pop_status_counts
+                aggregations['status_breakdown'] = shown_status_counts
+                passing = pop_status_counts.get('passing', 0)
+                at_risk = pop_status_counts.get('at_risk', 0)
+                breached = pop_status_counts.get('breached', 0)
 
                 # Interpretation
                 if breached > 0:
@@ -253,11 +431,14 @@ def _compute_summary(df: pd.DataFrame, definition: Definition) -> ComputedSummar
                 else:
                     health = "healthy"
 
-                answer = f"SLO health ({health}): {passing} passing, {at_risk} at risk, {breached} breached across {row_count} services."
+                if is_top_n:
+                    answer = f"Showing {row_count} of {pop_count} services. Overall health ({health}): {passing} passing, {at_risk} at risk, {breached} breached."
+                else:
+                    answer = f"SLO health ({health}): {passing} passing, {at_risk} at risk, {breached} breached across {pop_count} services."
                 if avg_attainment:
                     answer += f" Average attainment: {avg_attainment:.1f}%."
             else:
-                answer = f"Tracking SLOs for {row_count} services."
+                answer = f"Tracking SLOs for {row_count} of {pop_count} services."
             limitations.append("SLO = Service Level Objective; target uptime/performance metric")
 
         # DORA Metrics - Deploy Frequency with benchmark
@@ -352,36 +533,60 @@ def _compute_summary(df: pd.DataFrame, definition: Definition) -> ComputedSummar
 
         # Incidents with severity interpretation
         elif 'incident' in defn_id:
+            pop_count = len(pop_df)
             aggregations['incident_count'] = row_count
-            sev_answer = ""
-            if 'severity' in df.columns:
-                severity_counts = df['severity'].value_counts().to_dict()
-                aggregations['severity_breakdown'] = severity_counts
-                sev1 = severity_counts.get('sev1', 0)
-                sev2 = severity_counts.get('sev2', 0)
-                sev3 = severity_counts.get('sev3', 0)
+            aggregations['population_count'] = pop_count
+            aggregations['population_total'] = float(pop_count)  # For incidents, count is the "total"
+            aggregations['share_of_total_pct'] = float((row_count / pop_count * 100) if pop_count > 0 else 100)
 
-                if sev1 > 0:
-                    sev_answer = f"{row_count} incidents ({sev1} sev1 = critical, {sev2} sev2, {sev3} sev3)."
+            sev_answer = ""
+            if 'severity' in pop_df.columns:
+                pop_severity_counts = pop_df['severity'].value_counts().to_dict()
+                shown_severity_counts = df['severity'].value_counts().to_dict() if 'severity' in df.columns else {}
+                aggregations['population_severity_breakdown'] = pop_severity_counts
+                aggregations['severity_breakdown'] = shown_severity_counts
+                pop_sev1 = pop_severity_counts.get('sev1', 0)
+                pop_sev2 = pop_severity_counts.get('sev2', 0)
+                pop_sev3 = pop_severity_counts.get('sev3', 0)
+
+                if is_top_n:
+                    sev_answer = f"{row_count} of {pop_count} total incidents. Full breakdown: {pop_sev1} sev1, {pop_sev2} sev2, {pop_sev3} sev3."
+                elif pop_sev1 > 0:
+                    sev_answer = f"{pop_count} incidents ({pop_sev1} sev1 = critical, {pop_sev2} sev2, {pop_sev3} sev3)."
                 else:
-                    sev_answer = f"{row_count} incidents ({sev2} sev2, {sev3} sev3). No sev1 (critical) incidents."
+                    sev_answer = f"{pop_count} incidents ({pop_sev2} sev2, {pop_sev3} sev3). No sev1 (critical) incidents."
             else:
-                sev_answer = f"{row_count} incidents."
+                sev_answer = f"{row_count} of {pop_count} incidents."
 
             answer = f"Incident summary: {sev_answer}"
-            if 'status' in df.columns:
-                open_count = len(df[df['status'] == 'open'])
+            if 'status' in pop_df.columns:
+                open_count = len(pop_df[pop_df['status'] == 'open'])
                 if open_count > 0:
-                    answer += f" ⚠️ {open_count} currently open."
+                    answer += f" {open_count} currently open across all incidents."
+            limitations.append("Incident counts reflect observation period in demo data")
 
         else:
+            pop_count = len(pop_df)
             aggregations['row_count'] = row_count
+            aggregations['population_count'] = pop_count
             if amount_cols:
-                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
-                aggregations['total'] = float(total)
-                answer = f"Retrieved {row_count} records with total value {_format_currency(total)}."
+                pop_total = pd.to_numeric(pop_df[amount_cols[0]], errors='coerce').sum()
+                shown_total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['population_total'] = float(pop_total)
+                aggregations['shown_total'] = float(shown_total)
+
+                share_pct = (shown_total / pop_total * 100) if pop_total > 0 else 0
+                aggregations['share_of_total_pct'] = float(share_pct)
+
+                if is_top_n:
+                    answer = f"Top {row_count} of {pop_count} records: {_format_currency(shown_total)} ({share_pct:.0f}% of {_format_currency(pop_total)} total)."
+                else:
+                    answer = f"Retrieved {pop_count} records with total value {_format_currency(pop_total)}."
             else:
-                answer = f"Retrieved {row_count} records."
+                if is_top_n:
+                    answer = f"Showing top {row_count} of {pop_count} total records."
+                else:
+                    answer = f"Retrieved {pop_count} records."
             limitations.append("Generic response; definition-specific summary not available")
 
     except Exception as e:
@@ -465,9 +670,16 @@ def execute_definition(request: ExecuteRequest) -> ExecuteResponse:
             result_df = _apply_filter(result_df, f)
     
     total_rows = len(result_df)
+    full_population_df = result_df.copy()  # Keep full data for summary calculation
+
+    # Apply limit AFTER keeping full population
     result_df = result_df.iloc[request.offset:request.offset + request.limit]
-    
-    summary = _compute_summary(result_df, definition)
+
+    # Compute summary with full population for accurate totals/share
+    # Treat as top-N if user explicitly requested a small limit (not the default 1000)
+    # This ensures share-of-total is computed even when limit >= total_rows
+    applied_limit = request.limit if request.limit <= 100 else None
+    summary = _compute_summary(result_df, definition, full_population_df, applied_limit)
     
     result_df = result_df.fillna("")
     data = result_df.to_dict(orient="records")
