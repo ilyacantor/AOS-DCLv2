@@ -71,7 +71,8 @@ def _compute_summary(
     df: pd.DataFrame,
     definition: Definition,
     full_population_df: pd.DataFrame | None = None,
-    applied_limit: int | None = None
+    applied_limit: int | None = None,
+    is_aggregate_query: bool = False
 ) -> ComputedSummary:
     """
     Compute aggregations and generate human-readable answer based on definition type.
@@ -87,6 +88,7 @@ def _compute_summary(
         definition: The BLL definition being executed
         full_population_df: The full dataset BEFORE limit was applied (for share calculation)
         applied_limit: The limit that was applied (e.g., 5 for "top 5")
+        is_aggregate_query: True if this is an AGGREGATE definition (returns totals, not ranked lists)
     """
     aggregations: dict[str, Any] = {}
     answer = ""
@@ -94,7 +96,13 @@ def _compute_summary(
 
     # Use full population for totals if available
     pop_df = full_population_df if full_population_df is not None else df
-    is_top_n = applied_limit is not None and len(df) <= applied_limit and full_population_df is not None
+    # AGGREGATE queries should NEVER be treated as top-N, regardless of limit
+    is_top_n = (
+        not is_aggregate_query and
+        applied_limit is not None and
+        len(df) <= applied_limit and
+        full_population_df is not None
+    )
 
     amount_cols = []
     for c in df.columns:
@@ -899,7 +907,16 @@ def execute_definition(request: ExecuteRequest) -> ExecuteResponse:
     # Treat as top-N if user explicitly requested a small limit (not the default 1000)
     # This ensures share-of-total is computed even when limit >= total_rows
     applied_limit = request.limit if request.limit <= 100 else None
-    summary = _compute_summary(result_df, definition, full_population_df, applied_limit)
+
+    # Check if this is an AGGREGATE definition (returns totals, not ranked lists)
+    # AGGREGATE definitions like finops.arr should never generate "Top N" summaries
+    is_aggregate_query = request.limit == 1000  # 1000 is the marker for aggregate queries
+    defn_id_lower = definition.definition_id.lower()
+    # Also check definition ID patterns for aggregate metrics
+    if any(pattern in defn_id_lower for pattern in ['arr', 'burn_rate', 'total', 'aggregate']):
+        is_aggregate_query = True
+
+    summary = _compute_summary(result_df, definition, full_population_df, applied_limit, is_aggregate_query)
     
     result_df = result_df.fillna("")
     data = result_df.to_dict(orient="records")
