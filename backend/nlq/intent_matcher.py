@@ -256,9 +256,20 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
 
             if "supports_delta" in required_capabilities:
                 if caps.supports_delta:
-                    # Strong boost for definitions that support delta when query needs it
-                    score += 1.5
-                    matched.append("cap:supports_delta")
+                    # Check if metric type matches (revenue vs cost)
+                    query_metric = operators.metric_type if operators else None
+                    defn_metric = caps.primary_metric
+
+                    if query_metric and defn_metric and query_metric != defn_metric:
+                        # Metric type mismatch - don't route to wrong definition
+                        # e.g., "revenue change MoM" shouldn't route to cost delta definition
+                        score *= 0.2
+                        capability_match = False
+                        matched.append(f"cap:metric_mismatch({query_metric}!={defn_metric})")
+                    else:
+                        # Strong boost for definitions that support delta when query needs it
+                        score += 1.5
+                        matched.append("cap:supports_delta")
                 else:
                     # Penalize definitions that don't support delta for delta queries
                     score *= 0.3

@@ -53,6 +53,7 @@ class ExtractedOperators:
     aggregation: Optional[AggregationOperator] = None
     requires_delta: bool = False  # True if query needs delta/change capability
     requires_trend: bool = False  # True if query needs trend capability
+    metric_type: Optional[str] = None  # "revenue", "cost", or None if ambiguous
 
 
 # Patterns for temporal operators
@@ -143,6 +144,28 @@ COMPARISON_PATTERNS = {
 }
 
 # Patterns for aggregation operators
+# Metric type patterns - what financial metric the query is about
+METRIC_TYPE_PATTERNS = {
+    "revenue": [
+        r'\brevenue\b',
+        r'\barr\b',
+        r'\bmrr\b',
+        r'\bsales\b',
+        r'\bincome\b',
+        r'\bearnings\b',
+        r'\bbookings\b',
+    ],
+    "cost": [
+        r'\bcosts?\b',
+        r'\bspend\b',
+        r'\bspending\b',
+        r'\bexpenses?\b',
+        r'\bvendor\b',
+        r'\bcloud\b',
+        r'\bsaas\b',
+    ],
+}
+
 AGGREGATION_PATTERNS = {
     AggregationOperator.TOTAL: [
         r'\btotal\b',
@@ -229,6 +252,22 @@ def extract_operators(question: str) -> ExtractedOperators:
                 break
         if result.aggregation:
             break
+
+    # Extract metric type (revenue vs cost)
+    revenue_score = 0
+    cost_score = 0
+    for pattern in METRIC_TYPE_PATTERNS["revenue"]:
+        if re.search(pattern, q_lower):
+            revenue_score += 1
+    for pattern in METRIC_TYPE_PATTERNS["cost"]:
+        if re.search(pattern, q_lower):
+            cost_score += 1
+
+    if revenue_score > cost_score:
+        result.metric_type = "revenue"
+    elif cost_score > revenue_score:
+        result.metric_type = "cost"
+    # If tied or both zero, leave as None (ambiguous)
 
     return result
 

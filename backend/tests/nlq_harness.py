@@ -471,11 +471,12 @@ class TemporalOperatorSuite:
     Test suite for temporal/change operator extraction.
 
     Validates that queries with temporal operators (MoM, QoQ, YoY) or change
-    operators (delta, variance, change) are correctly routed via capability
-    matching, NOT via keyword enumeration in definitions.
+    operators are correctly routed based on:
+    1. Operator detection (MoM, change, delta)
+    2. Metric type matching (revenue -> revenue definitions, cost -> cost definitions)
 
-    This suite generates many paraphrases of "change over time" queries and
-    verifies they all route to supports_delta=True definitions.
+    This suite generates paraphrases and verifies routing is based on capability
+    AND metric type matching, not keyword enumeration.
     """
 
     def __init__(self, seed: int = 42):
@@ -485,7 +486,19 @@ class TemporalOperatorSuite:
         """Generate n test cases for temporal operator routing."""
         tests = []
 
-        # Generate tests across all temporal template categories
+        # Metric to expected definition mapping
+        # Cost metrics -> cost delta definition (supports_delta=True)
+        # Revenue metrics -> revenue definition (current value, since no revenue delta exists)
+        METRIC_TO_DEFINITION = {
+            "costs": "finops.top_vendor_deltas_mom",
+            "spend": "finops.top_vendor_deltas_mom",
+            "spending": "finops.top_vendor_deltas_mom",
+            "cost": "finops.top_vendor_deltas_mom",
+            # Revenue metrics don't have a delta-capable definition
+            "revenue": "finops.arr",
+            "sales": "finops.arr",
+        }
+
         for _ in range(n):
             # Pick a temporal category
             category = self.rng.choice(list(TEMPORAL_TEMPLATES.keys()))
@@ -498,15 +511,101 @@ class TemporalOperatorSuite:
             # Generate the question
             question = template.format(metric=metric)
 
-            # All temporal/change queries should route to supports_delta definition
+            # Expected definition based on metric type
+            expected_def = METRIC_TO_DEFINITION.get(metric, "finops.top_vendor_deltas_mom")
+
             tests.append(GeneratedTest(
                 question=question,
-                expected_definition="finops.top_vendor_deltas_mom",  # The delta-capable definition
+                expected_definition=expected_def,
                 expected_limit=None,
                 defn_meta=None,
             ))
 
         return tests
+
+
+class GroundTruthSuite:
+    """
+    Test suite for validating NLQ outputs against Farm ground truth.
+
+    This suite:
+    1. Generates a deterministic scenario from Farm
+    2. Executes NLQ queries
+    3. Compares results against Farm ground truth metrics
+    4. Reports any discrepancies
+
+    Requires Farm API to be available.
+    """
+
+    def __init__(self, seed: int = 12345, scale: str = "medium"):
+        self.seed = seed
+        self.scale = scale
+        self.scenario = None
+        self.client = None
+
+    def setup(self) -> bool:
+        """Initialize Farm client and generate scenario. Returns False if Farm unavailable."""
+        try:
+            from backend.tests.farm_ground_truth import FarmGroundTruthClient
+            self.client = FarmGroundTruthClient()
+
+            if not self.client.health_check():
+                return False
+
+            self.scenario = self.client.generate_scenario(seed=self.seed, scale=self.scale)
+            return True
+        except Exception as e:
+            print(f"Farm setup failed: {e}")
+            return False
+
+    def generate(self, n: int) -> List[GeneratedTest]:
+        """Generate ground truth test cases."""
+        tests = []
+
+        # Test 1: Top N customers
+        for limit in [3, 5, 10]:
+            tests.append(GeneratedTest(
+                question=f"Show me the top {limit} customers by revenue",
+                expected_definition="crm.top_customers",
+                expected_limit=limit,
+                defn_meta=DefnMeta(
+                    definition_id="crm.top_customers",
+                    entity_type="customer",
+                    metric_type="revenue",
+                ),
+            ))
+
+        # Test 2: Revenue MoM
+        tests.append(GeneratedTest(
+            question="How did revenue change month-over-month?",
+            expected_definition="finops.top_vendor_deltas_mom",
+            defn_meta=DefnMeta(
+                definition_id="finops.top_vendor_deltas_mom",
+                metric_type="cost",
+            ),
+        ))
+
+        # Test 3: Total revenue
+        tests.append(GeneratedTest(
+            question="What is our total revenue?",
+            expected_definition="finops.arr",
+            defn_meta=DefnMeta(
+                definition_id="finops.arr",
+                metric_type="revenue",
+            ),
+        ))
+
+        # Test 4: Zombie resources
+        tests.append(GeneratedTest(
+            question="Show me zombie resources",
+            expected_definition="aod.zombies_overview",
+            defn_meta=DefnMeta(
+                definition_id="aod.zombies_overview",
+                entity_type="resource",
+            ),
+        ))
+
+        return tests[:n]  # Limit to requested count
 
 
 # =============================================================================

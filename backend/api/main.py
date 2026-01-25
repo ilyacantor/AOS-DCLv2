@@ -590,8 +590,24 @@ def nlq_ask(request: NLQAskRequest):
 
         logger.info(f"[NLQ] Matched '{question}' to {definition_id} (conf={confidence:.2f}, ambiguous={match_result.is_ambiguous})")
 
+        # Check for delta capability mismatch (query needs delta but definition doesn't support)
+        delta_capability_mismatch = False
+        if match_result.operators and match_result.operators.requires_delta:
+            from backend.bll.definitions import get_definition
+            matched_defn = get_definition(definition_id)
+            if matched_defn and hasattr(matched_defn, 'capabilities'):
+                if not matched_defn.capabilities.supports_delta:
+                    delta_capability_mismatch = True
+                    logger.info(f"[NLQ] Delta capability mismatch: query needs delta but {definition_id} doesn't support it")
+
         # Step 1.5: Check for ambiguity - return NEEDS_CLARIFICATION if ambiguous
-        if match_result.is_ambiguous and len(match_result.top_candidates) >= 2:
+        # But don't treat as ambiguous if we have a clear metric type match (e.g., revenue query -> ARR)
+        is_truly_ambiguous = match_result.is_ambiguous and len(match_result.top_candidates) >= 2
+        if delta_capability_mismatch:
+            # We know what they want (e.g., revenue), just can't do MoM - not ambiguous
+            is_truly_ambiguous = False
+
+        if is_truly_ambiguous:
             # Build clarification response with top candidates
             candidates = []
             for candidate in match_result.top_candidates[:4]:
@@ -651,6 +667,10 @@ def nlq_ask(request: NLQAskRequest):
 
         # Step 4: Build response with caveats
         caveats = []
+        if delta_capability_mismatch:
+            # User asked for MoM/change but we don't have temporal data
+            metric = match_result.operators.metric_type if match_result.operators else "this metric"
+            caveats.append(f"Month-over-month comparison not available for {metric}; showing current values")
         if exec_args.limit:
             caveats.append(f"Limited to top {exec_args.limit}")
             # Note: Ordering applied from definition's default_order_by
