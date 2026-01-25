@@ -123,10 +123,23 @@ class ExecuteMetadata(BaseModel):
 
 
 class ComputedSummary(BaseModel):
-    """Pre-computed aggregations and answer summary."""
-    answer: str  # Human-readable answer like "Your current ARR is $1,230,000"
-    aggregations: Dict[str, Any] = {}  # e.g., {"total_arr": 1230000, "deal_count": 7}
+    """
+    Pre-computed aggregations for NLQ consumption.
+
+    Contract:
+    - aggregations: Required metrics (population_total, population_count, topn_total, share_of_total_pct)
+    - warnings: List of warnings (e.g., missing limit for ranked queries)
+    - debug_summary: Optional human-readable summary (NOT for display in NLQ answers)
+
+    The 'answer' field is DEPRECATED - BLL/NLQ should generate human-readable
+    text from aggregations, NOT use this field.
+    """
+    aggregations: Dict[str, Any] = {}  # e.g., {"population_total": 1230000, "topn_total": 500000}
+    warnings: List[str] = []  # e.g., ["No limit specified for ranked list query"]
+    debug_summary: Optional[str] = None  # For debugging only, NOT for NLQ display
     currency: Optional[str] = "USD"
+    # DEPRECATED - use debug_summary. Kept for backward compatibility.
+    answer: Optional[str] = None
 
 
 class ExecuteResponse(BaseModel):

@@ -618,11 +618,30 @@ def _compute_summary(
         answer = f"Retrieved {row_count} records."
         limitations.append(f"Summary computation error: {str(e)}")
 
-    # Append limitations to answer if any
+    # Build warnings list
+    warnings: list[str] = []
+
+    # Check for ranked-list definitions without limit
+    ranked_list_patterns = ['top_', 'customer', 'vendor', 'deal', 'pipeline', 'zombie', 'identity_gap', 'finding']
+    is_ranked_definition = any(p in defn_id for p in ranked_list_patterns)
+
+    if is_ranked_definition and applied_limit is None:
+        warnings.append("No limit specified for ranked list query; returning full dataset")
+
+    # Append limitations to aggregations (for backward compat)
     if limitations:
         aggregations['limitations'] = limitations
 
-    return ComputedSummary(answer=answer, aggregations=aggregations)
+    # Use consistent naming: topn_total (when limited), population_total (always)
+    if 'shown_total' in aggregations and applied_limit is not None:
+        aggregations['topn_total'] = aggregations.get('shown_total')
+
+    return ComputedSummary(
+        aggregations=aggregations,
+        warnings=warnings,
+        debug_summary=answer,  # Answer is now debug-only
+        answer=answer,  # Keep for backward compat, but deprecated
+    )
 
 
 def _apply_definition_ordering(df: pd.DataFrame, definition: Definition, has_limit: bool = False) -> pd.DataFrame:
