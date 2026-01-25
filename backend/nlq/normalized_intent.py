@@ -41,6 +41,8 @@ class AggregationType(str, Enum):
     TREND = "trend"        # Over time
     INVENTORY = "inventory"  # List/enumeration
     HEALTH = "health"      # Status/health check
+    BREAKDOWN = "breakdown"  # Group by breakdown
+    AVERAGE = "average"      # Average value
 
 
 class RankDirection(str, Enum):
@@ -184,17 +186,55 @@ QUESTION_METRIC_PATTERNS = [
     (r"\bunallocated\b", "unallocated_spend"),  # "unallocated" alone is very specific
 
     # Customer COUNT patterns (before customer_revenue)
+    (r"\bcustomer\s+count\b", "customer_count"),
     (r"\b(?:new|lost)\s+customers?\b", "customer_count"),
-    (r"\bhow\s+many\s+customers?\b", "customer_count"),
-    (r"\bcustomers?\s+(?:last|this|past)\s+(?:month|quarter|year|week)\b", "customer_count"),
+    (r"\bhow\s+many\s+(?:active\s+)?customers?\b", "customer_count"),
+    (r"\bnumber\s+of\s+customers?\b", "customer_count"),
+    (r"\bcustomer\s+churn\b", "customer_churn"),
+    (r"\blost\s+customers?\b", "customer_churn"),
+    (r"\bcustomers?\s+count\s+(?:in\s+)?(?:past|last|this)\b", "customer_count"),
+
+    # Deal COUNT patterns (before deal_value)
+    (r"\bdeal\s+count\b", "deal_count"),
+    (r"\btotal\s+deal\s+count\b", "deal_count"),
+    (r"\bhow\s+many\s+deals?\b", "deal_count"),
+    (r"\bnumber\s+of\s+deals?\b", "deal_count"),
+    (r"\bdeals?\s+closed\b", "deals_closed"),
+
+    # Vendor COUNT patterns (before vendor_spend)
+    (r"\bhow\s+many\s+vendors?\b", "vendor_count"),
+    (r"\bnumber\s+of\s+vendors?\b", "vendor_count"),
+    (r"\bvendor\s+count\b", "vendor_count"),
+
+    # Resource COUNT patterns
+    (r"\bresource\s+(?:count|inventory)\b", "resource_count"),
+    (r"\bhow\s+many\s+resources?\b", "resource_count"),
+
+    # Concentration patterns (specific - before generic)
+    (r"\brevenue\s+concentration\b", "customer_concentration"),
+    (r"\bcustomer\s+concentration\b", "customer_concentration"),
+
+    # Unowned/orphaned patterns
+    (r"\bunowned\s+(?:spend|resources?)\b", "identity_gaps"),
+    (r"\borphaned?\s+(?:spend|resources?)\b", "identity_gaps"),
 
     # Budget/eating patterns
     (r"\bwhat's?\s+eating\s+(?:up\s+)?(?:our\s+)?budget\b", "spend"),
     (r"\beating\s+(?:up\s+)?(?:our\s+)?budget\b", "spend"),
 
+    # SaaS spend - before generic vendor patterns
+    (r"\bsaas\s+spend(?:ing)?\b", "saas_spend"),
+    (r"\bsaas\s+(?:spend|cost)s?\s+by\s+vendor\b", "saas_spend"),
+
+    # Vendor delta patterns - before generic vendor patterns
+    (r"\bvendor\s+(?:cost\s+)?(?:changes?|delta|increase|decrease)\s+mom\b", "vendor_spend_delta"),
+    (r"\btop\s+vendor\s+(?:cost\s+)?(?:changes?|deltas?)\b", "vendor_spend_delta"),
+
     # Vendor patterns
     (r"\bvendor[s]?\s+(?:increased|decreased)?\s*spend\b", "vendor_spend"),
     (r"\bspend\s+by\s+vendor\b", "vendor_spend"),
+    (r"\bcost\s+breakdown\s+by\s+vendor\b", "vendor_spend"),
+    (r"\bcost\s+breakdown\b", "vendor_spend"),  # implies vendor grouping
     (r"\btop\s+\d*\s*vendor[s]?\s+(?:by\s+)?(?:spend|cost)?\b", "vendor_spend"),
     (r"\bvendor[s]?\s+(?:by\s+)?(?:spend|cost)\b", "vendor_spend"),
     (r"\b(?:highest|lowest)\s+spending\s+vendors?\b", "vendor_spend"),
@@ -204,31 +244,40 @@ QUESTION_METRIC_PATTERNS = [
     # Finance specific
     (r"\bannual\s+recurring\s+revenue\b", "arr"),
     (r"\barr\b", "arr"),
-    (r"\bsaas\s+spend(?:ing)?\b", "saas_spend"),
     (r"\bcloud\s+(?:spend|cost)s?\b", "cloud_spend"),
+    (r"\binfrastructure\s+costs?\b", "cloud_spend"),
     (r"\bburn\s*rate\b", "burn_rate"),
+    (r"\bcash\s+burn\b", "burn_rate"),
 
     # Infrastructure - specific first
     (r"\b(?:worst|best)\s+(?:performing\s+)?services?\b", "slo_attainment"),
     (r"\b(?:mean\s+)?time\s+to\s+recover", "mttr"),
+    (r"\bincident\s+resolution\s+time\b", "mttr"),
+    (r"\brecovery\s+time\b", "mttr"),
     (r"\bmttr\b", "mttr"),
     (r"\blead\s+time\b", "lead_time"),
     (r"\bchange\s+failure\s+rate\b", "change_failure_rate"),
     (r"\bdeploy(?:ment)?(?:s)?\s+frequency\b", "deploy_frequency"),
+    (r"\bdeploy(?:ment)?\s+cadence\b", "deploy_frequency"),
     (r"\bhow\s+often\s+(?:do\s+)?(?:we\s+)?deploy\b", "deploy_frequency"),
+    (r"\breleases?\s+per\s+week\b", "deploy_frequency"),
     (r"\bslo[s]?\b", "slo_attainment"),
     (r"\buptime\b", "slo_attainment"),
     (r"\bavailability\b", "slo_attainment"),
     (r"\bservice\s+level\b", "slo_attainment"),
+    (r"\bincident\s+severity\b", "incident_severity"),
+    (r"\bworst\s+incidents?\b", "incident_severity"),
     (r"\bincident[s]?\b", "incident_count"),
     (r"\boutage[s]?\b", "incident_count"),
+    (r"\bissues?\b", "incident_count"),
 
     # Security
     (r"\b(?:critical\s+)?security\s+finding[s]?\b", "security_findings"),
     (r"\bfinding[s]?\s+by\s+severity\b", "security_findings"),
     (r"\bzombie[s]?\s+resource[s]?\b", "zombie_resources"),
+    (r"\bwasted\s+(?:cloud\s+)?resources?\b", "zombie_resources"),
     (r"\bzombie[s]?\b", "zombie_resources"),
-    (r"\bidle\s+resource[s]?\b", "zombie_resources"),
+    (r"\bidle\s+(?:infrastructure|resources?)\b", "zombie_resources"),
     (r"\bidle\b", "zombie_resources"),
     (r"\bidentity\s+gap[s]?\b", "identity_gaps"),
     (r"\bresource[s]?\s+without\s+owner", "identity_gaps"),
@@ -236,7 +285,6 @@ QUESTION_METRIC_PATTERNS = [
     # CRM - specific patterns
     (r"\btop\s+\d*\s*customer[s]?\b", "customer_revenue"),
     (r"\bcustomer[s]?\s+by\s+revenue\b", "customer_revenue"),
-    (r"\bcustomer\s+concentration\b", "customer_concentration"),
     (r"\bpipeline\b", "pipeline"),
     (r"\bdeal[s]?\s+(?:by\s+)?value\b", "deal_value"),
     (r"\bdeal[s]?\s+in\s+(?:the\s+)?pipeline\b", "pipeline"),
@@ -273,9 +321,11 @@ CALENDAR_PATTERNS = {
     r"\bthis\s+week\b": ("calendar", "calendar_week:current", "week"),
     r"\bytd\b": ("calendar", "calendar_ytd", "year"),
     r"\byear\s+to\s+date\b": ("calendar", "calendar_ytd", "year"),
+    r"\bsince\s+january\b": ("calendar", "calendar_ytd", "year"),
     r"\bq([1-4])\b": ("calendar", "calendar_quarter:Q\\1", "quarter"),
     r"\bmom\b": ("calendar", "calendar_month:mom", "month"),
     r"\bmonth\s+over\s+month\b": ("calendar", "calendar_month:mom", "month"),
+    r"\bmonth\s+on\s+month\b": ("calendar", "calendar_month:mom", "month"),
     r"\bqoq\b": ("calendar", "calendar_quarter:qoq", "quarter"),
     r"\bquarter\s+over\s+quarter\b": ("calendar", "calendar_quarter:qoq", "quarter"),
     r"\byoy\b": ("calendar", "calendar_year:yoy", "year"),
@@ -290,6 +340,17 @@ ROLLING_PATTERNS = {
     r"\blast\s+(\d+)\s+hours?\b": ("rolling", "rolling_hours:{}", "day"),
     r"\bpast\s+(\d+)\s+weeks?\b": ("rolling", "rolling_weeks:{}", "week"),
     r"\blast\s+(\d+)\s+weeks?\b": ("rolling", "rolling_weeks:{}", "week"),
+    r"\bpast\s+(\d+)\s+months?\b": ("rolling", "rolling_months:{}", "month"),
+    r"\blast\s+(\d+)\s+months?\b": ("rolling", "rolling_months:{}", "month"),
+}
+
+# Special "in the past X" patterns (without explicit number - implies approximate period)
+ROLLING_NAMED_PATTERNS = {
+    r"\b(?:in\s+)?(?:the\s+)?past\s+quarter\b": ("rolling", "rolling_days:90", "quarter"),
+    r"\bover\s+(?:the\s+)?past\s+year\b": ("rolling", "rolling_days:365", "year"),
+    r"\b(?:in\s+)?(?:the\s+)?past\s+year\b": ("rolling", "rolling_days:365", "year"),
+    r"\btrailing\s+twelve\s+months?\b": ("rolling", "rolling_months:12", "month"),
+    r"\bttm\b": ("rolling", "rolling_months:12", "month"),
 }
 
 
@@ -311,12 +372,18 @@ def extract_time_spec(question: str) -> tuple[TimeSpec, str]:
                 spec = spec.replace("\\1", match.group(1))
             return TimeSpec(mode=TimeMode.CALENDAR, spec=spec), grain
 
-    # Check rolling patterns
+    # Check rolling patterns with numbers
     for pattern, (mode, spec_template, grain) in ROLLING_PATTERNS.items():
         match = re.search(pattern, question_lower)
         if match:
             num = match.group(1)
             spec = spec_template.format(num)
+            return TimeSpec(mode=TimeMode.ROLLING, spec=spec), grain
+
+    # Check rolling named patterns (no number capture)
+    for pattern, (mode, spec, grain) in ROLLING_NAMED_PATTERNS.items():
+        match = re.search(pattern, question_lower)
+        if match:
             return TimeSpec(mode=TimeMode.ROLLING, spec=spec), grain
 
     # Default: no time scope
@@ -349,6 +416,10 @@ AGGREGATION_PATTERNS_ORDERED = [
     (r"\blist\s+(?:all\s+)?", AggregationType.INVENTORY),
     (r"\binventory\b", AggregationType.INVENTORY),
 
+    # Ranking patterns for specific entities (before count)
+    (r"\b(?:worst|best)\s+incidents?\b", AggregationType.RANKING),
+    (r"\b(?:worst|best)\s+(?:performing\s+)?(?:customers?|vendors?|deals?)\b", AggregationType.RANKING),
+
     # Count - explicit patterns (incidents by, findings by, customers last)
     (r"\bhow\s+many\b", AggregationType.COUNT),
     (r"\bnumber\s+of\b", AggregationType.COUNT),
@@ -375,6 +446,8 @@ AGGREGATION_PATTERNS_ORDERED = [
     # Delta/Change - specific patterns
     (r"\bchange[ds]?\s+mom\b", AggregationType.DELTA),
     (r"\bchange[ds]?\s+month\s+over\s+month\b", AggregationType.DELTA),
+    (r"\bmonth\s+on\s+month\s+(?:\w+\s+)?change\b", AggregationType.DELTA),  # "month on month revenue change"
+    (r"\bmonth\s+over\s+month\b", AggregationType.DELTA),
     (r"\bchange[ds]?\s+qoq\b", AggregationType.DELTA),
     (r"\bchange[ds]?\s+yoy\b", AggregationType.DELTA),
     (r"\bgrowth\b", AggregationType.DELTA),
@@ -388,6 +461,7 @@ AGGREGATION_PATTERNS_ORDERED = [
     (r"\bcomparison\b", AggregationType.DELTA),
     (r"\bhow\s+has\s+.*\s+changed\b", AggregationType.DELTA),
     (r"\bhas\s+changed\b", AggregationType.DELTA),
+    (r"\bhow\s+(?:much\s+)?did\s+.*\s+change\b", AggregationType.DELTA),
     (r"\blast\s+month\s+vs\s+this\s+month\b", AggregationType.DELTA),  # "spend last month vs this month"
 
     # Trend - SLO trending should be TREND not HEALTH
@@ -404,6 +478,22 @@ AGGREGATION_PATTERNS_ORDERED = [
     (r"\bwhat\s+percent(?:age)?\b", AggregationType.PERCENT),
     (r"\bbreach\s+rate\b", AggregationType.PERCENT),
 
+    # Breakdown - explicit breakdown requests only
+    # Note: "Revenue by customer" is TOTAL with group_by, NOT breakdown
+    (r"\bbreak\s*down\s+(?:by|costs?|spend|revenue)\b", AggregationType.BREAKDOWN),
+    (r"\bsplit\s+by\b", AggregationType.BREAKDOWN),
+    (r"\bgroup\s+(?:revenue|spend|costs?)\b", AggregationType.BREAKDOWN),  # "group revenue by" but not just "group by"
+    (r"\bmonthly\s+(?:spend|costs?|revenue)\s+for\s+(?:the\s+)?last\b", AggregationType.BREAKDOWN),
+    (r"\bsegment\s+(?:customers?|by)\b", AggregationType.BREAKDOWN),
+    (r"\baggregate\s+spending\s+by\b", AggregationType.BREAKDOWN),
+
+    # Average patterns
+    (r"\baverage\s+(?:time|cost|spend|revenue)\b", AggregationType.AVERAGE),
+    (r"\bavg\b", AggregationType.AVERAGE),
+    (r"\bmean\s+time\b", AggregationType.AVERAGE),
+    (r"\bhow\s+(?:long|often)\b", AggregationType.AVERAGE),
+    (r"\bcadence\b", AggregationType.AVERAGE),
+
     # Ranking - superlatives (check after more specific patterns)
     (r"\blargest\b", AggregationType.RANKING),
     (r"\bsmallest\b", AggregationType.RANKING),
@@ -413,6 +503,14 @@ AGGREGATION_PATTERNS_ORDERED = [
     (r"\bbest\b", AggregationType.RANKING),
     (r"\bbiggest\b", AggregationType.RANKING),
     (r"\bwhat's?\s+eating\b", AggregationType.RANKING),
+    (r"\brank\s+(?:by|vendors?|customers?)\b", AggregationType.RANKING),
+    (r"\bsort\s+(?:by|customers?|vendors?)\b", AggregationType.RANKING),
+    (r"\bcheapest\b", AggregationType.RANKING),
+    (r"\bmost\s+(?:expensive|profitable|revenue)\b", AggregationType.RANKING),
+    (r"\bleast\s+(?:expensive|profitable)\b", AggregationType.RANKING),
+    (r"\bnumber\s+one\b", AggregationType.RANKING),
+    (r"\bfirst\s+\d+\s+(?:\w+\s+)?who\b", AggregationType.RANKING),  # "first 5 customers who signed"
+    (r"\bwhich\s+(?:\w+\s+)?generate\b", AggregationType.RANKING),  # "which customers generate"
 ]
 
 # Legacy dict for backward compatibility (not used directly)
@@ -491,17 +589,34 @@ def extract_limit_and_direction(question: str) -> tuple[Optional[int], Optional[
 # =============================================================================
 
 GROUP_PATTERNS = {
+    # Explicit "by X" patterns
     r"\bby\s+customer\b": "customer",
     r"\bby\s+vendor\b": "vendor",
     r"\bby\s+service\b": "service",
     r"\bby\s+team\b": "team",
     r"\bby\s+region\b": "region",
+    r"\bby\s+country\b": "country",
     r"\bby\s+severity\b": "severity",
     r"\bby\s+stage\b": "stage",
+    r"\bby\s+month\b": "month",
+    r"\bby\s+department\b": "department",
+    r"\bby\s+tier\b": "tier",
+    r"\bby\s+product\b": "product",
+    r"\bby\s+sales\s+rep\b": "sales_rep",
     r"\bper\s+customer\b": "customer",
     r"\bper\s+vendor\b": "vendor",
     r"\bper\s+service\b": "service",
+    r"\bper\s+country\b": "country",
+    r"\bper\s+month\b": "month",
     r"\bbreakdown\s+by\b": None,  # Marker for grouping
+
+    # Implicit grouping patterns
+    r"\bwhich\s+customers?\b": "customer",
+    r"\bwhich\s+vendors?\b": "vendor",
+    r"\bwhich\s+services?\b": "service",
+    r"\bwhere\s+(?:we're|are\s+we)\s+spending\b": "vendor",  # "Show me where we're spending"
+    r"\bwhat's?\s+eating\b": "vendor",  # "What's eating our budget"
+    r"\bmonthly\s+(?:spend|revenue|cost).*last\s+\d+\s+months\b": "month",  # "Monthly spend for last 12 months"
 }
 
 ENTITY_PATTERNS = {
@@ -510,6 +625,22 @@ ENTITY_PATTERNS = {
     r"\bservices?\b": "service",
     r"\bdeals?\b": "deal",
     r"\bresources?\b": "resource",
+    r"\bproducts?\b": "product",
+    r"\bregions?\b": "region",
+    r"\baccounts?\b": "account",
+    r"\bitems?\b": "item",
+    r"\bincidents?\b": "incident",
+    r"\bemployees?\b": "employee",
+}
+
+# Aggregation types that should infer grouping from entities
+GROUPING_INFER_AGGREGATIONS = {
+    AggregationType.RANKING,
+    AggregationType.INVENTORY,
+    AggregationType.HEALTH,
+    AggregationType.DELTA,
+    AggregationType.PERCENT,
+    AggregationType.BREAKDOWN,
 }
 
 
@@ -518,17 +649,22 @@ def extract_grouping(question: str, aggregation: AggregationType) -> List[str]:
     question_lower = question.lower()
     groups = []
 
-    # Check explicit "by X" patterns
+    # Check explicit "by X" and implicit patterns
     for pattern, group in GROUP_PATTERNS.items():
         if group and re.search(pattern, question_lower):
-            groups.append(group)
+            if group not in groups:
+                groups.append(group)
 
-    # For ranking queries, infer grouping from entity
-    if aggregation == AggregationType.RANKING and not groups:
+    # For certain aggregation types, infer grouping from entity if not explicit
+    if aggregation in GROUPING_INFER_AGGREGATIONS and not groups:
         for pattern, group in ENTITY_PATTERNS.items():
             if re.search(pattern, question_lower):
                 groups.append(group)
                 break
+
+    # Special case: "concentration" implies customer grouping
+    if "concentration" in question_lower and not groups:
+        groups.append("customer")
 
     return groups
 
@@ -538,10 +674,33 @@ def extract_grouping(question: str, aggregation: AggregationType) -> List[str]:
 # =============================================================================
 
 AMBIGUOUS_PATTERNS = [
+    # Vague/too-broad queries
+    (r"^show\s+me\s+everything\b", "AMBIGUOUS_SCOPE: Query too broad - please specify what you want to see"),
+    (r"^give\s+me\s+all\s+(?:the\s+)?data\b", "AMBIGUOUS_SCOPE: Query too broad - please specify what you want to see"),
+    (r"^all\s+the\s+data\b", "AMBIGUOUS_SCOPE: Query too broad - please specify what you want to see"),
+    (r"^what's?\s+the\s+situation\??$", "AMBIGUOUS_METRIC: No specific metric or domain mentioned"),
+    (r"^how\s+are\s+we\s+doing\??$", "AMBIGUOUS_METRIC: Which aspect? (revenue, SLOs, pipeline, etc.)"),
+    (r"^how's?\s+everything\??$", "AMBIGUOUS_METRIC: No specific metric or domain mentioned"),
+    (r"^status\??$", "AMBIGUOUS_METRIC: Status of what? (incidents, SLOs, pipeline, etc.)"),
+    (r"^update\??$", "AMBIGUOUS_METRIC: Update on what?"),
+
+    # Fiscal year without specifics
+    (r"\bfiscal\s+year\b", "AMBIGUOUS_FISCAL_YEAR: Fiscal year boundaries not specified"),
+    (r"\bfy\s*\d*\b", "AMBIGUOUS_FISCAL_YEAR: Fiscal year boundaries not specified"),
+
+    # Quartile/percentile without metric
+    (r"\b(?:top|bottom)\s+quartile\s+of\s+performers?\b", "AMBIGUOUS_METRIC: No metric specified for 'performers'"),
+    (r"\b(?:top|bottom)\s+quartile\b(?!\s+(?:of|by)\s+(?:revenue|spend|cost|customers?))", "AMBIGUOUS_METRIC: Top quartile of what?"),
+    (r"\bpercentile\b(?!\s+(?:of|by)\s+\w+)", "AMBIGUOUS_METRIC: Percentile of what?"),
+
+    # Cross-domain correlations that need clarification
+    (r"\brevenue\s+impact\s+of\s+(?:outages?|incidents?)\b", "CORRELATION_ANALYSIS: Requires cross-domain correlation not currently supported"),
+    (r"\b(?:outages?|incidents?)\s+impact\s+(?:on\s+)?revenue\b", "CORRELATION_ANALYSIS: Requires cross-domain correlation not currently supported"),
+
+    # Basic metric-missing patterns
     (r"^what\s+changed\??$", "METRIC_UNDERSPECIFIED: What changed? (revenue, spend, headcount, etc.)"),
     (r"^what\s+changed\s+(?:mom|month\s+over\s+month|qoq|quarter\s+over\s+quarter|yoy|year\s+over\s+year)\??$", "METRIC_UNDERSPECIFIED: What changed? (revenue, spend, headcount, etc.)"),
     (r"^show\s+me\s+the\s+numbers\??$", "METRIC_UNDERSPECIFIED: Which numbers? (revenue, spend, customers, etc.)"),
-    (r"^how\s+are\s+we\s+doing\??$", "METRIC_UNDERSPECIFIED: Which aspect? (revenue, SLOs, pipeline, etc.)"),
     (r"^what's?\s+the\s+trend\??$", "METRIC_UNDERSPECIFIED: Trend of what? (revenue, spend, incidents, etc.)"),
     (r"^give\s+me\s+a\s+summary\??$", "METRIC_UNDERSPECIFIED: Summary of what? (financial, operational, etc.)"),
     (r"^top\s+performers?\??$", "METRIC_UNDERSPECIFIED: Top performers in what? (customers, vendors, services, etc.)"),
@@ -554,18 +713,50 @@ AMBIGUOUS_PATTERNS = [
 ]
 
 UNSUPPORTED_PATTERNS = [
-    (r"\bpredict\b", "FORECASTING_UNSUPPORTED: DCL does not support predictions"),
-    (r"\bforecast\b", "FORECASTING_UNSUPPORTED: DCL does not support predictions"),
-    (r"\bwhy\s+did\b", "CAUSAL_ANALYSIS_UNSUPPORTED: DCL cannot determine causation"),
-    (r"\bwhat\s+should\b", "RECOMMENDATION_UNSUPPORTED: DCL provides data, not recommendations"),
-    (r"\bdelete\s+(?:the\s+)?(?:old\s+)?", "WRITE_OPERATION_UNSUPPORTED: DCL is read-only"),
-    (r"\bupdate\s+(?:customer|record|data)", "WRITE_OPERATION_UNSUPPORTED: DCL is read-only"),
-    (r"\bsend\s+me\b", "SCHEDULING_UNSUPPORTED: DCL does not support scheduled reports"),
-    (r"\bemail\b", "COMMUNICATION_UNSUPPORTED: DCL cannot send emails"),
+    # Predictions/forecasting
+    (r"\bpredict\b", "PREDICTION_UNSUPPORTED: Forecasting not available"),
+    (r"\bforecast\b", "PREDICTION_UNSUPPORTED: Forecasting not available"),
+    (r"\bnext\s+(?:month|quarter|year)'?s?\s+(?:revenue|spend|cost)\b", "PREDICTION_UNSUPPORTED: Forecasting not available"),
+
+    # Causation queries
+    (r"\bwhy\s+did\b", "CAUSATION_QUERY: Cannot determine causation, only show data"),
+    (r"\bwhy\s+is\b", "CAUSATION_QUERY: Cannot determine causation, only show data"),
+    (r"\broot\s+cause\b", "CAUSATION_QUERY: Cannot determine root cause"),
+
+    # Recommendations/judgements
+    (r"\bwhat\s+should\b", "RECOMMENDATION_UNSUPPORTED: Cannot provide business recommendations"),
+    (r"\b(?:is|are)\s+(?:our\s+)?(?:revenue|costs?|spend)\s+(?:good|bad)\b", "JUDGEMENT_UNSUPPORTED: Cannot make value judgements without targets"),
+    (r"\b(?:good|bad)\s+or\s+(?:good|bad)\b", "JUDGEMENT_UNSUPPORTED: Cannot make value judgements without targets"),
+
+    # Write/mutation operations
+    (r"\bdelete\s+(?:all\s+)?(?:the\s+)?", "MUTATION_UNSUPPORTED: Cannot perform delete or modify actions"),
+    (r"\bfix\s+(?:the\s+)?(?:slo|incident|issue)\b", "MUTATION_UNSUPPORTED: Cannot perform remediation actions"),
+    (r"\bupdate\s+(?:customer|record|data)", "MUTATION_UNSUPPORTED: DCL is read-only"),
+    (r"\bremove\s+(?:the\s+)?", "MUTATION_UNSUPPORTED: DCL is read-only"),
+
+    # Communication/scheduling actions
+    (r"\bsend\s+(?:me\s+)?(?:an?\s+)?(?:email|report)\b", "ACTION_UNSUPPORTED: Cannot perform email or export actions"),
+    (r"\bemail\s+(?:me|us|the)\b", "ACTION_UNSUPPORTED: Cannot perform email or export actions"),
+    (r"\bschedule\s+(?:a\s+)?meeting\b", "ACTION_UNSUPPORTED: Cannot perform scheduling actions"),
+    (r"\bset\s+up\s+(?:a\s+)?meeting\b", "ACTION_UNSUPPORTED: Cannot perform scheduling actions"),
+
+    # Budget comparisons
     (r"\b(?:over|under)\s+budget\b", "BUDGET_COMPARISON_UNSUPPORTED: Budget targets not available"),
     (r"\bbudget\b.*\b(?:over|under|exceed)\b", "BUDGET_COMPARISON_UNSUPPORTED: Budget targets not available"),
     (r"^are\s+we\s+over\s+budget\??$", "BUDGET_COMPARISON_UNSUPPORTED: Budget targets not available"),
-    (r"^show\s+me\s+everything\b", "SCOPE_TOO_BROAD: Cannot show all data; please specify a metric"),
+
+    # Cross-domain comparisons that cannot be computed
+    (r"\bcompare\s+(?:aws|cloud)\s+(?:costs?|spend)\s+to\s+revenue\b", "CROSS_DOMAIN_COMPARISON: Cannot compare infrastructure costs to financial revenue"),
+    (r"\b(?:aws|cloud)\s+(?:costs?|spend)\s+(?:vs|versus|compared\s+to)\s+revenue\b", "CROSS_DOMAIN_COMPARISON: Cannot compare infrastructure costs to financial revenue"),
+    (r"\bdo\s+(?:high[- ]?spending|top)\s+customers?\s+have\s+(?:more|fewer)\s+(?:support\s+)?tickets?\b", "CROSS_DOMAIN_CORRELATION: Requires linking customer spend to support data"),
+    (r"\bcustomer\s+satisfaction\s+(?:vs|versus|and)\s+revenue\b", "CORRELATION_ANALYSIS: Cross-metric correlation not supported"),
+    (r"\brevenue\s+(?:vs|versus|and)\s+(?:customer\s+)?satisfaction\b", "CORRELATION_ANALYSIS: Cross-metric correlation not supported"),
+    (r"\btop\s+incidents?\s+(?:that\s+)?caused?\s+revenue\s+loss\b", "CROSS_DOMAIN_CAUSATION: Cannot link incidents to revenue impact"),
+    (r"\bincidents?\s+(?:that\s+)?caused?\s+revenue\b", "CROSS_DOMAIN_CAUSATION: Cannot link incidents to revenue impact"),
+    (r"\brevenue\s+by\s+cloud\s+provider\b", "INVALID_GROUPING: Revenue cannot be grouped by cloud provider"),
+    (r"\brevenue\s+by\s+(?:aws|gcp|azure)\b", "INVALID_GROUPING: Revenue cannot be grouped by cloud provider"),
+
+    # Scope too broad
     (r"^compare\s+everything\b", "SCOPE_TOO_BROAD: Cannot compare without specific metrics"),
 ]
 

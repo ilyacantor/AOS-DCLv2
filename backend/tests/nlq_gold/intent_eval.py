@@ -279,6 +279,13 @@ def evaluate_case(case: Dict[str, Any]) -> CaseScore:
     """
     Evaluate a single test case.
 
+    SCORING RULES:
+    - AMBIGUOUS expected + AMBIGUOUS actual = 100 (perfect restraint)
+    - AMBIGUOUS expected + RESOLVED actual = 0 (hallucination - hard fail)
+    - UNSUPPORTED expected + UNSUPPORTED actual = 100 (perfect restraint)
+    - RESOLVED expected + AMBIGUOUS actual = 30 max (over-cautious)
+    - RESOLVED cases: score based on intent primitives
+
     Returns CaseScore with detailed breakdown.
     """
     case_id = case.get("id", "unknown")
@@ -321,7 +328,87 @@ def evaluate_case(case: Dict[str, Any]) -> CaseScore:
     act_intent = actual_result.intent.to_dict() if actual_result.intent else None
     act_warning = actual_result.warning
 
-    # Calculate component scores
+    # SPECIAL CASE: AMBIGUOUS/UNSUPPORTED handling
+    # These are RESTRAINT cases - correct identification = full score
+    if exp_status in ("AMBIGUOUS", "UNSUPPORTED"):
+        if act_status == exp_status:
+            # Perfect restraint - correctly refused to answer
+            return CaseScore(
+                case_id=case_id,
+                question=question,
+                total_score=100.0,
+                time_score=35.0,
+                aggregation_score=20.0,
+                metric_score=15.0,
+                grouping_score=10.0,
+                ranking_score=10.0,
+                restraint_score=10.0,
+                expected_status=exp_status,
+                actual_status=act_status,
+                failures=[],
+                expected=expected,
+                actual=actual_result.to_dict() if actual_result else {},
+            )
+        elif act_status in ("RESOLVED", "RESOLVED_WITH_WARNING"):
+            # HALLUCINATION - answered when should have refused
+            failures.append(f"HALLUCINATION: expected {exp_status}, but system answered")
+            return CaseScore(
+                case_id=case_id,
+                question=question,
+                total_score=0.0,
+                time_score=0.0,
+                aggregation_score=0.0,
+                metric_score=0.0,
+                grouping_score=0.0,
+                ranking_score=0.0,
+                restraint_score=0.0,
+                expected_status=exp_status,
+                actual_status=act_status,
+                failures=failures,
+                expected=expected,
+                actual=actual_result.to_dict() if actual_result else {},
+            )
+        else:
+            # Different non-answer status (e.g., AMBIGUOUS vs UNSUPPORTED)
+            return CaseScore(
+                case_id=case_id,
+                question=question,
+                total_score=80.0,  # Partial credit - at least refused
+                time_score=28.0,
+                aggregation_score=16.0,
+                metric_score=12.0,
+                grouping_score=8.0,
+                ranking_score=8.0,
+                restraint_score=8.0,
+                expected_status=exp_status,
+                actual_status=act_status,
+                failures=[f"restraint: expected {exp_status}, got {act_status}"],
+                expected=expected,
+                actual=actual_result.to_dict() if actual_result else {},
+            )
+
+    # SPECIAL CASE: System refused when it should have answered
+    if exp_status in ("RESOLVED", "RESOLVED_WITH_WARNING") and act_status in ("AMBIGUOUS", "UNSUPPORTED"):
+        failures.append(f"OVER_CAUTIOUS: expected {exp_status}, but system refused")
+        return CaseScore(
+            case_id=case_id,
+            question=question,
+            total_score=30.0,  # Heavy penalty for over-caution
+            time_score=10.0,
+            aggregation_score=6.0,
+            metric_score=5.0,
+            grouping_score=3.0,
+            ranking_score=3.0,
+            restraint_score=3.0,
+            expected_status=exp_status,
+            actual_status=act_status,
+            failures=failures,
+            expected=expected,
+            actual=actual_result.to_dict() if actual_result else {},
+        )
+
+    # NORMAL CASE: Both expected and actual are RESOLVED variants
+    # Score based on intent primitives
     time_score = 0.0
     aggregation_score = 0.0
     metric_score = 0.0
@@ -370,15 +457,6 @@ def evaluate_case(case: Dict[str, Any]) -> CaseScore:
         )
         if ranking_score < 10:
             failures.append(f"ranking: expected limit={exp_intent.get('limit')}, got limit={act_intent.get('limit')}")
-
-    elif exp_status in ("AMBIGUOUS", "UNSUPPORTED"):
-        # For AMBIGUOUS/UNSUPPORTED, we don't expect an intent
-        if act_status in ("AMBIGUOUS", "UNSUPPORTED"):
-            # Correctly identified as problematic - give partial time/agg/metric scores
-            time_score = 17.5  # Half credit
-            aggregation_score = 10.0
-            metric_score = 7.5
-        # Don't penalize for not having intent when status is correct
 
     # Restraint (10 points)
     restraint_score = compare_restraint(exp_status, act_status, exp_warning, act_warning)

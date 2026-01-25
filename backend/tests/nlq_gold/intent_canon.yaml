@@ -1881,3 +1881,1163 @@ cases:
       status: UNSUPPORTED
       intent: null
       warning: "BUDGET_COMPARISON_UNSUPPORTED: Budget targets not available"
+
+  # =============================================================================
+  # ADVERSARIAL TIME CASES - Calendar vs Rolling Period Confusion
+  # =============================================================================
+  - id: adv_time_001
+    question: "Show me revenue for the past 30 days"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: day
+        time:
+          mode: rolling
+          spec: rolling_days:30
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_002
+    question: "Show me revenue for last month"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:last
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_003
+    question: "What were our costs in the last 7 days?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: spend
+        grain: day
+        time:
+          mode: rolling
+          spec: rolling_days:7
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_004
+    question: "What were our costs last week?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: spend
+        grain: week
+        time:
+          mode: calendar
+          spec: calendar_week:last
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_005
+    question: "Revenue in the past quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: quarter
+        time:
+          mode: rolling
+          spec: rolling_days:90
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_006
+    question: "Revenue last quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:last
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_007
+    question: "Spending over the past year"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: spend
+        grain: year
+        time:
+          mode: rolling
+          spec: rolling_days:365
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_008
+    question: "Spending last year"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: spend
+        grain: year
+        time:
+          mode: calendar
+          spec: calendar_year:last
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_009
+    question: "Revenue trend over the past 6 months"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: month
+        time:
+          mode: rolling
+          spec: rolling_months:6
+        aggregation: trend
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_010
+    question: "Revenue trend since January"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_ytd
+        aggregation: trend
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_011
+    question: "Monthly spend for the last 12 months"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: spend
+        grain: month
+        time:
+          mode: rolling
+          spec: rolling_months:12
+        aggregation: breakdown
+        group_by: [month]
+        limit: null
+        direction: null
+
+  - id: adv_time_012
+    question: "Spend by month this calendar year"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: spend
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_ytd
+        aggregation: breakdown
+        group_by: [month]
+        limit: null
+        direction: null
+
+  - id: adv_time_013
+    question: "Customer count in past 90 days"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: customer_count
+        grain: day
+        time:
+          mode: rolling
+          spec: rolling_days:90
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_014
+    question: "Customer count this quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: customer_count
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_015
+    question: "Deals closed in the past two weeks"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: deals_closed
+        grain: week
+        time:
+          mode: rolling
+          spec: rolling_weeks:2
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_016
+    question: "Deals closed last fortnight"
+    expected:
+      status: RESOLVED_WITH_WARNING
+      intent:
+        metric: deals_closed
+        grain: week
+        time:
+          mode: rolling
+          spec: rolling_weeks:2
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+      warning: "COLLOQUIAL_TIME: Interpreted 'fortnight' as 2 weeks"
+
+  - id: adv_time_017
+    question: "Revenue in Q1"
+    expected:
+      status: RESOLVED_WITH_WARNING
+      intent:
+        metric: revenue
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:q1
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+      warning: "AMBIGUOUS_YEAR: Assuming current year for Q1"
+
+  - id: adv_time_018
+    question: "Revenue in Q1 2024"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:q1_2024
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_019
+    question: "What's the trailing twelve months revenue?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: month
+        time:
+          mode: rolling
+          spec: rolling_months:12
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_time_020
+    question: "Show fiscal year revenue"
+    expected:
+      status: AMBIGUOUS
+      intent: null
+      warning: "AMBIGUOUS_FISCAL_YEAR: Fiscal year boundaries not specified"
+
+  # =============================================================================
+  # ADVERSARIAL RANKING/GROUPING CASES - Paraphrases and Edge Cases
+  # =============================================================================
+  - id: adv_rank_001
+    question: "Which customers generate the most revenue?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: customer_revenue
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: ranking
+        group_by: [customer]
+        limit: null
+        direction: top
+
+  - id: adv_rank_002
+    question: "Our highest-spending customers"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: customer_revenue
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: ranking
+        group_by: [customer]
+        limit: null
+        direction: top
+
+  - id: adv_rank_003
+    question: "What are the bottom 3 performing regions?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: ranking
+        group_by: [region]
+        limit: 3
+        direction: bottom
+
+  - id: adv_rank_004
+    question: "Show me the least profitable products"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: profit
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: ranking
+        group_by: [product]
+        limit: null
+        direction: bottom
+
+  - id: adv_rank_005
+    question: "Rank vendors by cost"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: vendor_spend
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: ranking
+        group_by: [vendor]
+        limit: null
+        direction: top
+
+  - id: adv_rank_006
+    question: "Who are the cheapest vendors?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: vendor_spend
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: ranking
+        group_by: [vendor]
+        limit: null
+        direction: bottom
+
+  - id: adv_rank_007
+    question: "Sort customers by spend descending"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: customer_spend
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: ranking
+        group_by: [customer]
+        limit: null
+        direction: top
+
+  - id: adv_rank_008
+    question: "List employees by tenure ascending"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: employee_tenure
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: ranking
+        group_by: [employee]
+        limit: null
+        direction: bottom
+
+  - id: adv_rank_009
+    question: "Break down costs by department"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: spend
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: breakdown
+        group_by: [department]
+        limit: null
+        direction: null
+
+  - id: adv_rank_010
+    question: "Revenue split by region and product"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: breakdown
+        group_by: [region, product]
+        limit: null
+        direction: null
+
+  - id: adv_rank_011
+    question: "Top 10 accounts sorted by deal size"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: deal_size
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: ranking
+        group_by: [account]
+        limit: 10
+        direction: top
+
+  - id: adv_rank_012
+    question: "First five customers who signed this year"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: customer_signup
+        grain: year
+        time:
+          mode: calendar
+          spec: calendar_ytd
+        aggregation: ranking
+        group_by: [customer]
+        limit: 5
+        direction: top
+
+  - id: adv_rank_013
+    question: "Group revenue by sales rep"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: breakdown
+        group_by: [sales_rep]
+        limit: null
+        direction: null
+
+  - id: adv_rank_014
+    question: "Show revenue per country"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: breakdown
+        group_by: [country]
+        limit: null
+        direction: null
+
+  - id: adv_rank_015
+    question: "Aggregate spending by vendor category"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: spend
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: breakdown
+        group_by: [vendor_category]
+        limit: null
+        direction: null
+
+  - id: adv_rank_016
+    question: "Top quartile of performers"
+    expected:
+      status: AMBIGUOUS
+      intent: null
+      warning: "AMBIGUOUS_METRIC: No metric specified for 'performers'"
+
+  - id: adv_rank_017
+    question: "Worst incidents last month"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: incident_severity
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:last
+        aggregation: ranking
+        group_by: [incident]
+        limit: null
+        direction: top
+
+  - id: adv_rank_018
+    question: "Segment customers by tier"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: customer_count
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: breakdown
+        group_by: [tier]
+        limit: null
+        direction: null
+
+  - id: adv_rank_019
+    question: "Top 20 items by cost per unit"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: unit_cost
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: ranking
+        group_by: [item]
+        limit: 20
+        direction: top
+
+  - id: adv_rank_020
+    question: "Just the number one customer"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: customer_revenue
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: ranking
+        group_by: [customer]
+        limit: 1
+        direction: top
+
+  # =============================================================================
+  # MIXED-DOMAIN ADVERSARIAL CASES
+  # =============================================================================
+  - id: adv_mix_001
+    question: "Compare AWS costs to revenue"
+    expected:
+      status: UNSUPPORTED
+      intent: null
+      warning: "CROSS_DOMAIN_COMPARISON: Cannot compare infrastructure costs to financial revenue"
+
+  - id: adv_mix_002
+    question: "Revenue impact of outages"
+    expected:
+      status: AMBIGUOUS
+      intent: null
+      warning: "CORRELATION_ANALYSIS: Requires cross-domain correlation not currently supported"
+
+  - id: adv_mix_003
+    question: "Do high-spending customers have more support tickets?"
+    expected:
+      status: UNSUPPORTED
+      intent: null
+      warning: "CROSS_DOMAIN_CORRELATION: Requires linking customer spend to support data"
+
+  - id: adv_mix_004
+    question: "Customer satisfaction vs revenue"
+    expected:
+      status: UNSUPPORTED
+      intent: null
+      warning: "CORRELATION_ANALYSIS: Cross-metric correlation not supported"
+
+  - id: adv_mix_005
+    question: "Show me everything"
+    expected:
+      status: AMBIGUOUS
+      intent: null
+      warning: "AMBIGUOUS_SCOPE: Query too broad - please specify what you want to see"
+
+  - id: adv_mix_006
+    question: "Give me all the data"
+    expected:
+      status: AMBIGUOUS
+      intent: null
+      warning: "AMBIGUOUS_SCOPE: Query too broad"
+
+  - id: adv_mix_007
+    question: "How are we doing?"
+    expected:
+      status: AMBIGUOUS
+      intent: null
+      warning: "AMBIGUOUS_METRIC: No specific metric or domain mentioned"
+
+  - id: adv_mix_008
+    question: "What's the situation?"
+    expected:
+      status: AMBIGUOUS
+      intent: null
+      warning: "AMBIGUOUS_METRIC: No specific metric or domain mentioned"
+
+  - id: adv_mix_009
+    question: "AWS spend per customer tier by region"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: cloud_spend
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: breakdown
+        group_by: [customer_tier, region]
+        limit: null
+        direction: null
+
+  - id: adv_mix_010
+    question: "Revenue by cloud provider"
+    expected:
+      status: UNSUPPORTED
+      intent: null
+      warning: "INVALID_GROUPING: Revenue cannot be grouped by cloud provider"
+
+  - id: adv_mix_011
+    question: "Top incidents that caused revenue loss"
+    expected:
+      status: UNSUPPORTED
+      intent: null
+      warning: "CROSS_DOMAIN_CAUSATION: Cannot link incidents to revenue impact"
+
+  - id: adv_mix_012
+    question: "Customer count and revenue and costs together"
+    expected:
+      status: RESOLVED_WITH_WARNING
+      intent:
+        metric: multi_metric
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+      warning: "MULTI_METRIC: Will fetch customer_count, revenue, costs separately"
+
+  - id: adv_mix_013
+    question: "Why did revenue drop?"
+    expected:
+      status: UNSUPPORTED
+      intent: null
+      warning: "CAUSATION_QUERY: Cannot determine causation, only show data"
+
+  - id: adv_mix_014
+    question: "Predict next month's revenue"
+    expected:
+      status: UNSUPPORTED
+      intent: null
+      warning: "PREDICTION_UNSUPPORTED: Forecasting not available"
+
+  - id: adv_mix_015
+    question: "What should we do about costs?"
+    expected:
+      status: UNSUPPORTED
+      intent: null
+      warning: "RECOMMENDATION_UNSUPPORTED: Cannot provide business recommendations"
+
+  - id: adv_mix_016
+    question: "Is our revenue good or bad?"
+    expected:
+      status: UNSUPPORTED
+      intent: null
+      warning: "JUDGEMENT_UNSUPPORTED: Cannot make value judgements without targets"
+
+  - id: adv_mix_017
+    question: "Email me the monthly report"
+    expected:
+      status: UNSUPPORTED
+      intent: null
+      warning: "ACTION_UNSUPPORTED: Cannot perform email or export actions"
+
+  - id: adv_mix_018
+    question: "Schedule a meeting to discuss revenue"
+    expected:
+      status: UNSUPPORTED
+      intent: null
+      warning: "ACTION_UNSUPPORTED: Cannot perform scheduling actions"
+
+  - id: adv_mix_019
+    question: "Delete all the zombie resources"
+    expected:
+      status: UNSUPPORTED
+      intent: null
+      warning: "MUTATION_UNSUPPORTED: Cannot perform delete or modify actions"
+
+  - id: adv_mix_020
+    question: "Fix the SLO violations"
+    expected:
+      status: UNSUPPORTED
+      intent: null
+      warning: "MUTATION_UNSUPPORTED: Cannot perform remediation actions"
+
+  # =============================================================================
+  # PARAPHRASES OF EXISTING CASES
+  # =============================================================================
+  - id: para_fin_001
+    question: "Current annual recurring revenue"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_fin_002
+    question: "How much ARR do we have right now?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_fin_003
+    question: "Total ARR as of today"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_burn_001
+    question: "What's our current burn rate?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: burn_rate
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_burn_002
+    question: "How fast are we burning cash?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: burn_rate
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_burn_003
+    question: "Monthly burn"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: burn_rate
+        grain: month
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_slo_001
+    question: "How are our SLOs performing?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: slo_attainment
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: health
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_slo_002
+    question: "Current SLO status"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: slo_attainment
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: health
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_slo_003
+    question: "Are we meeting our SLOs?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: slo_attainment
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: health
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_cloud_001
+    question: "What's our cloud spend?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: cloud_spend
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_cloud_002
+    question: "Total AWS + GCP + Azure costs"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: cloud_spend
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_cloud_003
+    question: "Infrastructure costs"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: cloud_spend
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_cust_001
+    question: "Customer count"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: customer_count
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_cust_002
+    question: "How many active customers?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: customer_count
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_cust_003
+    question: "Number of customers we have"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: customer_count
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_mttr_001
+    question: "Average time to fix incidents"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: mttr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: average
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_mttr_002
+    question: "Incident resolution time"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: mttr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: average
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_mttr_003
+    question: "How long does it take to recover from outages?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: mttr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: average
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_zombie_001
+    question: "Show me all zombie resources"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: zombie_count
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_zombie_002
+    question: "Wasted cloud resources"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: zombie_count
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_zombie_003
+    question: "Idle infrastructure we're paying for"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: zombie_count
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_deploy_001
+    question: "How often do we deploy?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: deploy_frequency
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: average
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_deploy_002
+    question: "Deployment cadence"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: deploy_frequency
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: average
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_deploy_003
+    question: "Number of releases per week"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: deploy_frequency
+        grain: week
+        time:
+          mode: none
+          spec: current
+        aggregation: average
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_delta_001
+    question: "How much did revenue change month over month?"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue_delta
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:mom
+        aggregation: delta
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_delta_002
+    question: "Revenue MoM"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue_delta
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:mom
+        aggregation: delta
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: para_delta_003
+    question: "Month on month revenue change"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue_delta
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:mom
+        aggregation: delta
+        group_by: []
+        limit: null
+        direction: null
