@@ -605,6 +605,12 @@ def nlq_ask(request: NLQAskRequest):
     from backend.bll.definitions import get_definition
     from backend.dcl.history.persistence import get_history_store
     from backend.dcl.definitions.registry import DefinitionRegistry
+    from backend.nlq.normalized_intent import (
+        extract_normalized_intent,
+        validate_output_against_intent,
+        OutputShape,
+        IntentViolationError,
+    )
 
     start_time = time.time()
 
@@ -678,20 +684,29 @@ def nlq_ask(request: NLQAskRequest):
 
         logger.info(f"[NLQ] Extracted params: {exec_args.to_dict()}")
 
-        # Step 2.5: Handle missing limit for ranked-list definitions
-        # AGGREGATE definitions don't need limits - they return totals
+        # Step 2.5: Extract NORMALIZED INTENT (BINDING CONTRACT)
+        # output_shape is derived from INTENT, NOT from definition
+        intent_result = extract_normalized_intent(question, definition_id, confidence)
+        normalized_intent = intent_result.intent
+
+        logger.info(f"[NLQ] Intent: output_shape={normalized_intent.output_shape.value if normalized_intent else 'none'}, "
+                    f"aggregation={normalized_intent.aggregation.value if normalized_intent else 'none'}")
+
+        # Step 2.6: Handle execution based on INTENT output_shape
+        # CRITICAL: output_shape is BINDING - it determines what execution can return
         is_ranked_list = DefinitionRegistry.is_ranked_list(definition_id)
         meta = DefinitionRegistry.get_metadata(definition_id)
-        is_aggregate = meta and meta.kind == DefinitionKind.AGGREGATE if meta else False
         default_limit = DefinitionRegistry.get_default_limit(definition_id)
         effective_limit = exec_args.limit
         limit_warning = None
 
-        if is_aggregate:
-            # AGGREGATE definitions return totals, not ranked lists
-            # Use high limit to get all data for aggregation, but don't treat as top-N
+        # INTENT-BASED EXECUTION CONTROL (replaces definition-based)
+        is_scalar_intent = normalized_intent and normalized_intent.output_shape == OutputShape.SCALAR
+
+        if is_scalar_intent:
+            # SCALAR intent: get all data for aggregation, but NO ranking
             effective_limit = 1000  # Get all data
-            logger.info(f"[NLQ] AGGREGATE definition {definition_id} - returning totals")
+            logger.info(f"[NLQ] SCALAR intent - returning aggregate total, NO ranking")
         elif is_ranked_list and exec_args.limit is None:
             if default_limit:
                 effective_limit = default_limit
@@ -710,6 +725,36 @@ def nlq_ask(request: NLQAskRequest):
 
         result = bll_execute(bll_request)
 
+        # Step 3.5: HARD INTENT GATE - validate output against intent
+        # For SCALAR intent, we MUST NOT return ranked data
+        if normalized_intent and is_scalar_intent:
+            # Extract aggregations from result
+            aggregations = result.summary.aggregations if result.summary else {}
+
+            # Validate: SCALAR intent must not have ranking indicators
+            try:
+                validate_output_against_intent(
+                    normalized_intent,
+                    result.data,
+                    aggregations,
+                    limit_applied=effective_limit if effective_limit and effective_limit < 1000 else None
+                )
+            except IntentViolationError as e:
+                logger.error(f"[NLQ] Intent violation: {e}")
+                # Don't fail the request, but log and fix the response
+                pass
+
+            # For SCALAR intent: suppress rows, return only the aggregate
+            # This is the BINDING enforcement
+            scalar_data = []  # NO rows for scalar queries
+            if result.summary:
+                # Fix the summary to be scalar-appropriate
+                agg = result.summary.aggregations
+                if agg.get("population_total"):
+                    result.summary.answer = f"Your current {normalized_intent.metric.upper()} is ${agg['population_total']/1_000_000:,.2f}M"
+        else:
+            scalar_data = result.data
+
         # Step 4: Build response with caveats
         caveats = []
         if delta_capability_mismatch:
@@ -717,7 +762,7 @@ def nlq_ask(request: NLQAskRequest):
             caveats.append(f"Month-over-month comparison not available for {metric}; showing current values")
         if limit_warning:
             caveats.append(limit_warning)
-        if exec_args.limit:
+        if exec_args.limit and not is_scalar_intent:
             caveats.append(f"Limited to top {exec_args.limit}")
             caveats.append("Sorted by definition default ordering")
         if not caveats:
@@ -726,20 +771,24 @@ def nlq_ask(request: NLQAskRequest):
         # Compute execution time
         execution_time_ms = int((time.time() - start_time) * 1000)
 
+        # Use scalar_data for SCALAR intent, else full data
+        response_data = scalar_data if is_scalar_intent else result.data
+
         response = NLQAskResponse(
             question=question,
             definition_id=definition_id,
             confidence_score=confidence,
             execution_args=exec_args.to_dict(),
-            data=result.data,
+            data=response_data,
             metadata={
                 "dataset_id": result.metadata.dataset_id,
                 "definition_id": result.metadata.definition_id,
-                "row_count": len(result.data),
+                "row_count": len(response_data),
                 "total_available": result.metadata.row_count,
                 "execution_time_ms": execution_time_ms,
                 "matched_keywords": matched_keywords,
                 "effective_limit": effective_limit,
+                "intent_output_shape": normalized_intent.output_shape.value if normalized_intent else None,
             },
             summary=result.summary.model_dump() if result.summary else None,
             caveats=caveats,

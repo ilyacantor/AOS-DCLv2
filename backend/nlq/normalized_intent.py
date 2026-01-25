@@ -28,7 +28,21 @@ class TimeMode(str, Enum):
     """Time scoping mode."""
     CALENDAR = "calendar"  # "last month", "Q2", "YTD"
     ROLLING = "rolling"    # "past 30 days", "last 7 days"
-    NONE = "none"          # Current/no time scope
+    STATE = "state"        # Current state query ("what is our X")
+    NONE = "none"          # No time scope
+
+
+class OutputShape(str, Enum):
+    """
+    Output shape - BINDING constraint on execution.
+
+    This determines what the response CAN contain.
+    Intent derives this, execution MUST obey it.
+    """
+    SCALAR = "scalar"      # One value only, NO rows, NO ranking
+    RANKED = "ranked"      # Ordered list with limit, rows required
+    TABLE = "table"        # Tabular data, rows allowed
+    STATUS = "status"      # Status/health check, counts + status only
 
 
 class AggregationType(str, Enum):
@@ -78,6 +92,12 @@ class NormalizedIntent:
 
     This is the canonical representation that gets evaluated against
     the gold standard. It is domain-agnostic and uses primitive types.
+
+    CRITICAL: output_shape is a BINDING CONTRACT.
+    - scalar: ONE value only, NO rows, NO ranking, NO limit
+    - ranked: Ordered list, rows required, limit required or inferred
+    - table: Tabular data, rows allowed
+    - status: Status/health check, counts + status only
     """
     metric: str  # Canonical metric name (arr, spend, slo_attainment, etc.)
     grain: str = "none"  # Time grain (day, week, month, quarter, year, none)
@@ -86,6 +106,7 @@ class NormalizedIntent:
     group_by: List[str] = field(default_factory=list)
     limit: Optional[int] = None
     direction: Optional[RankDirection] = None
+    output_shape: OutputShape = OutputShape.SCALAR  # BINDING execution constraint
 
     def to_dict(self) -> dict:
         return {
@@ -96,6 +117,7 @@ class NormalizedIntent:
             "group_by": self.group_by,
             "limit": self.limit,
             "direction": self.direction.value if self.direction else None,
+            "output_shape": self.output_shape.value,
         }
 
     @classmethod
@@ -103,6 +125,10 @@ class NormalizedIntent:
         direction = None
         if d.get("direction"):
             direction = RankDirection(d["direction"])
+
+        output_shape = OutputShape.SCALAR  # Default to scalar
+        if d.get("output_shape"):
+            output_shape = OutputShape(d["output_shape"])
 
         return cls(
             metric=d.get("metric", "unknown"),
@@ -112,6 +138,7 @@ class NormalizedIntent:
             group_by=d.get("group_by", []),
             limit=d.get("limit"),
             direction=direction,
+            output_shape=output_shape,
         )
 
 
@@ -792,6 +819,192 @@ def check_unsupported(question: str) -> Optional[str]:
 
 
 # =============================================================================
+# Output Shape Derivation - BINDING CONSTRAINT
+# =============================================================================
+
+# SCALAR patterns - these MUST return exactly one value, NO rows
+SCALAR_PATTERNS = [
+    r"^what\s+(?:is|are)\s+(?:our|the|my)\s+(?:current\s+)?(?:total\s+)?(?:arr|revenue|burn\s*rate|spend|cost|mttr)\b",
+    r"^what's?\s+(?:our|the|my)\s+(?:current\s+)?(?:total\s+)?(?:arr|revenue|burn\s*rate|spend|cost|mttr)\b",
+    r"\bcurrent\s+(?:arr|revenue|burn\s*rate|spend|cost)\b",
+    r"^(?:total|overall)\s+(?:arr|revenue|burn\s*rate|spend|cost)\b",
+    r"^how\s+much\s+(?:is\s+)?(?:our|the)\s+(?:arr|revenue|spend|cost)\b",
+]
+
+# RANKED patterns - these MUST return ordered rows with limit
+RANKED_PATTERNS = [
+    r"\btop\s+\d+\b",
+    r"\bbottom\s+\d+\b",
+    r"\bfirst\s+\d+\b",
+    r"\btop\s+(?:customers?|vendors?|deals?|services?)\b",
+    r"\bbiggest\b",
+    r"\blargest\b",
+    r"\bsmallest\b",
+    r"\bhighest\b",
+    r"\blowest\b",
+    r"\bworst\b",
+    r"\bbest\b",
+    r"\bwho\s+(?:are|is)\s+(?:our\s+)?(?:top|biggest|largest)\b",
+    r"\brank\s+(?:by|vendors?|customers?)\b",
+    r"\bsort\s+(?:by|customers?|vendors?)\b",
+]
+
+# TABLE/INVENTORY patterns - these return rows but not ranked
+TABLE_PATTERNS = [
+    r"\blist\s+(?:all\s+)?",
+    r"\bshow\s+(?:me\s+)?(?:all|the)\s+",
+    r"\bzombie\s+resources?\b",
+    r"\bidle\s+resources?\b",
+    r"\bidentity\s+gaps?\b",
+    r"\bsecurity\s+findings?\b",
+    r"\binventory\b",
+]
+
+# STATUS patterns - health/status checks
+STATUS_PATTERNS = [
+    r"\bhow\s+(?:are|is)\s+(?:our\s+)?slos?\b",
+    r"\bslo\s+(?:status|attainment|health)\b",
+    r"\bare\s+there\s+any\s+issues\b",
+    r"\bservice\s+health\b",
+    r"\bsystem\s+status\b",
+    r"\bat\s+risk\b",
+]
+
+
+class IntentViolationError(Exception):
+    """
+    Raised when execution violates intent contract.
+
+    This is a HARD FAILURE - the system MUST NOT return results
+    that violate the intent contract.
+    """
+    pass
+
+
+def validate_output_against_intent(
+    intent: "NormalizedIntent",
+    rows: List[Any],
+    aggregations: dict,
+    limit_applied: Optional[int] = None,
+) -> None:
+    """
+    HARD INTENT GATE - validates execution output against intent contract.
+
+    This function MUST be called before returning results to the user.
+    It raises IntentViolationError if the output violates the intent.
+
+    RULE TABLE:
+    | output_shape | allowed behavior                                        |
+    | ------------ | ------------------------------------------------------- |
+    | scalar       | exactly one value, no rows, no limit, no ranking fields |
+    | ranked       | rows required, limit required or inferred               |
+    | table        | rows allowed, no scalar summary                         |
+    | status       | counts + status only                                    |
+
+    Raises:
+        IntentViolationError if output violates intent contract
+    """
+    if intent.output_shape == OutputShape.SCALAR:
+        # SCALAR queries MUST NOT have:
+        # - rows (len > 0)
+        # - limit applied
+        # - topn_total
+        # - share_of_total_pct (implies ranking)
+
+        violations = []
+
+        if len(rows) > 1:
+            violations.append(f"SCALAR intent but got {len(rows)} rows (must be 0 or 1)")
+
+        if limit_applied is not None and limit_applied < 1000:
+            violations.append(f"SCALAR intent but limit={limit_applied} was applied")
+
+        if aggregations.get("topn_total"):
+            violations.append("SCALAR intent but topn_total exists (implies ranking)")
+
+        if aggregations.get("share_of_total_pct") and aggregations.get("share_of_total_pct") < 100:
+            violations.append("SCALAR intent but share_of_total_pct < 100 (implies ranking)")
+
+        if violations:
+            raise IntentViolationError(
+                f"INTENT VIOLATION: output_shape=scalar but: {'; '.join(violations)}"
+            )
+
+    elif intent.output_shape == OutputShape.RANKED:
+        # RANKED queries MUST have rows
+        if len(rows) == 0:
+            raise IntentViolationError(
+                "INTENT VIOLATION: output_shape=ranked but no rows returned"
+            )
+
+    # TABLE and STATUS don't have strict constraints
+
+
+def derive_output_shape(question: str, aggregation: AggregationType, limit: Optional[int], group_by: List[str]) -> OutputShape:
+    """
+    Derive output_shape from intent - THIS IS BINDING.
+
+    Output shape is derived from:
+    1. Question patterns (highest priority)
+    2. Aggregation type
+    3. Limit presence
+    4. Group by presence
+
+    RULES:
+    - "What is our current ARR?" → SCALAR (no rows, no ranking)
+    - "Top 5 customers" → RANKED (rows required, limit required)
+    - "List orphan resources" → TABLE (rows allowed)
+    - "How are our SLOs?" → STATUS
+
+    This CANNOT be overridden by definition selection.
+    """
+    question_lower = question.lower().strip()
+
+    # Check explicit scalar patterns FIRST - highest priority
+    for pattern in SCALAR_PATTERNS:
+        if re.search(pattern, question_lower):
+            return OutputShape.SCALAR
+
+    # Check ranked patterns
+    for pattern in RANKED_PATTERNS:
+        if re.search(pattern, question_lower):
+            return OutputShape.RANKED
+
+    # Check table/inventory patterns
+    for pattern in TABLE_PATTERNS:
+        if re.search(pattern, question_lower):
+            return OutputShape.TABLE
+
+    # Check status patterns
+    for pattern in STATUS_PATTERNS:
+        if re.search(pattern, question_lower):
+            return OutputShape.STATUS
+
+    # Derive from aggregation type
+    if aggregation == AggregationType.RANKING:
+        return OutputShape.RANKED
+    elif aggregation == AggregationType.INVENTORY:
+        return OutputShape.TABLE
+    elif aggregation == AggregationType.HEALTH:
+        return OutputShape.STATUS
+    elif aggregation == AggregationType.TOTAL and not group_by and limit is None:
+        # Total aggregation without grouping or limit = scalar
+        return OutputShape.SCALAR
+    elif aggregation == AggregationType.COUNT and not group_by:
+        # Simple count = scalar
+        return OutputShape.SCALAR
+    elif group_by:
+        # Has grouping = table or ranked depending on limit
+        return OutputShape.RANKED if limit else OutputShape.TABLE
+
+    # Default: if we have limit, it's ranked; otherwise scalar
+    if limit is not None:
+        return OutputShape.RANKED
+
+    return OutputShape.SCALAR
+
+
+# =============================================================================
 # Main Intent Extraction Function
 # =============================================================================
 
@@ -908,6 +1121,13 @@ def extract_normalized_intent(
         elif base_metric == "vendor_spend":
             metric = "vendor_spend_delta"
 
+    # Derive output_shape from intent - THIS IS BINDING
+    output_shape = derive_output_shape(question, aggregation, limit, group_by)
+
+    # CRITICAL: For state queries ("what is our X"), force time mode to STATE
+    if output_shape == OutputShape.SCALAR and time_spec.mode == TimeMode.NONE:
+        time_spec = TimeSpec(mode=TimeMode.STATE, spec="current")
+
     # Build normalized intent
     intent = NormalizedIntent(
         metric=metric,
@@ -917,6 +1137,7 @@ def extract_normalized_intent(
         group_by=group_by,
         limit=limit,
         direction=direction,
+        output_shape=output_shape,
     )
 
     # Determine status and warnings

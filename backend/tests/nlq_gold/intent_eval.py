@@ -34,6 +34,7 @@ from backend.nlq.normalized_intent import (
     TimeMode,
     AggregationType,
     RankDirection,
+    OutputShape,
 )
 from backend.nlq.intent_matcher import match_question_with_details
 
@@ -51,11 +52,13 @@ class CaseScore:
     grouping_score: float = 0.0
     ranking_score: float = 0.0
     restraint_score: float = 0.0
+    output_shape_score: float = 0.0  # NEW: Output shape validation
     expected_status: str = ""
     actual_status: str = ""
     failures: List[str] = field(default_factory=list)
     expected: Dict[str, Any] = field(default_factory=dict)
     actual: Dict[str, Any] = field(default_factory=dict)
+    is_output_shape_violation: bool = False  # HARD FAIL marker
 
 
 @dataclass
@@ -69,6 +72,8 @@ class EvalReport:
     failure_buckets: Dict[str, int]
     worst_cases: List[CaseScore]
     primitive_scores: Dict[str, Tuple[float, float]]  # (actual, max)
+    output_shape_violations: int = 0  # HARD FAIL count (scalar→ranking)
+    hallucination_count: int = 0  # Answered when should have refused
 
 
 def load_gold_cases(path: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -109,6 +114,10 @@ def compare_time(expected: Dict[str, Any], actual: Dict[str, Any]) -> float:
     if exp_mode == act_mode:
         score += 20.0
     elif exp_mode == "none" and act_mode == "none":
+        score += 20.0
+    elif (exp_mode in ("none", "state")) and (act_mode in ("none", "state")):
+        # "none" and "state" are semantically equivalent for current-state queries
+        # Both mean "no time window, just current state"
         score += 20.0
     elif (exp_mode in ("calendar", "rolling")) and (act_mode in ("calendar", "rolling")):
         # Partial credit for getting the right type of time reference
@@ -275,6 +284,94 @@ def compare_restraint(
     return score
 
 
+def compare_output_shape(
+    expected_shape: Optional[str],
+    actual_shape: Optional[str],
+    expected_aggregation: str,
+    actual_aggregation: str,
+    actual_limit: Optional[int],
+    expected_limit: Optional[int] = None,
+    expected_group_by: Optional[List[str]] = None,
+) -> Tuple[float, bool]:
+    """
+    Compare output_shape and detect HARD FAIL violations.
+
+    Returns (score, is_violation).
+
+    HARD FAIL CONDITIONS:
+    - Expected SCALAR but actual is RANKED → HARD FAIL (score = 0)
+    - Expected SCALAR but actual has limit → HARD FAIL (score = 0)
+    - Expected SCALAR but actual aggregation is 'ranking' → HARD FAIL (score = 0)
+
+    Normal scoring (10 points):
+    - Exact match: 10 points
+    - Compatible shapes: 5 points
+    - Mismatch: 0 points
+    """
+    expected_group_by = expected_group_by or []
+
+    # If no expected output_shape, infer from aggregation AND limit/group_by
+    if not expected_shape:
+        # If there's a limit, it's ranked
+        if expected_limit is not None and expected_limit < 100:
+            expected_shape = "ranked"
+        elif expected_aggregation == "ranking":
+            expected_shape = "ranked"
+        elif expected_aggregation in ("inventory", "breakdown"):
+            expected_shape = "table"
+        elif expected_aggregation == "health":
+            expected_shape = "status"
+        elif expected_aggregation == "percent" and expected_group_by:
+            # Percent by group is table/ranked
+            expected_shape = "table" if expected_limit is None else "ranked"
+        elif expected_aggregation == "total" and not expected_group_by:
+            expected_shape = "scalar"
+        elif expected_group_by:
+            # Has grouping but no limit = table
+            expected_shape = "table"
+        else:
+            expected_shape = "scalar"
+
+    # Normalize to lowercase
+    exp_shape = str(expected_shape).lower()
+    act_shape = str(actual_shape).lower() if actual_shape else "scalar"
+
+    # HARD FAIL CHECKS for scalar intent violations
+    if exp_shape == "scalar":
+        violations = []
+
+        # Check if actual shape is ranked
+        if act_shape == "ranked":
+            violations.append(f"scalar→ranked")
+
+        # Check if ranking aggregation was applied
+        if actual_aggregation == "ranking":
+            violations.append(f"scalar but aggregation=ranking")
+
+        # Check if limit was applied (implies ranking)
+        if actual_limit is not None and actual_limit < 100:
+            violations.append(f"scalar but limit={actual_limit}")
+
+        if violations:
+            # HARD FAIL - This is a critical violation
+            return 0.0, True
+
+    # Normal scoring
+    if exp_shape == act_shape:
+        return 10.0, False
+
+    # Partial credit for compatible shapes
+    compatible_pairs = [
+        ("scalar", "status"),  # Status can be scalar-like
+        ("table", "ranked"),   # Ranked is a type of table
+    ]
+    for pair in compatible_pairs:
+        if (exp_shape, act_shape) in [pair, pair[::-1]]:
+            return 5.0, False
+
+    return 0.0, False
+
+
 def evaluate_case(case: Dict[str, Any]) -> CaseScore:
     """
     Evaluate a single test case.
@@ -414,25 +511,31 @@ def evaluate_case(case: Dict[str, Any]) -> CaseScore:
     metric_score = 0.0
     grouping_score = 0.0
     ranking_score = 0.0
+    output_shape_score = 0.0
+    is_output_shape_violation = False
 
     if exp_intent and act_intent:
-        # Time semantics (35 points)
+        # Time semantics (30 points - reduced from 35 to make room for output_shape)
         time_score = compare_time(
             exp_intent.get("time", {}),
             act_intent.get("time", {}),
         )
-        if time_score < 35:
+        # Scale to 30 points
+        time_score = time_score * 30.0 / 35.0
+        if time_score < 30:
             failures.append(f"time: expected {exp_intent.get('time')}, got {act_intent.get('time')}")
 
-        # Aggregation (20 points)
+        # Aggregation (15 points - reduced from 20)
         aggregation_score = compare_aggregation(
             exp_intent.get("aggregation", "total"),
             act_intent.get("aggregation", "total"),
         )
-        if aggregation_score < 20:
+        # Scale to 15 points
+        aggregation_score = aggregation_score * 15.0 / 20.0
+        if aggregation_score < 15:
             failures.append(f"aggregation: expected {exp_intent.get('aggregation')}, got {act_intent.get('aggregation')}")
 
-        # Metric (15 points)
+        # Metric (15 points - unchanged)
         metric_score = compare_metric(
             exp_intent.get("metric", ""),
             act_intent.get("metric", ""),
@@ -440,7 +543,7 @@ def evaluate_case(case: Dict[str, Any]) -> CaseScore:
         if metric_score < 15:
             failures.append(f"metric: expected {exp_intent.get('metric')}, got {act_intent.get('metric')}")
 
-        # Grouping (10 points)
+        # Grouping (10 points - unchanged)
         grouping_score = compare_grouping(
             exp_intent.get("group_by", []),
             act_intent.get("group_by", []),
@@ -448,7 +551,7 @@ def evaluate_case(case: Dict[str, Any]) -> CaseScore:
         if grouping_score < 10:
             failures.append(f"grouping: expected {exp_intent.get('group_by')}, got {act_intent.get('group_by')}")
 
-        # Ranking (10 points)
+        # Ranking (10 points - unchanged)
         ranking_score = compare_ranking(
             exp_intent.get("limit"),
             act_intent.get("limit"),
@@ -458,12 +561,36 @@ def evaluate_case(case: Dict[str, Any]) -> CaseScore:
         if ranking_score < 10:
             failures.append(f"ranking: expected limit={exp_intent.get('limit')}, got limit={act_intent.get('limit')}")
 
-    # Restraint (10 points)
+        # OUTPUT SHAPE (10 points - NEW)
+        # This is a HARD FAIL category: scalar intent with ranking output = 0 total score
+        output_shape_score, is_output_shape_violation = compare_output_shape(
+            exp_intent.get("output_shape"),
+            act_intent.get("output_shape"),
+            exp_intent.get("aggregation", "total"),
+            act_intent.get("aggregation", "total"),
+            act_intent.get("limit"),
+            expected_limit=exp_intent.get("limit"),
+            expected_group_by=exp_intent.get("group_by", []),
+        )
+        if output_shape_score < 10:
+            exp_shape = exp_intent.get("output_shape", "inferred")
+            act_shape = act_intent.get("output_shape", "scalar")
+            failures.append(f"output_shape: expected {exp_shape}, got {act_shape}")
+
+        if is_output_shape_violation:
+            failures.insert(0, f"HARD FAIL: scalar intent produced ranking output")
+
+    # Restraint (10 points - unchanged)
     restraint_score = compare_restraint(exp_status, act_status, exp_warning, act_warning)
     if restraint_score < 10:
         failures.append(f"restraint: expected status={exp_status}, got status={act_status}")
 
-    total_score = time_score + aggregation_score + metric_score + grouping_score + ranking_score + restraint_score
+    # Calculate total score
+    # If HARD FAIL (output_shape violation), total score = 0
+    if is_output_shape_violation:
+        total_score = 0.0
+    else:
+        total_score = time_score + aggregation_score + metric_score + grouping_score + ranking_score + output_shape_score + restraint_score
 
     return CaseScore(
         case_id=case_id,
@@ -475,11 +602,13 @@ def evaluate_case(case: Dict[str, Any]) -> CaseScore:
         grouping_score=grouping_score,
         ranking_score=ranking_score,
         restraint_score=restraint_score,
+        output_shape_score=output_shape_score,
         expected_status=exp_status,
         actual_status=act_status,
         failures=failures,
         expected=expected,
         actual=actual_result.to_dict() if actual_result else {},
+        is_output_shape_violation=is_output_shape_violation,
     )
 
 
@@ -501,25 +630,36 @@ def run_evaluation(gold_path: Optional[str] = None) -> EvalReport:
         "grouping": (0.0, 0.0),
         "ranking": (0.0, 0.0),
         "restraint": (0.0, 0.0),
+        "output_shape": (0.0, 0.0),  # NEW
     }
+
+    # Track HARD FAIL violations
+    output_shape_violations = 0
+    hallucination_count = 0
 
     for case in cases:
         score = evaluate_case(case)
         case_scores.append(score)
+
+        # Track violations
+        if score.is_output_shape_violation:
+            output_shape_violations += 1
+        if any("HALLUCINATION" in f for f in score.failures):
+            hallucination_count += 1
 
         # Track failures by primitive
         for failure in score.failures:
             primitive = failure.split(":")[0]
             failure_buckets[primitive] += 1
 
-        # Update primitive totals
+        # Update primitive totals (max values updated for new scoring rubric)
         primitive_totals["time"] = (
             primitive_totals["time"][0] + score.time_score,
-            primitive_totals["time"][1] + 35.0,
+            primitive_totals["time"][1] + 30.0,  # Reduced from 35
         )
         primitive_totals["aggregation"] = (
             primitive_totals["aggregation"][0] + score.aggregation_score,
-            primitive_totals["aggregation"][1] + 20.0,
+            primitive_totals["aggregation"][1] + 15.0,  # Reduced from 20
         )
         primitive_totals["metric"] = (
             primitive_totals["metric"][0] + score.metric_score,
@@ -536,6 +676,10 @@ def run_evaluation(gold_path: Optional[str] = None) -> EvalReport:
         primitive_totals["restraint"] = (
             primitive_totals["restraint"][0] + score.restraint_score,
             primitive_totals["restraint"][1] + 10.0,
+        )
+        primitive_totals["output_shape"] = (
+            primitive_totals["output_shape"][0] + score.output_shape_score,
+            primitive_totals["output_shape"][1] + 10.0,  # NEW: 10 points
         )
 
     # Calculate totals
@@ -558,6 +702,8 @@ def run_evaluation(gold_path: Optional[str] = None) -> EvalReport:
         failure_buckets=failure_buckets,
         worst_cases=worst_cases,
         primitive_scores=primitive_totals,
+        output_shape_violations=output_shape_violations,
+        hallucination_count=hallucination_count,
     )
 
 
@@ -570,6 +716,22 @@ def print_report(report: EvalReport):
     print(f"\nTotal Cases: {report.total_cases}")
     print(f"Total Score: {report.total_score:.1f} / {report.max_possible_score:.1f}")
     print(f"Percentage:  {report.percentage:.1f}%")
+
+    # HARD FAIL STATISTICS
+    print("\n" + "-" * 70)
+    print("HARD FAIL STATISTICS (CRITICAL)")
+    print("-" * 70)
+    shape_status = "PASS" if report.output_shape_violations == 0 else "FAIL"
+    halluc_status = "PASS" if report.hallucination_count == 0 else "FAIL"
+    print(f"  Output Shape Violations (scalar→ranking): {report.output_shape_violations} [{shape_status}]")
+    print(f"  Hallucinations (answered when should refuse): {report.hallucination_count} [{halluc_status}]")
+
+    if report.output_shape_violations > 0:
+        print("\n  ⚠️  CRITICAL: Scalar queries returning ranked output!")
+        # Show which cases had violations
+        violations = [s for s in report.case_scores if s.is_output_shape_violation]
+        for v in violations[:5]:
+            print(f"     - [{v.case_id}] {v.question[:50]}...")
 
     print("\n" + "-" * 70)
     print("PRIMITIVE SCORES")
@@ -593,7 +755,8 @@ def print_report(report: EvalReport):
 
     for i, case in enumerate(report.worst_cases):
         status_match = "✓" if case.expected_status == case.actual_status else "✗"
-        print(f"\n  {i+1}. [{case.case_id}] Score: {case.total_score:.1f}/100 {status_match}")
+        violation_mark = " [HARD FAIL]" if case.is_output_shape_violation else ""
+        print(f"\n  {i+1}. [{case.case_id}] Score: {case.total_score:.1f}/100 {status_match}{violation_mark}")
         print(f"     Q: \"{case.question[:60]}{'...' if len(case.question) > 60 else ''}\"")
         print(f"     Expected: {case.expected_status}, Got: {case.actual_status}")
         if case.failures:
@@ -609,6 +772,31 @@ def main():
     report = run_evaluation()
     print_report(report)
 
+    # HARD THRESHOLD CHECKS
+    # These are MANDATORY pass conditions
+    has_hard_fails = False
+
+    # Check: Output shape violations MUST be 0
+    if report.output_shape_violations > 0:
+        print(f"\n❌ HARD FAIL: {report.output_shape_violations} scalar queries produced ranking output")
+        print("   MANDATORY: Scalar queries with ranking output = 0")
+        has_hard_fails = True
+
+    # Check: Hallucinations should be minimal
+    if report.hallucination_count > 2:
+        print(f"\n❌ HARD FAIL: {report.hallucination_count} hallucinations (answered when should refuse)")
+        print("   MANDATORY: Hallucinations ≤ 2")
+        has_hard_fails = True
+
+    # Check: Overall score threshold
+    if report.percentage < 92:
+        print(f"\n⚠️  WARNING: Score {report.percentage:.1f}% below target threshold of 92%")
+        # This is a soft fail unless combined with hard fails
+
+    if has_hard_fails:
+        print("\n🚫 EVALUATION FAILED - HARD THRESHOLDS NOT MET")
+        return 1
+
     # Return exit code based on score
     if report.percentage < 50:
         print("\n⚠️  SCORE BELOW 50% - INTENT EXTRACTION NEEDS IMPROVEMENT")
@@ -616,8 +804,13 @@ def main():
     elif report.percentage < 75:
         print("\n⚡ SCORE BETWEEN 50-75% - ACCEPTABLE BUT ROOM FOR IMPROVEMENT")
         return 0
+    elif report.percentage < 92:
+        print("\n⚡ SCORE BETWEEN 75-92% - GOOD BUT CAN IMPROVE")
+        return 0
     else:
-        print("\n✓ SCORE ABOVE 75% - GOOD INTENT EXTRACTION")
+        print("\n✅ SCORE ABOVE 92% - EXCELLENT INTENT EXTRACTION")
+        print(f"   Output shape violations: {report.output_shape_violations}")
+        print(f"   Hallucinations: {report.hallucination_count}")
         return 0
 
 
