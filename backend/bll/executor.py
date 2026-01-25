@@ -625,80 +625,65 @@ def _compute_summary(
     return ComputedSummary(answer=answer, aggregations=aggregations)
 
 
-def _apply_sorting(df: pd.DataFrame, order_by: list[OrderBySpec], definition: Definition) -> pd.DataFrame:
-    """Apply sorting based on order_by specification."""
-    if not order_by or df.empty:
+def _apply_definition_ordering(df: pd.DataFrame, definition: Definition, has_limit: bool = False) -> pd.DataFrame:
+    """
+    Apply ordering based on definition's declared default_order_by.
+    
+    PRODUCTION BOUNDARY: Ordering is defined in the definition spec, not inferred by NLQ.
+    This ensures deterministic, reproducible results.
+    
+    Args:
+        df: DataFrame to sort
+        definition: Definition with capabilities.default_order_by
+        has_limit: Whether a TopN limit is being applied (triggers sorting)
+    
+    Returns:
+        Sorted DataFrame (or unchanged if no ordering declared)
+    """
+    if df.empty:
         return df
     
-    # Map common field names to actual column names
-    field_mappings = {
-        "revenue": ["AnnualRevenue", "annual_revenue", "Revenue", "revenue", "Amount", "amount", "net_value"],
-        "amount": ["Amount", "amount", "AnnualRevenue", "annual_revenue", "net_value", "total_amount"],
-        "cost": ["monthly_cost", "MonthlyCost", "cost", "Cost", "amount", "spend"],
-        "date": ["created_at", "CreatedAt", "date", "Date", "timestamp"],
-        "name": ["Name", "name", "account_name", "AccountName"],
-    }
+    caps = definition.capabilities
+    
+    # Only apply ordering when TopN is requested and definition declares ordering
+    if not has_limit or not caps.default_order_by:
+        return df
     
     sort_columns = []
     sort_ascending = []
     
-    for spec in order_by:
-        field = spec.field.lower()
-        ascending = spec.direction.lower() == "asc"
+    # Apply definition-declared ordering
+    for order_spec in caps.default_order_by:
+        col = order_spec.field
+        ascending = order_spec.direction.lower() == "asc"
         
-        # Try to find matching column
+        # Find matching column (exact match or case-insensitive)
         col_to_use = None
-        
-        # Check if the field directly exists
-        if spec.field in df.columns:
-            col_to_use = spec.field
-        elif field in df.columns.str.lower().tolist():
-            # Case-insensitive match
-            col_to_use = [c for c in df.columns if c.lower() == field][0]
-        elif field in field_mappings:
-            # Try mapped alternatives
-            for alt in field_mappings[field]:
-                if alt in df.columns:
-                    col_to_use = alt
+        if col in df.columns:
+            col_to_use = col
+        else:
+            # Try case-insensitive match
+            for c in df.columns:
+                if c.lower() == col.lower():
+                    col_to_use = c
                     break
         
-        if col_to_use and col_to_use in df.columns:
+        if col_to_use:
             # Convert to numeric for proper sorting
             if df[col_to_use].dtype == 'object':
+                df = df.copy()
                 df[col_to_use] = pd.to_numeric(df[col_to_use], errors='coerce')
             sort_columns.append(col_to_use)
             sort_ascending.append(ascending)
     
+    # Add tie-breaker for deterministic results
+    if caps.tie_breaker and caps.tie_breaker in df.columns:
+        if caps.tie_breaker not in sort_columns:
+            sort_columns.append(caps.tie_breaker)
+            sort_ascending.append(True)  # Always ascending for tie-breaker
+    
     if sort_columns:
-        # Put NaN values at the end (na_position='last')
         return df.sort_values(by=sort_columns, ascending=sort_ascending, na_position='last')
-    
-    return df
-
-
-def _apply_default_sorting(df: pd.DataFrame, definition: Definition) -> pd.DataFrame:
-    """Apply default sorting based on definition's primary metric."""
-    if df.empty:
-        return df
-    
-    primary_metric = definition.capabilities.primary_metric
-    if not primary_metric:
-        return df
-    
-    # Map metric hints to column names
-    metric_columns = {
-        "revenue": ["AnnualRevenue", "annual_revenue", "Revenue", "revenue", "Amount", "net_value"],
-        "cost": ["monthly_cost", "MonthlyCost", "cost", "Cost", "amount", "spend"],
-        "amount": ["Amount", "amount", "AnnualRevenue", "net_value"],
-    }
-    
-    candidates = metric_columns.get(primary_metric.lower(), [])
-    for col in candidates:
-        if col in df.columns:
-            # Convert to numeric for proper sorting
-            if df[col].dtype == 'object':
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-            return df.sort_values(by=col, ascending=False, na_position='last')
     
     return df
 
@@ -774,12 +759,10 @@ def execute_definition(request: ExecuteRequest) -> ExecuteResponse:
     total_rows = len(result_df)
     full_population_df = result_df.copy()  # Keep full data for summary calculation
 
-    # Apply sorting BEFORE limit (so "top 5 by revenue" gets the actual top 5)
-    if request.order_by:
-        result_df = _apply_sorting(result_df, request.order_by, definition)
-    elif definition.capabilities.primary_metric:
-        # Fall back to definition's primary metric if no explicit order
-        result_df = _apply_default_sorting(result_df, definition)
+    # Apply definition-declared ordering when TopN limit is requested
+    # PRODUCTION BOUNDARY: Ordering is defined in definition spec, not inferred by NLQ
+    has_topn_limit = request.limit < 1000  # Default limit is 1000, anything less is TopN
+    result_df = _apply_definition_ordering(result_df, definition, has_limit=has_topn_limit)
 
     # Apply limit AFTER sorting
     result_df = result_df.iloc[request.offset:request.offset + request.limit]

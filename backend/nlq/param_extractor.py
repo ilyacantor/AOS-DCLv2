@@ -1,8 +1,14 @@
 """
 NLQ Parameter Extractor - Extracts execution parameters from natural language questions.
 
-This module provides deterministic, regex-based parameter extraction for common
-query modifiers like "top N", "by revenue", "last month", etc.
+PRODUCTION BOUNDARY:
+- NLQ = compiler. It emits TopN(limit) intent, NOT ordering decisions.
+- Ordering is defined in Definition.capabilities.default_order_by (concrete columns).
+- Executor applies ordering based on definition spec, not NLQ inference.
+
+This module provides deterministic, regex-based parameter extraction for:
+- TopN limit extraction ("top 5", "first 10")
+- Time window extraction ("last month", "YTD")
 
 No LLM required - all extraction uses pattern matching.
 """
@@ -15,16 +21,14 @@ from dataclasses import dataclass, field
 class ExecutionArgs:
     """Extracted execution arguments from a question."""
     limit: Optional[int] = None
-    order_by: Optional[List[Dict[str, str]]] = None
     time_window: Optional[str] = None
     filters: Optional[Dict[str, Any]] = None
+    # NOTE: order_by removed - ordering is handled by definition spec, not NLQ inference
     
     def to_dict(self) -> Dict[str, Any]:
         result = {}
         if self.limit is not None:
             result["limit"] = self.limit
-        if self.order_by:
-            result["order_by"] = self.order_by
         if self.time_window:
             result["time_window"] = self.time_window
         if self.filters:
@@ -32,20 +36,11 @@ class ExecutionArgs:
         return result
     
     def has_params(self) -> bool:
-        return any([self.limit, self.order_by, self.time_window, self.filters])
+        return any([self.limit, self.time_window, self.filters])
 
 
-# Allowed parameters per definition (can be extended per-definition)
-DEFAULT_ALLOWED_PARAMS = ["limit", "order_by", "time_window", "filters"]
-
-# Order-by field mappings
-ORDER_FIELD_MAPPINGS = {
-    "revenue": ["revenue", "annual_revenue", "total_revenue", "amount", "AnnualRevenue"],
-    "cost": ["monthly_cost", "cost", "amount", "total_cost"],
-    "date": ["close_date", "created_date", "date", "CloseDate"],
-    "name": ["name", "account_name", "Name", "AccountName"],
-    "count": ["count", "total", "quantity"],
-}
+# Allowed parameters per definition (order_by removed - handled by definition spec)
+DEFAULT_ALLOWED_PARAMS = ["limit", "time_window", "filters"]
 
 
 def extract_limit(question: str) -> Optional[int]:
@@ -100,53 +95,6 @@ def extract_limit(question: str) -> Optional[int]:
     return None
 
 
-def extract_order_by(question: str) -> Optional[List[Dict[str, str]]]:
-    """
-    Extract order-by from question.
-    
-    Patterns:
-    - "by revenue"
-    - "sorted by cost"
-    - "ordered by name"
-    - "highest revenue" (implies desc)
-    - "lowest cost" (implies asc)
-    """
-    question_lower = question.lower()
-    
-    # Check for explicit "by X" patterns
-    by_pattern = r'\b(?:by|sorted\s+by|ordered\s+by)\s+(\w+)'
-    match = re.search(by_pattern, question_lower)
-    if match:
-        field_hint = match.group(1)
-        direction = "desc"  # Default to descending for "top" queries
-        
-        # Check for ascending indicators
-        if any(word in question_lower for word in ['lowest', 'smallest', 'least', 'ascending', 'asc']):
-            direction = "asc"
-        
-        # Map hint to actual field
-        for canonical, variants in ORDER_FIELD_MAPPINGS.items():
-            if field_hint in variants or field_hint == canonical:
-                return [{"field": canonical, "direction": direction}]
-        
-        # Use hint directly if no mapping found
-        return [{"field": field_hint, "direction": direction}]
-    
-    # Check for implicit ordering from superlatives
-    if any(word in question_lower for word in ['highest', 'largest', 'biggest', 'most', 'top']):
-        # Try to infer field from context
-        if 'revenue' in question_lower:
-            return [{"field": "revenue", "direction": "desc"}]
-        if 'cost' in question_lower or 'spend' in question_lower:
-            return [{"field": "cost", "direction": "desc"}]
-    
-    if any(word in question_lower for word in ['lowest', 'smallest', 'least']):
-        if 'cost' in question_lower or 'spend' in question_lower:
-            return [{"field": "cost", "direction": "asc"}]
-    
-    return None
-
-
 def extract_time_window(question: str) -> Optional[str]:
     """
     Extract time window from question.
@@ -188,23 +136,23 @@ def extract_params(
     allowed_params: Optional[List[str]] = None
 ) -> ExecutionArgs:
     """
-    Extract all parameters from a question.
+    Extract execution parameters from a question.
+    
+    PRODUCTION BOUNDARY: NLQ extracts TopN(limit) intent only.
+    Ordering is determined by definition.capabilities.default_order_by.
     
     Args:
         question: Natural language question
         allowed_params: List of allowed parameter types (default: all)
     
     Returns:
-        ExecutionArgs with extracted parameters
+        ExecutionArgs with extracted parameters (limit, time_window only)
     """
     allowed = allowed_params or DEFAULT_ALLOWED_PARAMS
     args = ExecutionArgs()
     
     if "limit" in allowed:
         args.limit = extract_limit(question)
-    
-    if "order_by" in allowed:
-        args.order_by = extract_order_by(question)
     
     if "time_window" in allowed:
         args.time_window = extract_time_window(question)

@@ -10,7 +10,7 @@ that supports_delta, without each definition needing to list all change phrases.
 from datetime import datetime
 from .models import (
     Definition, DefinitionCategory, ColumnSchema,
-    SourceReference, JoinSpec, FilterSpec, DefinitionCapabilities
+    SourceReference, JoinSpec, FilterSpec, DefinitionCapabilities, OrderBySpec
 )
 
 
@@ -52,6 +52,9 @@ _register(Definition(
         supports_top_n=True,
         primary_metric="cost",
         entity_type="vendor",
+        default_order_by=[OrderBySpec(field="total_spend", direction="desc")],
+        allowed_order_by=["total_spend", "Monthly_Cost", "avg_monthly_cost"],
+        tie_breaker="vendor_name",
     ),
 ))
 
@@ -247,6 +250,9 @@ _register(Definition(
         supports_top_n=True,
         primary_metric="revenue",
         entity_type="deal",
+        default_order_by=[OrderBySpec(field="Amount", direction="desc")],
+        allowed_order_by=["Amount", "arr_contribution"],
+        tie_breaker="deal_name",
     ),
 ))
 
@@ -329,6 +335,10 @@ _register(Definition(
         supports_top_n=True,
         primary_metric="revenue",
         entity_type="customer",
+        # Production-grade ordering: concrete columns, tie-breaker for deterministic results
+        default_order_by=[OrderBySpec(field="AnnualRevenue", direction="desc")],
+        allowed_order_by=["AnnualRevenue", "Revenue", "NumberOfEmployees", "EmployeeCount"],
+        tie_breaker="Name",
     ),
 ))
 

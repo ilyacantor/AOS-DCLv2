@@ -287,10 +287,13 @@ class NLQExtractParamsRequest(BaseModel):
 
 
 class NLQExtractParamsResponse(BaseModel):
-    """Response with extracted execution parameters."""
+    """Response with extracted execution parameters.
+    
+    PRODUCTION BOUNDARY: NLQ extracts TopN(limit) only. Ordering is declared in
+    definition.capabilities.default_order_by, not inferred by NLQ.
+    """
     question: str
     limit: Optional[int] = None
-    order_by: Optional[List[Dict[str, str]]] = None
     time_window: Optional[str] = None
     filters: Optional[Dict[str, Any]] = None
     extraction_confidence: float = 1.0  # How confident we are in the extraction
@@ -529,7 +532,6 @@ def nlq_extract_params(request: NLQExtractParamsRequest):
         return NLQExtractParamsResponse(
             question=question,
             limit=exec_args.limit,
-            order_by=exec_args.order_by,
             time_window=exec_args.time_window,
             filters=exec_args.filters,
             extraction_confidence=confidence,
@@ -637,18 +639,12 @@ def nlq_ask(request: NLQAskRequest):
         logger.info(f"[NLQ] Extracted params: {exec_args.to_dict()}")
 
         # Step 3: Execute definition with extracted parameters
-        # Convert order_by dicts to OrderBySpec objects
-        from backend.bll.models import OrderBySpec
-        order_by_specs = None
-        if exec_args.order_by:
-            order_by_specs = [OrderBySpec(field=o["field"], direction=o["direction"]) for o in exec_args.order_by]
-
+        # PRODUCTION BOUNDARY: Ordering is declared in definition spec, not inferred by NLQ
         bll_request = BLLExecuteRequest(
             dataset_id=request.dataset_id,
             definition_id=definition_id,
             limit=exec_args.limit or 1000,
             offset=0,
-            order_by=order_by_specs,
         )
 
         result = bll_execute(bll_request)
@@ -657,9 +653,8 @@ def nlq_ask(request: NLQAskRequest):
         caveats = []
         if exec_args.limit:
             caveats.append(f"Limited to top {exec_args.limit}")
-        if exec_args.order_by:
-            order_desc = ", ".join([f"{o['field']} {o['direction']}" for o in exec_args.order_by])
-            caveats.append(f"Sorted by {order_desc}")
+            # Note: Ordering applied from definition's default_order_by
+            caveats.append("Sorted by definition default ordering")
         if not caveats:
             caveats.append("Based on available data bindings")
 

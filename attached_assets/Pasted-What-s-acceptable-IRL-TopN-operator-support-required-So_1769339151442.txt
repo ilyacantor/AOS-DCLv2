@@ -1,0 +1,61 @@
+What’s acceptable “IRL”
+
+✅ TopN operator support (required)
+✅ Sorting applied in the executor (closest to data / scalable path)
+✅ Sorting constrained to definition-declared fields/metrics
+✅ Deterministic tie-breaks
+
+What is not acceptable IRL (and where drift happens)
+
+❌ NLQ infers arbitrary order_by from text (“by revenue” → some column guess)
+❌ Sorting based on a vague primary_metric="revenue" without a concrete field mapping
+❌ Executor allowed to sort on any field (becomes a query engine by accident)
+
+Recommendation: do the refactor now (lightweight, pays off)
+
+Yes — refactor so definitions declare ordering explicitly. Not because of demo polish, but because it’s the clean production boundary.
+
+The production-grade pattern
+
+Definition spec declares
+
+default_order_by (one or more concrete, canonical fields)
+
+optional allowed_order_by list
+
+tie-breaker (customer_id or equivalent)
+
+NLQ emits TopN(N) (not “order_by=revenue”)
+
+NLQ should not decide columns
+
+NLQ just says: “user asked top 5 customers”
+
+Executor applies
+
+ORDER BY default_order_by when TopN requested
+
+optionally override only if user explicitly asks “by X” AND X ∈ allowed_order_by
+
+That keeps NLQ a compiler and keeps schema knowledge in the definition/executor.
+
+How to say this to the agent (copy/paste)
+
+Refactor to production boundary: NLQ must not infer order_by fields.
+Definitions must declare default_order_by (and optional allowed_order_by + deterministic tie-break).
+NLQ outputs only TopN(N) intent; executor applies ordering based on definition spec.
+Only permit overrides when the requested sort key maps to a definition-declared allowed order. No generic sorting API.
+
+One extra IRL detail: tie-breakers
+
+Add a deterministic secondary sort so results don’t reshuffle on equal values:
+
+ORDER BY revenue DESC, customer_id ASC
+
+That matters in production and in tests.
+
+Bottom line
+
+Current implementation is directionally OK because it’s narrow and executor-side.
+
+But for production, you should eliminate NLQ inference of order_by and move it into the definition spec now. This is a small refactor that prevents future feature creep.

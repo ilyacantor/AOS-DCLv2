@@ -41,14 +41,24 @@ class FilterSpec(BaseModel):
     value: Any
 
 
+class OrderBySpec(BaseModel):
+    """Sort specification with concrete column name."""
+    field: str  # Concrete column name (e.g., "AnnualRevenue", not "revenue")
+    direction: str = "desc"  # "asc" or "desc"
+
+
 class DefinitionCapabilities(BaseModel):
     """Capabilities that a definition supports for operator extraction."""
     supports_top_n: bool = True  # Can be limited/ranked (most definitions)
     supports_delta: bool = False  # Supports MoM/QoQ/YoY change comparison
     supports_trend: bool = False  # Supports time-series trending
     supports_aggregation: bool = True  # Can compute totals/averages
-    primary_metric: Optional[str] = None  # Primary metric for ordering (e.g., "revenue", "cost")
+    primary_metric: Optional[str] = None  # Primary metric label (e.g., "revenue", "cost")
     entity_type: Optional[str] = None  # What the rows represent (e.g., "customer", "resource")
+    # Production-grade ordering fields
+    default_order_by: List["OrderBySpec"] = Field(default_factory=list)  # Concrete columns for TopN
+    allowed_order_by: List[str] = Field(default_factory=list)  # Whitelist of override columns
+    tie_breaker: Optional[str] = None  # Deterministic secondary sort column
 
 
 class Definition(BaseModel):
@@ -72,12 +82,6 @@ class Definition(BaseModel):
 class TimeWindow(BaseModel):
     start: Optional[datetime] = None
     end: Optional[datetime] = None
-
-
-class OrderBySpec(BaseModel):
-    """Sort specification."""
-    field: str
-    direction: str = "desc"  # "asc" or "desc"
 
 
 class ExecuteRequest(BaseModel):
