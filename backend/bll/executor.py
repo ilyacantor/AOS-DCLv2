@@ -149,7 +149,84 @@ def _compute_summary(df: pd.DataFrame, definition: Definition) -> ComputedSummar
         elif 'finding' in defn_id or 'security' in defn_id:
             aggregations['finding_count'] = len(df)
             answer = f"Found {len(df)} security findings."
-        
+
+        # SLO Attainment
+        elif 'slo' in defn_id:
+            aggregations['service_count'] = len(df)
+            if 'actual' in df.columns:
+                avg_attainment = pd.to_numeric(df['actual'], errors='coerce').mean()
+                aggregations['avg_attainment'] = float(avg_attainment)
+            if 'status' in df.columns:
+                status_counts = df['status'].value_counts().to_dict()
+                aggregations['status_breakdown'] = status_counts
+                passing = status_counts.get('passing', 0)
+                at_risk = status_counts.get('at_risk', 0)
+                breached = status_counts.get('breached', 0)
+                answer = f"SLO attainment across {len(df)} services: {passing} passing, {at_risk} at risk, {breached} breached."
+                if avg_attainment:
+                    answer += f" Average attainment: {avg_attainment:.1f}%."
+            else:
+                answer = f"Tracking SLOs for {len(df)} services."
+
+        # DORA Metrics - Deploy Frequency
+        elif 'deploy' in defn_id:
+            aggregations['service_count'] = len(df)
+            if 'deploy_count' in df.columns:
+                total_deploys = pd.to_numeric(df['deploy_count'], errors='coerce').sum()
+                avg_deploys = pd.to_numeric(df['deploy_count'], errors='coerce').mean()
+                aggregations['total_deploys'] = int(total_deploys)
+                aggregations['avg_per_service'] = float(avg_deploys)
+                answer = f"Deployment frequency: {int(total_deploys)} total deployments across {len(df)} services (avg {avg_deploys:.1f} per service)."
+            else:
+                answer = f"Tracking deployments for {len(df)} services."
+
+        # DORA Metrics - Lead Time
+        elif 'lead_time' in defn_id:
+            aggregations['service_count'] = len(df)
+            if 'lead_time_hours' in df.columns:
+                avg_lead_time = pd.to_numeric(df['lead_time_hours'], errors='coerce').mean()
+                aggregations['avg_lead_time_hours'] = float(avg_lead_time)
+                answer = f"Lead time for changes: average {avg_lead_time:.1f} hours across {len(df)} services."
+            else:
+                answer = f"Lead time data for {len(df)} services."
+
+        # DORA Metrics - Change Failure Rate
+        elif 'failure_rate' in defn_id:
+            aggregations['service_count'] = len(df)
+            if 'change_failure_rate' in df.columns:
+                avg_cfr = pd.to_numeric(df['change_failure_rate'], errors='coerce').mean() * 100
+                aggregations['avg_failure_rate_pct'] = float(avg_cfr)
+                answer = f"Change failure rate: average {avg_cfr:.1f}% across {len(df)} services."
+            else:
+                answer = f"Change failure rate data for {len(df)} services."
+
+        # DORA Metrics - MTTR
+        elif 'mttr' in defn_id:
+            aggregations['incident_count'] = len(df)
+            if 'mttr_minutes' in df.columns:
+                avg_mttr = pd.to_numeric(df['mttr_minutes'], errors='coerce').mean()
+                aggregations['avg_mttr_minutes'] = float(avg_mttr)
+                answer = f"Mean time to recovery: average {avg_mttr:.0f} minutes across {len(df)} incidents."
+            else:
+                answer = f"MTTR data for {len(df)} incidents."
+
+        # Incidents
+        elif 'incident' in defn_id:
+            aggregations['incident_count'] = len(df)
+            if 'severity' in df.columns:
+                severity_counts = df['severity'].value_counts().to_dict()
+                aggregations['severity_breakdown'] = severity_counts
+                sev1 = severity_counts.get('sev1', 0)
+                sev2 = severity_counts.get('sev2', 0)
+                sev3 = severity_counts.get('sev3', 0)
+                answer = f"Incident summary: {len(df)} total incidents ({sev1} sev1, {sev2} sev2, {sev3} sev3)."
+            if 'status' in df.columns:
+                open_count = len(df[df['status'] == 'open'])
+                if open_count > 0:
+                    answer += f" {open_count} currently open."
+            else:
+                answer = f"Found {len(df)} incidents."
+
         else:
             aggregations['row_count'] = len(df)
             if amount_cols:
