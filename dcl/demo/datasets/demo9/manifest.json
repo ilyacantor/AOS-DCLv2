@@ -62,6 +62,21 @@
       "tables": [
         {"table_id": "usage_metrics", "file": "dcl/demo/datasets/demo9/legacy_usage_metrics.csv"}
       ]
+    },
+    {
+      "source_id": "datadog",
+      "name": "Datadog Observability",
+      "tables": [
+        {"table_id": "slo_metrics", "file": "dcl/demo/datasets/demo9/datadog_slo_metrics.csv"},
+        {"table_id": "dora_metrics", "file": "dcl/demo/datasets/demo9/datadog_dora_metrics.csv"}
+      ]
+    },
+    {
+      "source_id": "pagerduty",
+      "name": "PagerDuty Incidents",
+      "tables": [
+        {"table_id": "incidents", "file": "dcl/demo/datasets/demo9/pagerduty_incidents.csv"}
+      ]
     }
   ]
 }

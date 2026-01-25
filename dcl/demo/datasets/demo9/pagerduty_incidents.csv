@@ -1,0 +1,9 @@
+incident_id,service,severity,status,opened_at,resolved_at,mttr_minutes,title,team
+INC-001,payment-service,sev1,resolved,2026-01-10 14:30,2026-01-10 15:45,75,Payment processing timeout,payments
+INC-002,notification-service,sev2,resolved,2026-01-12 09:15,2026-01-12 10:30,75,Email delivery delays,comms
+INC-003,search-service,sev2,resolved,2026-01-15 16:00,2026-01-15 18:00,120,Search index corruption,search
+INC-004,inventory-service,sev1,resolved,2026-01-18 03:00,2026-01-18 06:30,210,Inventory sync failure,logistics
+INC-005,api-gateway,sev3,resolved,2026-01-20 11:00,2026-01-20 11:30,30,Rate limiting misconfigured,platform
+INC-006,auth-service,sev2,resolved,2026-01-22 08:45,2026-01-22 09:00,15,OAuth token refresh issue,identity
+INC-007,notification-service,sev2,open,2026-01-24 14:00,,NULL,SMS gateway degradation,comms
+INC-008,order-service,sev3,resolved,2026-01-23 10:00,2026-01-23 11:00,60,Cart calculation error,commerce
