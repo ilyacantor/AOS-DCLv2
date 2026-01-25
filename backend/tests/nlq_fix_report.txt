@@ -1,0 +1,12 @@
+
+## Definition Matching Issues
+These questions matched the wrong definition:
+  - "Show me top 5 customers by revenue"
+    Expected: crm.top_customers, Got: finops.arr
+    FIX: Add keywords to crm.top_customers definition
+  - "What is our mean time to recovery?"
+    Expected: infra.mttr, Got: infra.lead_time
+    FIX: Add keywords to infra.mttr definition
+  - "What does our sales pipeline look like?"
+    Expected: crm.pipeline, Got: finops.arr
+    FIX: Add keywords to crm.pipeline definition
