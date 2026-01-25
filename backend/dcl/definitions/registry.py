@@ -56,10 +56,10 @@ _DEFINITION_METADATA: Dict[str, DefinitionMetadata] = {
     ),
     "finops.arr": DefinitionMetadata(
         definition_id="finops.arr",
-        kind=DefinitionKind.RANKED_LIST,
-        supports_limit=True,
-        default_limit=10,
-        ranked_list=True,
+        kind=DefinitionKind.AGGREGATE,  # ARR is an aggregate metric, not a ranked list
+        supports_limit=False,  # Don't apply limit for aggregate queries
+        default_limit=None,  # No default limit - show aggregate total
+        ranked_list=False,  # Not a ranked list
         primary_metric="revenue",
         entity_type="deal",
     ),

@@ -291,6 +291,7 @@ from backend.nlq.param_extractor import extract_params, apply_limit_clamp, Execu
 from backend.bll.executor import execute_definition as bll_execute
 from backend.bll.models import ExecuteRequest as BLLExecuteRequest
 from backend.bll.definitions import get_definition as get_bll_definition, list_definitions as list_bll_definitions
+from backend.dcl.definitions.registry import DefinitionKind
 
 
 class NLQAskRequest(BaseModel):
@@ -678,12 +679,20 @@ def nlq_ask(request: NLQAskRequest):
         logger.info(f"[NLQ] Extracted params: {exec_args.to_dict()}")
 
         # Step 2.5: Handle missing limit for ranked-list definitions
+        # AGGREGATE definitions don't need limits - they return totals
         is_ranked_list = DefinitionRegistry.is_ranked_list(definition_id)
+        meta = DefinitionRegistry.get_metadata(definition_id)
+        is_aggregate = meta and meta.kind == DefinitionKind.AGGREGATE if meta else False
         default_limit = DefinitionRegistry.get_default_limit(definition_id)
         effective_limit = exec_args.limit
         limit_warning = None
 
-        if is_ranked_list and exec_args.limit is None:
+        if is_aggregate:
+            # AGGREGATE definitions return totals, not ranked lists
+            # Use high limit to get all data for aggregation, but don't treat as top-N
+            effective_limit = 1000  # Get all data
+            logger.info(f"[NLQ] AGGREGATE definition {definition_id} - returning totals")
+        elif is_ranked_list and exec_args.limit is None:
             if default_limit:
                 effective_limit = default_limit
                 logger.info(f"[NLQ] Using default limit {default_limit} for {definition_id}")

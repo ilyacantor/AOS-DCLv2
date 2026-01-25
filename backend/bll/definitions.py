@@ -119,7 +119,8 @@ _register(Definition(
     ],
     dimensions=["service", "region"],
     metrics=["monthly_cost"],
-    keywords=["unallocated spend", "untagged resources", "untagged spend", "orphan spend",
+    keywords=["unallocated spend", "unallocated cloud spend", "unallocated cloud", "unallocated",
+              "untagged resources", "untagged spend", "orphan spend",
               "unassigned cost", "missing tags", "no cost center", "spend without tags",
               "unassigned spend", "spend missing cost center"],
 ))
@@ -366,9 +367,10 @@ _register(Definition(
     ],
     dimensions=["service_name", "slo_name"],
     metrics=["target_percent", "actual_percent", "error_budget_remaining"],
-    keywords=["slo", "slo attainment", "service level objective", "service level",
+    keywords=["slo", "slos", "slo attainment", "service level objective", "service level",
               "uptime", "availability", "reliability", "error budget", "sla",
-              "how is our slo", "slo trending", "slo performance"],
+              "how is our slo", "how are our slos", "slo trending", "slos trending",
+              "slo performance", "slo status", "are our slos"],
 ))
 
 

@@ -159,22 +159,48 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
     # Category-specific term weights (reduced - these are tie-breakers, not primary signals)
     # Generic terms like "cost", "spend" should not overwhelm specific keywords
     category_terms = {
-        "finops": {"arr": 0.1, "burn": 0.1, "saas": 0.05, "mrr": 0.1, "budget": 0.05},
+        "finops": {"arr": 0.1, "burn": 0.1, "saas": 0.05, "mrr": 0.1, "budget": 0.05,
+                   "unallocated": 0.4},  # Very specific term - strong signal for unallocated_spend
         "aod": {"zombie": 0.1, "finding": 0.1, "security": 0.1, "identity": 0.1,
                 "idle": 0.1, "orphan": 0.05, "unowned": 0.1, "gap": 0.05},
         "crm": {"customer": 0.1, "deal": 0.1, "pipeline": 0.1, "account": 0.1,
                 "opportunity": 0.05, "sales": 0.05},
-        "infra": {"slo": 0.15, "sla": 0.1, "deploy": 0.1, "mttr": 0.15,
-                  "uptime": 0.1, "availability": 0.1},
+        "infra": {"slo": 0.4, "slos": 0.4, "sla": 0.1, "deploy": 0.1, "mttr": 0.15,
+                  "uptime": 0.1, "availability": 0.1},  # SLO is very specific
     }
     # Note: removed "spend", "cost", "revenue", "incident", "dora" from category terms
     # These are too generic and cause false matches across multiple definitions
+
+    # HIGH-VALUE TOKENS: These are so specific they should dominate matching
+    # If present, they strongly indicate a specific definition regardless of other matches
+    high_value_tokens = {
+        "unallocated": ("finops.unallocated_spend", 1.5),
+        "slo": ("infra.slo_attainment", 1.2),
+        "slos": ("infra.slo_attainment", 1.2),
+        "zombie": ("aod.zombies_overview", 1.0),
+        "zombies": ("aod.zombies_overview", 1.0),
+        "mttr": ("infra.mttr", 1.5),
+        "burn": ("finops.burn_rate", 1.0),
+    }
+
+    # Check for high-value tokens that strongly indicate a specific definition
+    high_value_boost = {}
+    for token, (target_defn, boost) in high_value_tokens.items():
+        if token in question_tokens or token in expanded_tokens:
+            if target_defn not in high_value_boost:
+                high_value_boost[target_defn] = 0.0
+            high_value_boost[target_defn] += boost
 
     for defn in definitions:
         score = 0.0
         matched = []
         triggered_by = []  # Track which question tokens triggered matches
         has_exact_phrase_match = False  # Track if we got a multi-word exact match
+
+        # 0. Apply high-value token boost
+        if defn.definition_id in high_value_boost:
+            score += high_value_boost[defn.definition_id]
+            matched.append(f"high_value_token:{defn.definition_id}")
 
         # 1. Check explicit keywords (highest weight)
         # Priority: multi-word exact phrases > single-word exact > partial overlap
