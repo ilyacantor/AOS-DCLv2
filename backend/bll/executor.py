@@ -247,6 +247,11 @@ def _compute_summary(
 
         elif 'customer' in defn_id or 'account' in defn_id:
             aggregations['customer_count'] = row_count
+
+            # Find name column
+            name_cols = [c for c in df.columns if any(n in c.lower() for n in ['name', 'account', 'customer'])]
+            name_col = name_cols[0] if name_cols else None
+
             if amount_cols:
                 # Compute totals on FULL population
                 pop_total = pd.to_numeric(pop_df[amount_cols[0]], errors='coerce').sum()
@@ -264,18 +269,35 @@ def _compute_summary(
                 share_pct = (shown_total / pop_total * 100) if pop_total > 0 else 0
                 aggregations['share_of_total_pct'] = float(share_pct)
 
-                # Build answer with interpretation
-                if is_top_n:
+                # Build answer with actual customer names for top-N
+                if is_top_n and name_col:
+                    # List the top N customers by name
+                    customer_lines = []
+                    for i, (_, row) in enumerate(df.head(row_count).iterrows(), 1):
+                        cust_name = row.get(name_col, f"Customer {i}")
+                        cust_rev = pd.to_numeric(row.get(amount_cols[0], 0), errors='coerce')
+                        customer_lines.append(f"{i}. {cust_name}: {_format_currency(cust_rev)}")
+
+                    answer = f"Top {row_count} customers by revenue:\n" + "\n".join(customer_lines)
+                    answer += f"\n\nTotal: {_format_currency(shown_total)} ({share_pct:.0f}% of {_format_currency(pop_total)} portfolio)."
+
+                    # Store customer list in aggregations for structured access
+                    aggregations['top_customers'] = [
+                        {"name": row.get(name_col), "revenue": float(pd.to_numeric(row.get(amount_cols[0], 0), errors='coerce'))}
+                        for _, row in df.head(row_count).iterrows()
+                    ]
+                elif is_top_n:
+                    # No name column - fall back to aggregate summary
                     answer = f"Top {row_count} customers represent {_format_currency(shown_total)} ({share_pct:.0f}% of {_format_currency(pop_total)} total portfolio)."
-                    # Interpretation
-                    if share_pct > 50:
-                        answer += f" High concentration: top {row_count} drive majority of revenue."
-                    elif share_pct > 25:
-                        answer += f" Moderate concentration in top accounts."
-                    else:
-                        answer += f" Revenue is well-distributed across customer base."
+                    limitations.append("Customer name column not found in data")
                 else:
                     answer = f"Total revenue: {_format_currency(pop_total)} across {pop_count} customers (avg {_format_currency(avg_revenue)} each)."
+
+                # Concentration interpretation
+                if share_pct > 50:
+                    answer += f" High concentration: top {row_count} drive majority of revenue."
+                elif share_pct > 25 and is_top_n:
+                    answer += " Moderate concentration in top accounts."
 
                 # Top customer concentration
                 if row_count >= 1:
@@ -283,8 +305,6 @@ def _compute_summary(
                     if pop_total > 0:
                         top_pct = (top_val / pop_total) * 100
                         aggregations['top_customer_pct'] = float(top_pct)
-                        if top_pct > 20:
-                            answer += f" Largest customer ({_format_currency(top_val)}) is {top_pct:.0f}% of total."
             else:
                 answer = f"Found {row_count} customers."
                 limitations.append("No revenue column for ranking impact")
