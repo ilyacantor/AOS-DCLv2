@@ -179,19 +179,37 @@ METRIC_TO_DEFINITION = {v: k for k, v in DEFINITION_TO_METRIC.items()}
 # Question-to-metric patterns - ORDER MATTERS (more specific patterns first)
 # These are checked in order, first match wins
 QUESTION_METRIC_PATTERNS = [
-    # Specific compound patterns first
+    # MOST SPECIFIC first - compound patterns with modifiers
+    (r"\bunallocated\s+(?:cloud\s+)?(?:spend|cost)\b", "unallocated_spend"),
+    (r"\bunallocated\b", "unallocated_spend"),  # "unallocated" alone is very specific
+
+    # Customer COUNT patterns (before customer_revenue)
+    (r"\b(?:new|lost)\s+customers?\b", "customer_count"),
+    (r"\bhow\s+many\s+customers?\b", "customer_count"),
+    (r"\bcustomers?\s+(?:last|this|past)\s+(?:month|quarter|year|week)\b", "customer_count"),
+
+    # Budget/eating patterns
+    (r"\bwhat's?\s+eating\s+(?:up\s+)?(?:our\s+)?budget\b", "spend"),
+    (r"\beating\s+(?:up\s+)?(?:our\s+)?budget\b", "spend"),
+
+    # Vendor patterns
+    (r"\bvendor[s]?\s+(?:increased|decreased)?\s*spend\b", "vendor_spend"),
+    (r"\bspend\s+by\s+vendor\b", "vendor_spend"),
+    (r"\btop\s+\d*\s*vendor[s]?\s+(?:by\s+)?(?:spend|cost)?\b", "vendor_spend"),
+    (r"\bvendor[s]?\s+(?:by\s+)?(?:spend|cost)\b", "vendor_spend"),
+    (r"\b(?:highest|lowest)\s+spending\s+vendors?\b", "vendor_spend"),
+    (r"\bvendor[s]?\s+cost\s+changes?\b", "vendor_spend"),
+    (r"\bvendors?\s+by\s+cost\b", "vendor_spend"),
+
+    # Finance specific
     (r"\bannual\s+recurring\s+revenue\b", "arr"),
     (r"\barr\b", "arr"),
     (r"\bsaas\s+spend(?:ing)?\b", "saas_spend"),
     (r"\bcloud\s+(?:spend|cost)s?\b", "cloud_spend"),
-    (r"\bunallocated\s+(?:cloud\s+)?spend\b", "unallocated_spend"),
-    (r"\bunallocated\b", "unallocated_spend"),
     (r"\bburn\s*rate\b", "burn_rate"),
-    (r"\bvendor[s]?\s+(?:by\s+)?spend\b", "vendor_spend"),
-    (r"\bspend\s+by\s+vendor\b", "vendor_spend"),
-    (r"\btop\s+\d*\s*vendor[s]?\b", "vendor_spend"),
 
     # Infrastructure - specific first
+    (r"\b(?:worst|best)\s+(?:performing\s+)?services?\b", "slo_attainment"),
     (r"\b(?:mean\s+)?time\s+to\s+recover", "mttr"),
     (r"\bmttr\b", "mttr"),
     (r"\blead\s+time\b", "lead_time"),
@@ -206,13 +224,13 @@ QUESTION_METRIC_PATTERNS = [
     (r"\boutage[s]?\b", "incident_count"),
 
     # Security
-    (r"\bsecurity\s+finding[s]?\b", "security_findings"),
+    (r"\b(?:critical\s+)?security\s+finding[s]?\b", "security_findings"),
+    (r"\bfinding[s]?\s+by\s+severity\b", "security_findings"),
     (r"\bzombie[s]?\s+resource[s]?\b", "zombie_resources"),
     (r"\bzombie[s]?\b", "zombie_resources"),
     (r"\bidle\s+resource[s]?\b", "zombie_resources"),
     (r"\bidle\b", "zombie_resources"),
     (r"\bidentity\s+gap[s]?\b", "identity_gaps"),
-    (r"\bunowned\s+spend\b", "identity_gaps"),
     (r"\bresource[s]?\s+without\s+owner", "identity_gaps"),
 
     # CRM - specific patterns
@@ -224,6 +242,7 @@ QUESTION_METRIC_PATTERNS = [
     (r"\bdeal[s]?\s+in\s+(?:the\s+)?pipeline\b", "pipeline"),
     (r"\btop\s+\d*\s*deal[s]?\b", "deal_value"),
     (r"\bdeals?\s+closing\b", "pipeline"),
+    (r"\b(?:largest|biggest)\s+deals?\b", "deal_value"),
 
     # Generic patterns last (these are catch-alls)
     (r"\brevenue\b", "revenue"),
@@ -318,31 +337,42 @@ AGGREGATION_PATTERNS_ORDERED = [
     (r"\bwho\s+(?:are|is)\s+(?:our\s+)?top\b", AggregationType.RANKING),  # "Who are our top customers?"
     (r"\btop\s+(?:customers?|vendors?|deals?|services?)\b", AggregationType.RANKING),
 
-    # Inventory - before count patterns
+    # Inventory - security/zombie/identity patterns
+    (r"\bwhat\s+(?:are\s+)?(?:our\s+)?zombie", AggregationType.INVENTORY),  # "What are our zombie resources?"
+    (r"\bzombie\s+resources?\b", AggregationType.INVENTORY),
+    (r"\bidle\s+resources?\b", AggregationType.INVENTORY),
+    (r"\bidentity\s+gaps?\b", AggregationType.INVENTORY),
+    (r"\bresources?\s+without\s+owners?\b", AggregationType.INVENTORY),
+    (r"\bshow\s+(?:me\s+)?(?:security\s+)?findings?\b", AggregationType.INVENTORY),
+    (r"\b(?:critical\s+)?security\s+findings?\b", AggregationType.INVENTORY),
     (r"\bshow\s+(?:me\s+)?(?:all|the)\s+", AggregationType.INVENTORY),
     (r"\blist\s+(?:all\s+)?", AggregationType.INVENTORY),
     (r"\binventory\b", AggregationType.INVENTORY),
-    (r"\bshow\s+me\s+(?:security\s+)?findings?\b", AggregationType.INVENTORY),  # security findings = inventory
 
-    # Count - explicit
+    # Count - explicit patterns (incidents by, findings by, customers last)
     (r"\bhow\s+many\b", AggregationType.COUNT),
     (r"\bnumber\s+of\b", AggregationType.COUNT),
     (r"\btotal\s+(?:deal\s+)?count\b", AggregationType.COUNT),
-    (r"\b(?:new|lost)\s+customers?\b", AggregationType.COUNT),  # "new customers", "lost customers"
-    (r"\bincident[s]?\s+(?:last|this|past)\b", AggregationType.COUNT),  # "incidents last week"
-    (r"\bopen\s+incidents?\b", AggregationType.COUNT),  # "open incidents"
+    (r"\b(?:new|lost)\s+customers?\b", AggregationType.COUNT),
+    (r"\bcustomers?\s+(?:last|this|past)\s+(?:year|month|quarter|week)\b", AggregationType.COUNT),
+    (r"\bincident[s]?\s+(?:last|this|past)\b", AggregationType.COUNT),
+    (r"\bincident[s]?\s+(?:count\s+)?by\s+", AggregationType.COUNT),  # "incidents by severity"
+    (r"\bfindings?\s+by\s+severity\b", AggregationType.COUNT),  # "findings by severity"
+    (r"\bopen\s+incidents?\b", AggregationType.COUNT),
 
     # Health - before generic "how are"
     (r"\bslo\s+(?:attainment\s+)?by\s+service\b", AggregationType.HEALTH),
     (r"\bhow\s+(?:are|is)\s+(?:our\s+)?slo", AggregationType.HEALTH),
+    (r"\bwhat\s+(?:do|does)\s+(?:our\s+)?slos?\s+look\s+like\b", AggregationType.HEALTH),
+    (r"\bshow\s+(?:me\s+)?(?:our\s+)?uptime\b", AggregationType.HEALTH),
+    (r"\buptime\b", AggregationType.HEALTH),
     (r"\bservice\s+health\b", AggregationType.HEALTH),
     (r"\bsystem\s+status\b", AggregationType.HEALTH),
-    (r"\buptime\b", AggregationType.HEALTH),
     (r"\bat\s+risk\b", AggregationType.HEALTH),
     (r"\bpipeline\s+health\b", AggregationType.HEALTH),
     (r"\bare\s+there\s+any\s+issues\b", AggregationType.HEALTH),
 
-    # Delta/Change - specific patterns (exclude "change failure rate", "lead time for changes")
+    # Delta/Change - specific patterns
     (r"\bchange[ds]?\s+mom\b", AggregationType.DELTA),
     (r"\bchange[ds]?\s+month\s+over\s+month\b", AggregationType.DELTA),
     (r"\bchange[ds]?\s+qoq\b", AggregationType.DELTA),
@@ -354,12 +384,15 @@ AGGREGATION_PATTERNS_ORDERED = [
     (r"\bmom\b", AggregationType.DELTA),
     (r"\bqoq\b", AggregationType.DELTA),
     (r"\byoy\b", AggregationType.DELTA),
-    (r"\bvs\s+(?:last|prior|previous)\b", AggregationType.DELTA),
+    (r"\bvs\s+(?:last|this|prior|previous)\b", AggregationType.DELTA),
     (r"\bcomparison\b", AggregationType.DELTA),
     (r"\bhow\s+has\s+.*\s+changed\b", AggregationType.DELTA),
     (r"\bhas\s+changed\b", AggregationType.DELTA),
+    (r"\blast\s+month\s+vs\s+this\s+month\b", AggregationType.DELTA),  # "spend last month vs this month"
 
-    # Trend
+    # Trend - SLO trending should be TREND not HEALTH
+    (r"\bslos?\s+trending\b", AggregationType.TREND),
+    (r"\bhow\s+(?:are|is)\s+(?:our\s+)?slos?\s+trending\b", AggregationType.TREND),
     (r"\btrend(?:ing)?\b", AggregationType.TREND),
     (r"\bover\s+time\b", AggregationType.TREND),
     (r"\bhow's?\s+.*\s+trending\b", AggregationType.TREND),
@@ -369,7 +402,7 @@ AGGREGATION_PATTERNS_ORDERED = [
     (r"\bshare\s+of\b", AggregationType.PERCENT),
     (r"\bconcentration\b", AggregationType.PERCENT),
     (r"\bwhat\s+percent(?:age)?\b", AggregationType.PERCENT),
-    (r"\bbreach\s+rate\b", AggregationType.PERCENT),  # SLO breach rate
+    (r"\bbreach\s+rate\b", AggregationType.PERCENT),
 
     # Ranking - superlatives (check after more specific patterns)
     (r"\blargest\b", AggregationType.RANKING),
@@ -379,7 +412,7 @@ AGGREGATION_PATTERNS_ORDERED = [
     (r"\bworst\b", AggregationType.RANKING),
     (r"\bbest\b", AggregationType.RANKING),
     (r"\bbiggest\b", AggregationType.RANKING),
-    (r"\bwhat's?\s+eating\b", AggregationType.RANKING),  # "what's eating up our budget?"
+    (r"\bwhat's?\s+eating\b", AggregationType.RANKING),
 ]
 
 # Legacy dict for backward compatibility (not used directly)
@@ -671,6 +704,18 @@ def extract_normalized_intent(
             metric = "zombie_resources"
         elif "identity" in matched_definition or "gap" in matched_definition:
             metric = "identity_gaps"
+
+    # If aggregation is DELTA, convert base metric to delta variant
+    # e.g., "revenue" → "revenue_delta" when asking about "revenue change MoM"
+    if aggregation == AggregationType.DELTA and metric and not metric.endswith("_delta"):
+        # Map base metrics to their delta equivalents
+        base_metric = metric
+        if base_metric in ("revenue", "arr"):
+            metric = "revenue_delta"
+        elif base_metric in ("spend", "saas_spend", "cloud_spend"):
+            metric = "spend_delta"
+        elif base_metric == "vendor_spend":
+            metric = "vendor_spend_delta"
 
     # Build normalized intent
     intent = NormalizedIntent(
