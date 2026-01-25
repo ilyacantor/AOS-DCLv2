@@ -230,6 +230,7 @@ def rank_answerability(request: AnswerabilityRequest):
     - size = probability_of_answer
     - rank = left→right order (most likely answerable first)
     - color = confidence (evidence quality: hot/warm/cool)
+    - extracted_params: limit, time_window, order_by extracted from question
 
     No LLM calls in the hot path. Uses deterministic rules + stored metadata.
 
@@ -243,6 +244,9 @@ def rank_answerability(request: AnswerabilityRequest):
         }
     }
     """
+    from backend.nlq.param_extractor import extract_params, apply_limit_clamp
+    from backend.nlq.models import ExtractedParams
+
     try:
         # Rank hypotheses
         circles = answerability_scorer.rank_hypotheses(
@@ -254,10 +258,23 @@ def rank_answerability(request: AnswerabilityRequest):
         # Check if clarification needed
         needs_context = answerability_scorer.get_needs_context(circles)
 
+        # Extract execution parameters from the question
+        exec_args = extract_params(request.question)
+        extracted_limit = None
+        if exec_args.limit:
+            extracted_limit = apply_limit_clamp(exec_args.limit, max_limit=100)
+
+        extracted_params = ExtractedParams(
+            limit=extracted_limit,
+            time_window=exec_args.time_window,
+            order_by=None,  # Ordering handled by definition spec, not NLQ inference
+        )
+
         return AnswerabilityResponse(
             question=request.question,
             circles=circles,
             needs_context=needs_context,
+            extracted_params=extracted_params,
         )
     except Exception as e:
         logger.error(f"Answerability ranking failed: {e}", exc_info=True)

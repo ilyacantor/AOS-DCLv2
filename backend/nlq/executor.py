@@ -325,7 +325,8 @@ class QueryExecutor:
         time_window: Optional[str] = None,
         additional_filters: Optional[Dict[str, Any]] = None,
         tenant_id: str = "default",
-        skip_cache: bool = False
+        skip_cache: bool = False,
+        limit: Optional[int] = None
     ) -> QueryResult:
         """
         Execute a query for a definition.
@@ -388,6 +389,12 @@ class QueryExecutor:
             tenant_id=tenant_id,
             metadata=metadata,
         )
+
+        # Apply limit if specified (post-execution slicing)
+        if limit and result.status == ExecutionStatus.COMPLETED:
+            result.metadata["total_before_limit"] = result.row_count
+            result.rows = result.rows[:limit]
+            result.row_count = len(result.rows)
 
         # Cache result if successful
         if result.status == ExecutionStatus.COMPLETED and self.enable_cache:

@@ -78,6 +78,7 @@ class ExecuteQueryRequest(BaseModel):
     dims: Optional[List[str]] = None
     time_window: Optional[str] = None
     filters: Optional[Dict[str, Any]] = None
+    limit: Optional[int] = Field(default=None, ge=1, le=1000, description="Max rows to return")
     skip_cache: bool = False
 
 
@@ -517,6 +518,7 @@ def execute_query(
         additional_filters=request.filters,
         tenant_id=tenant_id,
         skip_cache=request.skip_cache,
+        limit=request.limit,
     )
     return result.to_dict()
 

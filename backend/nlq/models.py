@@ -261,6 +261,13 @@ class Circle(CamelCaseModel):
     plan_id: str
 
 
+class ExtractedParams(CamelCaseModel):
+    """Extracted execution parameters from the question."""
+    limit: Optional[int] = None
+    time_window: Optional[str] = None
+    order_by: Optional[str] = None
+
+
 class AnswerabilityResponse(CamelCaseModel):
     """
     Response body for POST /api/nlq/answerability_rank
@@ -270,6 +277,7 @@ class AnswerabilityResponse(CamelCaseModel):
     question: str
     circles: List[Circle] = Field(default_factory=list)
     needs_context: List[str] = Field(default_factory=list)  # Clarifying questions if probability too low
+    extracted_params: Optional[ExtractedParams] = None  # Extracted limit, time_window, etc.
 
 
 class ExplainRequest(CamelCaseModel):
