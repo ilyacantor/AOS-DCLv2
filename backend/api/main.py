@@ -209,11 +209,13 @@ from backend.nlq.explainer import HypothesisExplainer
 from backend.nlq.routes_registry import router as registry_router
 from backend.bll.routes import router as bll_router
 from backend.farm.routes import router as farm_router
+from backend.dcl.routes import router as dcl_router
 
 # Include routers
 app.include_router(registry_router)
 app.include_router(bll_router)
 app.include_router(farm_router)
+app.include_router(dcl_router)
 
 # Initialize NLQ components
 nlq_persistence = NLQPersistence()
@@ -573,28 +575,37 @@ def nlq_extract_params_get(question: str):
 def nlq_ask(request: NLQAskRequest):
     """
     Ask a natural language question and get an answer.
-    
+
     Flow:
     1. Match question to best BLL definition (keyword-based)
-    2. Extract parameters from question (top N, by revenue, etc.)
+    2. Extract parameters from question (top N, etc.)
     3. Execute definition with extracted parameters
-    4. Return data + computed summary
-    
+    4. Store in history for replay
+    5. Return data + computed summary
+
+    Key Fix: If user asks "top 5", limit=5 is extracted and applied.
+    If limit is missing for ranked-list definitions, a warning is added.
+
     Example:
     {
         "question": "Show me the top 5 customers by revenue"
     }
-    
+
     Returns:
     - definition_id: matched definition
     - confidence_score: match confidence (0.0-1.0)
-    - execution_args: extracted parameters (limit, order_by, etc.)
+    - execution_args: extracted parameters (limit, etc.)
     - data: query results (limited to extracted top-N)
-    - summary: human-readable answer
+    - summary: human-readable answer with aggregations
     - caveats: any limitations applied
     """
+    import time
     from backend.nlq.intent_matcher import match_question_with_details, AMBIGUOUS_GROUPS
     from backend.bll.definitions import get_definition
+    from backend.dcl.history.persistence import get_history_store
+    from backend.dcl.definitions.registry import DefinitionRegistry
+
+    start_time = time.time()
 
     try:
         question = request.question
@@ -610,7 +621,6 @@ def nlq_ask(request: NLQAskRequest):
         # Check for delta capability mismatch (query needs delta but definition doesn't support)
         delta_capability_mismatch = False
         if match_result.operators and match_result.operators.requires_delta:
-            from backend.bll.definitions import get_definition
             matched_defn = get_definition(definition_id)
             if matched_defn and hasattr(matched_defn, 'capabilities'):
                 if not matched_defn.capabilities.supports_delta:
@@ -618,14 +628,11 @@ def nlq_ask(request: NLQAskRequest):
                     logger.info(f"[NLQ] Delta capability mismatch: query needs delta but {definition_id} doesn't support it")
 
         # Step 1.5: Check for ambiguity - return NEEDS_CLARIFICATION if ambiguous
-        # But don't treat as ambiguous if we have a clear metric type match (e.g., revenue query -> ARR)
         is_truly_ambiguous = match_result.is_ambiguous and len(match_result.top_candidates) >= 2
         if delta_capability_mismatch:
-            # We know what they want (e.g., revenue), just can't do MoM - not ambiguous
             is_truly_ambiguous = False
 
         if is_truly_ambiguous:
-            # Build clarification response with top candidates
             candidates = []
             for candidate in match_result.top_candidates[:4]:
                 defn = get_definition(candidate.definition_id)
@@ -637,7 +644,6 @@ def nlq_ask(request: NLQAskRequest):
                         score=round(candidate.score, 3),
                     ))
 
-            # Check for known ambiguous group clarification message
             clarification_msg = "Your question matches multiple definitions. Which one did you mean?"
             question_lower = question.lower()
             for group_key, group_info in AMBIGUOUS_GROUPS.items():
@@ -647,10 +653,10 @@ def nlq_ask(request: NLQAskRequest):
 
             return NLQAskResponse(
                 question=question,
-                definition_id=definition_id,  # Default/best guess
+                definition_id=definition_id,
                 confidence_score=confidence,
                 execution_args={},
-                data=[],  # No data when clarification needed
+                data=[],
                 metadata={
                     "dataset_id": request.dataset_id,
                     "ambiguity_gap": round(match_result.ambiguity_gap, 3),
@@ -671,12 +677,25 @@ def nlq_ask(request: NLQAskRequest):
 
         logger.info(f"[NLQ] Extracted params: {exec_args.to_dict()}")
 
+        # Step 2.5: Handle missing limit for ranked-list definitions
+        is_ranked_list = DefinitionRegistry.is_ranked_list(definition_id)
+        default_limit = DefinitionRegistry.get_default_limit(definition_id)
+        effective_limit = exec_args.limit
+        limit_warning = None
+
+        if is_ranked_list and exec_args.limit is None:
+            if default_limit:
+                effective_limit = default_limit
+                logger.info(f"[NLQ] Using default limit {default_limit} for {definition_id}")
+            else:
+                limit_warning = "MISSING_LIMIT: No limit specified for ranked list query"
+                effective_limit = 1000
+
         # Step 3: Execute definition with extracted parameters
-        # PRODUCTION BOUNDARY: Ordering is declared in definition spec, not inferred by NLQ
         bll_request = BLLExecuteRequest(
             dataset_id=request.dataset_id,
             definition_id=definition_id,
-            limit=exec_args.limit or 1000,
+            limit=effective_limit or 1000,
             offset=0,
         )
 
@@ -685,17 +704,20 @@ def nlq_ask(request: NLQAskRequest):
         # Step 4: Build response with caveats
         caveats = []
         if delta_capability_mismatch:
-            # User asked for MoM/change but we don't have temporal data
             metric = match_result.operators.metric_type if match_result.operators else "this metric"
             caveats.append(f"Month-over-month comparison not available for {metric}; showing current values")
+        if limit_warning:
+            caveats.append(limit_warning)
         if exec_args.limit:
             caveats.append(f"Limited to top {exec_args.limit}")
-            # Note: Ordering applied from definition's default_order_by
             caveats.append("Sorted by definition default ordering")
         if not caveats:
             caveats.append("Based on available data bindings")
 
-        return NLQAskResponse(
+        # Compute execution time
+        execution_time_ms = int((time.time() - start_time) * 1000)
+
+        response = NLQAskResponse(
             question=question,
             definition_id=definition_id,
             confidence_score=confidence,
@@ -704,15 +726,35 @@ def nlq_ask(request: NLQAskRequest):
             metadata={
                 "dataset_id": result.metadata.dataset_id,
                 "definition_id": result.metadata.definition_id,
-                "row_count": len(result.data),  # Actual returned rows
-                "total_available": result.metadata.row_count,  # Pre-limit count
-                "execution_time_ms": result.metadata.execution_time_ms,
+                "row_count": len(result.data),
+                "total_available": result.metadata.row_count,
+                "execution_time_ms": execution_time_ms,
                 "matched_keywords": matched_keywords,
+                "effective_limit": effective_limit,
             },
             summary=result.summary.model_dump() if result.summary else None,
             caveats=caveats,
             needs_clarification=False,
         )
+
+        # Step 5: Store in history for replay
+        try:
+            history_store = get_history_store()
+            history_store.add(
+                question=question,
+                dataset_id=request.dataset_id,
+                definition_id=definition_id,
+                extracted_params=exec_args.to_dict(),
+                response=response.model_dump(),
+                latency_ms=execution_time_ms,
+                status="success",
+                tenant_id=request.tenant_id,
+            )
+        except Exception as hist_err:
+            logger.warning(f"[NLQ] Failed to store history: {hist_err}")
+
+        return response
+
     except Exception as e:
         logger.error(f"NLQ ask failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"DCL execution failed: {str(e)}")
