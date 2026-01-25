@@ -68,91 +68,173 @@ def _format_currency(amount: float) -> str:
 
 
 def _compute_summary(df: pd.DataFrame, definition: Definition) -> ComputedSummary:
-    """Compute aggregations and generate human-readable answer based on definition type."""
+    """
+    Compute aggregations and generate human-readable answer based on definition type.
+
+    Quality guidelines:
+    - Lists include interpretation when possible
+    - Totals compared to baselines when available
+    - Rankings explain impact if dataset supports it
+    - Metrics reference their definition when ambiguity exists
+    - Data limitations explicitly noted
+    """
     aggregations: dict[str, Any] = {}
     answer = ""
-    
+    limitations: list[str] = []
+
     amount_cols = []
     for c in df.columns:
         if any(x in c.lower() for x in ['amount', 'revenue', 'monthly_cost', 'annual', 'net_value']):
             if df[c].dtype in ['int64', 'float64'] or pd.api.types.is_numeric_dtype(df[c]):
                 amount_cols.append(c)
-    
+
     defn_id = definition.definition_id.lower()
-    
+    row_count = len(df)
+
     try:
         if 'arr' in defn_id or 'revenue' in defn_id:
             if amount_cols:
                 total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
                 aggregations['total_arr'] = float(total)
-                aggregations['deal_count'] = len(df)
-                answer = f"Your current ARR is {_format_currency(total)} across {len(df)} deals/opportunities."
+                aggregations['deal_count'] = row_count
+                # Interpretation: ARR with context
+                answer = f"Your current ARR is {_format_currency(total)} across {row_count} deals/opportunities."
+                # Note limitation if sample is small
+                if row_count < 10:
+                    limitations.append(f"Based on {row_count} records; may not reflect full ARR")
             else:
-                aggregations['row_count'] = len(df)
-                answer = f"Found {len(df)} revenue records."
-        
+                aggregations['row_count'] = row_count
+                answer = f"Found {row_count} revenue records."
+                limitations.append("No amount column found for aggregation")
+
         elif 'delta' in defn_id or 'mom' in defn_id or 'change' in defn_id:
-            aggregations['row_count'] = len(df)
-            if amount_cols:
-                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
-                aggregations['total_value'] = float(total)
-                answer = f"Month-over-month analysis shows {len(df)} records with {_format_currency(total)} total."
+            aggregations['row_count'] = row_count
+            if amount_cols and 'delta' in ''.join(df.columns).lower():
+                # Try to find delta columns
+                delta_cols = [c for c in df.columns if 'delta' in c.lower()]
+                if delta_cols:
+                    delta_sum = pd.to_numeric(df[delta_cols[0]], errors='coerce').sum()
+                    aggregations['net_delta'] = float(delta_sum)
+                    direction = "increased" if delta_sum > 0 else "decreased" if delta_sum < 0 else "unchanged"
+                    answer = f"Month-over-month: costs {direction} by {_format_currency(abs(delta_sum))} across {row_count} vendors."
+                else:
+                    total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                    aggregations['total_value'] = float(total)
+                    answer = f"Month-over-month analysis: {row_count} vendors with {_format_currency(total)} total spend."
             else:
-                answer = f"Month-over-month analysis returned {len(df)} records."
-        
+                answer = f"Month-over-month analysis: {row_count} records."
+                limitations.append("Delta columns not available; showing raw records")
+
         elif 'burn' in defn_id:
             if amount_cols:
                 total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
                 monthly_avg = total / 12 if total > 0 else 0
                 aggregations['total_spend'] = float(total)
                 aggregations['monthly_avg'] = float(monthly_avg)
-                answer = f"Your current burn rate is approximately {_format_currency(monthly_avg)}/month ({_format_currency(total)} total)."
+                answer = f"Burn rate: approximately {_format_currency(monthly_avg)}/month ({_format_currency(total)} annualized)."
+                limitations.append("Burn rate estimated from available spend data; actual runway depends on cash reserves")
             else:
-                answer = f"Found {len(df)} cost records."
-        
+                answer = f"Found {row_count} cost records."
+                limitations.append("No cost column found for burn calculation")
+
+        elif 'unallocated' in defn_id:
+            # Unallocated spend - explain what it means
+            aggregations['resource_count'] = row_count
+            if amount_cols:
+                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['unallocated_spend'] = float(total)
+                answer = f"Unallocated spend: {_format_currency(total)} across {row_count} resources without cost center assignment."
+                if total > 10000:
+                    answer += " Consider tagging these resources to improve cost attribution."
+            else:
+                answer = f"Found {row_count} unallocated resources."
+            limitations.append("Definition: Resources lacking cost center or project tags")
+
         elif 'spend' in defn_id or 'cost' in defn_id:
             if amount_cols:
                 total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
                 aggregations['total_spend'] = float(total)
-                aggregations['transaction_count'] = len(df)
-                answer = f"Total spend is {_format_currency(total)} across {len(df)} transactions."
+                aggregations['transaction_count'] = row_count
+                avg_per_txn = total / row_count if row_count > 0 else 0
+                answer = f"Total spend: {_format_currency(total)} across {row_count} transactions (avg {_format_currency(avg_per_txn)} each)."
             else:
-                answer = f"Found {len(df)} spend records."
-        
+                answer = f"Found {row_count} spend records."
+                limitations.append("No cost column found for aggregation")
+
         elif 'customer' in defn_id or 'account' in defn_id:
-            aggregations['customer_count'] = len(df)
+            aggregations['customer_count'] = row_count
             if amount_cols:
                 total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                avg_revenue = total / row_count if row_count > 0 else 0
                 aggregations['total_revenue'] = float(total)
-                answer = f"Top {len(df)} customers with {_format_currency(total)} in total revenue."
+                aggregations['avg_per_customer'] = float(avg_revenue)
+                # Ranking with impact
+                answer = f"Top {row_count} customers: {_format_currency(total)} total revenue (avg {_format_currency(avg_revenue)} per customer)."
+                # Top customer concentration
+                if row_count >= 1 and amount_cols:
+                    top_val = pd.to_numeric(df[amount_cols[0]], errors='coerce').iloc[0] if len(df) > 0 else 0
+                    if total > 0:
+                        top_pct = (top_val / total) * 100
+                        if top_pct > 25:
+                            answer += f" Top customer represents {top_pct:.0f}% of shown revenue."
             else:
-                answer = f"Found {len(df)} customers."
-        
+                answer = f"Found {row_count} customers."
+                limitations.append("No revenue column for ranking impact")
+
         elif 'pipeline' in defn_id or 'deal' in defn_id:
-            aggregations['deal_count'] = len(df)
+            aggregations['deal_count'] = row_count
             if amount_cols:
                 total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
                 aggregations['pipeline_value'] = float(total)
-                answer = f"Pipeline contains {len(df)} deals worth {_format_currency(total)}."
+                avg_deal = total / row_count if row_count > 0 else 0
+                answer = f"Pipeline: {row_count} deals worth {_format_currency(total)} (avg deal size: {_format_currency(avg_deal)})."
+                # Stage breakdown if available
+                if 'Stage' in df.columns or 'stage' in df.columns:
+                    stage_col = 'Stage' if 'Stage' in df.columns else 'stage'
+                    stages = df[stage_col].value_counts().to_dict()
+                    aggregations['stage_breakdown'] = stages
             else:
-                answer = f"Pipeline contains {len(df)} deals."
-        
+                answer = f"Pipeline contains {row_count} deals."
+                limitations.append("No amount column for pipeline value")
+
         elif 'zombie' in defn_id or 'idle' in defn_id:
-            aggregations['resource_count'] = len(df)
+            aggregations['resource_count'] = row_count
             if amount_cols:
                 total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
                 aggregations['wasted_spend'] = float(total)
-                answer = f"Found {len(df)} idle/zombie resources costing {_format_currency(total)}."
+                answer = f"Zombie resources: {row_count} idle instances costing {_format_currency(total)}/month. These are candidates for termination or rightsizing."
             else:
-                answer = f"Found {len(df)} idle/zombie resources."
-        
-        elif 'finding' in defn_id or 'security' in defn_id:
-            aggregations['finding_count'] = len(df)
-            answer = f"Found {len(df)} security findings."
+                answer = f"Found {row_count} zombie/idle resources."
+            limitations.append("Definition: Resources with no meaningful activity in the observation period")
 
-        # SLO Attainment
+        elif 'identity_gap' in defn_id or 'ownership' in defn_id:
+            aggregations['resource_count'] = row_count
+            if amount_cols:
+                total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
+                aggregations['unowned_spend'] = float(total)
+                answer = f"Ownership gaps: {row_count} resources without clear owners, representing {_format_currency(total)} in spend."
+            else:
+                answer = f"Found {row_count} resources with ownership gaps."
+            limitations.append("Definition: Resources lacking owner tag or assignment")
+
+        elif 'finding' in defn_id or 'security' in defn_id:
+            aggregations['finding_count'] = row_count
+            if 'severity' in df.columns:
+                severity_counts = df['severity'].value_counts().to_dict()
+                aggregations['severity_breakdown'] = severity_counts
+                critical = severity_counts.get('critical', 0)
+                high = severity_counts.get('high', 0)
+                if critical > 0 or high > 0:
+                    answer = f"Security findings: {row_count} total ({critical} critical, {high} high priority). Critical/high findings require immediate attention."
+                else:
+                    answer = f"Security findings: {row_count} total. No critical or high severity issues found."
+            else:
+                answer = f"Found {row_count} security findings."
+
+        # SLO Attainment - with interpretation
         elif 'slo' in defn_id:
-            aggregations['service_count'] = len(df)
+            aggregations['service_count'] = row_count
+            avg_attainment = None
             if 'actual' in df.columns:
                 avg_attainment = pd.to_numeric(df['actual'], errors='coerce').mean()
                 aggregations['avg_attainment'] = float(avg_attainment)
@@ -162,83 +244,155 @@ def _compute_summary(df: pd.DataFrame, definition: Definition) -> ComputedSummar
                 passing = status_counts.get('passing', 0)
                 at_risk = status_counts.get('at_risk', 0)
                 breached = status_counts.get('breached', 0)
-                answer = f"SLO attainment across {len(df)} services: {passing} passing, {at_risk} at risk, {breached} breached."
+
+                # Interpretation
+                if breached > 0:
+                    health = "needs attention"
+                elif at_risk > passing:
+                    health = "trending down"
+                else:
+                    health = "healthy"
+
+                answer = f"SLO health ({health}): {passing} passing, {at_risk} at risk, {breached} breached across {row_count} services."
                 if avg_attainment:
                     answer += f" Average attainment: {avg_attainment:.1f}%."
             else:
-                answer = f"Tracking SLOs for {len(df)} services."
+                answer = f"Tracking SLOs for {row_count} services."
+            limitations.append("SLO = Service Level Objective; target uptime/performance metric")
 
-        # DORA Metrics - Deploy Frequency
+        # DORA Metrics - Deploy Frequency with benchmark
         elif 'deploy' in defn_id:
-            aggregations['service_count'] = len(df)
+            aggregations['service_count'] = row_count
             if 'deploy_count' in df.columns:
                 total_deploys = pd.to_numeric(df['deploy_count'], errors='coerce').sum()
                 avg_deploys = pd.to_numeric(df['deploy_count'], errors='coerce').mean()
                 aggregations['total_deploys'] = int(total_deploys)
                 aggregations['avg_per_service'] = float(avg_deploys)
-                answer = f"Deployment frequency: {int(total_deploys)} total deployments across {len(df)} services (avg {avg_deploys:.1f} per service)."
-            else:
-                answer = f"Tracking deployments for {len(df)} services."
 
-        # DORA Metrics - Lead Time
+                # DORA benchmark interpretation (per 30 days)
+                if avg_deploys >= 30:
+                    tier = "Elite (daily+)"
+                elif avg_deploys >= 4:
+                    tier = "High (weekly)"
+                elif avg_deploys >= 1:
+                    tier = "Medium (monthly)"
+                else:
+                    tier = "Low (<monthly)"
+
+                answer = f"Deployment frequency: {int(total_deploys)} total across {row_count} services. DORA tier: {tier} (avg {avg_deploys:.1f}/month per service)."
+            else:
+                answer = f"Tracking deployments for {row_count} services."
+            limitations.append("DORA = DevOps Research and Assessment metrics")
+
+        # DORA Metrics - Lead Time with benchmark
         elif 'lead_time' in defn_id:
-            aggregations['service_count'] = len(df)
+            aggregations['service_count'] = row_count
             if 'lead_time_hours' in df.columns:
                 avg_lead_time = pd.to_numeric(df['lead_time_hours'], errors='coerce').mean()
                 aggregations['avg_lead_time_hours'] = float(avg_lead_time)
-                answer = f"Lead time for changes: average {avg_lead_time:.1f} hours across {len(df)} services."
-            else:
-                answer = f"Lead time data for {len(df)} services."
 
-        # DORA Metrics - Change Failure Rate
+                # DORA benchmark
+                if avg_lead_time < 1:
+                    tier = "Elite (<1 hour)"
+                elif avg_lead_time < 24:
+                    tier = "High (<1 day)"
+                elif avg_lead_time < 168:
+                    tier = "Medium (<1 week)"
+                else:
+                    tier = "Low (>1 week)"
+
+                answer = f"Lead time for changes: average {avg_lead_time:.1f} hours. DORA tier: {tier}."
+            else:
+                answer = f"Lead time data for {row_count} services."
+            limitations.append("Lead time = time from commit to production")
+
+        # DORA Metrics - Change Failure Rate with benchmark
         elif 'failure_rate' in defn_id:
-            aggregations['service_count'] = len(df)
+            aggregations['service_count'] = row_count
             if 'change_failure_rate' in df.columns:
                 avg_cfr = pd.to_numeric(df['change_failure_rate'], errors='coerce').mean() * 100
                 aggregations['avg_failure_rate_pct'] = float(avg_cfr)
-                answer = f"Change failure rate: average {avg_cfr:.1f}% across {len(df)} services."
-            else:
-                answer = f"Change failure rate data for {len(df)} services."
 
-        # DORA Metrics - MTTR
+                # DORA benchmark
+                if avg_cfr <= 5:
+                    tier = "Elite (≤5%)"
+                elif avg_cfr <= 10:
+                    tier = "High (≤10%)"
+                elif avg_cfr <= 15:
+                    tier = "Medium (≤15%)"
+                else:
+                    tier = "Low (>15%)"
+
+                answer = f"Change failure rate: {avg_cfr:.1f}% average. DORA tier: {tier}."
+            else:
+                answer = f"Change failure rate data for {row_count} services."
+            limitations.append("CFR = % of deployments causing incidents/rollbacks")
+
+        # DORA Metrics - MTTR with benchmark
         elif 'mttr' in defn_id:
-            aggregations['incident_count'] = len(df)
+            aggregations['incident_count'] = row_count
             if 'mttr_minutes' in df.columns:
                 avg_mttr = pd.to_numeric(df['mttr_minutes'], errors='coerce').mean()
                 aggregations['avg_mttr_minutes'] = float(avg_mttr)
-                answer = f"Mean time to recovery: average {avg_mttr:.0f} minutes across {len(df)} incidents."
-            else:
-                answer = f"MTTR data for {len(df)} incidents."
 
-        # Incidents
+                # DORA benchmark
+                if avg_mttr < 60:
+                    tier = "Elite (<1 hour)"
+                elif avg_mttr < 1440:
+                    tier = "High (<1 day)"
+                elif avg_mttr < 10080:
+                    tier = "Medium (<1 week)"
+                else:
+                    tier = "Low (>1 week)"
+
+                answer = f"Mean time to recovery: {avg_mttr:.0f} minutes average. DORA tier: {tier}."
+            else:
+                answer = f"MTTR data for {row_count} incidents."
+            limitations.append("MTTR = Mean Time To Recovery from incidents")
+
+        # Incidents with severity interpretation
         elif 'incident' in defn_id:
-            aggregations['incident_count'] = len(df)
+            aggregations['incident_count'] = row_count
+            sev_answer = ""
             if 'severity' in df.columns:
                 severity_counts = df['severity'].value_counts().to_dict()
                 aggregations['severity_breakdown'] = severity_counts
                 sev1 = severity_counts.get('sev1', 0)
                 sev2 = severity_counts.get('sev2', 0)
                 sev3 = severity_counts.get('sev3', 0)
-                answer = f"Incident summary: {len(df)} total incidents ({sev1} sev1, {sev2} sev2, {sev3} sev3)."
+
+                if sev1 > 0:
+                    sev_answer = f"{row_count} incidents ({sev1} sev1 = critical, {sev2} sev2, {sev3} sev3)."
+                else:
+                    sev_answer = f"{row_count} incidents ({sev2} sev2, {sev3} sev3). No sev1 (critical) incidents."
+            else:
+                sev_answer = f"{row_count} incidents."
+
+            answer = f"Incident summary: {sev_answer}"
             if 'status' in df.columns:
                 open_count = len(df[df['status'] == 'open'])
                 if open_count > 0:
-                    answer += f" {open_count} currently open."
-            else:
-                answer = f"Found {len(df)} incidents."
+                    answer += f" ⚠️ {open_count} currently open."
 
         else:
-            aggregations['row_count'] = len(df)
+            aggregations['row_count'] = row_count
             if amount_cols:
                 total = pd.to_numeric(df[amount_cols[0]], errors='coerce').sum()
                 aggregations['total'] = float(total)
-                answer = f"Retrieved {len(df)} records with total value {_format_currency(total)}."
+                answer = f"Retrieved {row_count} records with total value {_format_currency(total)}."
             else:
-                answer = f"Retrieved {len(df)} records."
+                answer = f"Retrieved {row_count} records."
+            limitations.append("Generic response; definition-specific summary not available")
+
     except Exception as e:
-        aggregations['row_count'] = len(df)
-        answer = f"Retrieved {len(df)} records."
-    
+        aggregations['row_count'] = row_count
+        answer = f"Retrieved {row_count} records."
+        limitations.append(f"Summary computation error: {str(e)}")
+
+    # Append limitations to answer if any
+    if limitations:
+        aggregations['limitations'] = limitations
+
     return ComputedSummary(answer=answer, aggregations=aggregations)
 
 
