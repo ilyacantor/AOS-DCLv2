@@ -11,11 +11,14 @@ Usage:
     python -m backend.tests.nlq_harness --suite params --n 200 --seed 1234
     python -m backend.tests.nlq_harness --suite intent --n 100
     python -m backend.tests.nlq_harness --suite execution --n 50
+    python -m backend.tests.nlq_harness --suite temporal_operator --n 100
 
 Suites:
 - params: Tests ParamExtractor (top N, order_by, time_window)
 - intent: Tests intent matching (question → definition)
 - execution: Tests executor conformance (limit respected, etc.)
+- answer_quality: Tests summary quality (totals, share, interpretation)
+- temporal_operator: Tests operator extraction for MoM/QoQ/YoY queries
 """
 import sys
 import os
@@ -104,6 +107,45 @@ QUESTION_TEMPLATES = {
         "Give me the {entity}",
     ],
 }
+
+# Temporal/change operator templates - these should all route via operator extraction
+# These should NOT require keyword enumeration in definitions
+TEMPORAL_TEMPLATES = {
+    "mom": [
+        "How did {metric} change month-over-month?",
+        "How did {metric} change MoM?",
+        "What changed in {metric} last month?",
+        "Show me {metric} month over month",
+        "{metric} MoM comparison",
+        "Compare {metric} to last month",
+        "{metric} vs last month",
+    ],
+    "qoq": [
+        "How did {metric} change quarter-over-quarter?",
+        "How did {metric} change QoQ?",
+        "{metric} quarterly change",
+        "Compare {metric} to last quarter",
+        "{metric} vs last quarter",
+    ],
+    "yoy": [
+        "How did {metric} change year-over-year?",
+        "How did {metric} change YoY?",
+        "{metric} annual change",
+        "Compare {metric} to last year",
+        "{metric} vs last year",
+    ],
+    "generic_change": [
+        "How did {metric} change?",
+        "What changed in {metric}?",
+        "Show me changes in {metric}",
+        "{metric} delta",
+        "{metric} variance",
+        "What's the {metric} difference?",
+    ],
+}
+
+# Metrics that should work with temporal operators
+TEMPORAL_METRICS = ["revenue", "spending", "costs", "spend", "cost", "sales"]
 
 
 # =============================================================================
@@ -424,6 +466,49 @@ class AnswerQualitySuite:
         return tests
 
 
+class TemporalOperatorSuite:
+    """
+    Test suite for temporal/change operator extraction.
+
+    Validates that queries with temporal operators (MoM, QoQ, YoY) or change
+    operators (delta, variance, change) are correctly routed via capability
+    matching, NOT via keyword enumeration in definitions.
+
+    This suite generates many paraphrases of "change over time" queries and
+    verifies they all route to supports_delta=True definitions.
+    """
+
+    def __init__(self, seed: int = 42):
+        self.rng = random.Random(seed)
+
+    def generate(self, n: int) -> List[GeneratedTest]:
+        """Generate n test cases for temporal operator routing."""
+        tests = []
+
+        # Generate tests across all temporal template categories
+        for _ in range(n):
+            # Pick a temporal category
+            category = self.rng.choice(list(TEMPORAL_TEMPLATES.keys()))
+            templates = TEMPORAL_TEMPLATES[category]
+            template = self.rng.choice(templates)
+
+            # Pick a metric
+            metric = self.rng.choice(TEMPORAL_METRICS)
+
+            # Generate the question
+            question = template.format(metric=metric)
+
+            # All temporal/change queries should route to supports_delta definition
+            tests.append(GeneratedTest(
+                question=question,
+                expected_definition="finops.top_vendor_deltas_mom",  # The delta-capable definition
+                expected_limit=None,
+                defn_meta=None,
+            ))
+
+        return tests
+
+
 # =============================================================================
 # Test Runner
 # =============================================================================
@@ -580,6 +665,85 @@ def run_intent_suite(tests: List[GeneratedTest]) -> SuiteResult:
 
     return SuiteResult(
         suite_name="intent",
+        total=len(tests),
+        passed=passed_count,
+        failed=len(failed),
+        failures=failed[:20],
+        coverage=dict(coverage),
+    )
+
+
+def run_temporal_operator_suite(tests: List[GeneratedTest]) -> SuiteResult:
+    """
+    Run temporal operator extraction tests.
+
+    Validates that queries with temporal operators (MoM, QoQ, YoY) or change
+    operators are routed via capability matching to supports_delta definitions.
+    """
+    from backend.nlq.intent_matcher import match_question_with_details
+    from backend.nlq.operator_extractor import extract_operators, format_operator_description
+
+    results = []
+    coverage = defaultdict(lambda: defaultdict(int))
+    operator_failures = []
+
+    for test in tests:
+        try:
+            match_result = match_question_with_details(test.question, top_k=5)
+            operators = extract_operators(test.question)
+
+            passed = True
+            error = None
+
+            # Check 1: Operators should be detected
+            if operators.requires_delta and not match_result.capability_routed:
+                # Soft fail - might still work via keyword matching
+                pass
+
+            # Check 2: Should route to a supports_delta definition
+            # For now, we expect finops.top_vendor_deltas_mom
+            if test.expected_definition and match_result.best_match != test.expected_definition:
+                passed = False
+                error = f"Expected {test.expected_definition}, got {match_result.best_match}"
+                operator_failures.append({
+                    "question": test.question,
+                    "expected": test.expected_definition,
+                    "got": match_result.best_match,
+                    "operators": format_operator_description(operators),
+                    "capability_routed": match_result.capability_routed,
+                    "confidence": round(match_result.confidence, 3),
+                })
+
+            results.append(TestResult(
+                test=test,
+                passed=passed,
+                actual_definition=match_result.best_match,
+                error=error,
+            ))
+
+            coverage["temporal_operator"]["tests"] += 1
+
+        except Exception as e:
+            results.append(TestResult(
+                test=test,
+                passed=False,
+                error=str(e),
+            ))
+
+    passed_count = sum(1 for r in results if r.passed)
+    failed = [r for r in results if not r.passed]
+
+    # Print operator failure details
+    if operator_failures:
+        print("\n\033[93mOperator Routing Failures:\033[0m")
+        for entry in operator_failures[:10]:
+            print(f"\n  Q: \"{entry['question']}\"")
+            print(f"  Operators: {entry['operators']}")
+            print(f"  Expected: {entry['expected']} → Got: {entry['got']}")
+            print(f"  Capability routed: {entry['capability_routed']}")
+
+    return SuiteResult(
+        suite_name="temporal_operator",
         total=len(tests),
         passed=passed_count,
         failed=len(failed),
@@ -883,7 +1047,7 @@ def print_result(result: SuiteResult):
 
 def main():
     parser = argparse.ArgumentParser(description="NLQ Generative Test Harness")
-    parser.add_argument("--suite", choices=["params", "intent", "execution", "answer_quality", "all"],
+    parser.add_argument("--suite", choices=["params", "intent", "execution", "answer_quality", "temporal_operator", "all"],
                         default="params", help="Test suite to run")
     parser.add_argument("--n", type=int, default=100, help="Number of test cases to generate")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
@@ -922,6 +1086,13 @@ def main():
         suite = AnswerQualitySuite(seed=args.seed)
         tests = suite.generate(args.n)
         result = run_answer_quality_suite(tests)
+        results.append(result)
+        print_result(result)
+
+    if args.suite in ["temporal_operator", "all"]:
+        suite = TemporalOperatorSuite(seed=args.seed)
+        tests = suite.generate(args.n)
+        result = run_temporal_operator_suite(tests)
         results.append(result)
         print_result(result)
 

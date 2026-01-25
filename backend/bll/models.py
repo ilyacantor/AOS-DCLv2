@@ -41,6 +41,16 @@ class FilterSpec(BaseModel):
     value: Any
 
 
+class DefinitionCapabilities(BaseModel):
+    """Capabilities that a definition supports for operator extraction."""
+    supports_top_n: bool = True  # Can be limited/ranked (most definitions)
+    supports_delta: bool = False  # Supports MoM/QoQ/YoY change comparison
+    supports_trend: bool = False  # Supports time-series trending
+    supports_aggregation: bool = True  # Can compute totals/averages
+    primary_metric: Optional[str] = None  # Primary metric for ordering (e.g., "revenue", "cost")
+    entity_type: Optional[str] = None  # What the rows represent (e.g., "customer", "resource")
+
+
 class Definition(BaseModel):
     definition_id: str
     name: str
@@ -53,7 +63,8 @@ class Definition(BaseModel):
     default_filters: Optional[List[FilterSpec]] = None
     dimensions: List[str] = Field(default_factory=list)
     metrics: List[str] = Field(default_factory=list)
-    keywords: List[str] = Field(default_factory=list)  # Keywords for NLQ matching
+    keywords: List[str] = Field(default_factory=list)  # Core keywords for NLQ matching
+    capabilities: DefinitionCapabilities = Field(default_factory=DefinitionCapabilities)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

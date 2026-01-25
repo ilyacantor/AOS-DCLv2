@@ -3,11 +3,22 @@ NLQ Intent Matcher - Matches natural language questions to BLL definitions.
 
 This module is intentionally standalone with minimal dependencies to enable
 fast testing and iteration.
+
+ARCHITECTURE:
+1. Extract operators (temporal: MoM/QoQ/YoY, comparison: change/delta)
+2. Match keywords to find candidate definitions
+3. Filter by required capabilities (supports_delta, supports_trend, etc.)
+4. Return best match with confidence
 """
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from difflib import SequenceMatcher
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Set
+
+from .operator_extractor import (
+    extract_operators, ExtractedOperators, get_required_capabilities,
+    format_operator_description, TemporalOperator
+)
 
 # Lazy-load definitions to avoid circular imports
 _definitions = None
@@ -31,6 +42,8 @@ class MatchResult:
     top_candidates: List[MatchCandidate]  # Top-K for confusion reporting
     is_ambiguous: bool  # True if top candidates are close in score
     ambiguity_gap: float  # Score gap between #1 and #2
+    operators: Optional[ExtractedOperators] = None  # Extracted temporal/comparison operators
+    capability_routed: bool = False  # True if routing was based on capability match
 
 
 # Ambiguity policy: definitions that share keywords and need clarification
@@ -116,21 +129,32 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
     """
     Match a question to the best BLL definition with full confusion reporting.
 
+    Architecture:
+    1. Extract operators (temporal: MoM/QoQ/YoY, comparison: change/delta)
+    2. Match keywords to find candidate definitions
+    3. Filter/boost by required capabilities (supports_delta, supports_trend)
+    4. Return best match with confidence
+
     Returns MatchResult with:
     - best_match, confidence, matched_keywords (same as simple function)
     - top_candidates: Top-K candidates with scores for debugging
     - is_ambiguous: True if multiple definitions are close in score
     - ambiguity_gap: Score difference between #1 and #2
-
-    This is the function to use for confusion reporting and debugging.
+    - operators: Extracted temporal/comparison operators
+    - capability_routed: True if routing was based on capability match
     """
     definitions = _get_definitions()
     question_lower = question.lower()
     question_tokens = _tokenize(question_lower)
     expanded_tokens = _expand_synonyms(question_tokens)
 
+    # Step 1: Extract operators from the question
+    operators = extract_operators(question)
+    required_capabilities = get_required_capabilities(operators)
+
     # Collect all candidates with scores
     candidates: List[MatchCandidate] = []
+    capability_routed = False
 
     # Category-specific term weights (reduced - these are tie-breakers, not primary signals)
     # Generic terms like "cost", "spend" should not overwhelm specific keywords
@@ -224,6 +248,34 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
         elif len(matched) >= 2:
             score *= 1.05
 
+        # 7. Capability-based routing
+        # If query requires delta capability (MoM, change, etc.), boost definitions that support it
+        if required_capabilities and hasattr(defn, 'capabilities'):
+            caps = defn.capabilities
+            capability_match = True
+
+            if "supports_delta" in required_capabilities:
+                if caps.supports_delta:
+                    # Strong boost for definitions that support delta when query needs it
+                    score += 1.5
+                    matched.append("cap:supports_delta")
+                else:
+                    # Penalize definitions that don't support delta for delta queries
+                    score *= 0.3
+                    capability_match = False
+
+            if "supports_trend" in required_capabilities:
+                if caps.supports_trend:
+                    score += 1.0
+                    matched.append("cap:supports_trend")
+                else:
+                    score *= 0.5
+                    capability_match = False
+
+            if capability_match and required_capabilities:
+                # Track that we routed based on capability
+                triggered_by.append("operator_extraction")
+
         # No cap - let scores accumulate naturally for better discrimination
 
         if score > 0:
@@ -246,6 +298,8 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
             top_candidates=[],
             is_ambiguous=False,
             ambiguity_gap=0.0,
+            operators=operators,
+            capability_routed=False,
         )
 
     # Get top candidate
@@ -267,6 +321,17 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
                     # Multiple definitions from ambiguous group - use default
                     is_ambiguous = True
 
+    # Detect if routing was based on capability matching
+    capability_routed = (
+        required_capabilities and
+        "operator_extraction" in best.triggered_by
+    )
+
+    # If capability-routed, don't consider it ambiguous even if scores are close
+    # The operator extraction provides strong signal
+    if capability_routed and is_ambiguous:
+        is_ambiguous = False
+
     return MatchResult(
         best_match=best.definition_id,
         confidence=best.score,
@@ -274,4 +339,6 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
         top_candidates=candidates[:top_k],
         is_ambiguous=is_ambiguous,
         ambiguity_gap=ambiguity_gap,
+        operators=operators,
+        capability_routed=capability_routed,
     )

@@ -1,10 +1,16 @@
 """
 BLL Definition Seeds - Pre-configured definitions for FinOps and AOD use cases.
+
+ARCHITECTURE NOTE:
+Definitions declare CAPABILITIES (supports_delta, supports_trend, etc.) instead of
+enumerating phrase variants. Operator extraction happens separately from definition
+matching. This allows "how did X change MoM?" queries to work for ANY definition
+that supports_delta, without each definition needing to list all change phrases.
 """
 from datetime import datetime
 from .models import (
-    Definition, DefinitionCategory, ColumnSchema, 
-    SourceReference, JoinSpec, FilterSpec
+    Definition, DefinitionCategory, ColumnSchema,
+    SourceReference, JoinSpec, FilterSpec, DefinitionCapabilities
 )
 
 
@@ -39,7 +45,14 @@ _register(Definition(
     metrics=["total_spend", "transaction_count", "avg_monthly_cost"],
     keywords=["saas spend", "cloud spend", "software spend", "vendor spend",
               "total spend", "spending by vendor", "cloud costs", "saas costs",
-              "how much are we spending", "current spend", "spend summary"],
+              "current spend", "spend summary"],
+    capabilities=DefinitionCapabilities(
+        supports_delta=False,
+        supports_trend=False,
+        supports_top_n=True,
+        primary_metric="cost",
+        entity_type="vendor",
+    ),
 ))
 
 
@@ -62,13 +75,16 @@ _register(Definition(
     ],
     dimensions=["vendor_name"],
     metrics=["current_month_spend", "previous_month_spend", "delta_absolute", "delta_percent"],
-    keywords=["vendor delta", "month over month", "month-over-month", "mom",
-              "cost change", "spending change", "revenue change", "change month over month",
-              "vendor changes", "cost delta", "spend delta", "what changed in spend",
-              "cost changes over time", "spending delta", "vendor cost changes",
-              "month over month changes", "cost difference", "spending difference",
-              "what costs changed", "spend variance", "cost variance",
-              "how did revenue change", "how did costs change", "how did spending change"],
+    # Core keywords only - temporal operators detected via operator_extractor
+    keywords=["vendor delta", "cost delta", "spend delta", "spending delta",
+              "cost variance", "spend variance"],
+    capabilities=DefinitionCapabilities(
+        supports_delta=True,
+        supports_trend=True,
+        supports_top_n=True,
+        primary_metric="cost",
+        entity_type="vendor",
+    ),
 ))
 
 
@@ -222,9 +238,16 @@ _register(Definition(
     ],
     dimensions=["source", "stage"],
     metrics=["amount", "arr_contribution"],
-    keywords=["arr", "annual recurring revenue", "revenue", "mrr", "monthly recurring revenue", 
-              "current arr", "total arr", "bookings", "contract value", "acv", "tcv", 
-              "subscription revenue", "recurring", "what is our arr"],
+    keywords=["arr", "annual recurring revenue", "revenue", "mrr", "monthly recurring revenue",
+              "current arr", "total arr", "bookings", "contract value", "acv", "tcv",
+              "subscription revenue", "recurring"],
+    capabilities=DefinitionCapabilities(
+        supports_delta=False,  # ARR is current state, use MoM definition for changes
+        supports_trend=False,
+        supports_top_n=True,
+        primary_metric="revenue",
+        entity_type="deal",
+    ),
 ))
 
 
@@ -282,7 +305,7 @@ _register(Definition(
     definition_id="crm.top_customers",
     name="Top Customers by Revenue",
     description="Highest revenue customers ranked by annual revenue",
-    category=DefinitionCategory.FINOPS,
+    category=DefinitionCategory.CRM,
     version="1.0.0",
     output_schema=[
         ColumnSchema(name="account_name", dtype="string", description="Account/customer name"),
@@ -299,9 +322,14 @@ _register(Definition(
     dimensions=["industry"],
     metrics=["annual_revenue", "employee_count"],
     keywords=["top customers", "biggest customers", "largest customers", "customers by revenue",
-              "top accounts", "best customers", "high value customers", "customer revenue",
-              "largest accounts", "biggest accounts", "our largest customers",
-              "who are our top customers", "customer list by revenue"],
+              "top accounts", "best customers", "high value customers", "customer revenue"],
+    capabilities=DefinitionCapabilities(
+        supports_delta=False,
+        supports_trend=False,
+        supports_top_n=True,
+        primary_metric="revenue",
+        entity_type="customer",
+    ),
 ))
 
 
