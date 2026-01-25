@@ -1,0 +1,290 @@
+{
+  "entries": [
+    {
+      "id": "75d3e310-81c4-4dd3-a42d-53c3de524043",
+      "timestamp": "2026-01-25T14:47:17.495363Z",
+      "question": "Show me the top 5 customers by revenue",
+      "dataset_id": "demo9",
+      "definition_id": "crm.top_customers",
+      "extracted_params": {
+        "limit": 5
+      },
+      "response": {
+        "question": "Show me the top 5 customers by revenue",
+        "definition_id": "crm.top_customers",
+        "confidence_score": 1.6828333333333334,
+        "execution_args": {
+          "limit": 5
+        },
+        "data": [
+          {
+            "Id": "ACC008",
+            "Name": "Enterprise Plus",
+            "Industry": "Financial Services",
+            "AnnualRevenue": 89000000.0,
+            "NumberOfEmployees": 2000.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC003",
+            "Name": "Global Systems",
+            "Industry": "Consulting",
+            "AnnualRevenue": 72000000.0,
+            "NumberOfEmployees": 1200.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC007",
+            "Name": "FutureSoft",
+            "Industry": "Enterprise Software",
+            "AnnualRevenue": 68000000.0,
+            "NumberOfEmployees": 800.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC006",
+            "Name": "InnovateTech",
+            "Industry": "AI/ML",
+            "AnnualRevenue": 52000000.0,
+            "NumberOfEmployees": 400.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC001",
+            "Name": "Acme Corp",
+            "Industry": "Technology",
+            "AnnualRevenue": 45000000.0,
+            "NumberOfEmployees": 500.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          }
+        ],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "crm.top_customers",
+          "row_count": 5,
+          "total_available": 11,
+          "execution_time_ms": 15,
+          "matched_keywords": [
+            "kw~:top customers",
+            "kw~:biggest customers",
+            "kw~:largest customers",
+            "kw:customers by revenue",
+            "kw~:top accounts",
+            "kw~:best customers",
+            "kw~:high value customers",
+            "kw~:customer revenue",
+            "name:Top Customers by Revenue",
+            "desc:3words",
+            "id~:top",
+            "id~:customers"
+          ],
+          "effective_limit": 5
+        },
+        "summary": {
+          "aggregations": {
+            "customer_count": 5,
+            "population_total": 419000000.0,
+            "population_count": 11,
+            "shown_total": 326000000.0,
+            "avg_per_customer": 65200000.0,
+            "share_of_total_pct": 77.80429594272077,
+            "top_customers": [
+              {
+                "name": "Enterprise Plus",
+                "revenue": 89000000.0
+              },
+              {
+                "name": "Global Systems",
+                "revenue": 72000000.0
+              },
+              {
+                "name": "FutureSoft",
+                "revenue": 68000000.0
+              },
+              {
+                "name": "InnovateTech",
+                "revenue": 52000000.0
+              },
+              {
+                "name": "Acme Corp",
+                "revenue": 45000000.0
+              }
+            ],
+            "top_customer_pct": 21.241050119331742,
+            "limitations": [
+              "Based on 11 customers in demo dataset; production data may differ"
+            ],
+            "topn_total": 326000000.0
+          },
+          "warnings": [],
+          "debug_summary": "Top 5 customers by revenue:\n1. Enterprise Plus: $89.00M\n2. Global Systems: $72.00M\n3. FutureSoft: $68.00M\n4. InnovateTech: $52.00M\n5. Acme Corp: $45.00M\n\nTotal: $326.00M (78% of $419.00M portfolio). High concentration: top 5 drive majority of revenue.",
+          "currency": "USD",
+          "answer": "Top 5 customers by revenue:\n1. Enterprise Plus: $89.00M\n2. Global Systems: $72.00M\n3. FutureSoft: $68.00M\n4. InnovateTech: $52.00M\n5. Acme Corp: $45.00M\n\nTotal: $326.00M (78% of $419.00M portfolio). High concentration: top 5 drive majority of revenue."
+        },
+        "caveats": [
+          "Limited to top 5",
+          "Sorted by definition default ordering"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 15,
+      "status": "success",
+      "tenant_id": "default"
+    },
+    {
+      "id": "508666c4-bdbe-4e66-b4e1-767662864fa7",
+      "timestamp": "2026-01-25T14:47:58.024774Z",
+      "question": "Show me the top 5 customers by revenue",
+      "dataset_id": "demo9",
+      "definition_id": "crm.top_customers",
+      "extracted_params": {
+        "limit": 5
+      },
+      "response": {
+        "question": "Show me the top 5 customers by revenue",
+        "definition_id": "crm.top_customers",
+        "confidence_score": 1.6828333333333334,
+        "execution_args": {
+          "limit": 5
+        },
+        "data": [
+          {
+            "Id": "ACC008",
+            "Name": "Enterprise Plus",
+            "Industry": "Financial Services",
+            "AnnualRevenue": 89000000.0,
+            "NumberOfEmployees": 2000.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC003",
+            "Name": "Global Systems",
+            "Industry": "Consulting",
+            "AnnualRevenue": 72000000.0,
+            "NumberOfEmployees": 1200.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC007",
+            "Name": "FutureSoft",
+            "Industry": "Enterprise Software",
+            "AnnualRevenue": 68000000.0,
+            "NumberOfEmployees": 800.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC006",
+            "Name": "InnovateTech",
+            "Industry": "AI/ML",
+            "AnnualRevenue": 52000000.0,
+            "NumberOfEmployees": 400.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC001",
+            "Name": "Acme Corp",
+            "Industry": "Technology",
+            "AnnualRevenue": 45000000.0,
+            "NumberOfEmployees": 500.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          }
+        ],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "crm.top_customers",
+          "row_count": 5,
+          "total_available": 11,
+          "execution_time_ms": 10,
+          "matched_keywords": [
+            "kw~:top customers",
+            "kw~:biggest customers",
+            "kw~:largest customers",
+            "kw:customers by revenue",
+            "kw~:top accounts",
+            "kw~:best customers",
+            "kw~:high value customers",
+            "kw~:customer revenue",
+            "name:Top Customers by Revenue",
+            "desc:3words",
+            "id~:top",
+            "id~:customers"
+          ],
+          "effective_limit": 5
+        },
+        "summary": {
+          "aggregations": {
+            "customer_count": 5,
+            "population_total": 419000000.0,
+            "population_count": 11,
+            "shown_total": 326000000.0,
+            "avg_per_customer": 65200000.0,
+            "share_of_total_pct": 77.80429594272077,
+            "top_customers": [
+              {
+                "name": "Enterprise Plus",
+                "revenue": 89000000.0
+              },
+              {
+                "name": "Global Systems",
+                "revenue": 72000000.0
+              },
+              {
+                "name": "FutureSoft",
+                "revenue": 68000000.0
+              },
+              {
+                "name": "InnovateTech",
+                "revenue": 52000000.0
+              },
+              {
+                "name": "Acme Corp",
+                "revenue": 45000000.0
+              }
+            ],
+            "top_customer_pct": 21.241050119331742,
+            "limitations": [
+              "Based on 11 customers in demo dataset; production data may differ"
+            ],
+            "topn_total": 326000000.0
+          },
+          "warnings": [],
+          "debug_summary": "Top 5 customers by revenue:\n1. Enterprise Plus: $89.00M\n2. Global Systems: $72.00M\n3. FutureSoft: $68.00M\n4. InnovateTech: $52.00M\n5. Acme Corp: $45.00M\n\nTotal: $326.00M (78% of $419.00M portfolio). High concentration: top 5 drive majority of revenue.",
+          "currency": "USD",
+          "answer": "Top 5 customers by revenue:\n1. Enterprise Plus: $89.00M\n2. Global Systems: $72.00M\n3. FutureSoft: $68.00M\n4. InnovateTech: $52.00M\n5. Acme Corp: $45.00M\n\nTotal: $326.00M (78% of $419.00M portfolio). High concentration: top 5 drive majority of revenue."
+        },
+        "caveats": [
+          "Limited to top 5",
+          "Sorted by definition default ordering"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 10,
+      "status": "success",
+      "tenant_id": "default"
+    }
+  ]
+}
