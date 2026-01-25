@@ -284,6 +284,8 @@ class IntentSuite:
         "revenue",
         # "incident" applies to both incidents and mttr
         "incident",
+        # "orphan resources" applies to both zombies_overview and identity_gap
+        "orphan resources", "orphan",
     }
 
     def __init__(self, seed: int = 42):

@@ -40,6 +40,11 @@ AMBIGUOUS_GROUPS = {
         "default": "infra.deploy_frequency",
         "clarification": "Which DORA metric: deployment frequency, lead time, change failure rate, or MTTR?",
     },
+    "orphan": {
+        "definitions": ["aod.zombies_overview", "aod.identity_gap_financially_anchored"],
+        "default": "aod.identity_gap_financially_anchored",
+        "clarification": "Do you mean orphan resources that are unused (zombies) or resources without an owner (identity gaps)?",
+    },
 }
 
 # Threshold for ambiguity detection (if #2 is within this of #1, it's ambiguous)
