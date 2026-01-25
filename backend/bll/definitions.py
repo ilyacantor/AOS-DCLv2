@@ -62,11 +62,13 @@ _register(Definition(
     ],
     dimensions=["vendor_name"],
     metrics=["current_month_spend", "previous_month_spend", "delta_absolute", "delta_percent"],
-    keywords=["vendor delta", "month over month", "mom", "cost change", "spending change",
+    keywords=["vendor delta", "month over month", "month-over-month", "mom",
+              "cost change", "spending change", "revenue change", "change month over month",
               "vendor changes", "cost delta", "spend delta", "what changed in spend",
               "cost changes over time", "spending delta", "vendor cost changes",
               "month over month changes", "cost difference", "spending difference",
-              "what costs changed", "spend variance", "cost variance"],
+              "what costs changed", "spend variance", "cost variance",
+              "how did revenue change", "how did costs change", "how did spending change"],
 ))
 
 
