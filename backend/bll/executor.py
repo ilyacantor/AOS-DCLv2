@@ -715,12 +715,121 @@ def _apply_filter(df: pd.DataFrame, f: FilterSpec) -> pd.DataFrame:
     return df
 
 
+def _execute_farm_definition(request: ExecuteRequest, definition: Definition) -> ExecuteResponse | None:
+    """
+    Execute definition against Farm's ground truth data.
+    
+    If dataset_id starts with "farm:", fetch from Farm's scenario endpoints.
+    Returns None if not a Farm dataset or definition not supported.
+    """
+    if not request.dataset_id.startswith("farm:"):
+        return None
+    
+    scenario_id = request.dataset_id.replace("farm:", "")
+    
+    # Only crm.top_customers is currently wired to Farm
+    if request.definition_id != "crm.top_customers":
+        return None
+    
+    from backend.farm.client import get_farm_client
+    
+    start_time = time.time()
+    client = get_farm_client()
+    
+    try:
+        # Fetch from Farm's ground truth
+        result = client.get_top_customers(scenario_id, limit=request.limit)
+        customers = result.get("customers", [])
+        
+        # Transform Farm format to BLL format
+        data = []
+        for c in customers:
+            data.append({
+                "Id": c.get("customer_id", ""),
+                "Name": c.get("name", ""),
+                "AnnualRevenue": c.get("revenue", 0),
+                "percent_of_total": c.get("percent_of_total", 0),
+            })
+        
+        # Compute summary
+        total_revenue = sum(c.get("revenue", 0) for c in customers)
+        
+        # Get population total from Farm
+        try:
+            revenue_metrics = client.get_revenue_metrics(scenario_id)
+            population_total = revenue_metrics.get("total_revenue", total_revenue)
+        except Exception:
+            population_total = total_revenue
+        
+        execution_time_ms = int((time.time() - start_time) * 1000)
+        
+        # Build summary
+        lines = [f"Top {len(customers)} customers by revenue (Farm ground truth):"]
+        for i, c in enumerate(customers[:5], 1):
+            lines.append(f"{i}. {c.get('name', 'Unknown')}: ${c.get('revenue', 0):,.2f}")
+        lines.append(f"\nTotal: ${total_revenue:,.2f} ({(total_revenue/population_total*100) if population_total else 0:.1f}% of ${population_total:,.2f})")
+        
+        summary = ComputedSummary(
+            answer="\n".join(lines),
+            aggregations={
+                "customer_count": len(customers),
+                "shown_total": total_revenue,
+                "population_total": population_total,
+                "source": "farm_ground_truth",
+                "scenario_id": scenario_id,
+            }
+        )
+        
+        return ExecuteResponse(
+            data=data,
+            metadata=ExecuteMetadata(
+                dataset_id=request.dataset_id,
+                definition_id=request.definition_id,
+                version=definition.version,
+                executed_at=datetime.utcnow(),
+                execution_time_ms=execution_time_ms,
+                row_count=len(data),
+                result_schema=[
+                    ColumnSchema(name="Id", dtype="string"),
+                    ColumnSchema(name="Name", dtype="string"),
+                    ColumnSchema(name="AnnualRevenue", dtype="float"),
+                    ColumnSchema(name="percent_of_total", dtype="float"),
+                ]
+            ),
+            quality=QualityMetrics(
+                completeness=1.0,
+                freshness_hours=0.0,
+                row_count=len(data),
+                null_percentage=0.0
+            ),
+            lineage=[
+                LineageReference(
+                    source_id="farm",
+                    table_id=f"scenario/{scenario_id}",
+                    columns_used=["customer_id", "name", "revenue"],
+                    row_contribution=len(data)
+                )
+            ],
+            summary=summary
+        )
+    except Exception as e:
+        # Fall back to demo mode on Farm errors
+        import logging
+        logging.getLogger(__name__).warning(f"Farm fetch failed, falling back to demo: {e}")
+        return None
+
+
 def execute_definition(request: ExecuteRequest) -> ExecuteResponse:
     start_time = time.time()
     
     definition = get_definition(request.definition_id)
     if not definition:
         raise ValueError(f"Definition not found: {request.definition_id}")
+    
+    # Try Farm mode first if dataset_id starts with "farm:"
+    farm_result = _execute_farm_definition(request, definition)
+    if farm_result:
+        return farm_result
     
     manifest = _load_manifest(request.dataset_id)
     

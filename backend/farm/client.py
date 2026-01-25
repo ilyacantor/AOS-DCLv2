@@ -180,6 +180,85 @@ class FarmClient:
         except Exception as e:
             return {"status": "unhealthy", "farm_url": self.base_url, "error": str(e)}
     
+    def generate_scenario(self, seed: int = 12345, scale: str = "medium") -> Dict[str, Any]:
+        """
+        Generate a deterministic scenario for testing.
+        
+        POST /api/scenarios/generate
+        
+        Returns scenario_id and manifest with entity counts.
+        """
+        url = f"{self.base_url}/api/scenarios/generate"
+        payload = {"seed": seed, "scale": scale}
+        logger.info(f"[FarmClient] Generating scenario: seed={seed}, scale={scale}")
+        
+        try:
+            response = self._get_client().post(url, json=payload)
+            response.raise_for_status()
+            data = response.json()
+            scenario_id = data.get("scenario_id", "unknown")
+            logger.info(f"[FarmClient] Scenario generated: {scenario_id}")
+            return data
+        except Exception as e:
+            logger.error(f"[FarmClient] Scenario generation error: {e}")
+            raise
+    
+    def get_top_customers(self, scenario_id: str, limit: int = 10) -> Dict[str, Any]:
+        """
+        Get top customers by revenue from Farm's ground truth.
+        
+        GET /api/scenarios/{id}/metrics/top-customers?limit=N
+        
+        Returns list of customers sorted by revenue with percent_of_total.
+        """
+        url = f"{self.base_url}/api/scenarios/{scenario_id}/metrics/top-customers"
+        params = {"limit": limit}
+        logger.info(f"[FarmClient] Fetching top {limit} customers for scenario {scenario_id}")
+        
+        try:
+            response = self._get_client().get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            logger.info(f"[FarmClient] Got {len(data.get('customers', []))} customers")
+            return data
+        except Exception as e:
+            logger.error(f"[FarmClient] Top customers fetch error: {e}")
+            raise
+    
+    def get_revenue_metrics(self, scenario_id: str) -> Dict[str, Any]:
+        """
+        Get total revenue metrics from Farm's ground truth.
+        
+        GET /api/scenarios/{id}/metrics/revenue
+        """
+        url = f"{self.base_url}/api/scenarios/{scenario_id}/metrics/revenue"
+        logger.info(f"[FarmClient] Fetching revenue metrics for scenario {scenario_id}")
+        
+        try:
+            response = self._get_client().get(url)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"[FarmClient] Revenue metrics fetch error: {e}")
+            raise
+    
+    def get_vendor_spend(self, scenario_id: str) -> Dict[str, Any]:
+        """
+        Get vendor spend breakdown from Farm's ground truth.
+        
+        GET /api/scenarios/{id}/metrics/vendor-spend
+        """
+        url = f"{self.base_url}/api/scenarios/{scenario_id}/metrics/vendor-spend"
+        logger.info(f"[FarmClient] Fetching vendor spend for scenario {scenario_id}")
+        
+        try:
+            response = self._get_client().get(url)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"[FarmClient] Vendor spend fetch error: {e}")
+            raise
+    
     def close(self):
         """Close the HTTP client."""
         if self._client:
