@@ -106,11 +106,13 @@ TEMPORAL_PATTERNS = {
 COMPARISON_PATTERNS = {
     ComparisonOperator.CHANGE: [
         r'\bhow did .+ change\b',
+        r'\bwhy did .+ change\b',
         r'\bwhat changed\b',
         r'\bchanges? in\b',  # "change in" or "changes in"
         r'\bchanges? to\b',
         r'\bchanges? from\b',
         r'\bshow me changes\b',
+        r'\b\w+ change\b',  # "revenue change", "cost change", etc.
     ],
     ComparisonOperator.DELTA: [
         r'\bdelta\b',
