@@ -5129,6 +5129,757 @@
       "latency_ms": 10,
       "status": "success",
       "tenant_id": "default"
+    },
+    {
+      "id": "e37299aa-6000-4a19-8549-f13527b20215",
+      "timestamp": "2026-01-26T16:17:18.339915Z",
+      "question": "what was revenue last year",
+      "dataset_id": "demo9",
+      "definition_id": "finops.arr",
+      "extracted_params": {
+        "time_window": "last_year"
+      },
+      "response": {
+        "question": "what was revenue last year",
+        "definition_id": "finops.arr",
+        "confidence_score": 0.4791666666666666,
+        "execution_args": {
+          "time_window": "last_year"
+        },
+        "data": [],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "finops.arr",
+          "row_count": 0,
+          "total_available": 12,
+          "execution_time_ms": 276,
+          "matched_keywords": [
+            "kw~:annual recurring revenue",
+            "kw:revenue",
+            "kw~:monthly recurring revenue",
+            "kw~:subscription revenue",
+            "name:Annual Recurring Revenue"
+          ],
+          "effective_limit": 1000,
+          "intent_output_shape": "scalar"
+        },
+        "summary": {
+          "aggregations": {
+            "population_total": 6610000.0,
+            "population_count": 12,
+            "shown_total": 6610000.0,
+            "deal_count": 12,
+            "share_of_total_pct": 100.0
+          },
+          "warnings": [],
+          "debug_summary": "Your current ARR is $6.61M across 12 deals/opportunities.",
+          "currency": "USD",
+          "answer": "Your current REVENUE is $6.61M"
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 276,
+      "status": "success",
+      "tenant_id": "default"
+    },
+    {
+      "id": "3895d613-bd67-4df3-8fab-d2a354fcc0f4",
+      "timestamp": "2026-01-26T16:17:23.983158Z",
+      "question": "what was revenue last month",
+      "dataset_id": "demo9",
+      "definition_id": "finops.arr",
+      "extracted_params": {
+        "time_window": "last_month"
+      },
+      "response": {
+        "question": "what was revenue last month",
+        "definition_id": "finops.arr",
+        "confidence_score": 0.4791666666666666,
+        "execution_args": {
+          "time_window": "last_month"
+        },
+        "data": [],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "finops.arr",
+          "row_count": 0,
+          "total_available": 12,
+          "execution_time_ms": 10,
+          "matched_keywords": [
+            "kw~:annual recurring revenue",
+            "kw:revenue",
+            "kw~:monthly recurring revenue",
+            "kw~:subscription revenue",
+            "name:Annual Recurring Revenue"
+          ],
+          "effective_limit": 1000,
+          "intent_output_shape": "scalar"
+        },
+        "summary": {
+          "aggregations": {
+            "population_total": 6610000.0,
+            "population_count": 12,
+            "shown_total": 6610000.0,
+            "deal_count": 12,
+            "share_of_total_pct": 100.0
+          },
+          "warnings": [],
+          "debug_summary": "Your current ARR is $6.61M across 12 deals/opportunities.",
+          "currency": "USD",
+          "answer": "Your current REVENUE is $6.61M"
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 10,
+      "status": "success",
+      "tenant_id": "default"
+    },
+    {
+      "id": "27860a51-75b9-471b-86d6-284d388400a3",
+      "timestamp": "2026-01-26T16:17:38.735457Z",
+      "question": "Show me zombie or idle resources",
+      "dataset_id": "demo9",
+      "definition_id": "aod.zombies_overview",
+      "extracted_params": {},
+      "response": {
+        "question": "Show me zombie or idle resources",
+        "definition_id": "aod.zombies_overview",
+        "confidence_score": 3.034083333333333,
+        "execution_args": {},
+        "data": [
+          {
+            "RESOURCE_ID": "i-zombie001",
+            "RESOURCE_TYPE": "Instance",
+            "SERVICE": "EC2",
+            "INSTANCE_STATE": "stopped",
+            "MONTHLY_COST": 450,
+            "LAUNCH_TIME": "2024-01-15",
+            "OWNER": "Unknown",
+            "PROJECT": "Legacy",
+            "SERVICE_right": "EC2",
+            "MONTHLY_COST_right": 450,
+            "RESOURCE_TYPE_right": "Compute",
+            "PROJECT_right": "Legacy",
+            "COST_CENTER": "CC-300",
+            "MONTH": "2026-01",
+            "OWNER_right": "Unknown"
+          },
+          {
+            "RESOURCE_ID": "db-zombie002",
+            "RESOURCE_TYPE": "Instance",
+            "SERVICE": "RDS",
+            "INSTANCE_STATE": "stopped",
+            "MONTHLY_COST": 280,
+            "LAUNCH_TIME": "2024-03-20",
+            "OWNER": "john.smith@company.com",
+            "PROJECT": "OldProject",
+            "SERVICE_right": "RDS",
+            "MONTHLY_COST_right": 280,
+            "RESOURCE_TYPE_right": "Database",
+            "PROJECT_right": "OldProject",
+            "COST_CENTER": "CC-300",
+            "MONTH": "2026-01",
+            "OWNER_right": "john.smith@company.com"
+          },
+          {
+            "RESOURCE_ID": "vol-zombie003",
+            "RESOURCE_TYPE": "Volume",
+            "SERVICE": "EBS",
+            "INSTANCE_STATE": "available",
+            "MONTHLY_COST": 45,
+            "LAUNCH_TIME": "2023-12-01",
+            "OWNER": "Unknown",
+            "PROJECT": "Unknown",
+            "SERVICE_right": "EBS",
+            "MONTHLY_COST_right": 45,
+            "RESOURCE_TYPE_right": "Storage",
+            "PROJECT_right": "Unknown",
+            "COST_CENTER": "CC-300",
+            "MONTH": "2026-01",
+            "OWNER_right": "Unknown"
+          },
+          {
+            "RESOURCE_ID": "eip-zombie004",
+            "RESOURCE_TYPE": "Address",
+            "SERVICE": "EC2",
+            "INSTANCE_STATE": "available",
+            "MONTHLY_COST": 12,
+            "LAUNCH_TIME": "2024-02-10",
+            "OWNER": "Unknown",
+            "PROJECT": "Unknown",
+            "SERVICE_right": "EC2",
+            "MONTHLY_COST_right": 12,
+            "RESOURCE_TYPE_right": "Network",
+            "PROJECT_right": "Unknown",
+            "COST_CENTER": "CC-300",
+            "MONTH": "2026-01",
+            "OWNER_right": "Unknown"
+          },
+          {
+            "RESOURCE_ID": "elb-zombie005",
+            "RESOURCE_TYPE": "LoadBalancer",
+            "SERVICE": "ELB",
+            "INSTANCE_STATE": "idle",
+            "MONTHLY_COST": 180,
+            "LAUNCH_TIME": "2024-06-15",
+            "OWNER": "jane.doe@company.com",
+            "PROJECT": "TestEnv",
+            "SERVICE_right": "ELB",
+            "MONTHLY_COST_right": 180,
+            "RESOURCE_TYPE_right": "Network",
+            "PROJECT_right": "TestEnv",
+            "COST_CENTER": "CC-300",
+            "MONTH": "2026-01",
+            "OWNER_right": "jane.doe@company.com"
+          },
+          {
+            "RESOURCE_ID": "nat-zombie006",
+            "RESOURCE_TYPE": "Gateway",
+            "SERVICE": "VPC",
+            "INSTANCE_STATE": "idle",
+            "MONTHLY_COST": 120,
+            "LAUNCH_TIME": "2024-04-01",
+            "OWNER": "Unknown",
+            "PROJECT": "DevTest",
+            "SERVICE_right": "VPC",
+            "MONTHLY_COST_right": 120,
+            "RESOURCE_TYPE_right": "Network",
+            "PROJECT_right": "DevTest",
+            "COST_CENTER": "CC-300",
+            "MONTH": "2026-01",
+            "OWNER_right": "Unknown"
+          },
+          {
+            "RESOURCE_ID": "ecs-zombie007",
+            "RESOURCE_TYPE": "Cluster",
+            "SERVICE": "ECS",
+            "INSTANCE_STATE": "inactive",
+            "MONTHLY_COST": 350,
+            "LAUNCH_TIME": "2023-09-15",
+            "OWNER": "mike.wilson@company.com",
+            "PROJECT": "Deprecated",
+            "SERVICE_right": "ECS",
+            "MONTHLY_COST_right": 350,
+            "RESOURCE_TYPE_right": "Container",
+            "PROJECT_right": "Deprecated",
+            "COST_CENTER": "CC-300",
+            "MONTH": "2026-01",
+            "OWNER_right": "mike.wilson@company.com"
+          },
+          {
+            "RESOURCE_ID": "fn-zombie008",
+            "RESOURCE_TYPE": "Function",
+            "SERVICE": "Lambda",
+            "INSTANCE_STATE": "inactive",
+            "MONTHLY_COST": 25,
+            "LAUNCH_TIME": "2024-05-20",
+            "OWNER": "Unknown",
+            "PROJECT": "Unknown",
+            "SERVICE_right": "Lambda",
+            "MONTHLY_COST_right": 25,
+            "RESOURCE_TYPE_right": "Serverless",
+            "PROJECT_right": "Unknown",
+            "COST_CENTER": "CC-300",
+            "MONTH": "2026-01",
+            "OWNER_right": "Unknown"
+          },
+          {
+            "RESOURCE_ID": "i-active001",
+            "RESOURCE_TYPE": "Instance",
+            "SERVICE": "EC2",
+            "INSTANCE_STATE": "running",
+            "MONTHLY_COST": 800,
+            "LAUNCH_TIME": "2025-01-15",
+            "OWNER": "engineering@company.com",
+            "PROJECT": "Production",
+            "SERVICE_right": "EC2",
+            "MONTHLY_COST_right": 800,
+            "RESOURCE_TYPE_right": "Compute",
+            "PROJECT_right": "Production",
+            "COST_CENTER": "CC-300",
+            "MONTH": "2026-01",
+            "OWNER_right": "engineering@company.com"
+          },
+          {
+            "RESOURCE_ID": "db-active002",
+            "RESOURCE_TYPE": "Instance",
+            "SERVICE": "RDS",
+            "INSTANCE_STATE": "running",
+            "MONTHLY_COST": 1200,
+            "LAUNCH_TIME": "2025-02-01",
+            "OWNER": "data@company.com",
+            "PROJECT": "Production",
+            "SERVICE_right": "RDS",
+            "MONTHLY_COST_right": 1200,
+            "RESOURCE_TYPE_right": "Database",
+            "PROJECT_right": "Production",
+            "COST_CENTER": "CC-300",
+            "MONTH": "2026-01",
+            "OWNER_right": "data@company.com"
+          }
+        ],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "aod.zombies_overview",
+          "row_count": 10,
+          "total_available": 10,
+          "execution_time_ms": 16,
+          "matched_keywords": [
+            "high_value_token:aod.zombies_overview",
+            "kw:zombie",
+            "kw:idle resources",
+            "kw~:unused resources",
+            "kw~:wasted resources",
+            "kw:idle",
+            "kw~:zombie resources",
+            "kw~:idle spend",
+            "kw~:wasted cloud spend",
+            "kw~:resources not being used",
+            "name:Zombie Resources Overview",
+            "desc:3words",
+            "id~:zombies"
+          ],
+          "effective_limit": 20,
+          "intent_output_shape": "table"
+        },
+        "summary": {
+          "aggregations": {
+            "resource_count": 10,
+            "population_count": 10,
+            "population_wasted_spend": 3462.0,
+            "shown_wasted_spend": 3462.0,
+            "share_of_total_pct": 100.0,
+            "limitations": [
+              "Definition: Resources with no meaningful activity in the observation period"
+            ]
+          },
+          "warnings": [],
+          "debug_summary": "Top 10 zombie resources: $3.5K/month (100% of $3.5K total waste). 10 total idle resources identified. Candidates for termination or rightsizing.",
+          "currency": "USD",
+          "answer": "Top 10 zombie resources: $3.5K/month (100% of $3.5K total waste). 10 total idle resources identified. Candidates for termination or rightsizing."
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 16,
+      "status": "success",
+      "tenant_id": "default"
+    },
+    {
+      "id": "5b5c1d43-3de4-4b9e-be2f-40b8a6f88687",
+      "timestamp": "2026-01-26T16:17:56.598389Z",
+      "question": "What is our burn rate?",
+      "dataset_id": "demo9",
+      "definition_id": "finops.burn_rate",
+      "extracted_params": {},
+      "response": {
+        "question": "What is our burn rate?",
+        "definition_id": "finops.burn_rate",
+        "confidence_score": 3.676166666666667,
+        "execution_args": {},
+        "data": [],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "finops.burn_rate",
+          "row_count": 0,
+          "total_available": 14,
+          "execution_time_ms": 8,
+          "matched_keywords": [
+            "high_value_token:finops.burn_rate",
+            "kw:burn rate",
+            "kw:burn",
+            "kw~:runway",
+            "kw~:cash burn",
+            "kw~:monthly burn",
+            "kw~:spending rate",
+            "kw~:current burn rate",
+            "kw:what is our burn rate",
+            "name:Burn Rate Analysis",
+            "desc:3words",
+            "id~:burn",
+            "id~:rate"
+          ],
+          "effective_limit": 1000,
+          "intent_output_shape": "scalar"
+        },
+        "summary": {
+          "aggregations": {
+            "population_total": 35262.0,
+            "shown_total": 35262.0,
+            "monthly_avg": 2938.5,
+            "population_count": 14,
+            "share_of_total_pct": 100.0,
+            "limitations": [
+              "Burn rate estimated from available spend data; actual runway depends on cash reserves"
+            ]
+          },
+          "warnings": [],
+          "debug_summary": "Burn rate: approximately $2.9K/month ($35.3K annualized).",
+          "currency": "USD",
+          "answer": "Your current BURN_RATE is $0.04M"
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 8,
+      "status": "success",
+      "tenant_id": "default"
+    },
+    {
+      "id": "72422c4a-8b71-4a40-8bc0-8fd084b4207e",
+      "timestamp": "2026-01-26T16:18:23.836499Z",
+      "question": "what was revenue last quarter?",
+      "dataset_id": "demo9",
+      "definition_id": "finops.arr",
+      "extracted_params": {
+        "time_window": "last_quarter"
+      },
+      "response": {
+        "question": "what was revenue last quarter?",
+        "definition_id": "finops.arr",
+        "confidence_score": 0.4791666666666666,
+        "execution_args": {
+          "time_window": "last_quarter"
+        },
+        "data": [],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "finops.arr",
+          "row_count": 0,
+          "total_available": 12,
+          "execution_time_ms": 12,
+          "matched_keywords": [
+            "kw~:annual recurring revenue",
+            "kw:revenue",
+            "kw~:monthly recurring revenue",
+            "kw~:subscription revenue",
+            "name:Annual Recurring Revenue"
+          ],
+          "effective_limit": 1000,
+          "intent_output_shape": "scalar"
+        },
+        "summary": {
+          "aggregations": {
+            "population_total": 6610000.0,
+            "population_count": 12,
+            "shown_total": 6610000.0,
+            "deal_count": 12,
+            "share_of_total_pct": 100.0
+          },
+          "warnings": [],
+          "debug_summary": "Your current ARR is $6.61M across 12 deals/opportunities.",
+          "currency": "USD",
+          "answer": "Your current REVENUE is $6.61M"
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 12,
+      "status": "success",
+      "tenant_id": "default"
+    },
+    {
+      "id": "e1b6aee6-7d3e-4f5b-b6bc-90abe955fc81",
+      "timestamp": "2026-01-26T16:28:37.053999Z",
+      "question": "what was revenue last quarter?",
+      "dataset_id": "demo9",
+      "definition_id": "finops.arr",
+      "extracted_params": {
+        "time_window": "last_quarter"
+      },
+      "response": {
+        "question": "what was revenue last quarter?",
+        "definition_id": "finops.arr",
+        "confidence_score": 0.4791666666666666,
+        "execution_args": {
+          "time_window": "last_quarter"
+        },
+        "data": [],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "finops.arr",
+          "row_count": 0,
+          "total_available": 12,
+          "execution_time_ms": 20,
+          "matched_keywords": [
+            "kw~:annual recurring revenue",
+            "kw:revenue",
+            "kw~:monthly recurring revenue",
+            "kw~:subscription revenue",
+            "name:Annual Recurring Revenue"
+          ],
+          "effective_limit": 1000,
+          "intent_output_shape": "scalar"
+        },
+        "summary": {
+          "aggregations": {
+            "population_total": 6610000.0,
+            "population_count": 12,
+            "shown_total": 6610000.0,
+            "deal_count": 12,
+            "share_of_total_pct": 100.0
+          },
+          "warnings": [],
+          "debug_summary": "Your current ARR is $6.61M across 12 deals/opportunities.",
+          "currency": "USD",
+          "answer": "Your current REVENUE is $6.61M"
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 20,
+      "status": "success",
+      "tenant_id": "default"
+    },
+    {
+      "id": "b8bcf416-08c6-4e2a-9297-2183d175d9c8",
+      "timestamp": "2026-01-26T16:28:43.665384Z",
+      "question": "what was revenue last year?",
+      "dataset_id": "demo9",
+      "definition_id": "finops.arr",
+      "extracted_params": {
+        "time_window": "last_year"
+      },
+      "response": {
+        "question": "what was revenue last year?",
+        "definition_id": "finops.arr",
+        "confidence_score": 0.4791666666666666,
+        "execution_args": {
+          "time_window": "last_year"
+        },
+        "data": [],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "finops.arr",
+          "row_count": 0,
+          "total_available": 12,
+          "execution_time_ms": 16,
+          "matched_keywords": [
+            "kw~:annual recurring revenue",
+            "kw:revenue",
+            "kw~:monthly recurring revenue",
+            "kw~:subscription revenue",
+            "name:Annual Recurring Revenue"
+          ],
+          "effective_limit": 1000,
+          "intent_output_shape": "scalar"
+        },
+        "summary": {
+          "aggregations": {
+            "population_total": 6610000.0,
+            "population_count": 12,
+            "shown_total": 6610000.0,
+            "deal_count": 12,
+            "share_of_total_pct": 100.0
+          },
+          "warnings": [],
+          "debug_summary": "Your current ARR is $6.61M across 12 deals/opportunities.",
+          "currency": "USD",
+          "answer": "Your current REVENUE is $6.61M"
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 16,
+      "status": "success",
+      "tenant_id": "default"
+    },
+    {
+      "id": "3ef75c7d-73af-4f36-a16c-6d0785e1921d",
+      "timestamp": "2026-01-26T16:28:48.870511Z",
+      "question": "what was revenue last month?",
+      "dataset_id": "demo9",
+      "definition_id": "finops.arr",
+      "extracted_params": {
+        "time_window": "last_month"
+      },
+      "response": {
+        "question": "what was revenue last month?",
+        "definition_id": "finops.arr",
+        "confidence_score": 0.4791666666666666,
+        "execution_args": {
+          "time_window": "last_month"
+        },
+        "data": [],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "finops.arr",
+          "row_count": 0,
+          "total_available": 12,
+          "execution_time_ms": 15,
+          "matched_keywords": [
+            "kw~:annual recurring revenue",
+            "kw:revenue",
+            "kw~:monthly recurring revenue",
+            "kw~:subscription revenue",
+            "name:Annual Recurring Revenue"
+          ],
+          "effective_limit": 1000,
+          "intent_output_shape": "scalar"
+        },
+        "summary": {
+          "aggregations": {
+            "population_total": 6610000.0,
+            "population_count": 12,
+            "shown_total": 6610000.0,
+            "deal_count": 12,
+            "share_of_total_pct": 100.0
+          },
+          "warnings": [],
+          "debug_summary": "Your current ARR is $6.61M across 12 deals/opportunities.",
+          "currency": "USD",
+          "answer": "Your current REVENUE is $6.61M"
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 15,
+      "status": "success",
+      "tenant_id": "default"
+    },
+    {
+      "id": "5ba9cb25-60db-42a4-8d35-99f480128525",
+      "timestamp": "2026-01-26T17:00:44.655085Z",
+      "question": "What is our current ARR?",
+      "dataset_id": "demo9",
+      "definition_id": "finops.arr",
+      "extracted_params": {},
+      "response": {
+        "question": "What is our current ARR?",
+        "definition_id": "finops.arr",
+        "confidence_score": 1.058,
+        "execution_args": {},
+        "data": [],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "finops.arr",
+          "row_count": 0,
+          "total_available": 12,
+          "execution_time_ms": 32,
+          "matched_keywords": [
+            "kw:arr",
+            "kw:current arr",
+            "kw~:total arr",
+            "desc:2words",
+            "id~:arr"
+          ],
+          "effective_limit": 1000,
+          "intent_output_shape": "scalar"
+        },
+        "summary": {
+          "aggregations": {
+            "population_total": 6610000.0,
+            "population_count": 12,
+            "shown_total": 6610000.0,
+            "deal_count": 12,
+            "share_of_total_pct": 100.0
+          },
+          "warnings": [],
+          "debug_summary": "Your current ARR is $6.61M across 12 deals/opportunities.",
+          "currency": "USD",
+          "answer": "Your current ARR is $6.61M"
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 32,
+      "status": "success",
+      "tenant_id": "default"
+    },
+    {
+      "id": "53999e30-3635-45ee-b611-46a0793dafff",
+      "timestamp": "2026-01-26T17:01:00.160921Z",
+      "question": "What was revenue last year?",
+      "dataset_id": "demo9",
+      "definition_id": "finops.arr",
+      "extracted_params": {
+        "time_window": "last_year"
+      },
+      "response": {
+        "question": "What was revenue last year?",
+        "definition_id": "finops.arr",
+        "confidence_score": 0.4791666666666666,
+        "execution_args": {
+          "time_window": "last_year"
+        },
+        "data": [],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "finops.arr",
+          "row_count": 0,
+          "total_available": 12,
+          "execution_time_ms": 11,
+          "matched_keywords": [
+            "kw~:annual recurring revenue",
+            "kw:revenue",
+            "kw~:monthly recurring revenue",
+            "kw~:subscription revenue",
+            "name:Annual Recurring Revenue"
+          ],
+          "effective_limit": 1000,
+          "intent_output_shape": "scalar"
+        },
+        "summary": {
+          "aggregations": {
+            "population_total": 6610000.0,
+            "population_count": 12,
+            "shown_total": 6610000.0,
+            "deal_count": 12,
+            "share_of_total_pct": 100.0
+          },
+          "warnings": [],
+          "debug_summary": "Your current ARR is $6.61M across 12 deals/opportunities.",
+          "currency": "USD",
+          "answer": "Your current REVENUE is $6.61M"
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 11,
+      "status": "success",
+      "tenant_id": "default"
     }
   ]
 }
