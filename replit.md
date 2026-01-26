@@ -160,3 +160,10 @@ Ingest functionality has been fully migrated to AAM (Asset & Availability Manage
 - **PostgreSQL**: Schema and mapping persistence
 - **Redis**: Narration broadcast
 - **httpx**: Async HTTP client for Farm API
+
+## Documentation
+- **NLQ Architecture**: See `docs/NLQ_ARCHITECTURE.md` for complete NLQ layer documentation
+  - Intent matching, operator extraction, parameter extraction
+  - Production boundary: NLQ = compiler, BLL = executor
+  - Definition capabilities and ordering specification
+  - API endpoints and request/response examples
