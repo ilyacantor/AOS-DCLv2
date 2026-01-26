@@ -53,3 +53,7 @@ Thumbs.db
 schemas/
 *.db
 *.sqlite
+
+# Runtime/data files (not tracked in git)
+dump.rdb
+data/history.json
