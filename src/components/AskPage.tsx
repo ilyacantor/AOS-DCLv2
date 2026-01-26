@@ -58,10 +58,10 @@ async function fetchHistory(limit = 20): Promise<HistoryEntry[]> {
 }
 
 async function askQuestion(question: string, datasetId?: string): Promise<NLQAskResponse> {
-  const body: NLQAskRequest = {
-    question,
-    dataset_id: datasetId || 'demo9',
-  };
+  // Don't pass dataset_id if not specified - let server use its default (Farm)
+  const body: NLQAskRequest = datasetId
+    ? { question, dataset_id: datasetId }
+    : { question } as NLQAskRequest;
 
   const res = await fetch('/api/nlq/ask', {
     method: 'POST',
@@ -99,8 +99,11 @@ function formatTimestamp(ts: string): string {
   }
 }
 
-function generateCurl(question: string, datasetId: string): string {
-  const body = JSON.stringify({ question, dataset_id: datasetId });
+function generateCurl(question: string, datasetId?: string): string {
+  // Don't include dataset_id if not specified - server uses its default (Farm)
+  const body = datasetId
+    ? JSON.stringify({ question, dataset_id: datasetId })
+    : JSON.stringify({ question });
   return `curl -X POST http://localhost:8000/api/nlq/ask \\
   -H "Content-Type: application/json" \\
   -d '${body}'`;
@@ -413,13 +416,13 @@ export function AskPage() {
           method: 'POST',
           request_payload: {
             question: questionText,
-            dataset_id: dataset?.dataset_id || 'demo9',
+            ...(dataset?.dataset_id ? { dataset_id: dataset.dataset_id } : {}),
           },
           response_payload: response as unknown as Record<string, unknown>,
           latency_ms: latency,
           definition_id: response.definition_id,
           warnings: response.caveats || [],
-          curl: generateCurl(questionText, dataset?.dataset_id || 'demo9'),
+          curl: generateCurl(questionText, dataset?.dataset_id),
         },
         ...prev.slice(0, 9), // Keep last 10
       ]);

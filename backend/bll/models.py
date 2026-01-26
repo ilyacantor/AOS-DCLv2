@@ -1,10 +1,15 @@
 """
 BLL Contract Models - Domain models for BLL consumption contracts.
 """
+import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from enum import Enum
 from pydantic import BaseModel, Field
+
+# Default dataset - Farm if FARM_SCENARIO_ID is set, otherwise demo9
+_FARM_SCENARIO = os.environ.get("FARM_SCENARIO_ID")
+_DEFAULT_DATASET = f"farm:{_FARM_SCENARIO}" if _FARM_SCENARIO else "demo9"
 
 
 class DefinitionCategory(str, Enum):
@@ -88,7 +93,7 @@ class TimeWindow(BaseModel):
 
 
 class ExecuteRequest(BaseModel):
-    dataset_id: str = Field(default="demo9", alias="datasetId")
+    dataset_id: str = Field(default=_DEFAULT_DATASET, alias="datasetId")
     definition_id: str = Field(alias="definitionId")
     version: Optional[str] = None
     time_window: Optional[TimeWindow] = Field(default=None, alias="timeWindow")

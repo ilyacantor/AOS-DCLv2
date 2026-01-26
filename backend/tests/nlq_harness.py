@@ -878,9 +878,10 @@ def run_execution_suite(tests: List[GeneratedTest], direct: bool = False) -> Sui
 
         for test in tests:
             try:
+                # Don't pass dataset_id - let server use its default (Farm if FARM_SCENARIO_ID is set)
                 resp = requests.post(
                     f"{BASE_URL}/api/nlq/ask",
-                    json={"question": test.question, "dataset_id": "demo9"},
+                    json={"question": test.question},
                     timeout=30
                 )
                 resp.raise_for_status()
@@ -993,9 +994,10 @@ def run_answer_quality_suite(tests: List[GeneratedTest]) -> SuiteResult:
 
     for test in tests:
         try:
+            # Don't pass dataset_id - let server use its default (Farm if FARM_SCENARIO_ID is set)
             resp = requests.post(
                 f"{BASE_URL}/api/nlq/ask",
-                json={"question": test.question, "dataset_id": "demo9"},
+                json={"question": test.question},
                 timeout=30
             )
             resp.raise_for_status()
