@@ -1,14 +1,14 @@
 # Engineering Loop State
 
-**Last Updated:** 2026-01-26T20:45:00Z
-**Last Updated By:** Claude Code (OBSERVE complete - awaiting human decision)
+**Last Updated:** 2026-01-26T20:55:00Z
+**Last Updated By:** Claude Code (ACT - INV-003 spec refined)
 
 ---
 
 ## Current Stage
 
 ```
-STAGE: OBSERVE
+STAGE: ACT
 ```
 
 Valid stages: `OBSERVE` | `DIAGNOSE` | `PLAN` | `ACT` | `REFLECT` | `CHECKPOINT` | `IDLE`
@@ -86,7 +86,24 @@ options:
 ## Diagnosis (if in DIAGNOSE or later)
 
 ```yaml
-# Cleared for new cycle - INV-003 investigation
+diagnosis_id: diag_2026-01-26T20:50:00Z
+component: STAGE_PROMPTS.md (invariant specification)
+root_cause_hypothesis: |
+  INV-003 is specified as: "if row_count=0 then aggregations must be empty"
+
+  This invariant doesn't account for SCALAR intent queries where:
+  - row_count=0 is intentional (no row data for scalar results)
+  - aggregations contain the actual answer (population_total, etc.)
+
+  The invariant needs refinement to exclude SCALAR output_shape from this check.
+
+evidence:
+  - "SCALAR intent queries intentionally return row_count=0 with aggregations (main.py:747-749)"
+  - "output_shape is available in response metadata (main.py:791)"
+  - "INV-003 definition in STAGE_PROMPTS.md doesn't account for output_shape"
+confidence_in_diagnosis: 1.0
+estimated_complexity: low
+human_decision: "Option A - Refine invariant to exclude SCALAR queries"
 ```
 
 ---
@@ -94,7 +111,35 @@ options:
 ## Plan (if in PLAN or later)
 
 ```yaml
-# Cleared for new cycle - INV-003 investigation
+plan_id: plan_2026-01-26T20:50:00Z
+diagnosis_id: diag_2026-01-26T20:50:00Z
+strategy: |
+  Update INV-003 specification in STAGE_PROMPTS.md to exclude SCALAR intent queries.
+
+  Change from:
+    "INV-003: if row_count = 0, aggregations must be empty"
+
+  To:
+    "INV-003: if row_count = 0 AND output_shape != SCALAR, aggregations must be empty"
+
+  This preserves the invariant's intent (catching genuine "no data" errors) while
+  correctly exempting SCALAR queries where row_count=0 with aggregations is expected.
+
+files_to_modify:
+  - path: STAGE_PROMPTS.md
+    change: "Update INV-003 definition at lines 36, 289 to include output_shape exception"
+success_criteria:
+  - "INV-003 definition updated in all occurrences"
+  - "SCALAR intent queries no longer flagged as violations"
+  - "Non-SCALAR queries with row_count=0 and non-empty aggregations still flagged"
+risk_level: low
+risk_factors:
+  files: 1
+  lines_estimate: 2
+  component_type: documentation/specification
+rollback_steps:
+  - "git checkout STAGE_PROMPTS.md"
+requires_human_approval: false
 ```
 
 ---
@@ -102,7 +147,16 @@ options:
 ## Act (if in ACT or later)
 
 ```yaml
-# Cleared for new cycle - INV-003 investigation
+act_id: act_2026-01-26T20:55:00Z
+plan_id: plan_2026-01-26T20:50:00Z
+changes_made:
+  - file: STAGE_PROMPTS.md
+    line: 36
+    change: "Added 'AND output_shape != SCALAR' to INV-003 definition"
+  - file: STAGE_PROMPTS.md
+    line: 289
+    change: "Added '(unless output_shape=SCALAR)' to INV-003 shorthand"
+deviations_from_plan: []
 ```
 
 ---
@@ -128,22 +182,17 @@ options:
 | 2026-01-26T20:30:00Z | CHECKPOINT | Compiled summary, assessed health | INV-001 closed, INV-003 remains, recommend NEW_CYCLE |
 | 2026-01-26T20:35:00Z | OBSERVE | NEW_CYCLE started for INV-003 | Human approved, investigating row_count/aggregations issue |
 | 2026-01-26T20:45:00Z | OBSERVE | Code path traced | Found: INTENTIONAL DESIGN for SCALAR intent; INV-003 is SPEC_ISSUE not code bug |
+| 2026-01-26T20:50:00Z | DIAGNOSE/PLAN | Human selected Option A | Plan: refine INV-003 to exclude SCALAR output_shape |
+| 2026-01-26T20:55:00Z | ACT | Updated STAGE_PROMPTS.md | INV-003 refined to exclude SCALAR output_shape |
 
 ---
 
 ## Next Action
 
-**Stage: OBSERVE COMPLETE** - Human decision required
+**Stage: ACT** - Implementing Option A
 
-**Finding:** INV-003 violation is INTENTIONAL DESIGN for SCALAR queries, not a code bug.
-The invariant is too strict - it doesn't account for SCALAR intent queries where `row_count=0` with non-empty `aggregations` is the correct behavior.
-
-**Options for human to decide:**
-- **A) Refine invariant** - Change INV-003 spec to exclude SCALAR intent queries
-- **B) Add scalar marker** - Modify response to indicate scalar results differently
-- **C) Accept as designed** - Close INV-003 as "working as intended"
-
-Respond with option A, B, or C to proceed to DIAGNOSE/PLAN.
+Update STAGE_PROMPTS.md to refine INV-003 specification:
+- Add "AND output_shape != SCALAR" exception to invariant definition
 
 ---
 

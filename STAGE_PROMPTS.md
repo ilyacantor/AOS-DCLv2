@@ -33,7 +33,7 @@ Read STATE.md to confirm you're in the OBSERVE stage.
 3. Check these invariants:
    - INV-001: confidence must be in [0.0, 1.0]
    - INV-002: execution must complete in < 5000ms
-   - INV-003: if row_count = 0, aggregations must be empty
+   - INV-003: if row_count = 0 AND output_shape != SCALAR, aggregations must be empty
    - INV-005: no 500 errors
 
 4. Report findings in this format:
@@ -286,7 +286,7 @@ Read STATE.md to confirm you're in the REFLECT stage and see what was changed.
 3. Check ALL invariants (not just the one that was violated):
    - INV-001: confidence in [0.0, 1.0]
    - INV-002: execution < 5000ms
-   - INV-003: row_count=0 implies empty aggregations
+   - INV-003: row_count=0 implies empty aggregations (unless output_shape=SCALAR)
    - INV-005: no 500 errors
 
 4. Run existing tests:
