@@ -507,7 +507,7 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
 
     return MatchResult(
         best_match=best.definition_id,
-        confidence=best.score,
+        confidence=max(0.0, min(1.0, best.score)),  # FIX: diag_2026-01-26T19:15:00Z - clamp confidence to [0.0, 1.0]
         matched_keywords=best.matched_tokens,
         top_candidates=candidates[:top_k],
         is_ambiguous=is_ambiguous,
