@@ -286,6 +286,50 @@ _register(Definition(
 ))
 
 
+# =============================================================================
+# Revenue Metrics (Scalar / Aggregate)
+# =============================================================================
+
+_register(Definition(
+    definition_id="finops.total_revenue",
+    name="Total Revenue",
+    description="Aggregate total revenue for a time period. Use this for scalar revenue queries like 'what was our revenue last year' or 'total revenue this quarter'. NOT for customer rankings.",
+    category=DefinitionCategory.FINOPS,
+    version="1.0.0",
+    output_schema=[
+        ColumnSchema(name="total_revenue", dtype="float", description="Total revenue amount"),
+        ColumnSchema(name="period", dtype="string", description="Time period"),
+        ColumnSchema(name="transaction_count", dtype="integer", description="Number of transactions"),
+    ],
+    sources=[
+        SourceReference(source_id="salesforce", table_id="account",
+                       columns=["AnnualRevenue"]),
+        SourceReference(source_id="dynamics", table_id="accounts",
+                       columns=["AnnualRevenue"]),
+        SourceReference(source_id="netsuite", table_id="invoices",
+                       columns=["Amount", "InvoiceDate"]),
+    ],
+    dimensions=["period"],
+    metrics=["total_revenue", "transaction_count"],
+    # CRITICAL: Keywords for SCALAR revenue queries (no "customer", "top", "rank")
+    keywords=["total revenue", "revenue total", "what is our revenue", "what was our revenue",
+              "how much revenue", "revenue amount", "overall revenue", "aggregate revenue",
+              "revenue this", "revenue last", "revenue for"],
+    capabilities=DefinitionCapabilities(
+        supports_delta=False,
+        supports_trend=True,
+        supports_top_n=False,  # SCALAR definition - NO ranking
+        supports_aggregation=True,
+        primary_metric="revenue",
+        entity_type=None,  # No entity - pure aggregate
+        default_order_by=[],  # No ordering for scalar
+        allowed_order_by=[],
+        tie_breaker=None,
+        output_shape="scalar",  # EXPLICIT: This is for scalar queries
+    ),
+))
+
+
 _register(Definition(
     definition_id="crm.pipeline",
     name="Sales Pipeline",

@@ -59,6 +59,9 @@ class DefinitionCapabilities(BaseModel):
     default_order_by: List["OrderBySpec"] = Field(default_factory=list)  # Concrete columns for TopN
     allowed_order_by: List[str] = Field(default_factory=list)  # Whitelist of override columns
     tie_breaker: Optional[str] = None  # Deterministic secondary sort column
+    # Output shape hint - helps intent matcher prefer this definition for matching queries
+    # "scalar" = aggregate totals, "ranked" = top-N lists, "table" = tabular data, "status" = health checks
+    output_shape: Optional[str] = None  # None means infer from supports_top_n
 
 
 class Definition(BaseModel):

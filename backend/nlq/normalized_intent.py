@@ -309,6 +309,7 @@ DEFINITION_TO_METRIC = {
     # Finance - Revenue
     "finops.arr": "arr",
     "finops.revenue": "revenue",
+    "finops.total_revenue": "revenue",  # Scalar aggregate revenue definition
 
     # Finance - Spend
     "finops.saas_spend": "saas_spend",
@@ -1057,11 +1058,20 @@ def check_unsupported(question: str) -> Optional[str]:
 
 # SCALAR patterns - these MUST return exactly one value, NO rows
 SCALAR_PATTERNS = [
+    # Present tense patterns
     r"^what\s+(?:is|are)\s+(?:our|the|my)\s+(?:current\s+)?(?:total\s+)?(?:arr|revenue|burn\s*rate|spend|cost|mttr)\b",
     r"^what's?\s+(?:our|the|my)\s+(?:current\s+)?(?:total\s+)?(?:arr|revenue|burn\s*rate|spend|cost|mttr)\b",
     r"\bcurrent\s+(?:arr|revenue|burn\s*rate|spend|cost)\b",
     r"^(?:total|overall)\s+(?:arr|revenue|burn\s*rate|spend|cost)\b",
     r"^how\s+much\s+(?:is\s+)?(?:our|the)\s+(?:arr|revenue|spend|cost)\b",
+    # PAST TENSE patterns - CRITICAL for "what was our revenue last year"
+    r"^what\s+was\s+(?:our|the|my)\s+(?:total\s+)?(?:arr|revenue|burn\s*rate|spend|cost|mttr)\b",
+    r"^what\s+were\s+(?:our|the|my)\s+(?:total\s+)?(?:arr|revenue|burn\s*rate|spend|cost|mttr)\b",
+    r"^how\s+much\s+(?:was\s+)?(?:our|the)\s+(?:arr|revenue|spend|cost)\b",
+    r"^how\s+much\s+(?:did\s+we\s+)?(?:make|earn|bring)\s+(?:in\s+)?(?:revenue)?\b",
+    # Time-scoped scalar patterns (without "top", "customers", "by customer" etc.)
+    r"^(?:arr|revenue|spend|cost)\s+(?:last|this|for\s+the)\s+(?:year|quarter|month|week)\b",
+    r"^(?:total\s+)?(?:arr|revenue|spend|cost)\s+(?:in|for|during)\s+(?:20\d{2}|q[1-4]|january|february|march|april|may|june|july|august|september|october|november|december)\b",
 ]
 
 # RANKED patterns - these MUST return ordered rows with limit

@@ -8,7 +8,8 @@ ARCHITECTURE:
 1. Extract operators (temporal: MoM/QoQ/YoY, comparison: change/delta)
 2. Match keywords to find candidate definitions
 3. Filter by required capabilities (supports_delta, supports_trend, etc.)
-4. Return best match with confidence
+4. OUTPUT_SHAPE-AWARE ROUTING: Prefer scalar defs for scalar queries, penalize TopN defs
+5. Return best match with confidence
 """
 import re
 from dataclasses import dataclass, field
@@ -19,6 +20,69 @@ from .operator_extractor import (
     extract_operators, ExtractedOperators, get_required_capabilities,
     format_operator_description, TemporalOperator
 )
+
+# =============================================================================
+# OUTPUT SHAPE DETECTION - SCALAR vs RANKED/LIST
+# Patterns that indicate the query is asking for a scalar aggregate, not a list
+# =============================================================================
+SCALAR_QUERY_PATTERNS = [
+    # Present tense scalar patterns
+    r"^what\s+(?:is|are)\s+(?:our|the|my)\s+(?:current\s+)?(?:total\s+)?(?:arr|revenue|burn\s*rate|spend|cost|mttr)\b",
+    r"^what's?\s+(?:our|the|my)\s+(?:current\s+)?(?:total\s+)?(?:arr|revenue|burn\s*rate|spend|cost|mttr)\b",
+    r"\bcurrent\s+(?:arr|revenue|burn\s*rate|spend|cost)\b",
+    r"^(?:total|overall)\s+(?:arr|revenue|burn\s*rate|spend|cost)\b",
+    r"^how\s+much\s+(?:is\s+)?(?:our|the)\s+(?:arr|revenue|spend|cost)\b",
+    # PAST TENSE patterns - CRITICAL for "what was our revenue last year"
+    r"^what\s+was\s+(?:our|the|my)\s+(?:total\s+)?(?:arr|revenue|burn\s*rate|spend|cost|mttr)\b",
+    r"^what\s+were\s+(?:our|the|my)\s+(?:total\s+)?(?:arr|revenue|burn\s*rate|spend|cost|mttr)\b",
+    r"^how\s+much\s+(?:was\s+)?(?:our|the)\s+(?:arr|revenue|spend|cost)\b",
+    r"^how\s+much\s+(?:did\s+we\s+)?(?:make|earn|bring)\s+(?:in\s+)?(?:revenue)?\b",
+    # Time-scoped scalar patterns (without "top", "customers", "by customer" etc.)
+    r"^(?:arr|revenue|spend|cost)\s+(?:last|this|for\s+the)\s+(?:year|quarter|month|week)\b",
+]
+
+# Patterns that indicate the query is asking for a RANKED list (TopN)
+RANKED_QUERY_PATTERNS = [
+    r"\btop\s+\d+\b",
+    r"\bbottom\s+\d+\b",
+    r"\bfirst\s+\d+\b",
+    r"\btop\s+(?:customers?|vendors?|deals?|services?)\b",
+    r"\bbiggest\b",
+    r"\blargest\b",
+    r"\bsmallest\b",
+    r"\bhighest\b",
+    r"\blowest\b",
+    r"\bworst\b",
+    r"\bbest\b",
+    r"\bwho\s+(?:are|is)\s+(?:our\s+)?(?:top|biggest|largest)\b",
+    r"\brank\s+(?:by|vendors?|customers?)\b",
+    r"\bby\s+(?:customer|vendor|region|industry)\b",  # Grouping implies list
+    r"\bcustomers?\s+by\s+",  # "customers by revenue" is a list
+]
+
+
+def _detect_query_output_shape(question: str) -> Optional[str]:
+    """
+    Detect the expected output shape from the question.
+
+    Returns:
+        "scalar" - if query asks for aggregate total (e.g., "what was our revenue")
+        "ranked" - if query asks for a ranked list (e.g., "top 5 customers")
+        None - if ambiguous or no clear signal
+    """
+    question_lower = question.lower().strip()
+
+    # Check for RANKED patterns first (they're more specific)
+    for pattern in RANKED_QUERY_PATTERNS:
+        if re.search(pattern, question_lower):
+            return "ranked"
+
+    # Check for SCALAR patterns
+    for pattern in SCALAR_QUERY_PATTERNS:
+        if re.search(pattern, question_lower):
+            return "scalar"
+
+    return None
 
 # Lazy-load definitions to avoid circular imports
 _definitions = None
@@ -260,6 +324,12 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
             detected_primary_metric = PRIMARY_METRIC_ALIASES[token]
             break
 
+    # =================================================================
+    # PRE-COMPUTE: Detect query output_shape (scalar vs ranked)
+    # This is CRITICAL for routing scalar queries to scalar definitions
+    # =================================================================
+    query_output_shape = _detect_query_output_shape(question)
+
     for defn in definitions:
         score = 0.0
         matched = []
@@ -421,6 +491,38 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
         if is_same_domain and score > 0:
             score *= 2.0
             matched.append(f"DOMAIN_BOOST:{detected_domain}")
+
+        # =================================================================
+        # STEP 8.5: OUTPUT_SHAPE-AWARE ROUTING (CRITICAL FIX)
+        # If query asks for SCALAR, penalize TopN definitions
+        # If query asks for RANKED, penalize scalar definitions
+        # =================================================================
+        if query_output_shape and hasattr(defn, 'capabilities') and defn.capabilities:
+            defn_output_shape = getattr(defn.capabilities, 'output_shape', None)
+            defn_supports_top_n = defn.capabilities.supports_top_n
+
+            if query_output_shape == "scalar":
+                # SCALAR query - prefer scalar definitions, penalize TopN
+                if defn_output_shape == "scalar":
+                    # BOOST: Definition is explicitly scalar
+                    score += 1.0
+                    matched.append("OUTPUT_SHAPE_MATCH:scalar")
+                elif defn_supports_top_n and defn_output_shape != "scalar":
+                    # PENALTY: Definition is TopN but query is scalar
+                    # Strong penalty to prevent "top customers" matching "what was revenue"
+                    score *= 0.3
+                    matched.append("OUTPUT_SHAPE_MISMATCH:scalar_query_vs_topn_def")
+
+            elif query_output_shape == "ranked":
+                # RANKED query - prefer TopN definitions, penalize scalar
+                if defn_supports_top_n:
+                    # BOOST: Definition supports ranking
+                    score += 0.3
+                    matched.append("OUTPUT_SHAPE_MATCH:ranked")
+                elif defn_output_shape == "scalar":
+                    # PENALTY: Definition is scalar but query is ranked
+                    score *= 0.5
+                    matched.append("OUTPUT_SHAPE_MISMATCH:ranked_query_vs_scalar_def")
 
         # =================================================================
         # STEP 9: CONFIDENCE NORMALIZATION
