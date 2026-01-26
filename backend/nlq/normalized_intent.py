@@ -13,7 +13,143 @@ ARCHITECTURE:
 """
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Set, Tuple
+import re
+
+
+# =============================================================================
+# METRIC GROUP ENFORCEMENT (Revenue vs ARR/Subscription)
+# These are HARD boundaries - cross-group matching is FORBIDDEN
+# =============================================================================
+
+# Metrics that belong to REVENUE (transactional, realized, invoiced)
+REVENUE_METRICS: Set[str] = {
+    "revenue",
+    "revenue_delta",
+    "sales",
+    "billings",
+    "invoiced",
+    "income",
+    "earnings",
+    "top_line",
+    "realized_revenue",
+}
+
+# Metrics that belong to SUBSCRIPTION/ARR (recurring, contracted)
+SUBSCRIPTION_METRICS: Set[str] = {
+    "arr",
+    "arr_churn",
+    "mrr",
+    "recurring_revenue",
+    "subscription",
+    "bookings",
+    "run_rate",
+    "contracted_revenue",
+}
+
+# Tokens in queries that indicate REVENUE intent
+REVENUE_TOKENS: Set[str] = {
+    "sales",
+    "revenue",
+    "billing",
+    "billings",
+    "invoice",
+    "invoiced",
+    "income",
+    "earnings",
+    "realized",
+    "top-line",
+    "topline",
+    "top line",
+    "transactions",
+    "transactional",
+}
+
+# Tokens in queries that indicate SUBSCRIPTION/ARR intent
+SUBSCRIPTION_TOKENS: Set[str] = {
+    "arr",
+    "mrr",
+    "recurring",
+    "subscription",
+    "subscriptions",
+    "bookings",
+    "run-rate",
+    "runrate",
+    "run rate",
+    "contracted",
+    "annual recurring",
+}
+
+
+class MetricMismatchError(Exception):
+    """Raised when query tokens indicate one metric group but resolution picks another."""
+    pass
+
+
+def detect_metric_group_from_query(question: str) -> Optional[str]:
+    """
+    Detect which metric group the query is asking about based on tokens.
+
+    Returns:
+        "revenue" - if revenue tokens detected
+        "subscription" - if subscription/ARR tokens detected
+        None - if ambiguous or no clear signal
+    """
+    question_lower = question.lower()
+
+    has_revenue_signal = any(token in question_lower for token in REVENUE_TOKENS)
+    has_subscription_signal = any(token in question_lower for token in SUBSCRIPTION_TOKENS)
+
+    # CRITICAL: "annual" alone is NOT a subscription signal
+    # "annual earnings" = revenue, "annual recurring revenue" = subscription
+    if "annual" in question_lower and "recurring" not in question_lower:
+        # "annual" without "recurring" is neutral or revenue-leaning
+        pass  # Don't count as subscription
+
+    if has_revenue_signal and not has_subscription_signal:
+        return "revenue"
+    elif has_subscription_signal and not has_revenue_signal:
+        return "subscription"
+    elif has_revenue_signal and has_subscription_signal:
+        # Both signals present - check for dominant signal
+        # "recurring revenue" → subscription wins
+        # "revenue from subscriptions" → subscription wins
+        if "recurring" in question_lower:
+            return "subscription"
+        return None  # Truly ambiguous
+
+    return None  # No clear signal
+
+
+def get_metric_group(metric: str) -> Optional[str]:
+    """Get the group a metric belongs to."""
+    if metric in REVENUE_METRICS or metric.startswith("revenue"):
+        return "revenue"
+    elif metric in SUBSCRIPTION_METRICS or "arr" in metric.lower():
+        return "subscription"
+    return None
+
+
+def check_metric_group_mismatch(question: str, resolved_metric: str) -> Tuple[bool, Optional[str]]:
+    """
+    Check if there's a mismatch between query intent and resolved metric.
+
+    Returns:
+        (is_mismatch, warning_message)
+    """
+    query_group = detect_metric_group_from_query(question)
+    metric_group = get_metric_group(resolved_metric)
+
+    if query_group is None or metric_group is None:
+        return (False, None)
+
+    if query_group != metric_group:
+        if query_group == "revenue" and metric_group == "subscription":
+            return (True, "METRIC_MISMATCH_REVENUE_VS_ARR: Query asks for revenue but resolved to ARR/subscription metric")
+        elif query_group == "subscription" and metric_group == "revenue":
+            return (True, "METRIC_MISMATCH_ARR_VS_REVENUE: Query asks for ARR/subscription but resolved to revenue metric")
+
+    return (False, None)
 
 
 class IntentStatus(str, Enum):
@@ -233,11 +369,13 @@ QUESTION_METRIC_PATTERNS = [
     (r"\bsales\s+(?:revenue|total|amount)?\b", "revenue"),  # "sales" → revenue
     (r"\btotal\s+sales\b", "revenue"),
     (r"\bearnings?\s+from\s+sales\b", "revenue"),
+    (r"\b(?:annual\s+)?earnings?\b", "revenue"),  # "earnings", "annual earnings" → revenue
     (r"\binvoice[ds]?\s+(?:revenue|amount|total)?\b", "revenue"),  # invoiced → revenue
     (r"\btop[- ]?line\b", "revenue"),  # "top line" → revenue
     (r"\brealized\s+(?:revenue|value)\b", "revenue"),
     (r"\bbilling[s]?\s+(?:total|amount)?\b", "revenue"),  # billings → revenue
     (r"\bincome\b", "revenue"),  # "total income" → revenue
+    (r"\btransactions?\b", "revenue"),  # "transactions" → revenue
 
     # MOST SPECIFIC first - compound patterns with modifiers
     (r"\bunallocated\s+(?:cloud\s+)?(?:spend|cost)\b", "unallocated_spend"),
@@ -1218,6 +1356,28 @@ def extract_normalized_intent(
             metric = "spend_delta"
         elif base_metric == "vendor_spend":
             metric = "vendor_spend_delta"
+
+    # ==========================================================================
+    # METRIC GROUP MISMATCH CHECK - HARD GATE
+    # If query tokens indicate revenue but metric is ARR (or vice versa),
+    # this is a CRITICAL mismatch that must return AMBIGUOUS
+    # ==========================================================================
+    is_mismatch, mismatch_warning = check_metric_group_mismatch(question, metric)
+    if is_mismatch:
+        # Return AMBIGUOUS status - cannot resolve
+        return IntentResult(
+            status=IntentStatus.AMBIGUOUS,
+            warning=mismatch_warning,
+            confidence=confidence * 0.5,  # Reduce confidence significantly
+            matched_definition=matched_definition,
+            debug_info={
+                "question": question,
+                "reason": "metric_group_mismatch",
+                "query_group": detect_metric_group_from_query(question),
+                "metric_group": get_metric_group(metric),
+                "resolved_metric": metric,
+            },
+        )
 
     # Derive output_shape from intent - THIS IS BINDING
     output_shape = derive_output_shape(question, aggregation, limit, group_by)

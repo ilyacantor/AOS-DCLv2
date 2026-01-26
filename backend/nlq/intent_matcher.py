@@ -63,6 +63,17 @@ AMBIGUOUS_GROUPS = {
 # Threshold for ambiguity detection (if #2 is within this of #1, it's ambiguous)
 AMBIGUITY_THRESHOLD = 0.15
 
+# Definitions that belong to different metric groups
+# Cross-group matches should be marked as ambiguous
+REVENUE_DEFINITIONS = {
+    "finops.customer_revenue_concentration",
+    "finops.top_customers_by_revenue",
+}
+
+SUBSCRIPTION_DEFINITIONS = {
+    "finops.arr",
+}
+
 
 def _get_definitions():
     """Lazy-load BLL definitions."""
@@ -349,11 +360,21 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
         ambiguity_gap = best.score - candidates[1].score
         is_ambiguous = ambiguity_gap < AMBIGUITY_THRESHOLD
 
+        # CRITICAL: Check for Revenue vs ARR/Subscription conflict
+        # If top candidates span both groups, this is a metric confusion hazard
+        top_defns = {c.definition_id for c in candidates[:3]}
+        has_revenue_candidate = any(d in REVENUE_DEFINITIONS for d in top_defns)
+        has_subscription_candidate = any(d in SUBSCRIPTION_DEFINITIONS for d in top_defns)
+
+        if has_revenue_candidate and has_subscription_candidate and ambiguity_gap < 0.20:
+            # Revenue and subscription definitions both in top 3 with small gap
+            # This is a potential metric confusion - mark as ambiguous
+            is_ambiguous = True
+
         # Check if this is a known ambiguous group
         for group_key, group_info in AMBIGUOUS_GROUPS.items():
             if group_key in question_lower:
                 group_defns = set(group_info["definitions"])
-                top_defns = {c.definition_id for c in candidates[:4]}
                 if len(top_defns & group_defns) >= 2:
                     # Multiple definitions from ambiguous group - use default
                     is_ambiguous = True
