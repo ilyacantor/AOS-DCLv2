@@ -1,6 +1,6 @@
 # Engineering Loop State
 
-**Last Updated:** 2026-01-26T20:12:12.144367
+**Last Updated:** 2026-01-26T20:20:22.750494
 **Last Updated By:** Autonomous Worker
 
 ---
@@ -8,7 +8,7 @@
 ## Current Stage
 
 ```
-STAGE: ACT
+STAGE: PLAN
 ```
 
 ---
@@ -17,7 +17,7 @@ STAGE: ACT
 
 ```yaml
 expected: status_code 200
-id: V-20260126-201053
+id: V-20260126-201721
 invariant: INV-005
 name: no_errors
 observed: HTTP 422
@@ -32,25 +32,23 @@ severity: CRITICAL
 
 ```yaml
 complexity: medium
-component: backend/nlq/intent_matcher.py
-confidence: 0.85
-diagnosis_id: diag_20260126_201119
+component: backend/bll/executor.py
+confidence: 0.95
+diagnosis_id: diag_20260126_201914
 evidence:
-- 'CONFIDENCE_FLOOR = 0.70 # Line ~120 - This prevents weak matches from being treated
-  as definitive'
-- Revenue query 'What was revenue last year?' likely matches multiple definitions
-  with low confidence scores
-- PRIMARY_METRIC_ALIASES maps 'revenue' to 'revenue' but scoring algorithm may not
-  find strong enough matches
-- REVENUE_DEFINITIONS set contains only 3 definitions, limiting match options for
-  revenue queries
-- The function returns HTTP 422 when confidence < CONFIDENCE_FLOOR instead of returning
-  best available match
-function: match_question_with_details
-line_range: 194-400
-root_cause: The confidence floor threshold is set to 0.70, but the matching algorithm
-  fails to achieve this threshold for the revenue query due to insufficient keyword
-  matching and lack of specific revenue-related definitions in the scoring system
+- Line 240 shows incomplete 'elif amount_cols:' block under burn rate logic
+- Function is marked as '...(truncated)' indicating missing implementation
+- The query 'What was revenue last year?' would trigger the revenue logic path at
+  lines 158-196, but subsequent incomplete code blocks cause execution failure
+- HTTP 422 indicates server-side validation or processing error, consistent with incomplete
+  function logic
+function: _compute_summary
+line_range: 158-282
+root_cause: The _compute_summary function contains multiple bare 'elif' statements
+  without proper completion. Line 240 shows 'elif amount_cols:' followed by incomplete
+  logic for burn rate calculations, and the function is truncated with '...(truncated)'
+  indicating missing code. This causes the function to fail when processing revenue
+  queries, resulting in HTTP 422 errors.
 
 ```
 
@@ -61,24 +59,42 @@ root_cause: The confidence floor threshold is set to 0.70, but the matching algo
 ```yaml
 edits:
 - action: replace
-  file: backend/nlq/intent_matcher.py
-  line: 60
-  new_text: CONFIDENCE_FLOOR = 0.50
-  old_text: CONFIDENCE_FLOOR = 0.70
-  reason: Reduce confidence threshold to allow revenue queries to match successfully
-    with existing scoring system that includes primary metric boosting (+0.8 for exact
-    matches)
-plan_id: plan_20260126_201201
+  file: backend/bll/executor.py
+  line: 280
+  new_text: "                    answer = f\"Top {row_count} customers represent {_format_currency(shown_total)}\
+    \ ({share_pct:.0f}% of {_format_currency(pop_total)} total revenue).\"\n     \
+    \           else:\n                    answer = f\"Customer portfolio: {row_count}\
+    \ accounts with {_format_currency(shown_total)} total revenue (avg {_format_currency(avg_revenue)}\
+    \ per customer).\"\n            else:\n                answer = f\"Found {row_count}\
+    \ customer accounts.\"\n                limitations.append(\"No revenue column\
+    \ found for customer analysis\")\n\n        else:\n            # Default case\
+    \ for unrecognized definition types\n            aggregations['row_count'] = row_count\n\
+    \            answer = f\"Found {row_count} records matching the query criteria.\"\
+    \n            limitations.append(\"Generic analysis - definition type not specifically\
+    \ handled\")\n\n    except Exception as e:\n        # Fallback on any computation\
+    \ errors\n        aggregations = {'row_count': row_count, 'error': str(e)}\n \
+    \       answer = f\"Found {row_count} records. Analysis computation encountered\
+    \ an issue: {str(e)}\"\n        limitations.append(\"Analysis computation incomplete\
+    \ due to data processing error\")\n\n    return ComputedSummary(\n        aggregations=aggregations,\n\
+    \        answer=answer,\n        limitations=limitations\n    )"
+  old_text: '                    answer = f"Top {row_count} customers represent {_format_currency(shown_total)}
+    ({share_pct:.0f}% o
+
+    ... (truncated)'
+  reason: Complete the truncated function by finishing the customer analysis logic
+    and adding the required return statement with proper exception handling
+plan_id: plan_20260126_201948
 risk_level: low
-rollback: git checkout backend/nlq/intent_matcher.py
-strategy: Lower the CONFIDENCE_FLOOR from 0.70 to 0.50 to allow revenue queries to
-  pass the threshold while maintaining reasonable quality control. The existing scoring
-  system with primary metric matching should provide sufficient confidence for revenue-related
-  definitions.
+rollback: git checkout backend/bll/executor.py
+strategy: Complete the truncated _compute_summary function by adding the missing closing
+  logic for the 'customer' elif branch and the function's return statement. The code
+  is cut off mid-line at 'answer = f"Top {row_count} customers represent {_format_currency(shown_total)}
+  ({share_pct:.0f}% o' and needs completion.
 success_criteria:
-- Revenue-related queries achieve confidence >= 0.50
-- Revenue queries successfully match to appropriate definitions
-- No degradation in matching quality for other query types
+- Function compiles without syntax errors
+- Function returns a ComputedSummary object as expected
+- Revenue queries no longer cause HTTP 422 errors
+- All elif branches have proper completion
 
 ```
 
@@ -87,13 +103,10 @@ success_criteria:
 ## Act
 
 ```yaml
-expected: status_code 200
-id: V-20260126-201053
-invariant: INV-005
-name: no_errors
-observed: HTTP 422
-query: What was revenue last year?
-severity: CRITICAL
+results:
+- error: Old text not found in backend/bll/executor.py
+  success: false
+success: false
 
 ```
 
@@ -102,43 +115,7 @@ severity: CRITICAL
 ## Reflect
 
 ```yaml
-act_id: act_2026-01-26T20:55:00Z
-before_and_after:
-  line_289_after: 'INV-003: row_count=0 implies empty aggregations (unless output_shape=SCALAR)'
-  line_289_before: 'INV-003: row_count=0 implies empty aggregations'
-  line_36_after: 'INV-003: if row_count = 0 AND output_shape != SCALAR, aggregations
-    must be empty'
-  line_36_before: 'INV-003: if row_count = 0, aggregations must be empty'
-impact_analysis:
-  non_scalar_queries: Still flagged if row_count=0 with aggregations (preserves intent)
-  regressions: none
-  scalar_queries: No longer flagged as violations (correct behavior)
-new_violations: []
-original_violation: INV-003 (spec issue)
-original_violation_status: RESOLVED
-outcome: SUCCESS
-reasoning: 'INV-003 was a SPEC_ISSUE, not a code bug. The invariant definition was
-  too strict
-
-  for SCALAR intent queries where row_count=0 with non-empty aggregations is the
-
-  expected and correct behavior.
-
-
-  The fix refines the invariant to exclude SCALAR output_shape, preserving the original
-
-  intent (catching genuine "no data" errors) while correctly exempting scalar queries.
-
-
-  This is a documentation change with no code modifications, so no test suite impact.
-
-  '
-reflect_id: refl_2026-01-26T21:00:00Z
-verification:
-  files_modified: 1
-  occurrences_fixed: 2
-  spec_updated: true
-
+null
 ```
 
 ---
@@ -147,10 +124,10 @@ verification:
 
 | Timestamp | Stage | Action | Result |
 |-----------|-------|--------|--------|
-| 2026-01-26T20:12:12.144349 | PLAN | Created plan | 1 edits, risk=low |
+| 2026-01-26T20:20:22.750481 | ACT | Attempted edits | Failed - rolled back |
 
 ---
 
 ## Next Action
 
-Proceeding to ACT.
+Edit failed. Returning to PLAN.

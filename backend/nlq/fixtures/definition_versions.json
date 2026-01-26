@@ -6,12 +6,33 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["revenue_recognized"],
-      "measure": {"op": "sum", "field": "recognized_amount"},
+      "required_events": [
+        "revenue_recognized"
+      ],
+      "measure": {
+        "op": "sum",
+        "field": "recognized_amount"
+      },
       "filters": {},
-      "allowed_grains": ["day", "week", "month", "quarter", "year"],
-      "allowed_dims": ["customer", "service_line", "region", "contract", "product"],
-      "joins": {"customer_id": "customer", "service_line": "service_line", "region": "region"},
+      "allowed_grains": [
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "year"
+      ],
+      "allowed_dims": [
+        "customer",
+        "service_line",
+        "region",
+        "contract",
+        "product"
+      ],
+      "joins": {
+        "customer_id": "customer",
+        "service_line": "service_line",
+        "region": "region"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -23,12 +44,27 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["invoice_posted"],
-      "measure": {"op": "sum", "field": "posted_amount"},
+      "required_events": [
+        "invoice_posted"
+      ],
+      "measure": {
+        "op": "sum",
+        "field": "posted_amount"
+      },
       "filters": {},
-      "allowed_grains": ["day", "week", "month", "quarter"],
-      "allowed_dims": ["customer", "region"],
-      "joins": {"customer_id": "customer"},
+      "allowed_grains": [
+        "day",
+        "week",
+        "month",
+        "quarter"
+      ],
+      "allowed_dims": [
+        "customer",
+        "region"
+      ],
+      "joins": {
+        "customer_id": "customer"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -40,12 +76,27 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["payment_received"],
-      "measure": {"op": "sum", "field": "cash_amount"},
+      "required_events": [
+        "payment_received"
+      ],
+      "measure": {
+        "op": "sum",
+        "field": "cash_amount"
+      },
       "filters": {},
-      "allowed_grains": ["day", "week", "month", "quarter"],
-      "allowed_dims": ["customer", "payment_method"],
-      "joins": {"customer_id": "customer"},
+      "allowed_grains": [
+        "day",
+        "week",
+        "month",
+        "quarter"
+      ],
+      "allowed_dims": [
+        "customer",
+        "payment_method"
+      ],
+      "joins": {
+        "customer_id": "customer"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -57,12 +108,28 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["subscription_started", "subscription_changed", "subscription_canceled"],
-      "measure": {"op": "point_in_time_sum", "field": "arr"},
+      "required_events": [
+        "subscription_started",
+        "subscription_changed",
+        "subscription_canceled"
+      ],
+      "measure": {
+        "op": "point_in_time_sum",
+        "field": "arr"
+      },
       "filters": {},
-      "allowed_grains": ["month", "quarter"],
-      "allowed_dims": ["customer", "service_line", "region"],
-      "joins": {"customer_id": "customer"},
+      "allowed_grains": [
+        "month",
+        "quarter"
+      ],
+      "allowed_dims": [
+        "customer",
+        "service_line",
+        "region"
+      ],
+      "joins": {
+        "customer_id": "customer"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -74,12 +141,27 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["subscription_started", "subscription_changed", "subscription_canceled"],
-      "measure": {"op": "point_in_time_sum", "field": "mrr"},
+      "required_events": [
+        "subscription_started",
+        "subscription_changed",
+        "subscription_canceled"
+      ],
+      "measure": {
+        "op": "point_in_time_sum",
+        "field": "mrr"
+      },
       "filters": {},
-      "allowed_grains": ["month", "quarter"],
-      "allowed_dims": ["customer", "service_line"],
-      "joins": {"customer_id": "customer"},
+      "allowed_grains": [
+        "month",
+        "quarter"
+      ],
+      "allowed_dims": [
+        "customer",
+        "service_line"
+      ],
+      "joins": {
+        "customer_id": "customer"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -91,12 +173,28 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["subscription_started", "subscription_changed", "subscription_canceled"],
-      "measure": {"op": "cohort_retention", "field": "arr", "cohort_field": "start_date"},
+      "required_events": [
+        "subscription_started",
+        "subscription_changed",
+        "subscription_canceled"
+      ],
+      "measure": {
+        "op": "cohort_retention",
+        "field": "arr",
+        "cohort_field": "start_date"
+      },
       "filters": {},
-      "allowed_grains": ["month", "quarter"],
-      "allowed_dims": ["customer", "service_line"],
-      "joins": {"customer_id": "customer"},
+      "allowed_grains": [
+        "month",
+        "quarter"
+      ],
+      "allowed_dims": [
+        "customer",
+        "service_line"
+      ],
+      "joins": {
+        "customer_id": "customer"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -108,12 +206,27 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["invoice_posted", "payment_applied"],
-      "measure": {"op": "avg_days_between", "start_field": "invoice_posted.effective_at", "end_field": "payment_applied.effective_at"},
+      "required_events": [
+        "invoice_posted",
+        "payment_applied"
+      ],
+      "measure": {
+        "op": "avg_days_between",
+        "start_field": "invoice_posted.effective_at",
+        "end_field": "payment_applied.effective_at"
+      },
       "filters": {},
-      "allowed_grains": ["month", "quarter"],
-      "allowed_dims": ["customer", "region"],
-      "joins": {"customer_id": "customer"},
+      "allowed_grains": [
+        "month",
+        "quarter"
+      ],
+      "allowed_dims": [
+        "customer",
+        "region"
+      ],
+      "joins": {
+        "customer_id": "customer"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -125,12 +238,35 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["invoice_posted", "payment_applied", "credit_note_issued"],
-      "measure": {"op": "event_sourced_balance", "credits": ["invoice_posted.posted_amount"], "debits": ["payment_applied.applied_amount", "credit_note_issued.credit_amount"]},
+      "required_events": [
+        "invoice_posted",
+        "payment_applied",
+        "credit_note_issued"
+      ],
+      "measure": {
+        "op": "event_sourced_balance",
+        "credits": [
+          "invoice_posted.posted_amount"
+        ],
+        "debits": [
+          "payment_applied.applied_amount",
+          "credit_note_issued.credit_amount"
+        ]
+      },
       "filters": {},
-      "allowed_grains": ["day", "month"],
-      "allowed_dims": ["customer", "invoice", "aging_bucket"],
-      "joins": {"customer_id": "customer", "invoice_id": "invoice"},
+      "allowed_grains": [
+        "day",
+        "month"
+      ],
+      "allowed_dims": [
+        "customer",
+        "invoice",
+        "aging_bucket"
+      ],
+      "joins": {
+        "customer_id": "customer",
+        "invoice_id": "invoice"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -142,12 +278,33 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["revenue_recognized", "cost_allocated"],
-      "measure": {"op": "difference", "minuend": "revenue_recognized.recognized_amount", "subtrahend": "cost_allocated.allocated_amount"},
-      "filters": {"cost_allocated.allocation_method": {"op": "eq", "value": "cogs"}},
-      "allowed_grains": ["month", "quarter"],
-      "allowed_dims": ["service_line", "customer", "region"],
-      "joins": {"service_line": "service_line"},
+      "required_events": [
+        "revenue_recognized",
+        "cost_allocated"
+      ],
+      "measure": {
+        "op": "difference",
+        "minuend": "revenue_recognized.recognized_amount",
+        "subtrahend": "cost_allocated.allocated_amount"
+      },
+      "filters": {
+        "cost_allocated.allocation_method": {
+          "op": "eq",
+          "value": "cogs"
+        }
+      },
+      "allowed_grains": [
+        "month",
+        "quarter"
+      ],
+      "allowed_dims": [
+        "service_line",
+        "customer",
+        "region"
+      ],
+      "joins": {
+        "service_line": "service_line"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -159,12 +316,37 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["revenue_recognized"],
-      "measure": {"op": "sum", "field": "recognized_amount"},
-      "filters": {"service_line": {"op": "in", "values": ["Professional Services", "Consulting", "Implementation"]}},
-      "allowed_grains": ["month", "quarter"],
-      "allowed_dims": ["customer", "service_line", "region"],
-      "joins": {"customer_id": "customer", "service_line": "service_line", "region": "region"},
+      "required_events": [
+        "revenue_recognized"
+      ],
+      "measure": {
+        "op": "sum",
+        "field": "recognized_amount"
+      },
+      "filters": {
+        "service_line": {
+          "op": "in",
+          "values": [
+            "Professional Services",
+            "Consulting",
+            "Implementation"
+          ]
+        }
+      },
+      "allowed_grains": [
+        "month",
+        "quarter"
+      ],
+      "allowed_dims": [
+        "customer",
+        "service_line",
+        "region"
+      ],
+      "joins": {
+        "customer_id": "customer",
+        "service_line": "service_line",
+        "region": "region"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -176,12 +358,33 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["deployment_completed"],
-      "measure": {"op": "count"},
-      "filters": {"status": {"op": "eq", "value": "success"}},
-      "allowed_grains": ["day", "week", "month"],
-      "allowed_dims": ["service", "repo", "environment", "team"],
-      "joins": {"service_id": "service", "repo_id": "repo"},
+      "required_events": [
+        "deployment_completed"
+      ],
+      "measure": {
+        "op": "count"
+      },
+      "filters": {
+        "status": {
+          "op": "eq",
+          "value": "success"
+        }
+      },
+      "allowed_grains": [
+        "day",
+        "week",
+        "month"
+      ],
+      "allowed_dims": [
+        "service",
+        "repo",
+        "environment",
+        "team"
+      ],
+      "joins": {
+        "service_id": "service",
+        "repo_id": "repo"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -193,12 +396,28 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["incident_opened", "incident_resolved"],
-      "measure": {"op": "avg", "field": "ttr_minutes"},
+      "required_events": [
+        "incident_opened",
+        "incident_resolved"
+      ],
+      "measure": {
+        "op": "avg",
+        "field": "ttr_minutes"
+      },
       "filters": {},
-      "allowed_grains": ["day", "week", "month"],
-      "allowed_dims": ["service", "severity", "root_cause_category"],
-      "joins": {"service_id": "service"},
+      "allowed_grains": [
+        "day",
+        "week",
+        "month"
+      ],
+      "allowed_dims": [
+        "service",
+        "severity",
+        "root_cause_category"
+      ],
+      "joins": {
+        "service_id": "service"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -210,12 +429,28 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["deployment_completed", "incident_opened"],
-      "measure": {"op": "ratio", "numerator": "deployment_completed.status='failed'", "denominator": "deployment_completed"},
+      "required_events": [
+        "deployment_completed",
+        "incident_opened"
+      ],
+      "measure": {
+        "op": "ratio",
+        "numerator": "deployment_completed.status='failed'",
+        "denominator": "deployment_completed"
+      },
       "filters": {},
-      "allowed_grains": ["week", "month"],
-      "allowed_dims": ["service", "repo", "team"],
-      "joins": {"service_id": "service"},
+      "allowed_grains": [
+        "week",
+        "month"
+      ],
+      "allowed_dims": [
+        "service",
+        "repo",
+        "team"
+      ],
+      "joins": {
+        "service_id": "service"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -227,12 +462,25 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["incident_opened"],
-      "measure": {"op": "count"},
+      "required_events": [
+        "incident_opened"
+      ],
+      "measure": {
+        "op": "count"
+      },
       "filters": {},
-      "allowed_grains": ["day", "week", "month"],
-      "allowed_dims": ["service", "severity"],
-      "joins": {"service_id": "service"},
+      "allowed_grains": [
+        "day",
+        "week",
+        "month"
+      ],
+      "allowed_dims": [
+        "service",
+        "severity"
+      ],
+      "joins": {
+        "service_id": "service"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -244,12 +492,28 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["slo_breached"],
-      "measure": {"op": "ratio", "numerator": "1 - breach_minutes/total_minutes", "denominator": "1"},
+      "required_events": [
+        "slo_breached"
+      ],
+      "measure": {
+        "op": "ratio",
+        "numerator": "1 - breach_minutes/total_minutes",
+        "denominator": "1"
+      },
       "filters": {},
-      "allowed_grains": ["day", "week", "month"],
-      "allowed_dims": ["service", "slo"],
-      "joins": {"service_id": "service", "slo_id": "slo"},
+      "allowed_grains": [
+        "day",
+        "week",
+        "month"
+      ],
+      "allowed_dims": [
+        "service",
+        "slo"
+      ],
+      "joins": {
+        "service_id": "service",
+        "slo_id": "slo"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -261,12 +525,29 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["cloud_cost_incurred"],
-      "measure": {"op": "sum", "field": "cost_amount"},
+      "required_events": [
+        "cloud_cost_incurred"
+      ],
+      "measure": {
+        "op": "sum",
+        "field": "cost_amount"
+      },
       "filters": {},
-      "allowed_grains": ["day", "week", "month"],
-      "allowed_dims": ["service", "cloud_provider", "cost_category", "cost_center"],
-      "joins": {"service_id": "service", "cost_center_id": "cost_center"},
+      "allowed_grains": [
+        "day",
+        "week",
+        "month"
+      ],
+      "allowed_dims": [
+        "service",
+        "cloud_provider",
+        "cost_category",
+        "cost_center"
+      ],
+      "joins": {
+        "service_id": "service",
+        "cost_center_id": "cost_center"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -278,12 +559,27 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["work_item_completed"],
-      "measure": {"op": "count"},
+      "required_events": [
+        "work_item_completed"
+      ],
+      "measure": {
+        "op": "count"
+      },
       "filters": {},
-      "allowed_grains": ["day", "week", "sprint"],
-      "allowed_dims": ["team", "project", "work_item_type"],
-      "joins": {"team_id": "team", "project_id": "project"},
+      "allowed_grains": [
+        "day",
+        "week",
+        "sprint"
+      ],
+      "allowed_dims": [
+        "team",
+        "project",
+        "work_item_type"
+      ],
+      "joins": {
+        "team_id": "team",
+        "project_id": "project"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -295,12 +591,33 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["work_item_state_changed"],
-      "measure": {"op": "avg", "field": "cycle_time_hours"},
-      "filters": {"to_state": {"op": "eq", "value": "done"}},
-      "allowed_grains": ["week", "sprint", "month"],
-      "allowed_dims": ["team", "project", "work_item_type"],
-      "joins": {"team_id": "team", "project_id": "project"},
+      "required_events": [
+        "work_item_state_changed"
+      ],
+      "measure": {
+        "op": "avg",
+        "field": "cycle_time_hours"
+      },
+      "filters": {
+        "to_state": {
+          "op": "eq",
+          "value": "done"
+        }
+      },
+      "allowed_grains": [
+        "week",
+        "sprint",
+        "month"
+      ],
+      "allowed_dims": [
+        "team",
+        "project",
+        "work_item_type"
+      ],
+      "joins": {
+        "team_id": "team",
+        "project_id": "project"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -312,12 +629,28 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["sla_met", "sla_breached"],
-      "measure": {"op": "ratio", "numerator": "sla_met.count", "denominator": "sla_met.count + sla_breached.count"},
+      "required_events": [
+        "sla_met",
+        "sla_breached"
+      ],
+      "measure": {
+        "op": "ratio",
+        "numerator": "sla_met.count",
+        "denominator": "sla_met.count + sla_breached.count"
+      },
       "filters": {},
-      "allowed_grains": ["week", "month"],
-      "allowed_dims": ["service", "team", "sla"],
-      "joins": {"service_id": "service"},
+      "allowed_grains": [
+        "week",
+        "month"
+      ],
+      "allowed_dims": [
+        "service",
+        "team",
+        "sla"
+      ],
+      "joins": {
+        "service_id": "service"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -329,12 +662,31 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["ticket_opened", "ticket_resolved"],
-      "measure": {"op": "net_count", "opened": "ticket_opened", "closed": "ticket_resolved"},
+      "required_events": [
+        "ticket_opened",
+        "ticket_resolved"
+      ],
+      "measure": {
+        "op": "net_count",
+        "opened": "ticket_opened",
+        "closed": "ticket_resolved"
+      },
       "filters": {},
-      "allowed_grains": ["day", "week", "month"],
-      "allowed_dims": ["customer", "service", "priority", "category"],
-      "joins": {"customer_id": "customer", "service_id": "service"},
+      "allowed_grains": [
+        "day",
+        "week",
+        "month"
+      ],
+      "allowed_dims": [
+        "customer",
+        "service",
+        "priority",
+        "category"
+      ],
+      "joins": {
+        "customer_id": "customer",
+        "service_id": "service"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -346,12 +698,27 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["revenue_recognized"],
-      "measure": {"op": "period_over_period_growth", "field": "recognized_amount", "period": "quarter"},
+      "required_events": [
+        "revenue_recognized"
+      ],
+      "measure": {
+        "op": "period_over_period_growth",
+        "field": "recognized_amount",
+        "period": "quarter"
+      },
       "filters": {},
-      "allowed_grains": ["quarter", "year"],
-      "allowed_dims": ["service_line", "region"],
-      "joins": {"service_line": "service_line", "region": "region"},
+      "allowed_grains": [
+        "quarter",
+        "year"
+      ],
+      "allowed_dims": [
+        "service_line",
+        "region"
+      ],
+      "joins": {
+        "service_line": "service_line",
+        "region": "region"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -363,11 +730,24 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["subscription_canceled", "subscription_started"],
-      "measure": {"op": "ratio", "numerator": "subscription_canceled.ending_arr", "denominator": "starting_arr"},
+      "required_events": [
+        "subscription_canceled",
+        "subscription_started"
+      ],
+      "measure": {
+        "op": "ratio",
+        "numerator": "subscription_canceled.ending_arr",
+        "denominator": "starting_arr"
+      },
       "filters": {},
-      "allowed_grains": ["month", "quarter"],
-      "allowed_dims": ["service_line", "customer_segment"],
+      "allowed_grains": [
+        "month",
+        "quarter"
+      ],
+      "allowed_dims": [
+        "service_line",
+        "customer_segment"
+      ],
       "joins": {},
       "time_field": "effective_at"
     },
@@ -380,11 +760,24 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["revenue_recognized", "cost_allocated"],
-      "measure": {"op": "ratio", "numerator": "gross_margin", "denominator": "recognized_revenue"},
+      "required_events": [
+        "revenue_recognized",
+        "cost_allocated"
+      ],
+      "measure": {
+        "op": "ratio",
+        "numerator": "gross_margin",
+        "denominator": "recognized_revenue"
+      },
       "filters": {},
-      "allowed_grains": ["month", "quarter"],
-      "allowed_dims": ["service_line", "region"],
+      "allowed_grains": [
+        "month",
+        "quarter"
+      ],
+      "allowed_dims": [
+        "service_line",
+        "region"
+      ],
       "joins": {},
       "time_field": "effective_at"
     },
@@ -397,12 +790,29 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["deal_won"],
-      "measure": {"op": "sum", "field": "deal_amount"},
+      "required_events": [
+        "deal_won"
+      ],
+      "measure": {
+        "op": "sum",
+        "field": "deal_amount"
+      },
       "filters": {},
-      "allowed_grains": ["day", "week", "month", "quarter"],
-      "allowed_dims": ["customer", "service_line", "region", "deal_type"],
-      "joins": {"customer_id": "customer"},
+      "allowed_grains": [
+        "day",
+        "week",
+        "month",
+        "quarter"
+      ],
+      "allowed_dims": [
+        "customer",
+        "service_line",
+        "region",
+        "deal_type"
+      ],
+      "joins": {
+        "customer_id": "customer"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -414,12 +824,28 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["opportunity_created", "opportunity_stage_changed"],
-      "measure": {"op": "point_in_time_sum", "field": "expected_amount"},
+      "required_events": [
+        "opportunity_created",
+        "opportunity_stage_changed"
+      ],
+      "measure": {
+        "op": "point_in_time_sum",
+        "field": "expected_amount"
+      },
       "filters": {},
-      "allowed_grains": ["day", "week", "month"],
-      "allowed_dims": ["customer", "stage", "region"],
-      "joins": {"customer_id": "customer"},
+      "allowed_grains": [
+        "day",
+        "week",
+        "month"
+      ],
+      "allowed_dims": [
+        "customer",
+        "stage",
+        "region"
+      ],
+      "joins": {
+        "customer_id": "customer"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -431,12 +857,27 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["security_finding_raised", "security_finding_resolved"],
-      "measure": {"op": "avg", "field": "mttr_hours"},
+      "required_events": [
+        "security_finding_raised",
+        "security_finding_resolved"
+      ],
+      "measure": {
+        "op": "avg",
+        "field": "mttr_hours"
+      },
       "filters": {},
-      "allowed_grains": ["week", "month"],
-      "allowed_dims": ["service", "severity", "category"],
-      "joins": {"service_id": "service"},
+      "allowed_grains": [
+        "week",
+        "month"
+      ],
+      "allowed_dims": [
+        "service",
+        "severity",
+        "category"
+      ],
+      "joins": {
+        "service_id": "service"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
@@ -448,14 +889,52 @@
     "version": "v1",
     "status": "published",
     "spec": {
-      "required_events": ["deal_won", "customer_onboarded"],
-      "measure": {"op": "avg", "field": "onboarding_duration_days"},
+      "required_events": [
+        "deal_won",
+        "customer_onboarded"
+      ],
+      "measure": {
+        "op": "avg",
+        "field": "onboarding_duration_days"
+      },
       "filters": {},
-      "allowed_grains": ["month", "quarter"],
-      "allowed_dims": ["customer", "service_line"],
-      "joins": {"customer_id": "customer"},
+      "allowed_grains": [
+        "month",
+        "quarter"
+      ],
+      "allowed_dims": [
+        "customer",
+        "service_line"
+      ],
+      "joins": {
+        "customer_id": "customer"
+      },
       "time_field": "effective_at"
     },
     "published_at": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "test_definition_v1",
+    "tenant_id": "test_tenant",
+    "definition_id": "test_definition",
+    "version": "v1",
+    "status": "draft",
+    "spec": {
+      "required_events": [
+        "revenue_recognized"
+      ],
+      "measure": {
+        "op": "sum",
+        "field": "amount"
+      },
+      "filters": {},
+      "allowed_grains": [],
+      "allowed_dims": [
+        "customer"
+      ],
+      "joins": {},
+      "time_field": null
+    },
+    "published_at": null
   }
 ]

@@ -62,7 +62,7 @@
       "customer": true
     },
     "quality_score": 0.92,
-    "freshness_score": 0.90,
+    "freshness_score": 0.9,
     "updated_at": "2024-01-15T00:00:00Z"
   },
   {
@@ -82,7 +82,7 @@
       "vendor": true,
       "cost_center": true
     },
-    "quality_score": 0.90,
+    "quality_score": 0.9,
     "freshness_score": 0.88,
     "updated_at": "2024-01-15T00:00:00Z"
   },
@@ -104,7 +104,7 @@
       "customer": true,
       "stage": true
     },
-    "quality_score": 0.90,
+    "quality_score": 0.9,
     "freshness_score": 0.95,
     "updated_at": "2024-01-15T00:00:00Z"
   },
@@ -125,7 +125,7 @@
       "customer": true,
       "deal_type": true
     },
-    "quality_score": 0.90,
+    "quality_score": 0.9,
     "freshness_score": 0.95,
     "updated_at": "2024-01-15T00:00:00Z"
   },
@@ -210,7 +210,7 @@
       "work_item_type": true
     },
     "quality_score": 0.85,
-    "freshness_score": 0.90,
+    "freshness_score": 0.9,
     "updated_at": "2024-01-15T00:00:00Z"
   },
   {
@@ -229,7 +229,7 @@
       "team": false
     },
     "quality_score": 0.85,
-    "freshness_score": 0.90,
+    "freshness_score": 0.9,
     "updated_at": "2024-01-15T00:00:00Z"
   },
   {
@@ -250,7 +250,7 @@
       "environment": true,
       "service": false
     },
-    "quality_score": 0.90,
+    "quality_score": 0.9,
     "freshness_score": 0.95,
     "updated_at": "2024-01-15T00:00:00Z"
   },
@@ -367,7 +367,7 @@
       "service": true,
       "severity": true
     },
-    "quality_score": 0.90,
+    "quality_score": 0.9,
     "freshness_score": 0.92,
     "updated_at": "2024-01-15T00:00:00Z"
   },
@@ -410,7 +410,55 @@
     },
     "dims_coverage_json": {},
     "quality_score": 0.65,
-    "freshness_score": 0.60,
+    "freshness_score": 0.6,
     "updated_at": "2024-01-08T00:00:00Z"
+  },
+  {
+    "id": "test_binding_new",
+    "tenant_id": "test_tenant",
+    "source_system": "TestSystem",
+    "canonical_event_id": "revenue_recognized",
+    "mapping_json": {
+      "field1": "canonical_field1"
+    },
+    "dims_coverage_json": {
+      "customer": true
+    },
+    "quality_score": 0.85,
+    "freshness_score": 0.9,
+    "updated_at": null
+  },
+  {
+    "id": "test_binding_update",
+    "tenant_id": "test_tenant",
+    "source_system": "TestSystem",
+    "canonical_event_id": "revenue_recognized",
+    "mapping_json": {},
+    "dims_coverage_json": {},
+    "quality_score": 0.95,
+    "freshness_score": 0.8,
+    "updated_at": null
+  },
+  {
+    "id": "isolated_binding",
+    "tenant_id": "tenant1",
+    "source_system": "System1",
+    "canonical_event_id": "revenue_recognized",
+    "mapping_json": {},
+    "dims_coverage_json": {},
+    "quality_score": 0.5,
+    "freshness_score": 0.5,
+    "updated_at": null
+  },
+  {
+    "id": "isolated_binding",
+    "tenant_id": "tenant2",
+    "source_system": "System2",
+    "canonical_event_id": "invoice_posted",
+    "mapping_json": {},
+    "dims_coverage_json": {},
+    "quality_score": 0.5,
+    "freshness_score": 0.5,
+    "updated_at": null
   }
 ]

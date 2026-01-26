@@ -4,14 +4,38 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "invoice_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "contract_id", "type": "string"},
-        {"name": "invoice_amount", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "invoice_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "contract_id",
+          "type": "string"
+        },
+        {
+          "name": "invoice_amount",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -28,13 +52,34 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "invoice_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "posted_amount", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "invoice_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "posted_amount",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -51,17 +96,50 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "invoice_line_id", "type": "string"},
-        {"name": "invoice_id", "type": "string"},
-        {"name": "product_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "quantity", "type": "decimal"},
-        {"name": "unit_price", "type": "decimal"},
-        {"name": "line_amount", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "invoice_line_id",
+          "type": "string"
+        },
+        {
+          "name": "invoice_id",
+          "type": "string"
+        },
+        {
+          "name": "product_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "quantity",
+          "type": "decimal"
+        },
+        {
+          "name": "unit_price",
+          "type": "decimal"
+        },
+        {
+          "name": "line_amount",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -78,15 +156,42 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "contract_id", "type": "string"},
-        {"name": "service_line", "type": "string"},
-        {"name": "region", "type": "string"},
-        {"name": "recognized_amount", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "contract_id",
+          "type": "string"
+        },
+        {
+          "name": "service_line",
+          "type": "string"
+        },
+        {
+          "name": "region",
+          "type": "string"
+        },
+        {
+          "name": "recognized_amount",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -103,15 +208,42 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "credit_id", "type": "string"},
-        {"name": "invoice_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "credit_amount", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "reason", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "credit_id",
+          "type": "string"
+        },
+        {
+          "name": "invoice_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "credit_amount",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -128,14 +260,38 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "payment_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "cash_amount", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "payment_method", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "payment_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "cash_amount",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "payment_method",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -152,13 +308,34 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "payment_id", "type": "string"},
-        {"name": "invoice_id", "type": "string"},
-        {"name": "applied_amount", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "payment_id",
+          "type": "string"
+        },
+        {
+          "name": "invoice_id",
+          "type": "string"
+        },
+        {
+          "name": "applied_amount",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -175,15 +352,42 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "refund_id", "type": "string"},
-        {"name": "payment_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "refund_amount", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "reason", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "refund_id",
+          "type": "string"
+        },
+        {
+          "name": "payment_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "refund_amount",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -200,16 +404,46 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "subscription_id", "type": "string"},
-        {"name": "contract_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "mrr", "type": "decimal"},
-        {"name": "arr", "type": "decimal"},
-        {"name": "term_months", "type": "integer"},
-        {"name": "currency", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "subscription_id",
+          "type": "string"
+        },
+        {
+          "name": "contract_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "mrr",
+          "type": "decimal"
+        },
+        {
+          "name": "arr",
+          "type": "decimal"
+        },
+        {
+          "name": "term_months",
+          "type": "integer"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -226,17 +460,50 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "subscription_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "change_type", "type": "string"},
-        {"name": "delta_mrr", "type": "decimal"},
-        {"name": "delta_arr", "type": "decimal"},
-        {"name": "old_mrr", "type": "decimal"},
-        {"name": "new_mrr", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "subscription_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "change_type",
+          "type": "string"
+        },
+        {
+          "name": "delta_mrr",
+          "type": "decimal"
+        },
+        {
+          "name": "delta_arr",
+          "type": "decimal"
+        },
+        {
+          "name": "old_mrr",
+          "type": "decimal"
+        },
+        {
+          "name": "new_mrr",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -253,15 +520,42 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "subscription_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "ending_mrr", "type": "decimal"},
-        {"name": "ending_arr", "type": "decimal"},
-        {"name": "cancel_reason", "type": "string"},
-        {"name": "currency", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "subscription_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "ending_mrr",
+          "type": "decimal"
+        },
+        {
+          "name": "ending_arr",
+          "type": "decimal"
+        },
+        {
+          "name": "cancel_reason",
+          "type": "string"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -278,12 +572,30 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "base_currency", "type": "string"},
-        {"name": "quote_currency", "type": "string"},
-        {"name": "rate", "type": "decimal"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "base_currency",
+          "type": "string"
+        },
+        {
+          "name": "quote_currency",
+          "type": "string"
+        },
+        {
+          "name": "rate",
+          "type": "decimal"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -300,15 +612,42 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "vendor_bill_id", "type": "string"},
-        {"name": "vendor_id", "type": "string"},
-        {"name": "cost_center_id", "type": "string"},
-        {"name": "bill_amount", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "expense_category", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "vendor_bill_id",
+          "type": "string"
+        },
+        {
+          "name": "vendor_id",
+          "type": "string"
+        },
+        {
+          "name": "cost_center_id",
+          "type": "string"
+        },
+        {
+          "name": "bill_amount",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "expense_category",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -325,16 +664,46 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "expense_id", "type": "string"},
-        {"name": "employee_id", "type": "string"},
-        {"name": "cost_center_id", "type": "string"},
-        {"name": "project_id", "type": "string"},
-        {"name": "amount", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "expense_category", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "expense_id",
+          "type": "string"
+        },
+        {
+          "name": "employee_id",
+          "type": "string"
+        },
+        {
+          "name": "cost_center_id",
+          "type": "string"
+        },
+        {
+          "name": "project_id",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "expense_category",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -351,17 +720,50 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "payroll_id", "type": "string"},
-        {"name": "employee_id", "type": "string"},
-        {"name": "cost_center_id", "type": "string"},
-        {"name": "gross_pay", "type": "decimal"},
-        {"name": "taxes", "type": "decimal"},
-        {"name": "benefits", "type": "decimal"},
-        {"name": "net_pay", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "payroll_id",
+          "type": "string"
+        },
+        {
+          "name": "employee_id",
+          "type": "string"
+        },
+        {
+          "name": "cost_center_id",
+          "type": "string"
+        },
+        {
+          "name": "gross_pay",
+          "type": "decimal"
+        },
+        {
+          "name": "taxes",
+          "type": "decimal"
+        },
+        {
+          "name": "benefits",
+          "type": "decimal"
+        },
+        {
+          "name": "net_pay",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -378,16 +780,46 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "allocation_id", "type": "string"},
-        {"name": "cost_center_id", "type": "string"},
-        {"name": "project_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "allocated_amount", "type": "decimal"},
-        {"name": "allocation_method", "type": "string"},
-        {"name": "currency", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "allocation_id",
+          "type": "string"
+        },
+        {
+          "name": "cost_center_id",
+          "type": "string"
+        },
+        {
+          "name": "project_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "allocated_amount",
+          "type": "decimal"
+        },
+        {
+          "name": "allocation_method",
+          "type": "string"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -404,13 +836,34 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "lead_id", "type": "string"},
-        {"name": "source", "type": "string"},
-        {"name": "region", "type": "string"},
-        {"name": "industry", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "lead_id",
+          "type": "string"
+        },
+        {
+          "name": "source",
+          "type": "string"
+        },
+        {
+          "name": "region",
+          "type": "string"
+        },
+        {
+          "name": "industry",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -427,15 +880,42 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "opportunity_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "expected_amount", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "stage", "type": "string"},
-        {"name": "close_date", "type": "date"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "opportunity_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "expected_amount",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "stage",
+          "type": "string"
+        },
+        {
+          "name": "close_date",
+          "type": "date"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -452,14 +932,38 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "opportunity_id", "type": "string"},
-        {"name": "from_stage", "type": "string"},
-        {"name": "to_stage", "type": "string"},
-        {"name": "amount", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "opportunity_id",
+          "type": "string"
+        },
+        {
+          "name": "from_stage",
+          "type": "string"
+        },
+        {
+          "name": "to_stage",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -476,16 +980,46 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "opportunity_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "contract_id", "type": "string"},
-        {"name": "deal_amount", "type": "decimal"},
-        {"name": "arr_value", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "deal_type", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "opportunity_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "contract_id",
+          "type": "string"
+        },
+        {
+          "name": "deal_amount",
+          "type": "decimal"
+        },
+        {
+          "name": "arr_value",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "deal_type",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -502,15 +1036,42 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "opportunity_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "lost_amount", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "loss_reason", "type": "string"},
-        {"name": "competitor", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "opportunity_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "lost_amount",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "loss_reason",
+          "type": "string"
+        },
+        {
+          "name": "competitor",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -527,12 +1088,30 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "contract_id", "type": "string"},
-        {"name": "onboarding_duration_days", "type": "integer"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "contract_id",
+          "type": "string"
+        },
+        {
+          "name": "onboarding_duration_days",
+          "type": "integer"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -549,14 +1128,38 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "subscription_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "quoted_arr", "type": "decimal"},
-        {"name": "current_arr", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "subscription_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "quoted_arr",
+          "type": "decimal"
+        },
+        {
+          "name": "current_arr",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -573,14 +1176,38 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "subscription_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "renewed_arr", "type": "decimal"},
-        {"name": "previous_arr", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "subscription_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "renewed_arr",
+          "type": "decimal"
+        },
+        {
+          "name": "previous_arr",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -597,14 +1224,38 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "subscription_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "lost_arr", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "loss_reason", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "subscription_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "lost_arr",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "loss_reason",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -621,15 +1272,42 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "work_item_id", "type": "string"},
-        {"name": "project_id", "type": "string"},
-        {"name": "team_id", "type": "string"},
-        {"name": "work_item_type", "type": "string"},
-        {"name": "priority", "type": "string"},
-        {"name": "estimate_points", "type": "decimal"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "work_item_id",
+          "type": "string"
+        },
+        {
+          "name": "project_id",
+          "type": "string"
+        },
+        {
+          "name": "team_id",
+          "type": "string"
+        },
+        {
+          "name": "work_item_type",
+          "type": "string"
+        },
+        {
+          "name": "priority",
+          "type": "string"
+        },
+        {
+          "name": "estimate_points",
+          "type": "decimal"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -646,14 +1324,38 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "work_item_id", "type": "string"},
-        {"name": "team_id", "type": "string"},
-        {"name": "from_state", "type": "string"},
-        {"name": "to_state", "type": "string"},
-        {"name": "time_in_state_hours", "type": "decimal"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "work_item_id",
+          "type": "string"
+        },
+        {
+          "name": "team_id",
+          "type": "string"
+        },
+        {
+          "name": "from_state",
+          "type": "string"
+        },
+        {
+          "name": "to_state",
+          "type": "string"
+        },
+        {
+          "name": "time_in_state_hours",
+          "type": "decimal"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -670,13 +1372,34 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "work_item_id", "type": "string"},
-        {"name": "team_id", "type": "string"},
-        {"name": "cycle_time_hours", "type": "decimal"},
-        {"name": "actual_points", "type": "decimal"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "work_item_id",
+          "type": "string"
+        },
+        {
+          "name": "team_id",
+          "type": "string"
+        },
+        {
+          "name": "cycle_time_hours",
+          "type": "decimal"
+        },
+        {
+          "name": "actual_points",
+          "type": "decimal"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -693,13 +1416,34 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "sla_id", "type": "string"},
-        {"name": "ticket_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "target_hours", "type": "decimal"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "sla_id",
+          "type": "string"
+        },
+        {
+          "name": "ticket_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "target_hours",
+          "type": "decimal"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -716,14 +1460,38 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "sla_id", "type": "string"},
-        {"name": "ticket_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "breach_hours", "type": "decimal"},
-        {"name": "severity", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "sla_id",
+          "type": "string"
+        },
+        {
+          "name": "ticket_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "breach_hours",
+          "type": "decimal"
+        },
+        {
+          "name": "severity",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -740,13 +1508,34 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "sla_id", "type": "string"},
-        {"name": "ticket_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "resolution_hours", "type": "decimal"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "sla_id",
+          "type": "string"
+        },
+        {
+          "name": "ticket_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "resolution_hours",
+          "type": "decimal"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -763,14 +1552,38 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "ticket_id", "type": "string"},
-        {"name": "customer_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "priority", "type": "string"},
-        {"name": "category", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "ticket_id",
+          "type": "string"
+        },
+        {
+          "name": "customer_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "priority",
+          "type": "string"
+        },
+        {
+          "name": "category",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -787,13 +1600,34 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "ticket_id", "type": "string"},
-        {"name": "resolution_hours", "type": "decimal"},
-        {"name": "first_response_hours", "type": "decimal"},
-        {"name": "resolution_type", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "ticket_id",
+          "type": "string"
+        },
+        {
+          "name": "resolution_hours",
+          "type": "decimal"
+        },
+        {
+          "name": "first_response_hours",
+          "type": "decimal"
+        },
+        {
+          "name": "resolution_type",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -810,13 +1644,34 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "team_id", "type": "string"},
-        {"name": "cost_center_id", "type": "string"},
-        {"name": "available_hours", "type": "decimal"},
-        {"name": "headcount", "type": "integer"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "team_id",
+          "type": "string"
+        },
+        {
+          "name": "cost_center_id",
+          "type": "string"
+        },
+        {
+          "name": "available_hours",
+          "type": "decimal"
+        },
+        {
+          "name": "headcount",
+          "type": "integer"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -833,14 +1688,38 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "deployment_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "repo_id", "type": "string"},
-        {"name": "environment", "type": "string"},
-        {"name": "version", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "deployment_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "repo_id",
+          "type": "string"
+        },
+        {
+          "name": "environment",
+          "type": "string"
+        },
+        {
+          "name": "version",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -857,16 +1736,46 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "deployment_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "repo_id", "type": "string"},
-        {"name": "environment", "type": "string"},
-        {"name": "version", "type": "string"},
-        {"name": "status", "type": "string"},
-        {"name": "duration_seconds", "type": "integer"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "deployment_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "repo_id",
+          "type": "string"
+        },
+        {
+          "name": "environment",
+          "type": "string"
+        },
+        {
+          "name": "version",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        },
+        {
+          "name": "duration_seconds",
+          "type": "integer"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -883,13 +1792,34 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "incident_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "severity", "type": "string"},
-        {"name": "impacted_customers", "type": "integer"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "incident_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "severity",
+          "type": "string"
+        },
+        {
+          "name": "impacted_customers",
+          "type": "integer"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -906,14 +1836,38 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "incident_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "ttd_minutes", "type": "integer"},
-        {"name": "ttr_minutes", "type": "integer"},
-        {"name": "root_cause_category", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "incident_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "ttd_minutes",
+          "type": "integer"
+        },
+        {
+          "name": "ttr_minutes",
+          "type": "integer"
+        },
+        {
+          "name": "root_cause_category",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -930,13 +1884,34 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "slo_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "breach_minutes", "type": "integer"},
-        {"name": "error_budget_remaining_pct", "type": "decimal"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "slo_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "breach_minutes",
+          "type": "integer"
+        },
+        {
+          "name": "error_budget_remaining_pct",
+          "type": "decimal"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -953,15 +1928,42 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "resource_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "resource_type", "type": "string"},
-        {"name": "cloud_provider", "type": "string"},
-        {"name": "region", "type": "string"},
-        {"name": "hourly_cost", "type": "decimal"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "resource_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "resource_type",
+          "type": "string"
+        },
+        {
+          "name": "cloud_provider",
+          "type": "string"
+        },
+        {
+          "name": "region",
+          "type": "string"
+        },
+        {
+          "name": "hourly_cost",
+          "type": "decimal"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -978,14 +1980,38 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "resource_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "resource_type", "type": "string"},
-        {"name": "lifetime_hours", "type": "decimal"},
-        {"name": "total_cost", "type": "decimal"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "resource_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "resource_type",
+          "type": "string"
+        },
+        {
+          "name": "lifetime_hours",
+          "type": "decimal"
+        },
+        {
+          "name": "total_cost",
+          "type": "decimal"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -1002,16 +2028,46 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "resource_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "cost_center_id", "type": "string"},
-        {"name": "cloud_provider", "type": "string"},
-        {"name": "cost_category", "type": "string"},
-        {"name": "cost_amount", "type": "decimal"},
-        {"name": "currency", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "resource_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "cost_center_id",
+          "type": "string"
+        },
+        {
+          "name": "cloud_provider",
+          "type": "string"
+        },
+        {
+          "name": "cost_category",
+          "type": "string"
+        },
+        {
+          "name": "cost_amount",
+          "type": "decimal"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -1028,15 +2084,42 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "finding_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "resource_id", "type": "string"},
-        {"name": "severity", "type": "string"},
-        {"name": "category", "type": "string"},
-        {"name": "cve_id", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "finding_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "resource_id",
+          "type": "string"
+        },
+        {
+          "name": "severity",
+          "type": "string"
+        },
+        {
+          "name": "category",
+          "type": "string"
+        },
+        {
+          "name": "cve_id",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -1053,13 +2136,34 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "finding_id", "type": "string"},
-        {"name": "service_id", "type": "string"},
-        {"name": "resolution_type", "type": "string"},
-        {"name": "mttr_hours", "type": "decimal"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "finding_id",
+          "type": "string"
+        },
+        {
+          "name": "service_id",
+          "type": "string"
+        },
+        {
+          "name": "resolution_type",
+          "type": "string"
+        },
+        {
+          "name": "mttr_hours",
+          "type": "decimal"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -1076,15 +2180,42 @@
     "tenant_id": "default",
     "schema_json": {
       "fields": [
-        {"name": "event_id", "type": "string"},
-        {"name": "entity_type", "type": "string"},
-        {"name": "entity_id", "type": "string"},
-        {"name": "field_changed", "type": "string"},
-        {"name": "old_value", "type": "string"},
-        {"name": "new_value", "type": "string"},
-        {"name": "change_reason", "type": "string"},
-        {"name": "occurred_at", "type": "timestamp"},
-        {"name": "effective_at", "type": "timestamp"}
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "entity_type",
+          "type": "string"
+        },
+        {
+          "name": "entity_id",
+          "type": "string"
+        },
+        {
+          "name": "field_changed",
+          "type": "string"
+        },
+        {
+          "name": "old_value",
+          "type": "string"
+        },
+        {
+          "name": "new_value",
+          "type": "string"
+        },
+        {
+          "name": "change_reason",
+          "type": "string"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_at",
+          "type": "timestamp"
+        }
       ]
     },
     "time_semantics_json": {
@@ -1095,5 +2226,23 @@
     "description": "Mapping or classification change (reclass tracking)",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": "test_event_new",
+    "tenant_id": "test_tenant",
+    "schema_json": {
+      "fields": [
+        {
+          "name": "amount",
+          "type": "decimal"
+        }
+      ]
+    },
+    "time_semantics_json": {
+      "event_time": "created_at"
+    },
+    "description": "Test event",
+    "created_at": null,
+    "updated_at": null
   }
 ]

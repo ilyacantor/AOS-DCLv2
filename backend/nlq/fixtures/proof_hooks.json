@@ -10,7 +10,7 @@
       "query_hash_template": "sha256:{hash}",
       "description": "NetSuite saved search for services revenue"
     },
-    "availability_score": 0.90
+    "availability_score": 0.9
   },
   {
     "id": "services_revenue_psa",
@@ -46,6 +46,17 @@
       "ref_template": "report:arr_by_customer",
       "description": "Salesforce ARR by customer report"
     },
-    "availability_score": 0.80
+    "availability_score": 0.8
+  },
+  {
+    "id": "test_proof_hook_new",
+    "tenant_id": "test_tenant",
+    "definition_id": "test_definition",
+    "pointer_template_json": {
+      "system": "TestSystem",
+      "type": "report",
+      "ref_template": "report:{id}"
+    },
+    "availability_score": 0.85
   }
 ]
