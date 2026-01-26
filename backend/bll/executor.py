@@ -934,16 +934,24 @@ def _execute_farm_top_customers(
 
 def execute_definition(request: ExecuteRequest) -> ExecuteResponse:
     start_time = time.time()
-    
+
     definition = get_definition(request.definition_id)
     if not definition:
         raise ValueError(f"Definition not found: {request.definition_id}")
-    
-    # Try Farm mode first if dataset_id starts with "farm:"
-    farm_result = _execute_farm_definition(request, definition)
-    if farm_result:
-        return farm_result
-    
+
+    # Farm mode - don't fall through to local manifests
+    if request.dataset_id.startswith("farm:"):
+        farm_result = _execute_farm_definition(request, definition)
+        if farm_result:
+            return farm_result
+        # Farm failed - raise helpful error instead of falling through to local manifest
+        scenario_id = request.dataset_id.replace("farm:", "")
+        raise ValueError(
+            f"Farm execution failed for definition '{request.definition_id}' "
+            f"against scenario '{scenario_id}'. Check Farm logs or endpoint availability."
+        )
+
+    # Local demo mode
     manifest = _load_manifest(request.dataset_id)
     
     tables: dict[str, pd.DataFrame] = {}
