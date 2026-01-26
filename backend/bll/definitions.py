@@ -220,8 +220,8 @@ _register(Definition(
 
 _register(Definition(
     definition_id="finops.arr",
-    name="Annual Recurring Revenue",
-    description="Total annual recurring revenue (ARR) from subscription contracts, deals, and opportunities. Use this for questions about current ARR, revenue, MRR, bookings, or contract value.",
+    name="ARR - Annual Recurring",
+    description="Total ARR (Annual Recurring) from subscription contracts, deals, and opportunities. Use this for questions about current ARR, MRR, recurring metrics, bookings, or contract value. NOT for transactional/invoiced income.",
     category=DefinitionCategory.FINOPS,
     version="1.0.0",
     output_schema=[
@@ -242,14 +242,17 @@ _register(Definition(
     ],
     dimensions=["source", "stage"],
     metrics=["amount", "arr_contribution"],
-    keywords=["arr", "annual recurring revenue", "revenue", "mrr", "monthly recurring revenue",
+    # CRITICAL: Do NOT include generic "revenue" keyword - causes collision with transactional revenue
+    # CRITICAL: Multi-word phrases must NOT contain "revenue" token (causes partial match overlap)
+    # Only include ARR-specific terms: arr, mrr, recurring, subscription, bookings
+    keywords=["arr", "annual recurring", "mrr", "monthly recurring",
               "current arr", "total arr", "bookings", "contract value", "acv", "tcv",
-              "subscription revenue", "recurring"],
+              "subscription metrics", "subscription", "recurring", "run rate", "runrate"],
     capabilities=DefinitionCapabilities(
         supports_delta=False,  # ARR is current state, use MoM definition for changes
         supports_trend=False,
         supports_top_n=True,
-        primary_metric="revenue",
+        primary_metric="arr",  # CRITICAL: This is ARR, not revenue
         entity_type="deal",
         default_order_by=[OrderBySpec(field="Amount", direction="desc")],
         allowed_order_by=["Amount", "arr_contribution"],

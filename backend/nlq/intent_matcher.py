@@ -61,7 +61,11 @@ AMBIGUOUS_GROUPS = {
 }
 
 # Threshold for ambiguity detection (if #2 is within this of #1, it's ambiguous)
-AMBIGUITY_THRESHOLD = 0.15
+AMBIGUITY_THRESHOLD = 0.20
+
+# CONFIDENCE FLOOR: If best score is below this, mark as ambiguous (low confidence)
+# This prevents weak matches from being treated as definitive
+CONFIDENCE_FLOOR = 0.40
 
 # Definitions that belong to different metric groups
 # Cross-group matches should be marked as ambiguous
@@ -88,18 +92,19 @@ def _get_definitions():
 SYNONYMS = {
     "slo": ["slo", "service level", "uptime", "availability", "reliability"],
     "sla": ["sla", "service level agreement", "availability"],
-    "arr": ["arr", "annual recurring revenue", "recurring revenue"],
-    "mrr": ["mrr", "monthly recurring revenue"],
+    "arr": ["arr", "annual recurring", "recurring"],  # CRITICAL: Avoid "revenue" overlap
+    "mrr": ["mrr", "monthly recurring"],  # CRITICAL: Avoid "revenue" overlap
     "burn": ["burn", "burn rate", "cash burn", "spending rate", "runway"],
     "mttr": ["mttr", "mean time to recovery", "recovery time", "time to recover"],
     "deploy": ["deploy", "deployment", "release", "ship", "push to prod"],
     "incident": ["incident", "outage", "page", "alert", "sev1", "sev2"],
     "customer": ["customer", "client", "account", "buyer"],
-    "revenue": ["revenue", "sales", "income", "earnings"],
+    "revenue": ["revenue", "sales", "income", "earnings", "money", "make", "bring"],
     "cost": ["cost", "spend", "spending", "expense", "price"],
     "zombie": ["zombie", "idle", "unused", "orphan", "wasted"],
     "trend": ["trend", "trending", "over time", "change", "growth"],
     "dora": ["dora", "dora metrics", "four keys", "engineering metrics"],
+    "performance": ["performing", "performance", "results", "outcome"],
 }
 
 
@@ -238,6 +243,11 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
             # Token overlap match (partial - only if no exact match for this keyword)
             elif kw_tokens & expanded_tokens:
                 overlap = len(kw_tokens & expanded_tokens) / len(kw_tokens)
+                # CRITICAL: Require >50% overlap for multi-word keywords to prevent
+                # single-token partial matches (e.g., "revenue" matching "annual recurring revenue")
+                if len(kw_tokens) >= 2 and overlap < 0.5:
+                    # Skip weak partial matches on multi-word keywords
+                    continue
                 # Reduced weight for partial matches
                 score += 0.1 * overlap
                 matched.append(f"kw~:{kw}")
@@ -337,14 +347,14 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
     # Sort by score descending
     candidates.sort(key=lambda c: c.score, reverse=True)
 
-    # Handle empty results
+    # Handle empty results - mark as AMBIGUOUS since we couldn't match anything
     if not candidates:
         return MatchResult(
-            best_match="finops.arr",
-            confidence=0.1,
-            matched_keywords=["fallback:default"],
+            best_match="UNKNOWN",
+            confidence=0.0,
+            matched_keywords=["fallback:no_match"],
             top_candidates=[],
-            is_ambiguous=False,
+            is_ambiguous=True,  # CRITICAL: No matches means we can't confidently resolve
             ambiguity_gap=0.0,
             operators=operators,
             capability_routed=False,
@@ -378,6 +388,11 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
                 if len(top_defns & group_defns) >= 2:
                     # Multiple definitions from ambiguous group - use default
                     is_ambiguous = True
+
+    # CONFIDENCE FLOOR GATE: If best score is below threshold, mark as ambiguous
+    # This prevents weak matches from being treated as high-confidence results
+    if best.score < CONFIDENCE_FLOOR:
+        is_ambiguous = True
 
     # Detect if routing was based on capability matching
     capability_routed = (
