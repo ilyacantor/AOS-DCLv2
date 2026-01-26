@@ -1,14 +1,14 @@
 # Engineering Loop State
 
-**Last Updated:** 2026-01-26T18:40:00Z
-**Last Updated By:** Claude Code (OBSERVE stage)
+**Last Updated:** 2026-01-26T19:15:00Z
+**Last Updated By:** Claude Code (DIAGNOSE stage)
 
 ---
 
 ## Current Stage
 
 ```
-STAGE: DIAGNOSE
+STAGE: PLAN
 ```
 
 Valid stages: `OBSERVE` | `DIAGNOSE` | `PLAN` | `ACT` | `REFLECT` | `CHECKPOINT` | `IDLE`
@@ -40,13 +40,36 @@ canary_query: "What was revenue last year?, What is our burn rate?"
 ## Diagnosis (if in DIAGNOSE or later)
 
 ```yaml
-diagnosis_id: null
-component: null
-function: null
-line_range: null
-hypothesis: null
-evidence: []
-confidence: null
+diagnosis_id: diag_2026-01-26T19:15:00Z
+component: backend/nlq/intent_matcher.py
+function: match_question_with_details
+line_range: 508-517
+root_cause_hypothesis: |
+  The confidence score returned by match_question_with_details() is set directly
+  from the raw accumulated score (line 510: confidence=best.score) without any
+  clamping to [0.0, 1.0]. The scoring algorithm uses additive and multiplicative
+  boosts that can easily exceed 1.0:
+  - Line 279: +0.8 for exact metric match
+  - Line 298: +1.5 for high-value tokens (zombie, mttr, burn, etc.)
+  - Lines 311-320: +0.25 to +0.8 for keyword phrase matches
+  - Line 398: +1.5 for supports_delta capability
+  - Line 407: +1.0 for supports_trend capability
+  - Line 422: *2.0 domain boost multiplier
+  - Lines 374-376: *1.15 multi-keyword multiplier
+
+  A query matching multiple patterns accumulates unbounded scores. The observed
+  values (2.156, 5.129, 7.352, 5.566) are consistent with this behavior.
+
+  Note: scorer.py correctly clamps at lines 294-296, but intent_matcher.py is a
+  separate code path that lacks this safeguard.
+evidence:
+  - "Line 510 returns confidence=best.score without min/max clamping"
+  - "Score accumulates additively from lines 279,298,311-320,398,407 then multiplies at 422,374-376"
+  - "Observed values (2.156-7.352) match expected behavior of unclamped cumulative scoring"
+  - "scorer.py has proper clamping (lines 294-296) but intent_matcher.py does not"
+  - "MatchResult dataclass (lines 37-46) has no Field constraint on confidence"
+confidence_in_diagnosis: 0.95
+estimated_complexity: low
 ```
 
 ---
@@ -92,12 +115,13 @@ outcome: null
 |-----------|-------|--------|--------|
 | 2026-01-26T10:00:00Z | SETUP | Initial state file created | Ready for OBSERVE |
 | 2026-01-26T18:40:00Z | OBSERVE | Ran 4 canary queries | 2 invariant violations found (INV-001, INV-003) |
+| 2026-01-26T19:15:00Z | DIAGNOSE | Traced INV-001 to intent_matcher.py:510 | Root cause: unbounded score assigned to confidence without clamping |
 
 ---
 
 ## Next Action
 
-**For Human:** Start a new Claude Code session and paste the DIAGNOSE prompt to investigate INV-001 (unbounded confidence scores).
+**For Human:** Start a new Claude Code session and paste the PLAN prompt to design the fix for the unbounded confidence score.
 
 ---
 
