@@ -1,14 +1,14 @@
 # Engineering Loop State
 
-**Last Updated:** 2026-01-26T19:15:00Z
-**Last Updated By:** Claude Code (DIAGNOSE stage)
+**Last Updated:** 2026-01-26T19:30:00Z
+**Last Updated By:** Claude Code (PLAN stage)
 
 ---
 
 ## Current Stage
 
 ```
-STAGE: PLAN
+STAGE: ACT
 ```
 
 Valid stages: `OBSERVE` | `DIAGNOSE` | `PLAN` | `ACT` | `REFLECT` | `CHECKPOINT` | `IDLE`
@@ -77,12 +77,35 @@ estimated_complexity: low
 ## Plan (if in PLAN or later)
 
 ```yaml
-plan_id: null
-strategy: null
-files_to_modify: []
-success_criteria: []
-risk_level: null
-rollback_steps: []
+plan_id: plan_2026-01-26T19:30:00Z
+diagnosis_id: diag_2026-01-26T19:15:00Z
+strategy: |
+  Clamp the confidence score to [0.0, 1.0] at line 510 in intent_matcher.py.
+  Use the same clamping pattern already established in scorer.py (lines 294-296):
+  max(0.0, min(1.0, value))
+
+  This is a minimal, surgical fix that:
+  1. Addresses the root cause directly (unbounded score assigned to confidence)
+  2. Follows existing codebase patterns (scorer.py)
+  3. Does not change scoring logic or ranking behavior
+  4. Preserves the raw score for ranking while normalizing the output confidence
+files_to_modify:
+  - path: backend/nlq/intent_matcher.py
+    change: "Line 510: Change 'confidence=best.score' to 'confidence=max(0.0, min(1.0, best.score))'"
+success_criteria:
+  - "All 4 canary queries return confidence in [0.0, 1.0]"
+  - "INV-001 passes: confidence_score values must be in range [0.0, 1.0]"
+  - "INV-003 separate issue: not addressed by this fix (row_count vs aggregations)"
+  - "Existing ranking behavior unchanged (relative scores preserved)"
+risk_level: low
+risk_factors:
+  files: 1
+  lines_estimate: 1
+  component_type: utility
+rollback_steps:
+  - "git checkout backend/nlq/intent_matcher.py"
+  - "Re-run canary queries to confirm rollback"
+requires_human_approval: false
 ```
 
 ---
@@ -116,12 +139,13 @@ outcome: null
 | 2026-01-26T10:00:00Z | SETUP | Initial state file created | Ready for OBSERVE |
 | 2026-01-26T18:40:00Z | OBSERVE | Ran 4 canary queries | 2 invariant violations found (INV-001, INV-003) |
 | 2026-01-26T19:15:00Z | DIAGNOSE | Traced INV-001 to intent_matcher.py:510 | Root cause: unbounded score assigned to confidence without clamping |
+| 2026-01-26T19:30:00Z | PLAN | Designed fix: clamp confidence at line 510 | risk=low, 1 file, 1 line change, no approval needed |
 
 ---
 
 ## Next Action
 
-**For Human:** Start a new Claude Code session and paste the PLAN prompt to design the fix for the unbounded confidence score.
+**Next stage: ACT.** Awaiting next session to implement the 1-line fix at `backend/nlq/intent_matcher.py:510`.
 
 ---
 
