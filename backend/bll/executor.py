@@ -934,6 +934,266 @@ def _execute_farm_top_customers(
         return None
 
 
+def _parse_time_window(time_window: str | None) -> tuple[str | None, str | None]:
+    """
+    Parse time_window string into date range.
+
+    Returns (start_date, end_date) as ISO strings, or (None, None) if no filter.
+    """
+    if not time_window:
+        return None, None
+
+    from datetime import datetime, timedelta
+
+    today = datetime.now()
+    current_year = today.year
+    current_month = today.month
+    current_quarter = (current_month - 1) // 3 + 1
+
+    tw = time_window.lower().replace(" ", "_")
+
+    if tw in ("last_year", "lastyear"):
+        return f"{current_year - 1}-01-01", f"{current_year - 1}-12-31"
+    elif tw in ("this_year", "thisyear", "ytd"):
+        return f"{current_year}-01-01", today.strftime("%Y-%m-%d")
+    elif tw == "2024":
+        return "2024-01-01", "2024-12-31"
+    elif tw == "2025":
+        return "2025-01-01", "2025-12-31"
+    elif tw in ("last_quarter", "lastquarter"):
+        q = current_quarter - 1 if current_quarter > 1 else 4
+        y = current_year if current_quarter > 1 else current_year - 1
+        start_month = (q - 1) * 3 + 1
+        end_month = q * 3
+        return f"{y}-{start_month:02d}-01", f"{y}-{end_month:02d}-{28 if end_month == 2 else 30}"
+    elif tw in ("this_quarter", "thisquarter"):
+        start_month = (current_quarter - 1) * 3 + 1
+        return f"{current_year}-{start_month:02d}-01", today.strftime("%Y-%m-%d")
+    elif tw in ("last_month", "lastmonth"):
+        first_of_month = today.replace(day=1)
+        last_month_end = first_of_month - timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        return last_month_start.strftime("%Y-%m-%d"), last_month_end.strftime("%Y-%m-%d")
+    elif tw in ("this_month", "thismonth"):
+        return today.replace(day=1).strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
+    elif tw in ("q1", "q2", "q3", "q4"):
+        q = int(tw[1])
+        start_month = (q - 1) * 3 + 1
+        end_month = q * 3
+        # Default to current year for quarter references
+        return f"{current_year}-{start_month:02d}-01", f"{current_year}-{end_month:02d}-{28 if end_month == 2 else 30}"
+
+    return None, None
+
+
+def _execute_nlq_test_definition(request: ExecuteRequest, definition: Definition) -> ExecuteResponse | None:
+    """
+    Execute definition against local nlq_test dataset with time_window support.
+
+    Supported definitions:
+    - finops.total_revenue: Total revenue aggregate (with optional time_window)
+    - crm.top_customers: Top customers by revenue (with optional time_window)
+    """
+    if request.dataset_id != "nlq_test":
+        return None
+
+    start_time = time.time()
+
+    # Load invoice data
+    invoice_path = Path("dcl/demo/datasets/nlq_test/invoices.csv")
+    if not invoice_path.exists():
+        return None
+
+    df = pd.read_csv(invoice_path)
+    df['invoice_date'] = pd.to_datetime(df['invoice_date'])
+
+    # Apply time_window filter
+    time_window = request.time_window_str
+    start_date, end_date = _parse_time_window(time_window)
+
+    if start_date and end_date:
+        mask = (df['invoice_date'] >= start_date) & (df['invoice_date'] <= end_date)
+        filtered_df = df[mask]
+        time_window_applied = True
+        period = f"{start_date} to {end_date}"
+    else:
+        filtered_df = df
+        time_window_applied = False
+        period = "All Time"
+
+    if request.definition_id == "finops.total_revenue":
+        return _execute_nlq_test_total_revenue(
+            filtered_df, df, time_window, time_window_applied, period, definition, start_time
+        )
+    elif request.definition_id == "crm.top_customers":
+        return _execute_nlq_test_top_customers(
+            filtered_df, df, request.limit, time_window, time_window_applied, period, definition, start_time
+        )
+
+    return None
+
+
+def _execute_nlq_test_total_revenue(
+    filtered_df: pd.DataFrame,
+    full_df: pd.DataFrame,
+    time_window: str | None,
+    time_window_applied: bool,
+    period: str,
+    definition: Definition,
+    start_time: float
+) -> ExecuteResponse:
+    """Execute finops.total_revenue against local nlq_test dataset."""
+    total_revenue = filtered_df['amount'].sum()
+    transaction_count = len(filtered_df)
+
+    execution_time_ms = int((time.time() - start_time) * 1000)
+
+    # Build time-aware answer
+    if time_window_applied:
+        # Make period more human readable - extract year from date range
+        import datetime as dt_module
+        current_year = dt_module.datetime.now().year
+        if time_window and "last_year" in time_window.lower():
+            period_label = f"Last Year ({current_year - 1})"
+        elif time_window and "2024" in time_window:
+            period_label = "2024"
+        elif time_window and "2025" in time_window:
+            period_label = "2025"
+        else:
+            period_label = period
+        answer = f"Your {period_label} REVENUE is ${total_revenue/1_000_000:,.2f}M ({transaction_count:,} transactions)"
+    else:
+        answer = f"Your total REVENUE is ${total_revenue/1_000_000:,.2f}M ({transaction_count:,} transactions)"
+
+    summary = ComputedSummary(
+        answer=answer,
+        aggregations={
+            "population_total": float(total_revenue),
+            "transaction_count": transaction_count,
+            "period": period,
+            "time_window_applied": time_window_applied,
+            "time_window_requested": time_window,
+            "source": "nlq_test_local",
+        }
+    )
+
+    return ExecuteResponse(
+        data=[],
+        metadata=ExecuteMetadata(
+            dataset_id="nlq_test",
+            definition_id="finops.total_revenue",
+            version=definition.version,
+            executed_at=datetime.utcnow(),
+            execution_time_ms=execution_time_ms,
+            row_count=0,
+            result_schema=[]
+        ),
+        quality=QualityMetrics(
+            completeness=1.0,
+            freshness_hours=0.0,
+            row_count=0,
+            null_percentage=0.0
+        ),
+        lineage=[
+            LineageReference(
+                source_id="nlq_test",
+                table_id="invoices",
+                columns_used=["amount", "invoice_date"],
+                row_contribution=transaction_count
+            )
+        ],
+        summary=summary
+    )
+
+
+def _execute_nlq_test_top_customers(
+    filtered_df: pd.DataFrame,
+    full_df: pd.DataFrame,
+    limit: int,
+    time_window: str | None,
+    time_window_applied: bool,
+    period: str,
+    definition: Definition,
+    start_time: float
+) -> ExecuteResponse:
+    """Execute crm.top_customers against local nlq_test dataset."""
+    # Aggregate by customer
+    customer_totals = filtered_df.groupby(['customer_id', 'customer_name']).agg({
+        'amount': 'sum'
+    }).reset_index()
+    customer_totals = customer_totals.sort_values('amount', ascending=False)
+
+    # Apply limit
+    top_customers = customer_totals.head(limit)
+
+    # Calculate totals
+    total_revenue = filtered_df['amount'].sum()
+
+    # Build response data
+    data = []
+    for _, row in top_customers.iterrows():
+        pct = (row['amount'] / total_revenue * 100) if total_revenue > 0 else 0
+        data.append({
+            "Id": row['customer_id'],
+            "Name": row['customer_name'],
+            "AnnualRevenue": row['amount'],
+            "percent_of_total": round(pct, 1),
+        })
+
+    execution_time_ms = int((time.time() - start_time) * 1000)
+
+    # Build summary
+    shown_total = top_customers['amount'].sum()
+    lines = [f"Top {len(data)} customers by revenue (nlq_test local data):"]
+    for i, c in enumerate(data[:5], 1):
+        lines.append(f"{i}. {c['Name']}: ${c['AnnualRevenue']:,.2f}")
+    lines.append(f"\nTotal: ${shown_total:,.2f} ({(shown_total/total_revenue*100) if total_revenue else 0:.1f}% of ${total_revenue:,.2f})")
+
+    summary = ComputedSummary(
+        answer="\n".join(lines),
+        aggregations={
+            "customer_count": len(data),
+            "shown_total": float(shown_total),
+            "population_total": float(total_revenue),
+            "time_window_applied": time_window_applied,
+            "source": "nlq_test_local",
+        }
+    )
+
+    return ExecuteResponse(
+        data=data,
+        metadata=ExecuteMetadata(
+            dataset_id="nlq_test",
+            definition_id="crm.top_customers",
+            version=definition.version,
+            executed_at=datetime.utcnow(),
+            execution_time_ms=execution_time_ms,
+            row_count=len(data),
+            result_schema=[
+                ColumnSchema(name="Id", dtype="string"),
+                ColumnSchema(name="Name", dtype="string"),
+                ColumnSchema(name="AnnualRevenue", dtype="float"),
+                ColumnSchema(name="percent_of_total", dtype="float"),
+            ]
+        ),
+        quality=QualityMetrics(
+            completeness=1.0,
+            freshness_hours=0.0,
+            row_count=len(data),
+            null_percentage=0.0
+        ),
+        lineage=[
+            LineageReference(
+                source_id="nlq_test",
+                table_id="invoices",
+                columns_used=["customer_id", "customer_name", "amount", "invoice_date"],
+                row_contribution=len(filtered_df)
+            )
+        ],
+        summary=summary
+    )
+
+
 def execute_definition(request: ExecuteRequest) -> ExecuteResponse:
     start_time = time.time()
 
@@ -952,6 +1212,13 @@ def execute_definition(request: ExecuteRequest) -> ExecuteResponse:
             f"Farm execution failed for definition '{request.definition_id}' "
             f"against scenario '{scenario_id}'. Check Farm logs or endpoint availability."
         )
+
+    # NLQ test mode - local dataset with time_window support
+    if request.dataset_id == "nlq_test":
+        nlq_test_result = _execute_nlq_test_definition(request, definition)
+        if nlq_test_result:
+            return nlq_test_result
+        # Fall through to generic local mode if definition not supported
 
     # Local demo mode
     manifest = _load_manifest(request.dataset_id)

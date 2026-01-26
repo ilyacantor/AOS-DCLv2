@@ -1,0 +1,13 @@
+{
+  "dataset_id": "nlq_test",
+  "description": "NLQ test dataset with invoice data for time-window query testing",
+  "sources": [
+    {
+      "source_id": "salesforce",
+      "name": "Salesforce CRM",
+      "tables": [
+        {"table_id": "invoices", "file": "dcl/demo/datasets/nlq_test/invoices.csv"}
+      ]
+    }
+  ]
+}
