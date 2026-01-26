@@ -1,0 +1,736 @@
+{
+  "metadata": {
+    "description": "100 NLQ test questions for validating DCL/BLL/NLQ systems against Farm ground truth",
+    "scenario_id": "dfa0ae0d57c9",
+    "seed": 12345,
+    "scale": "medium",
+    "generated_for": "AOS Farm Test Oracle"
+  },
+  "questions": [
+    {
+      "id": 1,
+      "category": "revenue_total",
+      "question": "What is the total revenue?",
+      "ground_truth_endpoint": "/metrics/revenue",
+      "expected_field": "total_revenue"
+    },
+    {
+      "id": 2,
+      "category": "revenue_total",
+      "question": "How much revenue did we generate?",
+      "ground_truth_endpoint": "/metrics/revenue",
+      "expected_field": "total_revenue"
+    },
+    {
+      "id": 3,
+      "category": "revenue_total",
+      "question": "What are our total sales?",
+      "ground_truth_endpoint": "/metrics/revenue",
+      "expected_field": "total_revenue"
+    },
+    {
+      "id": 4,
+      "category": "revenue_total",
+      "question": "Show me total revenue for the period",
+      "ground_truth_endpoint": "/metrics/revenue",
+      "expected_field": "total_revenue"
+    },
+    {
+      "id": 5,
+      "category": "revenue_total",
+      "question": "What's our revenue in USD?",
+      "ground_truth_endpoint": "/metrics/revenue",
+      "expected_field": "total_revenue"
+    },
+    {
+      "id": 6,
+      "category": "revenue_period",
+      "question": "What time period does the revenue cover?",
+      "ground_truth_endpoint": "/metrics/revenue",
+      "expected_field": "period_start,period_end"
+    },
+    {
+      "id": 7,
+      "category": "revenue_period",
+      "question": "When does the revenue period start?",
+      "ground_truth_endpoint": "/metrics/revenue",
+      "expected_field": "period_start"
+    },
+    {
+      "id": 8,
+      "category": "revenue_period",
+      "question": "When does the revenue period end?",
+      "ground_truth_endpoint": "/metrics/revenue",
+      "expected_field": "period_end"
+    },
+    {
+      "id": 9,
+      "category": "revenue_monthly",
+      "question": "What was revenue in October?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[0].revenue"
+    },
+    {
+      "id": 10,
+      "category": "revenue_monthly",
+      "question": "What was revenue in November?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[1].revenue"
+    },
+    {
+      "id": 11,
+      "category": "revenue_monthly",
+      "question": "What was revenue in December?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[2].revenue"
+    },
+    {
+      "id": 12,
+      "category": "revenue_monthly",
+      "question": "Show me monthly revenue breakdown",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months"
+    },
+    {
+      "id": 13,
+      "category": "revenue_monthly",
+      "question": "What was our best month for revenue?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[max(revenue)]"
+    },
+    {
+      "id": 14,
+      "category": "revenue_monthly",
+      "question": "What was our worst month for revenue?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[min(revenue)]"
+    },
+    {
+      "id": 15,
+      "category": "revenue_trend",
+      "question": "How did revenue change month over month?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[].delta_pct"
+    },
+    {
+      "id": 16,
+      "category": "revenue_trend",
+      "question": "What's the revenue trend?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[].delta_pct"
+    },
+    {
+      "id": 17,
+      "category": "revenue_trend",
+      "question": "Is revenue growing or declining?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[].delta_pct"
+    },
+    {
+      "id": 18,
+      "category": "revenue_trend",
+      "question": "What was the percentage change from October to November?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[1].delta_pct"
+    },
+    {
+      "id": 19,
+      "category": "revenue_trend",
+      "question": "What was the percentage change from November to December?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[2].delta_pct"
+    },
+    {
+      "id": 20,
+      "category": "revenue_trend",
+      "question": "How much did revenue increase in absolute terms from Oct to Nov?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[1].delta_abs"
+    },
+    {
+      "id": 21,
+      "category": "top_customers",
+      "question": "Who are our top 5 customers?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=5",
+      "expected_field": "customers"
+    },
+    {
+      "id": 22,
+      "category": "top_customers",
+      "question": "Who is our biggest customer?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=1",
+      "expected_field": "customers[0]"
+    },
+    {
+      "id": 23,
+      "category": "top_customers",
+      "question": "Who are the top 3 customers by revenue?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=3",
+      "expected_field": "customers"
+    },
+    {
+      "id": 24,
+      "category": "top_customers",
+      "question": "Who are our top 10 customers?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=10",
+      "expected_field": "customers"
+    },
+    {
+      "id": 25,
+      "category": "top_customers",
+      "question": "List our largest accounts",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=5",
+      "expected_field": "customers"
+    },
+    {
+      "id": 26,
+      "category": "top_customers",
+      "question": "Which customers generate the most revenue?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=5",
+      "expected_field": "customers"
+    },
+    {
+      "id": 27,
+      "category": "top_customers",
+      "question": "Show me our highest value customers",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=5",
+      "expected_field": "customers"
+    },
+    {
+      "id": 28,
+      "category": "customer_revenue",
+      "question": "How much revenue does our top customer generate?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=1",
+      "expected_field": "customers[0].revenue"
+    },
+    {
+      "id": 29,
+      "category": "customer_revenue",
+      "question": "What's the revenue from Enterprise 75 Corp?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=10",
+      "expected_field": "customers[name='Enterprise 75 Corp'].revenue"
+    },
+    {
+      "id": 30,
+      "category": "customer_revenue",
+      "question": "How much did GlobalTech Partners spend?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=10",
+      "expected_field": "customers[name='GlobalTech Partners'].revenue"
+    },
+    {
+      "id": 31,
+      "category": "customer_concentration",
+      "question": "What percent of revenue comes from our top customer?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=1",
+      "expected_field": "customers[0].percent_of_total"
+    },
+    {
+      "id": 32,
+      "category": "customer_concentration",
+      "question": "What percentage of revenue do the top 3 customers represent?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=3",
+      "expected_field": "sum(customers[].percent_of_total)"
+    },
+    {
+      "id": 33,
+      "category": "customer_concentration",
+      "question": "How concentrated is our revenue among top customers?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=5",
+      "expected_field": "sum(customers[].percent_of_total)"
+    },
+    {
+      "id": 34,
+      "category": "customer_concentration",
+      "question": "What's the revenue share of our top 5 customers?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=5",
+      "expected_field": "sum(customers[].percent_of_total)"
+    },
+    {
+      "id": 35,
+      "category": "vendor_spend",
+      "question": "What's our total vendor spend?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "sum(vendors[].total_spend)"
+    },
+    {
+      "id": 36,
+      "category": "vendor_spend",
+      "question": "How much do we spend on vendors?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "sum(vendors[].total_spend)"
+    },
+    {
+      "id": 37,
+      "category": "vendor_spend",
+      "question": "Show me vendor spending breakdown",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors"
+    },
+    {
+      "id": 38,
+      "category": "vendor_spend",
+      "question": "Who are our top vendors by spend?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[sorted by total_spend]"
+    },
+    {
+      "id": 39,
+      "category": "vendor_spend",
+      "question": "Which vendor do we spend the most with?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[0]"
+    },
+    {
+      "id": 40,
+      "category": "vendor_specific",
+      "question": "How much do we spend on Cloudflare?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[name='Cloudflare'].total_spend"
+    },
+    {
+      "id": 41,
+      "category": "vendor_specific",
+      "question": "What's our Snowflake spend?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[name='Snowflake'].total_spend"
+    },
+    {
+      "id": 42,
+      "category": "vendor_specific",
+      "question": "How much are we paying GitLab?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[name='GitLab'].total_spend"
+    },
+    {
+      "id": 43,
+      "category": "vendor_specific",
+      "question": "What's our PagerDuty invoice total?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[name='PagerDuty'].total_spend"
+    },
+    {
+      "id": 44,
+      "category": "vendor_specific",
+      "question": "How much have we paid Deloitte?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[name='Deloitte'].total_spend"
+    },
+    {
+      "id": 45,
+      "category": "vendor_invoices",
+      "question": "How many invoices do we have from Cloudflare?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[name='Cloudflare'].invoice_count"
+    },
+    {
+      "id": 46,
+      "category": "vendor_invoices",
+      "question": "How many Snowflake invoices are there?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[name='Snowflake'].invoice_count"
+    },
+    {
+      "id": 47,
+      "category": "vendor_invoices",
+      "question": "What's the invoice count per vendor?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[].invoice_count"
+    },
+    {
+      "id": 48,
+      "category": "vendor_invoices",
+      "question": "Which vendor has the most invoices?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[max(invoice_count)]"
+    },
+    {
+      "id": 49,
+      "category": "vendor_average",
+      "question": "What's the average invoice value for Cloudflare?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[name='Cloudflare'].total_spend / invoice_count"
+    },
+    {
+      "id": 50,
+      "category": "vendor_average",
+      "question": "What's the average spend per vendor?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "avg(vendors[].total_spend)"
+    },
+    {
+      "id": 51,
+      "category": "resource_health",
+      "question": "How many active resources do we have?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "active_count"
+    },
+    {
+      "id": 52,
+      "category": "resource_health",
+      "question": "How many zombie resources are there?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "zombie_count"
+    },
+    {
+      "id": 53,
+      "category": "resource_health",
+      "question": "How many orphan assets do we have?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "orphan_count"
+    },
+    {
+      "id": 54,
+      "category": "resource_health",
+      "question": "What's our resource health status?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "active_count,zombie_count,orphan_count"
+    },
+    {
+      "id": 55,
+      "category": "resource_health",
+      "question": "Show me the resource health breakdown",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "active_count,zombie_count,orphan_count"
+    },
+    {
+      "id": 56,
+      "category": "resource_health",
+      "question": "How many total resources exist?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "active_count + zombie_count + orphan_count"
+    },
+    {
+      "id": 57,
+      "category": "resource_zombie",
+      "question": "List all zombie resources",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "zombie_ids"
+    },
+    {
+      "id": 58,
+      "category": "resource_zombie",
+      "question": "What are the zombie asset IDs?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "zombie_ids"
+    },
+    {
+      "id": 59,
+      "category": "resource_zombie",
+      "question": "Show me zombie resources",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "zombie_ids"
+    },
+    {
+      "id": 60,
+      "category": "resource_zombie",
+      "question": "Which assets are zombies?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "zombie_ids"
+    },
+    {
+      "id": 61,
+      "category": "resource_orphan",
+      "question": "List all orphan resources",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "orphan_ids"
+    },
+    {
+      "id": 62,
+      "category": "resource_orphan",
+      "question": "What are the orphan asset IDs?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "orphan_ids"
+    },
+    {
+      "id": 63,
+      "category": "resource_orphan",
+      "question": "Show me orphaned resources",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "orphan_ids"
+    },
+    {
+      "id": 64,
+      "category": "resource_orphan",
+      "question": "Which assets have no owner?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "orphan_ids"
+    },
+    {
+      "id": 65,
+      "category": "resource_ratio",
+      "question": "What's the ratio of healthy to unhealthy resources?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "active_count / (zombie_count + orphan_count)"
+    },
+    {
+      "id": 66,
+      "category": "resource_ratio",
+      "question": "What percentage of resources are active?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "active_count / total * 100"
+    },
+    {
+      "id": 67,
+      "category": "resource_ratio",
+      "question": "What percentage of resources are zombies?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "zombie_count / total * 100"
+    },
+    {
+      "id": 68,
+      "category": "resource_ratio",
+      "question": "What percentage of resources are orphans?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "orphan_count / total * 100"
+    },
+    {
+      "id": 69,
+      "category": "comparison",
+      "question": "Do we have more zombies or orphans?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "zombie_count vs orphan_count"
+    },
+    {
+      "id": 70,
+      "category": "comparison",
+      "question": "Compare October and November revenue",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[0].revenue vs months[1].revenue"
+    },
+    {
+      "id": 71,
+      "category": "comparison",
+      "question": "Compare November and December revenue",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[1].revenue vs months[2].revenue"
+    },
+    {
+      "id": 72,
+      "category": "comparison",
+      "question": "Which month had the highest growth?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "max(months[].delta_pct)"
+    },
+    {
+      "id": 73,
+      "category": "comparison",
+      "question": "Is customer revenue more than vendor spend?",
+      "ground_truth_endpoint": "/metrics/revenue + /metrics/vendor-spend",
+      "expected_field": "total_revenue vs sum(vendor_spend)"
+    },
+    {
+      "id": 74,
+      "category": "aggregation",
+      "question": "What's the average monthly revenue?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "avg(months[].revenue)"
+    },
+    {
+      "id": 75,
+      "category": "aggregation",
+      "question": "What's the total number of customer invoices?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "sum(vendors[].invoice_count)"
+    },
+    {
+      "id": 76,
+      "category": "aggregation",
+      "question": "How many vendors do we work with?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "count(vendors)"
+    },
+    {
+      "id": 77,
+      "category": "aggregation",
+      "question": "How many customers do we have in top 10?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=10",
+      "expected_field": "count(customers)"
+    },
+    {
+      "id": 78,
+      "category": "ranking",
+      "question": "Rank customers by revenue",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=10",
+      "expected_field": "customers[sorted by revenue desc]"
+    },
+    {
+      "id": 79,
+      "category": "ranking",
+      "question": "Rank vendors by spend",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[sorted by total_spend desc]"
+    },
+    {
+      "id": 80,
+      "category": "ranking",
+      "question": "Rank months by revenue",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[sorted by revenue desc]"
+    },
+    {
+      "id": 81,
+      "category": "filtering",
+      "question": "Which customers generated over $200,000?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=20",
+      "expected_field": "customers[revenue > 200000]"
+    },
+    {
+      "id": 82,
+      "category": "filtering",
+      "question": "Which vendors have more than 25 invoices?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[invoice_count > 25]"
+    },
+    {
+      "id": 83,
+      "category": "filtering",
+      "question": "Which months had positive growth?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[delta_pct > 0]"
+    },
+    {
+      "id": 84,
+      "category": "filtering",
+      "question": "Which vendors have spend over $500,000?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[total_spend > 500000]"
+    },
+    {
+      "id": 85,
+      "category": "yes_no",
+      "question": "Did revenue grow in November?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[1].delta_pct > 0"
+    },
+    {
+      "id": 86,
+      "category": "yes_no",
+      "question": "Did revenue grow in December?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[2].delta_pct > 0"
+    },
+    {
+      "id": 87,
+      "category": "yes_no",
+      "question": "Do we have any zombie resources?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "zombie_count > 0"
+    },
+    {
+      "id": 88,
+      "category": "yes_no",
+      "question": "Do we have orphan assets?",
+      "ground_truth_endpoint": "/metrics/resource-health",
+      "expected_field": "orphan_count > 0"
+    },
+    {
+      "id": 89,
+      "category": "yes_no",
+      "question": "Is Cloudflare our biggest vendor?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[0].name == 'Cloudflare'"
+    },
+    {
+      "id": 90,
+      "category": "yes_no",
+      "question": "Did we exceed $10 million in revenue?",
+      "ground_truth_endpoint": "/metrics/revenue",
+      "expected_field": "total_revenue > 10000000"
+    },
+    {
+      "id": 91,
+      "category": "time_series",
+      "question": "What's the Q4 revenue trend?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months"
+    },
+    {
+      "id": 92,
+      "category": "time_series",
+      "question": "Show me revenue over time",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months"
+    },
+    {
+      "id": 93,
+      "category": "time_series",
+      "question": "How has revenue changed each month?",
+      "ground_truth_endpoint": "/metrics/revenue-mom",
+      "expected_field": "months[].delta_abs"
+    },
+    {
+      "id": 94,
+      "category": "derived",
+      "question": "What's our profit margin if vendor spend is cost?",
+      "ground_truth_endpoint": "/metrics/revenue + /metrics/vendor-spend",
+      "expected_field": "(total_revenue - sum(vendor_spend)) / total_revenue"
+    },
+    {
+      "id": 95,
+      "category": "derived",
+      "question": "What's the average revenue per customer?",
+      "ground_truth_endpoint": "/metrics/revenue + customer count",
+      "expected_field": "total_revenue / customer_count"
+    },
+    {
+      "id": 96,
+      "category": "derived",
+      "question": "What's the average spend per vendor?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "sum(total_spend) / count(vendors)"
+    },
+    {
+      "id": 97,
+      "category": "entity_lookup",
+      "question": "What's the customer ID for Enterprise 75 Corp?",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=10",
+      "expected_field": "customers[name='Enterprise 75 Corp'].customer_id"
+    },
+    {
+      "id": 98,
+      "category": "entity_lookup",
+      "question": "What's the vendor ID for Cloudflare?",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[name='Cloudflare'].vendor_id"
+    },
+    {
+      "id": 99,
+      "category": "entity_lookup",
+      "question": "Get details for customer CUST-db4d2b12",
+      "ground_truth_endpoint": "/metrics/top-customers?limit=10",
+      "expected_field": "customers[customer_id='CUST-db4d2b12']"
+    },
+    {
+      "id": 100,
+      "category": "entity_lookup",
+      "question": "Get details for vendor VEND-00e3fd4e",
+      "ground_truth_endpoint": "/metrics/vendor-spend",
+      "expected_field": "vendors[vendor_id='VEND-00e3fd4e']"
+    }
+  ],
+  "categories": {
+    "revenue_total": "Questions about total revenue",
+    "revenue_period": "Questions about revenue time period",
+    "revenue_monthly": "Questions about specific month revenue",
+    "revenue_trend": "Questions about revenue trends and changes",
+    "top_customers": "Questions about top N customers",
+    "customer_revenue": "Questions about specific customer revenue",
+    "customer_concentration": "Questions about revenue concentration",
+    "vendor_spend": "Questions about total vendor spending",
+    "vendor_specific": "Questions about specific vendors",
+    "vendor_invoices": "Questions about vendor invoice counts",
+    "vendor_average": "Questions about average vendor metrics",
+    "resource_health": "Questions about overall resource health",
+    "resource_zombie": "Questions about zombie resources",
+    "resource_orphan": "Questions about orphan resources",
+    "resource_ratio": "Questions about resource health ratios",
+    "comparison": "Questions comparing values",
+    "aggregation": "Questions requiring aggregation",
+    "ranking": "Questions requiring sorting/ranking",
+    "filtering": "Questions with filter conditions",
+    "yes_no": "Boolean/Yes-No questions",
+    "time_series": "Questions about data over time",
+    "derived": "Questions requiring calculation",
+    "entity_lookup": "Questions looking up specific entities"
+  }
+}
