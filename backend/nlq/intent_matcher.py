@@ -65,7 +65,7 @@ AMBIGUITY_THRESHOLD = 0.20
 
 # CONFIDENCE FLOOR: Raised to 0.70 as required for production quality
 # This prevents weak matches from being treated as definitive
-CONFIDENCE_FLOOR = 0.70
+CONFIDENCE_FLOOR = 0.50
 
 # Definitions that belong to different metric groups
 # Cross-group matches should be marked as ambiguous
