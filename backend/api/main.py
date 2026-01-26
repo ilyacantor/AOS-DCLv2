@@ -751,15 +751,34 @@ def nlq_ask(request: NLQAskRequest):
                 # Fix the summary to be scalar-appropriate
                 agg = result.summary.aggregations
                 if agg.get("population_total"):
-                    result.summary.answer = f"Your current {normalized_intent.metric.upper()} is ${agg['population_total']/1_000_000:,.2f}M"
+                    # Build time-aware answer prose
+                    if exec_args.time_window:
+                        # User asked for time-filtered data, but we can't provide it
+                        time_desc = exec_args.time_window.replace("_", " ")
+                        result.summary.answer = (
+                            f"Your total {normalized_intent.metric.upper()} is ${agg['population_total']/1_000_000:,.2f}M "
+                            f"(Note: '{time_desc}' filter is not yet available - this is the current total)"
+                        )
+                    else:
+                        result.summary.answer = f"Your current {normalized_intent.metric.upper()} is ${agg['population_total']/1_000_000:,.2f}M"
         else:
             scalar_data = result.data
 
         # Step 4: Build response with caveats
         caveats = []
+        time_window_unsupported = False  # Track if time filtering was requested but unavailable
+
         if delta_capability_mismatch:
             metric = match_result.operators.metric_type if match_result.operators else "this metric"
             caveats.append(f"Month-over-month comparison not available for {metric}; showing current values")
+
+        # GRACEFUL FAILURE: Time window requested but not supported
+        if exec_args.time_window:
+            time_window_unsupported = True
+            time_desc = exec_args.time_window.replace("_", " ")  # "last_year" -> "last year"
+            caveats.append(f"Time-based filtering for '{time_desc}' is not yet available. Showing current totals instead.")
+            logger.warning(f"[NLQ] Time window '{exec_args.time_window}' requested but not supported - returning current data")
+
         if limit_warning:
             caveats.append(limit_warning)
         if exec_args.limit and not is_scalar_intent:
@@ -789,6 +808,8 @@ def nlq_ask(request: NLQAskRequest):
                 "matched_keywords": matched_keywords,
                 "effective_limit": effective_limit,
                 "intent_output_shape": normalized_intent.output_shape.value if normalized_intent else None,
+                "time_window_requested": exec_args.time_window,
+                "time_window_applied": False if exec_args.time_window else None,  # None if not requested
             },
             summary=result.summary.model_dump() if result.summary else None,
             caveats=caveats,
