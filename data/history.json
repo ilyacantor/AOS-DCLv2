@@ -5880,6 +5880,70 @@
       "latency_ms": 11,
       "status": "success",
       "tenant_id": "default"
+    },
+    {
+      "id": "150338e2-7cae-476c-9af2-60e3ff3b652a",
+      "timestamp": "2026-01-26T17:15:39.135873Z",
+      "question": "What was revenue last year?",
+      "dataset_id": "demo9",
+      "definition_id": "crm.top_customers",
+      "extracted_params": {
+        "time_window": "last_year"
+      },
+      "response": {
+        "question": "What was revenue last year?",
+        "definition_id": "crm.top_customers",
+        "confidence_score": 2.15625,
+        "execution_args": {
+          "time_window": "last_year"
+        },
+        "data": [],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "crm.top_customers",
+          "row_count": 0,
+          "total_available": 11,
+          "execution_time_ms": 36,
+          "matched_keywords": [
+            "EXACT_METRIC:revenue",
+            "kw~:customer revenue",
+            "name:Top Customers by Revenue",
+            "cat:sales",
+            "DOMAIN_BOOST:crm"
+          ],
+          "effective_limit": 1000,
+          "intent_output_shape": "scalar"
+        },
+        "summary": {
+          "aggregations": {
+            "customer_count": 11,
+            "population_total": 419000000.0,
+            "population_count": 11,
+            "shown_total": 419000000.0,
+            "avg_per_customer": 38090909.09090909,
+            "share_of_total_pct": 100.0,
+            "top_customer_pct": 10.739856801909307,
+            "limitations": [
+              "Based on 11 customers in demo dataset; production data may differ"
+            ]
+          },
+          "warnings": [
+            "No limit specified for ranked list query; returning full dataset"
+          ],
+          "debug_summary": "Total revenue: $419.00M across 11 customers (avg $38.09M each). High concentration: top 11 drive majority of revenue.",
+          "currency": "USD",
+          "answer": "Your current REVENUE is $419.00M"
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 36,
+      "status": "success",
+      "tenant_id": "default"
     }
   ]
 }
