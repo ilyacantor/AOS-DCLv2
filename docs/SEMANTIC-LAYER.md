@@ -1,62 +1,337 @@
-# NLQ Semantic Layer
+# DCL Semantic Layer
 
-**Last Updated:** January 24, 2026
+**Last Updated:** January 26, 2026
 
 ## Overview
 
-The NLQ Semantic Layer is a metadata-only infrastructure that enables natural language query answerability through deterministic hypothesis ranking. It provides:
+The DCL Semantic Layer is the unified metadata infrastructure that enables natural language query answering through deterministic definition matching and execution. After the BLL/NLQ/DCL merge, it provides:
 
-1. **Canonical Events** - System-agnostic business event types
-2. **Entity Dimensions** - Business entities for grouping/filtering
-3. **Metric Definitions** - Reusable metric specifications
+1. **BLL Definitions** - Reusable business logic definitions with capabilities
+2. **NLQ Compiler** - Natural language → definition matching + parameter extraction
+3. **Executor** - Definition execution with ordering and summary computation
 4. **Source Bindings** - Mappings from source systems to canonical events
 5. **Proof Chains** - Traceability to source system evidence
 
 ### Core Principle
 
-**No LLM in the hot path.** All scoring uses deterministic rules + stored metadata.
+**NLQ is a compiler, not a SQL builder.** NLQ extracts intent (which definition) and parameters (limit, time_window). Ordering and execution logic live in the definition spec.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     DCL Semantic Layer (Post-Merge)                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                         NLQ Compiler                                 │    │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐               │    │
+│  │  │   Operator   │  │    Intent    │  │  Parameter   │               │    │
+│  │  │   Extractor  │  │   Matcher    │  │  Extractor   │               │    │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘               │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                    │                                         │
+│                                    ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                        BLL Executor                                  │    │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐               │    │
+│  │  │  Definition  │  │    Data      │  │   Summary    │               │    │
+│  │  │   Lookup     │  │   Loader     │  │   Computer   │               │    │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘               │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
+│  │   Registry   │  │  Validation  │  │   Lineage    │  │    Proof     │    │
+│  │   Service    │  │   Services   │  │   Service    │  │   Resolver   │    │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘    │
+│                                                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                         Data Sources                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Demo CSVs (demo9/)  ←→  Farm Ground Truth (farm:{scenario_id})             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Architecture
+## Production Boundary
+
+The key architectural decision is the separation between NLQ (compiler) and BLL (executor):
 
 ```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                        NLQ Semantic Layer                                  │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                            │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                 │
-│  │   Registry   │    │  Validation  │    │   Lineage    │                 │
-│  │   Service    │    │   Services   │    │   Service    │                 │
-│  ├──────────────┤    ├──────────────┤    ├──────────────┤                 │
-│  │ • List/Search│    │ • Consistency│    │ • Dep Graph  │                 │
-│  │ • Publish    │    │ • Schema     │    │ • Impact     │                 │
-│  │ • Deprecate  │    │ • Coverage   │    │ • Upstream   │                 │
-│  └──────────────┘    └──────────────┘    └──────────────┘                 │
-│                                                                            │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                 │
-│  │   Executor   │    │    Proof     │    │Answerability │                 │
-│  │   Service    │    │   Resolver   │    │   Scorer     │                 │
-│  ├──────────────┤    ├──────────────┤    ├──────────────┤                 │
-│  │ • Compile SQL│    │ • URL Gen    │    │ • Rank       │                 │
-│  │ • Execute    │    │ • Chains     │    │ • Hypotheses │                 │
-│  │ • Cache      │    │ • Verify     │    │ • Explain    │                 │
-│  └──────────────┘    └──────────────┘    └──────────────┘                 │
-│                                                                            │
-├────────────────────────────────────────────────────────────────────────────┤
-│                         Persistence Layer                                  │
-├────────────────────────────────────────────────────────────────────────────┤
-│  JSON Fixtures (Development) ←→ PostgreSQL (Production)                   │
-└────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────┬────────────────────────────────────────┐
+│           NLQ Layer            │           BLL Layer                     │
+│         (Compiler)             │         (Executor)                      │
+├────────────────────────────────┼────────────────────────────────────────┤
+│ Extract operators              │ Apply default_order_by                 │
+│ Match question → definition    │ Apply tie_breaker for determinism      │
+│ Extract limit (TopN)           │ Apply limit AFTER sorting              │
+│ Extract time_window            │ Compute share-of-total summary         │
+│ Detect ambiguity               │ Track lineage to sources               │
+│                                │                                        │
+│ Does NOT:                      │ Does NOT:                              │
+│ - Build SQL                    │ - Parse natural language               │
+│ - Apply ordering               │ - Infer intent                         │
+│ - Execute queries              │ - Handle ambiguity                     │
+└────────────────────────────────┴────────────────────────────────────────┘
 ```
 
 ---
 
-## Data Model
+## BLL Definition Model
+
+Definitions are the core abstraction - pre-configured business logic that NLQ routes to.
+
+### Definition Structure
+
+```python
+class Definition(BaseModel):
+    definition_id: str           # e.g., "crm.top_customers"
+    name: str                    # Human-readable name
+    description: str             # What this definition answers
+    category: DefinitionCategory # finops, aod, crm, infra
+    version: str                 # Semantic version
+    
+    output_schema: List[ColumnSchema]   # Expected columns
+    sources: List[SourceReference]      # Where data comes from
+    joins: Optional[List[JoinSpec]]     # How to join tables
+    default_filters: Optional[List[FilterSpec]]
+    
+    dimensions: List[str]        # Grouping dimensions
+    metrics: List[str]           # Computed metrics
+    keywords: List[str]          # NLQ matching keywords
+    capabilities: DefinitionCapabilities  # What operators it supports
+```
+
+### Definition Capabilities
+
+Capabilities declare what operations a definition supports:
+
+```python
+class DefinitionCapabilities(BaseModel):
+    supports_top_n: bool = True      # Can be limited/ranked
+    supports_delta: bool = False     # Supports MoM/QoQ/YoY comparison
+    supports_trend: bool = False     # Supports time-series trending
+    supports_aggregation: bool = True
+    
+    primary_metric: Optional[str]    # "revenue", "cost", "count"
+    entity_type: Optional[str]       # "customer", "vendor", "resource"
+    
+    # Production-grade ordering (declared, not inferred)
+    default_order_by: List[OrderBySpec]  # Concrete columns
+    allowed_order_by: List[str]          # Whitelist for overrides
+    tie_breaker: Optional[str]           # Secondary sort for determinism
+```
+
+### Example Definition
+
+```python
+Definition(
+    definition_id="crm.top_customers",
+    name="Top Customers by Revenue",
+    description="Ranked list of customers by annual revenue",
+    category=DefinitionCategory.CRM,
+    version="1.0.0",
+    output_schema=[
+        ColumnSchema(name="Id", dtype="string"),
+        ColumnSchema(name="Name", dtype="string"),
+        ColumnSchema(name="AnnualRevenue", dtype="float"),
+    ],
+    sources=[
+        SourceReference(
+            source_id="salesforce",
+            table_id="salesforce_account",
+            columns=["Id", "Name", "AnnualRevenue"]
+        ),
+    ],
+    dimensions=["Name"],
+    metrics=["AnnualRevenue"],
+    keywords=["top customers", "largest customers", "biggest accounts",
+              "customer revenue", "revenue by customer"],
+    capabilities=DefinitionCapabilities(
+        supports_top_n=True,
+        supports_delta=False,
+        primary_metric="revenue",
+        entity_type="customer",
+        default_order_by=[
+            OrderBySpec(field="AnnualRevenue", direction="desc")
+        ],
+        allowed_order_by=["AnnualRevenue", "NumberOfEmployees"],
+        tie_breaker="Id",
+    ),
+)
+```
+
+### Definition Categories
+
+| Category | Focus | Example Definitions |
+|----------|-------|---------------------|
+| **finops** | FinOps/Cloud | `saas_spend`, `arr`, `burn_rate`, `unallocated_spend` |
+| **aod** | Asset Operations | `zombies_overview`, `identity_gap`, `findings_by_severity` |
+| **crm** | CRM | `top_customers`, `pipeline_summary`, `deal_velocity` |
+| **infra** | Infrastructure | `deploy_frequency`, `mttr`, `slo_attainment` |
+
+---
+
+## NLQ Processing Pipeline
+
+### 1. Operator Extraction
+
+Detects temporal, comparison, and aggregation operators:
+
+| Type | Operators | Example Phrases |
+|------|-----------|-----------------|
+| **Temporal** | MoM, QoQ, YoY | "month over month", "vs last quarter" |
+| **Comparison** | change, delta, growth | "how did X change", "variance" |
+| **Aggregation** | top, total, average | "top 5", "total spend" |
+
+```python
+# "How did revenue change MoM?" extracts:
+ExtractedOperators(
+    temporal=TemporalOperator.MOM,
+    comparison=ComparisonOperator.CHANGE,
+    requires_delta=True
+)
+```
+
+### 2. Intent Matching
+
+Maps question to best definition using:
+- Keyword matching with synonyms
+- Capability filtering (route only to definitions that support detected operators)
+- Ambiguity detection
+
+```python
+# "top 5 customers by revenue" matches:
+MatchResult(
+    best_match="crm.top_customers",
+    confidence=0.92,
+    matched_keywords=["top", "customers", "revenue"],
+    capability_routed=True
+)
+```
+
+### 3. Parameter Extraction
+
+Extracts execution parameters (NOT ordering):
+
+| Parameter | Patterns | Example |
+|-----------|----------|---------|
+| `limit` | "top N", "first N" | "top 5" → 5 |
+| `time_window` | "last month", "YTD" | "this quarter" → current_quarter |
+
+```python
+# "Show me top 10 vendors from last quarter" extracts:
+ExecutionArgs(
+    limit=10,
+    time_window="last_quarter"
+)
+```
+
+---
+
+## Data Sources
+
+### Demo Mode (dataset_id: "demo9")
+
+Static CSV files for development and testing:
+
+```
+dcl/demo/datasets/demo9/
+├── salesforce_account.csv
+├── dynamics_accounts.csv
+├── hubspot_companies.csv
+├── netsuite_customers.csv
+└── ...
+```
+
+### Farm Mode (dataset_id: "farm:{scenario_id}")
+
+Deterministic ground truth from Farm API:
+
+```bash
+# Generate scenario (seed ensures reproducibility)
+POST /api/scenarios/generate {"seed": 12345, "scale": "medium"}
+# Returns: {"scenario_id": "dfa0ae0d57c9", ...}
+
+# Query DCL with Farm data
+POST /api/nlq/ask {
+  "question": "top 5 customers by revenue",
+  "dataset_id": "farm:dfa0ae0d57c9"
+}
+```
+
+**Farm Ground Truth Endpoints:**
+- `/api/scenarios/{id}/metrics/top-customers?limit=N`
+- `/api/scenarios/{id}/metrics/revenue`
+- `/api/scenarios/{id}/metrics/vendor-spend`
+
+---
+
+## API Reference
+
+### Core NLQ Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/nlq/ask` | POST | Execute natural language question |
+| `/api/nlq/extract_params` | POST/GET | Extract parameters from question |
+| `/api/nlq/answerability_rank` | POST | Get ranked hypotheses (circles) |
+| `/api/nlq/explain` | POST | Generate explanation for hypothesis |
+
+### BLL Execution Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/bll/execute` | POST | Execute definition directly |
+| `/api/bll/definitions` | GET | List all definitions |
+| `/api/bll/definitions/{id}` | GET | Get definition details |
+
+### Request/Response Examples
+
+**POST /api/nlq/ask**
+
+```json
+// Request
+{
+  "question": "top 5 customers by revenue",
+  "dataset_id": "demo9"
+}
+
+// Response
+{
+  "definition_id": "crm.top_customers",
+  "confidence": 0.92,
+  "matched_keywords": ["top", "customers", "revenue"],
+  "data": [
+    {"Id": "001...", "Name": "Enterprise Plus Corp", "AnnualRevenue": 89000000},
+    {"Id": "002...", "Name": "TechFlow Inc", "AnnualRevenue": 48000000}
+  ],
+  "summary": {
+    "answer": "Top 5 customers by revenue:\n1. Enterprise Plus Corp: $89M\n...",
+    "aggregations": {
+      "customer_count": 5,
+      "shown_total": 234500000,
+      "population_total": 456000000,
+      "share_of_total": 0.514
+    }
+  },
+  "lineage": [
+    {
+      "source_id": "salesforce",
+      "table_id": "salesforce_account",
+      "columns_used": ["Id", "Name", "AnnualRevenue"],
+      "row_contribution": 847
+    }
+  ]
+}
+```
+
+---
+
+## Canonical Events & Bindings
 
 ### Canonical Events
 
-System-agnostic business event types following the `NOUN_VERB_PAST` naming pattern.
+System-agnostic business event types:
 
 ```json
 {
@@ -67,149 +342,40 @@ System-agnostic business event types following the `NOUN_VERB_PAST` naming patte
       {"name": "event_id", "type": "string"},
       {"name": "amount", "type": "decimal"},
       {"name": "customer_id", "type": "string"},
-      {"name": "service_line", "type": "string"},
       {"name": "occurred_at", "type": "timestamp"},
       {"name": "effective_at", "type": "timestamp"}
     ]
   },
   "time_semantics_json": {
     "occurred_at": "created_timestamp",
-    "effective_at": "recognition_date",
-    "calendar": "fiscal"
+    "effective_at": "recognition_date"
   }
 }
 ```
-
-**Key Principle: Dual Time Axes**
-- `occurred_at` - When the event was recorded (system time)
-- `effective_at` - Business effective date (e.g., revenue recognition date)
 
 ### Event Categories
 
 | Category | Events |
 |----------|--------|
-| Revenue/Billing | `invoice_issued`, `invoice_posted`, `revenue_recognized`, `payment_received`, `refund_issued` |
+| Revenue/Billing | `invoice_issued`, `revenue_recognized`, `payment_received` |
 | Subscription | `subscription_started`, `subscription_changed`, `subscription_canceled` |
-| CRM | `lead_created`, `opportunity_created`, `deal_won`, `deal_lost`, `customer_onboarded` |
-| Operations | `work_item_created`, `work_item_completed`, `sla_breached`, `ticket_resolved` |
-| Engineering | `deployment_completed`, `incident_opened`, `incident_resolved`, `slo_breached` |
-| Cloud/Security | `cloud_cost_incurred`, `security_finding_raised`, `security_finding_resolved` |
-
----
-
-### Entities (Dimensions)
-
-Business entities that events can be grouped/filtered by.
-
-```json
-{
-  "id": "customer",
-  "tenant_id": "default",
-  "identifiers_json": {
-    "primary": "customer_id",
-    "aliases": ["account_id", "client_id"]
-  },
-  "description": "Customer or account"
-}
-```
-
-### Entity Categories
-
-| Category | Entities |
-|----------|----------|
-| Business/Finance | `customer`, `account`, `contract`, `subscription`, `invoice`, `payment`, `vendor`, `expense` |
-| Operations/Work | `work_item`, `ticket`, `sla`, `employee`, `team`, `project` |
-| Engineering/Platform | `deployment`, `build`, `repo`, `incident`, `slo`, `cloud_resource`, `security_finding` |
-
----
-
-### Metric Definitions
-
-Reusable metric specifications organized by pack.
-
-```json
-{
-  "id": "arr",
-  "tenant_id": "default",
-  "kind": "metric",
-  "pack": "cfo",
-  "description": "Annual Recurring Revenue",
-  "default_time_semantics_json": {
-    "event": "subscription_started",
-    "time_field": "effective_at",
-    "calendar": "fiscal"
-  }
-}
-```
-
-### Metric Packs
-
-| Pack | Focus Area | Example Metrics |
-|------|------------|-----------------|
-| **CFO** | Finance | `recognized_revenue`, `arr`, `mrr`, `dso`, `burn_rate`, `gross_margin` |
-| **CTO** | Engineering | `deploy_frequency`, `lead_time_for_changes`, `mttr`, `slo_attainment` |
-| **COO** | Operations | `throughput`, `cycle_time`, `sla_compliance`, `backlog_health` |
-| **CEO** | Executive | `revenue_growth`, `churn_rate`, `runway`, `reliability_score` |
-
----
-
-### Definition Versions
-
-Versioned specifications with full computation details.
-
-```json
-{
-  "id": "arr_v1",
-  "tenant_id": "default",
-  "definition_id": "arr",
-  "version": "v1",
-  "status": "published",
-  "spec": {
-    "required_events": ["subscription_started", "subscription_changed", "subscription_canceled"],
-    "measure": {"op": "point_in_time_sum", "field": "arr"},
-    "filters": {},
-    "allowed_grains": ["month", "quarter"],
-    "allowed_dims": ["customer", "service_line", "region"],
-    "joins": {"customer_id": "customer"},
-    "time_field": "effective_at"
-  }
-}
-```
-
-### Measure Operations
-
-| Operation | Description | Example Use |
-|-----------|-------------|-------------|
-| `sum` | Simple sum | Total revenue |
-| `count` | Count records | Number of deals |
-| `avg` | Average | Average deal size |
-| `ratio` | A / B ratio | Win rate |
-| `point_in_time_sum` | Balance at point in time | ARR, MRR |
-| `cohort_retention` | Retention by cohort | Customer retention |
-| `event_sourced_balance` | Running balance from events | AR balance |
-| `avg_days_between` | Average duration | DSO, lead time |
-| `period_over_period_growth` | Growth rate | Revenue growth |
-| `net_count` | Adds minus subtracts | Net new customers |
-| `difference` | A - B | Variance |
-
----
+| CRM | `opportunity_created`, `deal_won`, `customer_onboarded` |
+| Operations | `work_item_completed`, `sla_breached`, `ticket_resolved` |
+| Engineering | `deployment_completed`, `incident_opened`, `incident_resolved` |
 
 ### Bindings
 
-Map source systems to canonical events.
+Map source systems to canonical events:
 
 ```json
 {
   "id": "netsuite_revenue_recognized",
-  "tenant_id": "default",
   "source_system": "NetSuite",
   "canonical_event_id": "revenue_recognized",
   "mapping_json": {
     "transaction_id": "event_id",
     "amount": "amount",
-    "customer_id": "customer_id",
-    "tran_date": "occurred_at",
-    "rev_rec_date": "effective_at"
+    "customer_id": "customer_id"
   },
   "dims_coverage_json": {
     "customer": true,
@@ -221,289 +387,60 @@ Map source systems to canonical events.
 }
 ```
 
-### Supported Source Systems
-
-| System | Event Types |
-|--------|-------------|
-| NetSuite | Revenue, invoices, payments, vendor bills |
-| Salesforce | Opportunities, deals, leads |
-| Chargebee | Subscriptions |
-| Jira | Work items |
-| GitHub | Deployments |
-| PagerDuty | Incidents |
-| AWS Cost Explorer | Cloud costs |
-| Zendesk | Tickets |
-| Snyk | Security findings |
-| Expensify | Expenses |
-
 ---
 
-## Services
+## Validation & Lineage
 
-### DefinitionRegistry
+### DefinitionValidator
 
-Catalog management with search and publish workflow.
+Validates definition answerability:
 
 ```python
-from backend.nlq import DefinitionRegistry
-
-registry = DefinitionRegistry()
-
-# List with filtering
-summaries, total = registry.list_definitions(
-    tenant_id="default",
-    pack="cfo",
-    status="published"
+result = validator.validate(
+    definition_id="arr",
+    version="v1",
+    requested_dims=["customer"],
+    time_window="QoQ"
 )
 
-# Search
-results = registry.search_definitions("revenue")
+# Returns:
+ValidationResult(
+    ok=True,
+    missing_events=[],
+    missing_dims=[],
+    weak_bindings=[],
+    coverage_score=0.92,
+    freshness_score=0.88,
+    proof_score=0.75
+)
+```
 
-# Get details with lineage
-detail = registry.get_definition_detail("arr")
+### LineageService
 
-# Publish workflow
-success, errors = registry.publish_definition("arr", "v2")
+Track data flow from definitions to sources:
+
+```python
+lineage = lineage_service.get_definition_lineage("arr")
+
+# Returns:
+{
+    "definition_id": "arr",
+    "events": ["subscription_started", "subscription_changed"],
+    "bindings": ["chargebee_subscription"],
+    "source_systems": ["Chargebee"]
+}
 ```
 
 ### ConsistencyValidator
 
-Validates semantic layer integrity.
-
-```python
-from backend.nlq import ConsistencyValidator
-
-validator = ConsistencyValidator()
-
-# Run all checks
-report = validator.run_all_checks("default")
-print(f"Status: {report.overall_status}")
-print(f"Issues: {report.total_issues}")
-
-# Individual checks
-result = validator.check_orphan_events("default")
-result = validator.check_binding_coverage("default")
-result = validator.check_entity_references("default")
-```
-
-### Checks Performed
+Checks semantic layer integrity:
 
 | Check | Description | Severity |
 |-------|-------------|----------|
 | `orphan_events` | Events without bindings | Warning |
-| `orphan_definitions` | Definitions missing events/versions | Error |
-| `orphan_bindings` | Bindings referencing missing events | Error |
+| `orphan_definitions` | Definitions missing events | Error |
 | `circular_dependencies` | Cycles in dependencies | Error |
 | `binding_coverage` | Incomplete dimension coverage | Warning |
-| `entity_references` | Invalid entity references | Warning |
-| `version_consistency` | Multiple published versions | Error |
-
-### LineageService
-
-Track dependencies and analyze impact.
-
-```python
-from backend.nlq import LineageService
-
-lineage = LineageService()
-
-# Full graph
-graph = lineage.build_full_graph("default")
-print(f"Nodes: {len(graph.nodes)}, Edges: {len(graph.edges)}")
-
-# Definition lineage
-result = lineage.get_definition_lineage("arr")
-# Returns: events, bindings, source_systems
-
-# Impact analysis
-impact = lineage.analyze_impact("event", "revenue_recognized")
-print(f"Severity: {impact.severity}")
-print(f"Affected: {impact.total_affected}")
-```
-
-### SchemaEnforcer
-
-Validate schemas before creation.
-
-```python
-from backend.nlq import SchemaEnforcer
-
-enforcer = SchemaEnforcer()
-
-# Validate all
-result = enforcer.validate_all("default")
-print(f"Valid: {result.valid}, Errors: {result.errors}")
-
-# Validate new event
-valid, errors = enforcer.validate_event(
-    event_id="new_event",
-    schema_json={"fields": [...]},
-    time_semantics_json={...}
-)
-
-# Get suggestions
-suggestions = enforcer.suggest_schema_improvements("invoice_posted")
-```
-
-### QueryExecutor
-
-Execute queries with caching and audit.
-
-```python
-from backend.nlq import QueryExecutor
-
-executor = QueryExecutor()
-
-# Execute for definition
-result = executor.execute_definition(
-    definition_id="arr",
-    dims=["customer", "region"],
-    time_window="QoQ"
-)
-
-if result.status == ExecutionStatus.COMPLETED:
-    for row in result.rows:
-        print(row)
-
-# Audit log
-audits = executor.get_audit_log(definition_id="arr")
-
-# Stats
-stats = executor.get_execution_stats()
-print(f"Total: {stats['total_executions']}")
-```
-
-### ProofResolver
-
-Generate source system URLs.
-
-```python
-from backend.nlq import ProofResolver
-
-resolver = ProofResolver()
-
-# Resolve proofs for definition
-proofs = resolver.resolve_definition_proofs("services_revenue")
-
-for proof in proofs:
-    print(f"{proof.system}: {proof.url}")
-
-# Build full chain
-chain = resolver.build_proof_chain("services_revenue")
-print(f"Query hash: {chain.query_hash}")
-print(f"Sources: {[e['source_system'] for e in chain.event_traces]}")
-```
-
----
-
-## API Reference
-
-### Registry Endpoints
-
-```
-GET  /api/nlq/registry/definitions
-     ?pack=cfo&status=published&search=revenue&limit=50
-
-GET  /api/nlq/registry/definitions/search?q=revenue
-
-GET  /api/nlq/registry/definitions/{definition_id}
-
-POST /api/nlq/registry/definitions
-     {"id": "new_metric", "kind": "metric", "pack": "cfo", "spec": {...}}
-
-POST /api/nlq/registry/definitions/{id}/versions
-     {"version": "v2", "spec": {...}}
-
-POST /api/nlq/registry/definitions/{id}/publish
-     {"version": "v2"}
-
-POST /api/nlq/registry/definitions/{id}/deprecate
-     {"version": "v1"}
-```
-
-### Catalog Endpoints
-
-```
-GET  /api/nlq/registry/catalog/stats
-     → total_definitions, by_pack, avg_coverage
-
-GET  /api/nlq/registry/catalog/packs
-     → [{pack: "cfo", definition_count: 16}, ...]
-```
-
-### Consistency Endpoints
-
-```
-GET  /api/nlq/registry/consistency/check
-     → Full report with all checks
-
-GET  /api/nlq/registry/consistency/orphan-events
-GET  /api/nlq/registry/consistency/orphan-definitions
-GET  /api/nlq/registry/consistency/binding-coverage
-```
-
-### Lineage Endpoints
-
-```
-GET  /api/nlq/registry/lineage/graph
-     → Full dependency graph (nodes + edges)
-
-GET  /api/nlq/registry/lineage/definition/{id}
-     → Events, bindings, sources for definition
-
-GET  /api/nlq/registry/lineage/event/{id}/consumers
-     → Definitions that use this event
-
-POST /api/nlq/registry/lineage/impact
-     {"object_type": "event", "object_id": "revenue_recognized"}
-     → Severity, affected objects
-
-GET  /api/nlq/registry/lineage/upstream/{type}/{id}
-GET  /api/nlq/registry/lineage/downstream/{type}/{id}
-```
-
-### Schema Endpoints
-
-```
-GET  /api/nlq/registry/schema/validate
-     → Validate all schemas
-
-POST /api/nlq/registry/schema/validate/event
-     {"event_id": "...", "schema_json": {...}}
-
-POST /api/nlq/registry/schema/validate/binding
-     {"binding_id": "...", "canonical_event_id": "...", "mapping_json": {...}}
-
-GET  /api/nlq/registry/schema/suggestions/{event_id}
-```
-
-### Execution Endpoints
-
-```
-POST /api/nlq/registry/execute
-     {"definition_id": "arr", "dims": ["customer"], "time_window": "QoQ"}
-
-POST /api/nlq/registry/execute/raw
-     {"sql": "SELECT ...", "params": [...]}
-
-GET  /api/nlq/registry/execute/stats
-GET  /api/nlq/registry/execute/audit?definition_id=arr
-
-DELETE /api/nlq/registry/execute/cache
-```
-
-### Proof Endpoints
-
-```
-GET  /api/nlq/registry/proof/definition/{id}
-     → Resolved proofs with URLs
-
-GET  /api/nlq/registry/proof/chain/{id}
-     → Full proof chain from definition to sources
-
-GET  /api/nlq/registry/proof/coverage
-     → Coverage statistics
-```
 
 ---
 
@@ -514,178 +451,99 @@ GET  /api/nlq/registry/proof/coverage
 ```sql
 -- Canonical event types
 CREATE TABLE canonical_events (
-    id VARCHAR(128),
+    id VARCHAR(128) PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'default',
-    description TEXT,
     schema_json JSONB NOT NULL DEFAULT '{}',
     time_semantics_json JSONB NOT NULL DEFAULT '{}',
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    PRIMARY KEY (id, tenant_id)
+    created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Business entities (dimensions)
 CREATE TABLE entities (
-    id VARCHAR(128),
+    id VARCHAR(128) PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'default',
-    description TEXT,
-    identifiers_json JSONB NOT NULL DEFAULT '{}',
-    PRIMARY KEY (id, tenant_id)
+    identifiers_json JSONB NOT NULL DEFAULT '{}'
 );
 
 -- Source system bindings
 CREATE TABLE bindings (
-    id VARCHAR(128),
+    id VARCHAR(128) PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'default',
     source_system VARCHAR(128) NOT NULL,
     canonical_event_id VARCHAR(128) NOT NULL,
     mapping_json JSONB NOT NULL DEFAULT '{}',
     dims_coverage_json JSONB NOT NULL DEFAULT '{}',
-    quality_score FLOAT DEFAULT 0.5 CHECK (quality_score BETWEEN 0 AND 1),
-    freshness_score FLOAT DEFAULT 0.5 CHECK (freshness_score BETWEEN 0 AND 1),
-    PRIMARY KEY (id, tenant_id),
-    FOREIGN KEY (canonical_event_id, tenant_id)
-        REFERENCES canonical_events(id, tenant_id)
+    quality_score FLOAT DEFAULT 0.5,
+    freshness_score FLOAT DEFAULT 0.5
 );
 
 -- Metric/view definitions
 CREATE TABLE definitions (
-    id VARCHAR(128),
+    id VARCHAR(128) PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'default',
-    kind VARCHAR(32) DEFAULT 'metric' CHECK (kind IN ('metric', 'view')),
+    kind VARCHAR(32) DEFAULT 'metric',
     pack VARCHAR(64),
     description TEXT,
-    default_time_semantics_json JSONB NOT NULL DEFAULT '{}',
-    PRIMARY KEY (id, tenant_id)
+    default_time_semantics_json JSONB DEFAULT '{}'
 );
 
 -- Versioned definition specs
 CREATE TABLE definition_versions (
-    id VARCHAR(128),
-    tenant_id VARCHAR(64) DEFAULT 'default',
+    id VARCHAR(128) PRIMARY KEY,
     definition_id VARCHAR(128) NOT NULL,
     version VARCHAR(32) DEFAULT 'v1',
-    status VARCHAR(32) DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'deprecated')),
+    status VARCHAR(32) DEFAULT 'draft',
     spec_json JSONB NOT NULL DEFAULT '{}',
-    published_at TIMESTAMP,
-    PRIMARY KEY (id, tenant_id),
-    FOREIGN KEY (definition_id, tenant_id)
-        REFERENCES definitions(id, tenant_id),
-    UNIQUE (definition_id, version, tenant_id)
-);
-
--- Lineage tracking
-CREATE TABLE lineage_edges (
-    id VARCHAR(256),
-    tenant_id VARCHAR(64) DEFAULT 'default',
-    source_type VARCHAR(64) NOT NULL,
-    source_id VARCHAR(128) NOT NULL,
-    target_type VARCHAR(64) NOT NULL,
-    target_id VARCHAR(128) NOT NULL,
-    edge_type VARCHAR(64) NOT NULL,
-    metadata_json JSONB NOT NULL DEFAULT '{}',
-    PRIMARY KEY (id, tenant_id)
+    published_at TIMESTAMP
 );
 
 -- Query execution audit
 CREATE TABLE query_executions (
-    id VARCHAR(64),
-    tenant_id VARCHAR(64) DEFAULT 'default',
+    id VARCHAR(64) PRIMARY KEY,
     definition_id VARCHAR(128),
-    version VARCHAR(32),
-    sql_hash VARCHAR(64) NOT NULL,
-    sql_text TEXT NOT NULL,
-    params_json JSONB NOT NULL DEFAULT '{}',
-    status VARCHAR(32) DEFAULT 'pending',
-    started_at TIMESTAMP,
-    completed_at TIMESTAMP,
-    row_count INTEGER,
+    sql_hash VARCHAR(64),
+    status VARCHAR(32),
     execution_time_ms FLOAT,
-    error_message TEXT,
-    PRIMARY KEY (id, tenant_id)
+    row_count INTEGER
 );
 ```
 
 ---
 
-## Configuration
+## File Structure
 
-### Environment Variables
-
-```bash
-# Database
-NLQ_DATABASE_URL=postgresql://user:pass@localhost/dcl_nlq
-
-# Query execution
-NLQ_QUERY_CACHE_TTL=300  # seconds
-NLQ_QUERY_TIMEOUT=60000  # milliseconds
-
-# Snowflake (production)
-SNOWFLAKE_ACCOUNT=xxx
-SNOWFLAKE_USER=xxx
-SNOWFLAKE_PASSWORD=xxx
-SNOWFLAKE_WAREHOUSE=COMPUTE_WH
-SNOWFLAKE_DATABASE=DCL
-SNOWFLAKE_SCHEMA=NLQ
 ```
-
-### Running Migrations
-
-```bash
-cd backend/nlq
-alembic upgrade head
-```
-
----
-
-## Best Practices
-
-### Event Design
-
-1. **Use NOUN_VERB_PAST naming**: `invoice_posted`, `subscription_started`
-2. **Include both time axes**: `occurred_at` (system) and `effective_at` (business)
-3. **Add event_id**: For traceability
-4. **Use decimal for money**: Avoid floating point
-
-### Definition Design
-
-1. **Declare valid grains**: Not all metrics work at all grains
-2. **Specify time_field**: `occurred_at` vs `effective_at`
-3. **Limit allowed_dims**: Don't allow impossible drilldowns
-4. **Document joins**: How to get to entities
-
-### Binding Design
-
-1. **Map all required fields**: Check schema coverage
-2. **Score quality honestly**: Don't inflate scores
-3. **Track freshness**: How stale is this data?
-4. **Document coverage gaps**: Which dims are missing?
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| "Definition not answerable" | Missing bindings | Add bindings for required events |
-| "Dimension not available" | No binding covers dim | Update binding dims_coverage |
-| "Low confidence score" | Weak bindings | Improve quality/freshness scores |
-| "Missing events" | Event not registered | Register canonical event first |
-
-### Checking Health
-
-```bash
-curl localhost:8000/api/nlq/registry/health
-curl localhost:8000/api/nlq/registry/consistency/check
-curl localhost:8000/api/nlq/registry/catalog/stats
+backend/
+├── nlq/                      # NLQ Compiler Layer
+│   ├── intent_matcher.py     # Question → Definition matching
+│   ├── operator_extractor.py # Temporal/comparison operators
+│   ├── param_extractor.py    # TopN limit, time window
+│   ├── models.py             # NLQ domain models
+│   ├── validator.py          # Definition validation
+│   ├── compiler.py           # SQL template generation
+│   ├── scorer.py             # Answerability scoring
+│   ├── lineage.py            # Lineage tracking
+│   ├── persistence.py        # In-memory persistence
+│   └── db_persistence.py     # PostgreSQL persistence
+│
+├── bll/                      # BLL Executor Layer
+│   ├── definitions.py        # Definition registry (seeds)
+│   ├── models.py             # BLL domain models
+│   ├── executor.py           # Definition execution
+│   └── routes.py             # API routes
+│
+├── farm/                     # Farm Integration
+│   └── client.py             # Farm API client
+│
+└── api/
+    └── main.py               # FastAPI app with NLQ/BLL routes
 ```
 
 ---
 
 ## Related Documentation
 
+- [NLQ_ARCHITECTURE.md](NLQ_ARCHITECTURE.md) - Detailed NLQ layer documentation
 - [ARCH-DCL-CURRENT.md](ARCH-DCL-CURRENT.md) - Overall DCL architecture
 - [DCL-OVERVIEW.md](DCL-OVERVIEW.md) - What DCL does
 - [ARCH-GLOBAL-PIVOT.md](ARCH-GLOBAL-PIVOT.md) - Zero-Trust architecture
