@@ -1,7 +1,7 @@
 # Engineering Loop State
 
-**Last Updated:** 2026-01-26T20:15:00Z
-**Last Updated By:** Claude Code (REFLECT stage)
+**Last Updated:** 2026-01-26T20:30:00Z
+**Last Updated By:** Claude Code (CHECKPOINT stage)
 
 ---
 
@@ -190,12 +190,20 @@ reasoning: |
 | 2026-01-26T19:30:00Z | PLAN | Designed fix: clamp confidence at line 510 | risk=low, 1 file, 1 line change, no approval needed |
 | 2026-01-26T19:45:00Z | ACT | Implemented 1-line fix at intent_matcher.py:510 | confidence clamped to [0.0, 1.0], 0 deviations |
 | 2026-01-26T20:15:00Z | REFLECT | Verified fix with canary queries and test suite | INV-001 RESOLVED, 185 tests pass, 12 pre-existing failures, outcome=SUCCESS |
+| 2026-01-26T20:30:00Z | CHECKPOINT | Compiled summary, assessed health | INV-001 closed, INV-003 remains, recommend NEW_CYCLE |
 
 ---
 
 ## Next Action
 
-**Next stage: CHECKPOINT.** INV-001 resolved successfully. Remaining item: INV-003 (row_count=0 with non-empty aggregations) is a separate issue for future investigation.
+**Recommendation: NEW_CYCLE** (or IDLE if deferring INV-003)
+
+INV-001 resolved successfully. One remaining violation:
+- **INV-003**: row_count=0 but aggregations non-empty (queries 1,3)
+
+**Human decision required:**
+- To investigate INV-003 → respond "proceed" or "start OBSERVE"
+- To defer and mark healthy → respond "go to IDLE"
 
 ---
 
