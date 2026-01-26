@@ -208,6 +208,37 @@ METRIC_TO_DEFINITION = {v: k for k, v in DEFINITION_TO_METRIC.items()}
 # Question-to-metric patterns - ORDER MATTERS (more specific patterns first)
 # These are checked in order, first match wins
 QUESTION_METRIC_PATTERNS = [
+    # =============================================================================
+    # REVENUE vs ARR DISCRIMINATION (CRITICAL - most specific first)
+    # ARR = recurring/subscription/run-rate
+    # Revenue = transactional/invoiced/realized
+    # =============================================================================
+
+    # ARR PATTERNS (subscription/recurring - check BEFORE revenue patterns)
+    (r"\brecurring\s+revenue\b", "arr"),  # "recurring revenue" → ARR
+    (r"\bsubscription\s+(?:revenue|value|amount)\b", "arr"),
+    (r"\brun[- ]?rate\b", "arr"),  # "run rate" or "run-rate"
+    (r"\bmrr\b", "arr"),  # Monthly Recurring Revenue
+    (r"\barr\b", "arr"),  # Explicit ARR
+    (r"\bannual\s+recurring\s+revenue\b", "arr"),
+    (r"\bsubscriptions?\b", "arr"),  # "total subscriptions"
+    (r"\bbookings?\b", "arr"),  # "total bookings" → typically ARR
+    (r"\bcontracted\s+(?:revenue|value|amount)\b", "arr"),
+    (r"\bnet\s+new\s+recurring\b", "arr"),
+    (r"\bchurned?\s+(?:arr|mrr|revenue)\b", "arr_churn"),
+    (r"\blost\s+recurring\b", "arr_churn"),
+    (r"\bsubscription\s+cancellation", "arr_churn"),
+
+    # REVENUE PATTERNS (transactional - check AFTER ARR patterns)
+    (r"\bsales\s+(?:revenue|total|amount)?\b", "revenue"),  # "sales" → revenue
+    (r"\btotal\s+sales\b", "revenue"),
+    (r"\bearnings?\s+from\s+sales\b", "revenue"),
+    (r"\binvoice[ds]?\s+(?:revenue|amount|total)?\b", "revenue"),  # invoiced → revenue
+    (r"\btop[- ]?line\b", "revenue"),  # "top line" → revenue
+    (r"\brealized\s+(?:revenue|value)\b", "revenue"),
+    (r"\bbilling[s]?\s+(?:total|amount)?\b", "revenue"),  # billings → revenue
+    (r"\bincome\b", "revenue"),  # "total income" → revenue
+
     # MOST SPECIFIC first - compound patterns with modifiers
     (r"\bunallocated\s+(?:cloud\s+)?(?:spend|cost)\b", "unallocated_spend"),
     (r"\bunallocated\b", "unallocated_spend"),  # "unallocated" alone is very specific
@@ -298,9 +329,17 @@ QUESTION_METRIC_PATTERNS = [
     (r"\boutage[s]?\b", "incident_count"),
     (r"\bissues?\b", "incident_count"),
 
+    # Support/Customer Success - tickets (BEFORE security_findings)
+    (r"\btickets?\s+(?:resolved|closed|opened|open)\b", "ticket_count"),
+    (r"\b(?:open|closed|resolved)\s+tickets?\b", "ticket_count"),
+    (r"\btotal\s+tickets?\b", "ticket_count"),
+    (r"\btickets?\s+by\s+(?:priority|agent|status)\b", "ticket_count"),
+    (r"\bsupport\s+tickets?\b", "ticket_count"),
+
     # Security
     (r"\b(?:critical\s+)?security\s+finding[s]?\b", "security_findings"),
     (r"\bfinding[s]?\s+by\s+severity\b", "security_findings"),
+    (r"\bvulnerabilit(?:y|ies)\b", "security_findings"),
     (r"\bzombie[s]?\s+resource[s]?\b", "zombie_resources"),
     (r"\bwasted\s+(?:cloud\s+)?resources?\b", "zombie_resources"),
     (r"\bzombie[s]?\b", "zombie_resources"),
@@ -308,6 +347,30 @@ QUESTION_METRIC_PATTERNS = [
     (r"\bidle\b", "zombie_resources"),
     (r"\bidentity\s+gap[s]?\b", "identity_gaps"),
     (r"\bresource[s]?\s+without\s+owner", "identity_gaps"),
+
+    # HR/Headcount
+    (r"\bheadcount\b", "headcount"),
+    (r"\bemployees?\b", "headcount"),
+    (r"\bstaff\b", "headcount"),
+    (r"\bnew\s+hires?\b", "headcount"),
+    (r"\battrition\b", "attrition"),
+
+    # Engineering metrics
+    (r"\bstory\s+points?\b", "story_points"),
+    (r"\bcode\s+coverage\b", "code_coverage"),
+    (r"\bbuild\s+(?:success|failure)\s+rate\b", "build_success"),
+
+    # Customer success
+    (r"\bcsat\b", "csat"),
+    (r"\bcustomer\s+satisfaction\b", "csat"),
+    (r"\bnps\b", "nps"),
+    (r"\bnet\s+promoter\b", "nps"),
+    (r"\bresponse\s+time\b", "response_time"),
+    (r"\bfirst\s+response\b", "response_time"),
+
+    # Sales
+    (r"\bwin\s+rate\b", "win_rate"),
+    (r"\bsla\s+breach\b", "sla_breach"),
 
     # CRM - specific patterns
     (r"\btop\s+\d*\s*customer[s]?\b", "customer_revenue"),
@@ -340,15 +403,22 @@ import re
 CALENDAR_PATTERNS = {
     r"\blast\s+month\b": ("calendar", "calendar_month:last", "month"),
     r"\bthis\s+month\b": ("calendar", "calendar_month:current", "month"),
+    r"\bcurrent\s+month\b": ("calendar", "calendar_month:current", "month"),
     r"\blast\s+quarter\b": ("calendar", "calendar_quarter:last", "quarter"),
     r"\bthis\s+quarter\b": ("calendar", "calendar_quarter:current", "quarter"),
+    r"\bcurrent\s+quarter\b": ("calendar", "calendar_quarter:current", "quarter"),
     r"\blast\s+year\b": ("calendar", "calendar_year:last", "year"),
     r"\bthis\s+year\b": ("calendar", "calendar_year:current", "year"),
+    r"\bcurrent\s+year\b": ("calendar", "calendar_year:current", "year"),
     r"\blast\s+week\b": ("calendar", "calendar_week:last", "week"),
     r"\bthis\s+week\b": ("calendar", "calendar_week:current", "week"),
+    r"\bcurrent\s+week\b": ("calendar", "calendar_week:current", "week"),
+    r"\bthis\s+sprint\b": ("calendar", "calendar_week:current", "week"),  # Sprint ≈ week
+    r"\bcurrent\s+sprint\b": ("calendar", "calendar_week:current", "week"),
     r"\bytd\b": ("calendar", "calendar_ytd", "year"),
     r"\byear\s+to\s+date\b": ("calendar", "calendar_ytd", "year"),
     r"\bsince\s+january\b": ("calendar", "calendar_ytd", "year"),
+    r"\bthis\s+calendar\s+year\b": ("calendar", "calendar_ytd", "year"),
     r"\bq([1-4])\b": ("calendar", "calendar_quarter:Q\\1", "quarter"),
     r"\bmom\b": ("calendar", "calendar_month:mom", "month"),
     r"\bmonth\s+over\s+month\b": ("calendar", "calendar_month:mom", "month"),
@@ -357,6 +427,21 @@ CALENDAR_PATTERNS = {
     r"\bquarter\s+over\s+quarter\b": ("calendar", "calendar_quarter:qoq", "quarter"),
     r"\byoy\b": ("calendar", "calendar_year:yoy", "year"),
     r"\byear\s+over\s+year\b": ("calendar", "calendar_year:yoy", "year"),
+    # Named months
+    r"\b(?:in\s+|for\s+)?january\b": ("calendar", "calendar_month:january", "month"),
+    r"\b(?:in\s+|for\s+)?february\b": ("calendar", "calendar_month:february", "month"),
+    r"\b(?:in\s+|for\s+)?march\b": ("calendar", "calendar_month:march", "month"),
+    r"\b(?:in\s+|for\s+)?april\b": ("calendar", "calendar_month:april", "month"),
+    r"\b(?:in\s+|for\s+)?may\b": ("calendar", "calendar_month:may", "month"),
+    r"\b(?:in\s+|for\s+)?june\b": ("calendar", "calendar_month:june", "month"),
+    r"\b(?:in\s+|for\s+)?july\b": ("calendar", "calendar_month:july", "month"),
+    r"\b(?:in\s+|for\s+)?august\b": ("calendar", "calendar_month:august", "month"),
+    r"\b(?:in\s+|for\s+)?september\b": ("calendar", "calendar_month:september", "month"),
+    r"\b(?:in\s+|for\s+)?october\b": ("calendar", "calendar_month:october", "month"),
+    r"\b(?:in\s+|for\s+)?november\b": ("calendar", "calendar_month:november", "month"),
+    r"\b(?:in\s+|for\s+)?december\b": ("calendar", "calendar_month:december", "month"),
+    # Year numbers
+    r"\b20(\d{2})\b": ("calendar", "calendar_year:20\\1", "year"),
 }
 
 # Rolling time patterns
@@ -378,6 +463,16 @@ ROLLING_NAMED_PATTERNS = {
     r"\b(?:in\s+)?(?:the\s+)?past\s+year\b": ("rolling", "rolling_days:365", "year"),
     r"\btrailing\s+twelve\s+months?\b": ("rolling", "rolling_months:12", "month"),
     r"\bttm\b": ("rolling", "rolling_months:12", "month"),
+    # Single-day patterns
+    r"\byesterday\b": ("rolling", "rolling_days:1", "day"),
+    r"\b(?:from\s+)?yesterday\b": ("rolling", "rolling_days:1", "day"),
+    # Cycle patterns (typically 2 weeks for sprints)
+    r"\b(?:in\s+)?(?:the\s+)?last\s+cycle\b": ("rolling", "rolling_days:14", "week"),
+    r"\b(?:in\s+)?(?:the\s+)?past\s+cycle\b": ("rolling", "rolling_days:14", "week"),
+    # Hour patterns
+    r"\b(?:in\s+)?(?:the\s+)?last\s+48\s+hours?\b": ("rolling", "rolling_hours:48", "day"),
+    r"\b(?:in\s+)?(?:the\s+)?past\s+48\s+hours?\b": ("rolling", "rolling_hours:48", "day"),
+    r"\b(?:in\s+)?(?:the\s+)?last\s+24\s+hours?\b": ("rolling", "rolling_hours:24", "day"),
 }
 
 
@@ -1111,11 +1206,14 @@ def extract_normalized_intent(
 
     # If aggregation is DELTA, convert base metric to delta variant
     # e.g., "revenue" → "revenue_delta" when asking about "revenue change MoM"
+    # CRITICAL: ARR and Revenue are DISTINCT metrics - do NOT conflate them
     if aggregation == AggregationType.DELTA and metric and not metric.endswith("_delta"):
         # Map base metrics to their delta equivalents
         base_metric = metric
-        if base_metric in ("revenue", "arr"):
-            metric = "revenue_delta"
+        if base_metric == "revenue":
+            metric = "revenue_delta"  # Revenue only
+        elif base_metric == "arr":
+            pass  # Keep as "arr" with delta aggregation - DO NOT convert to revenue_delta
         elif base_metric in ("spend", "saas_spend", "cloud_spend"):
             metric = "spend_delta"
         elif base_metric == "vendor_spend":

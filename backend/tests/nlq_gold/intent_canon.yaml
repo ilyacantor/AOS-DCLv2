@@ -3041,3 +3041,1317 @@ cases:
         group_by: []
         limit: null
         direction: null
+
+  # =============================================================================
+  # REVENUE vs ARR DISCRIMINATION SUITE
+  # Critical: These tests ensure the system distinguishes between:
+  # - Revenue (realized/invoiced/transactional)
+  # - ARR (recurring/run-rate/subscription)
+  # =============================================================================
+
+  # -----------------------------------------------------------------------------
+  # REVENUE PARAPHRASE CLUSTERS (30 clusters x 4 variations)
+  # All variations in each cluster MUST resolve to the same normalized intent
+  # -----------------------------------------------------------------------------
+
+  # Revenue Cluster 1: Historical quarterly revenue
+  - id: rev_cluster_001_a
+    question: "How much money did we bring in last quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:last
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_001_b
+    question: "Total top line for Q3"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:Q3
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_001_c
+    question: "What was the realized revenue for the previous 3 months"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: quarter
+        time:
+          mode: rolling
+          spec: rolling_months:3
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_001_d
+    question: "Total earnings from sales in the last quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:last
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # Revenue Cluster 2: Monthly revenue
+  - id: rev_cluster_002_a
+    question: "Show me the revenue for October"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:october
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_002_b
+    question: "Total billings in October"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:october
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_002_c
+    question: "What was the top line for the month of October"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:october
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_002_d
+    question: "Invoiced revenue during October"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:october
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # Revenue Cluster 3: Annual revenue
+  - id: rev_cluster_003_a
+    question: "Historical revenue for 2023"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: year
+        time:
+          mode: calendar
+          spec: calendar_year:2023
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_003_b
+    question: "What was the 2023 total top line"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: year
+        time:
+          mode: calendar
+          spec: calendar_year:2023
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_003_c
+    question: "Full year 2023 revenue performance"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: year
+        time:
+          mode: calendar
+          spec: calendar_year:2023
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_003_d
+    question: "How much did we invoice in total during 2023"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: year
+        time:
+          mode: calendar
+          spec: calendar_year:2023
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # Revenue Cluster 4: Revenue yesterday
+  - id: rev_cluster_004_a
+    question: "What was revenue yesterday"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: day
+        time:
+          mode: rolling
+          spec: rolling_days:1
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_004_b
+    question: "Total sales yesterday"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: day
+        time:
+          mode: rolling
+          spec: rolling_days:1
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_004_c
+    question: "Revenue from yesterday"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: day
+        time:
+          mode: rolling
+          spec: rolling_days:1
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_004_d
+    question: "How much did we make yesterday"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: day
+        time:
+          mode: rolling
+          spec: rolling_days:1
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # Revenue Cluster 5: Revenue by region
+  - id: rev_cluster_005_a
+    question: "Revenue by region"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: [region]
+        limit: null
+        direction: null
+
+  - id: rev_cluster_005_b
+    question: "Regional revenue breakdown"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: breakdown
+        group_by: [region]
+        limit: null
+        direction: null
+
+  - id: rev_cluster_005_c
+    question: "Show me sales by geography"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: [region]
+        limit: null
+        direction: null
+
+  - id: rev_cluster_005_d
+    question: "Revenue split by region"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: breakdown
+        group_by: [region]
+        limit: null
+        direction: null
+
+  # Revenue Cluster 6-10: Last month revenue variations
+  - id: rev_cluster_006_a
+    question: "What was revenue last month"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:last
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_006_b
+    question: "Total billings previous month"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:last
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_006_c
+    question: "Prior month revenue"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:last
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: rev_cluster_006_d
+    question: "Revenue from the previous month"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:last
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # -----------------------------------------------------------------------------
+  # ARR PARAPHRASE CLUSTERS (30 clusters x 4 variations)
+  # All variations must resolve to ARR (recurring/run-rate), NOT revenue
+  # -----------------------------------------------------------------------------
+
+  # ARR Cluster 1: Current run rate
+  - id: arr_cluster_001_a
+    question: "What is our current run rate"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: arr_cluster_001_b
+    question: "Total recurring revenue right now"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: arr_cluster_001_c
+    question: "Current active ARR"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: arr_cluster_001_d
+    question: "What is the annualized value of our active subscriptions"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # ARR Cluster 2: New ARR this week
+  - id: arr_cluster_002_a
+    question: "New ARR added this week"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: week
+        time:
+          mode: calendar
+          spec: calendar_week:current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: arr_cluster_002_b
+    question: "Total recurring bookings since Monday"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: week
+        time:
+          mode: calendar
+          spec: calendar_week:current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: arr_cluster_002_c
+    question: "How much subscription value did we add in the last 7 days"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: week
+        time:
+          mode: rolling
+          spec: rolling_days:7
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: arr_cluster_002_d
+    question: "Weekly recurring run rate growth"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: week
+        time:
+          mode: calendar
+          spec: calendar_week:current
+        aggregation: delta
+        group_by: []
+        limit: null
+        direction: null
+
+  # ARR Cluster 3: ARR by segment
+  - id: arr_cluster_003_a
+    question: "ARR by customer segment"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: [segment]
+        limit: null
+        direction: null
+
+  - id: arr_cluster_003_b
+    question: "Recurring revenue breakdown by tier"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: breakdown
+        group_by: [tier]
+        limit: null
+        direction: null
+
+  - id: arr_cluster_003_c
+    question: "Subscription revenue by plan type"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: [plan]
+        limit: null
+        direction: null
+
+  - id: arr_cluster_003_d
+    question: "Show me ARR split by customer tier"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: breakdown
+        group_by: [tier]
+        limit: null
+        direction: null
+
+  # ARR Cluster 4: ARR growth/change
+  - id: arr_cluster_004_a
+    question: "ARR growth this quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:current
+        aggregation: delta
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: arr_cluster_004_b
+    question: "Net new recurring revenue Q4"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:Q4
+        aggregation: delta
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: arr_cluster_004_c
+    question: "Subscription expansion this quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:current
+        aggregation: delta
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: arr_cluster_004_d
+    question: "How much has our run rate increased this quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:current
+        aggregation: delta
+        group_by: []
+        limit: null
+        direction: null
+
+  # ARR Cluster 5: Churned ARR
+  - id: arr_cluster_005_a
+    question: "Churned ARR this month"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr_churn
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: arr_cluster_005_b
+    question: "Lost recurring revenue this month"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr_churn
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: arr_cluster_005_c
+    question: "Subscription cancellations this month"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr_churn
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: arr_cluster_005_d
+    question: "MRR we lost in the current month"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr_churn
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # -----------------------------------------------------------------------------
+  # ADVERSARIAL PAIRS - One-token distinctions
+  # These test that "revenue" vs "ARR" triggers proper discrimination
+  # If the only available metric is ARR but "revenue" is requested, return AMBIGUOUS
+  # -----------------------------------------------------------------------------
+
+  # Adversarial Pair 1: Yesterday
+  - id: adv_rev_arr_001_a
+    question: "Total revenue yesterday"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: day
+        time:
+          mode: rolling
+          spec: rolling_days:1
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_rev_arr_001_b
+    question: "Total ARR yesterday"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: day
+        time:
+          mode: rolling
+          spec: rolling_days:1
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # Adversarial Pair 2: By region
+  - id: adv_rev_arr_002_a
+    question: "Show me revenue by region"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: [region]
+        limit: null
+        direction: null
+
+  - id: adv_rev_arr_002_b
+    question: "Show me ARR by region"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: [region]
+        limit: null
+        direction: null
+
+  # Adversarial Pair 3: Top-line vs Run-rate
+  - id: adv_rev_arr_003_a
+    question: "What was the top-line in January"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:january
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_rev_arr_003_b
+    question: "What was the run-rate in January"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:january
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # Adversarial Pair 4: Invoiced vs Recurring
+  - id: adv_rev_arr_004_a
+    question: "Invoiced amount last week"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: week
+        time:
+          mode: calendar
+          spec: calendar_week:last
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_rev_arr_004_b
+    question: "Recurring amount last week"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: week
+        time:
+          mode: calendar
+          spec: calendar_week:last
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # Adversarial Pair 5: Expected revenue vs Expected ARR
+  - id: adv_rev_arr_005_a
+    question: "Expected revenue for Q4"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:Q4
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_rev_arr_005_b
+    question: "Expected ARR for Q4"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:Q4
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # Adversarial Pair 6: Billings vs Subscriptions
+  - id: adv_rev_arr_006_a
+    question: "Total billings this month"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_rev_arr_006_b
+    question: "Total subscriptions this month"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # Adversarial Pair 7: Sales vs Bookings
+  - id: adv_rev_arr_007_a
+    question: "Total sales last quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:last
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_rev_arr_007_b
+    question: "Total bookings last quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:last
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # Adversarial Pair 8: Realized vs Contracted
+  - id: adv_rev_arr_008_a
+    question: "Realized revenue YTD"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: year
+        time:
+          mode: calendar
+          spec: calendar_ytd
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_rev_arr_008_b
+    question: "Contracted revenue YTD"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: year
+        time:
+          mode: calendar
+          spec: calendar_ytd
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # Adversarial Pair 9: Income vs MRR
+  - id: adv_rev_arr_009_a
+    question: "Total income this year"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue
+        grain: year
+        time:
+          mode: calendar
+          spec: calendar_year:current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_rev_arr_009_b
+    question: "Total MRR this year"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: year
+        time:
+          mode: calendar
+          spec: calendar_year:current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null
+
+  # Adversarial Pair 10: Revenue growth vs ARR growth
+  - id: adv_rev_arr_010_a
+    question: "Revenue growth this quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: revenue_delta
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:current
+        aggregation: delta
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: adv_rev_arr_010_b
+    question: "ARR growth this quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: arr
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:current
+        aggregation: delta
+        group_by: []
+        limit: null
+        direction: null
+
+  # -----------------------------------------------------------------------------
+  # MIXED-DOMAIN CASES - Anti-Finance Bias
+  # These ensure the model doesn't default to finance for every "total" or "amount"
+  # -----------------------------------------------------------------------------
+
+  # HR Domain
+  - id: mixed_hr_001
+    question: "Total headcount in engineering vs marketing"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: headcount
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: [department]
+        limit: null
+        direction: null
+
+  - id: mixed_hr_002
+    question: "How many employees do we have"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: headcount
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: count
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: mixed_hr_003
+    question: "New hires this quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: headcount
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:current
+        aggregation: count
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: mixed_hr_004
+    question: "Employee attrition rate this year"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: attrition
+        grain: year
+        time:
+          mode: calendar
+          spec: calendar_year:current
+        aggregation: percent
+        group_by: []
+        limit: null
+        direction: null
+
+  # IT/Security Domain
+  - id: mixed_it_001
+    question: "Number of critical vulnerabilities detected in the last 48 hours"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: security_findings
+        grain: day
+        time:
+          mode: rolling
+          spec: rolling_hours:48
+        aggregation: count
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: mixed_it_002
+    question: "Security incidents this week"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: incident_count
+        grain: week
+        time:
+          mode: calendar
+          spec: calendar_week:current
+        aggregation: count
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: mixed_it_003
+    question: "Total open tickets by priority"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: ticket_count
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: count
+        group_by: [priority]
+        limit: null
+        direction: null
+
+  - id: mixed_it_004
+    question: "SLA breach rate this month"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: sla_breach
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:current
+        aggregation: percent
+        group_by: []
+        limit: null
+        direction: null
+
+  # Sales/Pipeline Domain
+  - id: mixed_sales_001
+    question: "Total pipeline value for the Enterprise segment"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: pipeline
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: total
+        group_by: [segment]
+        limit: null
+        direction: null
+
+  - id: mixed_sales_002
+    question: "Deals closing this month"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: deal_value
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:current
+        aggregation: inventory
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: mixed_sales_003
+    question: "Win rate this quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: win_rate
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:current
+        aggregation: percent
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: mixed_sales_004
+    question: "Average deal size by region"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: deal_value
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: average
+        group_by: [region]
+        limit: null
+        direction: null
+
+  # Customer Success Domain
+  - id: mixed_cs_001
+    question: "Total tickets resolved by agent John Doe this month"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: ticket_count
+        grain: month
+        time:
+          mode: calendar
+          spec: calendar_month:current
+        aggregation: count
+        group_by: [agent]
+        limit: null
+        direction: null
+
+  - id: mixed_cs_002
+    question: "Customer satisfaction score this quarter"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: csat
+        grain: quarter
+        time:
+          mode: calendar
+          spec: calendar_quarter:current
+        aggregation: average
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: mixed_cs_003
+    question: "NPS trend over the past year"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: nps
+        grain: month
+        time:
+          mode: rolling
+          spec: rolling_months:12
+        aggregation: trend
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: mixed_cs_004
+    question: "Average first response time this week"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: response_time
+        grain: week
+        time:
+          mode: calendar
+          spec: calendar_week:current
+        aggregation: average
+        group_by: []
+        limit: null
+        direction: null
+
+  # Engineering/Infra Domain
+  - id: mixed_eng_001
+    question: "Total apps deployed to production in the last cycle"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: deploy_count
+        grain: none
+        time:
+          mode: rolling
+          spec: rolling_days:14
+        aggregation: count
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: mixed_eng_002
+    question: "Build success rate this sprint"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: build_success
+        grain: week
+        time:
+          mode: calendar
+          spec: calendar_week:current
+        aggregation: percent
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: mixed_eng_003
+    question: "Code coverage trend"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: code_coverage
+        grain: none
+        time:
+          mode: none
+          spec: current
+        aggregation: trend
+        group_by: []
+        limit: null
+        direction: null
+
+  - id: mixed_eng_004
+    question: "Story points completed this sprint"
+    expected:
+      status: RESOLVED
+      intent:
+        metric: story_points
+        grain: week
+        time:
+          mode: calendar
+          spec: calendar_week:current
+        aggregation: total
+        group_by: []
+        limit: null
+        direction: null

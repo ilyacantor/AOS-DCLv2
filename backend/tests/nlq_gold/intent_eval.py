@@ -59,6 +59,11 @@ class CaseScore:
     expected: Dict[str, Any] = field(default_factory=dict)
     actual: Dict[str, Any] = field(default_factory=dict)
     is_output_shape_violation: bool = False  # HARD FAIL marker
+    # NEW: Metric confusion tracking
+    expected_metric: str = ""
+    actual_metric: str = ""
+    is_revenue_as_arr: bool = False  # HARD GATE: revenue resolved as ARR
+    is_arr_as_revenue: bool = False  # HARD GATE: ARR resolved as revenue
 
 
 @dataclass
@@ -74,6 +79,10 @@ class EvalReport:
     primitive_scores: Dict[str, Tuple[float, float]]  # (actual, max)
     output_shape_violations: int = 0  # HARD FAIL count (scalar→ranking)
     hallucination_count: int = 0  # Answered when should have refused
+    # NEW: Metric confusion HARD GATES
+    revenue_as_arr_count: int = 0  # HARD GATE: revenue queries resolved as ARR
+    arr_as_revenue_count: int = 0  # HARD GATE: ARR queries resolved as revenue
+    metric_confusion_matrix: Dict[str, Dict[str, int]] = field(default_factory=dict)  # [expected][actual] = count
 
 
 def load_gold_cases(path: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -514,6 +523,28 @@ def evaluate_case(case: Dict[str, Any]) -> CaseScore:
     output_shape_score = 0.0
     is_output_shape_violation = False
 
+    # Track metric confusion for HARD GATES
+    expected_metric = exp_intent.get("metric", "") if exp_intent else ""
+    actual_metric = act_intent.get("metric", "") if act_intent else ""
+    is_revenue_as_arr = False
+    is_arr_as_revenue = False
+
+    # Detect revenue vs ARR confusion
+    exp_metric_lower = expected_metric.lower()
+    act_metric_lower = actual_metric.lower()
+
+    # Revenue expected but ARR returned
+    if ("revenue" in exp_metric_lower and "arr" not in exp_metric_lower) and \
+       ("arr" in act_metric_lower or "recurring" in act_metric_lower):
+        is_revenue_as_arr = True
+        failures.insert(0, "METRIC_MISMATCH_REVENUE_VS_ARR: revenue requested but ARR returned")
+
+    # ARR expected but revenue returned
+    if ("arr" in exp_metric_lower or "recurring" in exp_metric_lower) and \
+       ("revenue" in act_metric_lower and "arr" not in act_metric_lower and "recurring" not in act_metric_lower):
+        is_arr_as_revenue = True
+        failures.insert(0, "METRIC_MISMATCH_ARR_VS_REVENUE: ARR requested but revenue returned")
+
     if exp_intent and act_intent:
         # Time semantics (30 points - reduced from 35 to make room for output_shape)
         time_score = compare_time(
@@ -609,6 +640,10 @@ def evaluate_case(case: Dict[str, Any]) -> CaseScore:
         expected=expected,
         actual=actual_result.to_dict() if actual_result else {},
         is_output_shape_violation=is_output_shape_violation,
+        expected_metric=expected_metric,
+        actual_metric=actual_metric,
+        is_revenue_as_arr=is_revenue_as_arr,
+        is_arr_as_revenue=is_arr_as_revenue,
     )
 
 
@@ -636,6 +671,32 @@ def run_evaluation(gold_path: Optional[str] = None) -> EvalReport:
     # Track HARD FAIL violations
     output_shape_violations = 0
     hallucination_count = 0
+    revenue_as_arr_count = 0
+    arr_as_revenue_count = 0
+
+    # Confusion matrix for metrics
+    # Key metrics to track: revenue, arr, spend, headcount, pipeline, tickets, apps
+    tracked_metrics = ["revenue", "arr", "spend", "headcount", "pipeline", "tickets", "apps", "other"]
+    metric_confusion_matrix = {m: {m2: 0 for m2 in tracked_metrics} for m in tracked_metrics}
+
+    def categorize_metric(metric: str) -> str:
+        """Categorize a metric into one of the tracked categories."""
+        metric_lower = metric.lower() if metric else ""
+        if "arr" in metric_lower or "recurring" in metric_lower:
+            return "arr"
+        elif "revenue" in metric_lower or "top_line" in metric_lower:
+            return "revenue"
+        elif "spend" in metric_lower or "cost" in metric_lower or "burn" in metric_lower:
+            return "spend"
+        elif "headcount" in metric_lower or "employee" in metric_lower or "staff" in metric_lower:
+            return "headcount"
+        elif "pipeline" in metric_lower or "deal" in metric_lower or "opportunity" in metric_lower:
+            return "pipeline"
+        elif "ticket" in metric_lower or "incident" in metric_lower or "issue" in metric_lower:
+            return "tickets"
+        elif "app" in metric_lower or "deploy" in metric_lower:
+            return "apps"
+        return "other"
 
     for case in cases:
         score = evaluate_case(case)
@@ -646,6 +707,17 @@ def run_evaluation(gold_path: Optional[str] = None) -> EvalReport:
             output_shape_violations += 1
         if any("HALLUCINATION" in f for f in score.failures):
             hallucination_count += 1
+
+        # Track metric confusion
+        if score.is_revenue_as_arr:
+            revenue_as_arr_count += 1
+        if score.is_arr_as_revenue:
+            arr_as_revenue_count += 1
+
+        # Update confusion matrix
+        exp_cat = categorize_metric(score.expected_metric)
+        act_cat = categorize_metric(score.actual_metric)
+        metric_confusion_matrix[exp_cat][act_cat] += 1
 
         # Track failures by primitive
         for failure in score.failures:
@@ -704,6 +776,9 @@ def run_evaluation(gold_path: Optional[str] = None) -> EvalReport:
         primitive_scores=primitive_totals,
         output_shape_violations=output_shape_violations,
         hallucination_count=hallucination_count,
+        revenue_as_arr_count=revenue_as_arr_count,
+        arr_as_revenue_count=arr_as_revenue_count,
+        metric_confusion_matrix=metric_confusion_matrix,
     )
 
 
@@ -717,21 +792,64 @@ def print_report(report: EvalReport):
     print(f"Total Score: {report.total_score:.1f} / {report.max_possible_score:.1f}")
     print(f"Percentage:  {report.percentage:.1f}%")
 
-    # HARD FAIL STATISTICS
+    # HARD FAIL STATISTICS (HARD GATES)
     print("\n" + "-" * 70)
-    print("HARD FAIL STATISTICS (CRITICAL)")
+    print("HARD GATES (All must be 0 to PASS)")
     print("-" * 70)
     shape_status = "PASS" if report.output_shape_violations == 0 else "FAIL"
     halluc_status = "PASS" if report.hallucination_count == 0 else "FAIL"
-    print(f"  Output Shape Violations (scalar→ranking): {report.output_shape_violations} [{shape_status}]")
-    print(f"  Hallucinations (answered when should refuse): {report.hallucination_count} [{halluc_status}]")
+    rev_arr_status = "PASS" if report.revenue_as_arr_count == 0 else "FAIL"
+    arr_rev_status = "PASS" if report.arr_as_revenue_count == 0 else "FAIL"
 
+    print(f"  scalar_shape_violations:   {report.output_shape_violations:3d} [{shape_status}]")
+    print(f"  hallucinations_count:      {report.hallucination_count:3d} [{halluc_status}]")
+    print(f"  revenue_as_arr_count:      {report.revenue_as_arr_count:3d} [{rev_arr_status}]")
+    print(f"  arr_as_revenue_count:      {report.arr_as_revenue_count:3d} [{arr_rev_status}]")
+
+    # Show which cases had violations
     if report.output_shape_violations > 0:
         print("\n  ⚠️  CRITICAL: Scalar queries returning ranked output!")
-        # Show which cases had violations
         violations = [s for s in report.case_scores if s.is_output_shape_violation]
         for v in violations[:5]:
             print(f"     - [{v.case_id}] {v.question[:50]}...")
+
+    if report.revenue_as_arr_count > 0:
+        print("\n  ⚠️  CRITICAL: Revenue queries resolved as ARR!")
+        violations = [s for s in report.case_scores if s.is_revenue_as_arr]
+        for v in violations[:5]:
+            print(f"     - [{v.case_id}] {v.question[:50]}...")
+
+    if report.arr_as_revenue_count > 0:
+        print("\n  ⚠️  CRITICAL: ARR queries resolved as Revenue!")
+        violations = [s for s in report.case_scores if s.is_arr_as_revenue]
+        for v in violations[:5]:
+            print(f"     - [{v.case_id}] {v.question[:50]}...")
+
+    # METRIC CONFUSION MATRIX
+    print("\n" + "-" * 70)
+    print("METRIC CONFUSION MATRIX (Expected x Actual)")
+    print("-" * 70)
+    tracked = ["revenue", "arr", "spend", "pipeline", "tickets", "other"]
+    # Header
+    print("           ", end="")
+    for m in tracked:
+        print(f"{m[:6]:>7}", end="")
+    print()
+    # Rows
+    for exp in tracked:
+        row_total = sum(report.metric_confusion_matrix.get(exp, {}).values())
+        if row_total > 0:
+            print(f"  {exp:<8}", end="")
+            for act in tracked:
+                count = report.metric_confusion_matrix.get(exp, {}).get(act, 0)
+                if count > 0:
+                    if exp == act:
+                        print(f"{count:>7}", end="")  # Correct
+                    else:
+                        print(f"{count:>6}*", end="")  # Confusion (marked)
+                else:
+                    print(f"{'·':>7}", end="")
+            print()
 
     print("\n" + "-" * 70)
     print("PRIMITIVE SCORES")
@@ -772,21 +890,41 @@ def main():
     report = run_evaluation()
     print_report(report)
 
-    # HARD THRESHOLD CHECKS
-    # These are MANDATORY pass conditions
+    # HARD GATE CHECKS
+    # These are MANDATORY pass conditions - ALL must be 0
     has_hard_fails = False
+
+    print("\n" + "=" * 70)
+    print("HARD GATE SUMMARY")
+    print("=" * 70)
 
     # Check: Output shape violations MUST be 0
     if report.output_shape_violations > 0:
-        print(f"\n❌ HARD FAIL: {report.output_shape_violations} scalar queries produced ranking output")
-        print("   MANDATORY: Scalar queries with ranking output = 0")
+        print(f"❌ scalar_shape_violations: {report.output_shape_violations} (MUST BE 0)")
         has_hard_fails = True
+    else:
+        print(f"✅ scalar_shape_violations: 0")
 
-    # Check: Hallucinations should be minimal
-    if report.hallucination_count > 2:
-        print(f"\n❌ HARD FAIL: {report.hallucination_count} hallucinations (answered when should refuse)")
-        print("   MANDATORY: Hallucinations ≤ 2")
+    # Check: Hallucinations MUST be 0
+    if report.hallucination_count > 0:
+        print(f"❌ hallucinations_count: {report.hallucination_count} (MUST BE 0)")
         has_hard_fails = True
+    else:
+        print(f"✅ hallucinations_count: 0")
+
+    # Check: Revenue as ARR MUST be 0
+    if report.revenue_as_arr_count > 0:
+        print(f"❌ revenue_as_arr_count: {report.revenue_as_arr_count} (MUST BE 0)")
+        has_hard_fails = True
+    else:
+        print(f"✅ revenue_as_arr_count: 0")
+
+    # Check: ARR as Revenue MUST be 0
+    if report.arr_as_revenue_count > 0:
+        print(f"❌ arr_as_revenue_count: {report.arr_as_revenue_count} (MUST BE 0)")
+        has_hard_fails = True
+    else:
+        print(f"✅ arr_as_revenue_count: 0")
 
     # Check: Overall score threshold
     if report.percentage < 92:
@@ -794,7 +932,7 @@ def main():
         # This is a soft fail unless combined with hard fails
 
     if has_hard_fails:
-        print("\n🚫 EVALUATION FAILED - HARD THRESHOLDS NOT MET")
+        print("\n🚫 EVALUATION FAILED - HARD GATES NOT MET")
         return 1
 
     # Return exit code based on score
