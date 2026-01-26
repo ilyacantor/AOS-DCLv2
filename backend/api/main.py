@@ -294,11 +294,15 @@ from backend.bll.definitions import get_definition as get_bll_definition, list_d
 from backend.dcl.definitions.registry import DefinitionKind
 
 
+# Default dataset - use Farm if FARM_SCENARIO_ID is set, otherwise demo9
+_DEFAULT_DATASET = f"farm:{os.environ['FARM_SCENARIO_ID']}" if os.environ.get("FARM_SCENARIO_ID") else "demo9"
+
+
 class NLQAskRequest(BaseModel):
     """Request to ask a natural language question."""
     question: str
     tenant_id: str = "default"
-    dataset_id: str = "demo9"
+    dataset_id: str = _DEFAULT_DATASET
 
 
 class NLQExtractParamsRequest(BaseModel):
