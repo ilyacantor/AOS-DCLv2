@@ -1,14 +1,14 @@
 # Engineering Loop State
 
-**Last Updated:** 2026-01-26T20:55:00Z
-**Last Updated By:** Claude Code (ACT - INV-003 spec refined)
+**Last Updated:** 2026-01-26T21:00:00Z
+**Last Updated By:** Claude Code (REFLECT - INV-003 RESOLVED)
 
 ---
 
 ## Current Stage
 
 ```
-STAGE: ACT
+STAGE: REFLECT
 ```
 
 Valid stages: `OBSERVE` | `DIAGNOSE` | `PLAN` | `ACT` | `REFLECT` | `CHECKPOINT` | `IDLE`
@@ -23,7 +23,9 @@ invariant: INV-003
 observed: "row_count=0 but aggregations non-empty for queries 1,3"
 expected: "if row_count=0 then aggregations must be empty"
 canary_query: "What was revenue last year?, What is our burn rate?"
-status: UNDER_INVESTIGATION
+status: RESOLVED
+resolution: "Spec refined - INV-003 now excludes SCALAR output_shape queries"
+fix_commit: 8b0ba5b
 ```
 
 ### OBSERVE Findings
@@ -164,7 +166,38 @@ deviations_from_plan: []
 ## Reflect (if in REFLECT or later)
 
 ```yaml
-# Cleared for new cycle - INV-003 investigation
+reflect_id: refl_2026-01-26T21:00:00Z
+act_id: act_2026-01-26T20:55:00Z
+original_violation: INV-003 (spec issue)
+
+verification:
+  spec_updated: true
+  occurrences_fixed: 2
+  files_modified: 1
+
+before_and_after:
+  line_36_before: "INV-003: if row_count = 0, aggregations must be empty"
+  line_36_after: "INV-003: if row_count = 0 AND output_shape != SCALAR, aggregations must be empty"
+  line_289_before: "INV-003: row_count=0 implies empty aggregations"
+  line_289_after: "INV-003: row_count=0 implies empty aggregations (unless output_shape=SCALAR)"
+
+impact_analysis:
+  scalar_queries: "No longer flagged as violations (correct behavior)"
+  non_scalar_queries: "Still flagged if row_count=0 with aggregations (preserves intent)"
+  regressions: none
+
+original_violation_status: RESOLVED
+new_violations: []
+outcome: SUCCESS
+reasoning: |
+  INV-003 was a SPEC_ISSUE, not a code bug. The invariant definition was too strict
+  for SCALAR intent queries where row_count=0 with non-empty aggregations is the
+  expected and correct behavior.
+
+  The fix refines the invariant to exclude SCALAR output_shape, preserving the original
+  intent (catching genuine "no data" errors) while correctly exempting scalar queries.
+
+  This is a documentation change with no code modifications, so no test suite impact.
 ```
 
 ---
@@ -184,15 +217,18 @@ deviations_from_plan: []
 | 2026-01-26T20:45:00Z | OBSERVE | Code path traced | Found: INTENTIONAL DESIGN for SCALAR intent; INV-003 is SPEC_ISSUE not code bug |
 | 2026-01-26T20:50:00Z | DIAGNOSE/PLAN | Human selected Option A | Plan: refine INV-003 to exclude SCALAR output_shape |
 | 2026-01-26T20:55:00Z | ACT | Updated STAGE_PROMPTS.md | INV-003 refined to exclude SCALAR output_shape |
+| 2026-01-26T21:00:00Z | REFLECT | Verified spec change | INV-003 RESOLVED - spec updated in 2 locations |
 
 ---
 
 ## Next Action
 
-**Stage: ACT** - Implementing Option A
+**Stage: CHECKPOINT** - Both violations resolved
 
-Update STAGE_PROMPTS.md to refine INV-003 specification:
-- Add "AND output_shape != SCALAR" exception to invariant definition
+- **INV-001**: RESOLVED (confidence clamping fix)
+- **INV-003**: RESOLVED (spec refinement for SCALAR queries)
+
+Ready for final checkpoint and transition to IDLE.
 
 ---
 
