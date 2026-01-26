@@ -3373,6 +3373,712 @@
       "latency_ms": 11,
       "status": "success",
       "tenant_id": "default"
+    },
+    {
+      "id": "b709eed3-bced-4745-969b-9a75b014c63f",
+      "timestamp": "2026-01-25T22:28:25.635178Z",
+      "question": "Show me the top 5 customers by revenue",
+      "dataset_id": "demo9",
+      "definition_id": "crm.top_customers",
+      "extracted_params": {
+        "limit": 5
+      },
+      "response": {
+        "question": "Show me the top 5 customers by revenue",
+        "definition_id": "crm.top_customers",
+        "confidence_score": 1.6828333333333334,
+        "execution_args": {
+          "limit": 5
+        },
+        "data": [
+          {
+            "Id": "ACC008",
+            "Name": "Enterprise Plus",
+            "Industry": "Financial Services",
+            "AnnualRevenue": 89000000.0,
+            "NumberOfEmployees": 2000.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC003",
+            "Name": "Global Systems",
+            "Industry": "Consulting",
+            "AnnualRevenue": 72000000.0,
+            "NumberOfEmployees": 1200.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC007",
+            "Name": "FutureSoft",
+            "Industry": "Enterprise Software",
+            "AnnualRevenue": 68000000.0,
+            "NumberOfEmployees": 800.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC006",
+            "Name": "InnovateTech",
+            "Industry": "AI/ML",
+            "AnnualRevenue": 52000000.0,
+            "NumberOfEmployees": 400.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC001",
+            "Name": "Acme Corp",
+            "Industry": "Technology",
+            "AnnualRevenue": 45000000.0,
+            "NumberOfEmployees": 500.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          }
+        ],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "crm.top_customers",
+          "row_count": 5,
+          "total_available": 11,
+          "execution_time_ms": 32,
+          "matched_keywords": [
+            "kw~:top customers",
+            "kw~:biggest customers",
+            "kw~:largest customers",
+            "kw:customers by revenue",
+            "kw~:top accounts",
+            "kw~:best customers",
+            "kw~:high value customers",
+            "kw~:customer revenue",
+            "name:Top Customers by Revenue",
+            "desc:3words",
+            "id~:top",
+            "id~:customers"
+          ],
+          "effective_limit": 5
+        },
+        "summary": {
+          "aggregations": {
+            "customer_count": 5,
+            "population_total": 419000000.0,
+            "population_count": 11,
+            "shown_total": 326000000.0,
+            "avg_per_customer": 65200000.0,
+            "share_of_total_pct": 77.80429594272077,
+            "top_customers": [
+              {
+                "name": "Enterprise Plus",
+                "revenue": 89000000.0
+              },
+              {
+                "name": "Global Systems",
+                "revenue": 72000000.0
+              },
+              {
+                "name": "FutureSoft",
+                "revenue": 68000000.0
+              },
+              {
+                "name": "InnovateTech",
+                "revenue": 52000000.0
+              },
+              {
+                "name": "Acme Corp",
+                "revenue": 45000000.0
+              }
+            ],
+            "top_customer_pct": 21.241050119331742,
+            "limitations": [
+              "Based on 11 customers in demo dataset; production data may differ"
+            ],
+            "topn_total": 326000000.0
+          },
+          "warnings": [],
+          "debug_summary": "Top 5 customers by revenue:\n1. Enterprise Plus: $89.00M\n2. Global Systems: $72.00M\n3. FutureSoft: $68.00M\n4. InnovateTech: $52.00M\n5. Acme Corp: $45.00M\n\nTotal: $326.00M (78% of $419.00M portfolio). High concentration: top 5 drive majority of revenue.",
+          "currency": "USD",
+          "answer": "Top 5 customers by revenue:\n1. Enterprise Plus: $89.00M\n2. Global Systems: $72.00M\n3. FutureSoft: $68.00M\n4. InnovateTech: $52.00M\n5. Acme Corp: $45.00M\n\nTotal: $326.00M (78% of $419.00M portfolio). High concentration: top 5 drive majority of revenue."
+        },
+        "caveats": [
+          "Limited to top 5",
+          "Sorted by definition default ordering"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 32,
+      "status": "success",
+      "tenant_id": "default"
+    },
+    {
+      "id": "24047f89-f230-4cf8-9119-183413f1e421",
+      "timestamp": "2026-01-25T22:28:34.020434Z",
+      "question": "Show me the top 10 customers by revenue",
+      "dataset_id": "demo9",
+      "definition_id": "crm.top_customers",
+      "extracted_params": {
+        "limit": 10
+      },
+      "response": {
+        "question": "Show me the top 10 customers by revenue",
+        "definition_id": "crm.top_customers",
+        "confidence_score": 1.6828333333333334,
+        "execution_args": {
+          "limit": 10
+        },
+        "data": [
+          {
+            "Id": "ACC008",
+            "Name": "Enterprise Plus",
+            "Industry": "Financial Services",
+            "AnnualRevenue": 89000000.0,
+            "NumberOfEmployees": 2000.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC003",
+            "Name": "Global Systems",
+            "Industry": "Consulting",
+            "AnnualRevenue": 72000000.0,
+            "NumberOfEmployees": 1200.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC007",
+            "Name": "FutureSoft",
+            "Industry": "Enterprise Software",
+            "AnnualRevenue": 68000000.0,
+            "NumberOfEmployees": 800.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC006",
+            "Name": "InnovateTech",
+            "Industry": "AI/ML",
+            "AnnualRevenue": 52000000.0,
+            "NumberOfEmployees": 400.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC001",
+            "Name": "Acme Corp",
+            "Industry": "Technology",
+            "AnnualRevenue": 45000000.0,
+            "NumberOfEmployees": 500.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC005",
+            "Name": "CloudNine Co",
+            "Industry": "Cloud Services",
+            "AnnualRevenue": 38000000.0,
+            "NumberOfEmployees": 300.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC002",
+            "Name": "TechStart Inc",
+            "Industry": "Software",
+            "AnnualRevenue": 28000000.0,
+            "NumberOfEmployees": 150.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC004",
+            "Name": "DataFlow LLC",
+            "Industry": "Data Services",
+            "AnnualRevenue": 15000000.0,
+            "NumberOfEmployees": 80.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "ACC009",
+            "Name": "StartupXYZ",
+            "Industry": "Fintech",
+            "AnnualRevenue": 12000000.0,
+            "NumberOfEmployees": 45.0,
+            "AccountId": "",
+            "AccountName": "",
+            "Revenue": ""
+          },
+          {
+            "Id": "",
+            "Name": "",
+            "Industry": "Technology",
+            "AnnualRevenue": "",
+            "NumberOfEmployees": "",
+            "AccountId": "DYN001",
+            "AccountName": "DataCorp Inc",
+            "Revenue": 34000000.0
+          }
+        ],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "crm.top_customers",
+          "row_count": 10,
+          "total_available": 11,
+          "execution_time_ms": 12,
+          "matched_keywords": [
+            "kw~:top customers",
+            "kw~:biggest customers",
+            "kw~:largest customers",
+            "kw:customers by revenue",
+            "kw~:top accounts",
+            "kw~:best customers",
+            "kw~:high value customers",
+            "kw~:customer revenue",
+            "name:Top Customers by Revenue",
+            "desc:3words",
+            "id~:top",
+            "id~:customers"
+          ],
+          "effective_limit": 10
+        },
+        "summary": {
+          "aggregations": {
+            "customer_count": 10,
+            "population_total": 419000000.0,
+            "population_count": 11,
+            "shown_total": 419000000.0,
+            "avg_per_customer": 41900000.0,
+            "share_of_total_pct": 100.0,
+            "top_customers": [
+              {
+                "name": "Enterprise Plus",
+                "revenue": 89000000.0
+              },
+              {
+                "name": "Global Systems",
+                "revenue": 72000000.0
+              },
+              {
+                "name": "FutureSoft",
+                "revenue": 68000000.0
+              },
+              {
+                "name": "InnovateTech",
+                "revenue": 52000000.0
+              },
+              {
+                "name": "Acme Corp",
+                "revenue": 45000000.0
+              },
+              {
+                "name": "CloudNine Co",
+                "revenue": 38000000.0
+              },
+              {
+                "name": "TechStart Inc",
+                "revenue": 28000000.0
+              },
+              {
+                "name": "DataFlow LLC",
+                "revenue": 15000000.0
+              },
+              {
+                "name": "StartupXYZ",
+                "revenue": 12000000.0
+              },
+              {
+                "name": NaN,
+                "revenue": NaN
+              }
+            ],
+            "top_customer_pct": 21.241050119331742,
+            "limitations": [
+              "Based on 11 customers in demo dataset; production data may differ"
+            ],
+            "topn_total": 419000000.0
+          },
+          "warnings": [],
+          "debug_summary": "Top 10 customers by revenue:\n1. Enterprise Plus: $89.00M\n2. Global Systems: $72.00M\n3. FutureSoft: $68.00M\n4. InnovateTech: $52.00M\n5. Acme Corp: $45.00M\n6. CloudNine Co: $38.00M\n7. TechStart Inc: $28.00M\n8. DataFlow LLC: $15.00M\n9. StartupXYZ: $12.00M\n10. nan: $nan\n\nTotal: $419.00M (100% of $419.00M portfolio). High concentration: top 10 drive majority of revenue.",
+          "currency": "USD",
+          "answer": "Top 10 customers by revenue:\n1. Enterprise Plus: $89.00M\n2. Global Systems: $72.00M\n3. FutureSoft: $68.00M\n4. InnovateTech: $52.00M\n5. Acme Corp: $45.00M\n6. CloudNine Co: $38.00M\n7. TechStart Inc: $28.00M\n8. DataFlow LLC: $15.00M\n9. StartupXYZ: $12.00M\n10. nan: $nan\n\nTotal: $419.00M (100% of $419.00M portfolio). High concentration: top 10 drive majority of revenue."
+        },
+        "caveats": [
+          "Limited to top 10",
+          "Sorted by definition default ordering"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 12,
+      "status": "success",
+      "tenant_id": "default"
+    },
+    {
+      "id": "11e57e7e-c87d-4363-adf0-0025e548efa7",
+      "timestamp": "2026-01-25T22:28:41.844157Z",
+      "question": "What does our sales pipeline look like?",
+      "dataset_id": "demo9",
+      "definition_id": "crm.pipeline",
+      "extracted_params": {},
+      "response": {
+        "question": "What does our sales pipeline look like?",
+        "definition_id": "crm.pipeline",
+        "confidence_score": 1.357,
+        "execution_args": {},
+        "data": [
+          {
+            "DealName": "Enterprise Plus Contract",
+            "Amount": 890000,
+            "Stage": "Negotiation",
+            "CloseDate": "2026-02-28",
+            "Pipeline": "Sales Pipeline"
+          },
+          {
+            "DealName": "StartupXYZ Initial",
+            "Amount": 120000,
+            "Stage": "Proposal",
+            "CloseDate": "2026-03-15",
+            "Pipeline": "Sales Pipeline"
+          },
+          {
+            "DealName": "MegaCorp Enterprise",
+            "Amount": 1500000,
+            "Stage": "Discovery",
+            "CloseDate": "2026-04-01",
+            "Pipeline": "Enterprise Pipeline"
+          }
+        ],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "crm.pipeline",
+          "row_count": 3,
+          "total_available": 3,
+          "execution_time_ms": 8,
+          "matched_keywords": [
+            "kw:pipeline",
+            "kw:sales pipeline",
+            "kw~:deal pipeline",
+            "kw~:sales forecast",
+            "kw~:pipeline value",
+            "name:Sales Pipeline",
+            "desc:3words",
+            "id~:pipeline"
+          ],
+          "effective_limit": 20
+        },
+        "summary": {
+          "aggregations": {
+            "deal_count": 3,
+            "population_total": 2510000.0,
+            "population_count": 3,
+            "shown_total": 2510000.0,
+            "avg_deal_size": 836666.6666666666,
+            "share_of_total_pct": 100.0,
+            "stage_breakdown": {
+              "Negotiation": 1,
+              "Proposal": 1,
+              "Discovery": 1
+            },
+            "limitations": [
+              "Based on 3 deals in demo dataset"
+            ],
+            "topn_total": 2510000.0
+          },
+          "warnings": [],
+          "debug_summary": "Top 3 deals: $2.51M (100% of $2.51M total pipeline). Pipeline heavily weighted toward top opportunities.",
+          "currency": "USD",
+          "answer": "Top 3 deals: $2.51M (100% of $2.51M total pipeline). Pipeline heavily weighted toward top opportunities."
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 8,
+      "status": "success",
+      "tenant_id": "default"
+    },
+    {
+      "id": "b4e6b5c5-3975-4a36-8491-b44242e6126d",
+      "timestamp": "2026-01-25T22:29:02.581179Z",
+      "question": "What is our current ARR?",
+      "dataset_id": "demo9",
+      "definition_id": "finops.arr",
+      "extracted_params": {},
+      "response": {
+        "question": "What is our current ARR?",
+        "definition_id": "finops.arr",
+        "confidence_score": 1.058,
+        "execution_args": {},
+        "data": [
+          {
+            "DealName": "Enterprise Plus Contract",
+            "Amount": 890000,
+            "Stage": "Negotiation",
+            "CloseDate": "2026-02-28",
+            "Pipeline": "Sales Pipeline",
+            "Name": "",
+            "AccountId": "",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "StartupXYZ Initial",
+            "Amount": 120000,
+            "Stage": "Proposal",
+            "CloseDate": "2026-03-15",
+            "Pipeline": "Sales Pipeline",
+            "Name": "",
+            "AccountId": "",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "MegaCorp Enterprise",
+            "Amount": 1500000,
+            "Stage": "Discovery",
+            "CloseDate": "2026-04-01",
+            "Pipeline": "Enterprise Pipeline",
+            "Name": "",
+            "AccountId": "",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "",
+            "Amount": 450000,
+            "Stage": "Closed Won",
+            "CloseDate": "2026-01-15",
+            "Pipeline": "",
+            "Name": "Acme Corp Enterprise Deal",
+            "AccountId": "ACC001",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "",
+            "Amount": 280000,
+            "Stage": "Closed Won",
+            "CloseDate": "2026-01-10",
+            "Pipeline": "",
+            "Name": "TechStart Expansion",
+            "AccountId": "ACC002",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "",
+            "Amount": 720000,
+            "Stage": "Closed Won",
+            "CloseDate": "2025-12-20",
+            "Pipeline": "",
+            "Name": "Global Systems Renewal",
+            "AccountId": "ACC003",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "",
+            "Amount": 150000,
+            "Stage": "Closed Won",
+            "CloseDate": "2026-01-05",
+            "Pipeline": "",
+            "Name": "DataFlow Initial",
+            "AccountId": "ACC004",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "",
+            "Amount": 380000,
+            "Stage": "Closed Won",
+            "CloseDate": "2025-12-15",
+            "Pipeline": "",
+            "Name": "CloudNine Platform",
+            "AccountId": "ACC005",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "",
+            "Amount": 520000,
+            "Stage": "Closed Won",
+            "CloseDate": "2025-11-30",
+            "Pipeline": "",
+            "Name": "InnovateTech AI Suite",
+            "AccountId": "ACC006",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "",
+            "Amount": 680000,
+            "Stage": "Closed Won",
+            "CloseDate": "2025-12-01",
+            "Pipeline": "",
+            "Name": "FutureSoft License",
+            "AccountId": "ACC007",
+            "OpportunityName": "",
+            "Status": "",
+            "AccountName": ""
+          },
+          {
+            "DealName": "",
+            "Amount": 340000,
+            "Stage": "",
+            "CloseDate": "2026-01-20",
+            "Pipeline": "",
+            "Name": "",
+            "AccountId": "",
+            "OpportunityName": "DataCorp Upsell",
+            "Status": "Won",
+            "AccountName": "DataCorp Inc"
+          },
+          {
+            "DealName": "",
+            "Amount": 580000,
+            "Stage": "",
+            "CloseDate": "2026-01-08",
+            "Pipeline": "",
+            "Name": "",
+            "AccountId": "",
+            "OpportunityName": "TechGiant Renewal",
+            "Status": "Won",
+            "AccountName": "TechGiant Ltd"
+          }
+        ],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "finops.arr",
+          "row_count": 12,
+          "total_available": 12,
+          "execution_time_ms": 12,
+          "matched_keywords": [
+            "kw:arr",
+            "kw:current arr",
+            "kw~:total arr",
+            "desc:2words",
+            "id~:arr"
+          ],
+          "effective_limit": 1000
+        },
+        "summary": {
+          "aggregations": {
+            "population_total": 6610000.0,
+            "population_count": 12,
+            "shown_total": 6610000.0,
+            "deal_count": 12,
+            "share_of_total_pct": 100.0
+          },
+          "warnings": [],
+          "debug_summary": "Your current ARR is $6.61M across 12 deals/opportunities.",
+          "currency": "USD",
+          "answer": "Your current ARR is $6.61M across 12 deals/opportunities."
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 12,
+      "status": "success",
+      "tenant_id": "default"
+    },
+    {
+      "id": "1833a275-5367-4080-8a41-743e88402a50",
+      "timestamp": "2026-01-25T22:37:10.975876Z",
+      "question": "What is our unallocated cloud spend?",
+      "dataset_id": "demo9",
+      "definition_id": "finops.unallocated_spend",
+      "extracted_params": {},
+      "response": {
+        "question": "What is our unallocated cloud spend?",
+        "definition_id": "finops.unallocated_spend",
+        "confidence_score": 4.2511666666666645,
+        "execution_args": {},
+        "data": [],
+        "metadata": {
+          "dataset_id": "demo9",
+          "definition_id": "finops.unallocated_spend",
+          "row_count": 0,
+          "total_available": 0,
+          "execution_time_ms": 12,
+          "matched_keywords": [
+            "high_value_token:finops.unallocated_spend",
+            "kw~:unallocated spend",
+            "kw:unallocated cloud spend",
+            "kw:unallocated cloud",
+            "kw:unallocated",
+            "kw~:untagged spend",
+            "kw~:orphan spend",
+            "kw~:unassigned cost",
+            "kw~:no cost center",
+            "kw~:spend without tags",
+            "kw~:unassigned spend",
+            "kw~:spend missing cost center",
+            "name:Unallocated Cloud Spend",
+            "desc:3words",
+            "id~:unallocated",
+            "id~:spend"
+          ],
+          "effective_limit": 20
+        },
+        "summary": {
+          "aggregations": {
+            "resource_count": 0,
+            "population_count": 0,
+            "population_unallocated_spend": 0.0,
+            "shown_unallocated_spend": 0.0,
+            "share_of_total_pct": 0.0,
+            "limitations": [
+              "Definition: Resources lacking cost center or project tags"
+            ]
+          },
+          "warnings": [],
+          "debug_summary": "Top 0 unallocated items: $0.00 (0% of $0.00 total unallocated). 0 resources total need cost center assignment.",
+          "currency": "USD",
+          "answer": "Top 0 unallocated items: $0.00 (0% of $0.00 total unallocated). 0 resources total need cost center assignment."
+        },
+        "caveats": [
+          "Based on available data bindings"
+        ],
+        "needs_clarification": false,
+        "clarification_prompt": null,
+        "candidates": null
+      },
+      "latency_ms": 12,
+      "status": "success",
+      "tenant_id": "default"
     }
   ]
 }
