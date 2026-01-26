@@ -203,18 +203,23 @@ class FarmClient:
             logger.error(f"[FarmClient] Scenario generation error: {e}")
             raise
     
-    def get_top_customers(self, scenario_id: str, limit: int = 10) -> Dict[str, Any]:
+    def get_top_customers(
+        self, scenario_id: str, limit: int = 10, time_window: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Get top customers by revenue from Farm's ground truth.
-        
-        GET /api/scenarios/{id}/metrics/top-customers?limit=N
-        
+
+        GET /api/scenarios/{id}/metrics/top-customers?limit=N&time_window=last_year
+
         Returns list of customers sorted by revenue with percent_of_total.
         """
         url = f"{self.base_url}/api/scenarios/{scenario_id}/metrics/top-customers"
         params = {"limit": limit}
-        logger.info(f"[FarmClient] Fetching top {limit} customers for scenario {scenario_id}")
-        
+        if time_window:
+            params["time_window"] = time_window
+        logger.info(f"[FarmClient] Fetching top {limit} customers for scenario {scenario_id}" +
+                    (f" (time_window={time_window})" if time_window else ""))
+
         try:
             response = self._get_client().get(url, params=params)
             response.raise_for_status()
@@ -223,6 +228,41 @@ class FarmClient:
             return data
         except Exception as e:
             logger.error(f"[FarmClient] Top customers fetch error: {e}")
+            raise
+
+    def get_total_revenue(
+        self, scenario_id: str, time_window: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Get total revenue from Farm's ground truth.
+
+        GET /api/scenarios/{id}/metrics/total-revenue?time_window=last_year
+
+        Returns:
+            {
+                "total_revenue": 12345678.90,
+                "period": "Last Year (2024)",
+                "transaction_count": 1200,
+                "time_window_applied": "last_year",
+                "date_range": {"start": "2024-01-01", "end": "2024-12-31"}
+            }
+        """
+        url = f"{self.base_url}/api/scenarios/{scenario_id}/metrics/total-revenue"
+        params = {}
+        if time_window:
+            params["time_window"] = time_window
+        logger.info(f"[FarmClient] Fetching total revenue for scenario {scenario_id}" +
+                    (f" (time_window={time_window})" if time_window else ""))
+
+        try:
+            response = self._get_client().get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            logger.info(f"[FarmClient] Got total_revenue=${data.get('total_revenue', 0):,.2f} "
+                        f"period={data.get('period', 'N/A')}")
+            return data
+        except Exception as e:
+            logger.error(f"[FarmClient] Total revenue fetch error: {e}")
             raise
     
     def get_revenue_metrics(self, scenario_id: str) -> Dict[str, Any]:

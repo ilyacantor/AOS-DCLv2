@@ -745,27 +745,114 @@ def _apply_filter(df: pd.DataFrame, f: FilterSpec) -> pd.DataFrame:
 def _execute_farm_definition(request: ExecuteRequest, definition: Definition) -> ExecuteResponse | None:
     """
     Execute definition against Farm's ground truth data.
-    
+
     If dataset_id starts with "farm:", fetch from Farm's scenario endpoints.
     Returns None if not a Farm dataset or definition not supported.
+
+    Supported definitions:
+    - crm.top_customers: Top customers by revenue (with optional time_window)
+    - finops.total_revenue: Total revenue aggregate (with optional time_window)
     """
     if not request.dataset_id.startswith("farm:"):
         return None
-    
+
     scenario_id = request.dataset_id.replace("farm:", "")
-    
-    # Only crm.top_customers is currently wired to Farm
-    if request.definition_id != "crm.top_customers":
-        return None
-    
+
+    # Extract time_window string for Farm (NLQ-extracted)
+    time_window = request.time_window_str
+
     from backend.farm.client import get_farm_client
-    
+
     start_time = time.time()
     client = get_farm_client()
-    
+
+    # Route to appropriate Farm endpoint based on definition
+    if request.definition_id == "finops.total_revenue":
+        return _execute_farm_total_revenue(
+            client, scenario_id, time_window, definition, start_time
+        )
+    elif request.definition_id == "crm.top_customers":
+        return _execute_farm_top_customers(
+            client, scenario_id, request.limit, time_window, definition, start_time
+        )
+    else:
+        return None
+
+
+def _execute_farm_total_revenue(
+    client, scenario_id: str, time_window: str | None, definition: Definition, start_time: float
+) -> ExecuteResponse:
+    """Execute finops.total_revenue against Farm's total-revenue endpoint."""
     try:
-        # Fetch from Farm's ground truth
-        result = client.get_top_customers(scenario_id, limit=request.limit)
+        result = client.get_total_revenue(scenario_id, time_window=time_window)
+
+        total_revenue = result.get("total_revenue", 0)
+        period = result.get("period", "All Time")
+        transaction_count = result.get("transaction_count", 0)
+        time_window_applied = result.get("time_window_applied")
+        date_range = result.get("date_range", {})
+
+        execution_time_ms = int((time.time() - start_time) * 1000)
+
+        # Build time-aware answer prose
+        if time_window_applied:
+            answer = f"Your {period} REVENUE is ${total_revenue/1_000_000:,.2f}M ({transaction_count:,} transactions)"
+        else:
+            answer = f"Your total REVENUE is ${total_revenue/1_000_000:,.2f}M ({transaction_count:,} transactions)"
+
+        summary = ComputedSummary(
+            answer=answer,
+            aggregations={
+                "population_total": total_revenue,
+                "transaction_count": transaction_count,
+                "period": period,
+                "time_window_applied": time_window_applied,
+                "date_range": date_range,
+                "source": "farm_ground_truth",
+                "scenario_id": scenario_id,
+            }
+        )
+
+        # Scalar response - no row data
+        return ExecuteResponse(
+            data=[],  # Scalar queries return no rows
+            metadata=ExecuteMetadata(
+                dataset_id=f"farm:{scenario_id}",
+                definition_id="finops.total_revenue",
+                version=definition.version,
+                executed_at=datetime.utcnow(),
+                execution_time_ms=execution_time_ms,
+                row_count=0,
+                result_schema=[]
+            ),
+            quality=QualityMetrics(
+                completeness=1.0,
+                freshness_hours=0.0,
+                row_count=0,
+                null_percentage=0.0
+            ),
+            lineage=[
+                LineageReference(
+                    source_id="farm",
+                    table_id=f"scenario/{scenario_id}/total-revenue",
+                    columns_used=["total_revenue", "period", "transaction_count"],
+                    row_contribution=transaction_count
+                )
+            ],
+            summary=summary
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Farm total_revenue failed: {e}")
+        return None
+
+
+def _execute_farm_top_customers(
+    client, scenario_id: str, limit: int, time_window: str | None, definition: Definition, start_time: float
+) -> ExecuteResponse:
+    """Execute crm.top_customers against Farm's top-customers endpoint."""
+    try:
+        result = client.get_top_customers(scenario_id, limit=limit, time_window=time_window)
         customers = result.get("customers", [])
         
         # Transform Farm format to BLL format
@@ -810,8 +897,8 @@ def _execute_farm_definition(request: ExecuteRequest, definition: Definition) ->
         return ExecuteResponse(
             data=data,
             metadata=ExecuteMetadata(
-                dataset_id=request.dataset_id,
-                definition_id=request.definition_id,
+                dataset_id=f"farm:{scenario_id}",
+                definition_id="crm.top_customers",
                 version=definition.version,
                 executed_at=datetime.utcnow(),
                 execution_time_ms=execution_time_ms,
@@ -832,7 +919,7 @@ def _execute_farm_definition(request: ExecuteRequest, definition: Definition) ->
             lineage=[
                 LineageReference(
                     source_id="farm",
-                    table_id=f"scenario/{scenario_id}",
+                    table_id=f"scenario/{scenario_id}/top-customers",
                     columns_used=["customer_id", "name", "revenue"],
                     row_contribution=len(data)
                 )
@@ -840,9 +927,8 @@ def _execute_farm_definition(request: ExecuteRequest, definition: Definition) ->
             summary=summary
         )
     except Exception as e:
-        # Fall back to demo mode on Farm errors
         import logging
-        logging.getLogger(__name__).warning(f"Farm fetch failed, falling back to demo: {e}")
+        logging.getLogger(__name__).warning(f"Farm top_customers failed: {e}")
         return None
 
 

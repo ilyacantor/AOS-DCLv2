@@ -92,12 +92,15 @@ class ExecuteRequest(BaseModel):
     definition_id: str = Field(alias="definitionId")
     version: Optional[str] = None
     time_window: Optional[TimeWindow] = Field(default=None, alias="timeWindow")
+    # NLQ-extracted time window string (e.g., "last_year", "this_quarter")
+    # Used for Farm integration where string-based time filters are supported
+    time_window_str: Optional[str] = Field(default=None, alias="timeWindowStr")
     dimensions: Optional[List[str]] = None
     filters: Optional[List[FilterSpec]] = None
     order_by: Optional[List[OrderBySpec]] = Field(default=None, alias="orderBy")
     limit: int = 1000
     offset: int = 0
-    
+
     model_config = {"populate_by_name": True}
 
 

@@ -721,6 +721,7 @@ def nlq_ask(request: NLQAskRequest):
             definition_id=definition_id,
             limit=effective_limit or 1000,
             offset=0,
+            time_window_str=exec_args.time_window,  # Pass NLQ-extracted time window to BLL/Farm
         )
 
         result = bll_execute(bll_request)
@@ -750,8 +751,12 @@ def nlq_ask(request: NLQAskRequest):
             if result.summary:
                 # Fix the summary to be scalar-appropriate
                 agg = result.summary.aggregations
-                if agg.get("population_total"):
-                    # Build time-aware answer prose
+
+                # Check if Farm/BLL already set a time-aware answer (via time_window_applied)
+                farm_time_applied = agg.get("time_window_applied")
+
+                if agg.get("population_total") and not farm_time_applied:
+                    # Farm didn't apply time filtering - build our own answer prose
                     if exec_args.time_window:
                         # User asked for time-filtered data, but we can't provide it
                         time_desc = exec_args.time_window.replace("_", " ")
@@ -761,20 +766,27 @@ def nlq_ask(request: NLQAskRequest):
                         )
                     else:
                         result.summary.answer = f"Your current {normalized_intent.metric.upper()} is ${agg['population_total']/1_000_000:,.2f}M"
+                # else: Farm already set a time-aware answer, use it as-is
         else:
             scalar_data = result.data
 
         # Step 4: Build response with caveats
         caveats = []
-        time_window_unsupported = False  # Track if time filtering was requested but unavailable
+        time_window_applied = False  # Track if time filtering was actually applied by BLL/Farm
 
         if delta_capability_mismatch:
             metric = match_result.operators.metric_type if match_result.operators else "this metric"
             caveats.append(f"Month-over-month comparison not available for {metric}; showing current values")
 
-        # GRACEFUL FAILURE: Time window requested but not supported
-        if exec_args.time_window:
-            time_window_unsupported = True
+        # Check if Farm/BLL actually applied the time_window
+        aggregations = result.summary.aggregations if result.summary else {}
+        if aggregations.get("time_window_applied"):
+            time_window_applied = True
+            period = aggregations.get("period", exec_args.time_window)
+            logger.info(f"[NLQ] Time window '{exec_args.time_window}' applied by Farm - period: {period}")
+
+        # GRACEFUL FAILURE: Time window requested but not applied
+        if exec_args.time_window and not time_window_applied:
             time_desc = exec_args.time_window.replace("_", " ")  # "last_year" -> "last year"
             caveats.append(f"Time-based filtering for '{time_desc}' is not yet available. Showing current totals instead.")
             logger.warning(f"[NLQ] Time window '{exec_args.time_window}' requested but not supported - returning current data")
@@ -809,7 +821,9 @@ def nlq_ask(request: NLQAskRequest):
                 "effective_limit": effective_limit,
                 "intent_output_shape": normalized_intent.output_shape.value if normalized_intent else None,
                 "time_window_requested": exec_args.time_window,
-                "time_window_applied": False if exec_args.time_window else None,  # None if not requested
+                "time_window_applied": time_window_applied if exec_args.time_window else None,  # None if not requested
+                "time_period": aggregations.get("period") if time_window_applied else None,
+                "date_range": aggregations.get("date_range") if time_window_applied else None,
             },
             summary=result.summary.model_dump() if result.summary else None,
             caveats=caveats,
