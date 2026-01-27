@@ -31,9 +31,9 @@ from .models import (
 from .definitions import get_definition
 
 
-# Default dataset - Farm if FARM_SCENARIO_ID is set, otherwise demo9
+# Default dataset - Farm if FARM_SCENARIO_ID is set, otherwise nlq_test (has time filtering)
 _FARM_SCENARIO = os.environ.get("FARM_SCENARIO_ID")
-DATASET_ID = f"farm:{_FARM_SCENARIO}" if _FARM_SCENARIO else os.environ.get("DCL_DATASET_ID", "demo9")
+DATASET_ID = f"farm:{_FARM_SCENARIO}" if _FARM_SCENARIO else os.environ.get("DCL_DATASET_ID", "nlq_test")
 
 
 def _load_manifest(dataset_id: str) -> dict:

@@ -7,9 +7,9 @@ from typing import Any, Dict, List, Optional
 from enum import Enum
 from pydantic import BaseModel, Field
 
-# Default dataset - Farm if FARM_SCENARIO_ID is set, otherwise demo9
+# Default dataset - Farm if FARM_SCENARIO_ID is set, otherwise nlq_test (has time filtering)
 _FARM_SCENARIO = os.environ.get("FARM_SCENARIO_ID")
-_DEFAULT_DATASET = f"farm:{_FARM_SCENARIO}" if _FARM_SCENARIO else "demo9"
+_DEFAULT_DATASET = f"farm:{_FARM_SCENARIO}" if _FARM_SCENARIO else "nlq_test"
 
 
 class DefinitionCategory(str, Enum):

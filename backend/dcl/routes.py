@@ -140,12 +140,12 @@ def resolve_dataset_id(requested_id: Optional[str] = None) -> DatasetInfo:
     except Exception:
         pass
 
-    # Default to demo9
+    # Default to nlq_test (has time filtering support)
     return DatasetInfo(
-        dataset_id="demo9",
+        dataset_id="nlq_test",
         source="demo",
         snapshot_ts=datetime.utcnow().isoformat() + "Z",
-        description="Default demo dataset"
+        description="Default dataset with time filtering"
     )
 
 

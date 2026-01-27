@@ -294,8 +294,8 @@ from backend.bll.definitions import get_definition as get_bll_definition, list_d
 from backend.dcl.definitions.registry import DefinitionKind
 
 
-# Default dataset - use Farm if FARM_SCENARIO_ID is set, otherwise demo9
-_DEFAULT_DATASET = f"farm:{os.environ['FARM_SCENARIO_ID']}" if os.environ.get("FARM_SCENARIO_ID") else "demo9"
+# Default dataset - use Farm if FARM_SCENARIO_ID is set, otherwise nlq_test (has time filtering)
+_DEFAULT_DATASET = f"farm:{os.environ['FARM_SCENARIO_ID']}" if os.environ.get("FARM_SCENARIO_ID") else "nlq_test"
 
 
 class NLQAskRequest(BaseModel):

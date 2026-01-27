@@ -58,7 +58,7 @@ async def execute_debug(request: Request):
     """Debug endpoint to see raw request body."""
     body = await request.json()
     logger.info(f"Raw execute request body: {body}")
-    return {"received": body, "expected_format": {"definition_id": "string", "dataset_id": "string (default: demo9)"}}
+    return {"received": body, "expected_format": {"definition_id": "string", "dataset_id": "string (default: nlq_test)"}}
 
 
 @router.post("/execute", response_model=ExecuteResponse)
@@ -75,7 +75,7 @@ async def execute(request: Request):
         
         normalized = {}
         normalized["definition_id"] = body.get("definition_id") or body.get("definitionId")
-        normalized["dataset_id"] = body.get("dataset_id") or body.get("datasetId") or "demo9"
+        normalized["dataset_id"] = body.get("dataset_id") or body.get("datasetId") or "nlq_test"
         normalized["version"] = body.get("version")
         normalized["limit"] = body.get("limit", 1000)
         normalized["offset"] = body.get("offset", 0)
