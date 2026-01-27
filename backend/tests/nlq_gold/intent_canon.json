@@ -1,0 +1,5522 @@
+{
+  "version": "1.0",
+  "created": "2026-01-25",
+  "cases": [
+    {
+      "id": "fin_001",
+      "question": "What is our current ARR?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_002",
+      "question": "What was our ARR last month?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_003",
+      "question": "Show me top 5 customers by revenue",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": 5,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "fin_004",
+      "question": "Top 10 deals in the pipeline",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "pipeline",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "deal"
+          ],
+          "limit": 10,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "fin_005",
+      "question": "What is our revenue?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_006",
+      "question": "Revenue by customer",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "customer"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_007",
+      "question": "How much revenue did we make last quarter?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_008",
+      "question": "Revenue in the last 30 days",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:30"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_009",
+      "question": "YTD revenue",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_ytd"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_010",
+      "question": "Q2 revenue breakdown",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "revenue",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:Q2"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        },
+        "warning": "YEAR_ASSUMED: Q2 assumed to be current fiscal year"
+      }
+    },
+    {
+      "id": "fin_011",
+      "question": "What is our total spend?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_012",
+      "question": "Top 5 vendors by spend",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "vendor_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "vendor"
+          ],
+          "limit": 5,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "fin_013",
+      "question": "SaaS spend by vendor",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "saas_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "vendor"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_014",
+      "question": "What is our burn rate?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "burn_rate",
+          "grain": "month",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_015",
+      "question": "Monthly burn rate",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "burn_rate",
+          "grain": "month",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_016",
+      "question": "What is our unallocated spend?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "unallocated_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_017",
+      "question": "What is our unallocated cloud spend?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "unallocated_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_018",
+      "question": "Show me cloud costs",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "cloud_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_019",
+      "question": "Spend last month vs this month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:comparison"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_020",
+      "question": "Which vendors increased spend MoM?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "vendor_spend_delta",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:mom"
+          },
+          "aggregation": "delta",
+          "group_by": [
+            "vendor"
+          ],
+          "limit": null,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "fin_021",
+      "question": "What changed month over month?",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "METRIC_UNDERSPECIFIED: What metric changed? (revenue, spend, headcount, etc.)"
+      }
+    },
+    {
+      "id": "fin_022",
+      "question": "Revenue change MoM",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue_delta",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:mom"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_023",
+      "question": "Top vendor cost changes MoM",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "vendor_spend_delta",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:mom"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "vendor"
+          ],
+          "limit": 10,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "fin_024",
+      "question": "QoQ revenue growth",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue_delta",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:qoq"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "fin_025",
+      "question": "Year over year spend comparison",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend_delta",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_year:yoy"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "crm_001",
+      "question": "Who are our top customers?",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": 10,
+          "direction": "top"
+        },
+        "warning": "LIMIT_DEFAULTED: No limit specified, defaulting to top 10"
+      }
+    },
+    {
+      "id": "crm_002",
+      "question": "Top 5 customers",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": 5,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "crm_003",
+      "question": "Show me the pipeline",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "pipeline",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "crm_004",
+      "question": "Pipeline by stage",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "pipeline",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "stage"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "crm_005",
+      "question": "Deals closing this quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "pipeline",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "crm_006",
+      "question": "Top 10 deals by value",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "deal_value",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "deal"
+          ],
+          "limit": 10,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "crm_007",
+      "question": "Customer concentration",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_concentration",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "percent",
+          "group_by": [
+            "customer"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "crm_008",
+      "question": "Bottom 5 customers by revenue",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": 5,
+          "direction": "bottom"
+        }
+      }
+    },
+    {
+      "id": "crm_009",
+      "question": "New customers last month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_count",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:last"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "crm_010",
+      "question": "Lost customers this year",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_churn",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_ytd"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "infra_001",
+      "question": "How are our SLOs?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "slo_attainment",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "health",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "infra_002",
+      "question": "How are our SLOs trending?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "slo_attainment",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "trend",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "infra_003",
+      "question": "SLO attainment by service",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "slo_attainment",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "health",
+          "group_by": [
+            "service"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "infra_004",
+      "question": "Which services are at risk?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "slo_attainment",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "health",
+          "group_by": [
+            "service"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "infra_005",
+      "question": "Deployment frequency",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "deploy_frequency",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "infra_006",
+      "question": "How often do we deploy?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "deploy_frequency",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "infra_007",
+      "question": "What is our MTTR?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "mttr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "infra_008",
+      "question": "Mean time to recovery",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "mttr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "infra_009",
+      "question": "Change failure rate",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "change_failure_rate",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "infra_010",
+      "question": "Lead time for changes",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "lead_time",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "infra_011",
+      "question": "DORA metrics",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "METRIC_UNDERSPECIFIED: Which DORA metric? (deploy frequency, lead time, MTTR, change failure rate)"
+      }
+    },
+    {
+      "id": "infra_012",
+      "question": "Show me our uptime",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "slo_attainment",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "health",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "infra_013",
+      "question": "Incidents last week",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "incident_count",
+          "grain": "week",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_week:last"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "infra_014",
+      "question": "Incident count by severity",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "incident_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "count",
+          "group_by": [
+            "severity"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "infra_015",
+      "question": "Open incidents",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "incident_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "sec_001",
+      "question": "Show me security findings",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "security_findings",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "inventory",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "sec_002",
+      "question": "Critical security findings",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "security_findings",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "inventory",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "sec_003",
+      "question": "Security findings by severity",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "security_findings",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "count",
+          "group_by": [
+            "severity"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "sec_004",
+      "question": "What are our zombie resources?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "zombie_resources",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "inventory",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "sec_005",
+      "question": "Idle resources",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "zombie_resources",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "inventory",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "sec_006",
+      "question": "Top 10 zombie resources by cost",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "zombie_resources",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "resource"
+          ],
+          "limit": 10,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "sec_007",
+      "question": "Resources without owners",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "identity_gaps",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "inventory",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "sec_008",
+      "question": "Identity gaps",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "identity_gaps",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "inventory",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "sec_009",
+      "question": "Orphan resources",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "METRIC_UNDERSPECIFIED: Do you mean unused resources (zombies) or resources without owners (identity gaps)?"
+      }
+    },
+    {
+      "id": "sec_010",
+      "question": "Unowned spend",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "identity_gaps",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "amb_001",
+      "question": "What changed?",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "METRIC_UNDERSPECIFIED: What changed? (revenue, spend, headcount, etc.)"
+      }
+    },
+    {
+      "id": "amb_002",
+      "question": "Show me the numbers",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "METRIC_UNDERSPECIFIED: Which numbers? (revenue, spend, customers, etc.)"
+      }
+    },
+    {
+      "id": "amb_003",
+      "question": "How are we doing?",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "METRIC_UNDERSPECIFIED: Which aspect? (revenue, SLOs, pipeline, etc.)"
+      }
+    },
+    {
+      "id": "amb_004",
+      "question": "What's the trend?",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "METRIC_UNDERSPECIFIED: Trend of what? (revenue, spend, incidents, etc.)"
+      }
+    },
+    {
+      "id": "amb_005",
+      "question": "Give me a summary",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "METRIC_UNDERSPECIFIED: Summary of what? (financial, operational, etc.)"
+      }
+    },
+    {
+      "id": "amb_006",
+      "question": "Top performers",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "METRIC_UNDERSPECIFIED: Top performers in what? (customers, vendors, services, etc.)"
+      }
+    },
+    {
+      "id": "amb_007",
+      "question": "What's happening?",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "METRIC_UNDERSPECIFIED: Cannot determine metric or domain"
+      }
+    },
+    {
+      "id": "amb_008",
+      "question": "Status update",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "METRIC_UNDERSPECIFIED: Status of what? (incidents, SLOs, pipeline, etc.)"
+      }
+    },
+    {
+      "id": "amb_009",
+      "question": "Show me everything",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "SCOPE_TOO_BROAD: Cannot show all data; please specify a metric"
+      }
+    },
+    {
+      "id": "amb_010",
+      "question": "Compare everything",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "SCOPE_TOO_BROAD: Cannot compare without specific metrics"
+      }
+    },
+    {
+      "id": "time_001",
+      "question": "Revenue last month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "time_002",
+      "question": "Revenue in the past 30 days",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:30"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "time_003",
+      "question": "Spend last week",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "week",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_week:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "time_004",
+      "question": "Spend in the past 7 days",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:7"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "time_005",
+      "question": "Last quarter's revenue",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "time_006",
+      "question": "Revenue past 90 days",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:90"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "time_007",
+      "question": "This month's spend",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "time_008",
+      "question": "Year to date revenue",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_ytd"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "time_009",
+      "question": "Customers last year",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_count",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_year:last"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "time_010",
+      "question": "Incidents past 24 hours",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "incident_count",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_hours:24"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rank_001",
+      "question": "Top 5 customers",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": 5,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "rank_002",
+      "question": "Top customers",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": 10,
+          "direction": "top"
+        },
+        "warning": "LIMIT_DEFAULTED: No limit specified, defaulting to top 10"
+      }
+    },
+    {
+      "id": "rank_003",
+      "question": "Bottom 3 vendors by cost",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "vendor_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "vendor"
+          ],
+          "limit": 3,
+          "direction": "bottom"
+        }
+      }
+    },
+    {
+      "id": "rank_004",
+      "question": "First 10 customers",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": 10,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "rank_005",
+      "question": "Highest spending vendors",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "vendor_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "vendor"
+          ],
+          "limit": 10,
+          "direction": "top"
+        },
+        "warning": "LIMIT_DEFAULTED: No limit specified, defaulting to top 10"
+      }
+    },
+    {
+      "id": "rank_006",
+      "question": "Largest deals",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "deal_value",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "deal"
+          ],
+          "limit": 10,
+          "direction": "top"
+        },
+        "warning": "LIMIT_DEFAULTED: No limit specified, defaulting to top 10"
+      }
+    },
+    {
+      "id": "rank_007",
+      "question": "Worst performing services",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "slo_attainment",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "service"
+          ],
+          "limit": 10,
+          "direction": "bottom"
+        },
+        "warning": "LIMIT_DEFAULTED: No limit specified, defaulting to bottom 10"
+      }
+    },
+    {
+      "id": "rank_008",
+      "question": "Show all customers",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "inventory",
+          "group_by": [
+            "customer"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rank_009",
+      "question": "List vendors",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "vendor_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "inventory",
+          "group_by": [
+            "vendor"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rank_010",
+      "question": "Top 100 customers by revenue",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": 100,
+          "direction": "top"
+        },
+        "warning": "LIMIT_CLAMPED: Requested 100, clamped to maximum 100"
+      }
+    },
+    {
+      "id": "group_001",
+      "question": "Revenue by region",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "region"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "group_002",
+      "question": "Spend by team",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "team"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "group_003",
+      "question": "Incidents by service",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "incident_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "count",
+          "group_by": [
+            "service"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "group_004",
+      "question": "Revenue per customer",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "customer"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "group_005",
+      "question": "Cost breakdown by vendor",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "vendor_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "vendor"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "comp_001",
+      "question": "Revenue growth",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "revenue_delta",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:mom"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        },
+        "warning": "PERIOD_ASSUMED: Defaulting to month-over-month comparison"
+      }
+    },
+    {
+      "id": "comp_002",
+      "question": "Spend increase",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "spend_delta",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:mom"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        },
+        "warning": "PERIOD_ASSUMED: Defaulting to month-over-month comparison"
+      }
+    },
+    {
+      "id": "comp_003",
+      "question": "How has revenue changed?",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "revenue_delta",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:mom"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        },
+        "warning": "PERIOD_ASSUMED: Defaulting to month-over-month comparison"
+      }
+    },
+    {
+      "id": "comp_004",
+      "question": "Compare this month to last month",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "METRIC_UNDERSPECIFIED: Compare what? (revenue, spend, incidents, etc.)"
+      }
+    },
+    {
+      "id": "comp_005",
+      "question": "Revenue vs last year",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue_delta",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_year:yoy"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "health_001",
+      "question": "Service health",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "slo_attainment",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "health",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "health_002",
+      "question": "System status",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "slo_attainment",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "health",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "health_003",
+      "question": "Are there any issues?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "incident_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "health",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "health_004",
+      "question": "Pipeline health",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "pipeline",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "health",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "health_005",
+      "question": "What's at risk?",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "METRIC_UNDERSPECIFIED: What's at risk? (SLOs, deals, customers, etc.)"
+      }
+    },
+    {
+      "id": "pct_001",
+      "question": "What percentage of revenue comes from top 5 customers?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "percent",
+          "group_by": [
+            "customer"
+          ],
+          "limit": 5,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "pct_002",
+      "question": "Revenue concentration",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_concentration",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "percent",
+          "group_by": [
+            "customer"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "pct_003",
+      "question": "Share of spend by vendor",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "vendor_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "percent",
+          "group_by": [
+            "vendor"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "pct_004",
+      "question": "What's the SLO breach rate?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "slo_attainment",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "percent",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "inv_001",
+      "question": "How many customers do we have?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "inv_002",
+      "question": "Number of incidents",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "incident_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "inv_003",
+      "question": "Total deal count",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "deal_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "inv_004",
+      "question": "How many vendors?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "vendor_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "inv_005",
+      "question": "Resource inventory",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "resource_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "inventory",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "edge_001",
+      "question": "Predict next quarter's revenue",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "FORECASTING_UNSUPPORTED: DCL does not support predictions"
+      }
+    },
+    {
+      "id": "edge_002",
+      "question": "Why did revenue drop?",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "CAUSAL_ANALYSIS_UNSUPPORTED: DCL cannot determine causation"
+      }
+    },
+    {
+      "id": "edge_003",
+      "question": "What should we do about churn?",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "RECOMMENDATION_UNSUPPORTED: DCL provides data, not recommendations"
+      }
+    },
+    {
+      "id": "edge_004",
+      "question": "Revenue for customer ABC Corp",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "edge_005",
+      "question": "Delete the old data",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "WRITE_OPERATION_UNSUPPORTED: DCL is read-only"
+      }
+    },
+    {
+      "id": "edge_006",
+      "question": "Update customer record",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "WRITE_OPERATION_UNSUPPORTED: DCL is read-only"
+      }
+    },
+    {
+      "id": "edge_007",
+      "question": "Send me a report every Monday",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "SCHEDULING_UNSUPPORTED: DCL does not support scheduled reports"
+      }
+    },
+    {
+      "id": "edge_008",
+      "question": "Email the CEO",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "COMMUNICATION_UNSUPPORTED: DCL cannot send emails"
+      }
+    },
+    {
+      "id": "edge_009",
+      "question": "",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "EMPTY_QUERY: No question provided"
+      }
+    },
+    {
+      "id": "edge_010",
+      "question": "?",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "INVALID_QUERY: Cannot parse question"
+      }
+    },
+    {
+      "id": "nat_001",
+      "question": "What's our ARR look like?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "nat_002",
+      "question": "Can you show me the top customers?",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": 10,
+          "direction": "top"
+        },
+        "warning": "LIMIT_DEFAULTED: No limit specified, defaulting to top 10"
+      }
+    },
+    {
+      "id": "nat_003",
+      "question": "I need to see spend breakdown",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        },
+        "warning": "GROUPING_UNDERSPECIFIED: No grouping specified for breakdown"
+      }
+    },
+    {
+      "id": "nat_004",
+      "question": "Give me ARR numbers",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "nat_005",
+      "question": "How's revenue trending?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "trend",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "nat_006",
+      "question": "What do our SLOs look like right now?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "slo_attainment",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "health",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "nat_007",
+      "question": "Show me where we're spending money",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "vendor"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "nat_008",
+      "question": "Who's our biggest customer?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": 1,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "nat_009",
+      "question": "What's eating up our budget?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "vendor"
+          ],
+          "limit": 10,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "nat_010",
+      "question": "Are we over budget?",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "BUDGET_COMPARISON_UNSUPPORTED: Budget targets not available"
+      }
+    },
+    {
+      "id": "adv_time_001",
+      "question": "Show me revenue for the past 30 days",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:30"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_002",
+      "question": "Show me revenue for last month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_003",
+      "question": "What were our costs in the last 7 days?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:7"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_004",
+      "question": "What were our costs last week?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "week",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_week:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_005",
+      "question": "Revenue in the past quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "quarter",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:90"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_006",
+      "question": "Revenue last quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_007",
+      "question": "Spending over the past year",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "year",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:365"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_008",
+      "question": "Spending last year",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_year:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_009",
+      "question": "Revenue trend over the past 6 months",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_months:6"
+          },
+          "aggregation": "trend",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_010",
+      "question": "Revenue trend since January",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_ytd"
+          },
+          "aggregation": "trend",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_011",
+      "question": "Monthly spend for the last 12 months",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "month",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_months:12"
+          },
+          "aggregation": "breakdown",
+          "group_by": [
+            "month"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_012",
+      "question": "Spend by month this calendar year",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_ytd"
+          },
+          "aggregation": "breakdown",
+          "group_by": [
+            "month"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_013",
+      "question": "Customer count in past 90 days",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_count",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:90"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_014",
+      "question": "Customer count this quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_count",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_015",
+      "question": "Deals closed in the past two weeks",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "deals_closed",
+          "grain": "week",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_weeks:2"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_016",
+      "question": "Deals closed last fortnight",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "deals_closed",
+          "grain": "week",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_weeks:2"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        },
+        "warning": "COLLOQUIAL_TIME: Interpreted 'fortnight' as 2 weeks"
+      }
+    },
+    {
+      "id": "adv_time_017",
+      "question": "Revenue in Q1",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "revenue",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:q1"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        },
+        "warning": "AMBIGUOUS_YEAR: Assuming current year for Q1"
+      }
+    },
+    {
+      "id": "adv_time_018",
+      "question": "Revenue in Q1 2024",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:q1_2024"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_019",
+      "question": "What's the trailing twelve months revenue?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_months:12"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_time_020",
+      "question": "Show fiscal year revenue",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "AMBIGUOUS_FISCAL_YEAR: Fiscal year boundaries not specified"
+      }
+    },
+    {
+      "id": "adv_rank_001",
+      "question": "Which customers generate the most revenue?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": null,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "adv_rank_002",
+      "question": "Our highest-spending customers",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": null,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "adv_rank_003",
+      "question": "What are the bottom 3 performing regions?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "region"
+          ],
+          "limit": 3,
+          "direction": "bottom"
+        }
+      }
+    },
+    {
+      "id": "adv_rank_004",
+      "question": "Show me the least profitable products",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "profit",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "product"
+          ],
+          "limit": null,
+          "direction": "bottom"
+        }
+      }
+    },
+    {
+      "id": "adv_rank_005",
+      "question": "Rank vendors by cost",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "vendor_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "vendor"
+          ],
+          "limit": null,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "adv_rank_006",
+      "question": "Who are the cheapest vendors?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "vendor_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "vendor"
+          ],
+          "limit": null,
+          "direction": "bottom"
+        }
+      }
+    },
+    {
+      "id": "adv_rank_007",
+      "question": "Sort customers by spend descending",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": null,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "adv_rank_008",
+      "question": "List employees by tenure ascending",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "employee_tenure",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "employee"
+          ],
+          "limit": null,
+          "direction": "bottom"
+        }
+      }
+    },
+    {
+      "id": "adv_rank_009",
+      "question": "Break down costs by department",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "breakdown",
+          "group_by": [
+            "department"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rank_010",
+      "question": "Revenue split by region and product",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "breakdown",
+          "group_by": [
+            "region",
+            "product"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rank_011",
+      "question": "Top 10 accounts sorted by deal size",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "deal_size",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "account"
+          ],
+          "limit": 10,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "adv_rank_012",
+      "question": "First five customers who signed this year",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_signup",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_ytd"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": 5,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "adv_rank_013",
+      "question": "Group revenue by sales rep",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "breakdown",
+          "group_by": [
+            "sales_rep"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rank_014",
+      "question": "Show revenue per country",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "breakdown",
+          "group_by": [
+            "country"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rank_015",
+      "question": "Aggregate spending by vendor category",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "breakdown",
+          "group_by": [
+            "vendor_category"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rank_016",
+      "question": "Top quartile of performers",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "AMBIGUOUS_METRIC: No metric specified for 'performers'"
+      }
+    },
+    {
+      "id": "adv_rank_017",
+      "question": "Worst incidents last month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "incident_severity",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:last"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "incident"
+          ],
+          "limit": null,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "adv_rank_018",
+      "question": "Segment customers by tier",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "breakdown",
+          "group_by": [
+            "tier"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rank_019",
+      "question": "Top 20 items by cost per unit",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "unit_cost",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "item"
+          ],
+          "limit": 20,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "adv_rank_020",
+      "question": "Just the number one customer",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "ranking",
+          "group_by": [
+            "customer"
+          ],
+          "limit": 1,
+          "direction": "top"
+        }
+      }
+    },
+    {
+      "id": "adv_mix_001",
+      "question": "Compare AWS costs to revenue",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "CROSS_DOMAIN_COMPARISON: Cannot compare infrastructure costs to financial revenue"
+      }
+    },
+    {
+      "id": "adv_mix_002",
+      "question": "Revenue impact of outages",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "CORRELATION_ANALYSIS: Requires cross-domain correlation not currently supported"
+      }
+    },
+    {
+      "id": "adv_mix_003",
+      "question": "Do high-spending customers have more support tickets?",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "CROSS_DOMAIN_CORRELATION: Requires linking customer spend to support data"
+      }
+    },
+    {
+      "id": "adv_mix_004",
+      "question": "Customer satisfaction vs revenue",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "CORRELATION_ANALYSIS: Cross-metric correlation not supported"
+      }
+    },
+    {
+      "id": "adv_mix_005",
+      "question": "Show me everything",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "AMBIGUOUS_SCOPE: Query too broad - please specify what you want to see"
+      }
+    },
+    {
+      "id": "adv_mix_006",
+      "question": "Give me all the data",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "AMBIGUOUS_SCOPE: Query too broad"
+      }
+    },
+    {
+      "id": "adv_mix_007",
+      "question": "How are we doing?",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "AMBIGUOUS_METRIC: No specific metric or domain mentioned"
+      }
+    },
+    {
+      "id": "adv_mix_008",
+      "question": "What's the situation?",
+      "expected": {
+        "status": "AMBIGUOUS",
+        "intent": null,
+        "warning": "AMBIGUOUS_METRIC: No specific metric or domain mentioned"
+      }
+    },
+    {
+      "id": "adv_mix_009",
+      "question": "AWS spend per customer tier by region",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "cloud_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "breakdown",
+          "group_by": [
+            "customer_tier",
+            "region"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_mix_010",
+      "question": "Revenue by cloud provider",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "INVALID_GROUPING: Revenue cannot be grouped by cloud provider"
+      }
+    },
+    {
+      "id": "adv_mix_011",
+      "question": "Top incidents that caused revenue loss",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "CROSS_DOMAIN_CAUSATION: Cannot link incidents to revenue impact"
+      }
+    },
+    {
+      "id": "adv_mix_012",
+      "question": "Customer count and revenue and costs together",
+      "expected": {
+        "status": "RESOLVED_WITH_WARNING",
+        "intent": {
+          "metric": "multi_metric",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        },
+        "warning": "MULTI_METRIC: Will fetch customer_count, revenue, costs separately"
+      }
+    },
+    {
+      "id": "adv_mix_013",
+      "question": "Why did revenue drop?",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "CAUSATION_QUERY: Cannot determine causation, only show data"
+      }
+    },
+    {
+      "id": "adv_mix_014",
+      "question": "Predict next month's revenue",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "PREDICTION_UNSUPPORTED: Forecasting not available"
+      }
+    },
+    {
+      "id": "adv_mix_015",
+      "question": "What should we do about costs?",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "RECOMMENDATION_UNSUPPORTED: Cannot provide business recommendations"
+      }
+    },
+    {
+      "id": "adv_mix_016",
+      "question": "Is our revenue good or bad?",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "JUDGEMENT_UNSUPPORTED: Cannot make value judgements without targets"
+      }
+    },
+    {
+      "id": "adv_mix_017",
+      "question": "Email me the monthly report",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "ACTION_UNSUPPORTED: Cannot perform email or export actions"
+      }
+    },
+    {
+      "id": "adv_mix_018",
+      "question": "Schedule a meeting to discuss revenue",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "ACTION_UNSUPPORTED: Cannot perform scheduling actions"
+      }
+    },
+    {
+      "id": "adv_mix_019",
+      "question": "Delete all the zombie resources",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "MUTATION_UNSUPPORTED: Cannot perform delete or modify actions"
+      }
+    },
+    {
+      "id": "adv_mix_020",
+      "question": "Fix the SLO violations",
+      "expected": {
+        "status": "UNSUPPORTED",
+        "intent": null,
+        "warning": "MUTATION_UNSUPPORTED: Cannot perform remediation actions"
+      }
+    },
+    {
+      "id": "para_fin_001",
+      "question": "Current annual recurring revenue",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_fin_002",
+      "question": "How much ARR do we have right now?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_fin_003",
+      "question": "Total ARR as of today",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_burn_001",
+      "question": "What's our current burn rate?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "burn_rate",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_burn_002",
+      "question": "How fast are we burning cash?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "burn_rate",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_burn_003",
+      "question": "Monthly burn",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "burn_rate",
+          "grain": "month",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_slo_001",
+      "question": "How are our SLOs performing?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "slo_attainment",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "health",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_slo_002",
+      "question": "Current SLO status",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "slo_attainment",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "health",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_slo_003",
+      "question": "Are we meeting our SLOs?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "slo_attainment",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "health",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_cloud_001",
+      "question": "What's our cloud spend?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "cloud_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_cloud_002",
+      "question": "Total AWS + GCP + Azure costs",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "cloud_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_cloud_003",
+      "question": "Infrastructure costs",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "cloud_spend",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_cust_001",
+      "question": "Customer count",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_cust_002",
+      "question": "How many active customers?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_cust_003",
+      "question": "Number of customers we have",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "customer_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_mttr_001",
+      "question": "Average time to fix incidents",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "mttr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "average",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_mttr_002",
+      "question": "Incident resolution time",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "mttr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "average",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_mttr_003",
+      "question": "How long does it take to recover from outages?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "mttr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "average",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_zombie_001",
+      "question": "Show me all zombie resources",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "zombie_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_zombie_002",
+      "question": "Wasted cloud resources",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "zombie_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_zombie_003",
+      "question": "Idle infrastructure we're paying for",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "zombie_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_deploy_001",
+      "question": "How often do we deploy?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "deploy_frequency",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "average",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_deploy_002",
+      "question": "Deployment cadence",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "deploy_frequency",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "average",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_deploy_003",
+      "question": "Number of releases per week",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "deploy_frequency",
+          "grain": "week",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "average",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_delta_001",
+      "question": "How much did revenue change month over month?",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue_delta",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:mom"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_delta_002",
+      "question": "Revenue MoM",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue_delta",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:mom"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "para_delta_003",
+      "question": "Month on month revenue change",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue_delta",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:mom"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_001_a",
+      "question": "How much money did we bring in last quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_001_b",
+      "question": "Total top line for Q3",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:Q3"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_001_c",
+      "question": "What was the realized revenue for the previous 3 months",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "quarter",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_months:3"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_001_d",
+      "question": "Total earnings from sales in the last quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_002_a",
+      "question": "Show me the revenue for October",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:october"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_002_b",
+      "question": "Total billings in October",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:october"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_002_c",
+      "question": "What was the top line for the month of October",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:october"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_002_d",
+      "question": "Invoiced revenue during October",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:october"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_003_a",
+      "question": "Historical revenue for 2023",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_year:2023"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_003_b",
+      "question": "What was the 2023 total top line",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_year:2023"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_003_c",
+      "question": "Full year 2023 revenue performance",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_year:2023"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_003_d",
+      "question": "How much did we invoice in total during 2023",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_year:2023"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_004_a",
+      "question": "What was revenue yesterday",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:1"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_004_b",
+      "question": "Total sales yesterday",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:1"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_004_c",
+      "question": "Revenue from yesterday",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:1"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_004_d",
+      "question": "How much did we make yesterday",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:1"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_005_a",
+      "question": "Revenue by region",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "region"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_005_b",
+      "question": "Regional revenue breakdown",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "breakdown",
+          "group_by": [
+            "region"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_005_c",
+      "question": "Show me sales by geography",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "region"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_005_d",
+      "question": "Revenue split by region",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "breakdown",
+          "group_by": [
+            "region"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_006_a",
+      "question": "What was revenue last month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_006_b",
+      "question": "Total billings previous month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_006_c",
+      "question": "Prior month revenue",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "rev_cluster_006_d",
+      "question": "Revenue from the previous month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_001_a",
+      "question": "What is our current run rate",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_001_b",
+      "question": "Total recurring revenue right now",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_001_c",
+      "question": "Current active ARR",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_001_d",
+      "question": "What is the annualized value of our active subscriptions",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_002_a",
+      "question": "New ARR added this week",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "week",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_week:current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_002_b",
+      "question": "Total recurring bookings since Monday",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "week",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_week:current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_002_c",
+      "question": "How much subscription value did we add in the last 7 days",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "week",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:7"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_002_d",
+      "question": "Weekly recurring run rate growth",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "week",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_week:current"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_003_a",
+      "question": "ARR by customer segment",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "segment"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_003_b",
+      "question": "Recurring revenue breakdown by tier",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "breakdown",
+          "group_by": [
+            "tier"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_003_c",
+      "question": "Subscription revenue by plan type",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "plan"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_003_d",
+      "question": "Show me ARR split by customer tier",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "breakdown",
+          "group_by": [
+            "tier"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_004_a",
+      "question": "ARR growth this quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:current"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_004_b",
+      "question": "Net new recurring revenue Q4",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:Q4"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_004_c",
+      "question": "Subscription expansion this quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:current"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_004_d",
+      "question": "How much has our run rate increased this quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:current"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_005_a",
+      "question": "Churned ARR this month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr_churn",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_005_b",
+      "question": "Lost recurring revenue this month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr_churn",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_005_c",
+      "question": "Subscription cancellations this month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr_churn",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "arr_cluster_005_d",
+      "question": "MRR we lost in the current month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr_churn",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_001_a",
+      "question": "Total revenue yesterday",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:1"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_001_b",
+      "question": "Total ARR yesterday",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:1"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_002_a",
+      "question": "Show me revenue by region",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "region"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_002_b",
+      "question": "Show me ARR by region",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "region"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_003_a",
+      "question": "What was the top-line in January",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:january"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_003_b",
+      "question": "What was the run-rate in January",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:january"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_004_a",
+      "question": "Invoiced amount last week",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "week",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_week:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_004_b",
+      "question": "Recurring amount last week",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "week",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_week:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_005_a",
+      "question": "Expected revenue for Q4",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:Q4"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_005_b",
+      "question": "Expected ARR for Q4",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:Q4"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_006_a",
+      "question": "Total billings this month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_006_b",
+      "question": "Total subscriptions this month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_007_a",
+      "question": "Total sales last quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_007_b",
+      "question": "Total bookings last quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:last"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_008_a",
+      "question": "Realized revenue YTD",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_ytd"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_008_b",
+      "question": "Contracted revenue YTD",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_ytd"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_009_a",
+      "question": "Total income this year",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_year:current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_009_b",
+      "question": "Total MRR this year",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_year:current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_010_a",
+      "question": "Revenue growth this quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "revenue_delta",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:current"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "adv_rev_arr_010_b",
+      "question": "ARR growth this quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "arr",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:current"
+          },
+          "aggregation": "delta",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_hr_001",
+      "question": "Total headcount in engineering vs marketing",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "headcount",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "department"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_hr_002",
+      "question": "How many employees do we have",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "headcount",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_hr_003",
+      "question": "New hires this quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "headcount",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:current"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_hr_004",
+      "question": "Employee attrition rate this year",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "attrition",
+          "grain": "year",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_year:current"
+          },
+          "aggregation": "percent",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_it_001",
+      "question": "Number of critical vulnerabilities detected in the last 48 hours",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "security_findings",
+          "grain": "day",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_hours:48"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_it_002",
+      "question": "Security incidents this week",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "incident_count",
+          "grain": "week",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_week:current"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_it_003",
+      "question": "Total open tickets by priority",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "ticket_count",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "count",
+          "group_by": [
+            "priority"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_it_004",
+      "question": "SLA breach rate this month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "sla_breach",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:current"
+          },
+          "aggregation": "percent",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_sales_001",
+      "question": "Total pipeline value for the Enterprise segment",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "pipeline",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "total",
+          "group_by": [
+            "segment"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_sales_002",
+      "question": "Deals closing this month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "deal_value",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:current"
+          },
+          "aggregation": "inventory",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_sales_003",
+      "question": "Win rate this quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "win_rate",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:current"
+          },
+          "aggregation": "percent",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_sales_004",
+      "question": "Average deal size by region",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "deal_value",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "average",
+          "group_by": [
+            "region"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_cs_001",
+      "question": "Total tickets resolved by agent John Doe this month",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "ticket_count",
+          "grain": "month",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_month:current"
+          },
+          "aggregation": "count",
+          "group_by": [
+            "agent"
+          ],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_cs_002",
+      "question": "Customer satisfaction score this quarter",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "csat",
+          "grain": "quarter",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_quarter:current"
+          },
+          "aggregation": "average",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_cs_003",
+      "question": "NPS trend over the past year",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "nps",
+          "grain": "month",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_months:12"
+          },
+          "aggregation": "trend",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_cs_004",
+      "question": "Average first response time this week",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "response_time",
+          "grain": "week",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_week:current"
+          },
+          "aggregation": "average",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_eng_001",
+      "question": "Total apps deployed to production in the last cycle",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "deploy_count",
+          "grain": "none",
+          "time": {
+            "mode": "rolling",
+            "spec": "rolling_days:14"
+          },
+          "aggregation": "count",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_eng_002",
+      "question": "Build success rate this sprint",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "build_success",
+          "grain": "week",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_week:current"
+          },
+          "aggregation": "percent",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_eng_003",
+      "question": "Code coverage trend",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "code_coverage",
+          "grain": "none",
+          "time": {
+            "mode": "none",
+            "spec": "current"
+          },
+          "aggregation": "trend",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    },
+    {
+      "id": "mixed_eng_004",
+      "question": "Story points completed this sprint",
+      "expected": {
+        "status": "RESOLVED",
+        "intent": {
+          "metric": "story_points",
+          "grain": "week",
+          "time": {
+            "mode": "calendar",
+            "spec": "calendar_week:current"
+          },
+          "aggregation": "total",
+          "group_by": [],
+          "limit": null,
+          "direction": null
+        }
+      }
+    }
+  ]
+}
