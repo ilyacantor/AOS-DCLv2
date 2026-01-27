@@ -234,7 +234,7 @@ SYNONYMS = {
     "customer": ["customer", "client", "account", "buyer"],
     "revenue": ["revenue", "sales", "income", "earnings", "money", "make", "bring"],
     "cost": ["cost", "spend", "spending", "expense", "price"],
-    "zombie": ["zombie", "idle", "unused", "orphan", "wasted"],
+    "zombie": ["zombie", "idle", "unused", "wasted"],  # Note: orphan has distinct meaning (unowned)
     "trend": ["trend", "trending", "over time", "change", "growth"],
     "dora": ["dora", "dora metrics", "four keys", "engineering metrics"],
     "performance": ["performing", "performance", "results", "outcome"],
@@ -340,15 +340,16 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
         "unallocated": ("finops.unallocated_spend", 3.0),  # Very strong - override "cloud spend"
         "slo": ("infra.slo_attainment", 1.2),
         "slos": ("infra.slo_attainment", 1.2),
-        "zombie": ("aod.zombies_overview", 1.5),  # Increased to override "cost"
-        "zombies": ("aod.zombies_overview", 1.5),
+        "zombie": ("aod.zombies_overview", 3.0),  # Very strong - zombie = zombies_overview
+        "zombies": ("aod.zombies_overview", 3.0),
         "mttr": ("infra.mttr", 1.5),
         "burn": ("finops.burn_rate", 1.0),
         "pipeline": ("crm.pipeline", 1.5),  # "pipeline" strongly indicates sales pipeline
         "deal": ("crm.pipeline", 1.2),  # "deal" indicates pipeline/deals
         "deals": ("crm.pipeline", 1.2),
-        "orphan": ("aod.identity_gap_financially_anchored", 1.2),  # Orphan resources = identity gaps
-        "orphans": ("aod.identity_gap_financially_anchored", 1.2),
+        "orphan": ("aod.identity_gap_financially_anchored", 2.5),  # Strong - orphan = identity gaps
+        "orphans": ("aod.identity_gap_financially_anchored", 2.5),
+        "orphaned": ("aod.identity_gap_financially_anchored", 2.5),
         "unowned": ("aod.identity_gap_financially_anchored", 2.0),  # Strong - override "spend"
         "incident": ("infra.incidents", 0.8),  # Reduced - let MTTR patterns override
         "incidents": ("infra.incidents", 0.8),
@@ -396,6 +397,22 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
         ({"runrate"}, "finops.arr", 2.5),
         ({"total", "subscriptions"}, "finops.arr", 2.5),
         ({"run", "rate", "increased"}, "finops.arr", 4.0),  # Very strong for "run rate increased"
+        # Best/worst month for revenue → scalar revenue, not top customers
+        ({"best", "month", "revenue"}, "finops.total_revenue", 3.0),
+        ({"worst", "month", "revenue"}, "finops.total_revenue", 3.0),
+        # Company name + spend → customer revenue, not SaaS spend
+        # (Generic pattern - company name detection is complex, using "Partners" as indicator)
+        # Need high boost to overcome METRIC_MISMATCH penalty (spend=cost but customers have revenue metric)
+        ({"partners", "spend"}, "crm.top_customers", 4.5),  # Increased to overcome metric mismatch
+        ({"did", "spend"}, "crm.top_customers", 3.5),  # "How much did X spend"
+        # Vendor name + invoice → saas_spend (vendor invoices, not revenue invoicing)
+        ({"pagerduty", "invoice"}, "finops.saas_spend", 4.0),
+        ({"gitlab", "invoice"}, "finops.saas_spend", 4.0),
+        ({"cloudflare", "invoice"}, "finops.saas_spend", 4.0),
+        ({"datadog", "invoice"}, "finops.saas_spend", 4.0),
+        ({"deloitte", "invoice"}, "finops.saas_spend", 4.0),
+        # "total spend" → saas_spend (not total_revenue)
+        ({"total", "spend"}, "finops.saas_spend", 3.0),
     ]
 
     # Apply compound pattern boosts

@@ -46,7 +46,14 @@ _register(Definition(
     keywords=["saas spend", "cloud spend", "software spend", "vendor spend",
               "total spend", "spending by vendor", "cloud costs", "saas costs",
               "current spend", "spend summary", "vendors", "list vendors",
-              "how many vendors", "vendor count", "cheapest vendors", "top vendors"],
+              "how many vendors", "vendor count", "cheapest vendors", "top vendors",
+              # Vendor-specific queries
+              "paying", "how much are we paying", "paid", "how much have we paid",
+              "invoice count", "vendor invoice", "invoices per vendor",
+              "average invoice", "per vendor",
+              # Specific vendor names
+              "gitlab", "pagerduty", "deloitte", "cloudflare", "aws", "datadog",
+              "vendor id", "get details for vendor", "biggest vendor"],
     capabilities=DefinitionCapabilities(
         supports_delta=False,
         supports_trend=False,
@@ -181,7 +188,9 @@ _register(Definition(
     keywords=["identity gap", "ownership gap", "unowned resources", "no owner",
               "missing owner", "orphan resources", "resources without owner",
               "who owns this", "ownership missing", "resource ownership",
-              "unowned spend", "orphan spend", "spend without owner"],
+              "unowned spend", "orphan spend", "spend without owner",
+              # Orphan-specific
+              "orphan", "orphans", "orphaned resources", "list all orphan", "orphan asset"],
 ))
 
 
@@ -216,7 +225,10 @@ _register(Definition(
     metrics=["monthly_cost", "days_idle"],
     keywords=["zombie", "zombies", "idle resources", "unused resources", "wasted resources",
               "underutilized", "stopped instances", "idle", "not used", "zombie resources",
-              "idle spend", "wasted cloud spend", "resources not being used"],
+              "idle spend", "wasted cloud spend", "resources not being used",
+              # Resource-specific health queries (not "service health" which is SLO)
+              "resource health", "resource health status",
+              "total resources", "how many resources", "resource count"],
 ))
 
 
@@ -321,7 +333,18 @@ _register(Definition(
               "how much revenue", "revenue amount", "overall revenue", "aggregate revenue",
               "revenue this", "revenue last", "revenue for",
               "performing regions", "bottom performing", "least profitable", "profitable", "profit",
-              "total sales", "what are our sales", "sales total", "overall sales"],
+              "total sales", "what are our sales", "sales total", "overall sales",
+              # Period/time queries
+              "revenue period", "revenue cover", "time period", "period start", "period end",
+              # Monthly revenue
+              "revenue in january", "revenue in february", "revenue in march", "revenue in april",
+              "revenue in may", "revenue in june", "revenue in july", "revenue in august",
+              "revenue in september", "revenue in october", "revenue in november", "revenue in december",
+              "monthly revenue", "revenue breakdown", "best month for revenue", "worst month for revenue",
+              # Trend queries
+              "revenue growing", "revenue declining", "is revenue growing",
+              # Invoice/invoiced queries (distinct from vendor invoice counts)
+              "invoiced", "invoice total", "invoiced amount", "how much did we invoice"],
     capabilities=DefinitionCapabilities(
         supports_delta=False,
         supports_trend=True,
@@ -427,7 +450,8 @@ _register(Definition(
               "uptime", "availability", "reliability", "error budget", "sla",
               "how is our slo", "how are our slos", "slo trending", "slos trending",
               "slo performance", "slo status", "are our slos",
-              "at risk", "services at risk", "which services are at risk"],
+              "at risk", "services at risk", "which services are at risk",
+              "service health"],  # "service health" is SLO, not resource health
 ))
 
 
