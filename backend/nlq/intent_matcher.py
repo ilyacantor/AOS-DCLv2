@@ -60,6 +60,40 @@ RANKED_QUERY_PATTERNS = [
     r"\bcustomers?\s+by\s+",  # "customers by revenue" is a list
 ]
 
+# =============================================================================
+# GENERIC AMBIGUOUS QUERY PATTERNS
+# Queries that are too vague to route to a specific definition
+# =============================================================================
+GENERIC_AMBIGUOUS_PATTERNS = [
+    r"^what\s+changed\??$",
+    r"^what\s+changed\s+(?:month\s+over\s+month|mom|this\s+month)\??$",
+    r"^what'?s?\s+the\s+trend\??$",
+    r"^show\s+me\s+the\s+numbers\??$",
+    r"^how\s+are\s+we\s+doing\??$",
+    r"^give\s+me\s+a\s+summary\??$",
+    r"^top\s+performers?\??$",
+    r"^what'?s?\s+happening\??$",
+    r"^status\s+update\??$",
+    r"^compare\s+this\s+(?:month|quarter|year)\s+to\s+(?:last|previous)\s+(?:month|quarter|year)\??$",
+    r"^what'?s?\s+at\s+risk\??$",
+    r"^show\s+(?:me\s+)?everything\??$",
+    r"^give\s+me\s+all\s+the\s+data\??$",
+    r"^what'?s?\s+the\s+situation\??$",
+    r"^dora\s+metrics?\??$",  # Too vague - which DORA metric?
+    r"^revenue\s+impact\s+of\s+",  # Multi-metric query
+    r"^show\s+fiscal\s+year\s+revenue\??$",  # Fiscal year is ambiguous without year specification
+    r"^top\s+quartile\s+of\s+performers?\??$",  # No metric specified
+]
+
+
+def _is_generic_ambiguous_query(question: str) -> bool:
+    """Check if question is too generic/vague to resolve to a specific definition."""
+    question_lower = question.lower().strip()
+    for pattern in GENERIC_AMBIGUOUS_PATTERNS:
+        if re.match(pattern, question_lower):
+            return True
+    return False
+
 
 def _detect_query_output_shape(question: str) -> Optional[str]:
     """
@@ -263,6 +297,20 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
     question_tokens = _tokenize(question_lower)
     expanded_tokens = _expand_synonyms(question_tokens)
 
+    # Step 0: Check for generic ambiguous queries FIRST
+    # These are queries too vague to resolve to a specific definition
+    if _is_generic_ambiguous_query(question):
+        return MatchResult(
+            best_match="AMBIGUOUS",
+            confidence=0.0,
+            matched_keywords=["GENERIC_AMBIGUOUS_QUERY"],
+            top_candidates=[],
+            is_ambiguous=True,
+            ambiguity_gap=0.0,
+            operators=None,
+            capability_routed=False,
+        )
+
     # Step 1: Extract operators from the question
     operators = extract_operators(question)
     required_capabilities = get_required_capabilities(operators)
@@ -289,15 +337,74 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
     # HIGH-VALUE TOKENS: These are so specific they should dominate matching
     # If present, they strongly indicate a specific definition regardless of other matches
     high_value_tokens = {
-        "unallocated": ("finops.unallocated_spend", 1.5),
+        "unallocated": ("finops.unallocated_spend", 3.0),  # Very strong - override "cloud spend"
         "slo": ("infra.slo_attainment", 1.2),
         "slos": ("infra.slo_attainment", 1.2),
-        "zombie": ("aod.zombies_overview", 1.0),
-        "zombies": ("aod.zombies_overview", 1.0),
+        "zombie": ("aod.zombies_overview", 1.5),  # Increased to override "cost"
+        "zombies": ("aod.zombies_overview", 1.5),
         "mttr": ("infra.mttr", 1.5),
         "burn": ("finops.burn_rate", 1.0),
         "pipeline": ("crm.pipeline", 1.5),  # "pipeline" strongly indicates sales pipeline
+        "deal": ("crm.pipeline", 1.2),  # "deal" indicates pipeline/deals
+        "deals": ("crm.pipeline", 1.2),
+        "orphan": ("aod.identity_gap_financially_anchored", 1.2),  # Orphan resources = identity gaps
+        "orphans": ("aod.identity_gap_financially_anchored", 1.2),
+        "unowned": ("aod.identity_gap_financially_anchored", 2.0),  # Strong - override "spend"
+        "incident": ("infra.incidents", 0.8),  # Reduced - let MTTR patterns override
+        "incidents": ("infra.incidents", 0.8),
+        "outage": ("infra.incidents", 0.8),
+        "outages": ("infra.incidents", 0.8),
+        "customer": ("crm.top_customers", 0.8),  # "customer" indicates CRM
+        "customers": ("crm.top_customers", 0.8),
+        "arr": ("finops.arr", 1.5),  # ARR explicitly routes to arr definition
+        "recurring": ("finops.arr", 1.2),
     }
+
+    # COMPOUND PATTERNS: Multi-token patterns that override individual token matching
+    # Format: (tokens_to_check, target_definition, boost)
+    compound_patterns = [
+        # "spending customers" or "customers by spend" → CRM, not SaaS spend
+        ({"customer", "spend"}, "crm.top_customers", 2.0),
+        ({"customers", "spend"}, "crm.top_customers", 2.0),
+        ({"customer", "spending"}, "crm.top_customers", 2.0),
+        ({"customers", "spending"}, "crm.top_customers", 2.0),
+        # "unowned spend" → identity gaps, not SaaS spend
+        ({"unowned", "spend"}, "aod.identity_gap_financially_anchored", 2.5),
+        # "revenue changed" → total_revenue (delta queries)
+        ({"revenue", "changed"}, "finops.total_revenue", 1.5),
+        ({"revenue", "change"}, "finops.total_revenue", 1.5),
+        # MTTR patterns - "time to fix/resolve" + "incident" → MTTR, not incidents
+        ({"time", "fix", "incidents"}, "infra.mttr", 3.0),
+        ({"time", "fix", "incident"}, "infra.mttr", 3.0),
+        ({"resolution", "time"}, "infra.mttr", 2.5),
+        ({"recover", "outages"}, "infra.mttr", 2.5),
+        ({"recover", "outage"}, "infra.mttr", 2.5),
+        ({"average", "time", "fix"}, "infra.mttr", 2.5),
+        ({"incident", "resolution"}, "infra.mttr", 2.5),
+        # AWS spend → saas_spend (must be strong enough to override customer boosts)
+        ({"aws", "spend"}, "finops.saas_spend", 5.0),  # Very strong to override customer+domain
+        ({"aws", "spend", "customer"}, "finops.saas_spend", 6.0),  # Override customer completely
+        ({"cloud", "spend"}, "finops.saas_spend", 3.0),
+        # "performing regions" → revenue (not SLO)
+        ({"performing", "regions"}, "finops.total_revenue", 2.0),
+        ({"bottom", "performing"}, "finops.total_revenue", 1.5),
+        # ARR-specific patterns
+        ({"annual", "recurring"}, "finops.arr", 2.5),
+        ({"subscription", "revenue"}, "finops.arr", 3.0),
+        ({"contracted", "revenue"}, "finops.arr", 3.0),
+        ({"run", "rate"}, "finops.arr", 3.5),  # Increased to override delta detection
+        ({"runrate"}, "finops.arr", 2.5),
+        ({"total", "subscriptions"}, "finops.arr", 2.5),
+        ({"run", "rate", "increased"}, "finops.arr", 4.0),  # Very strong for "run rate increased"
+    ]
+
+    # Apply compound pattern boosts
+    compound_boost = {}
+    for pattern_tokens, target_defn, boost in compound_patterns:
+        if pattern_tokens <= question_tokens or pattern_tokens <= expanded_tokens:
+            if target_defn not in compound_boost:
+                compound_boost[target_defn] = 0.0
+            compound_boost[target_defn] = max(compound_boost[target_defn], boost)
 
     # Check for high-value tokens that strongly indicate a specific definition
     high_value_boost = {}
@@ -368,6 +475,11 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
         if defn.definition_id in high_value_boost:
             score += high_value_boost[defn.definition_id]
             matched.append(f"high_value_token:{defn.definition_id}")
+
+        # 0D. Apply compound pattern boost (stronger than individual tokens)
+        if defn.definition_id in compound_boost:
+            score += compound_boost[defn.definition_id]
+            matched.append(f"compound_pattern:{defn.definition_id}")
 
         # 1. Check explicit keywords (highest weight)
         # Priority: multi-word exact phrases > single-word exact > partial overlap

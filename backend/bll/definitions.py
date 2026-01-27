@@ -45,7 +45,8 @@ _register(Definition(
     metrics=["total_spend", "transaction_count", "avg_monthly_cost"],
     keywords=["saas spend", "cloud spend", "software spend", "vendor spend",
               "total spend", "spending by vendor", "cloud costs", "saas costs",
-              "current spend", "spend summary"],
+              "current spend", "spend summary", "vendors", "list vendors",
+              "how many vendors", "vendor count", "cheapest vendors", "top vendors"],
     capabilities=DefinitionCapabilities(
         supports_delta=False,
         supports_trend=False,
@@ -179,7 +180,8 @@ _register(Definition(
     metrics=["monthly_cost"],
     keywords=["identity gap", "ownership gap", "unowned resources", "no owner",
               "missing owner", "orphan resources", "resources without owner",
-              "who owns this", "ownership missing", "resource ownership"],
+              "who owns this", "ownership missing", "resource ownership",
+              "unowned spend", "orphan spend", "spend without owner"],
 ))
 
 
@@ -247,7 +249,9 @@ _register(Definition(
     # Only include ARR-specific terms: arr, mrr, recurring, subscription, bookings
     keywords=["arr", "annual recurring", "mrr", "monthly recurring",
               "current arr", "total arr", "bookings", "contract value", "acv", "tcv",
-              "subscription metrics", "subscription", "recurring", "run rate", "runrate"],
+              "subscription metrics", "subscription", "recurring", "run rate", "runrate",
+              "subscriptions", "total subscriptions", "subscription revenue",
+              "contracted revenue", "run-rate", "contracted"],
     capabilities=DefinitionCapabilities(
         supports_delta=False,  # ARR is current state, use MoM definition for changes
         supports_trend=False,
@@ -281,8 +285,9 @@ _register(Definition(
     ],
     dimensions=["month", "category", "cost_center"],
     metrics=["total_spend"],
-    keywords=["burn rate", "burn", "runway", "cash burn", "monthly burn", "consumption", 
-              "spending rate", "current burn rate", "what is our burn rate"],
+    keywords=["burn rate", "burn", "runway", "cash burn", "monthly burn", "consumption",
+              "spending rate", "current burn rate", "what is our burn rate",
+              "budget", "eating up budget", "eating our budget", "where is money going"],
 ))
 
 
@@ -314,7 +319,8 @@ _register(Definition(
     # CRITICAL: Keywords for SCALAR revenue queries (no "customer", "top", "rank")
     keywords=["total revenue", "revenue total", "what is our revenue", "what was our revenue",
               "how much revenue", "revenue amount", "overall revenue", "aggregate revenue",
-              "revenue this", "revenue last", "revenue for"],
+              "revenue this", "revenue last", "revenue for",
+              "performing regions", "bottom performing", "least profitable", "profitable", "profit"],
     capabilities=DefinitionCapabilities(
         supports_delta=False,
         supports_trend=True,
@@ -377,7 +383,8 @@ _register(Definition(
     dimensions=["industry"],
     metrics=["annual_revenue", "employee_count"],
     keywords=["top customers", "biggest customers", "largest customers", "customers by revenue",
-              "top accounts", "best customers", "high value customers", "customer revenue"],
+              "top accounts", "best customers", "high value customers", "customer revenue",
+              "highest-spending customers", "spending customers", "top spending customers"],
     capabilities=DefinitionCapabilities(
         supports_delta=False,
         supports_trend=False,
@@ -418,7 +425,8 @@ _register(Definition(
     keywords=["slo", "slos", "slo attainment", "service level objective", "service level",
               "uptime", "availability", "reliability", "error budget", "sla",
               "how is our slo", "how are our slos", "slo trending", "slos trending",
-              "slo performance", "slo status", "are our slos"],
+              "slo performance", "slo status", "are our slos",
+              "at risk", "services at risk", "which services are at risk"],
 ))
 
 
@@ -441,7 +449,8 @@ _register(Definition(
     dimensions=["service_name", "period", "team"],
     metrics=["deploy_count"],
     keywords=["deploy frequency", "deployment frequency", "dora", "deployments",
-              "how often deploy", "release frequency", "deploys per day", "cd metrics"],
+              "how often deploy", "release frequency", "deploys per day", "cd metrics",
+              "releases", "number of releases", "releases per week", "release count"],
 ))
 
 
@@ -537,7 +546,8 @@ _register(Definition(
     dimensions=["service", "severity", "status", "team"],
     metrics=[],
     keywords=["incidents", "outages", "pages", "alerts", "incident count",
-              "sev1", "sev2", "critical incidents", "production incidents"],
+              "sev1", "sev2", "critical incidents", "production incidents",
+              "issues", "any issues", "are there any issues", "problems"],
 ))
 
 
