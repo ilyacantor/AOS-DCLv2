@@ -320,7 +320,8 @@ _register(Definition(
     keywords=["total revenue", "revenue total", "what is our revenue", "what was our revenue",
               "how much revenue", "revenue amount", "overall revenue", "aggregate revenue",
               "revenue this", "revenue last", "revenue for",
-              "performing regions", "bottom performing", "least profitable", "profitable", "profit"],
+              "performing regions", "bottom performing", "least profitable", "profitable", "profit",
+              "total sales", "what are our sales", "sales total", "overall sales"],
     capabilities=DefinitionCapabilities(
         supports_delta=False,
         supports_trend=True,

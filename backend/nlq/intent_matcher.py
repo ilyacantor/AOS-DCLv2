@@ -27,18 +27,18 @@ from .operator_extractor import (
 # =============================================================================
 SCALAR_QUERY_PATTERNS = [
     # Present tense scalar patterns
-    r"^what\s+(?:is|are)\s+(?:our|the|my)\s+(?:current\s+)?(?:total\s+)?(?:arr|revenue|burn\s*rate|spend|cost|mttr)\b",
-    r"^what's?\s+(?:our|the|my)\s+(?:current\s+)?(?:total\s+)?(?:arr|revenue|burn\s*rate|spend|cost|mttr)\b",
-    r"\bcurrent\s+(?:arr|revenue|burn\s*rate|spend|cost)\b",
-    r"^(?:total|overall)\s+(?:arr|revenue|burn\s*rate|spend|cost)\b",
-    r"^how\s+much\s+(?:is\s+)?(?:our|the)\s+(?:arr|revenue|spend|cost)\b",
+    r"^what\s+(?:is|are)\s+(?:our|the|my)\s+(?:current\s+)?(?:total\s+)?(?:arr|revenue|sales|burn\s*rate|spend|cost|mttr)\b",
+    r"^what's?\s+(?:our|the|my)\s+(?:current\s+)?(?:total\s+)?(?:arr|revenue|sales|burn\s*rate|spend|cost|mttr)\b",
+    r"\bcurrent\s+(?:arr|revenue|sales|burn\s*rate|spend|cost)\b",
+    r"^(?:total|overall)\s+(?:arr|revenue|sales|burn\s*rate|spend|cost)\b",
+    r"^how\s+much\s+(?:is\s+)?(?:our|the)\s+(?:arr|revenue|sales|spend|cost)\b",
     # PAST TENSE patterns - CRITICAL for "what was our revenue last year"
-    r"^what\s+was\s+(?:our|the|my)\s+(?:total\s+)?(?:arr|revenue|burn\s*rate|spend|cost|mttr)\b",
-    r"^what\s+were\s+(?:our|the|my)\s+(?:total\s+)?(?:arr|revenue|burn\s*rate|spend|cost|mttr)\b",
-    r"^how\s+much\s+(?:was\s+)?(?:our|the)\s+(?:arr|revenue|spend|cost)\b",
-    r"^how\s+much\s+(?:did\s+we\s+)?(?:make|earn|bring)\s+(?:in\s+)?(?:revenue)?\b",
+    r"^what\s+was\s+(?:our|the|my)\s+(?:total\s+)?(?:arr|revenue|sales|burn\s*rate|spend|cost|mttr)\b",
+    r"^what\s+were\s+(?:our|the|my)\s+(?:total\s+)?(?:arr|revenue|sales|burn\s*rate|spend|cost|mttr)\b",
+    r"^how\s+much\s+(?:was\s+)?(?:our|the)\s+(?:arr|revenue|sales|spend|cost)\b",
+    r"^how\s+much\s+(?:did\s+we\s+)?(?:make|earn|bring)\s+(?:in\s+)?(?:revenue|sales)?\b",
     # Time-scoped scalar patterns (without "top", "customers", "by customer" etc.)
-    r"^(?:arr|revenue|spend|cost)\s+(?:last|this|for\s+the)\s+(?:year|quarter|month|week)\b",
+    r"^(?:arr|revenue|sales|spend|cost)\s+(?:last|this|for\s+the)\s+(?:year|quarter|month|week)\b",
 ]
 
 # Patterns that indicate the query is asking for a RANKED list (TopN)
