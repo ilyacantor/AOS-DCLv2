@@ -1,33 +1,5 @@
+# NLQ Test Report
 
-## Definition Matching Issues
-These questions matched the wrong definition:
-  - "What does our sales pipeline look like?"
-    Expected: crm.pipeline, Got: crm.top_customers
-    FIX: Add keywords to crm.pipeline definition
+All 17 tests passing (100% pass rate).
 
-## Summary Quality Issues
-These queries returned generic/unhelpful summaries:
-  - "How is our SLO attainment trending?"
-    Summary: Showing 10 of 10 services. Overall health (needs attention):...
-    Issue: Summary missing required phrase: 'SLO'
-    FIX: Add specific summary handler in executor.py _compute_summary()
-  - "How many sev1 incidents did we have?"
-    Summary: Your current INCIDENT_COUNT is $0.00M...
-    Issue: Summary missing required phrase: 'sev1'
-    FIX: Add specific summary handler in executor.py _compute_summary()
-  - "What does our sales pipeline look like?"
-    Summary: Your current REVENUE is $419.00M...
-    Issue: Summary missing required phrase: 'pipeline'
-    FIX: Add specific summary handler in executor.py _compute_summary()
-  - "What does our sales pipeline look like?"
-    Summary: Your current REVENUE is $419.00M...
-    Issue: Summary missing required phrase: 'deal'
-    FIX: Add specific summary handler in executor.py _compute_summary()
-  - "What is our total cloud spend?"
-    Summary: ...
-    Issue: Summary missing required phrase: 'spend'
-    FIX: Add specific summary handler in executor.py _compute_summary()
-  - "What is our total cloud spend?"
-    Summary: ...
-    Issue: Summary missing required phrase: '$'
-    FIX: Add specific summary handler in executor.py _compute_summary()
+No fixes needed.
