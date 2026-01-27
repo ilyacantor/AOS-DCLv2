@@ -98,28 +98,49 @@ def extract_limit(question: str) -> Optional[int]:
 def extract_time_window(question: str) -> Optional[str]:
     """
     Extract time window from question.
-    
+
     Patterns:
-    - "last month"
-    - "this quarter"
+    - "last month" / "this month"
+    - "last quarter" / "this quarter"
+    - "Q1" / "Q2" / "Q3" / "Q4" (specific quarters)
     - "YTD" / "year to date"
+    - "last year" / "this year"
+    - "in 2024" / "2025 revenue" (specific years)
     - "last 30 days"
     """
     question_lower = question.lower()
-    
+
+    # Specific year patterns - check first (e.g., "in 2024", "2024 revenue", "2025's")
+    year_patterns = [
+        r'\b(?:in\s+)?(\d{4})\b(?:\s+revenue|\s+sales)?',  # "in 2024", "2024 revenue"
+        r"(\d{4})(?:'s)?\s+(?:revenue|sales)",  # "2024's revenue"
+    ]
+    for pattern in year_patterns:
+        match = re.search(pattern, question_lower)
+        if match:
+            year = match.group(1)
+            if 2020 <= int(year) <= 2030:  # Reasonable year range
+                return year
+
+    # Specific quarter patterns (Q1, Q2, Q3, Q4)
+    quarter_match = re.search(r'\b[qQ]([1-4])\b', question_lower)
+    if quarter_match:
+        return f"q{quarter_match.group(1)}"
+
+    # Relative time patterns
     time_patterns = {
         r'\blast\s+month\b': 'last_month',
-        r'\bthis\s+month\b': 'current_month',
+        r'\bthis\s+month\b': 'this_month',
         r'\blast\s+quarter\b': 'last_quarter',
-        r'\bthis\s+quarter\b': 'current_quarter',
-        r'\b(?:ytd|year\s+to\s+date)\b': 'ytd',
+        r'\bthis\s+quarter\b': 'this_quarter',
+        r'\b(?:ytd|year[\s-]to[\s-]date)\b': 'ytd',
         r'\blast\s+year\b': 'last_year',
-        r'\bthis\s+year\b': 'current_year',
+        r'\bthis\s+year\b': 'this_year',
         r'\blast\s+(\d+)\s+days?\b': 'last_n_days',
         r'\blast\s+week\b': 'last_week',
-        r'\bthis\s+week\b': 'current_week',
+        r'\bthis\s+week\b': 'this_week',
     }
-    
+
     for pattern, window in time_patterns.items():
         match = re.search(pattern, question_lower)
         if match:
@@ -127,7 +148,7 @@ def extract_time_window(question: str) -> Optional[str]:
                 days = match.group(1)
                 return f"last_{days}_days"
             return window
-    
+
     return None
 
 

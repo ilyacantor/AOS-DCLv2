@@ -934,6 +934,12 @@ def _execute_farm_top_customers(
         return None
 
 
+def _get_month_end_day(year: int, month: int) -> int:
+    """Get the last day of a month."""
+    import calendar
+    return calendar.monthrange(year, month)[1]
+
+
 def _parse_time_window(time_window: str | None) -> tuple[str | None, str | None]:
     """
     Parse time_window string into date range.
@@ -952,36 +958,84 @@ def _parse_time_window(time_window: str | None) -> tuple[str | None, str | None]
 
     tw = time_window.lower().replace(" ", "_")
 
+    # Specific year (e.g., "2024", "2025")
+    if tw.isdigit() and len(tw) == 4:
+        year = int(tw)
+        return f"{year}-01-01", f"{year}-12-31"
+
+    # Last year
     if tw in ("last_year", "lastyear"):
         return f"{current_year - 1}-01-01", f"{current_year - 1}-12-31"
-    elif tw in ("this_year", "thisyear", "ytd"):
+
+    # This year (full calendar year - matches typical business expectations)
+    elif tw in ("this_year", "thisyear", "current_year", "currentyear"):
+        return f"{current_year}-01-01", f"{current_year}-12-31"
+
+    # YTD (actual year-to-date: Jan 1 to today)
+    elif tw == "ytd":
         return f"{current_year}-01-01", today.strftime("%Y-%m-%d")
-    elif tw == "2024":
-        return "2024-01-01", "2024-12-31"
-    elif tw == "2025":
-        return "2025-01-01", "2025-12-31"
+
+    # Last quarter
     elif tw in ("last_quarter", "lastquarter"):
         q = current_quarter - 1 if current_quarter > 1 else 4
         y = current_year if current_quarter > 1 else current_year - 1
         start_month = (q - 1) * 3 + 1
         end_month = q * 3
-        return f"{y}-{start_month:02d}-01", f"{y}-{end_month:02d}-{28 if end_month == 2 else 30}"
-    elif tw in ("this_quarter", "thisquarter"):
+        end_day = _get_month_end_day(y, end_month)
+        return f"{y}-{start_month:02d}-01", f"{y}-{end_month:02d}-{end_day:02d}"
+
+    # This quarter (full quarter - matches typical business expectations)
+    elif tw in ("this_quarter", "thisquarter", "current_quarter", "currentquarter"):
         start_month = (current_quarter - 1) * 3 + 1
-        return f"{current_year}-{start_month:02d}-01", today.strftime("%Y-%m-%d")
+        end_month = current_quarter * 3
+        end_day = _get_month_end_day(current_year, end_month)
+        return f"{current_year}-{start_month:02d}-01", f"{current_year}-{end_month:02d}-{end_day:02d}"
+
+    # Last month
     elif tw in ("last_month", "lastmonth"):
         first_of_month = today.replace(day=1)
         last_month_end = first_of_month - timedelta(days=1)
         last_month_start = last_month_end.replace(day=1)
         return last_month_start.strftime("%Y-%m-%d"), last_month_end.strftime("%Y-%m-%d")
-    elif tw in ("this_month", "thismonth"):
-        return today.replace(day=1).strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
+
+    # This month (full month - matches typical business expectations)
+    elif tw in ("this_month", "thismonth", "current_month", "currentmonth"):
+        end_day = _get_month_end_day(current_year, current_month)
+        return today.replace(day=1).strftime("%Y-%m-%d"), f"{current_year}-{current_month:02d}-{end_day:02d}"
+
+    # Specific quarters (Q1, Q2, Q3, Q4)
     elif tw in ("q1", "q2", "q3", "q4"):
         q = int(tw[1])
         start_month = (q - 1) * 3 + 1
         end_month = q * 3
-        # Default to current year for quarter references
-        return f"{current_year}-{start_month:02d}-01", f"{current_year}-{end_month:02d}-{28 if end_month == 2 else 30}"
+        # Use current year for quarter references without year context
+        # But if we're in a later quarter, default to current year
+        # If we're asking about a future quarter this year, use current year
+        year = current_year
+        end_day = _get_month_end_day(year, end_month)
+        return f"{year}-{start_month:02d}-01", f"{year}-{end_month:02d}-{end_day:02d}"
+
+    # Last N days
+    elif tw.startswith("last_") and tw.endswith("_days"):
+        try:
+            days = int(tw.replace("last_", "").replace("_days", ""))
+            start_date = today - timedelta(days=days)
+            return start_date.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # This week (full week - Mon to Sun)
+    elif tw in ("this_week", "thisweek", "current_week", "currentweek"):
+        start_of_week = today - timedelta(days=today.weekday())
+        end_of_week = start_of_week + timedelta(days=6)
+        return start_of_week.strftime("%Y-%m-%d"), end_of_week.strftime("%Y-%m-%d")
+
+    # Last week
+    elif tw in ("last_week", "lastweek"):
+        start_of_this_week = today - timedelta(days=today.weekday())
+        end_of_last_week = start_of_this_week - timedelta(days=1)
+        start_of_last_week = end_of_last_week - timedelta(days=6)
+        return start_of_last_week.strftime("%Y-%m-%d"), end_of_last_week.strftime("%Y-%m-%d")
 
     return None, None
 
