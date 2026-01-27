@@ -1,5 +1,99 @@
-# NLQ Test Report
 
-All 17 tests passing (100% pass rate).
-
-No fixes needed.
+## Summary Quality Issues
+These queries returned generic/unhelpful summaries:
+  - "What is our current ARR?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'ARR'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "What is our current ARR?"
+    Summary: ...
+    Issue: Summary missing required phrase: '$'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "What is our current burn rate?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'burn'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "What is our current burn rate?"
+    Summary: ...
+    Issue: Summary missing required phrase: '$'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "How is our SLO attainment trending?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'SLO'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "How is our SLO attainment trending?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'passing'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "What is our current SLO performance?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'SLO'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "Are we meeting our SLAs?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'SLO'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "What is our deployment frequency?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'deploy'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "How often are we deploying?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'deploy'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "What is our MTTR?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'recovery'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "What is our MTTR?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'minutes'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "What is our mean time to recovery?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'recovery'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "Show me recent incidents"
+    Summary: ...
+    Issue: Summary missing required phrase: 'incident'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "How many sev1 incidents did we have?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'incident'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "How many sev1 incidents did we have?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'sev1'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "Show me zombie resources"
+    Summary: ...
+    Issue: Summary missing required phrase: 'zombie'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "Show me zombie resources"
+    Summary: ...
+    Issue: Summary missing required phrase: 'idle'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "What idle resources are costing us money?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'idle'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "What idle resources are costing us money?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'zombie'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "What does our sales pipeline look like?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'pipeline'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "What does our sales pipeline look like?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'deal'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "What is our total cloud spend?"
+    Summary: ...
+    Issue: Summary missing required phrase: 'spend'
+    FIX: Add specific summary handler in executor.py _compute_summary()
+  - "What is our total cloud spend?"
+    Summary: ...
+    Issue: Summary missing required phrase: '$'
+    FIX: Add specific summary handler in executor.py _compute_summary()
