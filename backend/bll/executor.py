@@ -466,7 +466,7 @@ def _compute_summary(
                     health = "healthy"
 
                 if is_top_n:
-                    answer = f"Showing {row_count} of {pop_count} services. Overall health ({health}): {passing} passing, {at_risk} at risk, {breached} breached."
+                    answer = f"SLO status: Showing {row_count} of {pop_count} services. Overall health ({health}): {passing} passing, {at_risk} at risk, {breached} breached."
                 else:
                     answer = f"SLO health ({health}): {passing} passing, {at_risk} at risk, {breached} breached across {pop_count} services."
                 if avg_attainment:

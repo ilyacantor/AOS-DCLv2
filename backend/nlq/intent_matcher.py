@@ -296,6 +296,7 @@ def match_question_with_details(question: str, top_k: int = 5) -> MatchResult:
         "zombies": ("aod.zombies_overview", 1.0),
         "mttr": ("infra.mttr", 1.5),
         "burn": ("finops.burn_rate", 1.0),
+        "pipeline": ("crm.pipeline", 1.5),  # "pipeline" strongly indicates sales pipeline
     }
 
     # Check for high-value tokens that strongly indicate a specific definition

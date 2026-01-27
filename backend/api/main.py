@@ -759,8 +759,17 @@ def nlq_ask(request: NLQAskRequest):
                 # Check if Farm/BLL already set a time-aware answer (via time_window_applied)
                 farm_time_applied = agg.get("time_window_applied")
 
-                if agg.get("population_total") and not farm_time_applied:
-                    # Farm didn't apply time filtering - build our own answer prose
+                # Check if _compute_summary already provided a meaningful answer
+                # (not just generic "Retrieved X records" or empty)
+                existing_answer = result.summary.answer or ""
+                has_meaningful_summary = (
+                    existing_answer and
+                    not existing_answer.startswith("Retrieved") and
+                    len(existing_answer) > 10
+                )
+
+                if agg.get("population_total") and not farm_time_applied and not has_meaningful_summary:
+                    # Farm didn't apply time filtering AND no meaningful summary - build our own answer prose
                     if exec_args.time_window:
                         # User asked for time-filtered data, but we can't provide it
                         time_desc = exec_args.time_window.replace("_", " ")
@@ -770,7 +779,7 @@ def nlq_ask(request: NLQAskRequest):
                         )
                     else:
                         result.summary.answer = f"Your current {normalized_intent.metric.upper()} is ${agg['population_total']/1_000_000:,.2f}M"
-                # else: Farm already set a time-aware answer, use it as-is
+                # else: Farm already set a time-aware answer OR _compute_summary gave us a good answer - use it as-is
         else:
             scalar_data = result.data
 

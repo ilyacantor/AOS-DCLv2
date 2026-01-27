@@ -37,9 +37,9 @@ _register(Definition(
     ],
     sources=[
         SourceReference(source_id="netsuite", table_id="cloud_spend",
-                       columns=["VendorName", "ServiceCategory", "Monthly_Cost"]),
+                       columns=["vendor", "category", "monthly_cost", "annual_cost"]),
         SourceReference(source_id="sap", table_id="cloud_invoices",
-                       columns=["VENDOR_CODE", "ServiceCategory", "Monthly_Cost"]),
+                       columns=["vendor", "amount", "invoice_date"]),
     ],
     dimensions=["vendor_name", "service_category"],
     metrics=["total_spend", "transaction_count", "avg_monthly_cost"],
@@ -52,9 +52,9 @@ _register(Definition(
         supports_top_n=True,
         primary_metric="cost",
         entity_type="vendor",
-        default_order_by=[OrderBySpec(field="total_spend", direction="desc")],
-        allowed_order_by=["total_spend", "Monthly_Cost", "avg_monthly_cost"],
-        tie_breaker="vendor_name",
+        default_order_by=[OrderBySpec(field="monthly_cost", direction="desc")],
+        allowed_order_by=["monthly_cost", "annual_cost", "amount"],
+        tie_breaker="vendor",
     ),
 ))
 
@@ -351,7 +351,8 @@ _register(Definition(
     dimensions=["stage", "pipeline"],
     metrics=["amount"],
     keywords=["pipeline", "sales pipeline", "deal pipeline", "opportunities",
-              "deals", "forecast", "sales forecast", "pipeline value"],
+              "deals", "forecast", "sales forecast", "pipeline value",
+              "what does our pipeline look like", "show me the pipeline", "pipeline overview"],
 ))
 
 
