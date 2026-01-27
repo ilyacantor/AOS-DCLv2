@@ -1,11 +1,33 @@
 # DCL Engine - Data Connectivity Layer
 
-**Last Updated:** January 24, 2026
+**Last Updated:** January 27, 2026
 
 ## Overview
 The DCL (Data Connectivity Layer) Engine is a **metadata-only semantic mapping engine** that maps raw technical fields from source systems to business concepts and visualizes who uses what. It answers one question: "What does this field mean to the business?"
 
-DCL does NOT: Store raw data, process payloads, track lineage, or perform ETL.
+**DCL does NOT:**
+- Store raw data
+- Process payloads
+- Track lineage
+- Perform ETL
+- Execute queries (moved to AOS-NLQ)
+- Parse natural language (moved to AOS-NLQ)
+- Assemble answers (moved to AOS-NLQ)
+
+**DCL DOES:**
+- Manage schema structures (field names, types)
+- Maintain semantic mappings (field → concept)
+- Provide ontology management
+- Support graph visualization (Sankey diagrams)
+- Handle pointer buffering (NOT payload buffering)
+
+## Architecture Changes (January 27, 2026)
+
+**NLQ & BLL Moved to AOS-NLQ Repository:**
+- All NLQ (Natural Language Query) functionality has been moved to `AOS-NLQ`
+- All BLL (Business Logic Layer) functionality has been absorbed into `AOS-NLQ`
+- DCL is now purely a metadata/semantic layer
+- Legacy endpoints return HTTP 410 Gone with `MOVED_TO_AOS_NLQ`
 
 ## User Preferences
 - Preferred communication style: Simple, everyday language
@@ -53,7 +75,6 @@ DCL buffers ONLY Fabric Pointers (offsets, cursors) - NEVER payloads:
 **Core Components:**
 - **FabricPointerBuffer**: Pointer-only buffering with JIT fetch capability
 - **FabricPlane Types**: KafkaPointer, SnowflakePointer, BigQueryPointer, EventBridgePointer
-- **DownstreamConsumerContract**: Abstract interface for BLL consumers
 - **TopologyAPI**: Service absorbing visualization from AAM health data
 - **SecurityConstraints**: Build/runtime guards preventing payload.body writes
 
@@ -70,6 +91,7 @@ DCL buffers ONLY Fabric Pointers (offsets, cursors) - NEVER payloads:
 |----------|--------|-------------|
 | `/api/dcl/run` | POST | Execute pipeline (params: data_mode, run_mode, personas) |
 | `/api/dcl/narration/{session_id}` | GET | Poll narration messages |
+| `/api/dcl/batch-mapping` | POST | Run semantic mapping batch |
 
 ### Topology API
 | Endpoint | Method | Description |
@@ -78,9 +100,18 @@ DCL buffers ONLY Fabric Pointers (offsets, cursors) - NEVER payloads:
 | `/api/topology/health` | GET | Connection health data from mesh |
 | `/api/topology/stats` | GET | Topology service statistics |
 
-### Legacy Ingest (REMOVED)
-All `/api/ingest/*` endpoints return HTTP 410 Gone with `{"error": "MOVED_TO_AAM"}`.
-Ingest functionality has been fully migrated to AAM (Asset & Availability Management).
+### Dataset & Presets
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/datasets/current` | GET | Get current dataset info |
+| `/api/presets` | GET | Get UI preset suggestions |
+
+### Legacy Endpoints (REMOVED)
+All legacy endpoints return HTTP 410 Gone:
+- `/api/ingest/*` → `MOVED_TO_AAM`
+- `/api/nlq/*` → `MOVED_TO_AOS_NLQ`
+- `/api/bll/*` → `MOVED_TO_AOS_NLQ`
+- `/api/execute` → `MOVED_TO_AOS_NLQ`
 
 ## Node List (24 Nodes)
 
@@ -139,8 +170,10 @@ Ingest functionality has been fully migrated to AAM (Asset & Availability Manage
 │   ├── core/
 │   │   ├── fabric_plane.py   # Fabric Plane types
 │   │   ├── pointer_buffer.py # Pointer buffering
-│   │   ├── downstream_contract.py # BLL interface
 │   │   └── topology_api.py   # Topology service
+│   ├── dcl/
+│   │   ├── __init__.py       # DCL module (metadata-only)
+│   │   └── routes.py         # Dataset/preset endpoints
 │   └── llm/
 │       └── mapping_validator.py # GPT-4o-mini validation
 ├── src/
@@ -161,9 +194,7 @@ Ingest functionality has been fully migrated to AAM (Asset & Availability Manage
 - **Redis**: Narration broadcast
 - **httpx**: Async HTTP client for Farm API
 
-## Documentation
-- **NLQ Architecture**: See `docs/NLQ_ARCHITECTURE.md` for complete NLQ layer documentation
-  - Intent matching, operator extraction, parameter extraction
-  - Production boundary: NLQ = compiler, BLL = executor
-  - Definition capabilities and ordering specification
-  - API endpoints and request/response examples
+## Related Repositories
+- **AOS-NLQ**: Natural Language Query layer (NLQ + BLL functionality)
+- **AOS-Farm**: Ground truth data and scenario management
+- **AAM**: Asset & Availability Management (ingest pipeline)

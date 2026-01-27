@@ -1,23 +1,23 @@
 """
-DCL (Data Connectivity Layer) - Unified runtime for NLQ and structured execution.
+DCL (Data Connectivity Layer) - Metadata-only semantic mapping engine.
 
-This module consolidates NLQ, BLL, and execution into a single runtime:
-- dcl.nlq: Parameter extraction and definition matching
-- dcl.executor: Query execution with proper aggregations
-- dcl.presenter: Mechanical data summary generation
-- dcl.definitions: Definition registry and metadata
-- dcl.history: Query history persistence and replay
+DCL maps raw technical fields from source systems to business concepts
+and visualizes who uses what. It answers one question:
+"What does this field mean to the business?"
+
+DCL does NOT:
+- Store raw data
+- Process payloads
+- Track lineage
+- Perform ETL
+- Execute queries (moved to AOS-NLQ)
+- Parse natural language (moved to AOS-NLQ)
+- Assemble answers (moved to AOS-NLQ)
+
+DCL DOES:
+- Manage schema structures (field names, types)
+- Maintain semantic mappings (field → concept)
+- Provide ontology management
+- Support graph visualization
+- Handle pointer buffering (NOT payload buffering)
 """
-from .executor.executor import execute_query, ExecuteRequest, ExecuteResponse
-from .presenter.presenter import generate_data_summary
-from .history.persistence import HistoryStore
-from .definitions.registry import DefinitionRegistry
-
-__all__ = [
-    "execute_query",
-    "ExecuteRequest",
-    "ExecuteResponse",
-    "generate_data_summary",
-    "HistoryStore",
-    "DefinitionRegistry",
-]
