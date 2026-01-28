@@ -166,7 +166,7 @@ function App() {
 
   // Format elapsed time for display
   const formatElapsedTime = (ms: number) => {
-    return `${(ms / 1000).toFixed(2)}s`;
+    return `${(ms / 1000).toFixed(1)}s`;
   };
 
   // Top-level navigation tabs
