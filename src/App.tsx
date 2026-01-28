@@ -8,6 +8,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './componen
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import { Toaster } from './components/ui/toaster';
 import { useToast } from './hooks/use-toast';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 type MainView = 'graph' | 'dashboard';
 
@@ -23,6 +24,7 @@ function App() {
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [mainView, setMainView] = useState<MainView>('graph');
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -326,10 +328,16 @@ function App() {
               </div>
             </ResizablePanel>
 
-            <ResizableHandle className="bg-border/50 w-1.5 hover:bg-primary/50 transition-colors" />
+            <div className="relative flex h-full">
+              <button
+                onClick={() => setRightPanelCollapsed(!rightPanelCollapsed)}
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-6 h-12 bg-sidebar border border-border rounded-md flex items-center justify-center hover:bg-accent transition-colors"
+                title={rightPanelCollapsed ? "Expand panel" : "Collapse panel"}
+              >
+                {rightPanelCollapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </button>
 
-            <ResizablePanel defaultSize={30} minSize={20}>
-              <div className="h-full border-l bg-sidebar flex flex-col min-h-0">
+              <div className={`h-full border-l bg-sidebar flex flex-col min-h-0 transition-all duration-200 ${rightPanelCollapsed ? 'w-0 overflow-hidden' : 'w-80'}`}>
                 <Tabs defaultValue="monitor" className="flex-1 flex flex-col min-h-0">
                    <div className="border-b px-4 pt-2 shrink-0">
                      <TabsList className="w-full">
@@ -348,7 +356,7 @@ function App() {
                    </div>
                 </Tabs>
               </div>
-            </ResizablePanel>
+            </div>
           </ResizablePanelGroup>
         )}
       </div>
