@@ -287,7 +287,7 @@ function App() {
                 )}
                 {!isRunning && graphData?.meta.runMetrics && (
                   <span className="text-xs text-muted-foreground">
-                    {graphData.meta.runMetrics.processingMs}ms
+                    {(graphData.meta.runMetrics.processingMs / 1000).toFixed(1)}s
                   </span>
                 )}
               </div>
