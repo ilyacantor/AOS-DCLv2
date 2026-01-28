@@ -166,9 +166,7 @@ function App() {
 
   // Format elapsed time for display
   const formatElapsedTime = (ms: number) => {
-    const seconds = Math.floor(ms / 1000);
-    const tenths = Math.floor((ms % 1000) / 100);
-    return `${seconds}.${tenths}s`;
+    return `${(ms / 1000).toFixed(2)}s`;
   };
 
   // Top-level navigation tabs
