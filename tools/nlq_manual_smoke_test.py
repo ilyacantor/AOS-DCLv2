@@ -292,9 +292,10 @@ def run_nlq_ask(question: str, direct: bool = False) -> dict:
 
     try:
         import requests
+        # Don't pass dataset_id - let server use its default (Farm if FARM_SCENARIO_ID is set)
         resp = requests.post(
             f"{BASE_URL}/api/nlq/ask",
-            json={"question": question, "dataset_id": "demo9"},
+            json={"question": question},
             timeout=30
         )
         resp.raise_for_status()

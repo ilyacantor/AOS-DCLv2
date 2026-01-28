@@ -26,7 +26,8 @@ class SchemaLoader:
         if SchemaLoader._demo_cache is not None and (now - SchemaLoader._cache_time) < SchemaLoader._CACHE_TTL:
             if narration and run_id:
                 narration.add_message(run_id, "SchemaLoader", f"Using cached demo schemas ({len(SchemaLoader._demo_cache)} sources)")
-            return SchemaLoader._demo_cache
+            # Return a copy to prevent callers from modifying the cache
+            return list(SchemaLoader._demo_cache)
         
         schemas_path = "schemas/schemas"
         if not os.path.exists(schemas_path):
@@ -126,7 +127,8 @@ class SchemaLoader:
         SchemaLoader._demo_cache = sources
         SchemaLoader._cache_time = time.time()
         
-        return sources
+        # Return a copy to prevent caller from mutating the cache
+        return list(sources)
 
     @staticmethod
     def load_farm_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 50) -> List[SourceSystem]:

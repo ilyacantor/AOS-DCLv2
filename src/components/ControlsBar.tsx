@@ -74,8 +74,8 @@ export function ControlsBar({
           <Clock className="w-3 h-3" />
           <span className="text-foreground font-mono">
             {isRunning
-              ? `${(elapsedTime / 1000).toFixed(2)}s`
-              : `${((metrics?.processingMs || 0) / 1000).toFixed(2)}s`}
+              ? `${(elapsedTime / 1000).toFixed(1)}s`
+              : `${((metrics?.processingMs || 0) / 1000).toFixed(1)}s`}
           </span>
         </div>
       </div>

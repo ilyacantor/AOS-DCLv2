@@ -1,0 +1,83 @@
+{
+  "dataset_id": "nlq_test",
+  "name": "NLQ Test Dataset",
+  "description": "Complete dataset with invoice data for time-window testing plus demo9 tables for full BLL coverage",
+  "created_at": "2026-01-27",
+  "sources": [
+    {
+      "source_id": "salesforce",
+      "name": "Salesforce CRM",
+      "tables": [
+        {"table_id": "invoices", "file": "dcl/demo/datasets/nlq_test/invoices.csv"},
+        {"table_id": "opportunity", "file": "dcl/demo/datasets/demo9/salesforce_opportunity.csv"},
+        {"table_id": "account", "file": "dcl/demo/datasets/demo9/salesforce_account.csv"}
+      ]
+    },
+    {
+      "source_id": "hubspot",
+      "name": "HubSpot CRM",
+      "tables": [
+        {"table_id": "deals", "file": "dcl/demo/datasets/demo9/hubspot_deals.csv"}
+      ]
+    },
+    {
+      "source_id": "dynamics",
+      "name": "Microsoft Dynamics",
+      "tables": [
+        {"table_id": "opportunities", "file": "dcl/demo/datasets/demo9/dynamics_opportunities.csv"},
+        {"table_id": "accounts", "file": "dcl/demo/datasets/demo9/dynamics_accounts.csv"}
+      ]
+    },
+    {
+      "source_id": "netsuite",
+      "name": "NetSuite ERP",
+      "tables": [
+        {"table_id": "cloud_spend", "file": "dcl/demo/datasets/demo9/netsuite_cloud_spend.csv"}
+      ]
+    },
+    {
+      "source_id": "snowflake",
+      "name": "Snowflake DW",
+      "tables": [
+        {"table_id": "aws_costs", "file": "dcl/demo/datasets/demo9/snowflake_aws_costs.csv"},
+        {"table_id": "aws_resources", "file": "dcl/demo/datasets/demo9/snowflake_aws_resources.csv"}
+      ]
+    },
+    {
+      "source_id": "sap",
+      "name": "SAP ERP",
+      "tables": [
+        {"table_id": "cloud_invoices", "file": "dcl/demo/datasets/demo9/sap_cloud_invoices.csv"}
+      ]
+    },
+    {
+      "source_id": "supabase",
+      "name": "Supabase App DB",
+      "tables": [
+        {"table_id": "account_health", "file": "dcl/demo/datasets/demo9/supabase_account_health.csv"}
+      ]
+    },
+    {
+      "source_id": "legacy_sql",
+      "name": "Legacy SQL DB",
+      "tables": [
+        {"table_id": "usage_metrics", "file": "dcl/demo/datasets/demo9/legacy_usage_metrics.csv"}
+      ]
+    },
+    {
+      "source_id": "datadog",
+      "name": "Datadog Observability",
+      "tables": [
+        {"table_id": "slo_metrics", "file": "dcl/demo/datasets/demo9/datadog_slo_metrics.csv"},
+        {"table_id": "dora_metrics", "file": "dcl/demo/datasets/demo9/datadog_dora_metrics.csv"}
+      ]
+    },
+    {
+      "source_id": "pagerduty",
+      "name": "PagerDuty Incidents",
+      "tables": [
+        {"table_id": "incidents", "file": "dcl/demo/datasets/demo9/pagerduty_incidents.csv"}
+      ]
+    }
+  ]
+}

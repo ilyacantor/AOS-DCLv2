@@ -4,13 +4,13 @@ import { MonitorPanel } from './components/MonitorPanel';
 import { NarrationPanel } from './components/NarrationPanel';
 import { SankeyGraph } from './components/SankeyGraph';
 import { EnterpriseDashboard } from './components/EnterpriseDashboard';
-import { AskPage } from './components/AskPage';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/resizable';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import { Toaster } from './components/ui/toaster';
 import { useToast } from './hooks/use-toast';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-type MainView = 'ask' | 'graph' | 'dashboard';
+type MainView = 'graph' | 'dashboard';
 
 const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO'];
 
@@ -23,14 +23,12 @@ function App() {
   const [runId, setRunId] = useState<string | undefined>(undefined);
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [mainView, setMainView] = useState<MainView>('ask');
+  const [mainView, setMainView] = useState<MainView>('graph');
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Only load DCL graph data when not on Ask view
-    if (mainView !== 'ask') {
-      loadData();
-    }
+    loadData();
   }, [mainView]);
 
   useEffect(() => {
@@ -170,14 +168,11 @@ function App() {
 
   // Format elapsed time for display
   const formatElapsedTime = (ms: number) => {
-    const seconds = Math.floor(ms / 1000);
-    const tenths = Math.floor((ms % 1000) / 100);
-    return `${seconds}.${tenths}s`;
+    return `${(ms / 1000).toFixed(1)}s`;
   };
 
   // Top-level navigation tabs
   const navTabs: { id: MainView; label: string }[] = [
-    { id: 'ask', label: 'Ask' },
     { id: 'graph', label: 'Graph' },
     { id: 'dashboard', label: 'Dashboard' },
   ];
@@ -214,8 +209,7 @@ function App() {
           <div className="flex-1" />
 
           {/* Controls for graph/dashboard views */}
-          {mainView !== 'ask' && (
-            <div className="flex items-center gap-3 text-sm">
+          <div className="flex items-center gap-3 text-sm">
               {/* Data Mode */}
               <div className="flex items-center gap-1">
                 <span className="text-xs text-muted-foreground">Data:</span>
@@ -298,15 +292,12 @@ function App() {
                 )}
               </div>
             </div>
-          )}
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        {mainView === 'ask' ? (
-          <AskPage />
-        ) : mainView === 'dashboard' ? (
+        {mainView === 'dashboard' ? (
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel defaultSize={75} minSize={50}>
               <div className="h-full w-full">
@@ -337,10 +328,16 @@ function App() {
               </div>
             </ResizablePanel>
 
-            <ResizableHandle className="bg-border/50 w-1.5 hover:bg-primary/50 transition-colors" />
+            <div className="relative flex h-full">
+              <button
+                onClick={() => setRightPanelCollapsed(!rightPanelCollapsed)}
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-6 h-12 bg-sidebar border border-border rounded-md flex items-center justify-center hover:bg-accent transition-colors"
+                title={rightPanelCollapsed ? "Expand panel" : "Collapse panel"}
+              >
+                {rightPanelCollapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </button>
 
-            <ResizablePanel defaultSize={30} minSize={20}>
-              <div className="h-full border-l bg-sidebar flex flex-col min-h-0">
+              <div className={`h-full border-l bg-sidebar flex flex-col min-h-0 transition-all duration-200 ${rightPanelCollapsed ? 'w-0 overflow-hidden' : 'w-80'}`}>
                 <Tabs defaultValue="monitor" className="flex-1 flex flex-col min-h-0">
                    <div className="border-b px-4 pt-2 shrink-0">
                      <TabsList className="w-full">
@@ -359,7 +356,7 @@ function App() {
                    </div>
                 </Tabs>
               </div>
-            </ResizablePanel>
+            </div>
           </ResizablePanelGroup>
         )}
       </div>
