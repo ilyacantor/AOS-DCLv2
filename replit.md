@@ -2,207 +2,244 @@
 
 **Last Updated:** January 28, 2026
 
-## Overview
-The DCL (Data Connectivity Layer) Engine is a **metadata-only semantic mapping engine** that maps raw technical fields from source systems to business concepts and visualizes who uses what. It answers one question: "What does this field mean to the business?"
+## What is DCL?
 
-**DCL does NOT:**
-- Store raw data
-- Process payloads
-- Track lineage
-- Perform ETL
-- Execute queries (moved to AOS-NLQ)
-- Parse natural language (moved to AOS-NLQ)
-- Assemble answers (moved to AOS-NLQ)
+The Data Connectivity Layer (DCL) is a **semantic mapping and visualization platform** that helps organizations understand their data landscape. It answers the critical business question: **"Where does our data come from, what does it mean, and who uses it?"**
 
-**DCL DOES:**
-- Manage schema structures (field names, types)
-- Maintain semantic mappings (field → concept)
-- Provide ontology management
-- Support graph visualization (Sankey diagrams)
-- Handle pointer buffering (NOT payload buffering)
+### The Problem DCL Solves
+
+Modern enterprises have data scattered across dozens of systems—CRMs, ERPs, databases, data warehouses, and integration platforms. Business users struggle to understand:
+- Which systems contain the data they need
+- How technical field names translate to business concepts
+- Which data flows are relevant to their role
+
+DCL provides a visual map that connects these dots, making data discovery intuitive and role-specific.
+
+## Functional Capabilities
+
+### 1. Interactive Data Flow Visualization (Sankey Graph)
+
+The centerpiece of DCL is a **4-layer Sankey diagram** showing data flow:
+
+| Layer | Name | Purpose | Example |
+|-------|------|---------|---------|
+| **L0** | Pipeline | Entry point showing data mode | Demo Pipeline, Farm Pipeline |
+| **L1** | Sources | Connected data systems | Salesforce CRM, SAP ERP, MongoDB |
+| **L2** | Ontology | Business concepts | Revenue, Cost, Account, Opportunity |
+| **L3** | Personas | Who uses this data | CFO, CRO, COO, CTO |
+
+Users can:
+- **Filter by persona** to see only data relevant to their role
+- **Hover over connections** to see relationship details
+- **Click nodes** to explore source details
+- **Collapse/expand** the side panel for more graph space
+
+### 2. Dual Operating Modes
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| **Demo** | Pre-configured schemas from CSV files | Training, demonstrations, testing |
+| **Farm** | Live schemas from AOS-Farm API | Production data discovery |
+
+### 3. Run Modes (Dev vs Prod)
+
+| Mode | Mapping Strategy | Speed | Accuracy |
+|------|------------------|-------|----------|
+| **Dev** | Heuristic pattern matching | Fast (~1s) | Good for common patterns |
+| **Prod** | AI-powered semantic matching with RAG | Slower (~5s) | Higher accuracy for edge cases |
+
+### 4. Persona-Based Filtering
+
+Four executive personas with distinct data views:
+
+| Persona | Focus Areas | Key Concepts |
+|---------|-------------|--------------|
+| **CFO** | Financial oversight | Revenue, Cost, Budget |
+| **CRO** | Revenue operations | Opportunity, Account, Pipeline |
+| **COO** | Operational efficiency | Usage Metrics, Health Score |
+| **CTO** | Technical infrastructure | AWS Resources, System Health |
+
+### 5. Real-Time Narration
+
+A terminal-style panel shows processing activity in real-time:
+- Schema loading progress
+- Mapping operations
+- Source normalization
+- Pipeline orchestration steps
+
+### 6. Collapsible Monitor Panel
+
+The right sidebar contains:
+- **Persona Views**: Role-specific metrics and KPIs
+- **RAG History**: Semantic matching results (Prod mode)
+- Toggle collapse/expand for more visualization space
+
+## Key Data Sources (L1 Layer)
+
+### CRM Systems
+- **Salesforce CRM** - Customer accounts, opportunities, contacts
+- **HubSpot CRM** - Marketing and sales pipeline
+- **Microsoft Dynamics CRM** - Enterprise CRM data
+
+### ERP Systems
+- **SAP ERP** - Financial and operational data
+- **NetSuite ERP** - Cloud ERP suite
+
+### Databases
+- **MongoDB Customer DB** - Document-based customer data
+- **Supabase App DB** - Application database
+- **Legacy SQL** - Discovered legacy systems
+
+### Data Warehouse
+- **DW Dim Customer** - Dimensional customer data
+
+### Integration Platforms
+- **MuleSoft ERP Sync** - Real-time streaming data from MuleSoft
+
+## Business Concepts (L2 Ontology)
+
+| Concept | Description | Common Fields |
+|---------|-------------|---------------|
+| **Account** | Customer/company entity | account_id, company_name, customer |
+| **Opportunity** | Sales pipeline deals | opportunity_id, deal_stage, amount |
+| **Revenue** | Income metrics | revenue, sales, mrr, arr |
+| **Cost** | Expense tracking | cost, expense, spend |
+| **Date/Timestamp** | Time dimensions | created_at, updated_at, date |
+| **Health Score** | Customer health metrics | health_score, nps, satisfaction |
+| **Usage Metrics** | Product usage data | usage, active_users, sessions |
+| **AWS Resource** | Cloud infrastructure | instance_id, resource_arn |
+
+## User Interface Guide
+
+### Top Navigation Bar
+- **DCL Logo** - Application identifier
+- **Graph / Dashboard** - Toggle between views
+- **Data Mode** - Switch between Demo and Farm
+- **Run Mode** - Switch between Dev and Prod
+- **Persona Toggles** - CFO, CRO, COO, CTO buttons
+- **Run Button** - Execute the pipeline
+
+### Main Graph Area
+- Sankey diagram fills the main viewport
+- Nodes are color-coded by layer (teal→blue→purple gradient)
+- Links show data flow strength through opacity
+
+### Right Panel (Collapsible)
+- **Monitor Tab** - Persona metrics and views
+- **Narration Tab** - Real-time processing log
+- **Collapse Button** - Toggle panel visibility
+
+### Status Display
+- Elapsed time counter (during run)
+- Processing time (after completion)
+- RAG query count (Prod mode)
 
 ## Recent Changes
 
-**January 28, 2026 - Cache Mutation Bug Fix:**
-- Fixed critical bug where MuleSoft ERP Sync node was duplicating in the graph
-- Root cause: `SchemaLoader._demo_cache` was set to the `sources` list, and the same list was returned to callers who then extended it, mutating the cache
-- Fix: Return `list(sources)` (a copy) from `load_demo_schemas()` even on cache miss, not just cache hit
-- Cleaned up database: Removed duplicate source_systems entries and associated field_concept_mappings
+**January 28, 2026:**
+- Fixed cache mutation bug causing duplicate MuleSoft nodes
+- Made right panel collapsible with toggle button
+- Timer now displays 1 decimal place
+- Improved overall UI polish
 
-## Architecture Changes (January 27, 2026)
-
-**NLQ & BLL Moved to AOS-NLQ Repository:**
-- All NLQ (Natural Language Query) functionality has been moved to `AOS-NLQ`
-- All BLL (Business Logic Layer) functionality has been absorbed into `AOS-NLQ`
-- DCL is now purely a metadata/semantic layer
-- Legacy endpoints return HTTP 410 Gone with `MOVED_TO_AOS_NLQ`
+**January 27, 2026:**
+- Moved NLQ & BLL functionality to AOS-NLQ repository
+- DCL refocused as metadata-only semantic layer
 
 ## User Preferences
-- Preferred communication style: Simple, everyday language
-- No fake/mock data to pass tests - always use real integrations
-- PST timezone for all timestamps (12-hour in controls, 24-hour in terminal)
+- Communication style: Simple, everyday language
+- No mock data - use real integrations
+- PST timezone (12-hour in controls, 24-hour in terminal)
+
+---
+
+# Technical Reference
 
 ## System Architecture
 
-### Frontend Architecture
-- **Framework**: React 18 + TypeScript + Vite
-- **Visualization**: D3.js (d3-sankey) for 4-layer Sankey diagrams
-- **Styling**: Tailwind CSS with glassmorphism effects
-- **Key Components**:
-  - `App.tsx` - State management and data flow
-  - `ControlPanel.tsx` - Mode selection (Demo/Farm, Dev/Prod), persona toggles
-  - `SankeyGraph.tsx` - Interactive 4-layer visualization (L0→L1→L2→L3)
-  - `NarrationPanel.tsx` - Terminal-style real-time processing logs
-  - `MonitorPanel.tsx` - Persona-specific metrics dashboard
+### Frontend Stack
+- **React 18** + TypeScript + Vite
+- **D3.js** (d3-sankey) for Sankey diagrams
+- **Tailwind CSS** with glassmorphism effects
+- **Lucide React** for icons
 
-### Backend Architecture
-- **Framework**: FastAPI + Python 3.11 + Pydantic V2
-- **Server**: Uvicorn on port 8000
-- **Layers**:
-  - **API Layer**: RESTful endpoints, CORS, validation
-  - **Domain Layer**: Core models (SourceSystem, TableSchema, OntologyConcept, Mapping, Persona)
-  - **Engine Layer**: DCLEngine orchestrator, SchemaLoader, MappingService, RAGService, NarrationService
-  - **Core Layer**: Zero-Trust components for metadata-only architecture
-  - **LLM Layer**: Mapping validation with GPT-4o-mini
+### Backend Stack
+- **FastAPI** + Python 3.11 + Pydantic V2
+- **Uvicorn** on port 8000
+- **PostgreSQL** for persistence
+- **Redis** for real-time pub/sub
 
-### Zero-Trust Core Components (backend/core/)
+### Key Components
 
-**Fabric Plane Mesh (January 2026 Pivot):**
-AAM connects to 4 Fabric Planes (not individual SaaS apps):
-- **iPaaS** (Workato, MuleSoft) - Integration flow control
-- **API_GATEWAY** (Kong, Apigee) - Managed API access
-- **EVENT_BUS** (Kafka, EventBridge) - Streaming backbone
-- **DATA_WAREHOUSE** (Snowflake, BigQuery) - Source of Truth
-
-**Pointer Buffering Strategy:**
-DCL buffers ONLY Fabric Pointers (offsets, cursors) - NEVER payloads:
-- Kafka: `{ topic, partition, offset }`
-- Snowflake: `{ table, stream_id, row_cursor }`
-- Just-in-Time fetching: payload retrieved only when semantic mapper requests
-
-**Core Components:**
-- **FabricPointerBuffer**: Pointer-only buffering with JIT fetch capability
-- **FabricPlane Types**: KafkaPointer, SnowflakePointer, BigQueryPointer, EventBridgePointer
-- **TopologyAPI**: Service absorbing visualization from AAM health data
-- **SecurityConstraints**: Build/runtime guards preventing payload.body writes
-
-### Data Storage
-- **PostgreSQL**: Schema persistence, mapping storage, source registration
-- **Redis**: Real-time pub/sub for narration (`dcl.logs`)
-- **Pinecone**: Vector database for RAG semantic matching (Prod mode)
-- **Local CSV**: Demo mode schema files
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `App.tsx` | src/ | Main React app, state management |
+| `SankeyGraph.tsx` | src/components/ | D3 Sankey visualization |
+| `MonitorPanel.tsx` | src/components/ | Persona metrics display |
+| `NarrationPanel.tsx` | src/components/ | Real-time log viewer |
+| `dcl_engine.py` | backend/engine/ | Main orchestrator |
+| `schema_loader.py` | backend/engine/ | Demo/Farm schema loading |
+| `mapping_service.py` | backend/engine/ | Heuristic field mapping |
+| `rag_service.py` | backend/engine/ | Pinecone RAG queries |
 
 ## API Endpoints
 
 ### Core Pipeline
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/dcl/run` | POST | Execute pipeline (params: data_mode, run_mode, personas) |
+| `/api/dcl/run` | POST | Execute pipeline with params: data_mode, run_mode, personas |
 | `/api/dcl/narration/{session_id}` | GET | Poll narration messages |
 | `/api/dcl/batch-mapping` | POST | Run semantic mapping batch |
 
-### Topology API
+### Topology
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/topology` | GET | Unified topology graph (merges DCL semantic graph with AAM health) |
-| `/api/topology/health` | GET | Connection health data from mesh |
-| `/api/topology/stats` | GET | Topology service statistics |
-
-### Dataset & Presets
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/datasets/current` | GET | Get current dataset info |
-| `/api/presets` | GET | Get UI preset suggestions |
-
-### Legacy Endpoints (REMOVED)
-All legacy endpoints return HTTP 410 Gone:
-- `/api/ingest/*` → `MOVED_TO_AAM`
-- `/api/nlq/*` → `MOVED_TO_AOS_NLQ`
-- `/api/bll/*` → `MOVED_TO_AOS_NLQ`
-- `/api/execute` → `MOVED_TO_AOS_NLQ`
-
-## Node List (24 Nodes)
-
-### L0 - Pipeline (1 node)
-- `pipe_demo` / `pipe_farm` - Pipeline entry point
-
-### L1 - Sources (11 nodes)
-- `source_salesforce_crm` - Salesforce CRM
-- `source_hubspot_crm` - HubSpot CRM
-- `source_dynamics_crm` - Microsoft Dynamics CRM
-- `source_sap_erp` - SAP ERP
-- `source_netsuite_erp` - NetSuite ERP
-- `source_mongodb_customer_db` - MongoDB Customer DB
-- `source_supabase_app_db` - Supabase App DB
-- `source_dw_dim_customer` - Data Warehouse Dim Customer
-- `source_discovered_legacy_sql` - Legacy SQL (discovered)
-- `source_mulesoft_mock` - MuleSoft ERP Sync
-- `source_mulesoft_stream` - MuleSoft Stream (Farm)
-
-### L2 - Ontology (8 concepts)
-- `ontology_account` - Account
-- `ontology_opportunity` - Opportunity
-- `ontology_revenue` - Revenue
-- `ontology_cost` - Cost
-- `ontology_date` - Date/Timestamp
-- `ontology_health` - Health Score
-- `ontology_usage` - Usage Metrics
-- `ontology_aws_resource` - AWS Resource
-
-### L3 - Business Logic Layer (4 personas)
-- `bll_cfo` - CFO persona
-- `bll_cro` - CRO persona
-- `bll_coo` - COO persona
-- `bll_cto` - CTO persona
+| `/api/topology` | GET | Unified topology graph |
+| `/api/topology/health` | GET | Connection health data |
 
 ## Environment Variables
-| Variable | Description |
-|----------|-------------|
-| `FARM_API_URL` | AOS-Farm API base URL |
-| `RUN_MODE` | `dev` (heuristic) or `prod` (LLM/RAG) |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `REDIS_URL` | Redis connection string |
-| `OPENAI_API_KEY` | OpenAI API key (embeddings + validation) |
-| `PINECONE_API_KEY` | Pinecone API key |
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `REDIS_URL` | Yes | Redis connection string |
+| `OPENAI_API_KEY` | Prod mode | OpenAI API for embeddings |
+| `PINECONE_API_KEY` | Prod mode | Pinecone vector database |
+| `FARM_API_URL` | Farm mode | AOS-Farm API base URL |
 
 ## File Structure
+
 ```
 ├── backend/
 │   ├── api/main.py           # FastAPI app, endpoints
-│   ├── domain/models.py      # Pydantic models
+│   ├── domain/models.py      # Pydantic data models
 │   ├── engine/
 │   │   ├── dcl_engine.py     # Main orchestrator
 │   │   ├── schema_loader.py  # CSV/Farm schema loading
 │   │   ├── mapping_service.py # Heuristic mapping
-│   │   └── rag_service.py    # Pinecone RAG
+│   │   ├── rag_service.py    # Pinecone RAG
+│   │   └── source_normalizer.py # Source deduplication
 │   ├── core/
 │   │   ├── fabric_plane.py   # Fabric Plane types
-│   │   ├── pointer_buffer.py # Pointer buffering
-│   │   └── topology_api.py   # Topology service
-│   ├── dcl/
-│   │   ├── __init__.py       # DCL module (metadata-only)
-│   │   └── routes.py         # Dataset/preset endpoints
+│   │   └── pointer_buffer.py # Pointer buffering
 │   └── llm/
 │       └── mapping_validator.py # GPT-4o-mini validation
 ├── src/
 │   ├── App.tsx               # Main React app
 │   └── components/
-│       ├── ControlPanel.tsx
-│       ├── SankeyGraph.tsx
-│       ├── NarrationPanel.tsx
-│       └── MonitorPanel.tsx
+│       ├── SankeyGraph.tsx   # D3 visualization
+│       ├── MonitorPanel.tsx  # Metrics dashboard
+│       └── NarrationPanel.tsx # Log viewer
 ├── data/schemas/             # Demo mode CSV files
 └── run_backend.py            # Backend entry point
 ```
 
-## External Dependencies
-- **OpenAI**: Mapping validation (GPT-4o-mini), embeddings (text-embedding-3-small)
-- **Pinecone**: Vector database for RAG
-- **PostgreSQL**: Schema and mapping persistence
-- **Redis**: Narration broadcast
-- **httpx**: Async HTTP client for Farm API
-
-## Related Repositories
-- **AOS-NLQ**: Natural Language Query layer (NLQ + BLL functionality)
+## Related Systems
+- **AOS-NLQ**: Natural Language Query layer (queries data from DCL mappings)
 - **AOS-Farm**: Ground truth data and scenario management
-- **AAM**: Asset & Availability Management (ingest pipeline)
+- **AAM**: Asset & Availability Management (data ingestion)
+
+## Workflows
+- **Backend API**: `python run_backend.py` - FastAPI server on port 8000
+- **Frontend Dev Server**: `npm run dev` - Vite dev server on port 5000
+- **Redis Server**: `redis-server --port 6379` - Pub/sub for narration
