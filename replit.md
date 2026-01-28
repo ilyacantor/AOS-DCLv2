@@ -48,9 +48,40 @@ Users can:
 | **Dev** | Heuristic pattern matching | Fast (~1s) | Good for common patterns |
 | **Prod** | AI-powered semantic matching with RAG | Slower (~5s) | Higher accuracy for edge cases |
 
-### 4. Persona-Based Filtering
+### 4. AI-Powered Semantic Mapping (LLM + RAG)
 
-Four executive personas with distinct data views:
+DCL uses AI to intelligently map technical field names to business concepts:
+
+**How It Works:**
+1. **Field Extraction** - Technical fields are extracted from source schemas (e.g., `acct_id`, `cust_revenue_ytd`)
+2. **Embedding Generation** - OpenAI's text-embedding-3-small converts fields to vector representations
+3. **RAG Query** - Pinecone vector database finds semantically similar concepts from the ontology
+4. **LLM Validation** - GPT-4o-mini validates and scores mapping confidence
+
+**Example Mapping Flow:**
+```
+Source Field: "cust_revenue_ytd"
+    ↓ Embedding
+Vector: [0.12, -0.34, 0.56, ...]
+    ↓ RAG Query (Pinecone)
+Top Match: "Revenue" (similarity: 0.92)
+    ↓ LLM Validation
+Result: Revenue concept, 95% confidence
+```
+
+**RAG History Panel:**
+- View semantic matches in the Monitor panel's "RAG History" tab
+- Shows query field, matched concept, and confidence score
+- Tracks total RAG reads during pipeline execution
+
+**When AI is Used:**
+- **Prod Mode Only** - Dev mode uses fast heuristics instead
+- **Ambiguous Fields** - Fields that don't match simple patterns
+- **New Sources** - First-time discovery of unknown schemas
+
+### 5. Persona-Based Filtering
+
+Filter the visualization by executive role to see only relevant data flows:
 
 | Persona | Focus Areas | Key Concepts |
 |---------|-------------|--------------|
@@ -59,7 +90,7 @@ Four executive personas with distinct data views:
 | **COO** | Operational efficiency | Usage Metrics, Health Score |
 | **CTO** | Technical infrastructure | AWS Resources, System Health |
 
-### 5. Real-Time Narration
+### 6. Real-Time Narration
 
 A terminal-style panel shows processing activity in real-time:
 - Schema loading progress
@@ -67,7 +98,7 @@ A terminal-style panel shows processing activity in real-time:
 - Source normalization
 - Pipeline orchestration steps
 
-### 6. Collapsible Monitor Panel
+### 7. Collapsible Monitor Panel
 
 The right sidebar contains:
 - **Persona Views**: Role-specific metrics and KPIs
