@@ -4,12 +4,13 @@ import { MonitorPanel } from './components/MonitorPanel';
 import { NarrationPanel } from './components/NarrationPanel';
 import { SankeyGraph } from './components/SankeyGraph';
 import { EnterpriseDashboard } from './components/EnterpriseDashboard';
+import { AskPage } from './components/AskPage';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/resizable';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import { Toaster } from './components/ui/toaster';
 import { useToast } from './hooks/use-toast';
 
-type MainView = 'graph' | 'dashboard';
+type MainView = 'ask' | 'graph' | 'dashboard';
 
 const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO'];
 
@@ -22,11 +23,14 @@ function App() {
   const [runId, setRunId] = useState<string | undefined>(undefined);
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [mainView, setMainView] = useState<MainView>('graph');
+  const [mainView, setMainView] = useState<MainView>('ask');
   const { toast } = useToast();
 
   useEffect(() => {
-    loadData();
+    // Only load DCL graph data when not on Ask view
+    if (mainView !== 'ask') {
+      loadData();
+    }
   }, [mainView]);
 
   useEffect(() => {
@@ -173,6 +177,7 @@ function App() {
 
   // Top-level navigation tabs
   const navTabs: { id: MainView; label: string }[] = [
+    { id: 'ask', label: 'Ask' },
     { id: 'graph', label: 'Graph' },
     { id: 'dashboard', label: 'Dashboard' },
   ];
@@ -209,7 +214,8 @@ function App() {
           <div className="flex-1" />
 
           {/* Controls for graph/dashboard views */}
-          <div className="flex items-center gap-3 text-sm">
+          {mainView !== 'ask' && (
+            <div className="flex items-center gap-3 text-sm">
               {/* Data Mode */}
               <div className="flex items-center gap-1">
                 <span className="text-xs text-muted-foreground">Data:</span>
@@ -292,12 +298,15 @@ function App() {
                 )}
               </div>
             </div>
+          )}
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        {mainView === 'dashboard' ? (
+        {mainView === 'ask' ? (
+          <AskPage />
+        ) : mainView === 'dashboard' ? (
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel defaultSize={75} minSize={50}>
               <div className="h-full w-full">
