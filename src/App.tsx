@@ -24,7 +24,7 @@ function App() {
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [mainView, setMainView] = useState<MainView>('graph');
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(true);
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
