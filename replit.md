@@ -1,6 +1,6 @@
 # DCL Engine - Data Connectivity Layer
 
-**Last Updated:** January 27, 2026
+**Last Updated:** January 28, 2026
 
 ## Overview
 The DCL (Data Connectivity Layer) Engine is a **metadata-only semantic mapping engine** that maps raw technical fields from source systems to business concepts and visualizes who uses what. It answers one question: "What does this field mean to the business?"
@@ -20,6 +20,14 @@ The DCL (Data Connectivity Layer) Engine is a **metadata-only semantic mapping e
 - Provide ontology management
 - Support graph visualization (Sankey diagrams)
 - Handle pointer buffering (NOT payload buffering)
+
+## Recent Changes
+
+**January 28, 2026 - Cache Mutation Bug Fix:**
+- Fixed critical bug where MuleSoft ERP Sync node was duplicating in the graph
+- Root cause: `SchemaLoader._demo_cache` was set to the `sources` list, and the same list was returned to callers who then extended it, mutating the cache
+- Fix: Return `list(sources)` (a copy) from `load_demo_schemas()` even on cache miss, not just cache hit
+- Cleaned up database: Removed duplicate source_systems entries and associated field_concept_mappings
 
 ## Architecture Changes (January 27, 2026)
 
