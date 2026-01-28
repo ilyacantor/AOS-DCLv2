@@ -23,7 +23,7 @@ function App() {
   const [runId, setRunId] = useState<string | undefined>(undefined);
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [mainView, setMainView] = useState<MainView>('ask');
+  const [mainView, setMainView] = useState<MainView>('graph');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -176,8 +176,9 @@ function App() {
   };
 
   // Top-level navigation tabs
+  // NOTE: 'ask' tab hidden - NLQ functionality moved to AOS-NLQ repository
   const navTabs: { id: MainView; label: string }[] = [
-    { id: 'ask', label: 'Ask' },
+    // { id: 'ask', label: 'Ask' },
     { id: 'graph', label: 'Graph' },
     { id: 'dashboard', label: 'Dashboard' },
   ];
