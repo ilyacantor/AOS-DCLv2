@@ -1,13 +1,20 @@
-from typing import List, Literal
+import logging
+from typing import List, Literal, Dict, Optional
 from backend.domain import SourceSystem, Mapping
 from .heuristic_mapper import HeuristicMapper
 from .persist_mappings import MappingPersistence
+
+logger = logging.getLogger("dcl.semantic_mapper")
 
 
 class SemanticMapper:
     
     def __init__(self):
-        self.persistence = MappingPersistence()
+        self.persistence: Optional[MappingPersistence] = None
+        try:
+            self.persistence = MappingPersistence()
+        except Exception as e:
+            logger.warning(f"Database not available: {e}. Running in memory-only mode.")
     
     def run_mapping(
         self,
@@ -16,7 +23,12 @@ class SemanticMapper:
         clear_existing: bool = False
     ) -> tuple[List[Mapping], dict]:
         
-        ontology_concepts = self.persistence.get_ontology_concepts()
+        ontology_concepts = []
+        if self.persistence:
+            try:
+                ontology_concepts = self.persistence.get_ontology_concepts()
+            except Exception as e:
+                logger.warning(f"Failed to load ontology concepts: {e}")
         
         stats = {
             'sources_processed': len(sources),
@@ -33,13 +45,30 @@ class SemanticMapper:
         if mode == "full":
             pass
         
-        saved = self.persistence.save_mappings(mappings, clear_existing=clear_existing)
-        stats['mappings_created'] = saved
+        if self.persistence:
+            try:
+                saved = self.persistence.save_mappings(mappings, clear_existing=clear_existing)
+                stats['mappings_created'] = saved
+            except Exception as e:
+                logger.warning(f"Failed to save mappings: {e}")
+                stats['mappings_created'] = 0
         
         return mappings, stats
     
     def get_stored_mappings(self, source_id: str = None) -> List[Mapping]:
-        return self.persistence.load_mappings(source_id)
+        if not self.persistence:
+            return []
+        try:
+            return self.persistence.load_mappings(source_id)
+        except Exception as e:
+            logger.warning(f"Failed to load mappings: {e}")
+            return []
     
-    def get_all_mappings_grouped(self) -> dict:
-        return self.persistence.load_all_mappings_grouped()
+    def get_all_mappings_grouped(self) -> Dict[str, List[Mapping]]:
+        if not self.persistence:
+            return {}
+        try:
+            return self.persistence.load_all_mappings_grouped()
+        except Exception as e:
+            logger.warning(f"Failed to load grouped mappings: {e}")
+            return {}

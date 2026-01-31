@@ -18,8 +18,17 @@ class MappingPersistence:
             if MappingPersistence._connection is None or MappingPersistence._connection.closed:
                 MappingPersistence._connection = psycopg2.connect(self.database_url)
             else:
-                MappingPersistence._connection.cursor().execute("SELECT 1")
+                cursor = MappingPersistence._connection.cursor()
+                try:
+                    cursor.execute("SELECT 1")
+                finally:
+                    cursor.close()
         except (psycopg2.OperationalError, psycopg2.InterfaceError):
+            if MappingPersistence._connection:
+                try:
+                    MappingPersistence._connection.close()
+                except:
+                    pass
             MappingPersistence._connection = psycopg2.connect(self.database_url)
         return MappingPersistence._connection
     
@@ -163,4 +172,3 @@ class MappingPersistence:
         
         finally:
             cursor.close()
-            conn.close()
