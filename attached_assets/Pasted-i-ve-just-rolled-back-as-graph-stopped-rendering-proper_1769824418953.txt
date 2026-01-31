@@ -1,0 +1,45 @@
+i've just rolled back as graph stopped rendering properly. you were examining a supabase database issue that is causing the app to not load the visualization or other functionality. examine the issue, do not change code. create plan to fall back gracefully and dminish impact of saturaded supabase calls - but which will not impact the graph rendering
+
+The solution:
+The heuristic mapper creates mappings in memory, but the engine flow depends on them being saved first. When save fails, the mappings are created but the count returned is 0.
+Fix approach:
+The run_mapping() method in runner.py should return the generated mappings regardless of whether save succeeds
+The mappings need to flow through to _build_graph() even when database is unavailable
+This is a small change to ensure in-memory mappings are used when database can't persist them
+
+
+Found the root cause in the ORIGINAL code (before my changes):
+Looking at the original persist_mappings.py:
+Line 30: save_mappings() creates a NEW connection every call (conn = psycopg2.connect(...)) instead of using the shared _get_connection()
+Line 21: Health check creates cursor but never closes it:
+MappingPersistence._connection.cursor().execute("SELECT 1")  # cursor never closed!
+load_mappings() and load_all_mappings_grouped(): Use shared connection but never close it - connection leak!
+get_ontology_concepts(): Closes connection at the end, but this breaks the shared connection for other methods
+Why it saturated NOW:
+Connection leaks accumulated over time
+Each page refresh opens new connections
+Supabase free tier has ~10-15 connection limit
+Development with frequent restarts/refreshes exhausted the pool
+The bugs existed before - saturation was just a matter of time.
+To fix Supabase saturation properly:
+Use connection pooling - Replace raw psycopg2.connect() with psycopg2.pool.ThreadedConnectionPool that manages a fixed number of connections
+Fix connection leaks - Ensure every connection opened is closed (the original code doesn't close connections in load_mappings() and load_all_mappings_grouped())
+Fix cursor leak - The health check cursor().execute("SELECT 1") creates a cursor that's never closed
+Consistent connection pattern - Make save_mappings() use the shared connection instead of creating new ones
+Add connection timeout - Set connect_timeout parameter so failed connections don't hang
+Reduce DB calls - Cache persona concepts and mappings in memory (they rarely change).
+
+i can't switch to transaction mode, as replit env is not ipv6 compatible.
+Understood. Then we need to fix it in code. Here's the plan:
+Proper fix (in code):
+Implement connection pooling using psycopg2.pool.SimpleConnectionPool with max 3-5 connections
+Fix all connection/cursor leaks in the original files
+Add graceful degradation so the graph still renders with heuristic mappings when DB is unavailable
+Cache mappings in memory to reduce DB calls
+This requires changes to:
+backend/semantic_mapper/persist_mappings.py - pooling + leak fixes
+backend/engine/persona_view.py - use pool + proper fallback
+backend/engine/schema_loader.py - use pool
+backend/engine/dcl_engine.py - ensure heuristic mappings work without DB
+Want me to implement this? I'll make sure the graph renders properly throughout.
+
