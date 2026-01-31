@@ -9,8 +9,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import { Toaster } from './components/ui/toaster';
 import { useToast } from './hooks/use-toast';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { UserGuide } from './components/UserGuide';
 
-type MainView = 'graph' | 'dashboard';
+type MainView = 'graph' | 'dashboard' | 'guide';
 
 const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO'];
 
@@ -175,6 +176,7 @@ function App() {
   const navTabs: { id: MainView; label: string }[] = [
     { id: 'graph', label: 'Graph' },
     { id: 'dashboard', label: 'Dashboard' },
+    { id: 'guide', label: 'Guide' },
   ];
 
   return (
@@ -297,7 +299,9 @@ function App() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        {mainView === 'dashboard' ? (
+        {mainView === 'guide' ? (
+          <UserGuide />
+        ) : mainView === 'dashboard' ? (
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel defaultSize={75} minSize={50}>
               <div className="h-full w-full">
