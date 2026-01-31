@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import List, Literal, Optional
 from backend.domain import SourceSystem, Mapping
 from backend.engine.ontology import get_ontology
 from backend.utils.log_utils import get_logger
@@ -73,7 +73,7 @@ class SemanticMapper:
         
         return mappings, stats
     
-    def get_stored_mappings(self, source_id: str = None) -> List[Mapping]:
+    def get_stored_mappings(self, source_id: Optional[str] = None) -> List[Mapping]:
         try:
             if self.persistence:
                 return self.persistence.load_mappings(source_id)

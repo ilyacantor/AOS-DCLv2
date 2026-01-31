@@ -259,82 +259,96 @@ class SchemaLoader:
         return sources
     
     @staticmethod
+    def _get_pool():
+        try:
+            from backend.semantic_mapper.persist_mappings import MappingPersistence
+            persistence = MappingPersistence()
+            return persistence
+        except Exception as e:
+            logger.warning(f"Failed to get connection pool: {e}")
+            return None
+    
+    @staticmethod
     def load_stream_sources(narration=None, run_id: Optional[str] = None) -> List[SourceSystem]:
         """Load stream sources from the database (registered by Consumer)."""
         database_url = os.getenv("DATABASE_URL")
         if not database_url:
             return []
         
+        pool = SchemaLoader._get_pool()
+        if pool is None:
+            return []
+        
         try:
-            conn = psycopg2.connect(database_url)
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                SELECT id, name, type, vendor, category, trust_score, discovery_status
-                FROM source_systems
-                WHERE type = 'stream'
-            """)
-            
-            sources = []
-            for row in cursor.fetchall():
-                source_id = row[0]
-                
-                cursor.execute("""
-                    SELECT DISTINCT table_name, field_name, concept_id, confidence
-                    FROM field_concept_mappings
-                    WHERE source_id = %s
-                    ORDER BY table_name, field_name
-                """, (source_id,))
-                
-                tables_data: Dict[str, List[FieldSchema]] = {}
-                for mapping_row in cursor.fetchall():
-                    table_name = mapping_row[0]
-                    field_name = mapping_row[1]
+            with pool._get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT id, name, type, vendor, category, trust_score, discovery_status
+                        FROM source_systems
+                        WHERE type = 'stream'
+                    """)
                     
-                    if table_name not in tables_data:
-                        tables_data[table_name] = []
+                    sources = []
+                    rows = cursor.fetchall()
                     
-                    tables_data[table_name].append(FieldSchema(
-                        name=field_name,
-                        type="string",
-                        semantic_hint=None,
-                        nullable=True
-                    ))
-                
-                tables = []
-                for table_name, fields in tables_data.items():
-                    tables.append(TableSchema(
-                        id=f"{source_id}.{table_name}",
-                        system_id=source_id,
-                        name=table_name,
-                        fields=fields
-                    ))
-                
-                source = SourceSystem(
-                    id=source_id,
-                    name=row[1],
-                    type=row[2] or "stream",
-                    tags=["stream", "real-time", "farm-synced"],
-                    tables=tables,
-                    discovery_status=DiscoveryStatus.CUSTOM,
-                    resolution_type=ResolutionType.PATTERN,
-                    trust_score=row[5] or 75,
-                    vendor=row[3],
-                    category=row[4],
-                )
-                sources.append(source)
-                
-                if narration and run_id:
-                    total_fields = sum(len(t.fields) for t in tables)
-                    narration.add_message(
-                        run_id, "SchemaLoader",
-                        f"Stream source: {row[1]} - {len(tables)} tables, {total_fields} fields"
+                for row in rows:
+                    source_id = row[0]
+                    
+                    with pool._get_connection() as conn2:
+                        with conn2.cursor() as cursor2:
+                            cursor2.execute("""
+                                SELECT DISTINCT table_name, field_name, concept_id, confidence
+                                FROM field_concept_mappings
+                                WHERE source_id = %s
+                                ORDER BY table_name, field_name
+                            """, (source_id,))
+                            
+                            tables_data: Dict[str, List[FieldSchema]] = {}
+                            for mapping_row in cursor2.fetchall():
+                                table_name = mapping_row[0]
+                                field_name = mapping_row[1]
+                                
+                                if table_name not in tables_data:
+                                    tables_data[table_name] = []
+                                
+                                tables_data[table_name].append(FieldSchema(
+                                    name=field_name,
+                                    type="string",
+                                    semantic_hint=None,
+                                    nullable=True
+                                ))
+                    
+                    tables = []
+                    for table_name, fields in tables_data.items():
+                        tables.append(TableSchema(
+                            id=f"{source_id}.{table_name}",
+                            system_id=source_id,
+                            name=table_name,
+                            fields=fields
+                        ))
+                    
+                    source = SourceSystem(
+                        id=source_id,
+                        name=row[1],
+                        type=row[2] or "stream",
+                        tags=["stream", "real-time", "farm-synced"],
+                        tables=tables,
+                        discovery_status=DiscoveryStatus.CUSTOM,
+                        resolution_type=ResolutionType.PATTERN,
+                        trust_score=row[5] or 75,
+                        vendor=row[3],
+                        category=row[4],
                     )
-            
-            cursor.close()
-            conn.close()
-            
-            return sources
+                    sources.append(source)
+                    
+                    if narration and run_id:
+                        total_fields = sum(len(t.fields) for t in tables)
+                        narration.add_message(
+                            run_id, "SchemaLoader",
+                            f"Stream source: {row[1]} - {len(tables)} tables, {total_fields} fields"
+                        )
+                
+                return sources
             
         except Exception as e:
             logger.warning(f"Failed to load stream sources: {e}")

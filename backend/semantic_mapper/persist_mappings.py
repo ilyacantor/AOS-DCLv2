@@ -1,4 +1,5 @@
 import os
+import time
 import psycopg2
 from psycopg2 import pool
 from typing import List, Dict, Any, Optional
@@ -14,9 +15,16 @@ class MappingPersistence:
     _pool: Optional[pool.SimpleConnectionPool] = None
     _pool_initialized = False
     
+    _ontology_cache: Optional[List[Dict[str, Any]]] = None
+    _ontology_cache_time: float = 0
+    _mappings_cache: Optional[Dict[str, List[Mapping]]] = None
+    _mappings_cache_time: float = 0
+    
     POOL_MIN_CONN = 1
     POOL_MAX_CONN = 5
     CONNECT_TIMEOUT = 5
+    ONTOLOGY_CACHE_TTL = 300.0
+    MAPPINGS_CACHE_TTL = 60.0
     
     def __init__(self):
         self.database_url = os.getenv('DATABASE_URL')
@@ -100,10 +108,16 @@ class MappingPersistence:
                         saved += 1
                     
                     conn.commit()
+                    MappingPersistence._invalidate_mappings_cache()
                     return saved
                 except Exception as e:
                     conn.rollback()
                     raise
+    
+    @classmethod
+    def _invalidate_mappings_cache(cls):
+        cls._mappings_cache = None
+        cls._mappings_cache_time = 0
     
     def load_mappings(self, source_id: Optional[str] = None) -> List[Mapping]:
         with self._get_connection() as conn:
@@ -138,6 +152,12 @@ class MappingPersistence:
                 return mappings
     
     def load_all_mappings_grouped(self) -> Dict[str, List[Mapping]]:
+        now = time.time()
+        if (MappingPersistence._mappings_cache is not None and 
+            (now - MappingPersistence._mappings_cache_time) < self.MAPPINGS_CACHE_TTL):
+            logger.debug("Using cached mappings")
+            return dict(MappingPersistence._mappings_cache)
+        
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
@@ -163,9 +183,19 @@ class MappingPersistence:
                         grouped[source_id] = []
                     grouped[source_id].append(mapping)
                 
-                return grouped
+                MappingPersistence._mappings_cache = grouped
+                MappingPersistence._mappings_cache_time = time.time()
+                logger.info(f"Cached {sum(len(v) for v in grouped.values())} mappings for {len(grouped)} sources")
+                
+                return dict(grouped)
     
     def get_ontology_concepts(self) -> List[Dict[str, Any]]:
+        now = time.time()
+        if (MappingPersistence._ontology_cache is not None and 
+            (now - MappingPersistence._ontology_cache_time) < self.ONTOLOGY_CACHE_TTL):
+            logger.debug("Using cached ontology concepts")
+            return list(MappingPersistence._ontology_cache)
+        
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
@@ -184,10 +214,23 @@ class MappingPersistence:
                         'metadata': row[4]
                     })
                 
-                return concepts
+                MappingPersistence._ontology_cache = concepts
+                MappingPersistence._ontology_cache_time = time.time()
+                logger.info(f"Cached {len(concepts)} ontology concepts")
+                
+                return list(concepts)
+    
+    @classmethod
+    def clear_all_caches(cls):
+        cls._ontology_cache = None
+        cls._ontology_cache_time = 0
+        cls._mappings_cache = None
+        cls._mappings_cache_time = 0
+        logger.info("All caches cleared")
     
     @classmethod
     def close_pool(cls):
+        cls.clear_all_caches()
         if cls._pool is not None:
             try:
                 cls._pool.closeall()

@@ -1,12 +1,11 @@
 import os
-import psycopg2
+import time
 from typing import List, Dict, Set, Optional
 from backend.domain import Persona
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
-# Default concept mappings when database is not available
 DEFAULT_PERSONA_CONCEPTS = {
     "CFO": ["Revenue", "Cost", "Margin", "CustomerValue", "ARR", "Churn"],
     "CRO": ["Revenue", "Pipeline", "Conversion", "CustomerValue", "LeadScore"],
@@ -16,6 +15,10 @@ DEFAULT_PERSONA_CONCEPTS = {
 
 
 class PersonaView:
+    
+    _concepts_cache: Optional[Dict[str, List[str]]] = None
+    _cache_time: float = 0
+    CACHE_TTL: float = 300.0
 
     def __init__(self):
         self.database_url = os.getenv('DATABASE_URL')
@@ -24,6 +27,15 @@ class PersonaView:
             self._use_defaults = True
         else:
             self._use_defaults = False
+    
+    def _get_pool(self):
+        try:
+            from backend.semantic_mapper.persist_mappings import MappingPersistence
+            persistence = MappingPersistence()
+            return persistence
+        except Exception as e:
+            logger.warning(f"Failed to get connection pool: {e}")
+            return None
 
     def get_relevant_concepts(
         self,
@@ -34,45 +46,75 @@ class PersonaView:
         if not personas:
             return {}
 
-        # Use defaults if database not available
         if self._use_defaults:
-            result = {}
-            for persona in personas:
-                concepts = DEFAULT_PERSONA_CONCEPTS.get(persona.value, [])
-                if available_concepts is not None:
-                    concepts = [c for c in concepts if c in available_concepts]
-                result[persona.value] = concepts
-            return result
+            return self._get_defaults(personas, available_concepts)
+        
+        now = time.time()
+        if PersonaView._concepts_cache is not None and (now - PersonaView._cache_time) < self.CACHE_TTL:
+            return self._filter_cached_concepts(personas, available_concepts)
 
-        conn = psycopg2.connect(self.database_url)
-        cursor = conn.cursor()
-
+        pool = self._get_pool()
+        if pool is None:
+            return self._get_defaults(personas, available_concepts)
+        
         try:
-            persona_keys = [p.value for p in personas]
-
-            cursor.execute("""
-                SELECT pp.persona_key, pcr.concept_id, pcr.relevance
-                FROM persona_profiles pp
-                JOIN persona_concept_relevance pcr ON pp.id = pcr.persona_id
-                WHERE pp.persona_key = ANY(%s)
-                ORDER BY pp.persona_key, pcr.relevance DESC
-            """, (persona_keys,))
-
-            result = {}
-            for row in cursor.fetchall():
-                persona_key = row[0]
-                concept_id = row[1]
-
-                if available_concepts is None or concept_id in available_concepts:
-                    if persona_key not in result:
-                        result[persona_key] = []
-                    result[persona_key].append(concept_id)
-
-            return result
-
-        finally:
-            cursor.close()
-            conn.close()
+            with pool._get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT pp.persona_key, pcr.concept_id, pcr.relevance
+                        FROM persona_profiles pp
+                        JOIN persona_concept_relevance pcr ON pp.id = pcr.persona_id
+                        ORDER BY pp.persona_key, pcr.relevance DESC
+                    """)
+                    
+                    all_concepts: Dict[str, List[str]] = {}
+                    for row in cursor.fetchall():
+                        persona_key = row[0]
+                        concept_id = row[1]
+                        
+                        if persona_key not in all_concepts:
+                            all_concepts[persona_key] = []
+                        all_concepts[persona_key].append(concept_id)
+                    
+                    PersonaView._concepts_cache = all_concepts
+                    PersonaView._cache_time = time.time()
+                    logger.info(f"Cached persona concepts for {len(all_concepts)} personas")
+                    
+                    return self._filter_cached_concepts(personas, available_concepts)
+                    
+        except Exception as e:
+            logger.warning(f"Failed to load persona concepts from DB: {e}. Using defaults.")
+            return self._get_defaults(personas, available_concepts)
+    
+    def _get_defaults(
+        self,
+        personas: List[Persona],
+        available_concepts: Optional[Set[str]] = None
+    ) -> Dict[str, List[str]]:
+        result = {}
+        for persona in personas:
+            concepts = DEFAULT_PERSONA_CONCEPTS.get(persona.value, [])
+            if available_concepts is not None:
+                concepts = [c for c in concepts if c in available_concepts]
+            result[persona.value] = concepts
+        return result
+    
+    def _filter_cached_concepts(
+        self,
+        personas: List[Persona],
+        available_concepts: Optional[Set[str]] = None
+    ) -> Dict[str, List[str]]:
+        if PersonaView._concepts_cache is None:
+            return self._get_defaults(personas, available_concepts)
+        
+        result = {}
+        for persona in personas:
+            concepts = PersonaView._concepts_cache.get(persona.value, 
+                       DEFAULT_PERSONA_CONCEPTS.get(persona.value, []))
+            if available_concepts is not None:
+                concepts = [c for c in concepts if c in available_concepts]
+            result[persona.value] = list(concepts)
+        return result
 
     def get_all_relevant_concept_ids(
         self,
@@ -94,25 +136,37 @@ class PersonaView:
         concept_id: str
     ) -> float:
 
-        # Use default score if database not available
         if self._use_defaults:
             concepts = DEFAULT_PERSONA_CONCEPTS.get(persona.value, [])
             return 0.8 if concept_id in concepts else 0.0
+        
+        if PersonaView._concepts_cache is not None:
+            concepts = PersonaView._concepts_cache.get(persona.value, [])
+            return 0.8 if concept_id in concepts else 0.0
 
-        conn = psycopg2.connect(self.database_url)
-        cursor = conn.cursor()
-
+        pool = self._get_pool()
+        if pool is None:
+            concepts = DEFAULT_PERSONA_CONCEPTS.get(persona.value, [])
+            return 0.8 if concept_id in concepts else 0.0
+        
         try:
-            cursor.execute("""
-                SELECT pcr.relevance
-                FROM persona_profiles pp
-                JOIN persona_concept_relevance pcr ON pp.id = pcr.persona_id
-                WHERE pp.persona_key = %s AND pcr.concept_id = %s
-            """, (persona.value, concept_id))
+            with pool._get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT pcr.relevance
+                        FROM persona_profiles pp
+                        JOIN persona_concept_relevance pcr ON pp.id = pcr.persona_id
+                        WHERE pp.persona_key = %s AND pcr.concept_id = %s
+                    """, (persona.value, concept_id))
 
-            row = cursor.fetchone()
-            return row[0] if row else 0.0
-
-        finally:
-            cursor.close()
-            conn.close()
+                    row = cursor.fetchone()
+                    return row[0] if row else 0.0
+        except Exception as e:
+            logger.warning(f"Failed to get relevance score: {e}")
+            concepts = DEFAULT_PERSONA_CONCEPTS.get(persona.value, [])
+            return 0.8 if concept_id in concepts else 0.0
+    
+    @classmethod
+    def clear_cache(cls):
+        cls._concepts_cache = None
+        cls._cache_time = 0
