@@ -55,7 +55,12 @@ class DCLEngine:
         
         semantic_mapper = SemanticMapper()
         
-        all_mappings_grouped = semantic_mapper.get_all_mappings_grouped()
+        try:
+            all_mappings_grouped = semantic_mapper.get_all_mappings_grouped()
+        except Exception as e:
+            logger.warning(f"Failed to load stored mappings from DB: {e}. Will generate fresh mappings.")
+            self.narration.add_message(run_id, "Engine", "DB unavailable - generating fresh mappings")
+            all_mappings_grouped = {}
         
         stored_mappings = []
         sources_with_mappings = set()
