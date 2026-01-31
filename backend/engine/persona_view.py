@@ -34,8 +34,8 @@ class PersonaView:
         if not personas:
             return {}
 
-        # Helper function for fallback to defaults
-        def use_default_concepts():
+        # Use defaults if database not available
+        if self._use_defaults:
             result = {}
             for persona in personas:
                 concepts = DEFAULT_PERSONA_CONCEPTS.get(persona.value, [])
@@ -44,16 +44,7 @@ class PersonaView:
                 result[persona.value] = concepts
             return result
 
-        # Use defaults if database not available
-        if self._use_defaults:
-            return use_default_concepts()
-
-        try:
-            conn = psycopg2.connect(self.database_url)
-        except Exception as e:
-            logger.warning(f"Database connection failed, using defaults: {e}")
-            return use_default_concepts()
-
+        conn = psycopg2.connect(self.database_url)
         cursor = conn.cursor()
 
         try:
