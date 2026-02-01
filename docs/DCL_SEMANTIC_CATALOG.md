@@ -2,28 +2,28 @@
 
 ## Metrics (20)
 
-| ID | Name | Pack | Unit | Allowed Dimensions |
-|----|------|------|------|--------------------|
-| arr | Annual Recurring Revenue | CFO | USD | customer, segment, product, region |
-| mrr | Monthly Recurring Revenue | CFO | USD | customer, segment, product |
-| revenue | Total Revenue | CFO | USD | customer, segment, service_line, region |
-| services_revenue | Services Revenue | CFO | USD | customer, service_line, region |
-| ar | Accounts Receivable | CFO | USD | customer, invoice, aging_bucket |
-| dso | Days Sales Outstanding | CFO | days | customer, segment |
-| burn_rate | Monthly Burn Rate | CFO | USD | cost_center, department |
-| gross_margin | Gross Margin | CFO | percent | product, service_line |
-| pipeline | Pipeline Value | CRO | USD | rep, stage, region, segment |
-| win_rate | Win Rate | CRO | percent | rep, region, segment |
-| churn_rate | Churn Rate | CRO | percent | segment, cohort, product |
-| nrr | Net Revenue Retention | CRO | percent | segment, cohort |
-| throughput | Throughput | COO | count | team, project, work_type |
-| cycle_time | Cycle Time | COO | days | team, project, work_type, priority |
-| sla_compliance | SLA Compliance Rate | COO | percent | team, service, priority |
-| deploy_frequency | Deploy Frequency | CTO | count | service, team, environment |
-| mttr | Mean Time to Recover | CTO | hours | service, team, severity |
-| uptime | Uptime | CTO | percent | service, environment |
-| slo_attainment | SLO Attainment | CTO | percent | service, team |
-| cloud_spend | Cloud Spend | CTO | USD | service, team, resource_type, environment |
+| ID | Name | Pack | Aliases | Allowed Dimensions |
+|----|------|------|---------|-------------------|
+| arr | Annual Recurring Revenue | CFO | ARR, annual recurring revenue, recurring revenue, annual revenue | customer, service_line, region, segment |
+| mrr | Monthly Recurring Revenue | CFO | MRR, monthly recurring revenue, monthly revenue | customer, service_line, region, segment |
+| revenue | Total Revenue | CFO | total revenue, sales, income, top line | customer, service_line, region, product, segment |
+| services_revenue | Services Revenue | CFO | professional services, PS revenue, consulting revenue | customer, service_line, region, project |
+| ar | Accounts Receivable | CFO | AR, accounts receivable, receivables, outstanding invoices, A/R | customer, invoice, aging_bucket |
+| dso | Days Sales Outstanding | CFO | DSO, days sales outstanding, collection days, AR days | customer, segment, region |
+| burn_rate | Burn Rate | CFO | burn, cash burn, monthly burn, spending rate | cost_center, category |
+| gross_margin | Gross Margin | CFO | margin, GM, gross profit margin | product, service_line, segment |
+| pipeline | Sales Pipeline | CRO | sales pipeline, open pipeline, pipeline value, opportunities | rep, stage, region, segment |
+| win_rate | Win Rate | CRO | close rate, conversion rate, deal win rate | rep, segment, region, product |
+| churn_rate | Churn Rate | CRO | churn, customer churn, revenue churn, attrition | segment, region, cohort |
+| nrr | Net Revenue Retention | CRO | NRR, net retention, dollar retention, NDR | segment, region, cohort |
+| throughput | Throughput | COO | velocity, output, completion rate | team, project, work_type |
+| cycle_time | Cycle Time | COO | lead time, completion time, turnaround time | team, project, work_type, priority |
+| sla_compliance | SLA Compliance | COO | SLA, service level, compliance rate | team, customer, sla_type |
+| deploy_frequency | Deployment Frequency | CTO | deploys, release frequency, shipping velocity | team, service, environment |
+| mttr | Mean Time to Recovery | CTO | MTTR, recovery time, incident recovery | team, service, severity |
+| uptime | Uptime | CTO | availability, system uptime, service availability | service, environment, region |
+| slo_attainment | SLO Attainment | CTO | SLO, SLO compliance, objective attainment | service, slo_type, team |
+| cloud_spend | Cloud Spend | CTO | cloud cost, infrastructure cost, AWS spend, GCP cost, Azure cost | service, team, resource_type, environment |
 
 ## Entities (22)
 
