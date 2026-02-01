@@ -22,6 +22,14 @@ from backend.engine import DCLEngine
 from backend.engine.schema_loader import SchemaLoader
 from backend.semantic_mapper import SemanticMapper
 from backend.utils.log_utils import get_logger
+from backend.api.semantic_export import (
+    get_semantic_export,
+    resolve_metric,
+    resolve_entity,
+    SemanticExport,
+    MetricDefinition,
+    EntityDefinition,
+)
 
 logger = get_logger(__name__)
 
@@ -239,6 +247,70 @@ async def get_connection_health(connector_id: Optional[str] = None):
 def get_topology_stats():
     """Get topology service statistics."""
     return topology_api.get_stats()
+
+
+@app.get("/api/dcl/semantic-export", response_model=SemanticExport)
+def semantic_export(tenant_id: str = "default"):
+    """
+    Export full semantic catalog for NLQ consumption.
+    
+    Returns all published metrics, entities (dimensions), persona mappings,
+    and the metric-entity compatibility matrix.
+    
+    NLQ uses this to:
+    - Resolve aliases ("AR" → "ar")
+    - Know valid dimensions per metric
+    - Fail fast with helpful messages for unknown metrics
+    """
+    return get_semantic_export(tenant_id)
+
+
+@app.get("/api/dcl/semantic-export/resolve/metric")
+def resolve_metric_alias(q: str):
+    """
+    Resolve a metric alias to its canonical definition.
+    
+    Args:
+        q: Query string (e.g., "AR", "accounts receivable")
+    
+    Returns:
+        Canonical metric definition or 404 if not found
+    """
+    metric = resolve_metric(q)
+    if not metric:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "METRIC_NOT_FOUND",
+                "query": q,
+                "suggestion": "Use GET /api/dcl/semantic-export to see all available metrics"
+            }
+        )
+    return metric
+
+
+@app.get("/api/dcl/semantic-export/resolve/entity")
+def resolve_entity_alias(q: str):
+    """
+    Resolve an entity/dimension alias to its canonical definition.
+    
+    Args:
+        q: Query string (e.g., "account", "customer")
+    
+    Returns:
+        Canonical entity definition or 404 if not found
+    """
+    entity = resolve_entity(q)
+    if not entity:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "ENTITY_NOT_FOUND",
+                "query": q,
+                "suggestion": "Use GET /api/dcl/semantic-export to see all available entities"
+            }
+        )
+    return entity
 
 
 @app.get("/api/nlq/ask")
