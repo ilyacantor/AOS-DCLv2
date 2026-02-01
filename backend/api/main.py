@@ -29,6 +29,7 @@ from backend.api.semantic_export import (
     SemanticExport,
     MetricDefinition,
     EntityDefinition,
+    ModeInfo,
 )
 
 logger = get_logger(__name__)
@@ -37,6 +38,7 @@ from backend.core.security_constraints import (
     validate_no_disk_payload_writes,
     assert_metadata_only_mode,
 )
+from backend.core.mode_state import get_current_mode, set_current_mode
 
 app = FastAPI(title="DCL Engine API")
 
@@ -100,6 +102,12 @@ def health():
 @app.post("/api/dcl/run", response_model=RunResponse)
 def run_dcl(request: RunRequest):
     run_id = str(uuid.uuid4())
+    
+    set_current_mode(
+        data_mode=request.mode,
+        run_mode=request.run_mode,
+        run_id=run_id
+    )
     
     personas = request.personas or [Persona.CFO, Persona.CRO, Persona.COO, Persona.CTO]
     

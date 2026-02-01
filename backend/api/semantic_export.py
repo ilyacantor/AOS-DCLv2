@@ -60,10 +60,18 @@ class BindingSummary(BaseModel):
     dims_coverage: Dict[str, bool] = Field(default_factory=dict)
 
 
+class ModeInfo(BaseModel):
+    """Current DCL mode information."""
+    data_mode: str  # "Demo" or "Farm"
+    run_mode: str   # "Dev" or "Prod"
+    last_updated: Optional[str] = None
+
+
 class SemanticExport(BaseModel):
     """Full semantic export payload for NLQ."""
     version: str = "1.0.0"
     tenant_id: str = "default"
+    mode: ModeInfo
     metrics: List[MetricDefinition] = Field(default_factory=list)
     entities: List[EntityDefinition] = Field(default_factory=list)
     persona_concepts: Dict[str, List[str]] = Field(default_factory=dict)
@@ -439,9 +447,79 @@ DEFAULT_PERSONA_CONCEPTS = {
 }
 
 
+DEMO_BINDINGS: List[BindingSummary] = [
+    BindingSummary(
+        source_system="Salesforce CRM",
+        canonical_event="deal_won",
+        quality_score=0.95,
+        freshness_score=0.98,
+        dims_coverage={"customer": True, "rep": True, "region": True, "segment": True}
+    ),
+    BindingSummary(
+        source_system="NetSuite ERP",
+        canonical_event="revenue_recognized",
+        quality_score=0.92,
+        freshness_score=0.95,
+        dims_coverage={"customer": True, "service_line": True, "region": False}
+    ),
+    BindingSummary(
+        source_system="NetSuite ERP",
+        canonical_event="invoice_posted",
+        quality_score=0.90,
+        freshness_score=0.95,
+        dims_coverage={"customer": True, "invoice": True, "aging_bucket": True}
+    ),
+    BindingSummary(
+        source_system="Chargebee",
+        canonical_event="subscription_started",
+        quality_score=0.88,
+        freshness_score=0.92,
+        dims_coverage={"customer": True, "product": True, "segment": True}
+    ),
+    BindingSummary(
+        source_system="Jira",
+        canonical_event="work_item_completed",
+        quality_score=0.85,
+        freshness_score=0.90,
+        dims_coverage={"team": True, "project": True, "work_type": True, "priority": True}
+    ),
+    BindingSummary(
+        source_system="GitHub Actions",
+        canonical_event="deployment_completed",
+        quality_score=0.90,
+        freshness_score=0.98,
+        dims_coverage={"service": True, "team": True, "environment": True}
+    ),
+    BindingSummary(
+        source_system="PagerDuty",
+        canonical_event="incident_resolved",
+        quality_score=0.88,
+        freshness_score=0.95,
+        dims_coverage={"service": True, "team": True, "severity": True}
+    ),
+    BindingSummary(
+        source_system="AWS Cost Explorer",
+        canonical_event="cloud_cost_incurred",
+        quality_score=0.92,
+        freshness_score=0.85,
+        dims_coverage={"service": True, "team": True, "resource_type": True, "environment": True}
+    ),
+]
+
+FARM_BINDINGS: List[BindingSummary] = []
+
+
 def build_metric_entity_matrix() -> Dict[str, List[str]]:
     """Build matrix of metric → valid dimensions."""
     return {m.id: m.allowed_dims for m in PUBLISHED_METRICS}
+
+
+def get_bindings_for_mode(data_mode: str) -> List[BindingSummary]:
+    """Get bindings appropriate for the current mode."""
+    if data_mode == "Demo":
+        return DEMO_BINDINGS
+    else:
+        return FARM_BINDINGS
 
 
 def resolve_metric(query: str) -> Optional[MetricDefinition]:
@@ -471,13 +549,26 @@ def resolve_entity(query: str) -> Optional[EntityDefinition]:
 
 
 def get_semantic_export(tenant_id: str = "default") -> SemanticExport:
-    """Build the full semantic export payload."""
+    """Build the full semantic export payload reflecting current DCL mode."""
+    from backend.core.mode_state import get_current_mode
+    
+    current_mode = get_current_mode()
+    
+    mode_info = ModeInfo(
+        data_mode=current_mode.data_mode,
+        run_mode=current_mode.run_mode,
+        last_updated=current_mode.last_updated
+    )
+    
+    bindings = get_bindings_for_mode(current_mode.data_mode)
+    
     return SemanticExport(
         version="1.0.0",
         tenant_id=tenant_id,
+        mode=mode_info,
         metrics=PUBLISHED_METRICS,
         entities=PUBLISHED_ENTITIES,
         persona_concepts=DEFAULT_PERSONA_CONCEPTS,
-        bindings=[],
+        bindings=bindings,
         metric_entity_matrix=build_metric_entity_matrix()
     )
