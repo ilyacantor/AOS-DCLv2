@@ -42,6 +42,8 @@ class MetricDefinition(BaseModel):
     allowed_grains: List[TimeGrain] = Field(default_factory=list)
     measure_op: Optional[str] = None
     default_grain: Optional[TimeGrain] = None
+    best_direction: str = "high"
+    rankable_dimensions: List[str] = Field(default_factory=list)
 
 
 class EntityDefinition(BaseModel):
@@ -114,7 +116,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["customer", "service_line", "region", "product", "segment"],
         allowed_grains=[TimeGrain.DAY, TimeGrain.WEEK, TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
         measure_op="sum",
-        default_grain=TimeGrain.MONTH
+        default_grain=TimeGrain.MONTH,
+        best_direction="high",
+        rankable_dimensions=["region", "segment", "product"]
     ),
     MetricDefinition(
         id="services_revenue",
@@ -147,7 +151,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["customer", "segment", "region"],
         allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
         measure_op="avg_days_between",
-        default_grain=TimeGrain.MONTH
+        default_grain=TimeGrain.MONTH,
+        best_direction="low",
+        rankable_dimensions=["segment", "region"]
     ),
     MetricDefinition(
         id="burn_rate",
@@ -158,7 +164,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["cost_center", "category"],
         allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
         measure_op="sum",
-        default_grain=TimeGrain.MONTH
+        default_grain=TimeGrain.MONTH,
+        best_direction="low",
+        rankable_dimensions=["cost_center", "category"]
     ),
     MetricDefinition(
         id="gross_margin",
@@ -191,7 +199,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["rep", "stage", "region", "segment"],
         allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH, TimeGrain.QUARTER],
         measure_op="point_in_time_sum",
-        default_grain=TimeGrain.MONTH
+        default_grain=TimeGrain.MONTH,
+        best_direction="high",
+        rankable_dimensions=["rep", "stage", "region", "segment"]
     ),
     MetricDefinition(
         id="win_rate",
@@ -202,7 +212,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["rep", "segment", "region", "product"],
         allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
         measure_op="ratio",
-        default_grain=TimeGrain.QUARTER
+        default_grain=TimeGrain.QUARTER,
+        best_direction="high",
+        rankable_dimensions=["rep", "segment", "region"]
     ),
     MetricDefinition(
         id="quota_attainment",
@@ -213,7 +225,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["rep", "segment", "region"],
         allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
         measure_op="ratio",
-        default_grain=TimeGrain.QUARTER
+        default_grain=TimeGrain.QUARTER,
+        best_direction="high",
+        rankable_dimensions=["rep", "region"]
     ),
     MetricDefinition(
         id="churn_rate",
@@ -224,7 +238,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["segment", "region", "cohort"],
         allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
         measure_op="ratio",
-        default_grain=TimeGrain.MONTH
+        default_grain=TimeGrain.MONTH,
+        best_direction="low",
+        rankable_dimensions=["segment", "region", "cohort"]
     ),
     MetricDefinition(
         id="nrr",
@@ -257,7 +273,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["segment", "customer"],
         allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
         measure_op="avg",
-        default_grain=TimeGrain.MONTH
+        default_grain=TimeGrain.MONTH,
+        best_direction="low",
+        rankable_dimensions=["segment", "customer"]
     ),
     MetricDefinition(
         id="nrr_by_cohort",
@@ -290,7 +308,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["team", "project_type", "priority"],
         allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH, TimeGrain.QUARTER],
         measure_op="avg",
-        default_grain=TimeGrain.WEEK
+        default_grain=TimeGrain.WEEK,
+        best_direction="low",
+        rankable_dimensions=["team", "project_type"]
     ),
     MetricDefinition(
         id="sla_compliance",
@@ -323,7 +343,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["team", "service", "severity"],
         allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH, TimeGrain.QUARTER],
         measure_op="avg",
-        default_grain=TimeGrain.MONTH
+        default_grain=TimeGrain.MONTH,
+        best_direction="low",
+        rankable_dimensions=["team", "service", "severity"]
     ),
     MetricDefinition(
         id="uptime",
@@ -345,7 +367,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["service"],
         allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
         measure_op="avg",
-        default_grain=TimeGrain.MONTH
+        default_grain=TimeGrain.MONTH,
+        best_direction="high",
+        rankable_dimensions=["service"]
     ),
     MetricDefinition(
         id="cloud_cost",
@@ -356,7 +380,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["resource_type", "team", "environment"],
         allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
         measure_op="sum",
-        default_grain=TimeGrain.MONTH
+        default_grain=TimeGrain.MONTH,
+        best_direction="low",
+        rankable_dimensions=["resource_type", "team", "environment"]
     ),
     MetricDefinition(
         id="headcount",
@@ -367,7 +393,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["department", "team", "location", "level"],
         allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
         measure_op="count",
-        default_grain=TimeGrain.QUARTER
+        default_grain=TimeGrain.QUARTER,
+        best_direction="high",
+        rankable_dimensions=["department", "team"]
     ),
     MetricDefinition(
         id="attrition_rate",
@@ -378,7 +406,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["department", "team", "tenure_band", "location"],
         allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
         measure_op="ratio",
-        default_grain=TimeGrain.QUARTER
+        default_grain=TimeGrain.QUARTER,
+        best_direction="low",
+        rankable_dimensions=["department", "team"]
     ),
     MetricDefinition(
         id="time_to_fill",
@@ -389,7 +419,9 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["department", "role", "location"],
         allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
         measure_op="avg_days_between",
-        default_grain=TimeGrain.QUARTER
+        default_grain=TimeGrain.QUARTER,
+        best_direction="low",
+        rankable_dimensions=["department"]
     ),
     MetricDefinition(
         id="engagement_score",
