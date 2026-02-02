@@ -87,25 +87,30 @@ def load_fact_base() -> Dict[str, Any]:
 
 METRIC_TO_FACTBASE_KEY = {
     "arr": "arr",
-    "mrr": None,
+    "mrr": "mrr",
     "revenue": "revenue",
-    "services_revenue": None,
+    "services_revenue": "services_revenue",
     "ar": "ar",
-    "dso": None,
-    "burn_rate": None,
-    "gross_margin": "gross_margin_pct",
+    "dso": "dso",
+    "burn_rate": "burn_rate",
+    "gross_margin": "gross_profit",
+    "ar_aging": "ar_aging",
     "pipeline": "pipeline",
+    "pipeline_value": "pipeline",
     "win_rate": "win_rate",
     "churn_rate": "churn_pct",
+    "churn_risk": "churn_risk",
     "nrr": "nrr",
-    "throughput": None,
-    "cycle_time": None,
-    "sla_compliance": None,
+    "nrr_by_cohort": "nrr_by_cohort",
+    "throughput": "throughput",
+    "cycle_time": "cycle_time",
+    "sla_compliance": "sla_compliance",
     "deploy_frequency": "deploys_per_week",
     "mttr": "mttr_p1_hours",
     "uptime": "uptime_pct",
-    "slo_attainment": None,
+    "slo_attainment": "slo_attainment",
     "cloud_spend": "cloud_spend",
+    "cloud_cost": "cloud_spend",
     "headcount": "headcount",
     "attrition_rate": "attrition_rate",
     "time_to_fill": "time_to_fill_days",
@@ -126,13 +131,17 @@ METRIC_UNIT_MAP = {
     "revenue": "USD (millions)",
     "services_revenue": "USD (millions)",
     "ar": "USD (millions)",
+    "ar_aging": "USD (millions)",
     "dso": "days",
     "burn_rate": "USD (millions)",
     "gross_margin": "percent",
     "pipeline": "USD (millions)",
+    "pipeline_value": "USD (millions)",
     "win_rate": "percent",
     "churn_rate": "percent",
+    "churn_risk": "score (0-100)",
     "nrr": "percent",
+    "nrr_by_cohort": "%",
     "throughput": "count",
     "cycle_time": "days",
     "sla_compliance": "percent",
@@ -141,6 +150,7 @@ METRIC_UNIT_MAP = {
     "uptime": "percent",
     "slo_attainment": "percent",
     "cloud_spend": "USD (millions)",
+    "cloud_cost": "USD (millions)",
     "headcount": "count",
     "attrition_rate": "percent",
     "time_to_fill": "days",
@@ -160,14 +170,22 @@ DIMENSION_TO_FACTBASE_KEY = {
         "revenue": "revenue_by_region",
         "pipeline": "pipeline_by_region",
         "ebitda": "ebitda_by_region",
+        "services_revenue": "services_revenue_by_region",
+        "win_rate": "win_rate_by_region",
     },
     "segment": {
         "revenue": "revenue_by_segment",
         "csat": "csat_by_segment",
         "implementation": "implementation_by_segment",
+        "mrr": "mrr_by_segment",
+        "dso": "dso_by_segment",
+        "churn_rate": "churn_by_segment",
+        "gross_margin": "gross_margin_by_product",
     },
     "product": {
         "revenue": "revenue_by_product",
+        "gross_margin": "gross_margin_by_product",
+        "nrr": "nrr_by_product",
     },
     "stage": {
         "pipeline": "pipeline_by_stage",
@@ -183,6 +201,8 @@ DIMENSION_TO_FACTBASE_KEY = {
         "headcount": "headcount_by_team",
         "attrition_rate": "attrition_by_team",
         "engagement_score": "engagement_by_team",
+        "throughput": "throughput_by_team",
+        "sla_compliance": "sla_compliance_by_team",
     },
     "department": {
         "headcount": "headcount_by_department",
@@ -193,6 +213,10 @@ DIMENSION_TO_FACTBASE_KEY = {
     },
     "service": {
         "incidents": "incidents_by_service",
+        "deploy_frequency": "deploy_frequency_by_service",
+        "uptime": "uptime_by_service",
+        "slo_attainment": "slo_attainment_by_service",
+        "mttr": "mttr_by_service",
     },
     "category": {
         "cloud_spend": "cloud_spend_by_category",
@@ -200,6 +224,26 @@ DIMENSION_TO_FACTBASE_KEY = {
     },
     "tier": {
         "support_tickets": "support_tickets_by_tier",
+    },
+    "aging_bucket": {
+        "ar_aging": "ar_aging",
+    },
+    "cohort": {
+        "nrr": "nrr_by_cohort",
+        "nrr_by_cohort": "nrr_by_cohort",
+    },
+    "customer": {
+        "churn_risk": "churn_risk_by_customer",
+    },
+    "project_type": {
+        "cycle_time": "cycle_time_by_project_type",
+    },
+    "severity": {
+        "mttr": "mttr_by_severity",
+    },
+    "resource_type": {
+        "cloud_spend": "cloud_spend_by_resource",
+        "cloud_cost": "cloud_spend_by_resource",
     },
 }
 
@@ -264,6 +308,32 @@ def filter_periods(data: Dict, time_range: Optional[Dict[str, str]]) -> List[str
     return filtered if filtered else all_periods
 
 
+def _get_value_key_for_metric(metric: str, dim_key: str) -> str:
+    """Get the value field name for a metric in array-format dimensional data."""
+    VALUE_KEY_MAP = {
+        "mrr_by_segment": "mrr",
+        "dso_by_segment": "dso",
+        "ar_aging": "amount",
+        "services_revenue_by_region": "revenue",
+        "gross_margin_by_product": "gross_margin",
+        "win_rate_by_region": "win_rate",
+        "nrr_by_cohort": "nrr",
+        "nrr_by_product": "nrr",
+        "churn_by_segment": "churn_pct",
+        "churn_risk_by_customer": "churn_risk",
+        "throughput_by_team": "throughput",
+        "cycle_time_by_project_type": "cycle_time",
+        "sla_compliance_by_team": "sla_compliance",
+        "deploy_frequency_by_service": "deploy_frequency",
+        "mttr_by_severity": "mttr",
+        "mttr_by_service": "mttr",
+        "uptime_by_service": "uptime",
+        "cloud_spend_by_resource": "cloud_spend",
+        "slo_attainment_by_service": "slo_attainment",
+    }
+    return VALUE_KEY_MAP.get(dim_key, metric)
+
+
 def execute_query(request: QueryRequest) -> QueryResponse:
     """Execute a validated query against the fact base."""
     fb = load_fact_base()
@@ -293,9 +363,14 @@ def execute_query(request: QueryRequest) -> QueryResponse:
         
         if dim_key and dim_key in fb:
             dim_data = fb[dim_key]
-            for period in periods:
-                if period in dim_data:
-                    for dim_value, value in dim_data[period].items():
+            if isinstance(dim_data, list):
+                value_key = _get_value_key_for_metric(request.metric, dim_key)
+                for record in dim_data:
+                    if record.get("period") not in periods:
+                        continue
+                    dim_value = record.get(dim)
+                    value = record.get(value_key, record.get(request.metric))
+                    if dim_value is not None and value is not None:
                         if request.filters:
                             filter_val = request.filters.get(dim)
                             if filter_val:
@@ -303,12 +378,28 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                                     continue
                                 elif isinstance(filter_val, str) and dim_value != filter_val:
                                     continue
-                        
                         data_points.append(QueryDataPoint(
-                            period=period,
+                            period=record["period"],
                             value=float(value),
                             dimensions={dim: dim_value}
                         ))
+            else:
+                for period in periods:
+                    if period in dim_data:
+                        for dim_value, value in dim_data[period].items():
+                            if request.filters:
+                                filter_val = request.filters.get(dim)
+                                if filter_val:
+                                    if isinstance(filter_val, list) and dim_value not in filter_val:
+                                        continue
+                                    elif isinstance(filter_val, str) and dim_value != filter_val:
+                                        continue
+                            
+                            data_points.append(QueryDataPoint(
+                                period=period,
+                                value=float(value),
+                                dimensions={dim: dim_value}
+                            ))
         else:
             fb_key = METRIC_TO_FACTBASE_KEY.get(request.metric)
             for q in fb.get("quarterly", []):

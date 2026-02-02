@@ -174,7 +174,8 @@
       "sales": 22.0,
       "internal_mobility_rate": 15.0,
       "span_of_control": 6.7,
-      "enps": 25
+      "enps": 25,
+      "burn_rate": -0.45
     },
     {
       "year": 2024,
@@ -278,7 +279,8 @@
       "sales": 24.0,
       "internal_mobility_rate": 16.0,
       "span_of_control": 6.8,
-      "enps": 26
+      "enps": 26,
+      "burn_rate": -0.42
     },
     {
       "year": 2024,
@@ -382,7 +384,8 @@
       "sales": 26.0,
       "internal_mobility_rate": 17.0,
       "span_of_control": 6.7,
-      "enps": 27
+      "enps": 27,
+      "burn_rate": -0.38
     },
     {
       "year": 2024,
@@ -486,7 +489,8 @@
       "sales": 28.0,
       "internal_mobility_rate": 18.0,
       "span_of_control": 6.8,
-      "enps": 28
+      "enps": 28,
+      "burn_rate": -0.35
     },
     {
       "year": 2025,
@@ -590,7 +594,8 @@
       "sales": 32.0,
       "internal_mobility_rate": 19.0,
       "span_of_control": 6.9,
-      "enps": 30
+      "enps": 30,
+      "burn_rate": -0.15
     },
     {
       "year": 2025,
@@ -694,7 +699,8 @@
       "sales": 35.0,
       "internal_mobility_rate": 20.0,
       "span_of_control": 6.8,
-      "enps": 32
+      "enps": 32,
+      "burn_rate": -0.05
     },
     {
       "year": 2025,
@@ -798,7 +804,8 @@
       "sales": 38.0,
       "internal_mobility_rate": 21.0,
       "span_of_control": 6.9,
-      "enps": 34
+      "enps": 34,
+      "burn_rate": 0.05
     },
     {
       "year": 2025,
@@ -902,7 +909,8 @@
       "sales": 45.0,
       "internal_mobility_rate": 22.5,
       "span_of_control": 7.0,
-      "enps": 36
+      "enps": 36,
+      "burn_rate": 0.12
     },
     {
       "year": 2026,
@@ -1006,7 +1014,8 @@
       "sales": 48.0,
       "internal_mobility_rate": 23.0,
       "span_of_control": 7.0,
-      "enps": 37
+      "enps": 37,
+      "burn_rate": 0.25
     },
     {
       "year": 2026,
@@ -1110,7 +1119,8 @@
       "sales": 50.0,
       "internal_mobility_rate": 24.0,
       "span_of_control": 6.9,
-      "enps": 38
+      "enps": 38,
+      "burn_rate": 0.35
     },
     {
       "year": 2026,
@@ -1214,7 +1224,8 @@
       "sales": 52.0,
       "internal_mobility_rate": 24.5,
       "span_of_control": 7.0,
-      "enps": 39
+      "enps": 39,
+      "burn_rate": 0.42
     },
     {
       "year": 2026,
@@ -1318,7 +1329,8 @@
       "sales": 50.0,
       "internal_mobility_rate": 25.0,
       "span_of_control": 7.1,
-      "enps": 40
+      "enps": 40,
+      "burn_rate": 0.48
     }
   ],
   "annual": {
@@ -8338,5 +8350,6425 @@
         "timezone": "CST"
       }
     ]
-  }
+  },
+  "mrr_by_segment": [
+    {
+      "period": "2024-Q1",
+      "segment": "Enterprise",
+      "mrr": 0.96
+    },
+    {
+      "period": "2024-Q1",
+      "segment": "Mid-Market",
+      "mrr": 0.52
+    },
+    {
+      "period": "2024-Q1",
+      "segment": "SMB",
+      "mrr": 0.26
+    },
+    {
+      "period": "2024-Q2",
+      "segment": "Enterprise",
+      "mrr": 1.05
+    },
+    {
+      "period": "2024-Q2",
+      "segment": "Mid-Market",
+      "mrr": 0.57
+    },
+    {
+      "period": "2024-Q2",
+      "segment": "SMB",
+      "mrr": 0.29
+    },
+    {
+      "period": "2024-Q3",
+      "segment": "Enterprise",
+      "mrr": 1.13
+    },
+    {
+      "period": "2024-Q3",
+      "segment": "Mid-Market",
+      "mrr": 0.62
+    },
+    {
+      "period": "2024-Q3",
+      "segment": "SMB",
+      "mrr": 0.31
+    },
+    {
+      "period": "2024-Q4",
+      "segment": "Enterprise",
+      "mrr": 1.22
+    },
+    {
+      "period": "2024-Q4",
+      "segment": "Mid-Market",
+      "mrr": 0.67
+    },
+    {
+      "period": "2024-Q4",
+      "segment": "SMB",
+      "mrr": 0.33
+    },
+    {
+      "period": "2025-Q1",
+      "segment": "Enterprise",
+      "mrr": 1.39
+    },
+    {
+      "period": "2025-Q1",
+      "segment": "Mid-Market",
+      "mrr": 0.76
+    },
+    {
+      "period": "2025-Q1",
+      "segment": "SMB",
+      "mrr": 0.38
+    },
+    {
+      "period": "2025-Q2",
+      "segment": "Enterprise",
+      "mrr": 1.52
+    },
+    {
+      "period": "2025-Q2",
+      "segment": "Mid-Market",
+      "mrr": 0.83
+    },
+    {
+      "period": "2025-Q2",
+      "segment": "SMB",
+      "mrr": 0.42
+    },
+    {
+      "period": "2025-Q3",
+      "segment": "Enterprise",
+      "mrr": 1.65
+    },
+    {
+      "period": "2025-Q3",
+      "segment": "Mid-Market",
+      "mrr": 0.9
+    },
+    {
+      "period": "2025-Q3",
+      "segment": "SMB",
+      "mrr": 0.45
+    },
+    {
+      "period": "2025-Q4",
+      "segment": "Enterprise",
+      "mrr": 1.96
+    },
+    {
+      "period": "2025-Q4",
+      "segment": "Mid-Market",
+      "mrr": 1.07
+    },
+    {
+      "period": "2025-Q4",
+      "segment": "SMB",
+      "mrr": 0.53
+    },
+    {
+      "period": "2026-Q1",
+      "segment": "Enterprise",
+      "mrr": 2.09
+    },
+    {
+      "period": "2026-Q1",
+      "segment": "Mid-Market",
+      "mrr": 1.14
+    },
+    {
+      "period": "2026-Q1",
+      "segment": "SMB",
+      "mrr": 0.57
+    },
+    {
+      "period": "2026-Q2",
+      "segment": "Enterprise",
+      "mrr": 2.18
+    },
+    {
+      "period": "2026-Q2",
+      "segment": "Mid-Market",
+      "mrr": 1.19
+    },
+    {
+      "period": "2026-Q2",
+      "segment": "SMB",
+      "mrr": 0.59
+    },
+    {
+      "period": "2026-Q3",
+      "segment": "Enterprise",
+      "mrr": 2.26
+    },
+    {
+      "period": "2026-Q3",
+      "segment": "Mid-Market",
+      "mrr": 1.23
+    },
+    {
+      "period": "2026-Q3",
+      "segment": "SMB",
+      "mrr": 0.62
+    },
+    {
+      "period": "2026-Q4",
+      "segment": "Enterprise",
+      "mrr": 2.18
+    },
+    {
+      "period": "2026-Q4",
+      "segment": "Mid-Market",
+      "mrr": 1.19
+    },
+    {
+      "period": "2026-Q4",
+      "segment": "SMB",
+      "mrr": 0.59
+    }
+  ],
+  "dso_by_segment": [
+    {
+      "period": "2024-Q1",
+      "segment": "Enterprise",
+      "dso": 55
+    },
+    {
+      "period": "2024-Q1",
+      "segment": "Mid-Market",
+      "dso": 42
+    },
+    {
+      "period": "2024-Q1",
+      "segment": "SMB",
+      "dso": 28
+    },
+    {
+      "period": "2024-Q2",
+      "segment": "Enterprise",
+      "dso": 54
+    },
+    {
+      "period": "2024-Q2",
+      "segment": "Mid-Market",
+      "dso": 42
+    },
+    {
+      "period": "2024-Q2",
+      "segment": "SMB",
+      "dso": 28
+    },
+    {
+      "period": "2024-Q3",
+      "segment": "Enterprise",
+      "dso": 54
+    },
+    {
+      "period": "2024-Q3",
+      "segment": "Mid-Market",
+      "dso": 41
+    },
+    {
+      "period": "2024-Q3",
+      "segment": "SMB",
+      "dso": 27
+    },
+    {
+      "period": "2024-Q4",
+      "segment": "Enterprise",
+      "dso": 53
+    },
+    {
+      "period": "2024-Q4",
+      "segment": "Mid-Market",
+      "dso": 41
+    },
+    {
+      "period": "2024-Q4",
+      "segment": "SMB",
+      "dso": 27
+    },
+    {
+      "period": "2025-Q1",
+      "segment": "Enterprise",
+      "dso": 52
+    },
+    {
+      "period": "2025-Q1",
+      "segment": "Mid-Market",
+      "dso": 40
+    },
+    {
+      "period": "2025-Q1",
+      "segment": "SMB",
+      "dso": 27
+    },
+    {
+      "period": "2025-Q2",
+      "segment": "Enterprise",
+      "dso": 52
+    },
+    {
+      "period": "2025-Q2",
+      "segment": "Mid-Market",
+      "dso": 40
+    },
+    {
+      "period": "2025-Q2",
+      "segment": "SMB",
+      "dso": 26
+    },
+    {
+      "period": "2025-Q3",
+      "segment": "Enterprise",
+      "dso": 51
+    },
+    {
+      "period": "2025-Q3",
+      "segment": "Mid-Market",
+      "dso": 40
+    },
+    {
+      "period": "2025-Q3",
+      "segment": "SMB",
+      "dso": 26
+    },
+    {
+      "period": "2025-Q4",
+      "segment": "Enterprise",
+      "dso": 51
+    },
+    {
+      "period": "2025-Q4",
+      "segment": "Mid-Market",
+      "dso": 39
+    },
+    {
+      "period": "2025-Q4",
+      "segment": "SMB",
+      "dso": 26
+    },
+    {
+      "period": "2026-Q1",
+      "segment": "Enterprise",
+      "dso": 50
+    },
+    {
+      "period": "2026-Q1",
+      "segment": "Mid-Market",
+      "dso": 39
+    },
+    {
+      "period": "2026-Q1",
+      "segment": "SMB",
+      "dso": 25
+    },
+    {
+      "period": "2026-Q2",
+      "segment": "Enterprise",
+      "dso": 50
+    },
+    {
+      "period": "2026-Q2",
+      "segment": "Mid-Market",
+      "dso": 38
+    },
+    {
+      "period": "2026-Q2",
+      "segment": "SMB",
+      "dso": 25
+    },
+    {
+      "period": "2026-Q3",
+      "segment": "Enterprise",
+      "dso": 49
+    },
+    {
+      "period": "2026-Q3",
+      "segment": "Mid-Market",
+      "dso": 38
+    },
+    {
+      "period": "2026-Q3",
+      "segment": "SMB",
+      "dso": 25
+    },
+    {
+      "period": "2026-Q4",
+      "segment": "Enterprise",
+      "dso": 49
+    },
+    {
+      "period": "2026-Q4",
+      "segment": "Mid-Market",
+      "dso": 38
+    },
+    {
+      "period": "2026-Q4",
+      "segment": "SMB",
+      "dso": 25
+    }
+  ],
+  "ar_aging": [
+    {
+      "period": "2024-Q1",
+      "aging_bucket": "Current",
+      "amount": 7.55
+    },
+    {
+      "period": "2024-Q1",
+      "aging_bucket": "1-30 days",
+      "amount": 1.94
+    },
+    {
+      "period": "2024-Q1",
+      "aging_bucket": "31-60 days",
+      "amount": 0.86
+    },
+    {
+      "period": "2024-Q1",
+      "aging_bucket": "61-90 days",
+      "amount": 0.32
+    },
+    {
+      "period": "2024-Q1",
+      "aging_bucket": "90+ days",
+      "amount": 0.11
+    },
+    {
+      "period": "2024-Q2",
+      "aging_bucket": "Current",
+      "amount": 8.23
+    },
+    {
+      "period": "2024-Q2",
+      "aging_bucket": "1-30 days",
+      "amount": 2.12
+    },
+    {
+      "period": "2024-Q2",
+      "aging_bucket": "31-60 days",
+      "amount": 0.94
+    },
+    {
+      "period": "2024-Q2",
+      "aging_bucket": "61-90 days",
+      "amount": 0.35
+    },
+    {
+      "period": "2024-Q2",
+      "aging_bucket": "90+ days",
+      "amount": 0.12
+    },
+    {
+      "period": "2024-Q3",
+      "aging_bucket": "Current",
+      "amount": 8.92
+    },
+    {
+      "period": "2024-Q3",
+      "aging_bucket": "1-30 days",
+      "amount": 2.29
+    },
+    {
+      "period": "2024-Q3",
+      "aging_bucket": "31-60 days",
+      "amount": 1.02
+    },
+    {
+      "period": "2024-Q3",
+      "aging_bucket": "61-90 days",
+      "amount": 0.38
+    },
+    {
+      "period": "2024-Q3",
+      "aging_bucket": "90+ days",
+      "amount": 0.13
+    },
+    {
+      "period": "2024-Q4",
+      "aging_bucket": "Current",
+      "amount": 9.6
+    },
+    {
+      "period": "2024-Q4",
+      "aging_bucket": "1-30 days",
+      "amount": 2.47
+    },
+    {
+      "period": "2024-Q4",
+      "aging_bucket": "31-60 days",
+      "amount": 1.1
+    },
+    {
+      "period": "2024-Q4",
+      "aging_bucket": "61-90 days",
+      "amount": 0.41
+    },
+    {
+      "period": "2024-Q4",
+      "aging_bucket": "90+ days",
+      "amount": 0.14
+    },
+    {
+      "period": "2025-Q1",
+      "aging_bucket": "Current",
+      "amount": 10.98
+    },
+    {
+      "period": "2025-Q1",
+      "aging_bucket": "1-30 days",
+      "amount": 2.82
+    },
+    {
+      "period": "2025-Q1",
+      "aging_bucket": "31-60 days",
+      "amount": 1.25
+    },
+    {
+      "period": "2025-Q1",
+      "aging_bucket": "61-90 days",
+      "amount": 0.47
+    },
+    {
+      "period": "2025-Q1",
+      "aging_bucket": "90+ days",
+      "amount": 0.16
+    },
+    {
+      "period": "2025-Q2",
+      "aging_bucket": "Current",
+      "amount": 12.0
+    },
+    {
+      "period": "2025-Q2",
+      "aging_bucket": "1-30 days",
+      "amount": 3.09
+    },
+    {
+      "period": "2025-Q2",
+      "aging_bucket": "31-60 days",
+      "amount": 1.37
+    },
+    {
+      "period": "2025-Q2",
+      "aging_bucket": "61-90 days",
+      "amount": 0.51
+    },
+    {
+      "period": "2025-Q2",
+      "aging_bucket": "90+ days",
+      "amount": 0.17
+    },
+    {
+      "period": "2025-Q3",
+      "aging_bucket": "Current",
+      "amount": 13.03
+    },
+    {
+      "period": "2025-Q3",
+      "aging_bucket": "1-30 days",
+      "amount": 3.35
+    },
+    {
+      "period": "2025-Q3",
+      "aging_bucket": "31-60 days",
+      "amount": 1.49
+    },
+    {
+      "period": "2025-Q3",
+      "aging_bucket": "61-90 days",
+      "amount": 0.56
+    },
+    {
+      "period": "2025-Q3",
+      "aging_bucket": "90+ days",
+      "amount": 0.19
+    },
+    {
+      "period": "2025-Q4",
+      "aging_bucket": "Current",
+      "amount": 15.43
+    },
+    {
+      "period": "2025-Q4",
+      "aging_bucket": "1-30 days",
+      "amount": 3.97
+    },
+    {
+      "period": "2025-Q4",
+      "aging_bucket": "31-60 days",
+      "amount": 1.76
+    },
+    {
+      "period": "2025-Q4",
+      "aging_bucket": "61-90 days",
+      "amount": 0.66
+    },
+    {
+      "period": "2025-Q4",
+      "aging_bucket": "90+ days",
+      "amount": 0.22
+    },
+    {
+      "period": "2026-Q1",
+      "aging_bucket": "Current",
+      "amount": 16.46
+    },
+    {
+      "period": "2026-Q1",
+      "aging_bucket": "1-30 days",
+      "amount": 4.23
+    },
+    {
+      "period": "2026-Q1",
+      "aging_bucket": "31-60 days",
+      "amount": 1.88
+    },
+    {
+      "period": "2026-Q1",
+      "aging_bucket": "61-90 days",
+      "amount": 0.71
+    },
+    {
+      "period": "2026-Q1",
+      "aging_bucket": "90+ days",
+      "amount": 0.24
+    },
+    {
+      "period": "2026-Q2",
+      "aging_bucket": "Current",
+      "amount": 17.15
+    },
+    {
+      "period": "2026-Q2",
+      "aging_bucket": "1-30 days",
+      "amount": 4.41
+    },
+    {
+      "period": "2026-Q2",
+      "aging_bucket": "31-60 days",
+      "amount": 1.96
+    },
+    {
+      "period": "2026-Q2",
+      "aging_bucket": "61-90 days",
+      "amount": 0.73
+    },
+    {
+      "period": "2026-Q2",
+      "aging_bucket": "90+ days",
+      "amount": 0.24
+    },
+    {
+      "period": "2026-Q3",
+      "aging_bucket": "Current",
+      "amount": 17.84
+    },
+    {
+      "period": "2026-Q3",
+      "aging_bucket": "1-30 days",
+      "amount": 4.59
+    },
+    {
+      "period": "2026-Q3",
+      "aging_bucket": "31-60 days",
+      "amount": 2.04
+    },
+    {
+      "period": "2026-Q3",
+      "aging_bucket": "61-90 days",
+      "amount": 0.76
+    },
+    {
+      "period": "2026-Q3",
+      "aging_bucket": "90+ days",
+      "amount": 0.25
+    },
+    {
+      "period": "2026-Q4",
+      "aging_bucket": "Current",
+      "amount": 17.15
+    },
+    {
+      "period": "2026-Q4",
+      "aging_bucket": "1-30 days",
+      "amount": 4.41
+    },
+    {
+      "period": "2026-Q4",
+      "aging_bucket": "31-60 days",
+      "amount": 1.96
+    },
+    {
+      "period": "2026-Q4",
+      "aging_bucket": "61-90 days",
+      "amount": 0.73
+    },
+    {
+      "period": "2026-Q4",
+      "aging_bucket": "90+ days",
+      "amount": 0.24
+    }
+  ],
+  "services_revenue_by_region": [
+    {
+      "period": "2024-Q1",
+      "region": "AMER",
+      "service_line": "Implementation",
+      "revenue": 1.03
+    },
+    {
+      "period": "2024-Q1",
+      "region": "AMER",
+      "service_line": "Consulting",
+      "revenue": 0.51
+    },
+    {
+      "period": "2024-Q1",
+      "region": "AMER",
+      "service_line": "Training",
+      "revenue": 0.31
+    },
+    {
+      "period": "2024-Q1",
+      "region": "AMER",
+      "service_line": "Support Premium",
+      "revenue": 0.21
+    },
+    {
+      "period": "2024-Q1",
+      "region": "EMEA",
+      "service_line": "Implementation",
+      "revenue": 0.56
+    },
+    {
+      "period": "2024-Q1",
+      "region": "EMEA",
+      "service_line": "Consulting",
+      "revenue": 0.28
+    },
+    {
+      "period": "2024-Q1",
+      "region": "EMEA",
+      "service_line": "Training",
+      "revenue": 0.17
+    },
+    {
+      "period": "2024-Q1",
+      "region": "EMEA",
+      "service_line": "Support Premium",
+      "revenue": 0.11
+    },
+    {
+      "period": "2024-Q1",
+      "region": "APAC",
+      "service_line": "Implementation",
+      "revenue": 0.28
+    },
+    {
+      "period": "2024-Q1",
+      "region": "APAC",
+      "service_line": "Consulting",
+      "revenue": 0.14
+    },
+    {
+      "period": "2024-Q1",
+      "region": "APAC",
+      "service_line": "Training",
+      "revenue": 0.08
+    },
+    {
+      "period": "2024-Q1",
+      "region": "APAC",
+      "service_line": "Support Premium",
+      "revenue": 0.06
+    },
+    {
+      "period": "2024-Q2",
+      "region": "AMER",
+      "service_line": "Implementation",
+      "revenue": 1.12
+    },
+    {
+      "period": "2024-Q2",
+      "region": "AMER",
+      "service_line": "Consulting",
+      "revenue": 0.56
+    },
+    {
+      "period": "2024-Q2",
+      "region": "AMER",
+      "service_line": "Training",
+      "revenue": 0.34
+    },
+    {
+      "period": "2024-Q2",
+      "region": "AMER",
+      "service_line": "Support Premium",
+      "revenue": 0.22
+    },
+    {
+      "period": "2024-Q2",
+      "region": "EMEA",
+      "service_line": "Implementation",
+      "revenue": 0.61
+    },
+    {
+      "period": "2024-Q2",
+      "region": "EMEA",
+      "service_line": "Consulting",
+      "revenue": 0.31
+    },
+    {
+      "period": "2024-Q2",
+      "region": "EMEA",
+      "service_line": "Training",
+      "revenue": 0.18
+    },
+    {
+      "period": "2024-Q2",
+      "region": "EMEA",
+      "service_line": "Support Premium",
+      "revenue": 0.12
+    },
+    {
+      "period": "2024-Q2",
+      "region": "APAC",
+      "service_line": "Implementation",
+      "revenue": 0.31
+    },
+    {
+      "period": "2024-Q2",
+      "region": "APAC",
+      "service_line": "Consulting",
+      "revenue": 0.15
+    },
+    {
+      "period": "2024-Q2",
+      "region": "APAC",
+      "service_line": "Training",
+      "revenue": 0.09
+    },
+    {
+      "period": "2024-Q2",
+      "region": "APAC",
+      "service_line": "Support Premium",
+      "revenue": 0.06
+    },
+    {
+      "period": "2024-Q3",
+      "region": "AMER",
+      "service_line": "Implementation",
+      "revenue": 1.22
+    },
+    {
+      "period": "2024-Q3",
+      "region": "AMER",
+      "service_line": "Consulting",
+      "revenue": 0.61
+    },
+    {
+      "period": "2024-Q3",
+      "region": "AMER",
+      "service_line": "Training",
+      "revenue": 0.36
+    },
+    {
+      "period": "2024-Q3",
+      "region": "AMER",
+      "service_line": "Support Premium",
+      "revenue": 0.24
+    },
+    {
+      "period": "2024-Q3",
+      "region": "EMEA",
+      "service_line": "Implementation",
+      "revenue": 0.66
+    },
+    {
+      "period": "2024-Q3",
+      "region": "EMEA",
+      "service_line": "Consulting",
+      "revenue": 0.33
+    },
+    {
+      "period": "2024-Q3",
+      "region": "EMEA",
+      "service_line": "Training",
+      "revenue": 0.2
+    },
+    {
+      "period": "2024-Q3",
+      "region": "EMEA",
+      "service_line": "Support Premium",
+      "revenue": 0.13
+    },
+    {
+      "period": "2024-Q3",
+      "region": "APAC",
+      "service_line": "Implementation",
+      "revenue": 0.33
+    },
+    {
+      "period": "2024-Q3",
+      "region": "APAC",
+      "service_line": "Consulting",
+      "revenue": 0.17
+    },
+    {
+      "period": "2024-Q3",
+      "region": "APAC",
+      "service_line": "Training",
+      "revenue": 0.1
+    },
+    {
+      "period": "2024-Q3",
+      "region": "APAC",
+      "service_line": "Support Premium",
+      "revenue": 0.07
+    },
+    {
+      "period": "2024-Q4",
+      "region": "AMER",
+      "service_line": "Implementation",
+      "revenue": 1.31
+    },
+    {
+      "period": "2024-Q4",
+      "region": "AMER",
+      "service_line": "Consulting",
+      "revenue": 0.65
+    },
+    {
+      "period": "2024-Q4",
+      "region": "AMER",
+      "service_line": "Training",
+      "revenue": 0.39
+    },
+    {
+      "period": "2024-Q4",
+      "region": "AMER",
+      "service_line": "Support Premium",
+      "revenue": 0.26
+    },
+    {
+      "period": "2024-Q4",
+      "region": "EMEA",
+      "service_line": "Implementation",
+      "revenue": 0.71
+    },
+    {
+      "period": "2024-Q4",
+      "region": "EMEA",
+      "service_line": "Consulting",
+      "revenue": 0.36
+    },
+    {
+      "period": "2024-Q4",
+      "region": "EMEA",
+      "service_line": "Training",
+      "revenue": 0.21
+    },
+    {
+      "period": "2024-Q4",
+      "region": "EMEA",
+      "service_line": "Support Premium",
+      "revenue": 0.14
+    },
+    {
+      "period": "2024-Q4",
+      "region": "APAC",
+      "service_line": "Implementation",
+      "revenue": 0.36
+    },
+    {
+      "period": "2024-Q4",
+      "region": "APAC",
+      "service_line": "Consulting",
+      "revenue": 0.18
+    },
+    {
+      "period": "2024-Q4",
+      "region": "APAC",
+      "service_line": "Training",
+      "revenue": 0.11
+    },
+    {
+      "period": "2024-Q4",
+      "region": "APAC",
+      "service_line": "Support Premium",
+      "revenue": 0.07
+    },
+    {
+      "period": "2025-Q1",
+      "region": "AMER",
+      "service_line": "Implementation",
+      "revenue": 1.5
+    },
+    {
+      "period": "2025-Q1",
+      "region": "AMER",
+      "service_line": "Consulting",
+      "revenue": 0.75
+    },
+    {
+      "period": "2025-Q1",
+      "region": "AMER",
+      "service_line": "Training",
+      "revenue": 0.45
+    },
+    {
+      "period": "2025-Q1",
+      "region": "AMER",
+      "service_line": "Support Premium",
+      "revenue": 0.3
+    },
+    {
+      "period": "2025-Q1",
+      "region": "EMEA",
+      "service_line": "Implementation",
+      "revenue": 0.82
+    },
+    {
+      "period": "2025-Q1",
+      "region": "EMEA",
+      "service_line": "Consulting",
+      "revenue": 0.41
+    },
+    {
+      "period": "2025-Q1",
+      "region": "EMEA",
+      "service_line": "Training",
+      "revenue": 0.24
+    },
+    {
+      "period": "2025-Q1",
+      "region": "EMEA",
+      "service_line": "Support Premium",
+      "revenue": 0.16
+    },
+    {
+      "period": "2025-Q1",
+      "region": "APAC",
+      "service_line": "Implementation",
+      "revenue": 0.41
+    },
+    {
+      "period": "2025-Q1",
+      "region": "APAC",
+      "service_line": "Consulting",
+      "revenue": 0.2
+    },
+    {
+      "period": "2025-Q1",
+      "region": "APAC",
+      "service_line": "Training",
+      "revenue": 0.12
+    },
+    {
+      "period": "2025-Q1",
+      "region": "APAC",
+      "service_line": "Support Premium",
+      "revenue": 0.08
+    },
+    {
+      "period": "2025-Q2",
+      "region": "AMER",
+      "service_line": "Implementation",
+      "revenue": 1.64
+    },
+    {
+      "period": "2025-Q2",
+      "region": "AMER",
+      "service_line": "Consulting",
+      "revenue": 0.82
+    },
+    {
+      "period": "2025-Q2",
+      "region": "AMER",
+      "service_line": "Training",
+      "revenue": 0.49
+    },
+    {
+      "period": "2025-Q2",
+      "region": "AMER",
+      "service_line": "Support Premium",
+      "revenue": 0.33
+    },
+    {
+      "period": "2025-Q2",
+      "region": "EMEA",
+      "service_line": "Implementation",
+      "revenue": 0.89
+    },
+    {
+      "period": "2025-Q2",
+      "region": "EMEA",
+      "service_line": "Consulting",
+      "revenue": 0.45
+    },
+    {
+      "period": "2025-Q2",
+      "region": "EMEA",
+      "service_line": "Training",
+      "revenue": 0.27
+    },
+    {
+      "period": "2025-Q2",
+      "region": "EMEA",
+      "service_line": "Support Premium",
+      "revenue": 0.18
+    },
+    {
+      "period": "2025-Q2",
+      "region": "APAC",
+      "service_line": "Implementation",
+      "revenue": 0.45
+    },
+    {
+      "period": "2025-Q2",
+      "region": "APAC",
+      "service_line": "Consulting",
+      "revenue": 0.22
+    },
+    {
+      "period": "2025-Q2",
+      "region": "APAC",
+      "service_line": "Training",
+      "revenue": 0.13
+    },
+    {
+      "period": "2025-Q2",
+      "region": "APAC",
+      "service_line": "Support Premium",
+      "revenue": 0.09
+    },
+    {
+      "period": "2025-Q3",
+      "region": "AMER",
+      "service_line": "Implementation",
+      "revenue": 1.78
+    },
+    {
+      "period": "2025-Q3",
+      "region": "AMER",
+      "service_line": "Consulting",
+      "revenue": 0.89
+    },
+    {
+      "period": "2025-Q3",
+      "region": "AMER",
+      "service_line": "Training",
+      "revenue": 0.53
+    },
+    {
+      "period": "2025-Q3",
+      "region": "AMER",
+      "service_line": "Support Premium",
+      "revenue": 0.36
+    },
+    {
+      "period": "2025-Q3",
+      "region": "EMEA",
+      "service_line": "Implementation",
+      "revenue": 0.97
+    },
+    {
+      "period": "2025-Q3",
+      "region": "EMEA",
+      "service_line": "Consulting",
+      "revenue": 0.48
+    },
+    {
+      "period": "2025-Q3",
+      "region": "EMEA",
+      "service_line": "Training",
+      "revenue": 0.29
+    },
+    {
+      "period": "2025-Q3",
+      "region": "EMEA",
+      "service_line": "Support Premium",
+      "revenue": 0.19
+    },
+    {
+      "period": "2025-Q3",
+      "region": "APAC",
+      "service_line": "Implementation",
+      "revenue": 0.48
+    },
+    {
+      "period": "2025-Q3",
+      "region": "APAC",
+      "service_line": "Consulting",
+      "revenue": 0.24
+    },
+    {
+      "period": "2025-Q3",
+      "region": "APAC",
+      "service_line": "Training",
+      "revenue": 0.15
+    },
+    {
+      "period": "2025-Q3",
+      "region": "APAC",
+      "service_line": "Support Premium",
+      "revenue": 0.1
+    },
+    {
+      "period": "2025-Q4",
+      "region": "AMER",
+      "service_line": "Implementation",
+      "revenue": 2.1
+    },
+    {
+      "period": "2025-Q4",
+      "region": "AMER",
+      "service_line": "Consulting",
+      "revenue": 1.05
+    },
+    {
+      "period": "2025-Q4",
+      "region": "AMER",
+      "service_line": "Training",
+      "revenue": 0.63
+    },
+    {
+      "period": "2025-Q4",
+      "region": "AMER",
+      "service_line": "Support Premium",
+      "revenue": 0.42
+    },
+    {
+      "period": "2025-Q4",
+      "region": "EMEA",
+      "service_line": "Implementation",
+      "revenue": 1.15
+    },
+    {
+      "period": "2025-Q4",
+      "region": "EMEA",
+      "service_line": "Consulting",
+      "revenue": 0.57
+    },
+    {
+      "period": "2025-Q4",
+      "region": "EMEA",
+      "service_line": "Training",
+      "revenue": 0.34
+    },
+    {
+      "period": "2025-Q4",
+      "region": "EMEA",
+      "service_line": "Support Premium",
+      "revenue": 0.23
+    },
+    {
+      "period": "2025-Q4",
+      "region": "APAC",
+      "service_line": "Implementation",
+      "revenue": 0.57
+    },
+    {
+      "period": "2025-Q4",
+      "region": "APAC",
+      "service_line": "Consulting",
+      "revenue": 0.29
+    },
+    {
+      "period": "2025-Q4",
+      "region": "APAC",
+      "service_line": "Training",
+      "revenue": 0.17
+    },
+    {
+      "period": "2025-Q4",
+      "region": "APAC",
+      "service_line": "Support Premium",
+      "revenue": 0.11
+    },
+    {
+      "period": "2026-Q1",
+      "region": "AMER",
+      "service_line": "Implementation",
+      "revenue": 2.24
+    },
+    {
+      "period": "2026-Q1",
+      "region": "AMER",
+      "service_line": "Consulting",
+      "revenue": 1.12
+    },
+    {
+      "period": "2026-Q1",
+      "region": "AMER",
+      "service_line": "Training",
+      "revenue": 0.67
+    },
+    {
+      "period": "2026-Q1",
+      "region": "AMER",
+      "service_line": "Support Premium",
+      "revenue": 0.45
+    },
+    {
+      "period": "2026-Q1",
+      "region": "EMEA",
+      "service_line": "Implementation",
+      "revenue": 1.22
+    },
+    {
+      "period": "2026-Q1",
+      "region": "EMEA",
+      "service_line": "Consulting",
+      "revenue": 0.61
+    },
+    {
+      "period": "2026-Q1",
+      "region": "EMEA",
+      "service_line": "Training",
+      "revenue": 0.37
+    },
+    {
+      "period": "2026-Q1",
+      "region": "EMEA",
+      "service_line": "Support Premium",
+      "revenue": 0.24
+    },
+    {
+      "period": "2026-Q1",
+      "region": "APAC",
+      "service_line": "Implementation",
+      "revenue": 0.61
+    },
+    {
+      "period": "2026-Q1",
+      "region": "APAC",
+      "service_line": "Consulting",
+      "revenue": 0.31
+    },
+    {
+      "period": "2026-Q1",
+      "region": "APAC",
+      "service_line": "Training",
+      "revenue": 0.18
+    },
+    {
+      "period": "2026-Q1",
+      "region": "APAC",
+      "service_line": "Support Premium",
+      "revenue": 0.12
+    },
+    {
+      "period": "2026-Q2",
+      "region": "AMER",
+      "service_line": "Implementation",
+      "revenue": 2.34
+    },
+    {
+      "period": "2026-Q2",
+      "region": "AMER",
+      "service_line": "Consulting",
+      "revenue": 1.17
+    },
+    {
+      "period": "2026-Q2",
+      "region": "AMER",
+      "service_line": "Training",
+      "revenue": 0.7
+    },
+    {
+      "period": "2026-Q2",
+      "region": "AMER",
+      "service_line": "Support Premium",
+      "revenue": 0.47
+    },
+    {
+      "period": "2026-Q2",
+      "region": "EMEA",
+      "service_line": "Implementation",
+      "revenue": 1.27
+    },
+    {
+      "period": "2026-Q2",
+      "region": "EMEA",
+      "service_line": "Consulting",
+      "revenue": 0.64
+    },
+    {
+      "period": "2026-Q2",
+      "region": "EMEA",
+      "service_line": "Training",
+      "revenue": 0.38
+    },
+    {
+      "period": "2026-Q2",
+      "region": "EMEA",
+      "service_line": "Support Premium",
+      "revenue": 0.26
+    },
+    {
+      "period": "2026-Q2",
+      "region": "APAC",
+      "service_line": "Implementation",
+      "revenue": 0.64
+    },
+    {
+      "period": "2026-Q2",
+      "region": "APAC",
+      "service_line": "Consulting",
+      "revenue": 0.32
+    },
+    {
+      "period": "2026-Q2",
+      "region": "APAC",
+      "service_line": "Training",
+      "revenue": 0.19
+    },
+    {
+      "period": "2026-Q2",
+      "region": "APAC",
+      "service_line": "Support Premium",
+      "revenue": 0.13
+    },
+    {
+      "period": "2026-Q3",
+      "region": "AMER",
+      "service_line": "Implementation",
+      "revenue": 2.43
+    },
+    {
+      "period": "2026-Q3",
+      "region": "AMER",
+      "service_line": "Consulting",
+      "revenue": 1.22
+    },
+    {
+      "period": "2026-Q3",
+      "region": "AMER",
+      "service_line": "Training",
+      "revenue": 0.73
+    },
+    {
+      "period": "2026-Q3",
+      "region": "AMER",
+      "service_line": "Support Premium",
+      "revenue": 0.49
+    },
+    {
+      "period": "2026-Q3",
+      "region": "EMEA",
+      "service_line": "Implementation",
+      "revenue": 1.33
+    },
+    {
+      "period": "2026-Q3",
+      "region": "EMEA",
+      "service_line": "Consulting",
+      "revenue": 0.66
+    },
+    {
+      "period": "2026-Q3",
+      "region": "EMEA",
+      "service_line": "Training",
+      "revenue": 0.4
+    },
+    {
+      "period": "2026-Q3",
+      "region": "EMEA",
+      "service_line": "Support Premium",
+      "revenue": 0.27
+    },
+    {
+      "period": "2026-Q3",
+      "region": "APAC",
+      "service_line": "Implementation",
+      "revenue": 0.66
+    },
+    {
+      "period": "2026-Q3",
+      "region": "APAC",
+      "service_line": "Consulting",
+      "revenue": 0.33
+    },
+    {
+      "period": "2026-Q3",
+      "region": "APAC",
+      "service_line": "Training",
+      "revenue": 0.2
+    },
+    {
+      "period": "2026-Q3",
+      "region": "APAC",
+      "service_line": "Support Premium",
+      "revenue": 0.13
+    },
+    {
+      "period": "2026-Q4",
+      "region": "AMER",
+      "service_line": "Implementation",
+      "revenue": 2.34
+    },
+    {
+      "period": "2026-Q4",
+      "region": "AMER",
+      "service_line": "Consulting",
+      "revenue": 1.17
+    },
+    {
+      "period": "2026-Q4",
+      "region": "AMER",
+      "service_line": "Training",
+      "revenue": 0.7
+    },
+    {
+      "period": "2026-Q4",
+      "region": "AMER",
+      "service_line": "Support Premium",
+      "revenue": 0.47
+    },
+    {
+      "period": "2026-Q4",
+      "region": "EMEA",
+      "service_line": "Implementation",
+      "revenue": 1.27
+    },
+    {
+      "period": "2026-Q4",
+      "region": "EMEA",
+      "service_line": "Consulting",
+      "revenue": 0.64
+    },
+    {
+      "period": "2026-Q4",
+      "region": "EMEA",
+      "service_line": "Training",
+      "revenue": 0.38
+    },
+    {
+      "period": "2026-Q4",
+      "region": "EMEA",
+      "service_line": "Support Premium",
+      "revenue": 0.26
+    },
+    {
+      "period": "2026-Q4",
+      "region": "APAC",
+      "service_line": "Implementation",
+      "revenue": 0.64
+    },
+    {
+      "period": "2026-Q4",
+      "region": "APAC",
+      "service_line": "Consulting",
+      "revenue": 0.32
+    },
+    {
+      "period": "2026-Q4",
+      "region": "APAC",
+      "service_line": "Training",
+      "revenue": 0.19
+    },
+    {
+      "period": "2026-Q4",
+      "region": "APAC",
+      "service_line": "Support Premium",
+      "revenue": 0.13
+    }
+  ],
+  "gross_margin_by_product": [
+    {
+      "period": "2024-Q1",
+      "product": "Enterprise",
+      "gross_margin": 9.15
+    },
+    {
+      "period": "2024-Q1",
+      "product": "Professional",
+      "gross_margin": 3.58
+    },
+    {
+      "period": "2024-Q1",
+      "product": "Team",
+      "gross_margin": 1.14
+    },
+    {
+      "period": "2024-Q1",
+      "product": "Starter",
+      "gross_margin": 0.43
+    },
+    {
+      "period": "2024-Q2",
+      "product": "Enterprise",
+      "gross_margin": 9.98
+    },
+    {
+      "period": "2024-Q2",
+      "product": "Professional",
+      "gross_margin": 3.9
+    },
+    {
+      "period": "2024-Q2",
+      "product": "Team",
+      "gross_margin": 1.25
+    },
+    {
+      "period": "2024-Q2",
+      "product": "Starter",
+      "gross_margin": 0.47
+    },
+    {
+      "period": "2024-Q3",
+      "product": "Enterprise",
+      "gross_margin": 10.82
+    },
+    {
+      "period": "2024-Q3",
+      "product": "Professional",
+      "gross_margin": 4.22
+    },
+    {
+      "period": "2024-Q3",
+      "product": "Team",
+      "gross_margin": 1.35
+    },
+    {
+      "period": "2024-Q3",
+      "product": "Starter",
+      "gross_margin": 0.51
+    },
+    {
+      "period": "2024-Q4",
+      "product": "Enterprise",
+      "gross_margin": 11.65
+    },
+    {
+      "period": "2024-Q4",
+      "product": "Professional",
+      "gross_margin": 4.55
+    },
+    {
+      "period": "2024-Q4",
+      "product": "Team",
+      "gross_margin": 1.46
+    },
+    {
+      "period": "2024-Q4",
+      "product": "Starter",
+      "gross_margin": 0.55
+    },
+    {
+      "period": "2025-Q1",
+      "product": "Enterprise",
+      "gross_margin": 13.52
+    },
+    {
+      "period": "2025-Q1",
+      "product": "Professional",
+      "gross_margin": 5.28
+    },
+    {
+      "period": "2025-Q1",
+      "product": "Team",
+      "gross_margin": 1.69
+    },
+    {
+      "period": "2025-Q1",
+      "product": "Starter",
+      "gross_margin": 0.63
+    },
+    {
+      "period": "2025-Q2",
+      "product": "Enterprise",
+      "gross_margin": 14.78
+    },
+    {
+      "period": "2025-Q2",
+      "product": "Professional",
+      "gross_margin": 5.78
+    },
+    {
+      "period": "2025-Q2",
+      "product": "Team",
+      "gross_margin": 1.85
+    },
+    {
+      "period": "2025-Q2",
+      "product": "Starter",
+      "gross_margin": 0.69
+    },
+    {
+      "period": "2025-Q3",
+      "product": "Enterprise",
+      "gross_margin": 16.05
+    },
+    {
+      "period": "2025-Q3",
+      "product": "Professional",
+      "gross_margin": 6.27
+    },
+    {
+      "period": "2025-Q3",
+      "product": "Team",
+      "gross_margin": 2.01
+    },
+    {
+      "period": "2025-Q3",
+      "product": "Starter",
+      "gross_margin": 0.75
+    },
+    {
+      "period": "2025-Q4",
+      "product": "Enterprise",
+      "gross_margin": 19.01
+    },
+    {
+      "period": "2025-Q4",
+      "product": "Professional",
+      "gross_margin": 7.42
+    },
+    {
+      "period": "2025-Q4",
+      "product": "Team",
+      "gross_margin": 2.38
+    },
+    {
+      "period": "2025-Q4",
+      "product": "Starter",
+      "gross_margin": 0.89
+    },
+    {
+      "period": "2026-Q1",
+      "product": "Enterprise",
+      "gross_margin": 20.58
+    },
+    {
+      "period": "2026-Q1",
+      "product": "Professional",
+      "gross_margin": 8.04
+    },
+    {
+      "period": "2026-Q1",
+      "product": "Team",
+      "gross_margin": 2.57
+    },
+    {
+      "period": "2026-Q1",
+      "product": "Starter",
+      "gross_margin": 0.96
+    },
+    {
+      "period": "2026-Q2",
+      "product": "Enterprise",
+      "gross_margin": 21.44
+    },
+    {
+      "period": "2026-Q2",
+      "product": "Professional",
+      "gross_margin": 8.38
+    },
+    {
+      "period": "2026-Q2",
+      "product": "Team",
+      "gross_margin": 2.68
+    },
+    {
+      "period": "2026-Q2",
+      "product": "Starter",
+      "gross_margin": 1.0
+    },
+    {
+      "period": "2026-Q3",
+      "product": "Enterprise",
+      "gross_margin": 22.3
+    },
+    {
+      "period": "2026-Q3",
+      "product": "Professional",
+      "gross_margin": 8.71
+    },
+    {
+      "period": "2026-Q3",
+      "product": "Team",
+      "gross_margin": 2.79
+    },
+    {
+      "period": "2026-Q3",
+      "product": "Starter",
+      "gross_margin": 1.05
+    },
+    {
+      "period": "2026-Q4",
+      "product": "Enterprise",
+      "gross_margin": 21.44
+    },
+    {
+      "period": "2026-Q4",
+      "product": "Professional",
+      "gross_margin": 8.38
+    },
+    {
+      "period": "2026-Q4",
+      "product": "Team",
+      "gross_margin": 2.68
+    },
+    {
+      "period": "2026-Q4",
+      "product": "Starter",
+      "gross_margin": 1.0
+    }
+  ],
+  "win_rate_by_region": [
+    {
+      "period": "2024-Q1",
+      "region": "AMER",
+      "win_rate": 42.0
+    },
+    {
+      "period": "2024-Q1",
+      "region": "EMEA",
+      "win_rate": 36.0
+    },
+    {
+      "period": "2024-Q1",
+      "region": "APAC",
+      "win_rate": 38.0
+    },
+    {
+      "period": "2024-Q2",
+      "region": "AMER",
+      "win_rate": 42.5
+    },
+    {
+      "period": "2024-Q2",
+      "region": "EMEA",
+      "win_rate": 36.5
+    },
+    {
+      "period": "2024-Q2",
+      "region": "APAC",
+      "win_rate": 38.5
+    },
+    {
+      "period": "2024-Q3",
+      "region": "AMER",
+      "win_rate": 43.0
+    },
+    {
+      "period": "2024-Q3",
+      "region": "EMEA",
+      "win_rate": 37.0
+    },
+    {
+      "period": "2024-Q3",
+      "region": "APAC",
+      "win_rate": 39.0
+    },
+    {
+      "period": "2024-Q4",
+      "region": "AMER",
+      "win_rate": 43.5
+    },
+    {
+      "period": "2024-Q4",
+      "region": "EMEA",
+      "win_rate": 37.5
+    },
+    {
+      "period": "2024-Q4",
+      "region": "APAC",
+      "win_rate": 39.5
+    },
+    {
+      "period": "2025-Q1",
+      "region": "AMER",
+      "win_rate": 44.0
+    },
+    {
+      "period": "2025-Q1",
+      "region": "EMEA",
+      "win_rate": 38.0
+    },
+    {
+      "period": "2025-Q1",
+      "region": "APAC",
+      "win_rate": 40.0
+    },
+    {
+      "period": "2025-Q2",
+      "region": "AMER",
+      "win_rate": 44.5
+    },
+    {
+      "period": "2025-Q2",
+      "region": "EMEA",
+      "win_rate": 38.5
+    },
+    {
+      "period": "2025-Q2",
+      "region": "APAC",
+      "win_rate": 40.5
+    },
+    {
+      "period": "2025-Q3",
+      "region": "AMER",
+      "win_rate": 45.0
+    },
+    {
+      "period": "2025-Q3",
+      "region": "EMEA",
+      "win_rate": 39.0
+    },
+    {
+      "period": "2025-Q3",
+      "region": "APAC",
+      "win_rate": 41.0
+    },
+    {
+      "period": "2025-Q4",
+      "region": "AMER",
+      "win_rate": 45.5
+    },
+    {
+      "period": "2025-Q4",
+      "region": "EMEA",
+      "win_rate": 39.5
+    },
+    {
+      "period": "2025-Q4",
+      "region": "APAC",
+      "win_rate": 41.5
+    },
+    {
+      "period": "2026-Q1",
+      "region": "AMER",
+      "win_rate": 46.0
+    },
+    {
+      "period": "2026-Q1",
+      "region": "EMEA",
+      "win_rate": 40.0
+    },
+    {
+      "period": "2026-Q1",
+      "region": "APAC",
+      "win_rate": 42.0
+    },
+    {
+      "period": "2026-Q2",
+      "region": "AMER",
+      "win_rate": 46.5
+    },
+    {
+      "period": "2026-Q2",
+      "region": "EMEA",
+      "win_rate": 40.5
+    },
+    {
+      "period": "2026-Q2",
+      "region": "APAC",
+      "win_rate": 42.5
+    },
+    {
+      "period": "2026-Q3",
+      "region": "AMER",
+      "win_rate": 47.0
+    },
+    {
+      "period": "2026-Q3",
+      "region": "EMEA",
+      "win_rate": 41.0
+    },
+    {
+      "period": "2026-Q3",
+      "region": "APAC",
+      "win_rate": 43.0
+    },
+    {
+      "period": "2026-Q4",
+      "region": "AMER",
+      "win_rate": 47.5
+    },
+    {
+      "period": "2026-Q4",
+      "region": "EMEA",
+      "win_rate": 41.5
+    },
+    {
+      "period": "2026-Q4",
+      "region": "APAC",
+      "win_rate": 43.5
+    }
+  ],
+  "nrr_by_cohort": [
+    {
+      "period": "2024-Q1",
+      "cohort": "2022-H1",
+      "nrr": 108.0
+    },
+    {
+      "period": "2024-Q1",
+      "cohort": "2022-H2",
+      "nrr": 112.0
+    },
+    {
+      "period": "2024-Q1",
+      "cohort": "2023-H1",
+      "nrr": 115.0
+    },
+    {
+      "period": "2024-Q1",
+      "cohort": "2023-H2",
+      "nrr": 118.0
+    },
+    {
+      "period": "2024-Q1",
+      "cohort": "2024-H1",
+      "nrr": 120.0
+    },
+    {
+      "period": "2024-Q2",
+      "cohort": "2022-H1",
+      "nrr": 108.3
+    },
+    {
+      "period": "2024-Q2",
+      "cohort": "2022-H2",
+      "nrr": 112.3
+    },
+    {
+      "period": "2024-Q2",
+      "cohort": "2023-H1",
+      "nrr": 115.3
+    },
+    {
+      "period": "2024-Q2",
+      "cohort": "2023-H2",
+      "nrr": 118.3
+    },
+    {
+      "period": "2024-Q2",
+      "cohort": "2024-H1",
+      "nrr": 120.3
+    },
+    {
+      "period": "2024-Q3",
+      "cohort": "2022-H1",
+      "nrr": 108.6
+    },
+    {
+      "period": "2024-Q3",
+      "cohort": "2022-H2",
+      "nrr": 112.6
+    },
+    {
+      "period": "2024-Q3",
+      "cohort": "2023-H1",
+      "nrr": 115.6
+    },
+    {
+      "period": "2024-Q3",
+      "cohort": "2023-H2",
+      "nrr": 118.6
+    },
+    {
+      "period": "2024-Q3",
+      "cohort": "2024-H1",
+      "nrr": 120.6
+    },
+    {
+      "period": "2024-Q3",
+      "cohort": "2024-H2",
+      "nrr": 122.6
+    },
+    {
+      "period": "2024-Q4",
+      "cohort": "2022-H1",
+      "nrr": 108.9
+    },
+    {
+      "period": "2024-Q4",
+      "cohort": "2022-H2",
+      "nrr": 112.9
+    },
+    {
+      "period": "2024-Q4",
+      "cohort": "2023-H1",
+      "nrr": 115.9
+    },
+    {
+      "period": "2024-Q4",
+      "cohort": "2023-H2",
+      "nrr": 118.9
+    },
+    {
+      "period": "2024-Q4",
+      "cohort": "2024-H1",
+      "nrr": 120.9
+    },
+    {
+      "period": "2024-Q4",
+      "cohort": "2024-H2",
+      "nrr": 122.9
+    },
+    {
+      "period": "2025-Q1",
+      "cohort": "2022-H1",
+      "nrr": 109.2
+    },
+    {
+      "period": "2025-Q1",
+      "cohort": "2022-H2",
+      "nrr": 113.2
+    },
+    {
+      "period": "2025-Q1",
+      "cohort": "2023-H1",
+      "nrr": 116.2
+    },
+    {
+      "period": "2025-Q1",
+      "cohort": "2023-H2",
+      "nrr": 119.2
+    },
+    {
+      "period": "2025-Q1",
+      "cohort": "2024-H1",
+      "nrr": 121.2
+    },
+    {
+      "period": "2025-Q1",
+      "cohort": "2024-H2",
+      "nrr": 123.2
+    },
+    {
+      "period": "2025-Q1",
+      "cohort": "2025-H1",
+      "nrr": 125.2
+    },
+    {
+      "period": "2025-Q2",
+      "cohort": "2022-H1",
+      "nrr": 109.5
+    },
+    {
+      "period": "2025-Q2",
+      "cohort": "2022-H2",
+      "nrr": 113.5
+    },
+    {
+      "period": "2025-Q2",
+      "cohort": "2023-H1",
+      "nrr": 116.5
+    },
+    {
+      "period": "2025-Q2",
+      "cohort": "2023-H2",
+      "nrr": 119.5
+    },
+    {
+      "period": "2025-Q2",
+      "cohort": "2024-H1",
+      "nrr": 121.5
+    },
+    {
+      "period": "2025-Q2",
+      "cohort": "2024-H2",
+      "nrr": 123.5
+    },
+    {
+      "period": "2025-Q2",
+      "cohort": "2025-H1",
+      "nrr": 125.5
+    },
+    {
+      "period": "2025-Q3",
+      "cohort": "2022-H1",
+      "nrr": 109.8
+    },
+    {
+      "period": "2025-Q3",
+      "cohort": "2022-H2",
+      "nrr": 113.8
+    },
+    {
+      "period": "2025-Q3",
+      "cohort": "2023-H1",
+      "nrr": 116.8
+    },
+    {
+      "period": "2025-Q3",
+      "cohort": "2023-H2",
+      "nrr": 119.8
+    },
+    {
+      "period": "2025-Q3",
+      "cohort": "2024-H1",
+      "nrr": 121.8
+    },
+    {
+      "period": "2025-Q3",
+      "cohort": "2024-H2",
+      "nrr": 123.8
+    },
+    {
+      "period": "2025-Q3",
+      "cohort": "2025-H1",
+      "nrr": 125.8
+    },
+    {
+      "period": "2025-Q3",
+      "cohort": "2025-H2",
+      "nrr": 127.8
+    },
+    {
+      "period": "2025-Q4",
+      "cohort": "2022-H1",
+      "nrr": 110.1
+    },
+    {
+      "period": "2025-Q4",
+      "cohort": "2022-H2",
+      "nrr": 114.1
+    },
+    {
+      "period": "2025-Q4",
+      "cohort": "2023-H1",
+      "nrr": 117.1
+    },
+    {
+      "period": "2025-Q4",
+      "cohort": "2023-H2",
+      "nrr": 120.1
+    },
+    {
+      "period": "2025-Q4",
+      "cohort": "2024-H1",
+      "nrr": 122.1
+    },
+    {
+      "period": "2025-Q4",
+      "cohort": "2024-H2",
+      "nrr": 124.1
+    },
+    {
+      "period": "2025-Q4",
+      "cohort": "2025-H1",
+      "nrr": 126.1
+    },
+    {
+      "period": "2025-Q4",
+      "cohort": "2025-H2",
+      "nrr": 128.1
+    },
+    {
+      "period": "2026-Q1",
+      "cohort": "2022-H1",
+      "nrr": 110.4
+    },
+    {
+      "period": "2026-Q1",
+      "cohort": "2022-H2",
+      "nrr": 114.4
+    },
+    {
+      "period": "2026-Q1",
+      "cohort": "2023-H1",
+      "nrr": 117.4
+    },
+    {
+      "period": "2026-Q1",
+      "cohort": "2023-H2",
+      "nrr": 120.4
+    },
+    {
+      "period": "2026-Q1",
+      "cohort": "2024-H1",
+      "nrr": 122.4
+    },
+    {
+      "period": "2026-Q1",
+      "cohort": "2024-H2",
+      "nrr": 124.4
+    },
+    {
+      "period": "2026-Q1",
+      "cohort": "2025-H1",
+      "nrr": 126.4
+    },
+    {
+      "period": "2026-Q1",
+      "cohort": "2025-H2",
+      "nrr": 128.4
+    },
+    {
+      "period": "2026-Q2",
+      "cohort": "2022-H1",
+      "nrr": 110.7
+    },
+    {
+      "period": "2026-Q2",
+      "cohort": "2022-H2",
+      "nrr": 114.7
+    },
+    {
+      "period": "2026-Q2",
+      "cohort": "2023-H1",
+      "nrr": 117.7
+    },
+    {
+      "period": "2026-Q2",
+      "cohort": "2023-H2",
+      "nrr": 120.7
+    },
+    {
+      "period": "2026-Q2",
+      "cohort": "2024-H1",
+      "nrr": 122.7
+    },
+    {
+      "period": "2026-Q2",
+      "cohort": "2024-H2",
+      "nrr": 124.7
+    },
+    {
+      "period": "2026-Q2",
+      "cohort": "2025-H1",
+      "nrr": 126.7
+    },
+    {
+      "period": "2026-Q2",
+      "cohort": "2025-H2",
+      "nrr": 128.7
+    },
+    {
+      "period": "2026-Q3",
+      "cohort": "2022-H1",
+      "nrr": 111.0
+    },
+    {
+      "period": "2026-Q3",
+      "cohort": "2022-H2",
+      "nrr": 115.0
+    },
+    {
+      "period": "2026-Q3",
+      "cohort": "2023-H1",
+      "nrr": 118.0
+    },
+    {
+      "period": "2026-Q3",
+      "cohort": "2023-H2",
+      "nrr": 121.0
+    },
+    {
+      "period": "2026-Q3",
+      "cohort": "2024-H1",
+      "nrr": 123.0
+    },
+    {
+      "period": "2026-Q3",
+      "cohort": "2024-H2",
+      "nrr": 125.0
+    },
+    {
+      "period": "2026-Q3",
+      "cohort": "2025-H1",
+      "nrr": 127.0
+    },
+    {
+      "period": "2026-Q3",
+      "cohort": "2025-H2",
+      "nrr": 129.0
+    },
+    {
+      "period": "2026-Q4",
+      "cohort": "2022-H1",
+      "nrr": 111.3
+    },
+    {
+      "period": "2026-Q4",
+      "cohort": "2022-H2",
+      "nrr": 115.3
+    },
+    {
+      "period": "2026-Q4",
+      "cohort": "2023-H1",
+      "nrr": 118.3
+    },
+    {
+      "period": "2026-Q4",
+      "cohort": "2023-H2",
+      "nrr": 121.3
+    },
+    {
+      "period": "2026-Q4",
+      "cohort": "2024-H1",
+      "nrr": 123.3
+    },
+    {
+      "period": "2026-Q4",
+      "cohort": "2024-H2",
+      "nrr": 125.3
+    },
+    {
+      "period": "2026-Q4",
+      "cohort": "2025-H1",
+      "nrr": 127.3
+    },
+    {
+      "period": "2026-Q4",
+      "cohort": "2025-H2",
+      "nrr": 129.3
+    }
+  ],
+  "churn_risk_by_customer": [
+    {
+      "period": "2024-Q1",
+      "customer": "Acme Corp",
+      "churn_risk": 10
+    },
+    {
+      "period": "2024-Q1",
+      "customer": "TechStart Inc",
+      "churn_risk": 54
+    },
+    {
+      "period": "2024-Q1",
+      "customer": "GlobalBank",
+      "churn_risk": 8
+    },
+    {
+      "period": "2024-Q1",
+      "customer": "HealthCare Plus",
+      "churn_risk": 34
+    },
+    {
+      "period": "2024-Q1",
+      "customer": "RetailMax",
+      "churn_risk": 71
+    },
+    {
+      "period": "2024-Q1",
+      "customer": "Manufacturing Co",
+      "churn_risk": 21
+    },
+    {
+      "period": "2024-Q1",
+      "customer": "FinServ Group",
+      "churn_risk": 7
+    },
+    {
+      "period": "2024-Q1",
+      "customer": "EduTech Academy",
+      "churn_risk": 39
+    },
+    {
+      "period": "2024-Q1",
+      "customer": "CloudNine Systems",
+      "churn_risk": 60
+    },
+    {
+      "period": "2024-Q1",
+      "customer": "DataDriven Inc",
+      "churn_risk": 15
+    },
+    {
+      "period": "2024-Q2",
+      "customer": "Acme Corp",
+      "churn_risk": 6
+    },
+    {
+      "period": "2024-Q2",
+      "customer": "TechStart Inc",
+      "churn_risk": 56
+    },
+    {
+      "period": "2024-Q2",
+      "customer": "GlobalBank",
+      "churn_risk": 6
+    },
+    {
+      "period": "2024-Q2",
+      "customer": "HealthCare Plus",
+      "churn_risk": 34
+    },
+    {
+      "period": "2024-Q2",
+      "customer": "RetailMax",
+      "churn_risk": 80
+    },
+    {
+      "period": "2024-Q2",
+      "customer": "Manufacturing Co",
+      "churn_risk": 16
+    },
+    {
+      "period": "2024-Q2",
+      "customer": "FinServ Group",
+      "churn_risk": 10
+    },
+    {
+      "period": "2024-Q2",
+      "customer": "EduTech Academy",
+      "churn_risk": 50
+    },
+    {
+      "period": "2024-Q2",
+      "customer": "CloudNine Systems",
+      "churn_risk": 54
+    },
+    {
+      "period": "2024-Q2",
+      "customer": "DataDriven Inc",
+      "churn_risk": 28
+    },
+    {
+      "period": "2024-Q3",
+      "customer": "Acme Corp",
+      "churn_risk": 14
+    },
+    {
+      "period": "2024-Q3",
+      "customer": "TechStart Inc",
+      "churn_risk": 53
+    },
+    {
+      "period": "2024-Q3",
+      "customer": "GlobalBank",
+      "churn_risk": 5
+    },
+    {
+      "period": "2024-Q3",
+      "customer": "HealthCare Plus",
+      "churn_risk": 39
+    },
+    {
+      "period": "2024-Q3",
+      "customer": "RetailMax",
+      "churn_risk": 73
+    },
+    {
+      "period": "2024-Q3",
+      "customer": "Manufacturing Co",
+      "churn_risk": 24
+    },
+    {
+      "period": "2024-Q3",
+      "customer": "FinServ Group",
+      "churn_risk": 7
+    },
+    {
+      "period": "2024-Q3",
+      "customer": "EduTech Academy",
+      "churn_risk": 42
+    },
+    {
+      "period": "2024-Q3",
+      "customer": "CloudNine Systems",
+      "churn_risk": 56
+    },
+    {
+      "period": "2024-Q3",
+      "customer": "DataDriven Inc",
+      "churn_risk": 16
+    },
+    {
+      "period": "2024-Q4",
+      "customer": "Acme Corp",
+      "churn_risk": 8
+    },
+    {
+      "period": "2024-Q4",
+      "customer": "TechStart Inc",
+      "churn_risk": 64
+    },
+    {
+      "period": "2024-Q4",
+      "customer": "GlobalBank",
+      "churn_risk": 5
+    },
+    {
+      "period": "2024-Q4",
+      "customer": "HealthCare Plus",
+      "churn_risk": 36
+    },
+    {
+      "period": "2024-Q4",
+      "customer": "RetailMax",
+      "churn_risk": 74
+    },
+    {
+      "period": "2024-Q4",
+      "customer": "Manufacturing Co",
+      "churn_risk": 24
+    },
+    {
+      "period": "2024-Q4",
+      "customer": "FinServ Group",
+      "churn_risk": 5
+    },
+    {
+      "period": "2024-Q4",
+      "customer": "EduTech Academy",
+      "churn_risk": 50
+    },
+    {
+      "period": "2024-Q4",
+      "customer": "CloudNine Systems",
+      "churn_risk": 48
+    },
+    {
+      "period": "2024-Q4",
+      "customer": "DataDriven Inc",
+      "churn_risk": 24
+    },
+    {
+      "period": "2025-Q1",
+      "customer": "Acme Corp",
+      "churn_risk": 7
+    },
+    {
+      "period": "2025-Q1",
+      "customer": "TechStart Inc",
+      "churn_risk": 61
+    },
+    {
+      "period": "2025-Q1",
+      "customer": "GlobalBank",
+      "churn_risk": 9
+    },
+    {
+      "period": "2025-Q1",
+      "customer": "HealthCare Plus",
+      "churn_risk": 31
+    },
+    {
+      "period": "2025-Q1",
+      "customer": "RetailMax",
+      "churn_risk": 64
+    },
+    {
+      "period": "2025-Q1",
+      "customer": "Manufacturing Co",
+      "churn_risk": 16
+    },
+    {
+      "period": "2025-Q1",
+      "customer": "FinServ Group",
+      "churn_risk": 9
+    },
+    {
+      "period": "2025-Q1",
+      "customer": "EduTech Academy",
+      "churn_risk": 44
+    },
+    {
+      "period": "2025-Q1",
+      "customer": "CloudNine Systems",
+      "churn_risk": 47
+    },
+    {
+      "period": "2025-Q1",
+      "customer": "DataDriven Inc",
+      "churn_risk": 19
+    },
+    {
+      "period": "2025-Q2",
+      "customer": "Acme Corp",
+      "churn_risk": 8
+    },
+    {
+      "period": "2025-Q2",
+      "customer": "TechStart Inc",
+      "churn_risk": 64
+    },
+    {
+      "period": "2025-Q2",
+      "customer": "GlobalBank",
+      "churn_risk": 6
+    },
+    {
+      "period": "2025-Q2",
+      "customer": "HealthCare Plus",
+      "churn_risk": 38
+    },
+    {
+      "period": "2025-Q2",
+      "customer": "RetailMax",
+      "churn_risk": 72
+    },
+    {
+      "period": "2025-Q2",
+      "customer": "Manufacturing Co",
+      "churn_risk": 20
+    },
+    {
+      "period": "2025-Q2",
+      "customer": "FinServ Group",
+      "churn_risk": 12
+    },
+    {
+      "period": "2025-Q2",
+      "customer": "EduTech Academy",
+      "churn_risk": 46
+    },
+    {
+      "period": "2025-Q2",
+      "customer": "CloudNine Systems",
+      "churn_risk": 50
+    },
+    {
+      "period": "2025-Q2",
+      "customer": "DataDriven Inc",
+      "churn_risk": 20
+    },
+    {
+      "period": "2025-Q3",
+      "customer": "Acme Corp",
+      "churn_risk": 6
+    },
+    {
+      "period": "2025-Q3",
+      "customer": "TechStart Inc",
+      "churn_risk": 56
+    },
+    {
+      "period": "2025-Q3",
+      "customer": "GlobalBank",
+      "churn_risk": 5
+    },
+    {
+      "period": "2025-Q3",
+      "customer": "HealthCare Plus",
+      "churn_risk": 29
+    },
+    {
+      "period": "2025-Q3",
+      "customer": "RetailMax",
+      "churn_risk": 75
+    },
+    {
+      "period": "2025-Q3",
+      "customer": "Manufacturing Co",
+      "churn_risk": 26
+    },
+    {
+      "period": "2025-Q3",
+      "customer": "FinServ Group",
+      "churn_risk": 9
+    },
+    {
+      "period": "2025-Q3",
+      "customer": "EduTech Academy",
+      "churn_risk": 41
+    },
+    {
+      "period": "2025-Q3",
+      "customer": "CloudNine Systems",
+      "churn_risk": 54
+    },
+    {
+      "period": "2025-Q3",
+      "customer": "DataDriven Inc",
+      "churn_risk": 12
+    },
+    {
+      "period": "2025-Q4",
+      "customer": "Acme Corp",
+      "churn_risk": 10
+    },
+    {
+      "period": "2025-Q4",
+      "customer": "TechStart Inc",
+      "churn_risk": 52
+    },
+    {
+      "period": "2025-Q4",
+      "customer": "GlobalBank",
+      "churn_risk": 6
+    },
+    {
+      "period": "2025-Q4",
+      "customer": "HealthCare Plus",
+      "churn_risk": 36
+    },
+    {
+      "period": "2025-Q4",
+      "customer": "RetailMax",
+      "churn_risk": 68
+    },
+    {
+      "period": "2025-Q4",
+      "customer": "Manufacturing Co",
+      "churn_risk": 16
+    },
+    {
+      "period": "2025-Q4",
+      "customer": "FinServ Group",
+      "churn_risk": 6
+    },
+    {
+      "period": "2025-Q4",
+      "customer": "EduTech Academy",
+      "churn_risk": 44
+    },
+    {
+      "period": "2025-Q4",
+      "customer": "CloudNine Systems",
+      "churn_risk": 50
+    },
+    {
+      "period": "2025-Q4",
+      "customer": "DataDriven Inc",
+      "churn_risk": 26
+    },
+    {
+      "period": "2026-Q1",
+      "customer": "Acme Corp",
+      "churn_risk": 15
+    },
+    {
+      "period": "2026-Q1",
+      "customer": "TechStart Inc",
+      "churn_risk": 64
+    },
+    {
+      "period": "2026-Q1",
+      "customer": "GlobalBank",
+      "churn_risk": 5
+    },
+    {
+      "period": "2026-Q1",
+      "customer": "HealthCare Plus",
+      "churn_risk": 31
+    },
+    {
+      "period": "2026-Q1",
+      "customer": "RetailMax",
+      "churn_risk": 64
+    },
+    {
+      "period": "2026-Q1",
+      "customer": "Manufacturing Co",
+      "churn_risk": 20
+    },
+    {
+      "period": "2026-Q1",
+      "customer": "FinServ Group",
+      "churn_risk": 8
+    },
+    {
+      "period": "2026-Q1",
+      "customer": "EduTech Academy",
+      "churn_risk": 46
+    },
+    {
+      "period": "2026-Q1",
+      "customer": "CloudNine Systems",
+      "churn_risk": 55
+    },
+    {
+      "period": "2026-Q1",
+      "customer": "DataDriven Inc",
+      "churn_risk": 21
+    },
+    {
+      "period": "2026-Q2",
+      "customer": "Acme Corp",
+      "churn_risk": 10
+    },
+    {
+      "period": "2026-Q2",
+      "customer": "TechStart Inc",
+      "churn_risk": 54
+    },
+    {
+      "period": "2026-Q2",
+      "customer": "GlobalBank",
+      "churn_risk": 12
+    },
+    {
+      "period": "2026-Q2",
+      "customer": "HealthCare Plus",
+      "churn_risk": 38
+    },
+    {
+      "period": "2026-Q2",
+      "customer": "RetailMax",
+      "churn_risk": 62
+    },
+    {
+      "period": "2026-Q2",
+      "customer": "Manufacturing Co",
+      "churn_risk": 14
+    },
+    {
+      "period": "2026-Q2",
+      "customer": "FinServ Group",
+      "churn_risk": 5
+    },
+    {
+      "period": "2026-Q2",
+      "customer": "EduTech Academy",
+      "churn_risk": 36
+    },
+    {
+      "period": "2026-Q2",
+      "customer": "CloudNine Systems",
+      "churn_risk": 48
+    },
+    {
+      "period": "2026-Q2",
+      "customer": "DataDriven Inc",
+      "churn_risk": 22
+    },
+    {
+      "period": "2026-Q3",
+      "customer": "Acme Corp",
+      "churn_risk": 5
+    },
+    {
+      "period": "2026-Q3",
+      "customer": "TechStart Inc",
+      "churn_risk": 61
+    },
+    {
+      "period": "2026-Q3",
+      "customer": "GlobalBank",
+      "churn_risk": 7
+    },
+    {
+      "period": "2026-Q3",
+      "customer": "HealthCare Plus",
+      "churn_risk": 36
+    },
+    {
+      "period": "2026-Q3",
+      "customer": "RetailMax",
+      "churn_risk": 75
+    },
+    {
+      "period": "2026-Q3",
+      "customer": "Manufacturing Co",
+      "churn_risk": 20
+    },
+    {
+      "period": "2026-Q3",
+      "customer": "FinServ Group",
+      "churn_risk": 5
+    },
+    {
+      "period": "2026-Q3",
+      "customer": "EduTech Academy",
+      "churn_risk": 35
+    },
+    {
+      "period": "2026-Q3",
+      "customer": "CloudNine Systems",
+      "churn_risk": 50
+    },
+    {
+      "period": "2026-Q3",
+      "customer": "DataDriven Inc",
+      "churn_risk": 19
+    },
+    {
+      "period": "2026-Q4",
+      "customer": "Acme Corp",
+      "churn_risk": 5
+    },
+    {
+      "period": "2026-Q4",
+      "customer": "TechStart Inc",
+      "churn_risk": 58
+    },
+    {
+      "period": "2026-Q4",
+      "customer": "GlobalBank",
+      "churn_risk": 8
+    },
+    {
+      "period": "2026-Q4",
+      "customer": "HealthCare Plus",
+      "churn_risk": 26
+    },
+    {
+      "period": "2026-Q4",
+      "customer": "RetailMax",
+      "churn_risk": 72
+    },
+    {
+      "period": "2026-Q4",
+      "customer": "Manufacturing Co",
+      "churn_risk": 12
+    },
+    {
+      "period": "2026-Q4",
+      "customer": "FinServ Group",
+      "churn_risk": 6
+    },
+    {
+      "period": "2026-Q4",
+      "customer": "EduTech Academy",
+      "churn_risk": 48
+    },
+    {
+      "period": "2026-Q4",
+      "customer": "CloudNine Systems",
+      "churn_risk": 46
+    },
+    {
+      "period": "2026-Q4",
+      "customer": "DataDriven Inc",
+      "churn_risk": 24
+    }
+  ],
+  "churn_by_segment": [
+    {
+      "period": "2024-Q1",
+      "segment": "Enterprise",
+      "churn_pct": 5.5
+    },
+    {
+      "period": "2024-Q1",
+      "segment": "Mid-Market",
+      "churn_pct": 8.0
+    },
+    {
+      "period": "2024-Q1",
+      "segment": "SMB",
+      "churn_pct": 12.5
+    },
+    {
+      "period": "2024-Q2",
+      "segment": "Enterprise",
+      "churn_pct": 5.3
+    },
+    {
+      "period": "2024-Q2",
+      "segment": "Mid-Market",
+      "churn_pct": 7.8
+    },
+    {
+      "period": "2024-Q2",
+      "segment": "SMB",
+      "churn_pct": 12.3
+    },
+    {
+      "period": "2024-Q3",
+      "segment": "Enterprise",
+      "churn_pct": 5.2
+    },
+    {
+      "period": "2024-Q3",
+      "segment": "Mid-Market",
+      "churn_pct": 7.7
+    },
+    {
+      "period": "2024-Q3",
+      "segment": "SMB",
+      "churn_pct": 12.2
+    },
+    {
+      "period": "2024-Q4",
+      "segment": "Enterprise",
+      "churn_pct": 5.0
+    },
+    {
+      "period": "2024-Q4",
+      "segment": "Mid-Market",
+      "churn_pct": 7.5
+    },
+    {
+      "period": "2024-Q4",
+      "segment": "SMB",
+      "churn_pct": 12.1
+    },
+    {
+      "period": "2025-Q1",
+      "segment": "Enterprise",
+      "churn_pct": 4.9
+    },
+    {
+      "period": "2025-Q1",
+      "segment": "Mid-Market",
+      "churn_pct": 7.4
+    },
+    {
+      "period": "2025-Q1",
+      "segment": "SMB",
+      "churn_pct": 11.9
+    },
+    {
+      "period": "2025-Q2",
+      "segment": "Enterprise",
+      "churn_pct": 4.8
+    },
+    {
+      "period": "2025-Q2",
+      "segment": "Mid-Market",
+      "churn_pct": 7.2
+    },
+    {
+      "period": "2025-Q2",
+      "segment": "SMB",
+      "churn_pct": 11.8
+    },
+    {
+      "period": "2025-Q3",
+      "segment": "Enterprise",
+      "churn_pct": 4.6
+    },
+    {
+      "period": "2025-Q3",
+      "segment": "Mid-Market",
+      "churn_pct": 7.1
+    },
+    {
+      "period": "2025-Q3",
+      "segment": "SMB",
+      "churn_pct": 11.6
+    },
+    {
+      "period": "2025-Q4",
+      "segment": "Enterprise",
+      "churn_pct": 4.5
+    },
+    {
+      "period": "2025-Q4",
+      "segment": "Mid-Market",
+      "churn_pct": 7.0
+    },
+    {
+      "period": "2025-Q4",
+      "segment": "SMB",
+      "churn_pct": 11.4
+    },
+    {
+      "period": "2026-Q1",
+      "segment": "Enterprise",
+      "churn_pct": 4.3
+    },
+    {
+      "period": "2026-Q1",
+      "segment": "Mid-Market",
+      "churn_pct": 6.8
+    },
+    {
+      "period": "2026-Q1",
+      "segment": "SMB",
+      "churn_pct": 11.3
+    },
+    {
+      "period": "2026-Q2",
+      "segment": "Enterprise",
+      "churn_pct": 4.2
+    },
+    {
+      "period": "2026-Q2",
+      "segment": "Mid-Market",
+      "churn_pct": 6.7
+    },
+    {
+      "period": "2026-Q2",
+      "segment": "SMB",
+      "churn_pct": 11.2
+    },
+    {
+      "period": "2026-Q3",
+      "segment": "Enterprise",
+      "churn_pct": 4.0
+    },
+    {
+      "period": "2026-Q3",
+      "segment": "Mid-Market",
+      "churn_pct": 6.5
+    },
+    {
+      "period": "2026-Q3",
+      "segment": "SMB",
+      "churn_pct": 11.0
+    },
+    {
+      "period": "2026-Q4",
+      "segment": "Enterprise",
+      "churn_pct": 4.0
+    },
+    {
+      "period": "2026-Q4",
+      "segment": "Mid-Market",
+      "churn_pct": 6.3
+    },
+    {
+      "period": "2026-Q4",
+      "segment": "SMB",
+      "churn_pct": 10.8
+    }
+  ],
+  "nrr_by_product": [
+    {
+      "period": "2024-Q1",
+      "product": "Enterprise",
+      "nrr": 122.0
+    },
+    {
+      "period": "2024-Q1",
+      "product": "Professional",
+      "nrr": 116.0
+    },
+    {
+      "period": "2024-Q1",
+      "product": "Team",
+      "nrr": 108.0
+    },
+    {
+      "period": "2024-Q1",
+      "product": "Starter",
+      "nrr": 98.0
+    },
+    {
+      "period": "2024-Q2",
+      "product": "Enterprise",
+      "nrr": 122.4
+    },
+    {
+      "period": "2024-Q2",
+      "product": "Professional",
+      "nrr": 116.4
+    },
+    {
+      "period": "2024-Q2",
+      "product": "Team",
+      "nrr": 108.4
+    },
+    {
+      "period": "2024-Q2",
+      "product": "Starter",
+      "nrr": 98.4
+    },
+    {
+      "period": "2024-Q3",
+      "product": "Enterprise",
+      "nrr": 122.8
+    },
+    {
+      "period": "2024-Q3",
+      "product": "Professional",
+      "nrr": 116.8
+    },
+    {
+      "period": "2024-Q3",
+      "product": "Team",
+      "nrr": 108.8
+    },
+    {
+      "period": "2024-Q3",
+      "product": "Starter",
+      "nrr": 98.8
+    },
+    {
+      "period": "2024-Q4",
+      "product": "Enterprise",
+      "nrr": 123.2
+    },
+    {
+      "period": "2024-Q4",
+      "product": "Professional",
+      "nrr": 117.2
+    },
+    {
+      "period": "2024-Q4",
+      "product": "Team",
+      "nrr": 109.2
+    },
+    {
+      "period": "2024-Q4",
+      "product": "Starter",
+      "nrr": 99.2
+    },
+    {
+      "period": "2025-Q1",
+      "product": "Enterprise",
+      "nrr": 123.6
+    },
+    {
+      "period": "2025-Q1",
+      "product": "Professional",
+      "nrr": 117.6
+    },
+    {
+      "period": "2025-Q1",
+      "product": "Team",
+      "nrr": 109.6
+    },
+    {
+      "period": "2025-Q1",
+      "product": "Starter",
+      "nrr": 99.6
+    },
+    {
+      "period": "2025-Q2",
+      "product": "Enterprise",
+      "nrr": 124.0
+    },
+    {
+      "period": "2025-Q2",
+      "product": "Professional",
+      "nrr": 118.0
+    },
+    {
+      "period": "2025-Q2",
+      "product": "Team",
+      "nrr": 110.0
+    },
+    {
+      "period": "2025-Q2",
+      "product": "Starter",
+      "nrr": 100.0
+    },
+    {
+      "period": "2025-Q3",
+      "product": "Enterprise",
+      "nrr": 124.4
+    },
+    {
+      "period": "2025-Q3",
+      "product": "Professional",
+      "nrr": 118.4
+    },
+    {
+      "period": "2025-Q3",
+      "product": "Team",
+      "nrr": 110.4
+    },
+    {
+      "period": "2025-Q3",
+      "product": "Starter",
+      "nrr": 100.4
+    },
+    {
+      "period": "2025-Q4",
+      "product": "Enterprise",
+      "nrr": 124.8
+    },
+    {
+      "period": "2025-Q4",
+      "product": "Professional",
+      "nrr": 118.8
+    },
+    {
+      "period": "2025-Q4",
+      "product": "Team",
+      "nrr": 110.8
+    },
+    {
+      "period": "2025-Q4",
+      "product": "Starter",
+      "nrr": 100.8
+    },
+    {
+      "period": "2026-Q1",
+      "product": "Enterprise",
+      "nrr": 125.2
+    },
+    {
+      "period": "2026-Q1",
+      "product": "Professional",
+      "nrr": 119.2
+    },
+    {
+      "period": "2026-Q1",
+      "product": "Team",
+      "nrr": 111.2
+    },
+    {
+      "period": "2026-Q1",
+      "product": "Starter",
+      "nrr": 101.2
+    },
+    {
+      "period": "2026-Q2",
+      "product": "Enterprise",
+      "nrr": 125.6
+    },
+    {
+      "period": "2026-Q2",
+      "product": "Professional",
+      "nrr": 119.6
+    },
+    {
+      "period": "2026-Q2",
+      "product": "Team",
+      "nrr": 111.6
+    },
+    {
+      "period": "2026-Q2",
+      "product": "Starter",
+      "nrr": 101.6
+    },
+    {
+      "period": "2026-Q3",
+      "product": "Enterprise",
+      "nrr": 126.0
+    },
+    {
+      "period": "2026-Q3",
+      "product": "Professional",
+      "nrr": 120.0
+    },
+    {
+      "period": "2026-Q3",
+      "product": "Team",
+      "nrr": 112.0
+    },
+    {
+      "period": "2026-Q3",
+      "product": "Starter",
+      "nrr": 102.0
+    },
+    {
+      "period": "2026-Q4",
+      "product": "Enterprise",
+      "nrr": 126.4
+    },
+    {
+      "period": "2026-Q4",
+      "product": "Professional",
+      "nrr": 120.4
+    },
+    {
+      "period": "2026-Q4",
+      "product": "Team",
+      "nrr": 112.4
+    },
+    {
+      "period": "2026-Q4",
+      "product": "Starter",
+      "nrr": 102.4
+    }
+  ],
+  "throughput_by_team": [
+    {
+      "period": "2024-Q1",
+      "team": "Platform",
+      "throughput": 85
+    },
+    {
+      "period": "2024-Q1",
+      "team": "Frontend",
+      "throughput": 92
+    },
+    {
+      "period": "2024-Q1",
+      "team": "Backend",
+      "throughput": 78
+    },
+    {
+      "period": "2024-Q1",
+      "team": "Data",
+      "throughput": 65
+    },
+    {
+      "period": "2024-Q1",
+      "team": "Infrastructure",
+      "throughput": 45
+    },
+    {
+      "period": "2024-Q1",
+      "team": "Security",
+      "throughput": 38
+    },
+    {
+      "period": "2024-Q1",
+      "team": "Mobile",
+      "throughput": 55
+    },
+    {
+      "period": "2024-Q2",
+      "team": "Platform",
+      "throughput": 87
+    },
+    {
+      "period": "2024-Q2",
+      "team": "Frontend",
+      "throughput": 94
+    },
+    {
+      "period": "2024-Q2",
+      "team": "Backend",
+      "throughput": 79
+    },
+    {
+      "period": "2024-Q2",
+      "team": "Data",
+      "throughput": 66
+    },
+    {
+      "period": "2024-Q2",
+      "team": "Infrastructure",
+      "throughput": 46
+    },
+    {
+      "period": "2024-Q2",
+      "team": "Security",
+      "throughput": 39
+    },
+    {
+      "period": "2024-Q2",
+      "team": "Mobile",
+      "throughput": 56
+    },
+    {
+      "period": "2024-Q3",
+      "team": "Platform",
+      "throughput": 88
+    },
+    {
+      "period": "2024-Q3",
+      "team": "Frontend",
+      "throughput": 95
+    },
+    {
+      "period": "2024-Q3",
+      "team": "Backend",
+      "throughput": 81
+    },
+    {
+      "period": "2024-Q3",
+      "team": "Data",
+      "throughput": 67
+    },
+    {
+      "period": "2024-Q3",
+      "team": "Infrastructure",
+      "throughput": 47
+    },
+    {
+      "period": "2024-Q3",
+      "team": "Security",
+      "throughput": 39
+    },
+    {
+      "period": "2024-Q3",
+      "team": "Mobile",
+      "throughput": 57
+    },
+    {
+      "period": "2024-Q4",
+      "team": "Platform",
+      "throughput": 90
+    },
+    {
+      "period": "2024-Q4",
+      "team": "Frontend",
+      "throughput": 97
+    },
+    {
+      "period": "2024-Q4",
+      "team": "Backend",
+      "throughput": 82
+    },
+    {
+      "period": "2024-Q4",
+      "team": "Data",
+      "throughput": 69
+    },
+    {
+      "period": "2024-Q4",
+      "team": "Infrastructure",
+      "throughput": 47
+    },
+    {
+      "period": "2024-Q4",
+      "team": "Security",
+      "throughput": 40
+    },
+    {
+      "period": "2024-Q4",
+      "team": "Mobile",
+      "throughput": 58
+    },
+    {
+      "period": "2025-Q1",
+      "team": "Platform",
+      "throughput": 91
+    },
+    {
+      "period": "2025-Q1",
+      "team": "Frontend",
+      "throughput": 99
+    },
+    {
+      "period": "2025-Q1",
+      "team": "Backend",
+      "throughput": 84
+    },
+    {
+      "period": "2025-Q1",
+      "team": "Data",
+      "throughput": 70
+    },
+    {
+      "period": "2025-Q1",
+      "team": "Infrastructure",
+      "throughput": 48
+    },
+    {
+      "period": "2025-Q1",
+      "team": "Security",
+      "throughput": 41
+    },
+    {
+      "period": "2025-Q1",
+      "team": "Mobile",
+      "throughput": 59
+    },
+    {
+      "period": "2025-Q2",
+      "team": "Platform",
+      "throughput": 93
+    },
+    {
+      "period": "2025-Q2",
+      "team": "Frontend",
+      "throughput": 100
+    },
+    {
+      "period": "2025-Q2",
+      "team": "Backend",
+      "throughput": 85
+    },
+    {
+      "period": "2025-Q2",
+      "team": "Data",
+      "throughput": 71
+    },
+    {
+      "period": "2025-Q2",
+      "team": "Infrastructure",
+      "throughput": 49
+    },
+    {
+      "period": "2025-Q2",
+      "team": "Security",
+      "throughput": 41
+    },
+    {
+      "period": "2025-Q2",
+      "team": "Mobile",
+      "throughput": 60
+    },
+    {
+      "period": "2025-Q3",
+      "team": "Platform",
+      "throughput": 94
+    },
+    {
+      "period": "2025-Q3",
+      "team": "Frontend",
+      "throughput": 102
+    },
+    {
+      "period": "2025-Q3",
+      "team": "Backend",
+      "throughput": 86
+    },
+    {
+      "period": "2025-Q3",
+      "team": "Data",
+      "throughput": 72
+    },
+    {
+      "period": "2025-Q3",
+      "team": "Infrastructure",
+      "throughput": 50
+    },
+    {
+      "period": "2025-Q3",
+      "team": "Security",
+      "throughput": 42
+    },
+    {
+      "period": "2025-Q3",
+      "team": "Mobile",
+      "throughput": 61
+    },
+    {
+      "period": "2025-Q4",
+      "team": "Platform",
+      "throughput": 96
+    },
+    {
+      "period": "2025-Q4",
+      "team": "Frontend",
+      "throughput": 104
+    },
+    {
+      "period": "2025-Q4",
+      "team": "Backend",
+      "throughput": 88
+    },
+    {
+      "period": "2025-Q4",
+      "team": "Data",
+      "throughput": 73
+    },
+    {
+      "period": "2025-Q4",
+      "team": "Infrastructure",
+      "throughput": 51
+    },
+    {
+      "period": "2025-Q4",
+      "team": "Security",
+      "throughput": 43
+    },
+    {
+      "period": "2025-Q4",
+      "team": "Mobile",
+      "throughput": 62
+    },
+    {
+      "period": "2026-Q1",
+      "team": "Platform",
+      "throughput": 97
+    },
+    {
+      "period": "2026-Q1",
+      "team": "Frontend",
+      "throughput": 105
+    },
+    {
+      "period": "2026-Q1",
+      "team": "Backend",
+      "throughput": 89
+    },
+    {
+      "period": "2026-Q1",
+      "team": "Data",
+      "throughput": 74
+    },
+    {
+      "period": "2026-Q1",
+      "team": "Infrastructure",
+      "throughput": 51
+    },
+    {
+      "period": "2026-Q1",
+      "team": "Security",
+      "throughput": 43
+    },
+    {
+      "period": "2026-Q1",
+      "team": "Mobile",
+      "throughput": 63
+    },
+    {
+      "period": "2026-Q2",
+      "team": "Platform",
+      "throughput": 99
+    },
+    {
+      "period": "2026-Q2",
+      "team": "Frontend",
+      "throughput": 107
+    },
+    {
+      "period": "2026-Q2",
+      "team": "Backend",
+      "throughput": 91
+    },
+    {
+      "period": "2026-Q2",
+      "team": "Data",
+      "throughput": 76
+    },
+    {
+      "period": "2026-Q2",
+      "team": "Infrastructure",
+      "throughput": 52
+    },
+    {
+      "period": "2026-Q2",
+      "team": "Security",
+      "throughput": 44
+    },
+    {
+      "period": "2026-Q2",
+      "team": "Mobile",
+      "throughput": 64
+    },
+    {
+      "period": "2026-Q3",
+      "team": "Platform",
+      "throughput": 100
+    },
+    {
+      "period": "2026-Q3",
+      "team": "Frontend",
+      "throughput": 109
+    },
+    {
+      "period": "2026-Q3",
+      "team": "Backend",
+      "throughput": 92
+    },
+    {
+      "period": "2026-Q3",
+      "team": "Data",
+      "throughput": 77
+    },
+    {
+      "period": "2026-Q3",
+      "team": "Infrastructure",
+      "throughput": 53
+    },
+    {
+      "period": "2026-Q3",
+      "team": "Security",
+      "throughput": 45
+    },
+    {
+      "period": "2026-Q3",
+      "team": "Mobile",
+      "throughput": 65
+    },
+    {
+      "period": "2026-Q4",
+      "team": "Platform",
+      "throughput": 102
+    },
+    {
+      "period": "2026-Q4",
+      "team": "Frontend",
+      "throughput": 110
+    },
+    {
+      "period": "2026-Q4",
+      "team": "Backend",
+      "throughput": 93
+    },
+    {
+      "period": "2026-Q4",
+      "team": "Data",
+      "throughput": 78
+    },
+    {
+      "period": "2026-Q4",
+      "team": "Infrastructure",
+      "throughput": 54
+    },
+    {
+      "period": "2026-Q4",
+      "team": "Security",
+      "throughput": 46
+    },
+    {
+      "period": "2026-Q4",
+      "team": "Mobile",
+      "throughput": 66
+    }
+  ],
+  "cycle_time_by_project_type": [
+    {
+      "period": "2024-Q1",
+      "project_type": "Feature",
+      "cycle_time": 18.5
+    },
+    {
+      "period": "2024-Q1",
+      "project_type": "Bug Fix",
+      "cycle_time": 3.2
+    },
+    {
+      "period": "2024-Q1",
+      "project_type": "Infrastructure",
+      "cycle_time": 12.0
+    },
+    {
+      "period": "2024-Q1",
+      "project_type": "Compliance",
+      "cycle_time": 25.0
+    },
+    {
+      "period": "2024-Q1",
+      "project_type": "Maintenance",
+      "cycle_time": 5.5
+    },
+    {
+      "period": "2024-Q2",
+      "project_type": "Feature",
+      "cycle_time": 18.2
+    },
+    {
+      "period": "2024-Q2",
+      "project_type": "Bug Fix",
+      "cycle_time": 3.2
+    },
+    {
+      "period": "2024-Q2",
+      "project_type": "Infrastructure",
+      "cycle_time": 11.8
+    },
+    {
+      "period": "2024-Q2",
+      "project_type": "Compliance",
+      "cycle_time": 24.6
+    },
+    {
+      "period": "2024-Q2",
+      "project_type": "Maintenance",
+      "cycle_time": 5.4
+    },
+    {
+      "period": "2024-Q3",
+      "project_type": "Feature",
+      "cycle_time": 17.9
+    },
+    {
+      "period": "2024-Q3",
+      "project_type": "Bug Fix",
+      "cycle_time": 3.1
+    },
+    {
+      "period": "2024-Q3",
+      "project_type": "Infrastructure",
+      "cycle_time": 11.6
+    },
+    {
+      "period": "2024-Q3",
+      "project_type": "Compliance",
+      "cycle_time": 24.2
+    },
+    {
+      "period": "2024-Q3",
+      "project_type": "Maintenance",
+      "cycle_time": 5.3
+    },
+    {
+      "period": "2024-Q4",
+      "project_type": "Feature",
+      "cycle_time": 17.7
+    },
+    {
+      "period": "2024-Q4",
+      "project_type": "Bug Fix",
+      "cycle_time": 3.1
+    },
+    {
+      "period": "2024-Q4",
+      "project_type": "Infrastructure",
+      "cycle_time": 11.5
+    },
+    {
+      "period": "2024-Q4",
+      "project_type": "Compliance",
+      "cycle_time": 23.9
+    },
+    {
+      "period": "2024-Q4",
+      "project_type": "Maintenance",
+      "cycle_time": 5.3
+    },
+    {
+      "period": "2025-Q1",
+      "project_type": "Feature",
+      "cycle_time": 17.4
+    },
+    {
+      "period": "2025-Q1",
+      "project_type": "Bug Fix",
+      "cycle_time": 3.0
+    },
+    {
+      "period": "2025-Q1",
+      "project_type": "Infrastructure",
+      "cycle_time": 11.3
+    },
+    {
+      "period": "2025-Q1",
+      "project_type": "Compliance",
+      "cycle_time": 23.5
+    },
+    {
+      "period": "2025-Q1",
+      "project_type": "Maintenance",
+      "cycle_time": 5.2
+    },
+    {
+      "period": "2025-Q2",
+      "project_type": "Feature",
+      "cycle_time": 17.1
+    },
+    {
+      "period": "2025-Q2",
+      "project_type": "Bug Fix",
+      "cycle_time": 3.0
+    },
+    {
+      "period": "2025-Q2",
+      "project_type": "Infrastructure",
+      "cycle_time": 11.1
+    },
+    {
+      "period": "2025-Q2",
+      "project_type": "Compliance",
+      "cycle_time": 23.1
+    },
+    {
+      "period": "2025-Q2",
+      "project_type": "Maintenance",
+      "cycle_time": 5.1
+    },
+    {
+      "period": "2025-Q3",
+      "project_type": "Feature",
+      "cycle_time": 16.8
+    },
+    {
+      "period": "2025-Q3",
+      "project_type": "Bug Fix",
+      "cycle_time": 2.9
+    },
+    {
+      "period": "2025-Q3",
+      "project_type": "Infrastructure",
+      "cycle_time": 10.9
+    },
+    {
+      "period": "2025-Q3",
+      "project_type": "Compliance",
+      "cycle_time": 22.8
+    },
+    {
+      "period": "2025-Q3",
+      "project_type": "Maintenance",
+      "cycle_time": 5.0
+    },
+    {
+      "period": "2025-Q4",
+      "project_type": "Feature",
+      "cycle_time": 16.6
+    },
+    {
+      "period": "2025-Q4",
+      "project_type": "Bug Fix",
+      "cycle_time": 2.9
+    },
+    {
+      "period": "2025-Q4",
+      "project_type": "Infrastructure",
+      "cycle_time": 10.7
+    },
+    {
+      "period": "2025-Q4",
+      "project_type": "Compliance",
+      "cycle_time": 22.4
+    },
+    {
+      "period": "2025-Q4",
+      "project_type": "Maintenance",
+      "cycle_time": 4.9
+    },
+    {
+      "period": "2026-Q1",
+      "project_type": "Feature",
+      "cycle_time": 16.3
+    },
+    {
+      "period": "2026-Q1",
+      "project_type": "Bug Fix",
+      "cycle_time": 2.8
+    },
+    {
+      "period": "2026-Q1",
+      "project_type": "Infrastructure",
+      "cycle_time": 10.6
+    },
+    {
+      "period": "2026-Q1",
+      "project_type": "Compliance",
+      "cycle_time": 22.0
+    },
+    {
+      "period": "2026-Q1",
+      "project_type": "Maintenance",
+      "cycle_time": 4.8
+    },
+    {
+      "period": "2026-Q2",
+      "project_type": "Feature",
+      "cycle_time": 16.0
+    },
+    {
+      "period": "2026-Q2",
+      "project_type": "Bug Fix",
+      "cycle_time": 2.8
+    },
+    {
+      "period": "2026-Q2",
+      "project_type": "Infrastructure",
+      "cycle_time": 10.4
+    },
+    {
+      "period": "2026-Q2",
+      "project_type": "Compliance",
+      "cycle_time": 21.6
+    },
+    {
+      "period": "2026-Q2",
+      "project_type": "Maintenance",
+      "cycle_time": 4.8
+    },
+    {
+      "period": "2026-Q3",
+      "project_type": "Feature",
+      "cycle_time": 15.7
+    },
+    {
+      "period": "2026-Q3",
+      "project_type": "Bug Fix",
+      "cycle_time": 2.7
+    },
+    {
+      "period": "2026-Q3",
+      "project_type": "Infrastructure",
+      "cycle_time": 10.2
+    },
+    {
+      "period": "2026-Q3",
+      "project_type": "Compliance",
+      "cycle_time": 21.2
+    },
+    {
+      "period": "2026-Q3",
+      "project_type": "Maintenance",
+      "cycle_time": 4.7
+    },
+    {
+      "period": "2026-Q4",
+      "project_type": "Feature",
+      "cycle_time": 15.4
+    },
+    {
+      "period": "2026-Q4",
+      "project_type": "Bug Fix",
+      "cycle_time": 2.7
+    },
+    {
+      "period": "2026-Q4",
+      "project_type": "Infrastructure",
+      "cycle_time": 10.0
+    },
+    {
+      "period": "2026-Q4",
+      "project_type": "Compliance",
+      "cycle_time": 20.9
+    },
+    {
+      "period": "2026-Q4",
+      "project_type": "Maintenance",
+      "cycle_time": 4.6
+    }
+  ],
+  "sla_compliance_by_team": [
+    {
+      "period": "2024-Q1",
+      "team": "Platform",
+      "sla_compliance": 94.5
+    },
+    {
+      "period": "2024-Q1",
+      "team": "Frontend",
+      "sla_compliance": 96.2
+    },
+    {
+      "period": "2024-Q1",
+      "team": "Backend",
+      "sla_compliance": 93.8
+    },
+    {
+      "period": "2024-Q1",
+      "team": "Data",
+      "sla_compliance": 91.5
+    },
+    {
+      "period": "2024-Q1",
+      "team": "Infrastructure",
+      "sla_compliance": 97.5
+    },
+    {
+      "period": "2024-Q1",
+      "team": "Security",
+      "sla_compliance": 98.0
+    },
+    {
+      "period": "2024-Q1",
+      "team": "Mobile",
+      "sla_compliance": 92.0
+    },
+    {
+      "period": "2024-Q2",
+      "team": "Platform",
+      "sla_compliance": 94.8
+    },
+    {
+      "period": "2024-Q2",
+      "team": "Frontend",
+      "sla_compliance": 96.5
+    },
+    {
+      "period": "2024-Q2",
+      "team": "Backend",
+      "sla_compliance": 94.1
+    },
+    {
+      "period": "2024-Q2",
+      "team": "Data",
+      "sla_compliance": 91.8
+    },
+    {
+      "period": "2024-Q2",
+      "team": "Infrastructure",
+      "sla_compliance": 97.8
+    },
+    {
+      "period": "2024-Q2",
+      "team": "Security",
+      "sla_compliance": 98.3
+    },
+    {
+      "period": "2024-Q2",
+      "team": "Mobile",
+      "sla_compliance": 92.3
+    },
+    {
+      "period": "2024-Q3",
+      "team": "Platform",
+      "sla_compliance": 95.2
+    },
+    {
+      "period": "2024-Q3",
+      "team": "Frontend",
+      "sla_compliance": 96.9
+    },
+    {
+      "period": "2024-Q3",
+      "team": "Backend",
+      "sla_compliance": 94.5
+    },
+    {
+      "period": "2024-Q3",
+      "team": "Data",
+      "sla_compliance": 92.2
+    },
+    {
+      "period": "2024-Q3",
+      "team": "Infrastructure",
+      "sla_compliance": 98.2
+    },
+    {
+      "period": "2024-Q3",
+      "team": "Security",
+      "sla_compliance": 98.7
+    },
+    {
+      "period": "2024-Q3",
+      "team": "Mobile",
+      "sla_compliance": 92.7
+    },
+    {
+      "period": "2024-Q4",
+      "team": "Platform",
+      "sla_compliance": 95.5
+    },
+    {
+      "period": "2024-Q4",
+      "team": "Frontend",
+      "sla_compliance": 97.2
+    },
+    {
+      "period": "2024-Q4",
+      "team": "Backend",
+      "sla_compliance": 94.8
+    },
+    {
+      "period": "2024-Q4",
+      "team": "Data",
+      "sla_compliance": 92.5
+    },
+    {
+      "period": "2024-Q4",
+      "team": "Infrastructure",
+      "sla_compliance": 98.5
+    },
+    {
+      "period": "2024-Q4",
+      "team": "Security",
+      "sla_compliance": 99.0
+    },
+    {
+      "period": "2024-Q4",
+      "team": "Mobile",
+      "sla_compliance": 93.0
+    },
+    {
+      "period": "2025-Q1",
+      "team": "Platform",
+      "sla_compliance": 95.9
+    },
+    {
+      "period": "2025-Q1",
+      "team": "Frontend",
+      "sla_compliance": 97.6
+    },
+    {
+      "period": "2025-Q1",
+      "team": "Backend",
+      "sla_compliance": 95.2
+    },
+    {
+      "period": "2025-Q1",
+      "team": "Data",
+      "sla_compliance": 92.9
+    },
+    {
+      "period": "2025-Q1",
+      "team": "Infrastructure",
+      "sla_compliance": 98.9
+    },
+    {
+      "period": "2025-Q1",
+      "team": "Security",
+      "sla_compliance": 99.4
+    },
+    {
+      "period": "2025-Q1",
+      "team": "Mobile",
+      "sla_compliance": 93.4
+    },
+    {
+      "period": "2025-Q2",
+      "team": "Platform",
+      "sla_compliance": 96.2
+    },
+    {
+      "period": "2025-Q2",
+      "team": "Frontend",
+      "sla_compliance": 98.0
+    },
+    {
+      "period": "2025-Q2",
+      "team": "Backend",
+      "sla_compliance": 95.5
+    },
+    {
+      "period": "2025-Q2",
+      "team": "Data",
+      "sla_compliance": 93.2
+    },
+    {
+      "period": "2025-Q2",
+      "team": "Infrastructure",
+      "sla_compliance": 99.2
+    },
+    {
+      "period": "2025-Q2",
+      "team": "Security",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2025-Q2",
+      "team": "Mobile",
+      "sla_compliance": 93.8
+    },
+    {
+      "period": "2025-Q3",
+      "team": "Platform",
+      "sla_compliance": 96.6
+    },
+    {
+      "period": "2025-Q3",
+      "team": "Frontend",
+      "sla_compliance": 98.3
+    },
+    {
+      "period": "2025-Q3",
+      "team": "Backend",
+      "sla_compliance": 95.9
+    },
+    {
+      "period": "2025-Q3",
+      "team": "Data",
+      "sla_compliance": 93.6
+    },
+    {
+      "period": "2025-Q3",
+      "team": "Infrastructure",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2025-Q3",
+      "team": "Security",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2025-Q3",
+      "team": "Mobile",
+      "sla_compliance": 94.1
+    },
+    {
+      "period": "2025-Q4",
+      "team": "Platform",
+      "sla_compliance": 97.0
+    },
+    {
+      "period": "2025-Q4",
+      "team": "Frontend",
+      "sla_compliance": 98.7
+    },
+    {
+      "period": "2025-Q4",
+      "team": "Backend",
+      "sla_compliance": 96.2
+    },
+    {
+      "period": "2025-Q4",
+      "team": "Data",
+      "sla_compliance": 94.0
+    },
+    {
+      "period": "2025-Q4",
+      "team": "Infrastructure",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2025-Q4",
+      "team": "Security",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2025-Q4",
+      "team": "Mobile",
+      "sla_compliance": 94.5
+    },
+    {
+      "period": "2026-Q1",
+      "team": "Platform",
+      "sla_compliance": 97.3
+    },
+    {
+      "period": "2026-Q1",
+      "team": "Frontend",
+      "sla_compliance": 99.0
+    },
+    {
+      "period": "2026-Q1",
+      "team": "Backend",
+      "sla_compliance": 96.6
+    },
+    {
+      "period": "2026-Q1",
+      "team": "Data",
+      "sla_compliance": 94.3
+    },
+    {
+      "period": "2026-Q1",
+      "team": "Infrastructure",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2026-Q1",
+      "team": "Security",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2026-Q1",
+      "team": "Mobile",
+      "sla_compliance": 94.8
+    },
+    {
+      "period": "2026-Q2",
+      "team": "Platform",
+      "sla_compliance": 97.7
+    },
+    {
+      "period": "2026-Q2",
+      "team": "Frontend",
+      "sla_compliance": 99.4
+    },
+    {
+      "period": "2026-Q2",
+      "team": "Backend",
+      "sla_compliance": 97.0
+    },
+    {
+      "period": "2026-Q2",
+      "team": "Data",
+      "sla_compliance": 94.7
+    },
+    {
+      "period": "2026-Q2",
+      "team": "Infrastructure",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2026-Q2",
+      "team": "Security",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2026-Q2",
+      "team": "Mobile",
+      "sla_compliance": 95.2
+    },
+    {
+      "period": "2026-Q3",
+      "team": "Platform",
+      "sla_compliance": 98.0
+    },
+    {
+      "period": "2026-Q3",
+      "team": "Frontend",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2026-Q3",
+      "team": "Backend",
+      "sla_compliance": 97.3
+    },
+    {
+      "period": "2026-Q3",
+      "team": "Data",
+      "sla_compliance": 95.0
+    },
+    {
+      "period": "2026-Q3",
+      "team": "Infrastructure",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2026-Q3",
+      "team": "Security",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2026-Q3",
+      "team": "Mobile",
+      "sla_compliance": 95.5
+    },
+    {
+      "period": "2026-Q4",
+      "team": "Platform",
+      "sla_compliance": 98.3
+    },
+    {
+      "period": "2026-Q4",
+      "team": "Frontend",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2026-Q4",
+      "team": "Backend",
+      "sla_compliance": 97.6
+    },
+    {
+      "period": "2026-Q4",
+      "team": "Data",
+      "sla_compliance": 95.3
+    },
+    {
+      "period": "2026-Q4",
+      "team": "Infrastructure",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2026-Q4",
+      "team": "Security",
+      "sla_compliance": 99.5
+    },
+    {
+      "period": "2026-Q4",
+      "team": "Mobile",
+      "sla_compliance": 95.8
+    }
+  ],
+  "deploy_frequency_by_service": [
+    {
+      "period": "2024-Q1",
+      "service": "API Gateway",
+      "deploy_frequency": 3.5
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Auth Service",
+      "deploy_frequency": 2.0
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Payment Service",
+      "deploy_frequency": 1.5
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Notification Service",
+      "deploy_frequency": 2.5
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Data Pipeline",
+      "deploy_frequency": 1.0
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Web App",
+      "deploy_frequency": 5.0
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Mobile Backend",
+      "deploy_frequency": 2.0
+    },
+    {
+      "period": "2024-Q2",
+      "service": "API Gateway",
+      "deploy_frequency": 3.6
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Auth Service",
+      "deploy_frequency": 2.0
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Payment Service",
+      "deploy_frequency": 1.5
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Notification Service",
+      "deploy_frequency": 2.6
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Data Pipeline",
+      "deploy_frequency": 1.0
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Web App",
+      "deploy_frequency": 5.1
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Mobile Backend",
+      "deploy_frequency": 2.0
+    },
+    {
+      "period": "2024-Q3",
+      "service": "API Gateway",
+      "deploy_frequency": 3.7
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Auth Service",
+      "deploy_frequency": 2.1
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Payment Service",
+      "deploy_frequency": 1.6
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Notification Service",
+      "deploy_frequency": 2.6
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Data Pipeline",
+      "deploy_frequency": 1.1
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Web App",
+      "deploy_frequency": 5.2
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Mobile Backend",
+      "deploy_frequency": 2.1
+    },
+    {
+      "period": "2024-Q4",
+      "service": "API Gateway",
+      "deploy_frequency": 3.8
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Auth Service",
+      "deploy_frequency": 2.1
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Payment Service",
+      "deploy_frequency": 1.6
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Notification Service",
+      "deploy_frequency": 2.7
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Data Pipeline",
+      "deploy_frequency": 1.1
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Web App",
+      "deploy_frequency": 5.4
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Mobile Backend",
+      "deploy_frequency": 2.1
+    },
+    {
+      "period": "2025-Q1",
+      "service": "API Gateway",
+      "deploy_frequency": 3.9
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Auth Service",
+      "deploy_frequency": 2.2
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Payment Service",
+      "deploy_frequency": 1.7
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Notification Service",
+      "deploy_frequency": 2.8
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Data Pipeline",
+      "deploy_frequency": 1.1
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Web App",
+      "deploy_frequency": 5.5
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Mobile Backend",
+      "deploy_frequency": 2.2
+    },
+    {
+      "period": "2025-Q2",
+      "service": "API Gateway",
+      "deploy_frequency": 3.9
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Auth Service",
+      "deploy_frequency": 2.2
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Payment Service",
+      "deploy_frequency": 1.7
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Notification Service",
+      "deploy_frequency": 2.8
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Data Pipeline",
+      "deploy_frequency": 1.1
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Web App",
+      "deploy_frequency": 5.6
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Mobile Backend",
+      "deploy_frequency": 2.2
+    },
+    {
+      "period": "2025-Q3",
+      "service": "API Gateway",
+      "deploy_frequency": 4.0
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Auth Service",
+      "deploy_frequency": 2.3
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Payment Service",
+      "deploy_frequency": 1.7
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Notification Service",
+      "deploy_frequency": 2.9
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Data Pipeline",
+      "deploy_frequency": 1.1
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Web App",
+      "deploy_frequency": 5.8
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Mobile Backend",
+      "deploy_frequency": 2.3
+    },
+    {
+      "period": "2025-Q4",
+      "service": "API Gateway",
+      "deploy_frequency": 4.1
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Auth Service",
+      "deploy_frequency": 2.4
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Payment Service",
+      "deploy_frequency": 1.8
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Notification Service",
+      "deploy_frequency": 2.9
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Data Pipeline",
+      "deploy_frequency": 1.2
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Web App",
+      "deploy_frequency": 5.9
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Mobile Backend",
+      "deploy_frequency": 2.4
+    },
+    {
+      "period": "2026-Q1",
+      "service": "API Gateway",
+      "deploy_frequency": 4.2
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Auth Service",
+      "deploy_frequency": 2.4
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Payment Service",
+      "deploy_frequency": 1.8
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Notification Service",
+      "deploy_frequency": 3.0
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Data Pipeline",
+      "deploy_frequency": 1.2
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Web App",
+      "deploy_frequency": 6.0
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Mobile Backend",
+      "deploy_frequency": 2.4
+    },
+    {
+      "period": "2026-Q2",
+      "service": "API Gateway",
+      "deploy_frequency": 4.3
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Auth Service",
+      "deploy_frequency": 2.5
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Payment Service",
+      "deploy_frequency": 1.8
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Notification Service",
+      "deploy_frequency": 3.1
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Data Pipeline",
+      "deploy_frequency": 1.2
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Web App",
+      "deploy_frequency": 6.1
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Mobile Backend",
+      "deploy_frequency": 2.5
+    },
+    {
+      "period": "2026-Q3",
+      "service": "API Gateway",
+      "deploy_frequency": 4.4
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Auth Service",
+      "deploy_frequency": 2.5
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Payment Service",
+      "deploy_frequency": 1.9
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Notification Service",
+      "deploy_frequency": 3.1
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Data Pipeline",
+      "deploy_frequency": 1.2
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Web App",
+      "deploy_frequency": 6.2
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Mobile Backend",
+      "deploy_frequency": 2.5
+    },
+    {
+      "period": "2026-Q4",
+      "service": "API Gateway",
+      "deploy_frequency": 4.5
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Auth Service",
+      "deploy_frequency": 2.5
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Payment Service",
+      "deploy_frequency": 1.9
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Notification Service",
+      "deploy_frequency": 3.2
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Data Pipeline",
+      "deploy_frequency": 1.3
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Web App",
+      "deploy_frequency": 6.4
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Mobile Backend",
+      "deploy_frequency": 2.5
+    }
+  ],
+  "mttr_by_severity": [
+    {
+      "period": "2024-Q1",
+      "severity": "P1",
+      "mttr": 2.8
+    },
+    {
+      "period": "2024-Q1",
+      "severity": "P2",
+      "mttr": 9.0
+    },
+    {
+      "period": "2024-Q1",
+      "severity": "P3",
+      "mttr": 24.0
+    },
+    {
+      "period": "2024-Q1",
+      "severity": "P4",
+      "mttr": 72.0
+    },
+    {
+      "period": "2024-Q2",
+      "severity": "P1",
+      "mttr": 2.7
+    },
+    {
+      "period": "2024-Q2",
+      "severity": "P2",
+      "mttr": 8.8
+    },
+    {
+      "period": "2024-Q2",
+      "severity": "P3",
+      "mttr": 23.4
+    },
+    {
+      "period": "2024-Q2",
+      "severity": "P4",
+      "mttr": 70.3
+    },
+    {
+      "period": "2024-Q3",
+      "severity": "P1",
+      "mttr": 2.7
+    },
+    {
+      "period": "2024-Q3",
+      "severity": "P2",
+      "mttr": 8.6
+    },
+    {
+      "period": "2024-Q3",
+      "severity": "P3",
+      "mttr": 22.9
+    },
+    {
+      "period": "2024-Q3",
+      "severity": "P4",
+      "mttr": 68.7
+    },
+    {
+      "period": "2024-Q4",
+      "severity": "P1",
+      "mttr": 2.6
+    },
+    {
+      "period": "2024-Q4",
+      "severity": "P2",
+      "mttr": 8.4
+    },
+    {
+      "period": "2024-Q4",
+      "severity": "P3",
+      "mttr": 22.3
+    },
+    {
+      "period": "2024-Q4",
+      "severity": "P4",
+      "mttr": 67.0
+    },
+    {
+      "period": "2025-Q1",
+      "severity": "P1",
+      "mttr": 2.5
+    },
+    {
+      "period": "2025-Q1",
+      "severity": "P2",
+      "mttr": 8.2
+    },
+    {
+      "period": "2025-Q1",
+      "severity": "P3",
+      "mttr": 21.8
+    },
+    {
+      "period": "2025-Q1",
+      "severity": "P4",
+      "mttr": 65.4
+    },
+    {
+      "period": "2025-Q2",
+      "severity": "P1",
+      "mttr": 2.5
+    },
+    {
+      "period": "2025-Q2",
+      "severity": "P2",
+      "mttr": 8.0
+    },
+    {
+      "period": "2025-Q2",
+      "severity": "P3",
+      "mttr": 21.2
+    },
+    {
+      "period": "2025-Q2",
+      "severity": "P4",
+      "mttr": 63.7
+    },
+    {
+      "period": "2025-Q3",
+      "severity": "P1",
+      "mttr": 2.4
+    },
+    {
+      "period": "2025-Q3",
+      "severity": "P2",
+      "mttr": 7.8
+    },
+    {
+      "period": "2025-Q3",
+      "severity": "P3",
+      "mttr": 20.7
+    },
+    {
+      "period": "2025-Q3",
+      "severity": "P4",
+      "mttr": 62.1
+    },
+    {
+      "period": "2025-Q4",
+      "severity": "P1",
+      "mttr": 2.3
+    },
+    {
+      "period": "2025-Q4",
+      "severity": "P2",
+      "mttr": 7.6
+    },
+    {
+      "period": "2025-Q4",
+      "severity": "P3",
+      "mttr": 20.1
+    },
+    {
+      "period": "2025-Q4",
+      "severity": "P4",
+      "mttr": 60.4
+    },
+    {
+      "period": "2026-Q1",
+      "severity": "P1",
+      "mttr": 2.3
+    },
+    {
+      "period": "2026-Q1",
+      "severity": "P2",
+      "mttr": 7.3
+    },
+    {
+      "period": "2026-Q1",
+      "severity": "P3",
+      "mttr": 19.6
+    },
+    {
+      "period": "2026-Q1",
+      "severity": "P4",
+      "mttr": 58.8
+    },
+    {
+      "period": "2026-Q2",
+      "severity": "P1",
+      "mttr": 2.2
+    },
+    {
+      "period": "2026-Q2",
+      "severity": "P2",
+      "mttr": 7.1
+    },
+    {
+      "period": "2026-Q2",
+      "severity": "P3",
+      "mttr": 19.0
+    },
+    {
+      "period": "2026-Q2",
+      "severity": "P4",
+      "mttr": 57.1
+    },
+    {
+      "period": "2026-Q3",
+      "severity": "P1",
+      "mttr": 2.2
+    },
+    {
+      "period": "2026-Q3",
+      "severity": "P2",
+      "mttr": 6.9
+    },
+    {
+      "period": "2026-Q3",
+      "severity": "P3",
+      "mttr": 18.5
+    },
+    {
+      "period": "2026-Q3",
+      "severity": "P4",
+      "mttr": 55.4
+    },
+    {
+      "period": "2026-Q4",
+      "severity": "P1",
+      "mttr": 2.1
+    },
+    {
+      "period": "2026-Q4",
+      "severity": "P2",
+      "mttr": 6.7
+    },
+    {
+      "period": "2026-Q4",
+      "severity": "P3",
+      "mttr": 17.9
+    },
+    {
+      "period": "2026-Q4",
+      "severity": "P4",
+      "mttr": 53.8
+    }
+  ],
+  "uptime_by_service": [
+    {
+      "period": "2024-Q1",
+      "service": "API Gateway",
+      "uptime": 99.92
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Auth Service",
+      "uptime": 99.98
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Payment Service",
+      "uptime": 99.995
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Notification Service",
+      "uptime": 99.85
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Data Pipeline",
+      "uptime": 99.75
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Web App",
+      "uptime": 99.9
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Mobile Backend",
+      "uptime": 99.88
+    },
+    {
+      "period": "2024-Q2",
+      "service": "API Gateway",
+      "uptime": 99.925
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Auth Service",
+      "uptime": 99.985
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Payment Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Notification Service",
+      "uptime": 99.855
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Data Pipeline",
+      "uptime": 99.755
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Web App",
+      "uptime": 99.905
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Mobile Backend",
+      "uptime": 99.885
+    },
+    {
+      "period": "2024-Q3",
+      "service": "API Gateway",
+      "uptime": 99.93
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Auth Service",
+      "uptime": 99.99
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Payment Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Notification Service",
+      "uptime": 99.86
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Data Pipeline",
+      "uptime": 99.76
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Web App",
+      "uptime": 99.91
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Mobile Backend",
+      "uptime": 99.89
+    },
+    {
+      "period": "2024-Q4",
+      "service": "API Gateway",
+      "uptime": 99.935
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Auth Service",
+      "uptime": 99.995
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Payment Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Notification Service",
+      "uptime": 99.865
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Data Pipeline",
+      "uptime": 99.765
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Web App",
+      "uptime": 99.915
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Mobile Backend",
+      "uptime": 99.895
+    },
+    {
+      "period": "2025-Q1",
+      "service": "API Gateway",
+      "uptime": 99.94
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Auth Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Payment Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Notification Service",
+      "uptime": 99.87
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Data Pipeline",
+      "uptime": 99.77
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Web App",
+      "uptime": 99.92
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Mobile Backend",
+      "uptime": 99.9
+    },
+    {
+      "period": "2025-Q2",
+      "service": "API Gateway",
+      "uptime": 99.945
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Auth Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Payment Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Notification Service",
+      "uptime": 99.875
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Data Pipeline",
+      "uptime": 99.775
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Web App",
+      "uptime": 99.925
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Mobile Backend",
+      "uptime": 99.905
+    },
+    {
+      "period": "2025-Q3",
+      "service": "API Gateway",
+      "uptime": 99.95
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Auth Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Payment Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Notification Service",
+      "uptime": 99.88
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Data Pipeline",
+      "uptime": 99.78
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Web App",
+      "uptime": 99.93
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Mobile Backend",
+      "uptime": 99.91
+    },
+    {
+      "period": "2025-Q4",
+      "service": "API Gateway",
+      "uptime": 99.955
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Auth Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Payment Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Notification Service",
+      "uptime": 99.885
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Data Pipeline",
+      "uptime": 99.785
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Web App",
+      "uptime": 99.935
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Mobile Backend",
+      "uptime": 99.915
+    },
+    {
+      "period": "2026-Q1",
+      "service": "API Gateway",
+      "uptime": 99.96
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Auth Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Payment Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Notification Service",
+      "uptime": 99.89
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Data Pipeline",
+      "uptime": 99.79
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Web App",
+      "uptime": 99.94
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Mobile Backend",
+      "uptime": 99.92
+    },
+    {
+      "period": "2026-Q2",
+      "service": "API Gateway",
+      "uptime": 99.965
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Auth Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Payment Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Notification Service",
+      "uptime": 99.895
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Data Pipeline",
+      "uptime": 99.795
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Web App",
+      "uptime": 99.945
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Mobile Backend",
+      "uptime": 99.925
+    },
+    {
+      "period": "2026-Q3",
+      "service": "API Gateway",
+      "uptime": 99.97
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Auth Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Payment Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Notification Service",
+      "uptime": 99.9
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Data Pipeline",
+      "uptime": 99.8
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Web App",
+      "uptime": 99.95
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Mobile Backend",
+      "uptime": 99.93
+    },
+    {
+      "period": "2026-Q4",
+      "service": "API Gateway",
+      "uptime": 99.975
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Auth Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Payment Service",
+      "uptime": 99.999
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Notification Service",
+      "uptime": 99.905
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Data Pipeline",
+      "uptime": 99.805
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Web App",
+      "uptime": 99.955
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Mobile Backend",
+      "uptime": 99.935
+    }
+  ],
+  "cloud_spend_by_resource": [
+    {
+      "period": "2024-Q1",
+      "resource_type": "Compute",
+      "cloud_spend": 0.28
+    },
+    {
+      "period": "2024-Q1",
+      "resource_type": "Storage",
+      "cloud_spend": 0.11
+    },
+    {
+      "period": "2024-Q1",
+      "resource_type": "Database",
+      "cloud_spend": 0.09
+    },
+    {
+      "period": "2024-Q1",
+      "resource_type": "Network",
+      "cloud_spend": 0.04
+    },
+    {
+      "period": "2024-Q1",
+      "resource_type": "ML/AI",
+      "cloud_spend": 0.02
+    },
+    {
+      "period": "2024-Q1",
+      "resource_type": "Other",
+      "cloud_spend": 0.01
+    },
+    {
+      "period": "2024-Q2",
+      "resource_type": "Compute",
+      "cloud_spend": 0.29
+    },
+    {
+      "period": "2024-Q2",
+      "resource_type": "Storage",
+      "cloud_spend": 0.12
+    },
+    {
+      "period": "2024-Q2",
+      "resource_type": "Database",
+      "cloud_spend": 0.09
+    },
+    {
+      "period": "2024-Q2",
+      "resource_type": "Network",
+      "cloud_spend": 0.05
+    },
+    {
+      "period": "2024-Q2",
+      "resource_type": "ML/AI",
+      "cloud_spend": 0.02
+    },
+    {
+      "period": "2024-Q2",
+      "resource_type": "Other",
+      "cloud_spend": 0.01
+    },
+    {
+      "period": "2024-Q3",
+      "resource_type": "Compute",
+      "cloud_spend": 0.3
+    },
+    {
+      "period": "2024-Q3",
+      "resource_type": "Storage",
+      "cloud_spend": 0.12
+    },
+    {
+      "period": "2024-Q3",
+      "resource_type": "Database",
+      "cloud_spend": 0.1
+    },
+    {
+      "period": "2024-Q3",
+      "resource_type": "Network",
+      "cloud_spend": 0.05
+    },
+    {
+      "period": "2024-Q3",
+      "resource_type": "ML/AI",
+      "cloud_spend": 0.02
+    },
+    {
+      "period": "2024-Q3",
+      "resource_type": "Other",
+      "cloud_spend": 0.01
+    },
+    {
+      "period": "2024-Q4",
+      "resource_type": "Compute",
+      "cloud_spend": 0.32
+    },
+    {
+      "period": "2024-Q4",
+      "resource_type": "Storage",
+      "cloud_spend": 0.13
+    },
+    {
+      "period": "2024-Q4",
+      "resource_type": "Database",
+      "cloud_spend": 0.1
+    },
+    {
+      "period": "2024-Q4",
+      "resource_type": "Network",
+      "cloud_spend": 0.05
+    },
+    {
+      "period": "2024-Q4",
+      "resource_type": "ML/AI",
+      "cloud_spend": 0.03
+    },
+    {
+      "period": "2024-Q4",
+      "resource_type": "Other",
+      "cloud_spend": 0.01
+    },
+    {
+      "period": "2025-Q1",
+      "resource_type": "Compute",
+      "cloud_spend": 0.35
+    },
+    {
+      "period": "2025-Q1",
+      "resource_type": "Storage",
+      "cloud_spend": 0.14
+    },
+    {
+      "period": "2025-Q1",
+      "resource_type": "Database",
+      "cloud_spend": 0.11
+    },
+    {
+      "period": "2025-Q1",
+      "resource_type": "Network",
+      "cloud_spend": 0.06
+    },
+    {
+      "period": "2025-Q1",
+      "resource_type": "ML/AI",
+      "cloud_spend": 0.03
+    },
+    {
+      "period": "2025-Q1",
+      "resource_type": "Other",
+      "cloud_spend": 0.01
+    },
+    {
+      "period": "2025-Q2",
+      "resource_type": "Compute",
+      "cloud_spend": 0.36
+    },
+    {
+      "period": "2025-Q2",
+      "resource_type": "Storage",
+      "cloud_spend": 0.15
+    },
+    {
+      "period": "2025-Q2",
+      "resource_type": "Database",
+      "cloud_spend": 0.12
+    },
+    {
+      "period": "2025-Q2",
+      "resource_type": "Network",
+      "cloud_spend": 0.06
+    },
+    {
+      "period": "2025-Q2",
+      "resource_type": "ML/AI",
+      "cloud_spend": 0.03
+    },
+    {
+      "period": "2025-Q2",
+      "resource_type": "Other",
+      "cloud_spend": 0.01
+    },
+    {
+      "period": "2025-Q3",
+      "resource_type": "Compute",
+      "cloud_spend": 0.38
+    },
+    {
+      "period": "2025-Q3",
+      "resource_type": "Storage",
+      "cloud_spend": 0.15
+    },
+    {
+      "period": "2025-Q3",
+      "resource_type": "Database",
+      "cloud_spend": 0.12
+    },
+    {
+      "period": "2025-Q3",
+      "resource_type": "Network",
+      "cloud_spend": 0.06
+    },
+    {
+      "period": "2025-Q3",
+      "resource_type": "ML/AI",
+      "cloud_spend": 0.03
+    },
+    {
+      "period": "2025-Q3",
+      "resource_type": "Other",
+      "cloud_spend": 0.02
+    },
+    {
+      "period": "2025-Q4",
+      "resource_type": "Compute",
+      "cloud_spend": 0.4
+    },
+    {
+      "period": "2025-Q4",
+      "resource_type": "Storage",
+      "cloud_spend": 0.16
+    },
+    {
+      "period": "2025-Q4",
+      "resource_type": "Database",
+      "cloud_spend": 0.13
+    },
+    {
+      "period": "2025-Q4",
+      "resource_type": "Network",
+      "cloud_spend": 0.06
+    },
+    {
+      "period": "2025-Q4",
+      "resource_type": "ML/AI",
+      "cloud_spend": 0.03
+    },
+    {
+      "period": "2025-Q4",
+      "resource_type": "Other",
+      "cloud_spend": 0.02
+    },
+    {
+      "period": "2026-Q1",
+      "resource_type": "Compute",
+      "cloud_spend": 0.42
+    },
+    {
+      "period": "2026-Q1",
+      "resource_type": "Storage",
+      "cloud_spend": 0.17
+    },
+    {
+      "period": "2026-Q1",
+      "resource_type": "Database",
+      "cloud_spend": 0.14
+    },
+    {
+      "period": "2026-Q1",
+      "resource_type": "Network",
+      "cloud_spend": 0.07
+    },
+    {
+      "period": "2026-Q1",
+      "resource_type": "ML/AI",
+      "cloud_spend": 0.03
+    },
+    {
+      "period": "2026-Q1",
+      "resource_type": "Other",
+      "cloud_spend": 0.02
+    },
+    {
+      "period": "2026-Q2",
+      "resource_type": "Compute",
+      "cloud_spend": 0.44
+    },
+    {
+      "period": "2026-Q2",
+      "resource_type": "Storage",
+      "cloud_spend": 0.18
+    },
+    {
+      "period": "2026-Q2",
+      "resource_type": "Database",
+      "cloud_spend": 0.14
+    },
+    {
+      "period": "2026-Q2",
+      "resource_type": "Network",
+      "cloud_spend": 0.07
+    },
+    {
+      "period": "2026-Q2",
+      "resource_type": "ML/AI",
+      "cloud_spend": 0.04
+    },
+    {
+      "period": "2026-Q2",
+      "resource_type": "Other",
+      "cloud_spend": 0.02
+    },
+    {
+      "period": "2026-Q3",
+      "resource_type": "Compute",
+      "cloud_spend": 0.46
+    },
+    {
+      "period": "2026-Q3",
+      "resource_type": "Storage",
+      "cloud_spend": 0.18
+    },
+    {
+      "period": "2026-Q3",
+      "resource_type": "Database",
+      "cloud_spend": 0.15
+    },
+    {
+      "period": "2026-Q3",
+      "resource_type": "Network",
+      "cloud_spend": 0.07
+    },
+    {
+      "period": "2026-Q3",
+      "resource_type": "ML/AI",
+      "cloud_spend": 0.04
+    },
+    {
+      "period": "2026-Q3",
+      "resource_type": "Other",
+      "cloud_spend": 0.02
+    },
+    {
+      "period": "2026-Q4",
+      "resource_type": "Compute",
+      "cloud_spend": 0.47
+    },
+    {
+      "period": "2026-Q4",
+      "resource_type": "Storage",
+      "cloud_spend": 0.19
+    },
+    {
+      "period": "2026-Q4",
+      "resource_type": "Database",
+      "cloud_spend": 0.15
+    },
+    {
+      "period": "2026-Q4",
+      "resource_type": "Network",
+      "cloud_spend": 0.08
+    },
+    {
+      "period": "2026-Q4",
+      "resource_type": "ML/AI",
+      "cloud_spend": 0.04
+    },
+    {
+      "period": "2026-Q4",
+      "resource_type": "Other",
+      "cloud_spend": 0.02
+    }
+  ],
+  "slo_attainment_by_service": [
+    {
+      "period": "2024-Q1",
+      "service": "API Gateway",
+      "slo_attainment": 96.5
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Auth Service",
+      "slo_attainment": 98.2
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Payment Service",
+      "slo_attainment": 99.1
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Notification Service",
+      "slo_attainment": 95.5
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Data Pipeline",
+      "slo_attainment": 94.0
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Web App",
+      "slo_attainment": 97.0
+    },
+    {
+      "period": "2024-Q1",
+      "service": "Mobile Backend",
+      "slo_attainment": 96.0
+    },
+    {
+      "period": "2024-Q2",
+      "service": "API Gateway",
+      "slo_attainment": 96.7
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Auth Service",
+      "slo_attainment": 98.4
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Payment Service",
+      "slo_attainment": 99.3
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Notification Service",
+      "slo_attainment": 95.7
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Data Pipeline",
+      "slo_attainment": 94.2
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Web App",
+      "slo_attainment": 97.2
+    },
+    {
+      "period": "2024-Q2",
+      "service": "Mobile Backend",
+      "slo_attainment": 96.2
+    },
+    {
+      "period": "2024-Q3",
+      "service": "API Gateway",
+      "slo_attainment": 96.9
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Auth Service",
+      "slo_attainment": 98.6
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Payment Service",
+      "slo_attainment": 99.5
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Notification Service",
+      "slo_attainment": 95.9
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Data Pipeline",
+      "slo_attainment": 94.4
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Web App",
+      "slo_attainment": 97.4
+    },
+    {
+      "period": "2024-Q3",
+      "service": "Mobile Backend",
+      "slo_attainment": 96.4
+    },
+    {
+      "period": "2024-Q4",
+      "service": "API Gateway",
+      "slo_attainment": 97.1
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Auth Service",
+      "slo_attainment": 98.8
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Payment Service",
+      "slo_attainment": 99.7
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Notification Service",
+      "slo_attainment": 96.1
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Data Pipeline",
+      "slo_attainment": 94.6
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Web App",
+      "slo_attainment": 97.6
+    },
+    {
+      "period": "2024-Q4",
+      "service": "Mobile Backend",
+      "slo_attainment": 96.6
+    },
+    {
+      "period": "2025-Q1",
+      "service": "API Gateway",
+      "slo_attainment": 97.3
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Auth Service",
+      "slo_attainment": 99.0
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Payment Service",
+      "slo_attainment": 99.9
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Notification Service",
+      "slo_attainment": 96.3
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Data Pipeline",
+      "slo_attainment": 94.8
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Web App",
+      "slo_attainment": 97.8
+    },
+    {
+      "period": "2025-Q1",
+      "service": "Mobile Backend",
+      "slo_attainment": 96.8
+    },
+    {
+      "period": "2025-Q2",
+      "service": "API Gateway",
+      "slo_attainment": 97.5
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Auth Service",
+      "slo_attainment": 99.2
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Payment Service",
+      "slo_attainment": 99.9
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Notification Service",
+      "slo_attainment": 96.5
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Data Pipeline",
+      "slo_attainment": 95.0
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Web App",
+      "slo_attainment": 98.0
+    },
+    {
+      "period": "2025-Q2",
+      "service": "Mobile Backend",
+      "slo_attainment": 97.0
+    },
+    {
+      "period": "2025-Q3",
+      "service": "API Gateway",
+      "slo_attainment": 97.7
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Auth Service",
+      "slo_attainment": 99.4
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Payment Service",
+      "slo_attainment": 99.9
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Notification Service",
+      "slo_attainment": 96.7
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Data Pipeline",
+      "slo_attainment": 95.2
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Web App",
+      "slo_attainment": 98.2
+    },
+    {
+      "period": "2025-Q3",
+      "service": "Mobile Backend",
+      "slo_attainment": 97.2
+    },
+    {
+      "period": "2025-Q4",
+      "service": "API Gateway",
+      "slo_attainment": 97.9
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Auth Service",
+      "slo_attainment": 99.6
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Payment Service",
+      "slo_attainment": 99.9
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Notification Service",
+      "slo_attainment": 96.9
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Data Pipeline",
+      "slo_attainment": 95.4
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Web App",
+      "slo_attainment": 98.4
+    },
+    {
+      "period": "2025-Q4",
+      "service": "Mobile Backend",
+      "slo_attainment": 97.4
+    },
+    {
+      "period": "2026-Q1",
+      "service": "API Gateway",
+      "slo_attainment": 98.1
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Auth Service",
+      "slo_attainment": 99.8
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Payment Service",
+      "slo_attainment": 99.9
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Notification Service",
+      "slo_attainment": 97.1
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Data Pipeline",
+      "slo_attainment": 95.6
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Web App",
+      "slo_attainment": 98.6
+    },
+    {
+      "period": "2026-Q1",
+      "service": "Mobile Backend",
+      "slo_attainment": 97.6
+    },
+    {
+      "period": "2026-Q2",
+      "service": "API Gateway",
+      "slo_attainment": 98.3
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Auth Service",
+      "slo_attainment": 99.9
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Payment Service",
+      "slo_attainment": 99.9
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Notification Service",
+      "slo_attainment": 97.3
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Data Pipeline",
+      "slo_attainment": 95.8
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Web App",
+      "slo_attainment": 98.8
+    },
+    {
+      "period": "2026-Q2",
+      "service": "Mobile Backend",
+      "slo_attainment": 97.8
+    },
+    {
+      "period": "2026-Q3",
+      "service": "API Gateway",
+      "slo_attainment": 98.5
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Auth Service",
+      "slo_attainment": 99.9
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Payment Service",
+      "slo_attainment": 99.9
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Notification Service",
+      "slo_attainment": 97.5
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Data Pipeline",
+      "slo_attainment": 96.0
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Web App",
+      "slo_attainment": 99.0
+    },
+    {
+      "period": "2026-Q3",
+      "service": "Mobile Backend",
+      "slo_attainment": 98.0
+    },
+    {
+      "period": "2026-Q4",
+      "service": "API Gateway",
+      "slo_attainment": 98.7
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Auth Service",
+      "slo_attainment": 99.9
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Payment Service",
+      "slo_attainment": 99.9
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Notification Service",
+      "slo_attainment": 97.7
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Data Pipeline",
+      "slo_attainment": 96.2
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Web App",
+      "slo_attainment": 99.2
+    },
+    {
+      "period": "2026-Q4",
+      "service": "Mobile Backend",
+      "slo_attainment": 98.2
+    }
+  ]
 }

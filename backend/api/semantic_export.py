@@ -50,6 +50,8 @@ class EntityDefinition(BaseModel):
     name: str
     description: str
     aliases: List[str] = Field(default_factory=list)
+    pack: Optional[Pack] = None
+    allowed_values: List[str] = Field(default_factory=list)
 
 
 class BindingSummary(BaseModel):
@@ -170,6 +172,17 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         default_grain=TimeGrain.QUARTER
     ),
     MetricDefinition(
+        id="ar_aging",
+        name="Accounts Receivable Aging",
+        description="Accounts receivable broken down by aging buckets",
+        aliases=["AR aging", "receivables aging", "aged receivables"],
+        pack=Pack.CFO,
+        allowed_dims=["aging_bucket"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
+        measure_op="sum",
+        default_grain=TimeGrain.MONTH
+    ),
+    MetricDefinition(
         id="pipeline",
         name="Sales Pipeline",
         description="Total value of open opportunities",
@@ -214,47 +227,80 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         default_grain=TimeGrain.MONTH
     ),
     MetricDefinition(
+        id="pipeline_value",
+        name="Total Pipeline Value",
+        description="Total value of all open opportunities in the sales pipeline",
+        aliases=["pipeline", "total pipeline", "sales pipeline"],
+        pack=Pack.CRO,
+        allowed_dims=["rep", "stage", "region", "segment"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
+        measure_op="sum",
+        default_grain=TimeGrain.MONTH
+    ),
+    MetricDefinition(
+        id="churn_risk",
+        name="Churn Risk Score",
+        description="Score indicating likelihood of customer churn",
+        aliases=["churn risk score", "risk score"],
+        pack=Pack.CRO,
+        allowed_dims=["segment", "customer"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
+        measure_op="avg",
+        default_grain=TimeGrain.MONTH
+    ),
+    MetricDefinition(
+        id="nrr_by_cohort",
+        name="NRR by Cohort",
+        description="Net Revenue Retention analyzed by customer cohort",
+        aliases=["cohort NRR", "retention by cohort"],
+        pack=Pack.CRO,
+        allowed_dims=["cohort", "product"],
+        allowed_grains=[TimeGrain.QUARTER, TimeGrain.YEAR],
+        measure_op="avg",
+        default_grain=TimeGrain.QUARTER
+    ),
+    MetricDefinition(
         id="throughput",
-        name="Throughput",
+        name="Work Throughput",
         description="Work items completed per time period",
-        aliases=["velocity", "output", "completion rate"],
+        aliases=["work throughput", "items completed", "tickets resolved"],
         pack=Pack.COO,
-        allowed_dims=["team", "project", "work_type"],
-        allowed_grains=[TimeGrain.DAY, TimeGrain.WEEK, TimeGrain.MONTH],
-        measure_op="count",
+        allowed_dims=["team", "work_type", "priority"],
+        allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH, TimeGrain.QUARTER],
+        measure_op="sum",
         default_grain=TimeGrain.WEEK
     ),
     MetricDefinition(
         id="cycle_time",
         name="Cycle Time",
         description="Average time to complete work items",
-        aliases=["lead time", "completion time", "turnaround time"],
+        aliases=["lead time", "delivery time", "time to complete"],
         pack=Pack.COO,
-        allowed_dims=["team", "project", "work_type", "priority"],
-        allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH],
-        measure_op="avg_days_between",
+        allowed_dims=["team", "project_type", "priority"],
+        allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH, TimeGrain.QUARTER],
+        measure_op="avg",
         default_grain=TimeGrain.WEEK
     ),
     MetricDefinition(
         id="sla_compliance",
-        name="SLA Compliance",
+        name="SLA Compliance Rate",
         description="Percentage of SLAs met",
-        aliases=["SLA", "service level", "compliance rate"],
+        aliases=["SLA attainment", "SLA rate", "service level compliance"],
         pack=Pack.COO,
-        allowed_dims=["team", "customer", "sla_type"],
+        allowed_dims=["team", "tier", "work_type"],
         allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="ratio",
+        measure_op="avg",
         default_grain=TimeGrain.MONTH
     ),
     MetricDefinition(
         id="deploy_frequency",
         name="Deployment Frequency",
         description="Number of deployments per time period",
-        aliases=["deploys", "release frequency", "shipping velocity"],
+        aliases=["deployment rate", "deploys per week", "release frequency"],
         pack=Pack.CTO,
-        allowed_dims=["team", "service", "environment"],
-        allowed_grains=[TimeGrain.DAY, TimeGrain.WEEK, TimeGrain.MONTH],
-        measure_op="count",
+        allowed_dims=["service", "team", "environment"],
+        allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH],
+        measure_op="sum",
         default_grain=TimeGrain.WEEK
     ),
     MetricDefinition(
@@ -264,40 +310,40 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         aliases=["MTTR", "recovery time", "incident recovery"],
         pack=Pack.CTO,
         allowed_dims=["team", "service", "severity"],
-        allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH],
-        measure_op="avg_days_between",
+        allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH, TimeGrain.QUARTER],
+        measure_op="avg",
         default_grain=TimeGrain.MONTH
     ),
     MetricDefinition(
         id="uptime",
-        name="Uptime",
+        name="Service Uptime",
         description="Percentage of time services are available",
-        aliases=["availability", "system uptime", "service availability"],
+        aliases=["availability", "uptime percentage", "service availability"],
         pack=Pack.CTO,
-        allowed_dims=["service", "environment", "region"],
-        allowed_grains=[TimeGrain.DAY, TimeGrain.WEEK, TimeGrain.MONTH],
-        measure_op="ratio",
+        allowed_dims=["service"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
+        measure_op="avg",
         default_grain=TimeGrain.MONTH
     ),
     MetricDefinition(
         id="slo_attainment",
         name="SLO Attainment",
         description="Percentage of Service Level Objectives met",
-        aliases=["SLO", "SLO compliance", "objective attainment"],
+        aliases=["SLO compliance", "service level objective", "SLO rate"],
         pack=Pack.CTO,
-        allowed_dims=["service", "slo_type", "team"],
-        allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH],
-        measure_op="ratio",
+        allowed_dims=["service"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
+        measure_op="avg",
         default_grain=TimeGrain.MONTH
     ),
     MetricDefinition(
-        id="cloud_spend",
+        id="cloud_cost",
         name="Cloud Spend",
         description="Total cloud infrastructure costs",
-        aliases=["cloud cost", "infrastructure cost", "AWS spend", "GCP cost", "Azure cost"],
+        aliases=["cloud spend", "infrastructure cost", "AWS cost", "cloud expenses"],
         pack=Pack.CTO,
-        allowed_dims=["service", "team", "resource_type", "environment"],
-        allowed_grains=[TimeGrain.DAY, TimeGrain.WEEK, TimeGrain.MONTH],
+        allowed_dims=["resource_type", "team", "environment"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
         measure_op="sum",
         default_grain=TimeGrain.MONTH
     ),
@@ -441,13 +487,17 @@ PUBLISHED_ENTITIES: List[EntityDefinition] = [
         id="customer",
         name="Customer",
         description="Business customer or account",
-        aliases=["account", "client", "company", "org", "organization"]
+        aliases=["account", "company", "client"],
+        pack=Pack.CRO,
+        allowed_values=["Acme Corp", "TechStart Inc", "GlobalBank", "HealthCare Plus", "RetailMax", "Manufacturing Co", "FinServ Group", "EduTech Academy"]
     ),
     EntityDefinition(
         id="service_line",
         name="Service Line",
         description="Business service offering category",
-        aliases=["product line", "offering", "LOB", "line of business"]
+        aliases=["service type", "professional service"],
+        pack=Pack.CFO,
+        allowed_values=["Implementation", "Consulting", "Training", "Support Premium"]
     ),
     EntityDefinition(
         id="region",
@@ -463,9 +513,11 @@ PUBLISHED_ENTITIES: List[EntityDefinition] = [
     ),
     EntityDefinition(
         id="rep",
-        name="Sales Rep",
+        name="Sales Representative",
         description="Sales representative",
-        aliases=["salesperson", "AE", "account executive", "seller"]
+        aliases=["sales rep", "account executive", "AE", "seller"],
+        pack=Pack.CRO,
+        allowed_values=["James Wilson", "Sarah Chen", "Mike Johnson", "Lisa Park", "David Kim", "Emily Brown", "Chris Lee", "Amanda Garcia"]
     ),
     EntityDefinition(
         id="team",
@@ -486,12 +538,6 @@ PUBLISHED_ENTITIES: List[EntityDefinition] = [
         aliases=["initiative", "program", "engagement"]
     ),
     EntityDefinition(
-        id="service",
-        name="Service",
-        description="Technical service or microservice",
-        aliases=["microservice", "application", "app", "system"]
-    ),
-    EntityDefinition(
         id="invoice",
         name="Invoice",
         description="Billing invoice",
@@ -499,15 +545,19 @@ PUBLISHED_ENTITIES: List[EntityDefinition] = [
     ),
     EntityDefinition(
         id="stage",
-        name="Stage",
+        name="Pipeline Stage",
         description="Pipeline or deal stage",
-        aliases=["opportunity stage", "deal stage", "phase"]
+        aliases=["deal stage", "opportunity stage", "sales stage"],
+        pack=Pack.CRO,
+        allowed_values=["Lead", "Qualified", "Proposal", "Negotiation", "Closed-Won", "Closed-Lost"]
     ),
     EntityDefinition(
         id="cohort",
-        name="Cohort",
+        name="Customer Cohort",
         description="Time-based customer cohort",
-        aliases=["vintage", "signup cohort"]
+        aliases=["customer cohort", "signup cohort"],
+        pack=Pack.CRO,
+        allowed_values=["2022-H1", "2022-H2", "2023-H1", "2023-H2", "2024-H1", "2024-H2", "2025-H1"]
     ),
     EntityDefinition(
         id="cost_center",
@@ -517,33 +567,59 @@ PUBLISHED_ENTITIES: List[EntityDefinition] = [
     ),
     EntityDefinition(
         id="aging_bucket",
-        name="Aging Bucket",
+        name="AR Aging Bucket",
         description="AR aging time range",
-        aliases=["aging range", "past due bucket"]
+        aliases=["aging period", "days outstanding bucket"],
+        pack=Pack.CFO,
+        allowed_values=["Current", "1-30 days", "31-60 days", "61-90 days", "90+ days"]
     ),
     EntityDefinition(
-        id="priority",
-        name="Priority",
-        description="Work item priority level",
-        aliases=["urgency", "severity"]
+        id="project_type",
+        name="Project Type",
+        description="Type of project or initiative",
+        aliases=["initiative type", "work category"],
+        pack=Pack.COO,
+        allowed_values=["Feature", "Bug Fix", "Infrastructure", "Compliance", "Maintenance"]
     ),
     EntityDefinition(
         id="work_type",
         name="Work Type",
         description="Category of work item",
-        aliases=["issue type", "ticket type", "task type"]
+        aliases=["task type", "item type"],
+        pack=Pack.COO,
+        allowed_values=["Development", "Design", "QA", "Documentation", "Support"]
     ),
     EntityDefinition(
-        id="environment",
-        name="Environment",
-        description="Deployment environment",
-        aliases=["env", "deploy target"]
+        id="priority",
+        name="Priority Level",
+        description="Work item priority level",
+        aliases=["urgency", "priority level"],
+        pack=Pack.COO,
+        allowed_values=["Critical", "High", "Medium", "Low"]
+    ),
+    EntityDefinition(
+        id="service",
+        name="Service/Application",
+        description="Technical service or microservice",
+        aliases=["application", "system", "microservice"],
+        pack=Pack.CTO,
+        allowed_values=["API Gateway", "Auth Service", "Payment Service", "Notification Service", "Data Pipeline", "Web App", "Mobile Backend"]
     ),
     EntityDefinition(
         id="resource_type",
-        name="Resource Type",
+        name="Cloud Resource Type",
         description="Cloud resource category",
-        aliases=["instance type", "service type"]
+        aliases=["infrastructure type", "cloud resource"],
+        pack=Pack.CTO,
+        allowed_values=["Compute", "Storage", "Database", "Network", "ML/AI", "Other"]
+    ),
+    EntityDefinition(
+        id="environment",
+        name="Deployment Environment",
+        description="Deployment environment",
+        aliases=["env", "stage"],
+        pack=Pack.CTO,
+        allowed_values=["Production", "Staging", "Development"]
     ),
     EntityDefinition(
         id="sla_type",
@@ -559,9 +635,11 @@ PUBLISHED_ENTITIES: List[EntityDefinition] = [
     ),
     EntityDefinition(
         id="severity",
-        name="Severity",
+        name="Incident Severity",
         description="Incident severity level",
-        aliases=["impact", "incident level"]
+        aliases=["incident level", "priority"],
+        pack=Pack.CTO,
+        allowed_values=["P1", "P2", "P3", "P4"]
     ),
     EntityDefinition(
         id="category",
@@ -609,10 +687,10 @@ PUBLISHED_ENTITIES: List[EntityDefinition] = [
 
 
 DEFAULT_PERSONA_CONCEPTS = {
-    "cfo": ["arr", "mrr", "revenue", "services_revenue", "ar", "dso", "burn_rate", "gross_margin"],
-    "cro": ["pipeline", "win_rate", "churn_rate", "nrr", "revenue", "arr"],
+    "cfo": ["arr", "mrr", "revenue", "services_revenue", "ar", "dso", "burn_rate", "gross_margin", "ar_aging"],
+    "cro": ["pipeline", "win_rate", "churn_rate", "nrr", "revenue", "arr", "pipeline_value", "churn_risk", "nrr_by_cohort"],
     "coo": ["throughput", "cycle_time", "sla_compliance"],
-    "cto": ["deploy_frequency", "mttr", "uptime", "slo_attainment", "cloud_spend"],
+    "cto": ["deploy_frequency", "mttr", "uptime", "slo_attainment", "cloud_cost"],
     "chro": ["headcount", "attrition_rate", "time_to_fill", "engagement_score", "compensation_ratio", "training_hours", "promotion_rate", "diversity_index", "offer_acceptance_rate", "internal_mobility_rate", "span_of_control", "enps"]
 }
 
