@@ -25,6 +25,8 @@ class QueryRequest(BaseModel):
     filters: Dict[str, Union[str, List[str]]] = Field(default_factory=dict)
     time_range: Optional[Dict[str, str]] = None
     grain: Optional[str] = None
+    order_by: Optional[str] = None
+    limit: Optional[int] = None
 
 
 class QueryDataPoint(BaseModel):
@@ -32,6 +34,7 @@ class QueryDataPoint(BaseModel):
     period: str
     value: float
     dimensions: Dict[str, str] = Field(default_factory=dict)
+    rank: Optional[int] = None
 
 
 class QueryMetadata(BaseModel):
@@ -41,6 +44,9 @@ class QueryMetadata(BaseModel):
     quality_score: float
     mode: str
     record_count: int
+    total_count: Optional[int] = None
+    ranking_type: Optional[str] = None
+    order: Optional[str] = None
 
 
 class QueryResponse(BaseModel):
@@ -443,6 +449,25 @@ def execute_query(request: QueryRequest) -> QueryResponse:
     
     mode = get_current_mode()
     
+    total_count = len(data_points)
+    ranking_type = None
+    order = None
+    
+    if request.order_by:
+        order = request.order_by.lower()
+        reverse = order == "desc"
+        data_points.sort(key=lambda dp: dp.value, reverse=reverse)
+        
+        for i, dp in enumerate(data_points):
+            dp.rank = i + 1
+        
+        if request.limit:
+            if request.limit == 1:
+                ranking_type = "max" if reverse else "min"
+            else:
+                ranking_type = "top_n" if reverse else "bottom_n"
+            data_points = data_points[:request.limit]
+    
     return QueryResponse(
         metric=request.metric,
         metric_name=metric_def.name,
@@ -455,7 +480,10 @@ def execute_query(request: QueryRequest) -> QueryResponse:
             freshness=datetime.utcnow().isoformat() + "Z",
             quality_score=1.0,
             mode=mode.data_mode,
-            record_count=len(data_points)
+            record_count=len(data_points),
+            total_count=total_count if request.order_by else None,
+            ranking_type=ranking_type,
+            order=order
         )
     )
 
