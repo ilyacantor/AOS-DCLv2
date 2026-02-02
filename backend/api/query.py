@@ -115,9 +115,9 @@ METRIC_TO_FACTBASE_KEY = {
     "promotion_rate": None,
     "diversity_index": None,
     "offer_acceptance_rate": "offer_acceptance_rate",
-    "internal_mobility_rate": None,
-    "span_of_control": None,
-    "enps": None,
+    "internal_mobility_rate": "internal_mobility_rate",
+    "span_of_control": "span_of_control",
+    "enps": "enps",
 }
 
 METRIC_UNIT_MAP = {

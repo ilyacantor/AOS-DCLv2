@@ -171,7 +171,10 @@
       "people_headcount": 12,
       "finance_headcount": 12,
       "ga_headcount": 18,
-      "sales": 22.0
+      "sales": 22.0,
+      "internal_mobility_rate": 15.0,
+      "span_of_control": 6.7,
+      "enps": 25
     },
     {
       "year": 2024,
@@ -272,7 +275,10 @@
       "people_headcount": 12,
       "finance_headcount": 12,
       "ga_headcount": 21,
-      "sales": 24.0
+      "sales": 24.0,
+      "internal_mobility_rate": 16.0,
+      "span_of_control": 6.8,
+      "enps": 26
     },
     {
       "year": 2024,
@@ -373,7 +379,10 @@
       "people_headcount": 12,
       "finance_headcount": 12,
       "ga_headcount": 22,
-      "sales": 26.0
+      "sales": 26.0,
+      "internal_mobility_rate": 17.0,
+      "span_of_control": 6.7,
+      "enps": 27
     },
     {
       "year": 2024,
@@ -474,7 +483,10 @@
       "people_headcount": 13,
       "finance_headcount": 13,
       "ga_headcount": 22,
-      "sales": 28.0
+      "sales": 28.0,
+      "internal_mobility_rate": 18.0,
+      "span_of_control": 6.8,
+      "enps": 28
     },
     {
       "year": 2025,
@@ -575,7 +587,10 @@
       "people_headcount": 15,
       "finance_headcount": 15,
       "ga_headcount": 23,
-      "sales": 32.0
+      "sales": 32.0,
+      "internal_mobility_rate": 19.0,
+      "span_of_control": 6.9,
+      "enps": 30
     },
     {
       "year": 2025,
@@ -676,7 +691,10 @@
       "people_headcount": 16,
       "finance_headcount": 16,
       "ga_headcount": 24,
-      "sales": 35.0
+      "sales": 35.0,
+      "internal_mobility_rate": 20.0,
+      "span_of_control": 6.8,
+      "enps": 32
     },
     {
       "year": 2025,
@@ -777,7 +795,10 @@
       "people_headcount": 16,
       "finance_headcount": 16,
       "ga_headcount": 26,
-      "sales": 38.0
+      "sales": 38.0,
+      "internal_mobility_rate": 21.0,
+      "span_of_control": 6.9,
+      "enps": 34
     },
     {
       "year": 2025,
@@ -878,7 +899,10 @@
       "people_headcount": 18,
       "finance_headcount": 18,
       "ga_headcount": 25,
-      "sales": 45.0
+      "sales": 45.0,
+      "internal_mobility_rate": 22.5,
+      "span_of_control": 7.0,
+      "enps": 36
     },
     {
       "year": 2026,
@@ -979,7 +1003,10 @@
       "people_headcount": 19,
       "finance_headcount": 19,
       "ga_headcount": 26,
-      "sales": 48.0
+      "sales": 48.0,
+      "internal_mobility_rate": 23.0,
+      "span_of_control": 7.0,
+      "enps": 37
     },
     {
       "year": 2026,
@@ -1080,7 +1107,10 @@
       "people_headcount": 20,
       "finance_headcount": 20,
       "ga_headcount": 25,
-      "sales": 50.0
+      "sales": 50.0,
+      "internal_mobility_rate": 24.0,
+      "span_of_control": 6.9,
+      "enps": 38
     },
     {
       "year": 2026,
@@ -1181,7 +1211,10 @@
       "people_headcount": 21,
       "finance_headcount": 21,
       "ga_headcount": 24,
-      "sales": 52.0
+      "sales": 52.0,
+      "internal_mobility_rate": 24.5,
+      "span_of_control": 7.0,
+      "enps": 39
     },
     {
       "year": 2026,
@@ -1282,7 +1315,10 @@
       "people_headcount": 22,
       "finance_headcount": 22,
       "ga_headcount": 24,
-      "sales": 50.0
+      "sales": 50.0,
+      "internal_mobility_rate": 25.0,
+      "span_of_control": 7.1,
+      "enps": 40
     }
   ],
   "annual": {
