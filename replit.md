@@ -222,6 +222,27 @@ The right sidebar contains:
 | `/api/dcl/narration/{session_id}` | GET | Poll narration messages |
 | `/api/dcl/batch-mapping` | POST | Run semantic mapping batch |
 
+### Semantic Export (for NLQ)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/dcl/semantic-export` | GET | Full semantic catalog (metrics, entities, bindings, mode) |
+| `/api/dcl/semantic-export/resolve/metric` | GET | Resolve metric alias to canonical definition |
+| `/api/dcl/semantic-export/resolve/entity` | GET | Resolve entity alias to canonical definition |
+| `/api/dcl/query` | POST | Execute data query against fact base |
+
+### Query Endpoint Usage
+```json
+POST /api/dcl/query
+{
+  "metric": "arr",
+  "dimensions": ["segment"],
+  "filters": {"region": "AMER"},
+  "time_range": {"start": "2025-Q1", "end": "2025-Q4"},
+  "grain": "quarter"
+}
+```
+Returns data points with metadata (sources, freshness, quality_score).
+
 ### Topology
 | Endpoint | Method | Description |
 |----------|--------|-------------|
