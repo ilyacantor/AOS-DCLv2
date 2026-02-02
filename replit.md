@@ -87,6 +87,7 @@ Filter the visualization by executive role to see only relevant data flows:
 |---------|-------------|--------------|
 | **CFO** | Financial oversight | Revenue, Cost, Budget |
 | **CRO** | Revenue operations | Opportunity, Account, Pipeline |
+| **CHRO** | People operations | Headcount, Attrition, Engagement |
 | **COO** | Operational efficiency | Usage Metrics, Health Score |
 | **CTO** | Technical infrastructure | AWS Resources, System Health |
 
@@ -166,6 +167,14 @@ The right sidebar contains:
 - RAG query count (Prod mode)
 
 ## Recent Changes
+
+**February 02, 2026:**
+- Added CHRO as first-class persona (equal to CFO/CRO/COO/CTO)
+- Added 8 CHRO metrics: headcount, attrition_rate, time_to_fill, engagement_score, compensation_ratio, training_hours, promotion_rate, diversity_index
+- Added CHRO entities: department, level, tenure_band, role, training_type, location
+- Added CHRO demo bindings: Workday, Greenhouse, Culture Amp
+- Added team-level CHRO dimensional data for queries
+- Added query endpoint (POST /api/dcl/query) for NLQ data consumption
 
 **January 28, 2026:**
 - Fixed cache mutation bug causing duplicate MuleSoft nodes
