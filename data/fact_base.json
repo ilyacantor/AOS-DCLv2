@@ -1,0 +1,7976 @@
+{
+  "metadata": {
+    "description": "Enterprise multi-persona fact base for NLQ testing - v3 complete with all persona drill-downs",
+    "version": "3.0",
+    "currency": "USD",
+    "unit": "millions",
+    "personas": [
+      "CFO",
+      "CRO",
+      "COO",
+      "CTO",
+      "CHRO"
+    ],
+    "years": [
+      2024,
+      2025,
+      2026
+    ],
+    "quarters": [
+      "Q1",
+      "Q2",
+      "Q3",
+      "Q4"
+    ],
+    "regions": [
+      "AMER",
+      "EMEA",
+      "APAC"
+    ],
+    "segments": [
+      "Enterprise",
+      "Mid-Market",
+      "SMB"
+    ],
+    "products": [
+      "Enterprise",
+      "Professional",
+      "Team",
+      "Starter"
+    ],
+    "pipeline_stages": [
+      "Lead",
+      "Qualified",
+      "Proposal",
+      "Negotiation",
+      "Closed-Won",
+      "Closed-Lost"
+    ],
+    "departments": [
+      "Engineering",
+      "Sales",
+      "Marketing",
+      "Product",
+      "Customer Success",
+      "People",
+      "Finance",
+      "G&A"
+    ],
+    "engineering_teams": [
+      "Platform",
+      "Frontend",
+      "Backend",
+      "Data",
+      "Infrastructure",
+      "Security",
+      "Mobile"
+    ],
+    "support_tiers": [
+      "Tier1",
+      "Tier2",
+      "Tier3"
+    ]
+  },
+  "quarterly": [
+    {
+      "year": 2024,
+      "quarter": "Q1",
+      "period": "2024-Q1",
+      "revenue": 22.0,
+      "bookings": 25.3,
+      "gross_margin_pct": 65.0,
+      "operating_margin_pct": 35.0,
+      "win_rate": 39,
+      "sales_cycle_days": 92,
+      "headcount": 235,
+      "engineering_headcount": 75,
+      "sales_headcount": 42,
+      "customer_count": 760,
+      "nrr": 114,
+      "churn_pct": 8.2,
+      "nps": 40,
+      "csat": 4.15,
+      "arr": 20.9,
+      "pipeline": 63.25,
+      "uptime_pct": 99.45,
+      "deploys_per_week": 7,
+      "support_tickets": 2800,
+      "attrition_rate": 2.1,
+      "engagement_score": 74,
+      "cogs": 7.7,
+      "gross_profit": 14.3,
+      "sga": 6.6,
+      "selling_expenses": 3.96,
+      "g_and_a_expenses": 2.64,
+      "operating_profit": 7.7,
+      "depreciation": 0.44,
+      "amortization": 0.33,
+      "d_and_a": 0.77,
+      "ebitda": 8.47,
+      "ebitda_margin_pct": 38.5,
+      "net_income": 5.78,
+      "net_income_pct": 26.3,
+      "cash": 21.56,
+      "ar": 10.78,
+      "ap": 2.53,
+      "deferred_revenue": 10.56,
+      "sales_quota": 25.3,
+      "quota_attainment": 99.5,
+      "qualified_pipeline": 37.95,
+      "avg_deal_size": 0.1,
+      "new_logo_revenue": 5.5,
+      "expansion_revenue": 3.3,
+      "renewal_revenue": 13.2,
+      "reps_at_quota_pct": 66,
+      "implementation_days": 47,
+      "time_to_value_days": 63,
+      "first_response_hours": 4.2,
+      "resolution_hours": 26.0,
+      "ps_utilization": 70,
+      "support_utilization": 86.0,
+      "features_shipped": 11,
+      "story_points": 560,
+      "sprint_velocity": 47,
+      "downtime_hours": 12.0,
+      "p1_incidents": 4,
+      "p2_incidents": 10,
+      "mttr_p1_hours": 2.8,
+      "mttr_p2_hours": 9.0,
+      "tech_debt_pct": 36,
+      "code_coverage_pct": 66,
+      "deployment_success_pct": 93.0,
+      "lead_time_days": 15.0,
+      "change_failure_rate": 13.0,
+      "cloud_spend": 0.55,
+      "cloud_spend_pct_revenue": 2.5,
+      "api_requests_millions": 130,
+      "engineering_utilization": 77.0,
+      "bug_escape_rate": 9.0,
+      "critical_bugs": 18,
+      "security_vulns": 7,
+      "hires": 20,
+      "attrition": 5,
+      "open_roles": 35,
+      "time_to_fill_days": 45,
+      "offer_acceptance_rate": 82,
+      "employee_satisfaction": 72,
+      "training_hours_per_employee": 8.0,
+      "revenue_per_employee": 0.094,
+      "cost_per_employee": 0.061,
+      "magic_number": 0.78,
+      "cac_payback_months": 19.0,
+      "ltv_cac": 3.1,
+      "burn_multiple": 1.3,
+      "cac": 0.42,
+      "ltv": 1.3,
+      "logo_churn_pct": 12.5,
+      "gross_churn_pct": 8.2,
+      "product_headcount": 19,
+      "marketing_headcount": 24,
+      "cs_headcount": 33,
+      "people_headcount": 12,
+      "finance_headcount": 12,
+      "ga_headcount": 18,
+      "sales": 22.0
+    },
+    {
+      "year": 2024,
+      "quarter": "Q2",
+      "period": "2024-Q2",
+      "revenue": 24.0,
+      "bookings": 27.6,
+      "gross_margin_pct": 65.0,
+      "operating_margin_pct": 35.0,
+      "win_rate": 39.5,
+      "sales_cycle_days": 91,
+      "headcount": 242,
+      "engineering_headcount": 77,
+      "sales_headcount": 43,
+      "customer_count": 780,
+      "nrr": 114.5,
+      "churn_pct": 8.1,
+      "nps": 41,
+      "csat": 4.17,
+      "arr": 22.8,
+      "pipeline": 69.0,
+      "uptime_pct": 99.48,
+      "deploys_per_week": 7.5,
+      "support_tickets": 2950,
+      "attrition_rate": 2.1,
+      "engagement_score": 75,
+      "cogs": 8.4,
+      "gross_profit": 15.6,
+      "sga": 7.2,
+      "selling_expenses": 4.32,
+      "g_and_a_expenses": 2.88,
+      "operating_profit": 8.4,
+      "depreciation": 0.48,
+      "amortization": 0.36,
+      "d_and_a": 0.84,
+      "ebitda": 9.24,
+      "ebitda_margin_pct": 38.5,
+      "net_income": 6.3,
+      "net_income_pct": 26.2,
+      "cash": 23.52,
+      "ar": 11.76,
+      "ap": 2.76,
+      "deferred_revenue": 11.52,
+      "sales_quota": 27.6,
+      "quota_attainment": 99.8,
+      "qualified_pipeline": 41.4,
+      "avg_deal_size": 0.103,
+      "new_logo_revenue": 6.0,
+      "expansion_revenue": 3.6,
+      "renewal_revenue": 14.4,
+      "reps_at_quota_pct": 67,
+      "implementation_days": 46,
+      "time_to_value_days": 62,
+      "first_response_hours": 4.1,
+      "resolution_hours": 26.0,
+      "ps_utilization": 71,
+      "support_utilization": 85.5,
+      "features_shipped": 12,
+      "story_points": 590,
+      "sprint_velocity": 48,
+      "downtime_hours": 11.5,
+      "p1_incidents": 4,
+      "p2_incidents": 9,
+      "mttr_p1_hours": 2.7,
+      "mttr_p2_hours": 8.7,
+      "tech_debt_pct": 35,
+      "code_coverage_pct": 67,
+      "deployment_success_pct": 93.5,
+      "lead_time_days": 14.5,
+      "change_failure_rate": 12.5,
+      "cloud_spend": 0.58,
+      "cloud_spend_pct_revenue": 2.42,
+      "api_requests_millions": 145,
+      "engineering_utilization": 77.5,
+      "bug_escape_rate": 8.7,
+      "critical_bugs": 17,
+      "security_vulns": 7,
+      "hires": 20,
+      "attrition": 5,
+      "open_roles": 25,
+      "time_to_fill_days": 44,
+      "offer_acceptance_rate": 83,
+      "employee_satisfaction": 73,
+      "training_hours_per_employee": 8.5,
+      "revenue_per_employee": 0.099,
+      "cost_per_employee": 0.064,
+      "magic_number": 0.8,
+      "cac_payback_months": 18.5,
+      "ltv_cac": 3.2,
+      "burn_multiple": 1.25,
+      "cac": 0.41,
+      "ltv": 1.3,
+      "logo_churn_pct": 12.3,
+      "gross_churn_pct": 8.1,
+      "product_headcount": 19,
+      "marketing_headcount": 24,
+      "cs_headcount": 34,
+      "people_headcount": 12,
+      "finance_headcount": 12,
+      "ga_headcount": 21,
+      "sales": 24.0
+    },
+    {
+      "year": 2024,
+      "quarter": "Q3",
+      "period": "2024-Q3",
+      "revenue": 26.0,
+      "bookings": 29.9,
+      "gross_margin_pct": 65.0,
+      "operating_margin_pct": 35.0,
+      "win_rate": 40,
+      "sales_cycle_days": 90,
+      "headcount": 249,
+      "engineering_headcount": 79,
+      "sales_headcount": 44,
+      "customer_count": 800,
+      "nrr": 115,
+      "churn_pct": 8.0,
+      "nps": 42,
+      "csat": 4.19,
+      "arr": 24.7,
+      "pipeline": 74.75,
+      "uptime_pct": 99.51,
+      "deploys_per_week": 8,
+      "support_tickets": 3100,
+      "attrition_rate": 2.0,
+      "engagement_score": 76,
+      "cogs": 9.1,
+      "gross_profit": 16.9,
+      "sga": 7.8,
+      "selling_expenses": 4.68,
+      "g_and_a_expenses": 3.12,
+      "operating_profit": 9.1,
+      "depreciation": 0.52,
+      "amortization": 0.39,
+      "d_and_a": 0.91,
+      "ebitda": 10.01,
+      "ebitda_margin_pct": 38.5,
+      "net_income": 6.82,
+      "net_income_pct": 26.2,
+      "cash": 25.48,
+      "ar": 12.74,
+      "ap": 2.99,
+      "deferred_revenue": 12.48,
+      "sales_quota": 29.9,
+      "quota_attainment": 100.0,
+      "qualified_pipeline": 44.85,
+      "avg_deal_size": 0.106,
+      "new_logo_revenue": 6.5,
+      "expansion_revenue": 3.9,
+      "renewal_revenue": 15.6,
+      "reps_at_quota_pct": 68,
+      "implementation_days": 45,
+      "time_to_value_days": 61,
+      "first_response_hours": 4.0,
+      "resolution_hours": 25.0,
+      "ps_utilization": 72,
+      "support_utilization": 85.0,
+      "features_shipped": 13,
+      "story_points": 620,
+      "sprint_velocity": 49,
+      "downtime_hours": 11.0,
+      "p1_incidents": 3,
+      "p2_incidents": 8,
+      "mttr_p1_hours": 2.6,
+      "mttr_p2_hours": 8.4,
+      "tech_debt_pct": 34,
+      "code_coverage_pct": 68,
+      "deployment_success_pct": 94.0,
+      "lead_time_days": 14.0,
+      "change_failure_rate": 12.0,
+      "cloud_spend": 0.61,
+      "cloud_spend_pct_revenue": 2.35,
+      "api_requests_millions": 160,
+      "engineering_utilization": 78.0,
+      "bug_escape_rate": 8.4,
+      "critical_bugs": 16,
+      "security_vulns": 6,
+      "hires": 12,
+      "attrition": 5,
+      "open_roles": 25,
+      "time_to_fill_days": 43,
+      "offer_acceptance_rate": 84,
+      "employee_satisfaction": 74,
+      "training_hours_per_employee": 9.0,
+      "revenue_per_employee": 0.104,
+      "cost_per_employee": 0.068,
+      "magic_number": 0.82,
+      "cac_payback_months": 18.0,
+      "ltv_cac": 3.3,
+      "burn_multiple": 1.2,
+      "cac": 0.4,
+      "ltv": 1.3,
+      "logo_churn_pct": 12.1,
+      "gross_churn_pct": 8.0,
+      "product_headcount": 20,
+      "marketing_headcount": 25,
+      "cs_headcount": 35,
+      "people_headcount": 12,
+      "finance_headcount": 12,
+      "ga_headcount": 22,
+      "sales": 26.0
+    },
+    {
+      "year": 2024,
+      "quarter": "Q4",
+      "period": "2024-Q4",
+      "revenue": 28.0,
+      "bookings": 32.2,
+      "gross_margin_pct": 65.0,
+      "operating_margin_pct": 35.0,
+      "win_rate": 40.5,
+      "sales_cycle_days": 89,
+      "headcount": 256,
+      "engineering_headcount": 81,
+      "sales_headcount": 45,
+      "customer_count": 820,
+      "nrr": 115.5,
+      "churn_pct": 7.9,
+      "nps": 43,
+      "csat": 4.21,
+      "arr": 26.6,
+      "pipeline": 80.5,
+      "uptime_pct": 99.54,
+      "deploys_per_week": 8.5,
+      "support_tickets": 3250,
+      "attrition_rate": 2.0,
+      "engagement_score": 77,
+      "cogs": 9.8,
+      "gross_profit": 18.2,
+      "sga": 8.4,
+      "selling_expenses": 5.04,
+      "g_and_a_expenses": 3.36,
+      "operating_profit": 9.8,
+      "depreciation": 0.56,
+      "amortization": 0.42,
+      "d_and_a": 0.98,
+      "ebitda": 10.78,
+      "ebitda_margin_pct": 38.5,
+      "net_income": 7.35,
+      "net_income_pct": 26.2,
+      "cash": 27.44,
+      "ar": 13.72,
+      "ap": 3.22,
+      "deferred_revenue": 13.44,
+      "sales_quota": 32.2,
+      "quota_attainment": 100.2,
+      "qualified_pipeline": 48.3,
+      "avg_deal_size": 0.109,
+      "new_logo_revenue": 7.0,
+      "expansion_revenue": 4.2,
+      "renewal_revenue": 16.8,
+      "reps_at_quota_pct": 69,
+      "implementation_days": 44,
+      "time_to_value_days": 60,
+      "first_response_hours": 3.9,
+      "resolution_hours": 24.0,
+      "ps_utilization": 73,
+      "support_utilization": 84.5,
+      "features_shipped": 14,
+      "story_points": 650,
+      "sprint_velocity": 50,
+      "downtime_hours": 10.5,
+      "p1_incidents": 3,
+      "p2_incidents": 7,
+      "mttr_p1_hours": 2.5,
+      "mttr_p2_hours": 8.1,
+      "tech_debt_pct": 33,
+      "code_coverage_pct": 69,
+      "deployment_success_pct": 94.5,
+      "lead_time_days": 13.5,
+      "change_failure_rate": 11.5,
+      "cloud_spend": 0.64,
+      "cloud_spend_pct_revenue": 2.29,
+      "api_requests_millions": 175,
+      "engineering_utilization": 78.5,
+      "bug_escape_rate": 8.1,
+      "critical_bugs": 15,
+      "security_vulns": 6,
+      "hires": 30,
+      "attrition": 5,
+      "open_roles": 25,
+      "time_to_fill_days": 42,
+      "offer_acceptance_rate": 85,
+      "employee_satisfaction": 75,
+      "training_hours_per_employee": 9.5,
+      "revenue_per_employee": 0.109,
+      "cost_per_employee": 0.071,
+      "magic_number": 0.84,
+      "cac_payback_months": 17.5,
+      "ltv_cac": 3.4,
+      "burn_multiple": 1.15,
+      "cac": 0.39,
+      "ltv": 1.3,
+      "logo_churn_pct": 11.9,
+      "gross_churn_pct": 7.9,
+      "product_headcount": 20,
+      "marketing_headcount": 26,
+      "cs_headcount": 36,
+      "people_headcount": 13,
+      "finance_headcount": 13,
+      "ga_headcount": 22,
+      "sales": 28.0
+    },
+    {
+      "year": 2025,
+      "quarter": "Q1",
+      "period": "2025-Q1",
+      "revenue": 32.0,
+      "bookings": 38.4,
+      "gross_margin_pct": 66.0,
+      "operating_margin_pct": 38.0,
+      "win_rate": 41,
+      "sales_cycle_days": 87,
+      "headcount": 295,
+      "engineering_headcount": 95,
+      "sales_headcount": 52,
+      "customer_count": 870,
+      "nrr": 117,
+      "churn_pct": 7.5,
+      "nps": 47,
+      "csat": 4.28,
+      "arr": 30.4,
+      "pipeline": 92.0,
+      "uptime_pct": 99.62,
+      "deploys_per_week": 10,
+      "support_tickets": 3600,
+      "attrition_rate": 1.7,
+      "engagement_score": 79,
+      "cogs": 10.88,
+      "gross_profit": 21.12,
+      "sga": 8.96,
+      "selling_expenses": 5.38,
+      "g_and_a_expenses": 3.58,
+      "operating_profit": 12.16,
+      "depreciation": 0.64,
+      "amortization": 0.48,
+      "d_and_a": 1.12,
+      "ebitda": 13.28,
+      "ebitda_margin_pct": 41.5,
+      "net_income": 9.12,
+      "net_income_pct": 28.5,
+      "cash": 31.36,
+      "ar": 15.68,
+      "ap": 3.68,
+      "deferred_revenue": 15.36,
+      "sales_quota": 38.4,
+      "quota_attainment": 100.5,
+      "qualified_pipeline": 55.2,
+      "avg_deal_size": 0.12,
+      "new_logo_revenue": 8.0,
+      "expansion_revenue": 4.8,
+      "renewal_revenue": 19.2,
+      "reps_at_quota_pct": 71,
+      "implementation_days": 42,
+      "time_to_value_days": 58,
+      "first_response_hours": 3.7,
+      "resolution_hours": 23.0,
+      "ps_utilization": 75,
+      "support_utilization": 83.0,
+      "features_shipped": 16,
+      "story_points": 710,
+      "sprint_velocity": 52,
+      "downtime_hours": 9.5,
+      "p1_incidents": 3,
+      "p2_incidents": 8,
+      "mttr_p1_hours": 2.3,
+      "mttr_p2_hours": 7.5,
+      "tech_debt_pct": 31,
+      "code_coverage_pct": 71,
+      "deployment_success_pct": 95.0,
+      "lead_time_days": 12.5,
+      "change_failure_rate": 10.5,
+      "cloud_spend": 0.7,
+      "cloud_spend_pct_revenue": 2.19,
+      "api_requests_millions": 200,
+      "engineering_utilization": 80.0,
+      "bug_escape_rate": 7.0,
+      "critical_bugs": 13,
+      "security_vulns": 5,
+      "hires": 44,
+      "attrition": 5,
+      "open_roles": 33,
+      "time_to_fill_days": 41,
+      "offer_acceptance_rate": 86,
+      "employee_satisfaction": 76,
+      "training_hours_per_employee": 10.0,
+      "revenue_per_employee": 0.108,
+      "cost_per_employee": 0.067,
+      "magic_number": 0.9,
+      "cac_payback_months": 16.0,
+      "ltv_cac": 3.7,
+      "burn_multiple": 0.95,
+      "cac": 0.37,
+      "ltv": 1.28,
+      "logo_churn_pct": 11.0,
+      "gross_churn_pct": 7.5,
+      "product_headcount": 24,
+      "marketing_headcount": 30,
+      "cs_headcount": 41,
+      "people_headcount": 15,
+      "finance_headcount": 15,
+      "ga_headcount": 23,
+      "sales": 32.0
+    },
+    {
+      "year": 2025,
+      "quarter": "Q2",
+      "period": "2025-Q2",
+      "revenue": 35.0,
+      "bookings": 42.0,
+      "gross_margin_pct": 66.0,
+      "operating_margin_pct": 38.0,
+      "win_rate": 41.5,
+      "sales_cycle_days": 86,
+      "headcount": 310,
+      "engineering_headcount": 100,
+      "sales_headcount": 55,
+      "customer_count": 900,
+      "nrr": 117.5,
+      "churn_pct": 7.3,
+      "nps": 48,
+      "csat": 4.3,
+      "arr": 33.25,
+      "pipeline": 100.625,
+      "uptime_pct": 99.65,
+      "deploys_per_week": 10.5,
+      "support_tickets": 3800,
+      "attrition_rate": 1.6,
+      "engagement_score": 80,
+      "cogs": 11.9,
+      "gross_profit": 23.1,
+      "sga": 9.8,
+      "selling_expenses": 5.88,
+      "g_and_a_expenses": 3.92,
+      "operating_profit": 13.3,
+      "depreciation": 0.7,
+      "amortization": 0.53,
+      "d_and_a": 1.23,
+      "ebitda": 14.53,
+      "ebitda_margin_pct": 41.5,
+      "net_income": 9.98,
+      "net_income_pct": 28.5,
+      "cash": 34.3,
+      "ar": 17.15,
+      "ap": 4.03,
+      "deferred_revenue": 16.8,
+      "sales_quota": 42.0,
+      "quota_attainment": 100.8,
+      "qualified_pipeline": 60.38,
+      "avg_deal_size": 0.123,
+      "new_logo_revenue": 8.8,
+      "expansion_revenue": 5.2,
+      "renewal_revenue": 21.0,
+      "reps_at_quota_pct": 72,
+      "implementation_days": 41,
+      "time_to_value_days": 57,
+      "first_response_hours": 3.6,
+      "resolution_hours": 22.0,
+      "ps_utilization": 76,
+      "support_utilization": 82.5,
+      "features_shipped": 17,
+      "story_points": 740,
+      "sprint_velocity": 53,
+      "downtime_hours": 9.0,
+      "p1_incidents": 3,
+      "p2_incidents": 7,
+      "mttr_p1_hours": 2.2,
+      "mttr_p2_hours": 7.2,
+      "tech_debt_pct": 30,
+      "code_coverage_pct": 72,
+      "deployment_success_pct": 95.5,
+      "lead_time_days": 12.0,
+      "change_failure_rate": 10.0,
+      "cloud_spend": 0.73,
+      "cloud_spend_pct_revenue": 2.09,
+      "api_requests_millions": 215,
+      "engineering_utilization": 80.5,
+      "bug_escape_rate": 6.7,
+      "critical_bugs": 12,
+      "security_vulns": 5,
+      "hires": 20,
+      "attrition": 5,
+      "open_roles": 23,
+      "time_to_fill_days": 40,
+      "offer_acceptance_rate": 87,
+      "employee_satisfaction": 77,
+      "training_hours_per_employee": 10.5,
+      "revenue_per_employee": 0.113,
+      "cost_per_employee": 0.07,
+      "magic_number": 0.92,
+      "cac_payback_months": 15.5,
+      "ltv_cac": 3.8,
+      "burn_multiple": 0.9,
+      "cac": 0.36,
+      "ltv": 1.28,
+      "logo_churn_pct": 10.8,
+      "gross_churn_pct": 7.3,
+      "product_headcount": 25,
+      "marketing_headcount": 31,
+      "cs_headcount": 43,
+      "people_headcount": 16,
+      "finance_headcount": 16,
+      "ga_headcount": 24,
+      "sales": 35.0
+    },
+    {
+      "year": 2025,
+      "quarter": "Q3",
+      "period": "2025-Q3",
+      "revenue": 38.0,
+      "bookings": 45.6,
+      "gross_margin_pct": 66.0,
+      "operating_margin_pct": 38.0,
+      "win_rate": 42,
+      "sales_cycle_days": 85,
+      "headcount": 325,
+      "engineering_headcount": 105,
+      "sales_headcount": 58,
+      "customer_count": 935,
+      "nrr": 118,
+      "churn_pct": 7.1,
+      "nps": 49,
+      "csat": 4.32,
+      "arr": 36.1,
+      "pipeline": 109.25,
+      "uptime_pct": 99.68,
+      "deploys_per_week": 11,
+      "support_tickets": 4000,
+      "attrition_rate": 1.5,
+      "engagement_score": 81,
+      "cogs": 12.92,
+      "gross_profit": 25.08,
+      "sga": 10.64,
+      "selling_expenses": 6.38,
+      "g_and_a_expenses": 4.26,
+      "operating_profit": 14.44,
+      "depreciation": 0.76,
+      "amortization": 0.57,
+      "d_and_a": 1.33,
+      "ebitda": 15.77,
+      "ebitda_margin_pct": 41.5,
+      "net_income": 10.83,
+      "net_income_pct": 28.5,
+      "cash": 37.24,
+      "ar": 18.62,
+      "ap": 4.37,
+      "deferred_revenue": 18.24,
+      "sales_quota": 45.6,
+      "quota_attainment": 101.0,
+      "qualified_pipeline": 65.55,
+      "avg_deal_size": 0.126,
+      "new_logo_revenue": 9.5,
+      "expansion_revenue": 5.7,
+      "renewal_revenue": 22.8,
+      "reps_at_quota_pct": 73,
+      "implementation_days": 40,
+      "time_to_value_days": 56,
+      "first_response_hours": 3.5,
+      "resolution_hours": 22.0,
+      "ps_utilization": 77,
+      "support_utilization": 82.0,
+      "features_shipped": 18,
+      "story_points": 770,
+      "sprint_velocity": 54,
+      "downtime_hours": 8.5,
+      "p1_incidents": 2,
+      "p2_incidents": 6,
+      "mttr_p1_hours": 2.1,
+      "mttr_p2_hours": 6.9,
+      "tech_debt_pct": 29,
+      "code_coverage_pct": 73,
+      "deployment_success_pct": 96.0,
+      "lead_time_days": 11.5,
+      "change_failure_rate": 9.5,
+      "cloud_spend": 0.76,
+      "cloud_spend_pct_revenue": 2.0,
+      "api_requests_millions": 230,
+      "engineering_utilization": 81.0,
+      "bug_escape_rate": 6.4,
+      "critical_bugs": 11,
+      "security_vulns": 4,
+      "hires": 12,
+      "attrition": 5,
+      "open_roles": 23,
+      "time_to_fill_days": 39,
+      "offer_acceptance_rate": 88,
+      "employee_satisfaction": 78,
+      "training_hours_per_employee": 11.0,
+      "revenue_per_employee": 0.117,
+      "cost_per_employee": 0.072,
+      "magic_number": 0.94,
+      "cac_payback_months": 15.0,
+      "ltv_cac": 3.9,
+      "burn_multiple": 0.85,
+      "cac": 0.35,
+      "ltv": 1.28,
+      "logo_churn_pct": 10.6,
+      "gross_churn_pct": 7.1,
+      "product_headcount": 26,
+      "marketing_headcount": 32,
+      "cs_headcount": 46,
+      "people_headcount": 16,
+      "finance_headcount": 16,
+      "ga_headcount": 26,
+      "sales": 38.0
+    },
+    {
+      "year": 2025,
+      "quarter": "Q4",
+      "period": "2025-Q4",
+      "revenue": 45.0,
+      "bookings": 54.0,
+      "gross_margin_pct": 66.0,
+      "operating_margin_pct": 38.0,
+      "win_rate": 43,
+      "sales_cycle_days": 83,
+      "headcount": 350,
+      "engineering_headcount": 115,
+      "sales_headcount": 62,
+      "customer_count": 990,
+      "nrr": 119,
+      "churn_pct": 6.8,
+      "nps": 51,
+      "csat": 4.36,
+      "arr": 42.75,
+      "pipeline": 129.375,
+      "uptime_pct": 99.72,
+      "deploys_per_week": 12,
+      "support_tickets": 4300,
+      "attrition_rate": 1.4,
+      "engagement_score": 82,
+      "cogs": 15.3,
+      "gross_profit": 29.7,
+      "sga": 12.6,
+      "selling_expenses": 7.56,
+      "g_and_a_expenses": 5.04,
+      "operating_profit": 17.1,
+      "depreciation": 0.9,
+      "amortization": 0.67,
+      "d_and_a": 1.57,
+      "ebitda": 18.67,
+      "ebitda_margin_pct": 41.5,
+      "net_income": 12.83,
+      "net_income_pct": 28.5,
+      "cash": 44.1,
+      "ar": 22.05,
+      "ap": 5.17,
+      "deferred_revenue": 21.6,
+      "sales_quota": 54.0,
+      "quota_attainment": 101.5,
+      "qualified_pipeline": 77.62,
+      "avg_deal_size": 0.129,
+      "new_logo_revenue": 11.2,
+      "expansion_revenue": 6.8,
+      "renewal_revenue": 27.0,
+      "reps_at_quota_pct": 74,
+      "implementation_days": 39,
+      "time_to_value_days": 55,
+      "first_response_hours": 3.4,
+      "resolution_hours": 22.0,
+      "ps_utilization": 78,
+      "support_utilization": 81.5,
+      "features_shipped": 19,
+      "story_points": 800,
+      "sprint_velocity": 55,
+      "downtime_hours": 8.0,
+      "p1_incidents": 2,
+      "p2_incidents": 5,
+      "mttr_p1_hours": 2.0,
+      "mttr_p2_hours": 6.6,
+      "tech_debt_pct": 28,
+      "code_coverage_pct": 74,
+      "deployment_success_pct": 96.5,
+      "lead_time_days": 11.0,
+      "change_failure_rate": 9.0,
+      "cloud_spend": 0.79,
+      "cloud_spend_pct_revenue": 1.76,
+      "api_requests_millions": 245,
+      "engineering_utilization": 81.5,
+      "bug_escape_rate": 6.1,
+      "critical_bugs": 10,
+      "security_vulns": 4,
+      "hires": 30,
+      "attrition": 5,
+      "open_roles": 23,
+      "time_to_fill_days": 38,
+      "offer_acceptance_rate": 89,
+      "employee_satisfaction": 79,
+      "training_hours_per_employee": 11.5,
+      "revenue_per_employee": 0.129,
+      "cost_per_employee": 0.08,
+      "magic_number": 0.96,
+      "cac_payback_months": 14.5,
+      "ltv_cac": 4.0,
+      "burn_multiple": 0.8,
+      "cac": 0.34,
+      "ltv": 1.28,
+      "logo_churn_pct": 10.4,
+      "gross_churn_pct": 6.8,
+      "product_headcount": 28,
+      "marketing_headcount": 35,
+      "cs_headcount": 49,
+      "people_headcount": 18,
+      "finance_headcount": 18,
+      "ga_headcount": 25,
+      "sales": 45.0
+    },
+    {
+      "year": 2026,
+      "quarter": "Q1",
+      "period": "2026-Q1",
+      "revenue": 48.0,
+      "bookings": 57.6,
+      "gross_margin_pct": 67.0,
+      "operating_margin_pct": 41.0,
+      "win_rate": 44,
+      "sales_cycle_days": 81,
+      "headcount": 385,
+      "engineering_headcount": 130,
+      "sales_headcount": 68,
+      "customer_count": 1050,
+      "nrr": 120,
+      "churn_pct": 6.5,
+      "nps": 53,
+      "csat": 4.4,
+      "arr": 45.6,
+      "pipeline": 138.0,
+      "uptime_pct": 99.76,
+      "deploys_per_week": 13,
+      "support_tickets": 4600,
+      "attrition_rate": 1.3,
+      "engagement_score": 83,
+      "cogs": 15.84,
+      "gross_profit": 32.16,
+      "sga": 12.48,
+      "selling_expenses": 7.49,
+      "g_and_a_expenses": 4.99,
+      "operating_profit": 19.68,
+      "depreciation": 0.96,
+      "amortization": 0.72,
+      "d_and_a": 1.68,
+      "ebitda": 21.36,
+      "ebitda_margin_pct": 44.5,
+      "net_income": 14.76,
+      "net_income_pct": 30.8,
+      "cash": 47.04,
+      "ar": 23.52,
+      "ap": 5.52,
+      "deferred_revenue": 23.04,
+      "sales_quota": 57.6,
+      "quota_attainment": 102.0,
+      "qualified_pipeline": 82.8,
+      "avg_deal_size": 0.14,
+      "new_logo_revenue": 12.0,
+      "expansion_revenue": 7.2,
+      "renewal_revenue": 28.8,
+      "reps_at_quota_pct": 76,
+      "implementation_days": 37,
+      "time_to_value_days": 53,
+      "first_response_hours": 3.2,
+      "resolution_hours": 20.0,
+      "ps_utilization": 80,
+      "support_utilization": 80.0,
+      "features_shipped": 21,
+      "story_points": 860,
+      "sprint_velocity": 57,
+      "downtime_hours": 7.0,
+      "p1_incidents": 2,
+      "p2_incidents": 6,
+      "mttr_p1_hours": 1.8,
+      "mttr_p2_hours": 6.0,
+      "tech_debt_pct": 26,
+      "code_coverage_pct": 76,
+      "deployment_success_pct": 97.0,
+      "lead_time_days": 10.0,
+      "change_failure_rate": 8.0,
+      "cloud_spend": 0.85,
+      "cloud_spend_pct_revenue": 1.77,
+      "api_requests_millions": 270,
+      "engineering_utilization": 83.0,
+      "bug_escape_rate": 5.0,
+      "critical_bugs": 8,
+      "security_vulns": 3,
+      "hires": 40,
+      "attrition": 5,
+      "open_roles": 31,
+      "time_to_fill_days": 37,
+      "offer_acceptance_rate": 90,
+      "employee_satisfaction": 80,
+      "training_hours_per_employee": 12.0,
+      "revenue_per_employee": 0.125,
+      "cost_per_employee": 0.074,
+      "magic_number": 1.02,
+      "cac_payback_months": 13.0,
+      "ltv_cac": 4.3,
+      "burn_multiple": 0.6,
+      "cac": 0.32,
+      "ltv": 1.26,
+      "logo_churn_pct": 9.5,
+      "gross_churn_pct": 6.5,
+      "product_headcount": 31,
+      "marketing_headcount": 38,
+      "cs_headcount": 54,
+      "people_headcount": 19,
+      "finance_headcount": 19,
+      "ga_headcount": 26,
+      "sales": 48.0
+    },
+    {
+      "year": 2026,
+      "quarter": "Q2",
+      "period": "2026-Q2",
+      "revenue": 50.0,
+      "bookings": 60.0,
+      "gross_margin_pct": 67.0,
+      "operating_margin_pct": 41.0,
+      "win_rate": 44.5,
+      "sales_cycle_days": 80,
+      "headcount": 400,
+      "engineering_headcount": 135,
+      "sales_headcount": 72,
+      "customer_count": 1085,
+      "nrr": 120.5,
+      "churn_pct": 6.3,
+      "nps": 54,
+      "csat": 4.42,
+      "arr": 47.5,
+      "pipeline": 143.75,
+      "uptime_pct": 99.78,
+      "deploys_per_week": 14,
+      "support_tickets": 4750,
+      "attrition_rate": 1.25,
+      "engagement_score": 84,
+      "cogs": 16.5,
+      "gross_profit": 33.5,
+      "sga": 13.0,
+      "selling_expenses": 7.8,
+      "g_and_a_expenses": 5.2,
+      "operating_profit": 20.5,
+      "depreciation": 1.0,
+      "amortization": 0.75,
+      "d_and_a": 1.75,
+      "ebitda": 22.25,
+      "ebitda_margin_pct": 44.5,
+      "net_income": 15.38,
+      "net_income_pct": 30.8,
+      "cash": 49.0,
+      "ar": 24.5,
+      "ap": 5.75,
+      "deferred_revenue": 24.0,
+      "sales_quota": 60.0,
+      "quota_attainment": 102.2,
+      "qualified_pipeline": 86.25,
+      "avg_deal_size": 0.143,
+      "new_logo_revenue": 12.5,
+      "expansion_revenue": 7.5,
+      "renewal_revenue": 30.0,
+      "reps_at_quota_pct": 77,
+      "implementation_days": 36,
+      "time_to_value_days": 52,
+      "first_response_hours": 3.1,
+      "resolution_hours": 20.0,
+      "ps_utilization": 81,
+      "support_utilization": 79.5,
+      "features_shipped": 22,
+      "story_points": 890,
+      "sprint_velocity": 58,
+      "downtime_hours": 6.5,
+      "p1_incidents": 2,
+      "p2_incidents": 5,
+      "mttr_p1_hours": 1.7,
+      "mttr_p2_hours": 5.7,
+      "tech_debt_pct": 25,
+      "code_coverage_pct": 77,
+      "deployment_success_pct": 97.5,
+      "lead_time_days": 9.5,
+      "change_failure_rate": 7.5,
+      "cloud_spend": 0.88,
+      "cloud_spend_pct_revenue": 1.76,
+      "api_requests_millions": 285,
+      "engineering_utilization": 83.5,
+      "bug_escape_rate": 4.7,
+      "critical_bugs": 7,
+      "security_vulns": 3,
+      "hires": 20,
+      "attrition": 5,
+      "open_roles": 21,
+      "time_to_fill_days": 36,
+      "offer_acceptance_rate": 91,
+      "employee_satisfaction": 81,
+      "training_hours_per_employee": 12.5,
+      "revenue_per_employee": 0.125,
+      "cost_per_employee": 0.074,
+      "magic_number": 1.04,
+      "cac_payback_months": 12.5,
+      "ltv_cac": 4.4,
+      "burn_multiple": 0.55,
+      "cac": 0.31,
+      "ltv": 1.26,
+      "logo_churn_pct": 9.3,
+      "gross_churn_pct": 6.3,
+      "product_headcount": 32,
+      "marketing_headcount": 40,
+      "cs_headcount": 56,
+      "people_headcount": 20,
+      "finance_headcount": 20,
+      "ga_headcount": 25,
+      "sales": 50.0
+    },
+    {
+      "year": 2026,
+      "quarter": "Q3",
+      "period": "2026-Q3",
+      "revenue": 52.0,
+      "bookings": 62.4,
+      "gross_margin_pct": 67.0,
+      "operating_margin_pct": 41.0,
+      "win_rate": 45,
+      "sales_cycle_days": 79,
+      "headcount": 415,
+      "engineering_headcount": 140,
+      "sales_headcount": 76,
+      "customer_count": 1120,
+      "nrr": 121,
+      "churn_pct": 6.1,
+      "nps": 55,
+      "csat": 4.44,
+      "arr": 49.4,
+      "pipeline": 149.5,
+      "uptime_pct": 99.8,
+      "deploys_per_week": 15,
+      "support_tickets": 4900,
+      "attrition_rate": 1.2,
+      "engagement_score": 85,
+      "cogs": 17.16,
+      "gross_profit": 34.84,
+      "sga": 13.52,
+      "selling_expenses": 8.11,
+      "g_and_a_expenses": 5.41,
+      "operating_profit": 21.32,
+      "depreciation": 1.04,
+      "amortization": 0.78,
+      "d_and_a": 1.82,
+      "ebitda": 23.14,
+      "ebitda_margin_pct": 44.5,
+      "net_income": 15.99,
+      "net_income_pct": 30.8,
+      "cash": 50.96,
+      "ar": 25.48,
+      "ap": 5.98,
+      "deferred_revenue": 24.96,
+      "sales_quota": 62.4,
+      "quota_attainment": 102.5,
+      "qualified_pipeline": 89.7,
+      "avg_deal_size": 0.146,
+      "new_logo_revenue": 13.0,
+      "expansion_revenue": 7.8,
+      "renewal_revenue": 31.2,
+      "reps_at_quota_pct": 78,
+      "implementation_days": 35,
+      "time_to_value_days": 51,
+      "first_response_hours": 3.0,
+      "resolution_hours": 19.0,
+      "ps_utilization": 82,
+      "support_utilization": 79.0,
+      "features_shipped": 23,
+      "story_points": 920,
+      "sprint_velocity": 59,
+      "downtime_hours": 6.0,
+      "p1_incidents": 1,
+      "p2_incidents": 4,
+      "mttr_p1_hours": 1.6,
+      "mttr_p2_hours": 5.4,
+      "tech_debt_pct": 24,
+      "code_coverage_pct": 78,
+      "deployment_success_pct": 98.0,
+      "lead_time_days": 9.0,
+      "change_failure_rate": 7.0,
+      "cloud_spend": 0.91,
+      "cloud_spend_pct_revenue": 1.75,
+      "api_requests_millions": 300,
+      "engineering_utilization": 84.0,
+      "bug_escape_rate": 4.4,
+      "critical_bugs": 6,
+      "security_vulns": 2,
+      "hires": 12,
+      "attrition": 5,
+      "open_roles": 21,
+      "time_to_fill_days": 35,
+      "offer_acceptance_rate": 92,
+      "employee_satisfaction": 82,
+      "training_hours_per_employee": 13.0,
+      "revenue_per_employee": 0.125,
+      "cost_per_employee": 0.074,
+      "magic_number": 1.06,
+      "cac_payback_months": 12.0,
+      "ltv_cac": 4.5,
+      "burn_multiple": 0.5,
+      "cac": 0.3,
+      "ltv": 1.26,
+      "logo_churn_pct": 9.1,
+      "gross_churn_pct": 6.1,
+      "product_headcount": 33,
+      "marketing_headcount": 42,
+      "cs_headcount": 58,
+      "people_headcount": 21,
+      "finance_headcount": 21,
+      "ga_headcount": 24,
+      "sales": 52.0
+    },
+    {
+      "year": 2026,
+      "quarter": "Q4",
+      "period": "2026-Q4",
+      "revenue": 50.0,
+      "bookings": 60.0,
+      "gross_margin_pct": 67.0,
+      "operating_margin_pct": 41.0,
+      "win_rate": 45.5,
+      "sales_cycle_days": 78,
+      "headcount": 430,
+      "engineering_headcount": 145,
+      "sales_headcount": 80,
+      "customer_count": 1155,
+      "nrr": 121.5,
+      "churn_pct": 5.9,
+      "nps": 56,
+      "csat": 4.46,
+      "arr": 47.5,
+      "pipeline": 143.75,
+      "uptime_pct": 99.82,
+      "deploys_per_week": 16,
+      "support_tickets": 5050,
+      "attrition_rate": 1.2,
+      "engagement_score": 86,
+      "cogs": 16.5,
+      "gross_profit": 33.5,
+      "sga": 13.0,
+      "selling_expenses": 7.8,
+      "g_and_a_expenses": 5.2,
+      "operating_profit": 20.5,
+      "depreciation": 1.0,
+      "amortization": 0.75,
+      "d_and_a": 1.75,
+      "ebitda": 22.25,
+      "ebitda_margin_pct": 44.5,
+      "net_income": 15.38,
+      "net_income_pct": 30.8,
+      "cash": 49.0,
+      "ar": 24.5,
+      "ap": 5.75,
+      "deferred_revenue": 24.0,
+      "sales_quota": 60.0,
+      "quota_attainment": 102.8,
+      "qualified_pipeline": 86.25,
+      "avg_deal_size": 0.149,
+      "new_logo_revenue": 12.5,
+      "expansion_revenue": 7.5,
+      "renewal_revenue": 30.0,
+      "reps_at_quota_pct": 79,
+      "implementation_days": 34,
+      "time_to_value_days": 50,
+      "first_response_hours": 2.9,
+      "resolution_hours": 18.0,
+      "ps_utilization": 83,
+      "support_utilization": 78.5,
+      "features_shipped": 24,
+      "story_points": 950,
+      "sprint_velocity": 60,
+      "downtime_hours": 5.5,
+      "p1_incidents": 1,
+      "p2_incidents": 3,
+      "mttr_p1_hours": 1.5,
+      "mttr_p2_hours": 5.1,
+      "tech_debt_pct": 23,
+      "code_coverage_pct": 79,
+      "deployment_success_pct": 98.5,
+      "lead_time_days": 8.5,
+      "change_failure_rate": 6.5,
+      "cloud_spend": 0.94,
+      "cloud_spend_pct_revenue": 1.88,
+      "api_requests_millions": 315,
+      "engineering_utilization": 84.5,
+      "bug_escape_rate": 4.1,
+      "critical_bugs": 5,
+      "security_vulns": 2,
+      "hires": 30,
+      "attrition": 5,
+      "open_roles": 21,
+      "time_to_fill_days": 34,
+      "offer_acceptance_rate": 93,
+      "employee_satisfaction": 83,
+      "training_hours_per_employee": 13.5,
+      "revenue_per_employee": 0.116,
+      "cost_per_employee": 0.069,
+      "magic_number": 1.08,
+      "cac_payback_months": 11.5,
+      "ltv_cac": 4.6,
+      "burn_multiple": 0.45,
+      "cac": 0.29,
+      "ltv": 1.26,
+      "logo_churn_pct": 8.9,
+      "gross_churn_pct": 5.9,
+      "product_headcount": 34,
+      "marketing_headcount": 43,
+      "cs_headcount": 60,
+      "people_headcount": 22,
+      "finance_headcount": 22,
+      "ga_headcount": 24,
+      "sales": 50.0
+    }
+  ],
+  "annual": {
+    "2024": {
+      "revenue": 100,
+      "arr": 26.6,
+      "headcount": 256,
+      "customer_count": 820
+    },
+    "2025": {
+      "revenue": 150,
+      "arr": 42.75,
+      "headcount": 350,
+      "customer_count": 990
+    },
+    "2026": {
+      "revenue": 200,
+      "arr": 47.5,
+      "headcount": 430,
+      "customer_count": 1155
+    }
+  },
+  "revenue_by_region": {
+    "2024-Q1": {
+      "AMER": 11.0,
+      "EMEA": 6.6,
+      "APAC": 4.4
+    },
+    "2024-Q2": {
+      "AMER": 12.0,
+      "EMEA": 7.2,
+      "APAC": 4.8
+    },
+    "2024-Q3": {
+      "AMER": 13.0,
+      "EMEA": 7.8,
+      "APAC": 5.2
+    },
+    "2024-Q4": {
+      "AMER": 14.0,
+      "EMEA": 8.4,
+      "APAC": 5.6
+    },
+    "2025-Q1": {
+      "AMER": 16.0,
+      "EMEA": 9.6,
+      "APAC": 6.4
+    },
+    "2025-Q2": {
+      "AMER": 17.5,
+      "EMEA": 10.5,
+      "APAC": 7.0
+    },
+    "2025-Q3": {
+      "AMER": 19.0,
+      "EMEA": 11.4,
+      "APAC": 7.6
+    },
+    "2025-Q4": {
+      "AMER": 22.5,
+      "EMEA": 13.5,
+      "APAC": 9.0
+    },
+    "2026-Q1": {
+      "AMER": 24.0,
+      "EMEA": 14.4,
+      "APAC": 9.6
+    },
+    "2026-Q2": {
+      "AMER": 25.0,
+      "EMEA": 15.0,
+      "APAC": 10.0
+    },
+    "2026-Q3": {
+      "AMER": 26.0,
+      "EMEA": 15.6,
+      "APAC": 10.4
+    },
+    "2026-Q4": {
+      "AMER": 25.0,
+      "EMEA": 15.0,
+      "APAC": 10.0
+    }
+  },
+  "revenue_by_segment": {
+    "2024-Q1": {
+      "Enterprise": 12.1,
+      "Mid-Market": 6.6,
+      "SMB": 3.3
+    },
+    "2024-Q2": {
+      "Enterprise": 13.2,
+      "Mid-Market": 7.2,
+      "SMB": 3.6
+    },
+    "2024-Q3": {
+      "Enterprise": 14.3,
+      "Mid-Market": 7.8,
+      "SMB": 3.9
+    },
+    "2024-Q4": {
+      "Enterprise": 15.4,
+      "Mid-Market": 8.4,
+      "SMB": 4.2
+    },
+    "2025-Q1": {
+      "Enterprise": 17.6,
+      "Mid-Market": 9.6,
+      "SMB": 4.8
+    },
+    "2025-Q2": {
+      "Enterprise": 19.2,
+      "Mid-Market": 10.5,
+      "SMB": 5.2
+    },
+    "2025-Q3": {
+      "Enterprise": 20.9,
+      "Mid-Market": 11.4,
+      "SMB": 5.7
+    },
+    "2025-Q4": {
+      "Enterprise": 24.8,
+      "Mid-Market": 13.5,
+      "SMB": 6.8
+    },
+    "2026-Q1": {
+      "Enterprise": 26.4,
+      "Mid-Market": 14.4,
+      "SMB": 7.2
+    },
+    "2026-Q2": {
+      "Enterprise": 27.5,
+      "Mid-Market": 15.0,
+      "SMB": 7.5
+    },
+    "2026-Q3": {
+      "Enterprise": 28.6,
+      "Mid-Market": 15.6,
+      "SMB": 7.8
+    },
+    "2026-Q4": {
+      "Enterprise": 27.5,
+      "Mid-Market": 15.0,
+      "SMB": 7.5
+    }
+  },
+  "revenue_by_product": {
+    "2024-Q1": {
+      "Enterprise": 9.9,
+      "Professional": 6.6,
+      "Team": 3.96,
+      "Starter": 1.54
+    },
+    "2024-Q2": {
+      "Enterprise": 10.8,
+      "Professional": 7.2,
+      "Team": 4.32,
+      "Starter": 1.68
+    },
+    "2024-Q3": {
+      "Enterprise": 11.7,
+      "Professional": 7.8,
+      "Team": 4.68,
+      "Starter": 1.82
+    },
+    "2024-Q4": {
+      "Enterprise": 12.6,
+      "Professional": 8.4,
+      "Team": 5.04,
+      "Starter": 1.96
+    },
+    "2025-Q1": {
+      "Enterprise": 14.4,
+      "Professional": 9.6,
+      "Team": 5.76,
+      "Starter": 2.24
+    },
+    "2025-Q2": {
+      "Enterprise": 15.75,
+      "Professional": 10.5,
+      "Team": 6.3,
+      "Starter": 2.45
+    },
+    "2025-Q3": {
+      "Enterprise": 17.1,
+      "Professional": 11.4,
+      "Team": 6.84,
+      "Starter": 2.66
+    },
+    "2025-Q4": {
+      "Enterprise": 20.25,
+      "Professional": 13.5,
+      "Team": 8.1,
+      "Starter": 3.15
+    },
+    "2026-Q1": {
+      "Enterprise": 21.6,
+      "Professional": 14.4,
+      "Team": 8.64,
+      "Starter": 3.36
+    },
+    "2026-Q2": {
+      "Enterprise": 22.5,
+      "Professional": 15.0,
+      "Team": 9.0,
+      "Starter": 3.5
+    },
+    "2026-Q3": {
+      "Enterprise": 23.4,
+      "Professional": 15.6,
+      "Team": 9.36,
+      "Starter": 3.64
+    },
+    "2026-Q4": {
+      "Enterprise": 22.5,
+      "Professional": 15.0,
+      "Team": 9.0,
+      "Starter": 3.5
+    }
+  },
+  "pipeline_by_stage": {
+    "2024-Q1": {
+      "Lead": 12.65,
+      "Qualified": 18.97,
+      "Proposal": 15.81,
+      "Negotiation": 9.49,
+      "Closed-Won": 6.33
+    },
+    "2024-Q2": {
+      "Lead": 13.8,
+      "Qualified": 20.7,
+      "Proposal": 17.25,
+      "Negotiation": 10.35,
+      "Closed-Won": 6.9
+    },
+    "2024-Q3": {
+      "Lead": 14.95,
+      "Qualified": 22.43,
+      "Proposal": 18.69,
+      "Negotiation": 11.21,
+      "Closed-Won": 7.48
+    },
+    "2024-Q4": {
+      "Lead": 16.1,
+      "Qualified": 24.15,
+      "Proposal": 20.12,
+      "Negotiation": 12.07,
+      "Closed-Won": 8.05
+    },
+    "2025-Q1": {
+      "Lead": 18.4,
+      "Qualified": 27.6,
+      "Proposal": 23.0,
+      "Negotiation": 13.8,
+      "Closed-Won": 9.2
+    },
+    "2025-Q2": {
+      "Lead": 20.12,
+      "Qualified": 30.19,
+      "Proposal": 25.16,
+      "Negotiation": 15.09,
+      "Closed-Won": 10.06
+    },
+    "2025-Q3": {
+      "Lead": 21.85,
+      "Qualified": 32.77,
+      "Proposal": 27.31,
+      "Negotiation": 16.39,
+      "Closed-Won": 10.93
+    },
+    "2025-Q4": {
+      "Lead": 25.88,
+      "Qualified": 38.81,
+      "Proposal": 32.34,
+      "Negotiation": 19.41,
+      "Closed-Won": 12.94
+    },
+    "2026-Q1": {
+      "Lead": 27.6,
+      "Qualified": 41.4,
+      "Proposal": 34.5,
+      "Negotiation": 20.7,
+      "Closed-Won": 13.8
+    },
+    "2026-Q2": {
+      "Lead": 28.75,
+      "Qualified": 43.12,
+      "Proposal": 35.94,
+      "Negotiation": 21.56,
+      "Closed-Won": 14.38
+    },
+    "2026-Q3": {
+      "Lead": 29.9,
+      "Qualified": 44.85,
+      "Proposal": 37.38,
+      "Negotiation": 22.43,
+      "Closed-Won": 14.95
+    },
+    "2026-Q4": {
+      "Lead": 28.75,
+      "Qualified": 43.12,
+      "Proposal": 35.94,
+      "Negotiation": 21.56,
+      "Closed-Won": 14.38
+    }
+  },
+  "pipeline_by_region": {
+    "2024-Q1": {
+      "AMER": 31.62,
+      "EMEA": 18.97,
+      "APAC": 12.65
+    },
+    "2024-Q2": {
+      "AMER": 34.5,
+      "EMEA": 20.7,
+      "APAC": 13.8
+    },
+    "2024-Q3": {
+      "AMER": 37.38,
+      "EMEA": 22.43,
+      "APAC": 14.95
+    },
+    "2024-Q4": {
+      "AMER": 40.25,
+      "EMEA": 24.15,
+      "APAC": 16.1
+    },
+    "2025-Q1": {
+      "AMER": 46.0,
+      "EMEA": 27.6,
+      "APAC": 18.4
+    },
+    "2025-Q2": {
+      "AMER": 50.31,
+      "EMEA": 30.19,
+      "APAC": 20.12
+    },
+    "2025-Q3": {
+      "AMER": 54.62,
+      "EMEA": 32.77,
+      "APAC": 21.85
+    },
+    "2025-Q4": {
+      "AMER": 64.69,
+      "EMEA": 38.81,
+      "APAC": 25.88
+    },
+    "2026-Q1": {
+      "AMER": 69.0,
+      "EMEA": 41.4,
+      "APAC": 27.6
+    },
+    "2026-Q2": {
+      "AMER": 71.88,
+      "EMEA": 43.12,
+      "APAC": 28.75
+    },
+    "2026-Q3": {
+      "AMER": 74.75,
+      "EMEA": 44.85,
+      "APAC": 29.9
+    },
+    "2026-Q4": {
+      "AMER": 71.88,
+      "EMEA": 43.12,
+      "APAC": 28.75
+    }
+  },
+  "ebitda_by_region": {
+    "2024-Q1": {
+      "AMER": 4.235,
+      "EMEA": 2.541,
+      "APAC": 1.694
+    },
+    "2024-Q2": {
+      "AMER": 4.62,
+      "EMEA": 2.772,
+      "APAC": 1.848
+    },
+    "2024-Q3": {
+      "AMER": 5.005,
+      "EMEA": 3.003,
+      "APAC": 2.002
+    },
+    "2024-Q4": {
+      "AMER": 5.39,
+      "EMEA": 3.234,
+      "APAC": 2.156
+    },
+    "2025-Q1": {
+      "AMER": 6.64,
+      "EMEA": 3.984,
+      "APAC": 2.656
+    },
+    "2025-Q2": {
+      "AMER": 7.265,
+      "EMEA": 4.359,
+      "APAC": 2.906
+    },
+    "2025-Q3": {
+      "AMER": 7.885,
+      "EMEA": 4.731,
+      "APAC": 3.154
+    },
+    "2025-Q4": {
+      "AMER": 9.335,
+      "EMEA": 5.601,
+      "APAC": 3.734
+    },
+    "2026-Q1": {
+      "AMER": 10.68,
+      "EMEA": 6.408,
+      "APAC": 4.272
+    },
+    "2026-Q2": {
+      "AMER": 11.125,
+      "EMEA": 6.675,
+      "APAC": 4.45
+    },
+    "2026-Q3": {
+      "AMER": 11.57,
+      "EMEA": 6.942,
+      "APAC": 4.628
+    },
+    "2026-Q4": {
+      "AMER": 11.125,
+      "EMEA": 6.675,
+      "APAC": 4.45
+    }
+  },
+  "sales_reps": [
+    {
+      "id": "SR001",
+      "name": "John Mitchell",
+      "region": "AMER",
+      "territory": "West",
+      "hire_date": "2022-03-15",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR002",
+      "name": "Sarah Williams",
+      "region": "AMER",
+      "territory": "East",
+      "hire_date": "2021-06-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR003",
+      "name": "Marcus Johnson",
+      "region": "AMER",
+      "territory": "Central",
+      "hire_date": "2022-09-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR004",
+      "name": "Lisa Chen",
+      "region": "AMER",
+      "territory": "West",
+      "hire_date": "2023-01-15",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR005",
+      "name": "David Rodriguez",
+      "region": "AMER",
+      "territory": "East",
+      "hire_date": "2022-04-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR006",
+      "name": "Amanda Foster",
+      "region": "AMER",
+      "territory": "Central",
+      "hire_date": "2023-03-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR007",
+      "name": "Michael Brown",
+      "region": "AMER",
+      "territory": "West",
+      "hire_date": "2021-11-15",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR008",
+      "name": "Jennifer Taylor",
+      "region": "AMER",
+      "territory": "East",
+      "hire_date": "2022-07-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR009",
+      "name": "Robert Kim",
+      "region": "AMER",
+      "territory": "Central",
+      "hire_date": "2023-06-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR010",
+      "name": "Emily Davis",
+      "region": "AMER",
+      "territory": "West",
+      "hire_date": "2022-02-15",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR011",
+      "name": "Thomas Anderson",
+      "region": "AMER",
+      "territory": "East",
+      "hire_date": "2023-04-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR012",
+      "name": "Rachel Martinez",
+      "region": "AMER",
+      "territory": "Central",
+      "hire_date": "2022-10-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR013",
+      "name": "Kevin Patel",
+      "region": "AMER",
+      "territory": "West",
+      "hire_date": "2024-01-15",
+      "active_years": [
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR014",
+      "name": "Olivia Thompson",
+      "region": "AMER",
+      "territory": "East",
+      "hire_date": "2024-03-01",
+      "active_years": [
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR015",
+      "name": "Daniel Garcia",
+      "region": "AMER",
+      "territory": "Central",
+      "hire_date": "2024-06-01",
+      "active_years": [
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR016",
+      "name": "Jessica Wong",
+      "region": "AMER",
+      "territory": "West",
+      "hire_date": "2025-01-15",
+      "active_years": [
+        2026
+      ]
+    },
+    {
+      "id": "SR017",
+      "name": "Brandon Scott",
+      "region": "AMER",
+      "territory": "East",
+      "hire_date": "2025-04-01",
+      "active_years": [
+        2026
+      ]
+    },
+    {
+      "id": "SR018",
+      "name": "Ashley Moore",
+      "region": "AMER",
+      "territory": "Central",
+      "hire_date": "2025-07-01",
+      "active_years": [
+        2026
+      ]
+    },
+    {
+      "id": "SR019",
+      "name": "Pierre Dubois",
+      "region": "EMEA",
+      "territory": "UK/Ireland",
+      "hire_date": "2022-05-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR020",
+      "name": "Anna Schmidt",
+      "region": "EMEA",
+      "territory": "DACH",
+      "hire_date": "2021-09-15",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR021",
+      "name": "Marco Rossi",
+      "region": "EMEA",
+      "territory": "Southern Europe",
+      "hire_date": "2022-11-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR022",
+      "name": "Sophie Martin",
+      "region": "EMEA",
+      "territory": "France/Benelux",
+      "hire_date": "2023-02-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR023",
+      "name": "Erik Lindqvist",
+      "region": "EMEA",
+      "territory": "Nordics",
+      "hire_date": "2022-08-15",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR024",
+      "name": "James O'Brien",
+      "region": "EMEA",
+      "territory": "UK/Ireland",
+      "hire_date": "2023-05-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR025",
+      "name": "Clara M\u00fcller",
+      "region": "EMEA",
+      "territory": "DACH",
+      "hire_date": "2024-02-01",
+      "active_years": [
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR026",
+      "name": "Luca Bianchi",
+      "region": "EMEA",
+      "territory": "Southern Europe",
+      "hire_date": "2024-04-15",
+      "active_years": [
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR027",
+      "name": "Henrik Nielsen",
+      "region": "EMEA",
+      "territory": "Nordics",
+      "hire_date": "2025-02-01",
+      "active_years": [
+        2026
+      ]
+    },
+    {
+      "id": "SR028",
+      "name": "Elena Petrova",
+      "region": "EMEA",
+      "territory": "Eastern Europe",
+      "hire_date": "2025-05-01",
+      "active_years": [
+        2026
+      ]
+    },
+    {
+      "id": "SR029",
+      "name": "Yuki Tanaka",
+      "region": "APAC",
+      "territory": "Japan",
+      "hire_date": "2022-06-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR030",
+      "name": "Wei Zhang",
+      "region": "APAC",
+      "territory": "Greater China",
+      "hire_date": "2021-12-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR031",
+      "name": "Priya Sharma",
+      "region": "APAC",
+      "territory": "India/SEA",
+      "hire_date": "2022-04-15",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR032",
+      "name": "Chris Lee",
+      "region": "APAC",
+      "territory": "ANZ",
+      "hire_date": "2023-01-01",
+      "active_years": [
+        2024,
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR033",
+      "name": "Kenji Nakamura",
+      "region": "APAC",
+      "territory": "Japan",
+      "hire_date": "2024-01-01",
+      "active_years": [
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR034",
+      "name": "Min-ji Park",
+      "region": "APAC",
+      "territory": "Korea",
+      "hire_date": "2024-05-01",
+      "active_years": [
+        2025,
+        2026
+      ]
+    },
+    {
+      "id": "SR035",
+      "name": "Rahul Patel",
+      "region": "APAC",
+      "territory": "India/SEA",
+      "hire_date": "2025-03-01",
+      "active_years": [
+        2026
+      ]
+    },
+    {
+      "id": "SR036",
+      "name": "Emma Watson",
+      "region": "APAC",
+      "territory": "ANZ",
+      "hire_date": "2025-06-01",
+      "active_years": [
+        2026
+      ]
+    }
+  ],
+  "quota_by_rep": {
+    "2024-Q1": {
+      "John Mitchell": {
+        "quota": 1.1,
+        "attainment": 1.11,
+        "attainment_pct": 100.9
+      },
+      "Sarah Williams": {
+        "quota": 1.3,
+        "attainment": 1.38,
+        "attainment_pct": 106.2
+      },
+      "Marcus Johnson": {
+        "quota": 1.1,
+        "attainment": 1.11,
+        "attainment_pct": 100.9
+      },
+      "Lisa Chen": {
+        "quota": 0.9,
+        "attainment": 0.85,
+        "attainment_pct": 94.4
+      },
+      "David Rodriguez": {
+        "quota": 1.1,
+        "attainment": 1.11,
+        "attainment_pct": 100.9
+      },
+      "Amanda Foster": {
+        "quota": 0.9,
+        "attainment": 0.85,
+        "attainment_pct": 94.4
+      },
+      "Michael Brown": {
+        "quota": 1.3,
+        "attainment": 1.38,
+        "attainment_pct": 106.2
+      },
+      "Jennifer Taylor": {
+        "quota": 1.1,
+        "attainment": 1.11,
+        "attainment_pct": 100.9
+      },
+      "Robert Kim": {
+        "quota": 0.9,
+        "attainment": 0.85,
+        "attainment_pct": 94.4
+      },
+      "Emily Davis": {
+        "quota": 1.3,
+        "attainment": 1.38,
+        "attainment_pct": 106.2
+      },
+      "Thomas Anderson": {
+        "quota": 0.9,
+        "attainment": 0.85,
+        "attainment_pct": 94.4
+      },
+      "Rachel Martinez": {
+        "quota": 1.1,
+        "attainment": 1.11,
+        "attainment_pct": 100.9
+      },
+      "Pierre Dubois": {
+        "quota": 1.1,
+        "attainment": 1.11,
+        "attainment_pct": 100.9
+      },
+      "Anna Schmidt": {
+        "quota": 1.3,
+        "attainment": 1.38,
+        "attainment_pct": 106.2
+      },
+      "Marco Rossi": {
+        "quota": 0.9,
+        "attainment": 0.85,
+        "attainment_pct": 94.4
+      },
+      "Sophie Martin": {
+        "quota": 0.9,
+        "attainment": 0.85,
+        "attainment_pct": 94.4
+      },
+      "Erik Lindqvist": {
+        "quota": 1.1,
+        "attainment": 1.11,
+        "attainment_pct": 100.9
+      },
+      "James O'Brien": {
+        "quota": 0.9,
+        "attainment": 0.85,
+        "attainment_pct": 94.4
+      },
+      "Yuki Tanaka": {
+        "quota": 1.1,
+        "attainment": 1.11,
+        "attainment_pct": 100.9
+      },
+      "Wei Zhang": {
+        "quota": 1.3,
+        "attainment": 1.38,
+        "attainment_pct": 106.2
+      },
+      "Priya Sharma": {
+        "quota": 0.9,
+        "attainment": 0.85,
+        "attainment_pct": 94.4
+      },
+      "Chris Lee": {
+        "quota": 0.9,
+        "attainment": 0.85,
+        "attainment_pct": 94.4
+      }
+    },
+    "2024-Q2": {
+      "John Mitchell": {
+        "quota": 1.16,
+        "attainment": 1.18,
+        "attainment_pct": 101.7
+      },
+      "Sarah Williams": {
+        "quota": 1.37,
+        "attainment": 1.47,
+        "attainment_pct": 107.3
+      },
+      "Marcus Johnson": {
+        "quota": 1.16,
+        "attainment": 1.18,
+        "attainment_pct": 101.7
+      },
+      "Lisa Chen": {
+        "quota": 0.95,
+        "attainment": 0.9,
+        "attainment_pct": 94.7
+      },
+      "David Rodriguez": {
+        "quota": 1.16,
+        "attainment": 1.18,
+        "attainment_pct": 101.7
+      },
+      "Amanda Foster": {
+        "quota": 0.95,
+        "attainment": 0.9,
+        "attainment_pct": 94.7
+      },
+      "Michael Brown": {
+        "quota": 1.37,
+        "attainment": 1.47,
+        "attainment_pct": 107.3
+      },
+      "Jennifer Taylor": {
+        "quota": 1.16,
+        "attainment": 1.18,
+        "attainment_pct": 101.7
+      },
+      "Robert Kim": {
+        "quota": 0.95,
+        "attainment": 0.9,
+        "attainment_pct": 94.7
+      },
+      "Emily Davis": {
+        "quota": 1.37,
+        "attainment": 1.47,
+        "attainment_pct": 107.3
+      },
+      "Thomas Anderson": {
+        "quota": 0.95,
+        "attainment": 0.9,
+        "attainment_pct": 94.7
+      },
+      "Rachel Martinez": {
+        "quota": 1.16,
+        "attainment": 1.18,
+        "attainment_pct": 101.7
+      },
+      "Pierre Dubois": {
+        "quota": 1.16,
+        "attainment": 1.18,
+        "attainment_pct": 101.7
+      },
+      "Anna Schmidt": {
+        "quota": 1.37,
+        "attainment": 1.47,
+        "attainment_pct": 107.3
+      },
+      "Marco Rossi": {
+        "quota": 0.95,
+        "attainment": 0.9,
+        "attainment_pct": 94.7
+      },
+      "Sophie Martin": {
+        "quota": 0.95,
+        "attainment": 0.9,
+        "attainment_pct": 94.7
+      },
+      "Erik Lindqvist": {
+        "quota": 1.16,
+        "attainment": 1.18,
+        "attainment_pct": 101.7
+      },
+      "James O'Brien": {
+        "quota": 0.95,
+        "attainment": 0.9,
+        "attainment_pct": 94.7
+      },
+      "Yuki Tanaka": {
+        "quota": 1.16,
+        "attainment": 1.18,
+        "attainment_pct": 101.7
+      },
+      "Wei Zhang": {
+        "quota": 1.37,
+        "attainment": 1.47,
+        "attainment_pct": 107.3
+      },
+      "Priya Sharma": {
+        "quota": 0.95,
+        "attainment": 0.9,
+        "attainment_pct": 94.7
+      },
+      "Chris Lee": {
+        "quota": 0.95,
+        "attainment": 0.9,
+        "attainment_pct": 94.7
+      }
+    },
+    "2024-Q3": {
+      "John Mitchell": {
+        "quota": 1.21,
+        "attainment": 1.23,
+        "attainment_pct": 101.7
+      },
+      "Sarah Williams": {
+        "quota": 1.43,
+        "attainment": 1.54,
+        "attainment_pct": 107.7
+      },
+      "Marcus Johnson": {
+        "quota": 1.21,
+        "attainment": 1.23,
+        "attainment_pct": 101.7
+      },
+      "Lisa Chen": {
+        "quota": 0.99,
+        "attainment": 0.95,
+        "attainment_pct": 96.0
+      },
+      "David Rodriguez": {
+        "quota": 1.21,
+        "attainment": 1.23,
+        "attainment_pct": 101.7
+      },
+      "Amanda Foster": {
+        "quota": 0.99,
+        "attainment": 0.95,
+        "attainment_pct": 96.0
+      },
+      "Michael Brown": {
+        "quota": 1.43,
+        "attainment": 1.54,
+        "attainment_pct": 107.7
+      },
+      "Jennifer Taylor": {
+        "quota": 1.21,
+        "attainment": 1.23,
+        "attainment_pct": 101.7
+      },
+      "Robert Kim": {
+        "quota": 0.99,
+        "attainment": 0.95,
+        "attainment_pct": 96.0
+      },
+      "Emily Davis": {
+        "quota": 1.43,
+        "attainment": 1.54,
+        "attainment_pct": 107.7
+      },
+      "Thomas Anderson": {
+        "quota": 0.99,
+        "attainment": 0.95,
+        "attainment_pct": 96.0
+      },
+      "Rachel Martinez": {
+        "quota": 1.21,
+        "attainment": 1.23,
+        "attainment_pct": 101.7
+      },
+      "Pierre Dubois": {
+        "quota": 1.21,
+        "attainment": 1.23,
+        "attainment_pct": 101.7
+      },
+      "Anna Schmidt": {
+        "quota": 1.43,
+        "attainment": 1.54,
+        "attainment_pct": 107.7
+      },
+      "Marco Rossi": {
+        "quota": 0.99,
+        "attainment": 0.95,
+        "attainment_pct": 96.0
+      },
+      "Sophie Martin": {
+        "quota": 0.99,
+        "attainment": 0.95,
+        "attainment_pct": 96.0
+      },
+      "Erik Lindqvist": {
+        "quota": 1.21,
+        "attainment": 1.23,
+        "attainment_pct": 101.7
+      },
+      "James O'Brien": {
+        "quota": 0.99,
+        "attainment": 0.95,
+        "attainment_pct": 96.0
+      },
+      "Yuki Tanaka": {
+        "quota": 1.21,
+        "attainment": 1.23,
+        "attainment_pct": 101.7
+      },
+      "Wei Zhang": {
+        "quota": 1.43,
+        "attainment": 1.54,
+        "attainment_pct": 107.7
+      },
+      "Priya Sharma": {
+        "quota": 0.99,
+        "attainment": 0.95,
+        "attainment_pct": 96.0
+      },
+      "Chris Lee": {
+        "quota": 0.99,
+        "attainment": 0.95,
+        "attainment_pct": 96.0
+      }
+    },
+    "2024-Q4": {
+      "John Mitchell": {
+        "quota": 1.26,
+        "attainment": 1.29,
+        "attainment_pct": 102.4
+      },
+      "Sarah Williams": {
+        "quota": 1.49,
+        "attainment": 1.62,
+        "attainment_pct": 108.7
+      },
+      "Marcus Johnson": {
+        "quota": 1.26,
+        "attainment": 1.29,
+        "attainment_pct": 102.4
+      },
+      "Lisa Chen": {
+        "quota": 1.03,
+        "attainment": 1.0,
+        "attainment_pct": 97.1
+      },
+      "David Rodriguez": {
+        "quota": 1.26,
+        "attainment": 1.29,
+        "attainment_pct": 102.4
+      },
+      "Amanda Foster": {
+        "quota": 1.03,
+        "attainment": 1.0,
+        "attainment_pct": 97.1
+      },
+      "Michael Brown": {
+        "quota": 1.49,
+        "attainment": 1.62,
+        "attainment_pct": 108.7
+      },
+      "Jennifer Taylor": {
+        "quota": 1.26,
+        "attainment": 1.29,
+        "attainment_pct": 102.4
+      },
+      "Robert Kim": {
+        "quota": 1.03,
+        "attainment": 1.0,
+        "attainment_pct": 97.1
+      },
+      "Emily Davis": {
+        "quota": 1.49,
+        "attainment": 1.62,
+        "attainment_pct": 108.7
+      },
+      "Thomas Anderson": {
+        "quota": 1.03,
+        "attainment": 1.0,
+        "attainment_pct": 97.1
+      },
+      "Rachel Martinez": {
+        "quota": 1.26,
+        "attainment": 1.29,
+        "attainment_pct": 102.4
+      },
+      "Pierre Dubois": {
+        "quota": 1.26,
+        "attainment": 1.29,
+        "attainment_pct": 102.4
+      },
+      "Anna Schmidt": {
+        "quota": 1.49,
+        "attainment": 1.62,
+        "attainment_pct": 108.7
+      },
+      "Marco Rossi": {
+        "quota": 1.03,
+        "attainment": 1.0,
+        "attainment_pct": 97.1
+      },
+      "Sophie Martin": {
+        "quota": 1.03,
+        "attainment": 1.0,
+        "attainment_pct": 97.1
+      },
+      "Erik Lindqvist": {
+        "quota": 1.26,
+        "attainment": 1.29,
+        "attainment_pct": 102.4
+      },
+      "James O'Brien": {
+        "quota": 1.03,
+        "attainment": 1.0,
+        "attainment_pct": 97.1
+      },
+      "Yuki Tanaka": {
+        "quota": 1.26,
+        "attainment": 1.29,
+        "attainment_pct": 102.4
+      },
+      "Wei Zhang": {
+        "quota": 1.49,
+        "attainment": 1.62,
+        "attainment_pct": 108.7
+      },
+      "Priya Sharma": {
+        "quota": 1.03,
+        "attainment": 1.0,
+        "attainment_pct": 97.1
+      },
+      "Chris Lee": {
+        "quota": 1.03,
+        "attainment": 1.0,
+        "attainment_pct": 97.1
+      }
+    },
+    "2025-Q1": {
+      "John Mitchell": {
+        "quota": 1.43,
+        "attainment": 1.44,
+        "attainment_pct": 100.7
+      },
+      "Sarah Williams": {
+        "quota": 1.69,
+        "attainment": 1.79,
+        "attainment_pct": 105.9
+      },
+      "Marcus Johnson": {
+        "quota": 1.43,
+        "attainment": 1.44,
+        "attainment_pct": 100.7
+      },
+      "Lisa Chen": {
+        "quota": 1.17,
+        "attainment": 1.1,
+        "attainment_pct": 94.0
+      },
+      "David Rodriguez": {
+        "quota": 1.43,
+        "attainment": 1.44,
+        "attainment_pct": 100.7
+      },
+      "Amanda Foster": {
+        "quota": 1.17,
+        "attainment": 1.1,
+        "attainment_pct": 94.0
+      },
+      "Michael Brown": {
+        "quota": 1.69,
+        "attainment": 1.79,
+        "attainment_pct": 105.9
+      },
+      "Jennifer Taylor": {
+        "quota": 1.43,
+        "attainment": 1.44,
+        "attainment_pct": 100.7
+      },
+      "Robert Kim": {
+        "quota": 1.17,
+        "attainment": 1.1,
+        "attainment_pct": 94.0
+      },
+      "Emily Davis": {
+        "quota": 1.69,
+        "attainment": 1.79,
+        "attainment_pct": 105.9
+      },
+      "Thomas Anderson": {
+        "quota": 1.17,
+        "attainment": 1.1,
+        "attainment_pct": 94.0
+      },
+      "Rachel Martinez": {
+        "quota": 1.43,
+        "attainment": 1.44,
+        "attainment_pct": 100.7
+      },
+      "Pierre Dubois": {
+        "quota": 1.43,
+        "attainment": 1.44,
+        "attainment_pct": 100.7
+      },
+      "Anna Schmidt": {
+        "quota": 1.69,
+        "attainment": 1.79,
+        "attainment_pct": 105.9
+      },
+      "Marco Rossi": {
+        "quota": 1.17,
+        "attainment": 1.1,
+        "attainment_pct": 94.0
+      },
+      "Sophie Martin": {
+        "quota": 1.17,
+        "attainment": 1.1,
+        "attainment_pct": 94.0
+      },
+      "Erik Lindqvist": {
+        "quota": 1.43,
+        "attainment": 1.44,
+        "attainment_pct": 100.7
+      },
+      "James O'Brien": {
+        "quota": 1.17,
+        "attainment": 1.1,
+        "attainment_pct": 94.0
+      },
+      "Yuki Tanaka": {
+        "quota": 1.43,
+        "attainment": 1.44,
+        "attainment_pct": 100.7
+      },
+      "Wei Zhang": {
+        "quota": 1.69,
+        "attainment": 1.79,
+        "attainment_pct": 105.9
+      },
+      "Priya Sharma": {
+        "quota": 1.17,
+        "attainment": 1.1,
+        "attainment_pct": 94.0
+      },
+      "Chris Lee": {
+        "quota": 1.17,
+        "attainment": 1.1,
+        "attainment_pct": 94.0
+      },
+      "Kevin Patel": {
+        "quota": 0.91,
+        "attainment": 0.88,
+        "attainment_pct": 96.7
+      },
+      "Clara M\u00fcller": {
+        "quota": 0.91,
+        "attainment": 0.88,
+        "attainment_pct": 96.7
+      },
+      "Kenji Nakamura": {
+        "quota": 0.91,
+        "attainment": 0.88,
+        "attainment_pct": 96.7
+      }
+    },
+    "2025-Q2": {
+      "John Mitchell": {
+        "quota": 1.49,
+        "attainment": 1.51,
+        "attainment_pct": 101.3
+      },
+      "Sarah Williams": {
+        "quota": 1.76,
+        "attainment": 1.88,
+        "attainment_pct": 106.8
+      },
+      "Marcus Johnson": {
+        "quota": 1.49,
+        "attainment": 1.51,
+        "attainment_pct": 101.3
+      },
+      "Lisa Chen": {
+        "quota": 1.22,
+        "attainment": 1.16,
+        "attainment_pct": 95.1
+      },
+      "David Rodriguez": {
+        "quota": 1.49,
+        "attainment": 1.51,
+        "attainment_pct": 101.3
+      },
+      "Amanda Foster": {
+        "quota": 1.22,
+        "attainment": 1.16,
+        "attainment_pct": 95.1
+      },
+      "Michael Brown": {
+        "quota": 1.76,
+        "attainment": 1.88,
+        "attainment_pct": 106.8
+      },
+      "Jennifer Taylor": {
+        "quota": 1.49,
+        "attainment": 1.51,
+        "attainment_pct": 101.3
+      },
+      "Robert Kim": {
+        "quota": 1.22,
+        "attainment": 1.16,
+        "attainment_pct": 95.1
+      },
+      "Emily Davis": {
+        "quota": 1.76,
+        "attainment": 1.88,
+        "attainment_pct": 106.8
+      },
+      "Thomas Anderson": {
+        "quota": 1.22,
+        "attainment": 1.16,
+        "attainment_pct": 95.1
+      },
+      "Rachel Martinez": {
+        "quota": 1.49,
+        "attainment": 1.51,
+        "attainment_pct": 101.3
+      },
+      "Pierre Dubois": {
+        "quota": 1.49,
+        "attainment": 1.51,
+        "attainment_pct": 101.3
+      },
+      "Anna Schmidt": {
+        "quota": 1.76,
+        "attainment": 1.88,
+        "attainment_pct": 106.8
+      },
+      "Marco Rossi": {
+        "quota": 1.22,
+        "attainment": 1.16,
+        "attainment_pct": 95.1
+      },
+      "Sophie Martin": {
+        "quota": 1.22,
+        "attainment": 1.16,
+        "attainment_pct": 95.1
+      },
+      "Erik Lindqvist": {
+        "quota": 1.49,
+        "attainment": 1.51,
+        "attainment_pct": 101.3
+      },
+      "James O'Brien": {
+        "quota": 1.22,
+        "attainment": 1.16,
+        "attainment_pct": 95.1
+      },
+      "Yuki Tanaka": {
+        "quota": 1.49,
+        "attainment": 1.51,
+        "attainment_pct": 101.3
+      },
+      "Wei Zhang": {
+        "quota": 1.76,
+        "attainment": 1.88,
+        "attainment_pct": 106.8
+      },
+      "Priya Sharma": {
+        "quota": 1.22,
+        "attainment": 1.16,
+        "attainment_pct": 95.1
+      },
+      "Chris Lee": {
+        "quota": 1.22,
+        "attainment": 1.16,
+        "attainment_pct": 95.1
+      },
+      "Kevin Patel": {
+        "quota": 0.94,
+        "attainment": 0.91,
+        "attainment_pct": 96.8
+      },
+      "Olivia Thompson": {
+        "quota": 0.94,
+        "attainment": 0.91,
+        "attainment_pct": 96.8
+      },
+      "Daniel Garcia": {
+        "quota": 0.94,
+        "attainment": 0.91,
+        "attainment_pct": 96.8
+      },
+      "Clara M\u00fcller": {
+        "quota": 0.94,
+        "attainment": 0.91,
+        "attainment_pct": 96.8
+      },
+      "Luca Bianchi": {
+        "quota": 0.94,
+        "attainment": 0.91,
+        "attainment_pct": 96.8
+      },
+      "Kenji Nakamura": {
+        "quota": 0.94,
+        "attainment": 0.91,
+        "attainment_pct": 96.8
+      },
+      "Min-ji Park": {
+        "quota": 0.94,
+        "attainment": 0.91,
+        "attainment_pct": 96.8
+      }
+    },
+    "2025-Q3": {
+      "John Mitchell": {
+        "quota": 1.54,
+        "attainment": 1.57,
+        "attainment_pct": 101.9
+      },
+      "Sarah Williams": {
+        "quota": 1.82,
+        "attainment": 1.97,
+        "attainment_pct": 108.2
+      },
+      "Marcus Johnson": {
+        "quota": 1.54,
+        "attainment": 1.57,
+        "attainment_pct": 101.9
+      },
+      "Lisa Chen": {
+        "quota": 1.26,
+        "attainment": 1.21,
+        "attainment_pct": 96.0
+      },
+      "David Rodriguez": {
+        "quota": 1.54,
+        "attainment": 1.57,
+        "attainment_pct": 101.9
+      },
+      "Amanda Foster": {
+        "quota": 1.26,
+        "attainment": 1.21,
+        "attainment_pct": 96.0
+      },
+      "Michael Brown": {
+        "quota": 1.82,
+        "attainment": 1.97,
+        "attainment_pct": 108.2
+      },
+      "Jennifer Taylor": {
+        "quota": 1.54,
+        "attainment": 1.57,
+        "attainment_pct": 101.9
+      },
+      "Robert Kim": {
+        "quota": 1.26,
+        "attainment": 1.21,
+        "attainment_pct": 96.0
+      },
+      "Emily Davis": {
+        "quota": 1.82,
+        "attainment": 1.97,
+        "attainment_pct": 108.2
+      },
+      "Thomas Anderson": {
+        "quota": 1.26,
+        "attainment": 1.21,
+        "attainment_pct": 96.0
+      },
+      "Rachel Martinez": {
+        "quota": 1.54,
+        "attainment": 1.57,
+        "attainment_pct": 101.9
+      },
+      "Pierre Dubois": {
+        "quota": 1.54,
+        "attainment": 1.57,
+        "attainment_pct": 101.9
+      },
+      "Anna Schmidt": {
+        "quota": 1.82,
+        "attainment": 1.97,
+        "attainment_pct": 108.2
+      },
+      "Marco Rossi": {
+        "quota": 1.26,
+        "attainment": 1.21,
+        "attainment_pct": 96.0
+      },
+      "Sophie Martin": {
+        "quota": 1.26,
+        "attainment": 1.21,
+        "attainment_pct": 96.0
+      },
+      "Erik Lindqvist": {
+        "quota": 1.54,
+        "attainment": 1.57,
+        "attainment_pct": 101.9
+      },
+      "James O'Brien": {
+        "quota": 1.26,
+        "attainment": 1.21,
+        "attainment_pct": 96.0
+      },
+      "Yuki Tanaka": {
+        "quota": 1.54,
+        "attainment": 1.57,
+        "attainment_pct": 101.9
+      },
+      "Wei Zhang": {
+        "quota": 1.82,
+        "attainment": 1.97,
+        "attainment_pct": 108.2
+      },
+      "Priya Sharma": {
+        "quota": 1.26,
+        "attainment": 1.21,
+        "attainment_pct": 96.0
+      },
+      "Chris Lee": {
+        "quota": 1.26,
+        "attainment": 1.21,
+        "attainment_pct": 96.0
+      },
+      "Kevin Patel": {
+        "quota": 0.98,
+        "attainment": 0.95,
+        "attainment_pct": 96.9
+      },
+      "Olivia Thompson": {
+        "quota": 0.98,
+        "attainment": 0.95,
+        "attainment_pct": 96.9
+      },
+      "Daniel Garcia": {
+        "quota": 0.98,
+        "attainment": 0.95,
+        "attainment_pct": 96.9
+      },
+      "Clara M\u00fcller": {
+        "quota": 0.98,
+        "attainment": 0.95,
+        "attainment_pct": 96.9
+      },
+      "Luca Bianchi": {
+        "quota": 0.98,
+        "attainment": 0.95,
+        "attainment_pct": 96.9
+      },
+      "Kenji Nakamura": {
+        "quota": 0.98,
+        "attainment": 0.95,
+        "attainment_pct": 96.9
+      },
+      "Min-ji Park": {
+        "quota": 0.98,
+        "attainment": 0.95,
+        "attainment_pct": 96.9
+      }
+    },
+    "2025-Q4": {
+      "John Mitchell": {
+        "quota": 1.6,
+        "attainment": 1.64,
+        "attainment_pct": 102.5
+      },
+      "Sarah Williams": {
+        "quota": 1.89,
+        "attainment": 2.06,
+        "attainment_pct": 109.0
+      },
+      "Marcus Johnson": {
+        "quota": 1.6,
+        "attainment": 1.64,
+        "attainment_pct": 102.5
+      },
+      "Lisa Chen": {
+        "quota": 1.31,
+        "attainment": 1.27,
+        "attainment_pct": 96.9
+      },
+      "David Rodriguez": {
+        "quota": 1.6,
+        "attainment": 1.64,
+        "attainment_pct": 102.5
+      },
+      "Amanda Foster": {
+        "quota": 1.31,
+        "attainment": 1.27,
+        "attainment_pct": 96.9
+      },
+      "Michael Brown": {
+        "quota": 1.89,
+        "attainment": 2.06,
+        "attainment_pct": 109.0
+      },
+      "Jennifer Taylor": {
+        "quota": 1.6,
+        "attainment": 1.64,
+        "attainment_pct": 102.5
+      },
+      "Robert Kim": {
+        "quota": 1.31,
+        "attainment": 1.27,
+        "attainment_pct": 96.9
+      },
+      "Emily Davis": {
+        "quota": 1.89,
+        "attainment": 2.06,
+        "attainment_pct": 109.0
+      },
+      "Thomas Anderson": {
+        "quota": 1.31,
+        "attainment": 1.27,
+        "attainment_pct": 96.9
+      },
+      "Rachel Martinez": {
+        "quota": 1.6,
+        "attainment": 1.64,
+        "attainment_pct": 102.5
+      },
+      "Pierre Dubois": {
+        "quota": 1.6,
+        "attainment": 1.64,
+        "attainment_pct": 102.5
+      },
+      "Anna Schmidt": {
+        "quota": 1.89,
+        "attainment": 2.06,
+        "attainment_pct": 109.0
+      },
+      "Marco Rossi": {
+        "quota": 1.31,
+        "attainment": 1.27,
+        "attainment_pct": 96.9
+      },
+      "Sophie Martin": {
+        "quota": 1.31,
+        "attainment": 1.27,
+        "attainment_pct": 96.9
+      },
+      "Erik Lindqvist": {
+        "quota": 1.6,
+        "attainment": 1.64,
+        "attainment_pct": 102.5
+      },
+      "James O'Brien": {
+        "quota": 1.31,
+        "attainment": 1.27,
+        "attainment_pct": 96.9
+      },
+      "Yuki Tanaka": {
+        "quota": 1.6,
+        "attainment": 1.64,
+        "attainment_pct": 102.5
+      },
+      "Wei Zhang": {
+        "quota": 1.89,
+        "attainment": 2.06,
+        "attainment_pct": 109.0
+      },
+      "Priya Sharma": {
+        "quota": 1.31,
+        "attainment": 1.27,
+        "attainment_pct": 96.9
+      },
+      "Chris Lee": {
+        "quota": 1.31,
+        "attainment": 1.27,
+        "attainment_pct": 96.9
+      },
+      "Kevin Patel": {
+        "quota": 1.02,
+        "attainment": 0.99,
+        "attainment_pct": 97.1
+      },
+      "Olivia Thompson": {
+        "quota": 1.02,
+        "attainment": 0.99,
+        "attainment_pct": 97.1
+      },
+      "Daniel Garcia": {
+        "quota": 1.02,
+        "attainment": 0.99,
+        "attainment_pct": 97.1
+      },
+      "Clara M\u00fcller": {
+        "quota": 1.02,
+        "attainment": 0.99,
+        "attainment_pct": 97.1
+      },
+      "Luca Bianchi": {
+        "quota": 1.02,
+        "attainment": 0.99,
+        "attainment_pct": 97.1
+      },
+      "Kenji Nakamura": {
+        "quota": 1.02,
+        "attainment": 0.99,
+        "attainment_pct": 97.1
+      },
+      "Min-ji Park": {
+        "quota": 1.02,
+        "attainment": 0.99,
+        "attainment_pct": 97.1
+      }
+    },
+    "2026-Q1": {
+      "John Mitchell": {
+        "quota": 1.76,
+        "attainment": 1.78,
+        "attainment_pct": 101.1
+      },
+      "Sarah Williams": {
+        "quota": 2.08,
+        "attainment": 2.2,
+        "attainment_pct": 105.8
+      },
+      "Marcus Johnson": {
+        "quota": 1.76,
+        "attainment": 1.78,
+        "attainment_pct": 101.1
+      },
+      "Lisa Chen": {
+        "quota": 1.44,
+        "attainment": 1.35,
+        "attainment_pct": 93.8
+      },
+      "David Rodriguez": {
+        "quota": 1.76,
+        "attainment": 1.78,
+        "attainment_pct": 101.1
+      },
+      "Amanda Foster": {
+        "quota": 1.44,
+        "attainment": 1.35,
+        "attainment_pct": 93.8
+      },
+      "Michael Brown": {
+        "quota": 2.08,
+        "attainment": 2.2,
+        "attainment_pct": 105.8
+      },
+      "Jennifer Taylor": {
+        "quota": 1.76,
+        "attainment": 1.78,
+        "attainment_pct": 101.1
+      },
+      "Robert Kim": {
+        "quota": 1.44,
+        "attainment": 1.35,
+        "attainment_pct": 93.8
+      },
+      "Emily Davis": {
+        "quota": 2.08,
+        "attainment": 2.2,
+        "attainment_pct": 105.8
+      },
+      "Thomas Anderson": {
+        "quota": 1.44,
+        "attainment": 1.35,
+        "attainment_pct": 93.8
+      },
+      "Rachel Martinez": {
+        "quota": 1.76,
+        "attainment": 1.78,
+        "attainment_pct": 101.1
+      },
+      "Pierre Dubois": {
+        "quota": 1.76,
+        "attainment": 1.78,
+        "attainment_pct": 101.1
+      },
+      "Anna Schmidt": {
+        "quota": 2.08,
+        "attainment": 2.2,
+        "attainment_pct": 105.8
+      },
+      "Marco Rossi": {
+        "quota": 1.44,
+        "attainment": 1.35,
+        "attainment_pct": 93.8
+      },
+      "Sophie Martin": {
+        "quota": 1.44,
+        "attainment": 1.35,
+        "attainment_pct": 93.8
+      },
+      "Erik Lindqvist": {
+        "quota": 1.76,
+        "attainment": 1.78,
+        "attainment_pct": 101.1
+      },
+      "James O'Brien": {
+        "quota": 1.44,
+        "attainment": 1.35,
+        "attainment_pct": 93.8
+      },
+      "Yuki Tanaka": {
+        "quota": 1.76,
+        "attainment": 1.78,
+        "attainment_pct": 101.1
+      },
+      "Wei Zhang": {
+        "quota": 2.08,
+        "attainment": 2.2,
+        "attainment_pct": 105.8
+      },
+      "Priya Sharma": {
+        "quota": 1.44,
+        "attainment": 1.35,
+        "attainment_pct": 93.8
+      },
+      "Chris Lee": {
+        "quota": 1.44,
+        "attainment": 1.35,
+        "attainment_pct": 93.8
+      },
+      "Kevin Patel": {
+        "quota": 1.12,
+        "attainment": 1.09,
+        "attainment_pct": 97.3
+      },
+      "Olivia Thompson": {
+        "quota": 1.12,
+        "attainment": 1.09,
+        "attainment_pct": 97.3
+      },
+      "Daniel Garcia": {
+        "quota": 1.12,
+        "attainment": 1.09,
+        "attainment_pct": 97.3
+      },
+      "Clara M\u00fcller": {
+        "quota": 1.12,
+        "attainment": 1.09,
+        "attainment_pct": 97.3
+      },
+      "Luca Bianchi": {
+        "quota": 1.12,
+        "attainment": 1.09,
+        "attainment_pct": 97.3
+      },
+      "Kenji Nakamura": {
+        "quota": 1.12,
+        "attainment": 1.09,
+        "attainment_pct": 97.3
+      },
+      "Min-ji Park": {
+        "quota": 1.12,
+        "attainment": 1.09,
+        "attainment_pct": 97.3
+      },
+      "Jessica Wong": {
+        "quota": 1.12,
+        "attainment": 1.09,
+        "attainment_pct": 97.3
+      },
+      "Henrik Nielsen": {
+        "quota": 1.12,
+        "attainment": 1.09,
+        "attainment_pct": 97.3
+      }
+    },
+    "2026-Q2": {
+      "John Mitchell": {
+        "quota": 1.82,
+        "attainment": 1.85,
+        "attainment_pct": 101.6
+      },
+      "Sarah Williams": {
+        "quota": 2.15,
+        "attainment": 2.3,
+        "attainment_pct": 107.0
+      },
+      "Marcus Johnson": {
+        "quota": 1.82,
+        "attainment": 1.85,
+        "attainment_pct": 101.6
+      },
+      "Lisa Chen": {
+        "quota": 1.49,
+        "attainment": 1.42,
+        "attainment_pct": 95.3
+      },
+      "David Rodriguez": {
+        "quota": 1.82,
+        "attainment": 1.85,
+        "attainment_pct": 101.6
+      },
+      "Amanda Foster": {
+        "quota": 1.49,
+        "attainment": 1.42,
+        "attainment_pct": 95.3
+      },
+      "Michael Brown": {
+        "quota": 2.15,
+        "attainment": 2.3,
+        "attainment_pct": 107.0
+      },
+      "Jennifer Taylor": {
+        "quota": 1.82,
+        "attainment": 1.85,
+        "attainment_pct": 101.6
+      },
+      "Robert Kim": {
+        "quota": 1.49,
+        "attainment": 1.42,
+        "attainment_pct": 95.3
+      },
+      "Emily Davis": {
+        "quota": 2.15,
+        "attainment": 2.3,
+        "attainment_pct": 107.0
+      },
+      "Thomas Anderson": {
+        "quota": 1.49,
+        "attainment": 1.42,
+        "attainment_pct": 95.3
+      },
+      "Rachel Martinez": {
+        "quota": 1.82,
+        "attainment": 1.85,
+        "attainment_pct": 101.6
+      },
+      "Pierre Dubois": {
+        "quota": 1.82,
+        "attainment": 1.85,
+        "attainment_pct": 101.6
+      },
+      "Anna Schmidt": {
+        "quota": 2.15,
+        "attainment": 2.3,
+        "attainment_pct": 107.0
+      },
+      "Marco Rossi": {
+        "quota": 1.49,
+        "attainment": 1.42,
+        "attainment_pct": 95.3
+      },
+      "Sophie Martin": {
+        "quota": 1.49,
+        "attainment": 1.42,
+        "attainment_pct": 95.3
+      },
+      "Erik Lindqvist": {
+        "quota": 1.82,
+        "attainment": 1.85,
+        "attainment_pct": 101.6
+      },
+      "James O'Brien": {
+        "quota": 1.49,
+        "attainment": 1.42,
+        "attainment_pct": 95.3
+      },
+      "Yuki Tanaka": {
+        "quota": 1.82,
+        "attainment": 1.85,
+        "attainment_pct": 101.6
+      },
+      "Wei Zhang": {
+        "quota": 2.15,
+        "attainment": 2.3,
+        "attainment_pct": 107.0
+      },
+      "Priya Sharma": {
+        "quota": 1.49,
+        "attainment": 1.42,
+        "attainment_pct": 95.3
+      },
+      "Chris Lee": {
+        "quota": 1.49,
+        "attainment": 1.42,
+        "attainment_pct": 95.3
+      },
+      "Kevin Patel": {
+        "quota": 1.16,
+        "attainment": 1.13,
+        "attainment_pct": 97.4
+      },
+      "Olivia Thompson": {
+        "quota": 1.16,
+        "attainment": 1.13,
+        "attainment_pct": 97.4
+      },
+      "Daniel Garcia": {
+        "quota": 1.16,
+        "attainment": 1.13,
+        "attainment_pct": 97.4
+      },
+      "Clara M\u00fcller": {
+        "quota": 1.16,
+        "attainment": 1.13,
+        "attainment_pct": 97.4
+      },
+      "Luca Bianchi": {
+        "quota": 1.16,
+        "attainment": 1.13,
+        "attainment_pct": 97.4
+      },
+      "Kenji Nakamura": {
+        "quota": 1.16,
+        "attainment": 1.13,
+        "attainment_pct": 97.4
+      },
+      "Min-ji Park": {
+        "quota": 1.16,
+        "attainment": 1.13,
+        "attainment_pct": 97.4
+      },
+      "Jessica Wong": {
+        "quota": 1.16,
+        "attainment": 1.13,
+        "attainment_pct": 97.4
+      },
+      "Brandon Scott": {
+        "quota": 1.16,
+        "attainment": 1.13,
+        "attainment_pct": 97.4
+      },
+      "Henrik Nielsen": {
+        "quota": 1.16,
+        "attainment": 1.13,
+        "attainment_pct": 97.4
+      },
+      "Elena Petrova": {
+        "quota": 1.16,
+        "attainment": 1.13,
+        "attainment_pct": 97.4
+      },
+      "Rahul Patel": {
+        "quota": 1.16,
+        "attainment": 1.13,
+        "attainment_pct": 97.4
+      }
+    },
+    "2026-Q3": {
+      "John Mitchell": {
+        "quota": 1.87,
+        "attainment": 1.91,
+        "attainment_pct": 102.1
+      },
+      "Sarah Williams": {
+        "quota": 2.21,
+        "attainment": 2.39,
+        "attainment_pct": 108.1
+      },
+      "Marcus Johnson": {
+        "quota": 1.87,
+        "attainment": 1.91,
+        "attainment_pct": 102.1
+      },
+      "Lisa Chen": {
+        "quota": 1.53,
+        "attainment": 1.47,
+        "attainment_pct": 96.1
+      },
+      "David Rodriguez": {
+        "quota": 1.87,
+        "attainment": 1.91,
+        "attainment_pct": 102.1
+      },
+      "Amanda Foster": {
+        "quota": 1.53,
+        "attainment": 1.47,
+        "attainment_pct": 96.1
+      },
+      "Michael Brown": {
+        "quota": 2.21,
+        "attainment": 2.39,
+        "attainment_pct": 108.1
+      },
+      "Jennifer Taylor": {
+        "quota": 1.87,
+        "attainment": 1.91,
+        "attainment_pct": 102.1
+      },
+      "Robert Kim": {
+        "quota": 1.53,
+        "attainment": 1.47,
+        "attainment_pct": 96.1
+      },
+      "Emily Davis": {
+        "quota": 2.21,
+        "attainment": 2.39,
+        "attainment_pct": 108.1
+      },
+      "Thomas Anderson": {
+        "quota": 1.53,
+        "attainment": 1.47,
+        "attainment_pct": 96.1
+      },
+      "Rachel Martinez": {
+        "quota": 1.87,
+        "attainment": 1.91,
+        "attainment_pct": 102.1
+      },
+      "Pierre Dubois": {
+        "quota": 1.87,
+        "attainment": 1.91,
+        "attainment_pct": 102.1
+      },
+      "Anna Schmidt": {
+        "quota": 2.21,
+        "attainment": 2.39,
+        "attainment_pct": 108.1
+      },
+      "Marco Rossi": {
+        "quota": 1.53,
+        "attainment": 1.47,
+        "attainment_pct": 96.1
+      },
+      "Sophie Martin": {
+        "quota": 1.53,
+        "attainment": 1.47,
+        "attainment_pct": 96.1
+      },
+      "Erik Lindqvist": {
+        "quota": 1.87,
+        "attainment": 1.91,
+        "attainment_pct": 102.1
+      },
+      "James O'Brien": {
+        "quota": 1.53,
+        "attainment": 1.47,
+        "attainment_pct": 96.1
+      },
+      "Yuki Tanaka": {
+        "quota": 1.87,
+        "attainment": 1.91,
+        "attainment_pct": 102.1
+      },
+      "Wei Zhang": {
+        "quota": 2.21,
+        "attainment": 2.39,
+        "attainment_pct": 108.1
+      },
+      "Priya Sharma": {
+        "quota": 1.53,
+        "attainment": 1.47,
+        "attainment_pct": 96.1
+      },
+      "Chris Lee": {
+        "quota": 1.53,
+        "attainment": 1.47,
+        "attainment_pct": 96.1
+      },
+      "Kevin Patel": {
+        "quota": 1.19,
+        "attainment": 1.15,
+        "attainment_pct": 96.6
+      },
+      "Olivia Thompson": {
+        "quota": 1.19,
+        "attainment": 1.15,
+        "attainment_pct": 96.6
+      },
+      "Daniel Garcia": {
+        "quota": 1.19,
+        "attainment": 1.15,
+        "attainment_pct": 96.6
+      },
+      "Clara M\u00fcller": {
+        "quota": 1.19,
+        "attainment": 1.15,
+        "attainment_pct": 96.6
+      },
+      "Luca Bianchi": {
+        "quota": 1.19,
+        "attainment": 1.15,
+        "attainment_pct": 96.6
+      },
+      "Kenji Nakamura": {
+        "quota": 1.19,
+        "attainment": 1.15,
+        "attainment_pct": 96.6
+      },
+      "Min-ji Park": {
+        "quota": 1.19,
+        "attainment": 1.15,
+        "attainment_pct": 96.6
+      },
+      "Jessica Wong": {
+        "quota": 1.19,
+        "attainment": 1.15,
+        "attainment_pct": 96.6
+      },
+      "Brandon Scott": {
+        "quota": 1.19,
+        "attainment": 1.15,
+        "attainment_pct": 96.6
+      },
+      "Ashley Moore": {
+        "quota": 1.19,
+        "attainment": 1.15,
+        "attainment_pct": 96.6
+      },
+      "Henrik Nielsen": {
+        "quota": 1.19,
+        "attainment": 1.15,
+        "attainment_pct": 96.6
+      },
+      "Elena Petrova": {
+        "quota": 1.19,
+        "attainment": 1.15,
+        "attainment_pct": 96.6
+      },
+      "Rahul Patel": {
+        "quota": 1.19,
+        "attainment": 1.15,
+        "attainment_pct": 96.6
+      },
+      "Emma Watson": {
+        "quota": 1.19,
+        "attainment": 1.15,
+        "attainment_pct": 96.6
+      }
+    },
+    "2026-Q4": {
+      "John Mitchell": {
+        "quota": 1.93,
+        "attainment": 1.98,
+        "attainment_pct": 102.6
+      },
+      "Sarah Williams": {
+        "quota": 2.27,
+        "attainment": 2.47,
+        "attainment_pct": 108.8
+      },
+      "Marcus Johnson": {
+        "quota": 1.93,
+        "attainment": 1.98,
+        "attainment_pct": 102.6
+      },
+      "Lisa Chen": {
+        "quota": 1.57,
+        "attainment": 1.52,
+        "attainment_pct": 96.8
+      },
+      "David Rodriguez": {
+        "quota": 1.93,
+        "attainment": 1.98,
+        "attainment_pct": 102.6
+      },
+      "Amanda Foster": {
+        "quota": 1.57,
+        "attainment": 1.52,
+        "attainment_pct": 96.8
+      },
+      "Michael Brown": {
+        "quota": 2.27,
+        "attainment": 2.47,
+        "attainment_pct": 108.8
+      },
+      "Jennifer Taylor": {
+        "quota": 1.93,
+        "attainment": 1.98,
+        "attainment_pct": 102.6
+      },
+      "Robert Kim": {
+        "quota": 1.57,
+        "attainment": 1.52,
+        "attainment_pct": 96.8
+      },
+      "Emily Davis": {
+        "quota": 2.27,
+        "attainment": 2.47,
+        "attainment_pct": 108.8
+      },
+      "Thomas Anderson": {
+        "quota": 1.57,
+        "attainment": 1.52,
+        "attainment_pct": 96.8
+      },
+      "Rachel Martinez": {
+        "quota": 1.93,
+        "attainment": 1.98,
+        "attainment_pct": 102.6
+      },
+      "Pierre Dubois": {
+        "quota": 1.93,
+        "attainment": 1.98,
+        "attainment_pct": 102.6
+      },
+      "Anna Schmidt": {
+        "quota": 2.27,
+        "attainment": 2.47,
+        "attainment_pct": 108.8
+      },
+      "Marco Rossi": {
+        "quota": 1.57,
+        "attainment": 1.52,
+        "attainment_pct": 96.8
+      },
+      "Sophie Martin": {
+        "quota": 1.57,
+        "attainment": 1.52,
+        "attainment_pct": 96.8
+      },
+      "Erik Lindqvist": {
+        "quota": 1.93,
+        "attainment": 1.98,
+        "attainment_pct": 102.6
+      },
+      "James O'Brien": {
+        "quota": 1.57,
+        "attainment": 1.52,
+        "attainment_pct": 96.8
+      },
+      "Yuki Tanaka": {
+        "quota": 1.93,
+        "attainment": 1.98,
+        "attainment_pct": 102.6
+      },
+      "Wei Zhang": {
+        "quota": 2.27,
+        "attainment": 2.47,
+        "attainment_pct": 108.8
+      },
+      "Priya Sharma": {
+        "quota": 1.57,
+        "attainment": 1.52,
+        "attainment_pct": 96.8
+      },
+      "Chris Lee": {
+        "quota": 1.57,
+        "attainment": 1.52,
+        "attainment_pct": 96.8
+      },
+      "Kevin Patel": {
+        "quota": 1.22,
+        "attainment": 1.18,
+        "attainment_pct": 96.7
+      },
+      "Olivia Thompson": {
+        "quota": 1.22,
+        "attainment": 1.18,
+        "attainment_pct": 96.7
+      },
+      "Daniel Garcia": {
+        "quota": 1.22,
+        "attainment": 1.18,
+        "attainment_pct": 96.7
+      },
+      "Clara M\u00fcller": {
+        "quota": 1.22,
+        "attainment": 1.18,
+        "attainment_pct": 96.7
+      },
+      "Luca Bianchi": {
+        "quota": 1.22,
+        "attainment": 1.18,
+        "attainment_pct": 96.7
+      },
+      "Kenji Nakamura": {
+        "quota": 1.22,
+        "attainment": 1.18,
+        "attainment_pct": 96.7
+      },
+      "Min-ji Park": {
+        "quota": 1.22,
+        "attainment": 1.18,
+        "attainment_pct": 96.7
+      },
+      "Jessica Wong": {
+        "quota": 1.22,
+        "attainment": 1.18,
+        "attainment_pct": 96.7
+      },
+      "Brandon Scott": {
+        "quota": 1.22,
+        "attainment": 1.18,
+        "attainment_pct": 96.7
+      },
+      "Ashley Moore": {
+        "quota": 1.22,
+        "attainment": 1.18,
+        "attainment_pct": 96.7
+      },
+      "Henrik Nielsen": {
+        "quota": 1.22,
+        "attainment": 1.18,
+        "attainment_pct": 96.7
+      },
+      "Elena Petrova": {
+        "quota": 1.22,
+        "attainment": 1.18,
+        "attainment_pct": 96.7
+      },
+      "Rahul Patel": {
+        "quota": 1.22,
+        "attainment": 1.18,
+        "attainment_pct": 96.7
+      },
+      "Emma Watson": {
+        "quota": 1.22,
+        "attainment": 1.18,
+        "attainment_pct": 96.7
+      }
+    }
+  },
+  "pipeline_by_rep": {
+    "2024-Q1": {
+      "John Mitchell": {
+        "pipeline": 3.6,
+        "qualified": 2.16,
+        "deals": 10
+      },
+      "Sarah Williams": {
+        "pipeline": 5.1,
+        "qualified": 3.06,
+        "deals": 14
+      },
+      "Marcus Johnson": {
+        "pipeline": 3.6,
+        "qualified": 2.16,
+        "deals": 10
+      },
+      "Lisa Chen": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "David Rodriguez": {
+        "pipeline": 3.6,
+        "qualified": 2.16,
+        "deals": 10
+      },
+      "Amanda Foster": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Michael Brown": {
+        "pipeline": 5.1,
+        "qualified": 3.06,
+        "deals": 14
+      },
+      "Jennifer Taylor": {
+        "pipeline": 3.6,
+        "qualified": 2.16,
+        "deals": 10
+      },
+      "Robert Kim": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Emily Davis": {
+        "pipeline": 5.1,
+        "qualified": 3.06,
+        "deals": 14
+      },
+      "Thomas Anderson": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Rachel Martinez": {
+        "pipeline": 3.6,
+        "qualified": 2.16,
+        "deals": 10
+      },
+      "Pierre Dubois": {
+        "pipeline": 3.6,
+        "qualified": 2.16,
+        "deals": 10
+      },
+      "Anna Schmidt": {
+        "pipeline": 5.1,
+        "qualified": 3.06,
+        "deals": 14
+      },
+      "Marco Rossi": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Sophie Martin": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Erik Lindqvist": {
+        "pipeline": 3.6,
+        "qualified": 2.16,
+        "deals": 10
+      },
+      "James O'Brien": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Yuki Tanaka": {
+        "pipeline": 3.6,
+        "qualified": 2.16,
+        "deals": 10
+      },
+      "Wei Zhang": {
+        "pipeline": 5.1,
+        "qualified": 3.06,
+        "deals": 14
+      },
+      "Priya Sharma": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Chris Lee": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      }
+    },
+    "2024-Q2": {
+      "John Mitchell": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Sarah Williams": {
+        "pipeline": 5.3,
+        "qualified": 3.18,
+        "deals": 15
+      },
+      "Marcus Johnson": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Lisa Chen": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "David Rodriguez": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Amanda Foster": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Michael Brown": {
+        "pipeline": 5.3,
+        "qualified": 3.18,
+        "deals": 15
+      },
+      "Jennifer Taylor": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Robert Kim": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Emily Davis": {
+        "pipeline": 5.3,
+        "qualified": 3.18,
+        "deals": 15
+      },
+      "Thomas Anderson": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Rachel Martinez": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Pierre Dubois": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Anna Schmidt": {
+        "pipeline": 5.3,
+        "qualified": 3.18,
+        "deals": 15
+      },
+      "Marco Rossi": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Sophie Martin": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Erik Lindqvist": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "James O'Brien": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Yuki Tanaka": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Wei Zhang": {
+        "pipeline": 5.3,
+        "qualified": 3.18,
+        "deals": 15
+      },
+      "Priya Sharma": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Chris Lee": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      }
+    },
+    "2024-Q3": {
+      "John Mitchell": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Sarah Williams": {
+        "pipeline": 5.6,
+        "qualified": 3.36,
+        "deals": 16
+      },
+      "Marcus Johnson": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Lisa Chen": {
+        "pipeline": 2.5,
+        "qualified": 1.5,
+        "deals": 7
+      },
+      "David Rodriguez": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Amanda Foster": {
+        "pipeline": 2.5,
+        "qualified": 1.5,
+        "deals": 7
+      },
+      "Michael Brown": {
+        "pipeline": 5.6,
+        "qualified": 3.36,
+        "deals": 16
+      },
+      "Jennifer Taylor": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Robert Kim": {
+        "pipeline": 2.5,
+        "qualified": 1.5,
+        "deals": 7
+      },
+      "Emily Davis": {
+        "pipeline": 5.6,
+        "qualified": 3.36,
+        "deals": 16
+      },
+      "Thomas Anderson": {
+        "pipeline": 2.5,
+        "qualified": 1.5,
+        "deals": 7
+      },
+      "Rachel Martinez": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Pierre Dubois": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Anna Schmidt": {
+        "pipeline": 5.6,
+        "qualified": 3.36,
+        "deals": 16
+      },
+      "Marco Rossi": {
+        "pipeline": 2.5,
+        "qualified": 1.5,
+        "deals": 7
+      },
+      "Sophie Martin": {
+        "pipeline": 2.5,
+        "qualified": 1.5,
+        "deals": 7
+      },
+      "Erik Lindqvist": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "James O'Brien": {
+        "pipeline": 2.5,
+        "qualified": 1.5,
+        "deals": 7
+      },
+      "Yuki Tanaka": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Wei Zhang": {
+        "pipeline": 5.6,
+        "qualified": 3.36,
+        "deals": 16
+      },
+      "Priya Sharma": {
+        "pipeline": 2.5,
+        "qualified": 1.5,
+        "deals": 7
+      },
+      "Chris Lee": {
+        "pipeline": 2.5,
+        "qualified": 1.5,
+        "deals": 7
+      }
+    },
+    "2024-Q4": {
+      "John Mitchell": {
+        "pipeline": 4.2,
+        "qualified": 2.52,
+        "deals": 12
+      },
+      "Sarah Williams": {
+        "pipeline": 5.8,
+        "qualified": 3.48,
+        "deals": 16
+      },
+      "Marcus Johnson": {
+        "pipeline": 4.2,
+        "qualified": 2.52,
+        "deals": 12
+      },
+      "Lisa Chen": {
+        "pipeline": 2.6,
+        "qualified": 1.56,
+        "deals": 7
+      },
+      "David Rodriguez": {
+        "pipeline": 4.2,
+        "qualified": 2.52,
+        "deals": 12
+      },
+      "Amanda Foster": {
+        "pipeline": 2.6,
+        "qualified": 1.56,
+        "deals": 7
+      },
+      "Michael Brown": {
+        "pipeline": 5.8,
+        "qualified": 3.48,
+        "deals": 16
+      },
+      "Jennifer Taylor": {
+        "pipeline": 4.2,
+        "qualified": 2.52,
+        "deals": 12
+      },
+      "Robert Kim": {
+        "pipeline": 2.6,
+        "qualified": 1.56,
+        "deals": 7
+      },
+      "Emily Davis": {
+        "pipeline": 5.8,
+        "qualified": 3.48,
+        "deals": 16
+      },
+      "Thomas Anderson": {
+        "pipeline": 2.6,
+        "qualified": 1.56,
+        "deals": 7
+      },
+      "Rachel Martinez": {
+        "pipeline": 4.2,
+        "qualified": 2.52,
+        "deals": 12
+      },
+      "Pierre Dubois": {
+        "pipeline": 4.2,
+        "qualified": 2.52,
+        "deals": 12
+      },
+      "Anna Schmidt": {
+        "pipeline": 5.8,
+        "qualified": 3.48,
+        "deals": 16
+      },
+      "Marco Rossi": {
+        "pipeline": 2.6,
+        "qualified": 1.56,
+        "deals": 7
+      },
+      "Sophie Martin": {
+        "pipeline": 2.6,
+        "qualified": 1.56,
+        "deals": 7
+      },
+      "Erik Lindqvist": {
+        "pipeline": 4.2,
+        "qualified": 2.52,
+        "deals": 12
+      },
+      "James O'Brien": {
+        "pipeline": 2.6,
+        "qualified": 1.56,
+        "deals": 7
+      },
+      "Yuki Tanaka": {
+        "pipeline": 4.2,
+        "qualified": 2.52,
+        "deals": 12
+      },
+      "Wei Zhang": {
+        "pipeline": 5.8,
+        "qualified": 3.48,
+        "deals": 16
+      },
+      "Priya Sharma": {
+        "pipeline": 2.6,
+        "qualified": 1.56,
+        "deals": 7
+      },
+      "Chris Lee": {
+        "pipeline": 2.6,
+        "qualified": 1.56,
+        "deals": 7
+      }
+    },
+    "2025-Q1": {
+      "John Mitchell": {
+        "pipeline": 4.7,
+        "qualified": 2.82,
+        "deals": 13
+      },
+      "Sarah Williams": {
+        "pipeline": 6.6,
+        "qualified": 3.96,
+        "deals": 18
+      },
+      "Marcus Johnson": {
+        "pipeline": 4.7,
+        "qualified": 2.82,
+        "deals": 13
+      },
+      "Lisa Chen": {
+        "pipeline": 3.0,
+        "qualified": 1.8,
+        "deals": 8
+      },
+      "David Rodriguez": {
+        "pipeline": 4.7,
+        "qualified": 2.82,
+        "deals": 13
+      },
+      "Amanda Foster": {
+        "pipeline": 3.0,
+        "qualified": 1.8,
+        "deals": 8
+      },
+      "Michael Brown": {
+        "pipeline": 6.6,
+        "qualified": 3.96,
+        "deals": 18
+      },
+      "Jennifer Taylor": {
+        "pipeline": 4.7,
+        "qualified": 2.82,
+        "deals": 13
+      },
+      "Robert Kim": {
+        "pipeline": 3.0,
+        "qualified": 1.8,
+        "deals": 8
+      },
+      "Emily Davis": {
+        "pipeline": 6.6,
+        "qualified": 3.96,
+        "deals": 18
+      },
+      "Thomas Anderson": {
+        "pipeline": 3.0,
+        "qualified": 1.8,
+        "deals": 8
+      },
+      "Rachel Martinez": {
+        "pipeline": 4.7,
+        "qualified": 2.82,
+        "deals": 13
+      },
+      "Pierre Dubois": {
+        "pipeline": 4.7,
+        "qualified": 2.82,
+        "deals": 13
+      },
+      "Anna Schmidt": {
+        "pipeline": 6.6,
+        "qualified": 3.96,
+        "deals": 18
+      },
+      "Marco Rossi": {
+        "pipeline": 3.0,
+        "qualified": 1.8,
+        "deals": 8
+      },
+      "Sophie Martin": {
+        "pipeline": 3.0,
+        "qualified": 1.8,
+        "deals": 8
+      },
+      "Erik Lindqvist": {
+        "pipeline": 4.7,
+        "qualified": 2.82,
+        "deals": 13
+      },
+      "James O'Brien": {
+        "pipeline": 3.0,
+        "qualified": 1.8,
+        "deals": 8
+      },
+      "Yuki Tanaka": {
+        "pipeline": 4.7,
+        "qualified": 2.82,
+        "deals": 13
+      },
+      "Wei Zhang": {
+        "pipeline": 6.6,
+        "qualified": 3.96,
+        "deals": 18
+      },
+      "Priya Sharma": {
+        "pipeline": 3.0,
+        "qualified": 1.8,
+        "deals": 8
+      },
+      "Chris Lee": {
+        "pipeline": 3.0,
+        "qualified": 1.8,
+        "deals": 8
+      },
+      "Kevin Patel": {
+        "pipeline": 1.8,
+        "qualified": 1.08,
+        "deals": 5
+      },
+      "Clara M\u00fcller": {
+        "pipeline": 1.8,
+        "qualified": 1.08,
+        "deals": 5
+      },
+      "Kenji Nakamura": {
+        "pipeline": 1.8,
+        "qualified": 1.08,
+        "deals": 5
+      }
+    },
+    "2025-Q2": {
+      "John Mitchell": {
+        "pipeline": 4.9,
+        "qualified": 2.94,
+        "deals": 14
+      },
+      "Sarah Williams": {
+        "pipeline": 6.9,
+        "qualified": 4.14,
+        "deals": 19
+      },
+      "Marcus Johnson": {
+        "pipeline": 4.9,
+        "qualified": 2.94,
+        "deals": 14
+      },
+      "Lisa Chen": {
+        "pipeline": 3.1,
+        "qualified": 1.86,
+        "deals": 8
+      },
+      "David Rodriguez": {
+        "pipeline": 4.9,
+        "qualified": 2.94,
+        "deals": 14
+      },
+      "Amanda Foster": {
+        "pipeline": 3.1,
+        "qualified": 1.86,
+        "deals": 8
+      },
+      "Michael Brown": {
+        "pipeline": 6.9,
+        "qualified": 4.14,
+        "deals": 19
+      },
+      "Jennifer Taylor": {
+        "pipeline": 4.9,
+        "qualified": 2.94,
+        "deals": 14
+      },
+      "Robert Kim": {
+        "pipeline": 3.1,
+        "qualified": 1.86,
+        "deals": 8
+      },
+      "Emily Davis": {
+        "pipeline": 6.9,
+        "qualified": 4.14,
+        "deals": 19
+      },
+      "Thomas Anderson": {
+        "pipeline": 3.1,
+        "qualified": 1.86,
+        "deals": 8
+      },
+      "Rachel Martinez": {
+        "pipeline": 4.9,
+        "qualified": 2.94,
+        "deals": 14
+      },
+      "Pierre Dubois": {
+        "pipeline": 4.9,
+        "qualified": 2.94,
+        "deals": 14
+      },
+      "Anna Schmidt": {
+        "pipeline": 6.9,
+        "qualified": 4.14,
+        "deals": 19
+      },
+      "Marco Rossi": {
+        "pipeline": 3.1,
+        "qualified": 1.86,
+        "deals": 8
+      },
+      "Sophie Martin": {
+        "pipeline": 3.1,
+        "qualified": 1.86,
+        "deals": 8
+      },
+      "Erik Lindqvist": {
+        "pipeline": 4.9,
+        "qualified": 2.94,
+        "deals": 14
+      },
+      "James O'Brien": {
+        "pipeline": 3.1,
+        "qualified": 1.86,
+        "deals": 8
+      },
+      "Yuki Tanaka": {
+        "pipeline": 4.9,
+        "qualified": 2.94,
+        "deals": 14
+      },
+      "Wei Zhang": {
+        "pipeline": 6.9,
+        "qualified": 4.14,
+        "deals": 19
+      },
+      "Priya Sharma": {
+        "pipeline": 3.1,
+        "qualified": 1.86,
+        "deals": 8
+      },
+      "Chris Lee": {
+        "pipeline": 3.1,
+        "qualified": 1.86,
+        "deals": 8
+      },
+      "Kevin Patel": {
+        "pipeline": 1.8,
+        "qualified": 1.08,
+        "deals": 5
+      },
+      "Olivia Thompson": {
+        "pipeline": 1.8,
+        "qualified": 1.08,
+        "deals": 5
+      },
+      "Daniel Garcia": {
+        "pipeline": 1.8,
+        "qualified": 1.08,
+        "deals": 5
+      },
+      "Clara M\u00fcller": {
+        "pipeline": 1.8,
+        "qualified": 1.08,
+        "deals": 5
+      },
+      "Luca Bianchi": {
+        "pipeline": 1.8,
+        "qualified": 1.08,
+        "deals": 5
+      },
+      "Kenji Nakamura": {
+        "pipeline": 1.8,
+        "qualified": 1.08,
+        "deals": 5
+      },
+      "Min-ji Park": {
+        "pipeline": 1.8,
+        "qualified": 1.08,
+        "deals": 5
+      }
+    },
+    "2025-Q3": {
+      "John Mitchell": {
+        "pipeline": 5.1,
+        "qualified": 3.06,
+        "deals": 14
+      },
+      "Sarah Williams": {
+        "pipeline": 7.1,
+        "qualified": 4.26,
+        "deals": 20
+      },
+      "Marcus Johnson": {
+        "pipeline": 5.1,
+        "qualified": 3.06,
+        "deals": 14
+      },
+      "Lisa Chen": {
+        "pipeline": 3.2,
+        "qualified": 1.92,
+        "deals": 9
+      },
+      "David Rodriguez": {
+        "pipeline": 5.1,
+        "qualified": 3.06,
+        "deals": 14
+      },
+      "Amanda Foster": {
+        "pipeline": 3.2,
+        "qualified": 1.92,
+        "deals": 9
+      },
+      "Michael Brown": {
+        "pipeline": 7.1,
+        "qualified": 4.26,
+        "deals": 20
+      },
+      "Jennifer Taylor": {
+        "pipeline": 5.1,
+        "qualified": 3.06,
+        "deals": 14
+      },
+      "Robert Kim": {
+        "pipeline": 3.2,
+        "qualified": 1.92,
+        "deals": 9
+      },
+      "Emily Davis": {
+        "pipeline": 7.1,
+        "qualified": 4.26,
+        "deals": 20
+      },
+      "Thomas Anderson": {
+        "pipeline": 3.2,
+        "qualified": 1.92,
+        "deals": 9
+      },
+      "Rachel Martinez": {
+        "pipeline": 5.1,
+        "qualified": 3.06,
+        "deals": 14
+      },
+      "Pierre Dubois": {
+        "pipeline": 5.1,
+        "qualified": 3.06,
+        "deals": 14
+      },
+      "Anna Schmidt": {
+        "pipeline": 7.1,
+        "qualified": 4.26,
+        "deals": 20
+      },
+      "Marco Rossi": {
+        "pipeline": 3.2,
+        "qualified": 1.92,
+        "deals": 9
+      },
+      "Sophie Martin": {
+        "pipeline": 3.2,
+        "qualified": 1.92,
+        "deals": 9
+      },
+      "Erik Lindqvist": {
+        "pipeline": 5.1,
+        "qualified": 3.06,
+        "deals": 14
+      },
+      "James O'Brien": {
+        "pipeline": 3.2,
+        "qualified": 1.92,
+        "deals": 9
+      },
+      "Yuki Tanaka": {
+        "pipeline": 5.1,
+        "qualified": 3.06,
+        "deals": 14
+      },
+      "Wei Zhang": {
+        "pipeline": 7.1,
+        "qualified": 4.26,
+        "deals": 20
+      },
+      "Priya Sharma": {
+        "pipeline": 3.2,
+        "qualified": 1.92,
+        "deals": 9
+      },
+      "Chris Lee": {
+        "pipeline": 3.2,
+        "qualified": 1.92,
+        "deals": 9
+      },
+      "Kevin Patel": {
+        "pipeline": 1.9,
+        "qualified": 1.14,
+        "deals": 5
+      },
+      "Olivia Thompson": {
+        "pipeline": 1.9,
+        "qualified": 1.14,
+        "deals": 5
+      },
+      "Daniel Garcia": {
+        "pipeline": 1.9,
+        "qualified": 1.14,
+        "deals": 5
+      },
+      "Clara M\u00fcller": {
+        "pipeline": 1.9,
+        "qualified": 1.14,
+        "deals": 5
+      },
+      "Luca Bianchi": {
+        "pipeline": 1.9,
+        "qualified": 1.14,
+        "deals": 5
+      },
+      "Kenji Nakamura": {
+        "pipeline": 1.9,
+        "qualified": 1.14,
+        "deals": 5
+      },
+      "Min-ji Park": {
+        "pipeline": 1.9,
+        "qualified": 1.14,
+        "deals": 5
+      }
+    },
+    "2025-Q4": {
+      "John Mitchell": {
+        "pipeline": 5.3,
+        "qualified": 3.18,
+        "deals": 15
+      },
+      "Sarah Williams": {
+        "pipeline": 7.4,
+        "qualified": 4.44,
+        "deals": 21
+      },
+      "Marcus Johnson": {
+        "pipeline": 5.3,
+        "qualified": 3.18,
+        "deals": 15
+      },
+      "Lisa Chen": {
+        "pipeline": 3.3,
+        "qualified": 1.98,
+        "deals": 9
+      },
+      "David Rodriguez": {
+        "pipeline": 5.3,
+        "qualified": 3.18,
+        "deals": 15
+      },
+      "Amanda Foster": {
+        "pipeline": 3.3,
+        "qualified": 1.98,
+        "deals": 9
+      },
+      "Michael Brown": {
+        "pipeline": 7.4,
+        "qualified": 4.44,
+        "deals": 21
+      },
+      "Jennifer Taylor": {
+        "pipeline": 5.3,
+        "qualified": 3.18,
+        "deals": 15
+      },
+      "Robert Kim": {
+        "pipeline": 3.3,
+        "qualified": 1.98,
+        "deals": 9
+      },
+      "Emily Davis": {
+        "pipeline": 7.4,
+        "qualified": 4.44,
+        "deals": 21
+      },
+      "Thomas Anderson": {
+        "pipeline": 3.3,
+        "qualified": 1.98,
+        "deals": 9
+      },
+      "Rachel Martinez": {
+        "pipeline": 5.3,
+        "qualified": 3.18,
+        "deals": 15
+      },
+      "Pierre Dubois": {
+        "pipeline": 5.3,
+        "qualified": 3.18,
+        "deals": 15
+      },
+      "Anna Schmidt": {
+        "pipeline": 7.4,
+        "qualified": 4.44,
+        "deals": 21
+      },
+      "Marco Rossi": {
+        "pipeline": 3.3,
+        "qualified": 1.98,
+        "deals": 9
+      },
+      "Sophie Martin": {
+        "pipeline": 3.3,
+        "qualified": 1.98,
+        "deals": 9
+      },
+      "Erik Lindqvist": {
+        "pipeline": 5.3,
+        "qualified": 3.18,
+        "deals": 15
+      },
+      "James O'Brien": {
+        "pipeline": 3.3,
+        "qualified": 1.98,
+        "deals": 9
+      },
+      "Yuki Tanaka": {
+        "pipeline": 5.3,
+        "qualified": 3.18,
+        "deals": 15
+      },
+      "Wei Zhang": {
+        "pipeline": 7.4,
+        "qualified": 4.44,
+        "deals": 21
+      },
+      "Priya Sharma": {
+        "pipeline": 3.3,
+        "qualified": 1.98,
+        "deals": 9
+      },
+      "Chris Lee": {
+        "pipeline": 3.3,
+        "qualified": 1.98,
+        "deals": 9
+      },
+      "Kevin Patel": {
+        "pipeline": 2.0,
+        "qualified": 1.2,
+        "deals": 5
+      },
+      "Olivia Thompson": {
+        "pipeline": 2.0,
+        "qualified": 1.2,
+        "deals": 5
+      },
+      "Daniel Garcia": {
+        "pipeline": 2.0,
+        "qualified": 1.2,
+        "deals": 5
+      },
+      "Clara M\u00fcller": {
+        "pipeline": 2.0,
+        "qualified": 1.2,
+        "deals": 5
+      },
+      "Luca Bianchi": {
+        "pipeline": 2.0,
+        "qualified": 1.2,
+        "deals": 5
+      },
+      "Kenji Nakamura": {
+        "pipeline": 2.0,
+        "qualified": 1.2,
+        "deals": 5
+      },
+      "Min-ji Park": {
+        "pipeline": 2.0,
+        "qualified": 1.2,
+        "deals": 5
+      }
+    },
+    "2026-Q1": {
+      "John Mitchell": {
+        "pipeline": 5.8,
+        "qualified": 3.48,
+        "deals": 16
+      },
+      "Sarah Williams": {
+        "pipeline": 8.1,
+        "qualified": 4.86,
+        "deals": 23
+      },
+      "Marcus Johnson": {
+        "pipeline": 5.8,
+        "qualified": 3.48,
+        "deals": 16
+      },
+      "Lisa Chen": {
+        "pipeline": 3.7,
+        "qualified": 2.22,
+        "deals": 10
+      },
+      "David Rodriguez": {
+        "pipeline": 5.8,
+        "qualified": 3.48,
+        "deals": 16
+      },
+      "Amanda Foster": {
+        "pipeline": 3.7,
+        "qualified": 2.22,
+        "deals": 10
+      },
+      "Michael Brown": {
+        "pipeline": 8.1,
+        "qualified": 4.86,
+        "deals": 23
+      },
+      "Jennifer Taylor": {
+        "pipeline": 5.8,
+        "qualified": 3.48,
+        "deals": 16
+      },
+      "Robert Kim": {
+        "pipeline": 3.7,
+        "qualified": 2.22,
+        "deals": 10
+      },
+      "Emily Davis": {
+        "pipeline": 8.1,
+        "qualified": 4.86,
+        "deals": 23
+      },
+      "Thomas Anderson": {
+        "pipeline": 3.7,
+        "qualified": 2.22,
+        "deals": 10
+      },
+      "Rachel Martinez": {
+        "pipeline": 5.8,
+        "qualified": 3.48,
+        "deals": 16
+      },
+      "Pierre Dubois": {
+        "pipeline": 5.8,
+        "qualified": 3.48,
+        "deals": 16
+      },
+      "Anna Schmidt": {
+        "pipeline": 8.1,
+        "qualified": 4.86,
+        "deals": 23
+      },
+      "Marco Rossi": {
+        "pipeline": 3.7,
+        "qualified": 2.22,
+        "deals": 10
+      },
+      "Sophie Martin": {
+        "pipeline": 3.7,
+        "qualified": 2.22,
+        "deals": 10
+      },
+      "Erik Lindqvist": {
+        "pipeline": 5.8,
+        "qualified": 3.48,
+        "deals": 16
+      },
+      "James O'Brien": {
+        "pipeline": 3.7,
+        "qualified": 2.22,
+        "deals": 10
+      },
+      "Yuki Tanaka": {
+        "pipeline": 5.8,
+        "qualified": 3.48,
+        "deals": 16
+      },
+      "Wei Zhang": {
+        "pipeline": 8.1,
+        "qualified": 4.86,
+        "deals": 23
+      },
+      "Priya Sharma": {
+        "pipeline": 3.7,
+        "qualified": 2.22,
+        "deals": 10
+      },
+      "Chris Lee": {
+        "pipeline": 3.7,
+        "qualified": 2.22,
+        "deals": 10
+      },
+      "Kevin Patel": {
+        "pipeline": 2.2,
+        "qualified": 1.32,
+        "deals": 6
+      },
+      "Olivia Thompson": {
+        "pipeline": 2.2,
+        "qualified": 1.32,
+        "deals": 6
+      },
+      "Daniel Garcia": {
+        "pipeline": 2.2,
+        "qualified": 1.32,
+        "deals": 6
+      },
+      "Clara M\u00fcller": {
+        "pipeline": 2.2,
+        "qualified": 1.32,
+        "deals": 6
+      },
+      "Luca Bianchi": {
+        "pipeline": 2.2,
+        "qualified": 1.32,
+        "deals": 6
+      },
+      "Kenji Nakamura": {
+        "pipeline": 2.2,
+        "qualified": 1.32,
+        "deals": 6
+      },
+      "Min-ji Park": {
+        "pipeline": 2.2,
+        "qualified": 1.32,
+        "deals": 6
+      },
+      "Jessica Wong": {
+        "pipeline": 2.2,
+        "qualified": 1.32,
+        "deals": 6
+      },
+      "Henrik Nielsen": {
+        "pipeline": 2.2,
+        "qualified": 1.32,
+        "deals": 6
+      }
+    },
+    "2026-Q2": {
+      "John Mitchell": {
+        "pipeline": 6.0,
+        "qualified": 3.6,
+        "deals": 17
+      },
+      "Sarah Williams": {
+        "pipeline": 8.4,
+        "qualified": 5.04,
+        "deals": 24
+      },
+      "Marcus Johnson": {
+        "pipeline": 6.0,
+        "qualified": 3.6,
+        "deals": 17
+      },
+      "Lisa Chen": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "David Rodriguez": {
+        "pipeline": 6.0,
+        "qualified": 3.6,
+        "deals": 17
+      },
+      "Amanda Foster": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Michael Brown": {
+        "pipeline": 8.4,
+        "qualified": 5.04,
+        "deals": 24
+      },
+      "Jennifer Taylor": {
+        "pipeline": 6.0,
+        "qualified": 3.6,
+        "deals": 17
+      },
+      "Robert Kim": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Emily Davis": {
+        "pipeline": 8.4,
+        "qualified": 5.04,
+        "deals": 24
+      },
+      "Thomas Anderson": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Rachel Martinez": {
+        "pipeline": 6.0,
+        "qualified": 3.6,
+        "deals": 17
+      },
+      "Pierre Dubois": {
+        "pipeline": 6.0,
+        "qualified": 3.6,
+        "deals": 17
+      },
+      "Anna Schmidt": {
+        "pipeline": 8.4,
+        "qualified": 5.04,
+        "deals": 24
+      },
+      "Marco Rossi": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Sophie Martin": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Erik Lindqvist": {
+        "pipeline": 6.0,
+        "qualified": 3.6,
+        "deals": 17
+      },
+      "James O'Brien": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Yuki Tanaka": {
+        "pipeline": 6.0,
+        "qualified": 3.6,
+        "deals": 17
+      },
+      "Wei Zhang": {
+        "pipeline": 8.4,
+        "qualified": 5.04,
+        "deals": 24
+      },
+      "Priya Sharma": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Chris Lee": {
+        "pipeline": 3.8,
+        "qualified": 2.28,
+        "deals": 10
+      },
+      "Kevin Patel": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Olivia Thompson": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Daniel Garcia": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Clara M\u00fcller": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Luca Bianchi": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Kenji Nakamura": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Min-ji Park": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Jessica Wong": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Brandon Scott": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Henrik Nielsen": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Elena Petrova": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Rahul Patel": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      }
+    },
+    "2026-Q3": {
+      "John Mitchell": {
+        "pipeline": 6.2,
+        "qualified": 3.72,
+        "deals": 17
+      },
+      "Sarah Williams": {
+        "pipeline": 8.6,
+        "qualified": 5.16,
+        "deals": 24
+      },
+      "Marcus Johnson": {
+        "pipeline": 6.2,
+        "qualified": 3.72,
+        "deals": 17
+      },
+      "Lisa Chen": {
+        "pipeline": 3.9,
+        "qualified": 2.34,
+        "deals": 11
+      },
+      "David Rodriguez": {
+        "pipeline": 6.2,
+        "qualified": 3.72,
+        "deals": 17
+      },
+      "Amanda Foster": {
+        "pipeline": 3.9,
+        "qualified": 2.34,
+        "deals": 11
+      },
+      "Michael Brown": {
+        "pipeline": 8.6,
+        "qualified": 5.16,
+        "deals": 24
+      },
+      "Jennifer Taylor": {
+        "pipeline": 6.2,
+        "qualified": 3.72,
+        "deals": 17
+      },
+      "Robert Kim": {
+        "pipeline": 3.9,
+        "qualified": 2.34,
+        "deals": 11
+      },
+      "Emily Davis": {
+        "pipeline": 8.6,
+        "qualified": 5.16,
+        "deals": 24
+      },
+      "Thomas Anderson": {
+        "pipeline": 3.9,
+        "qualified": 2.34,
+        "deals": 11
+      },
+      "Rachel Martinez": {
+        "pipeline": 6.2,
+        "qualified": 3.72,
+        "deals": 17
+      },
+      "Pierre Dubois": {
+        "pipeline": 6.2,
+        "qualified": 3.72,
+        "deals": 17
+      },
+      "Anna Schmidt": {
+        "pipeline": 8.6,
+        "qualified": 5.16,
+        "deals": 24
+      },
+      "Marco Rossi": {
+        "pipeline": 3.9,
+        "qualified": 2.34,
+        "deals": 11
+      },
+      "Sophie Martin": {
+        "pipeline": 3.9,
+        "qualified": 2.34,
+        "deals": 11
+      },
+      "Erik Lindqvist": {
+        "pipeline": 6.2,
+        "qualified": 3.72,
+        "deals": 17
+      },
+      "James O'Brien": {
+        "pipeline": 3.9,
+        "qualified": 2.34,
+        "deals": 11
+      },
+      "Yuki Tanaka": {
+        "pipeline": 6.2,
+        "qualified": 3.72,
+        "deals": 17
+      },
+      "Wei Zhang": {
+        "pipeline": 8.6,
+        "qualified": 5.16,
+        "deals": 24
+      },
+      "Priya Sharma": {
+        "pipeline": 3.9,
+        "qualified": 2.34,
+        "deals": 11
+      },
+      "Chris Lee": {
+        "pipeline": 3.9,
+        "qualified": 2.34,
+        "deals": 11
+      },
+      "Kevin Patel": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Olivia Thompson": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Daniel Garcia": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Clara M\u00fcller": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Luca Bianchi": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Kenji Nakamura": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Min-ji Park": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Jessica Wong": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Brandon Scott": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Ashley Moore": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Henrik Nielsen": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Elena Petrova": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Rahul Patel": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Emma Watson": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      }
+    },
+    "2026-Q4": {
+      "John Mitchell": {
+        "pipeline": 6.4,
+        "qualified": 3.84,
+        "deals": 18
+      },
+      "Sarah Williams": {
+        "pipeline": 8.9,
+        "qualified": 5.34,
+        "deals": 25
+      },
+      "Marcus Johnson": {
+        "pipeline": 6.4,
+        "qualified": 3.84,
+        "deals": 18
+      },
+      "Lisa Chen": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "David Rodriguez": {
+        "pipeline": 6.4,
+        "qualified": 3.84,
+        "deals": 18
+      },
+      "Amanda Foster": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Michael Brown": {
+        "pipeline": 8.9,
+        "qualified": 5.34,
+        "deals": 25
+      },
+      "Jennifer Taylor": {
+        "pipeline": 6.4,
+        "qualified": 3.84,
+        "deals": 18
+      },
+      "Robert Kim": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Emily Davis": {
+        "pipeline": 8.9,
+        "qualified": 5.34,
+        "deals": 25
+      },
+      "Thomas Anderson": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Rachel Martinez": {
+        "pipeline": 6.4,
+        "qualified": 3.84,
+        "deals": 18
+      },
+      "Pierre Dubois": {
+        "pipeline": 6.4,
+        "qualified": 3.84,
+        "deals": 18
+      },
+      "Anna Schmidt": {
+        "pipeline": 8.9,
+        "qualified": 5.34,
+        "deals": 25
+      },
+      "Marco Rossi": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Sophie Martin": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Erik Lindqvist": {
+        "pipeline": 6.4,
+        "qualified": 3.84,
+        "deals": 18
+      },
+      "James O'Brien": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Yuki Tanaka": {
+        "pipeline": 6.4,
+        "qualified": 3.84,
+        "deals": 18
+      },
+      "Wei Zhang": {
+        "pipeline": 8.9,
+        "qualified": 5.34,
+        "deals": 25
+      },
+      "Priya Sharma": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Chris Lee": {
+        "pipeline": 4.0,
+        "qualified": 2.4,
+        "deals": 11
+      },
+      "Kevin Patel": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Olivia Thompson": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Daniel Garcia": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Clara M\u00fcller": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Luca Bianchi": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Kenji Nakamura": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Min-ji Park": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Jessica Wong": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Brandon Scott": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Ashley Moore": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Henrik Nielsen": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Elena Petrova": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Rahul Patel": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Emma Watson": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      }
+    }
+  },
+  "win_rate_by_rep": {
+    "2024-Q1": {
+      "John Mitchell": 40,
+      "Sarah Williams": 45,
+      "Marcus Johnson": 40,
+      "Lisa Chen": 35,
+      "David Rodriguez": 40,
+      "Amanda Foster": 35,
+      "Michael Brown": 45,
+      "Jennifer Taylor": 40,
+      "Robert Kim": 35,
+      "Emily Davis": 45,
+      "Thomas Anderson": 35,
+      "Rachel Martinez": 40,
+      "Pierre Dubois": 40,
+      "Anna Schmidt": 45,
+      "Marco Rossi": 35,
+      "Sophie Martin": 35,
+      "Erik Lindqvist": 40,
+      "James O'Brien": 35,
+      "Yuki Tanaka": 40,
+      "Wei Zhang": 45,
+      "Priya Sharma": 35,
+      "Chris Lee": 35
+    },
+    "2024-Q2": {
+      "John Mitchell": 41,
+      "Sarah Williams": 46,
+      "Marcus Johnson": 41,
+      "Lisa Chen": 36,
+      "David Rodriguez": 41,
+      "Amanda Foster": 36,
+      "Michael Brown": 46,
+      "Jennifer Taylor": 41,
+      "Robert Kim": 36,
+      "Emily Davis": 46,
+      "Thomas Anderson": 36,
+      "Rachel Martinez": 41,
+      "Pierre Dubois": 41,
+      "Anna Schmidt": 46,
+      "Marco Rossi": 36,
+      "Sophie Martin": 36,
+      "Erik Lindqvist": 41,
+      "James O'Brien": 36,
+      "Yuki Tanaka": 41,
+      "Wei Zhang": 46,
+      "Priya Sharma": 36,
+      "Chris Lee": 36
+    },
+    "2024-Q3": {
+      "John Mitchell": 42,
+      "Sarah Williams": 47,
+      "Marcus Johnson": 42,
+      "Lisa Chen": 37,
+      "David Rodriguez": 42,
+      "Amanda Foster": 37,
+      "Michael Brown": 47,
+      "Jennifer Taylor": 42,
+      "Robert Kim": 37,
+      "Emily Davis": 47,
+      "Thomas Anderson": 37,
+      "Rachel Martinez": 42,
+      "Pierre Dubois": 42,
+      "Anna Schmidt": 47,
+      "Marco Rossi": 37,
+      "Sophie Martin": 37,
+      "Erik Lindqvist": 42,
+      "James O'Brien": 37,
+      "Yuki Tanaka": 42,
+      "Wei Zhang": 47,
+      "Priya Sharma": 37,
+      "Chris Lee": 37
+    },
+    "2024-Q4": {
+      "John Mitchell": 43,
+      "Sarah Williams": 48,
+      "Marcus Johnson": 43,
+      "Lisa Chen": 38,
+      "David Rodriguez": 43,
+      "Amanda Foster": 38,
+      "Michael Brown": 48,
+      "Jennifer Taylor": 43,
+      "Robert Kim": 38,
+      "Emily Davis": 48,
+      "Thomas Anderson": 38,
+      "Rachel Martinez": 43,
+      "Pierre Dubois": 43,
+      "Anna Schmidt": 48,
+      "Marco Rossi": 38,
+      "Sophie Martin": 38,
+      "Erik Lindqvist": 43,
+      "James O'Brien": 38,
+      "Yuki Tanaka": 43,
+      "Wei Zhang": 48,
+      "Priya Sharma": 38,
+      "Chris Lee": 38
+    },
+    "2025-Q1": {
+      "John Mitchell": 42,
+      "Sarah Williams": 47,
+      "Marcus Johnson": 42,
+      "Lisa Chen": 37,
+      "David Rodriguez": 42,
+      "Amanda Foster": 37,
+      "Michael Brown": 47,
+      "Jennifer Taylor": 42,
+      "Robert Kim": 37,
+      "Emily Davis": 47,
+      "Thomas Anderson": 37,
+      "Rachel Martinez": 42,
+      "Pierre Dubois": 42,
+      "Anna Schmidt": 47,
+      "Marco Rossi": 37,
+      "Sophie Martin": 37,
+      "Erik Lindqvist": 42,
+      "James O'Brien": 37,
+      "Yuki Tanaka": 42,
+      "Wei Zhang": 47,
+      "Priya Sharma": 37,
+      "Chris Lee": 37,
+      "Kevin Patel": 35,
+      "Clara M\u00fcller": 35,
+      "Kenji Nakamura": 35
+    },
+    "2025-Q2": {
+      "John Mitchell": 43,
+      "Sarah Williams": 48,
+      "Marcus Johnson": 43,
+      "Lisa Chen": 38,
+      "David Rodriguez": 43,
+      "Amanda Foster": 38,
+      "Michael Brown": 48,
+      "Jennifer Taylor": 43,
+      "Robert Kim": 38,
+      "Emily Davis": 48,
+      "Thomas Anderson": 38,
+      "Rachel Martinez": 43,
+      "Pierre Dubois": 43,
+      "Anna Schmidt": 48,
+      "Marco Rossi": 38,
+      "Sophie Martin": 38,
+      "Erik Lindqvist": 43,
+      "James O'Brien": 38,
+      "Yuki Tanaka": 43,
+      "Wei Zhang": 48,
+      "Priya Sharma": 38,
+      "Chris Lee": 38,
+      "Kevin Patel": 36,
+      "Olivia Thompson": 36,
+      "Daniel Garcia": 36,
+      "Clara M\u00fcller": 36,
+      "Luca Bianchi": 36,
+      "Kenji Nakamura": 36,
+      "Min-ji Park": 36
+    },
+    "2025-Q3": {
+      "John Mitchell": 44,
+      "Sarah Williams": 49,
+      "Marcus Johnson": 44,
+      "Lisa Chen": 39,
+      "David Rodriguez": 44,
+      "Amanda Foster": 39,
+      "Michael Brown": 49,
+      "Jennifer Taylor": 44,
+      "Robert Kim": 39,
+      "Emily Davis": 49,
+      "Thomas Anderson": 39,
+      "Rachel Martinez": 44,
+      "Pierre Dubois": 44,
+      "Anna Schmidt": 49,
+      "Marco Rossi": 39,
+      "Sophie Martin": 39,
+      "Erik Lindqvist": 44,
+      "James O'Brien": 39,
+      "Yuki Tanaka": 44,
+      "Wei Zhang": 49,
+      "Priya Sharma": 39,
+      "Chris Lee": 39,
+      "Kevin Patel": 37,
+      "Olivia Thompson": 37,
+      "Daniel Garcia": 37,
+      "Clara M\u00fcller": 37,
+      "Luca Bianchi": 37,
+      "Kenji Nakamura": 37,
+      "Min-ji Park": 37
+    },
+    "2025-Q4": {
+      "John Mitchell": 45,
+      "Sarah Williams": 50,
+      "Marcus Johnson": 45,
+      "Lisa Chen": 40,
+      "David Rodriguez": 45,
+      "Amanda Foster": 40,
+      "Michael Brown": 50,
+      "Jennifer Taylor": 45,
+      "Robert Kim": 40,
+      "Emily Davis": 50,
+      "Thomas Anderson": 40,
+      "Rachel Martinez": 45,
+      "Pierre Dubois": 45,
+      "Anna Schmidt": 50,
+      "Marco Rossi": 40,
+      "Sophie Martin": 40,
+      "Erik Lindqvist": 45,
+      "James O'Brien": 40,
+      "Yuki Tanaka": 45,
+      "Wei Zhang": 50,
+      "Priya Sharma": 40,
+      "Chris Lee": 40,
+      "Kevin Patel": 38,
+      "Olivia Thompson": 38,
+      "Daniel Garcia": 38,
+      "Clara M\u00fcller": 38,
+      "Luca Bianchi": 38,
+      "Kenji Nakamura": 38,
+      "Min-ji Park": 38
+    },
+    "2026-Q1": {
+      "John Mitchell": 44,
+      "Sarah Williams": 49,
+      "Marcus Johnson": 44,
+      "Lisa Chen": 39,
+      "David Rodriguez": 44,
+      "Amanda Foster": 39,
+      "Michael Brown": 49,
+      "Jennifer Taylor": 44,
+      "Robert Kim": 39,
+      "Emily Davis": 49,
+      "Thomas Anderson": 39,
+      "Rachel Martinez": 44,
+      "Pierre Dubois": 44,
+      "Anna Schmidt": 49,
+      "Marco Rossi": 39,
+      "Sophie Martin": 39,
+      "Erik Lindqvist": 44,
+      "James O'Brien": 39,
+      "Yuki Tanaka": 44,
+      "Wei Zhang": 49,
+      "Priya Sharma": 39,
+      "Chris Lee": 39,
+      "Kevin Patel": 37,
+      "Olivia Thompson": 37,
+      "Daniel Garcia": 37,
+      "Clara M\u00fcller": 37,
+      "Luca Bianchi": 37,
+      "Kenji Nakamura": 37,
+      "Min-ji Park": 37,
+      "Jessica Wong": 37,
+      "Henrik Nielsen": 37
+    },
+    "2026-Q2": {
+      "John Mitchell": 45,
+      "Sarah Williams": 50,
+      "Marcus Johnson": 45,
+      "Lisa Chen": 40,
+      "David Rodriguez": 45,
+      "Amanda Foster": 40,
+      "Michael Brown": 50,
+      "Jennifer Taylor": 45,
+      "Robert Kim": 40,
+      "Emily Davis": 50,
+      "Thomas Anderson": 40,
+      "Rachel Martinez": 45,
+      "Pierre Dubois": 45,
+      "Anna Schmidt": 50,
+      "Marco Rossi": 40,
+      "Sophie Martin": 40,
+      "Erik Lindqvist": 45,
+      "James O'Brien": 40,
+      "Yuki Tanaka": 45,
+      "Wei Zhang": 50,
+      "Priya Sharma": 40,
+      "Chris Lee": 40,
+      "Kevin Patel": 38,
+      "Olivia Thompson": 38,
+      "Daniel Garcia": 38,
+      "Clara M\u00fcller": 38,
+      "Luca Bianchi": 38,
+      "Kenji Nakamura": 38,
+      "Min-ji Park": 38,
+      "Jessica Wong": 38,
+      "Brandon Scott": 38,
+      "Henrik Nielsen": 38,
+      "Elena Petrova": 38,
+      "Rahul Patel": 38
+    },
+    "2026-Q3": {
+      "John Mitchell": 46,
+      "Sarah Williams": 51,
+      "Marcus Johnson": 46,
+      "Lisa Chen": 41,
+      "David Rodriguez": 46,
+      "Amanda Foster": 41,
+      "Michael Brown": 51,
+      "Jennifer Taylor": 46,
+      "Robert Kim": 41,
+      "Emily Davis": 51,
+      "Thomas Anderson": 41,
+      "Rachel Martinez": 46,
+      "Pierre Dubois": 46,
+      "Anna Schmidt": 51,
+      "Marco Rossi": 41,
+      "Sophie Martin": 41,
+      "Erik Lindqvist": 46,
+      "James O'Brien": 41,
+      "Yuki Tanaka": 46,
+      "Wei Zhang": 51,
+      "Priya Sharma": 41,
+      "Chris Lee": 41,
+      "Kevin Patel": 39,
+      "Olivia Thompson": 39,
+      "Daniel Garcia": 39,
+      "Clara M\u00fcller": 39,
+      "Luca Bianchi": 39,
+      "Kenji Nakamura": 39,
+      "Min-ji Park": 39,
+      "Jessica Wong": 39,
+      "Brandon Scott": 39,
+      "Ashley Moore": 39,
+      "Henrik Nielsen": 39,
+      "Elena Petrova": 39,
+      "Rahul Patel": 39,
+      "Emma Watson": 39
+    },
+    "2026-Q4": {
+      "John Mitchell": 47,
+      "Sarah Williams": 52,
+      "Marcus Johnson": 47,
+      "Lisa Chen": 42,
+      "David Rodriguez": 47,
+      "Amanda Foster": 42,
+      "Michael Brown": 52,
+      "Jennifer Taylor": 47,
+      "Robert Kim": 42,
+      "Emily Davis": 52,
+      "Thomas Anderson": 42,
+      "Rachel Martinez": 47,
+      "Pierre Dubois": 47,
+      "Anna Schmidt": 52,
+      "Marco Rossi": 42,
+      "Sophie Martin": 42,
+      "Erik Lindqvist": 47,
+      "James O'Brien": 42,
+      "Yuki Tanaka": 47,
+      "Wei Zhang": 52,
+      "Priya Sharma": 42,
+      "Chris Lee": 42,
+      "Kevin Patel": 40,
+      "Olivia Thompson": 40,
+      "Daniel Garcia": 40,
+      "Clara M\u00fcller": 40,
+      "Luca Bianchi": 40,
+      "Kenji Nakamura": 40,
+      "Min-ji Park": 40,
+      "Jessica Wong": 40,
+      "Brandon Scott": 40,
+      "Ashley Moore": 40,
+      "Henrik Nielsen": 40,
+      "Elena Petrova": 40,
+      "Rahul Patel": 40,
+      "Emma Watson": 40
+    }
+  },
+  "top_deals": {
+    "2024": [
+      {
+        "company": "GlobalTech Industries",
+        "value": 3.8,
+        "quarter": "Q4",
+        "rep": "Michael Brown",
+        "region": "AMER",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      },
+      {
+        "company": "Nexus Financial",
+        "value": 3.2,
+        "quarter": "Q3",
+        "rep": "Sarah Williams",
+        "region": "AMER",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      },
+      {
+        "company": "Horizon Healthcare",
+        "value": 2.9,
+        "quarter": "Q4",
+        "rep": "Anna Schmidt",
+        "region": "EMEA",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      },
+      {
+        "company": "Pacific Logistics",
+        "value": 2.5,
+        "quarter": "Q2",
+        "rep": "Wei Zhang",
+        "region": "APAC",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      },
+      {
+        "company": "Summit Energy",
+        "value": 2.2,
+        "quarter": "Q1",
+        "rep": "Emily Davis",
+        "region": "AMER",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      }
+    ],
+    "2025": [
+      {
+        "company": "MegaCorp",
+        "value": 4.2,
+        "quarter": "Q4",
+        "rep": "Michael Brown",
+        "region": "AMER",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      },
+      {
+        "company": "Enterprise One",
+        "value": 3.5,
+        "quarter": "Q3",
+        "rep": "Sarah Williams",
+        "region": "AMER",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      },
+      {
+        "company": "Nexus Industries",
+        "value": 3.1,
+        "quarter": "Q2",
+        "rep": "Anna Schmidt",
+        "region": "EMEA",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      },
+      {
+        "company": "Quantum Tech",
+        "value": 2.8,
+        "quarter": "Q4",
+        "rep": "Wei Zhang",
+        "region": "APAC",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      },
+      {
+        "company": "Apex Solutions",
+        "value": 2.4,
+        "quarter": "Q1",
+        "rep": "Emily Davis",
+        "region": "AMER",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      }
+    ],
+    "2026": [
+      {
+        "company": "Titan Corp",
+        "value": 5.5,
+        "quarter": "Q2",
+        "rep": "Michael Brown",
+        "region": "AMER",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      },
+      {
+        "company": "OmniTech",
+        "value": 4.8,
+        "quarter": "Q1",
+        "rep": "Sarah Williams",
+        "region": "AMER",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      },
+      {
+        "company": "Stellar Systems",
+        "value": 4.2,
+        "quarter": "Q3",
+        "rep": "Anna Schmidt",
+        "region": "EMEA",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      },
+      {
+        "company": "Phoenix Group",
+        "value": 3.9,
+        "quarter": "Q4",
+        "rep": "Wei Zhang",
+        "region": "APAC",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      },
+      {
+        "company": "Atlas Global",
+        "value": 3.5,
+        "quarter": "Q2",
+        "rep": "Emily Davis",
+        "region": "AMER",
+        "segment": "Enterprise",
+        "product": "Enterprise"
+      }
+    ]
+  },
+  "stalled_deals": {
+    "2024-Q1": [
+      {
+        "company": "Stalled Corp 2024-Q1-1",
+        "value": 0.5,
+        "stage": "Proposal",
+        "days_stalled": 35,
+        "rep": "Robert Kim",
+        "region": "AMER",
+        "last_activity": "2024-02-10"
+      },
+      {
+        "company": "Stalled Corp 2024-Q1-2",
+        "value": 0.7,
+        "stage": "Negotiation",
+        "days_stalled": 40,
+        "rep": "Thomas Anderson",
+        "region": "AMER",
+        "last_activity": "2024-02-15"
+      }
+    ],
+    "2024-Q2": [
+      {
+        "company": "Stalled Corp 2024-Q2-1",
+        "value": 0.5,
+        "stage": "Proposal",
+        "days_stalled": 35,
+        "rep": "Robert Kim",
+        "region": "AMER",
+        "last_activity": "2024-05-10"
+      },
+      {
+        "company": "Stalled Corp 2024-Q2-2",
+        "value": 0.7,
+        "stage": "Negotiation",
+        "days_stalled": 40,
+        "rep": "Thomas Anderson",
+        "region": "AMER",
+        "last_activity": "2024-05-15"
+      }
+    ],
+    "2024-Q3": [
+      {
+        "company": "Stalled Corp 2024-Q3-1",
+        "value": 0.5,
+        "stage": "Proposal",
+        "days_stalled": 35,
+        "rep": "Robert Kim",
+        "region": "AMER",
+        "last_activity": "2024-08-10"
+      },
+      {
+        "company": "Stalled Corp 2024-Q3-2",
+        "value": 0.7,
+        "stage": "Negotiation",
+        "days_stalled": 40,
+        "rep": "Thomas Anderson",
+        "region": "AMER",
+        "last_activity": "2024-08-15"
+      }
+    ],
+    "2024-Q4": [
+      {
+        "company": "Stalled Corp 2024-Q4-1",
+        "value": 0.5,
+        "stage": "Proposal",
+        "days_stalled": 35,
+        "rep": "Robert Kim",
+        "region": "AMER",
+        "last_activity": "2024-11-10"
+      },
+      {
+        "company": "Stalled Corp 2024-Q4-2",
+        "value": 0.7,
+        "stage": "Negotiation",
+        "days_stalled": 40,
+        "rep": "Thomas Anderson",
+        "region": "AMER",
+        "last_activity": "2024-11-15"
+      }
+    ],
+    "2025-Q1": [
+      {
+        "company": "Stalled Corp 2025-Q1-1",
+        "value": 0.8,
+        "stage": "Proposal",
+        "days_stalled": 35,
+        "rep": "Robert Kim",
+        "region": "AMER",
+        "last_activity": "2025-02-10"
+      },
+      {
+        "company": "Stalled Corp 2025-Q1-2",
+        "value": 1.0,
+        "stage": "Negotiation",
+        "days_stalled": 40,
+        "rep": "Thomas Anderson",
+        "region": "AMER",
+        "last_activity": "2025-02-15"
+      }
+    ],
+    "2025-Q2": [
+      {
+        "company": "Stalled Corp 2025-Q2-1",
+        "value": 0.8,
+        "stage": "Proposal",
+        "days_stalled": 35,
+        "rep": "Robert Kim",
+        "region": "AMER",
+        "last_activity": "2025-05-10"
+      },
+      {
+        "company": "Stalled Corp 2025-Q2-2",
+        "value": 1.0,
+        "stage": "Negotiation",
+        "days_stalled": 40,
+        "rep": "Thomas Anderson",
+        "region": "AMER",
+        "last_activity": "2025-05-15"
+      }
+    ],
+    "2025-Q3": [
+      {
+        "company": "Stalled Corp 2025-Q3-1",
+        "value": 0.8,
+        "stage": "Proposal",
+        "days_stalled": 35,
+        "rep": "Robert Kim",
+        "region": "AMER",
+        "last_activity": "2025-08-10"
+      },
+      {
+        "company": "Stalled Corp 2025-Q3-2",
+        "value": 1.0,
+        "stage": "Negotiation",
+        "days_stalled": 40,
+        "rep": "Thomas Anderson",
+        "region": "AMER",
+        "last_activity": "2025-08-15"
+      }
+    ],
+    "2025-Q4": [
+      {
+        "company": "Stalled Corp 2025-Q4-1",
+        "value": 0.8,
+        "stage": "Proposal",
+        "days_stalled": 35,
+        "rep": "Robert Kim",
+        "region": "AMER",
+        "last_activity": "2025-11-10"
+      },
+      {
+        "company": "Stalled Corp 2025-Q4-2",
+        "value": 1.0,
+        "stage": "Negotiation",
+        "days_stalled": 40,
+        "rep": "Thomas Anderson",
+        "region": "AMER",
+        "last_activity": "2025-11-15"
+      }
+    ],
+    "2026-Q1": [
+      {
+        "company": "Stalled Corp 2026-Q1-1",
+        "value": 1.1,
+        "stage": "Proposal",
+        "days_stalled": 35,
+        "rep": "Robert Kim",
+        "region": "AMER",
+        "last_activity": "2026-02-10"
+      },
+      {
+        "company": "Stalled Corp 2026-Q1-2",
+        "value": 1.3,
+        "stage": "Negotiation",
+        "days_stalled": 40,
+        "rep": "Thomas Anderson",
+        "region": "AMER",
+        "last_activity": "2026-02-15"
+      }
+    ],
+    "2026-Q2": [
+      {
+        "company": "Stalled Corp 2026-Q2-1",
+        "value": 1.1,
+        "stage": "Proposal",
+        "days_stalled": 35,
+        "rep": "Robert Kim",
+        "region": "AMER",
+        "last_activity": "2026-05-10"
+      },
+      {
+        "company": "Stalled Corp 2026-Q2-2",
+        "value": 1.3,
+        "stage": "Negotiation",
+        "days_stalled": 40,
+        "rep": "Thomas Anderson",
+        "region": "AMER",
+        "last_activity": "2026-05-15"
+      }
+    ],
+    "2026-Q3": [
+      {
+        "company": "Stalled Corp 2026-Q3-1",
+        "value": 1.1,
+        "stage": "Proposal",
+        "days_stalled": 35,
+        "rep": "Robert Kim",
+        "region": "AMER",
+        "last_activity": "2026-08-10"
+      },
+      {
+        "company": "Stalled Corp 2026-Q3-2",
+        "value": 1.3,
+        "stage": "Negotiation",
+        "days_stalled": 40,
+        "rep": "Thomas Anderson",
+        "region": "AMER",
+        "last_activity": "2026-08-15"
+      }
+    ],
+    "2026-Q4": [
+      {
+        "company": "Stalled Corp 2026-Q4-1",
+        "value": 1.1,
+        "stage": "Proposal",
+        "days_stalled": 35,
+        "rep": "Robert Kim",
+        "region": "AMER",
+        "last_activity": "2026-11-10"
+      },
+      {
+        "company": "Stalled Corp 2026-Q4-2",
+        "value": 1.3,
+        "stage": "Negotiation",
+        "days_stalled": 40,
+        "rep": "Thomas Anderson",
+        "region": "AMER",
+        "last_activity": "2026-11-15"
+      }
+    ]
+  },
+  "stage_conversion_rates": {
+    "2024-Q1": {
+      "Lead_to_Qualified": 63,
+      "Qualified_to_Proposal": 53,
+      "Proposal_to_Negotiation": 46,
+      "Negotiation_to_Won": 38
+    },
+    "2024-Q2": {
+      "Lead_to_Qualified": 64,
+      "Qualified_to_Proposal": 54,
+      "Proposal_to_Negotiation": 47,
+      "Negotiation_to_Won": 39
+    },
+    "2024-Q3": {
+      "Lead_to_Qualified": 65,
+      "Qualified_to_Proposal": 55,
+      "Proposal_to_Negotiation": 48,
+      "Negotiation_to_Won": 40
+    },
+    "2024-Q4": {
+      "Lead_to_Qualified": 66,
+      "Qualified_to_Proposal": 56,
+      "Proposal_to_Negotiation": 49,
+      "Negotiation_to_Won": 41
+    },
+    "2025-Q1": {
+      "Lead_to_Qualified": 65,
+      "Qualified_to_Proposal": 55,
+      "Proposal_to_Negotiation": 48,
+      "Negotiation_to_Won": 40
+    },
+    "2025-Q2": {
+      "Lead_to_Qualified": 66,
+      "Qualified_to_Proposal": 56,
+      "Proposal_to_Negotiation": 49,
+      "Negotiation_to_Won": 41
+    },
+    "2025-Q3": {
+      "Lead_to_Qualified": 67,
+      "Qualified_to_Proposal": 57,
+      "Proposal_to_Negotiation": 50,
+      "Negotiation_to_Won": 42
+    },
+    "2025-Q4": {
+      "Lead_to_Qualified": 68,
+      "Qualified_to_Proposal": 58,
+      "Proposal_to_Negotiation": 51,
+      "Negotiation_to_Won": 43
+    },
+    "2026-Q1": {
+      "Lead_to_Qualified": 67,
+      "Qualified_to_Proposal": 57,
+      "Proposal_to_Negotiation": 50,
+      "Negotiation_to_Won": 42
+    },
+    "2026-Q2": {
+      "Lead_to_Qualified": 68,
+      "Qualified_to_Proposal": 58,
+      "Proposal_to_Negotiation": 51,
+      "Negotiation_to_Won": 43
+    },
+    "2026-Q3": {
+      "Lead_to_Qualified": 69,
+      "Qualified_to_Proposal": 59,
+      "Proposal_to_Negotiation": 52,
+      "Negotiation_to_Won": 44
+    },
+    "2026-Q4": {
+      "Lead_to_Qualified": 70,
+      "Qualified_to_Proposal": 60,
+      "Proposal_to_Negotiation": 53,
+      "Negotiation_to_Won": 45
+    }
+  },
+  "customer_segments": {
+    "2024-Q1": {
+      "Enterprise": {
+        "count": 76,
+        "revenue": 12.1,
+        "avg_deal_size": 0.16,
+        "churn_pct": 5.5,
+        "nrr": 116
+      },
+      "Mid-Market": {
+        "count": 228,
+        "revenue": 6.6,
+        "avg_deal_size": 0.029,
+        "churn_pct": 8.8,
+        "nrr": 111
+      },
+      "SMB": {
+        "count": 456,
+        "revenue": 3.3,
+        "avg_deal_size": 0.007,
+        "churn_pct": 12.5,
+        "nrr": 104
+      }
+    },
+    "2024-Q2": {
+      "Enterprise": {
+        "count": 78,
+        "revenue": 13.2,
+        "avg_deal_size": 0.17,
+        "churn_pct": 5.5,
+        "nrr": 117
+      },
+      "Mid-Market": {
+        "count": 234,
+        "revenue": 7.2,
+        "avg_deal_size": 0.031,
+        "churn_pct": 8.7,
+        "nrr": 112
+      },
+      "SMB": {
+        "count": 468,
+        "revenue": 3.6,
+        "avg_deal_size": 0.008,
+        "churn_pct": 12.4,
+        "nrr": 105
+      }
+    },
+    "2024-Q3": {
+      "Enterprise": {
+        "count": 80,
+        "revenue": 14.3,
+        "avg_deal_size": 0.18,
+        "churn_pct": 5.4,
+        "nrr": 118
+      },
+      "Mid-Market": {
+        "count": 240,
+        "revenue": 7.8,
+        "avg_deal_size": 0.033,
+        "churn_pct": 8.6,
+        "nrr": 113
+      },
+      "SMB": {
+        "count": 480,
+        "revenue": 3.9,
+        "avg_deal_size": 0.008,
+        "churn_pct": 12.3,
+        "nrr": 106
+      }
+    },
+    "2024-Q4": {
+      "Enterprise": {
+        "count": 82,
+        "revenue": 15.4,
+        "avg_deal_size": 0.19,
+        "churn_pct": 5.3,
+        "nrr": 119
+      },
+      "Mid-Market": {
+        "count": 246,
+        "revenue": 8.4,
+        "avg_deal_size": 0.034,
+        "churn_pct": 8.5,
+        "nrr": 114
+      },
+      "SMB": {
+        "count": 492,
+        "revenue": 4.2,
+        "avg_deal_size": 0.009,
+        "churn_pct": 12.2,
+        "nrr": 107
+      }
+    },
+    "2025-Q1": {
+      "Enterprise": {
+        "count": 87,
+        "revenue": 17.6,
+        "avg_deal_size": 0.2,
+        "churn_pct": 5.2,
+        "nrr": 119
+      },
+      "Mid-Market": {
+        "count": 261,
+        "revenue": 9.6,
+        "avg_deal_size": 0.037,
+        "churn_pct": 8.3,
+        "nrr": 114
+      },
+      "SMB": {
+        "count": 522,
+        "revenue": 4.8,
+        "avg_deal_size": 0.009,
+        "churn_pct": 11.7,
+        "nrr": 107
+      }
+    },
+    "2025-Q2": {
+      "Enterprise": {
+        "count": 90,
+        "revenue": 19.2,
+        "avg_deal_size": 0.21,
+        "churn_pct": 5.2,
+        "nrr": 120
+      },
+      "Mid-Market": {
+        "count": 270,
+        "revenue": 10.5,
+        "avg_deal_size": 0.039,
+        "churn_pct": 8.2,
+        "nrr": 115
+      },
+      "SMB": {
+        "count": 540,
+        "revenue": 5.2,
+        "avg_deal_size": 0.01,
+        "churn_pct": 11.6,
+        "nrr": 108
+      }
+    },
+    "2025-Q3": {
+      "Enterprise": {
+        "count": 93,
+        "revenue": 20.9,
+        "avg_deal_size": 0.22,
+        "churn_pct": 5.1,
+        "nrr": 121
+      },
+      "Mid-Market": {
+        "count": 280,
+        "revenue": 11.4,
+        "avg_deal_size": 0.041,
+        "churn_pct": 8.1,
+        "nrr": 116
+      },
+      "SMB": {
+        "count": 561,
+        "revenue": 5.7,
+        "avg_deal_size": 0.01,
+        "churn_pct": 11.5,
+        "nrr": 109
+      }
+    },
+    "2025-Q4": {
+      "Enterprise": {
+        "count": 99,
+        "revenue": 24.8,
+        "avg_deal_size": 0.25,
+        "churn_pct": 5.0,
+        "nrr": 122
+      },
+      "Mid-Market": {
+        "count": 297,
+        "revenue": 13.5,
+        "avg_deal_size": 0.045,
+        "churn_pct": 8.0,
+        "nrr": 117
+      },
+      "SMB": {
+        "count": 594,
+        "revenue": 6.8,
+        "avg_deal_size": 0.011,
+        "churn_pct": 11.4,
+        "nrr": 110
+      }
+    },
+    "2026-Q1": {
+      "Enterprise": {
+        "count": 105,
+        "revenue": 26.4,
+        "avg_deal_size": 0.25,
+        "churn_pct": 4.9,
+        "nrr": 122
+      },
+      "Mid-Market": {
+        "count": 315,
+        "revenue": 14.4,
+        "avg_deal_size": 0.046,
+        "churn_pct": 7.8,
+        "nrr": 117
+      },
+      "SMB": {
+        "count": 630,
+        "revenue": 7.2,
+        "avg_deal_size": 0.011,
+        "churn_pct": 10.9,
+        "nrr": 110
+      }
+    },
+    "2026-Q2": {
+      "Enterprise": {
+        "count": 108,
+        "revenue": 27.5,
+        "avg_deal_size": 0.25,
+        "churn_pct": 4.9,
+        "nrr": 123
+      },
+      "Mid-Market": {
+        "count": 325,
+        "revenue": 15.0,
+        "avg_deal_size": 0.046,
+        "churn_pct": 7.7,
+        "nrr": 118
+      },
+      "SMB": {
+        "count": 651,
+        "revenue": 7.5,
+        "avg_deal_size": 0.012,
+        "churn_pct": 10.8,
+        "nrr": 111
+      }
+    },
+    "2026-Q3": {
+      "Enterprise": {
+        "count": 112,
+        "revenue": 28.6,
+        "avg_deal_size": 0.26,
+        "churn_pct": 4.8,
+        "nrr": 124
+      },
+      "Mid-Market": {
+        "count": 336,
+        "revenue": 15.6,
+        "avg_deal_size": 0.046,
+        "churn_pct": 7.6,
+        "nrr": 119
+      },
+      "SMB": {
+        "count": 672,
+        "revenue": 7.8,
+        "avg_deal_size": 0.012,
+        "churn_pct": 10.7,
+        "nrr": 112
+      }
+    },
+    "2026-Q4": {
+      "Enterprise": {
+        "count": 115,
+        "revenue": 27.5,
+        "avg_deal_size": 0.24,
+        "churn_pct": 4.8,
+        "nrr": 125
+      },
+      "Mid-Market": {
+        "count": 346,
+        "revenue": 15.0,
+        "avg_deal_size": 0.043,
+        "churn_pct": 7.5,
+        "nrr": 120
+      },
+      "SMB": {
+        "count": 693,
+        "revenue": 7.5,
+        "avg_deal_size": 0.011,
+        "churn_pct": 10.6,
+        "nrr": 113
+      }
+    }
+  },
+  "headcount_by_department": {
+    "2024-Q1": {
+      "Engineering": 75,
+      "Sales": 42,
+      "Marketing": 24,
+      "Product": 19,
+      "Customer Success": 33,
+      "People": 12,
+      "Finance": 12,
+      "G&A": 18,
+      "Total": 235
+    },
+    "2024-Q2": {
+      "Engineering": 77,
+      "Sales": 43,
+      "Marketing": 24,
+      "Product": 19,
+      "Customer Success": 34,
+      "People": 12,
+      "Finance": 12,
+      "G&A": 21,
+      "Total": 242
+    },
+    "2024-Q3": {
+      "Engineering": 79,
+      "Sales": 44,
+      "Marketing": 25,
+      "Product": 20,
+      "Customer Success": 35,
+      "People": 12,
+      "Finance": 12,
+      "G&A": 22,
+      "Total": 249
+    },
+    "2024-Q4": {
+      "Engineering": 81,
+      "Sales": 45,
+      "Marketing": 26,
+      "Product": 20,
+      "Customer Success": 36,
+      "People": 13,
+      "Finance": 13,
+      "G&A": 22,
+      "Total": 256
+    },
+    "2025-Q1": {
+      "Engineering": 95,
+      "Sales": 52,
+      "Marketing": 30,
+      "Product": 24,
+      "Customer Success": 41,
+      "People": 15,
+      "Finance": 15,
+      "G&A": 23,
+      "Total": 295
+    },
+    "2025-Q2": {
+      "Engineering": 100,
+      "Sales": 55,
+      "Marketing": 31,
+      "Product": 25,
+      "Customer Success": 43,
+      "People": 16,
+      "Finance": 16,
+      "G&A": 24,
+      "Total": 310
+    },
+    "2025-Q3": {
+      "Engineering": 105,
+      "Sales": 58,
+      "Marketing": 32,
+      "Product": 26,
+      "Customer Success": 46,
+      "People": 16,
+      "Finance": 16,
+      "G&A": 26,
+      "Total": 325
+    },
+    "2025-Q4": {
+      "Engineering": 115,
+      "Sales": 62,
+      "Marketing": 35,
+      "Product": 28,
+      "Customer Success": 49,
+      "People": 18,
+      "Finance": 18,
+      "G&A": 25,
+      "Total": 350
+    },
+    "2026-Q1": {
+      "Engineering": 130,
+      "Sales": 68,
+      "Marketing": 38,
+      "Product": 31,
+      "Customer Success": 54,
+      "People": 19,
+      "Finance": 19,
+      "G&A": 26,
+      "Total": 385
+    },
+    "2026-Q2": {
+      "Engineering": 135,
+      "Sales": 72,
+      "Marketing": 40,
+      "Product": 32,
+      "Customer Success": 56,
+      "People": 20,
+      "Finance": 20,
+      "G&A": 25,
+      "Total": 400
+    },
+    "2026-Q3": {
+      "Engineering": 140,
+      "Sales": 76,
+      "Marketing": 42,
+      "Product": 33,
+      "Customer Success": 58,
+      "People": 21,
+      "Finance": 21,
+      "G&A": 24,
+      "Total": 415
+    },
+    "2026-Q4": {
+      "Engineering": 145,
+      "Sales": 80,
+      "Marketing": 43,
+      "Product": 34,
+      "Customer Success": 60,
+      "People": 22,
+      "Finance": 22,
+      "G&A": 24,
+      "Total": 430
+    }
+  },
+  "attrition_by_department": {
+    "2024-Q1": {
+      "Engineering": 2,
+      "Sales": 1,
+      "Marketing": 0,
+      "Product": 1,
+      "Customer Success": 1,
+      "People": 0,
+      "Finance": 0,
+      "G&A": 0,
+      "Total": 5
+    },
+    "2024-Q2": {
+      "Engineering": 2,
+      "Sales": 1,
+      "Marketing": 1,
+      "Product": 0,
+      "Customer Success": 1,
+      "People": 0,
+      "Finance": 0,
+      "G&A": 0,
+      "Total": 5
+    },
+    "2024-Q3": {
+      "Engineering": 2,
+      "Sales": 1,
+      "Marketing": 0,
+      "Product": 1,
+      "Customer Success": 1,
+      "People": 0,
+      "Finance": 0,
+      "G&A": 0,
+      "Total": 5
+    },
+    "2024-Q4": {
+      "Engineering": 2,
+      "Sales": 1,
+      "Marketing": 1,
+      "Product": 0,
+      "Customer Success": 1,
+      "People": 0,
+      "Finance": 0,
+      "G&A": 0,
+      "Total": 5
+    },
+    "2025-Q1": {
+      "Engineering": 2,
+      "Sales": 1,
+      "Marketing": 0,
+      "Product": 1,
+      "Customer Success": 1,
+      "People": 0,
+      "Finance": 0,
+      "G&A": 0,
+      "Total": 5
+    },
+    "2025-Q2": {
+      "Engineering": 2,
+      "Sales": 1,
+      "Marketing": 1,
+      "Product": 0,
+      "Customer Success": 1,
+      "People": 0,
+      "Finance": 0,
+      "G&A": 0,
+      "Total": 5
+    },
+    "2025-Q3": {
+      "Engineering": 2,
+      "Sales": 1,
+      "Marketing": 0,
+      "Product": 1,
+      "Customer Success": 1,
+      "People": 0,
+      "Finance": 0,
+      "G&A": 0,
+      "Total": 5
+    },
+    "2025-Q4": {
+      "Engineering": 2,
+      "Sales": 1,
+      "Marketing": 1,
+      "Product": 0,
+      "Customer Success": 1,
+      "People": 0,
+      "Finance": 0,
+      "G&A": 0,
+      "Total": 5
+    },
+    "2026-Q1": {
+      "Engineering": 2,
+      "Sales": 1,
+      "Marketing": 0,
+      "Product": 1,
+      "Customer Success": 1,
+      "People": 0,
+      "Finance": 0,
+      "G&A": 0,
+      "Total": 5
+    },
+    "2026-Q2": {
+      "Engineering": 2,
+      "Sales": 1,
+      "Marketing": 1,
+      "Product": 0,
+      "Customer Success": 1,
+      "People": 0,
+      "Finance": 0,
+      "G&A": 0,
+      "Total": 5
+    },
+    "2026-Q3": {
+      "Engineering": 2,
+      "Sales": 1,
+      "Marketing": 0,
+      "Product": 1,
+      "Customer Success": 1,
+      "People": 0,
+      "Finance": 0,
+      "G&A": 0,
+      "Total": 5
+    },
+    "2026-Q4": {
+      "Engineering": 2,
+      "Sales": 1,
+      "Marketing": 1,
+      "Product": 0,
+      "Customer Success": 1,
+      "People": 0,
+      "Finance": 0,
+      "G&A": 0,
+      "Total": 5
+    }
+  },
+  "engagement_by_department": {
+    "2024-Q1": {
+      "Engineering": 76,
+      "Sales": 72,
+      "Marketing": 74,
+      "Product": 78,
+      "Customer Success": 73,
+      "People": 80,
+      "Finance": 75,
+      "G&A": 71
+    },
+    "2024-Q2": {
+      "Engineering": 77,
+      "Sales": 73,
+      "Marketing": 75,
+      "Product": 79,
+      "Customer Success": 74,
+      "People": 81,
+      "Finance": 76,
+      "G&A": 72
+    },
+    "2024-Q3": {
+      "Engineering": 78,
+      "Sales": 74,
+      "Marketing": 76,
+      "Product": 80,
+      "Customer Success": 75,
+      "People": 82,
+      "Finance": 77,
+      "G&A": 73
+    },
+    "2024-Q4": {
+      "Engineering": 79,
+      "Sales": 75,
+      "Marketing": 77,
+      "Product": 81,
+      "Customer Success": 76,
+      "People": 83,
+      "Finance": 78,
+      "G&A": 74
+    },
+    "2025-Q1": {
+      "Engineering": 81,
+      "Sales": 77,
+      "Marketing": 79,
+      "Product": 83,
+      "Customer Success": 78,
+      "People": 85,
+      "Finance": 80,
+      "G&A": 76
+    },
+    "2025-Q2": {
+      "Engineering": 82,
+      "Sales": 78,
+      "Marketing": 80,
+      "Product": 84,
+      "Customer Success": 79,
+      "People": 86,
+      "Finance": 81,
+      "G&A": 77
+    },
+    "2025-Q3": {
+      "Engineering": 83,
+      "Sales": 79,
+      "Marketing": 81,
+      "Product": 85,
+      "Customer Success": 80,
+      "People": 87,
+      "Finance": 82,
+      "G&A": 78
+    },
+    "2025-Q4": {
+      "Engineering": 84,
+      "Sales": 80,
+      "Marketing": 82,
+      "Product": 86,
+      "Customer Success": 81,
+      "People": 88,
+      "Finance": 83,
+      "G&A": 79
+    },
+    "2026-Q1": {
+      "Engineering": 85,
+      "Sales": 81,
+      "Marketing": 83,
+      "Product": 87,
+      "Customer Success": 82,
+      "People": 89,
+      "Finance": 84,
+      "G&A": 80
+    },
+    "2026-Q2": {
+      "Engineering": 86,
+      "Sales": 82,
+      "Marketing": 84,
+      "Product": 88,
+      "Customer Success": 83,
+      "People": 90,
+      "Finance": 85,
+      "G&A": 81
+    },
+    "2026-Q3": {
+      "Engineering": 87,
+      "Sales": 83,
+      "Marketing": 85,
+      "Product": 89,
+      "Customer Success": 84,
+      "People": 91,
+      "Finance": 86,
+      "G&A": 82
+    },
+    "2026-Q4": {
+      "Engineering": 88,
+      "Sales": 84,
+      "Marketing": 86,
+      "Product": 90,
+      "Customer Success": 85,
+      "People": 92,
+      "Finance": 87,
+      "G&A": 83
+    }
+  },
+  "time_to_fill_by_department": {
+    "2024-Q1": {
+      "Engineering": 52,
+      "Sales": 38,
+      "Marketing": 42,
+      "Product": 48,
+      "Customer Success": 35,
+      "People": 40,
+      "Finance": 45,
+      "G&A": 32
+    },
+    "2024-Q2": {
+      "Engineering": 51,
+      "Sales": 37,
+      "Marketing": 41,
+      "Product": 47,
+      "Customer Success": 34,
+      "People": 39,
+      "Finance": 44,
+      "G&A": 31
+    },
+    "2024-Q3": {
+      "Engineering": 50,
+      "Sales": 36,
+      "Marketing": 40,
+      "Product": 46,
+      "Customer Success": 33,
+      "People": 38,
+      "Finance": 43,
+      "G&A": 30
+    },
+    "2024-Q4": {
+      "Engineering": 49,
+      "Sales": 35,
+      "Marketing": 39,
+      "Product": 45,
+      "Customer Success": 32,
+      "People": 37,
+      "Finance": 42,
+      "G&A": 29
+    },
+    "2025-Q1": {
+      "Engineering": 48,
+      "Sales": 34,
+      "Marketing": 38,
+      "Product": 44,
+      "Customer Success": 31,
+      "People": 36,
+      "Finance": 41,
+      "G&A": 28
+    },
+    "2025-Q2": {
+      "Engineering": 47,
+      "Sales": 33,
+      "Marketing": 37,
+      "Product": 43,
+      "Customer Success": 30,
+      "People": 35,
+      "Finance": 40,
+      "G&A": 27
+    },
+    "2025-Q3": {
+      "Engineering": 46,
+      "Sales": 32,
+      "Marketing": 36,
+      "Product": 42,
+      "Customer Success": 29,
+      "People": 34,
+      "Finance": 39,
+      "G&A": 26
+    },
+    "2025-Q4": {
+      "Engineering": 45,
+      "Sales": 31,
+      "Marketing": 35,
+      "Product": 41,
+      "Customer Success": 28,
+      "People": 33,
+      "Finance": 38,
+      "G&A": 25
+    },
+    "2026-Q1": {
+      "Engineering": 44,
+      "Sales": 30,
+      "Marketing": 34,
+      "Product": 40,
+      "Customer Success": 27,
+      "People": 32,
+      "Finance": 37,
+      "G&A": 24
+    },
+    "2026-Q2": {
+      "Engineering": 43,
+      "Sales": 29,
+      "Marketing": 33,
+      "Product": 39,
+      "Customer Success": 26,
+      "People": 31,
+      "Finance": 36,
+      "G&A": 23
+    },
+    "2026-Q3": {
+      "Engineering": 42,
+      "Sales": 28,
+      "Marketing": 32,
+      "Product": 38,
+      "Customer Success": 25,
+      "People": 30,
+      "Finance": 35,
+      "G&A": 22
+    },
+    "2026-Q4": {
+      "Engineering": 41,
+      "Sales": 27,
+      "Marketing": 31,
+      "Product": 37,
+      "Customer Success": 24,
+      "People": 29,
+      "Finance": 34,
+      "G&A": 21
+    }
+  },
+  "engineering_by_team": {
+    "2024-Q1": {
+      "Platform": 18,
+      "Backend": 15,
+      "Frontend": 13,
+      "Data": 9,
+      "Infrastructure": 8,
+      "Security": 5,
+      "Mobile": 3
+    },
+    "2024-Q2": {
+      "Platform": 18,
+      "Backend": 16,
+      "Frontend": 13,
+      "Data": 10,
+      "Infrastructure": 8,
+      "Security": 5,
+      "Mobile": 3
+    },
+    "2024-Q3": {
+      "Platform": 18,
+      "Backend": 16,
+      "Frontend": 14,
+      "Data": 10,
+      "Infrastructure": 8,
+      "Security": 5,
+      "Mobile": 3
+    },
+    "2024-Q4": {
+      "Platform": 19,
+      "Backend": 17,
+      "Frontend": 14,
+      "Data": 10,
+      "Infrastructure": 8,
+      "Security": 5,
+      "Mobile": 4
+    },
+    "2025-Q1": {
+      "Platform": 22,
+      "Backend": 19,
+      "Frontend": 17,
+      "Data": 12,
+      "Infrastructure": 10,
+      "Security": 6,
+      "Mobile": 4
+    },
+    "2025-Q2": {
+      "Platform": 24,
+      "Backend": 21,
+      "Frontend": 18,
+      "Data": 13,
+      "Infrastructure": 11,
+      "Security": 7,
+      "Mobile": 5
+    },
+    "2025-Q3": {
+      "Platform": 25,
+      "Backend": 22,
+      "Frontend": 18,
+      "Data": 13,
+      "Infrastructure": 11,
+      "Security": 7,
+      "Mobile": 5
+    },
+    "2025-Q4": {
+      "Platform": 27,
+      "Backend": 24,
+      "Frontend": 20,
+      "Data": 14,
+      "Infrastructure": 12,
+      "Security": 8,
+      "Mobile": 5
+    },
+    "2026-Q1": {
+      "Platform": 31,
+      "Backend": 27,
+      "Frontend": 23,
+      "Data": 16,
+      "Infrastructure": 14,
+      "Security": 9,
+      "Mobile": 6
+    },
+    "2026-Q2": {
+      "Platform": 32,
+      "Backend": 28,
+      "Frontend": 24,
+      "Data": 17,
+      "Infrastructure": 14,
+      "Security": 9,
+      "Mobile": 6
+    },
+    "2026-Q3": {
+      "Platform": 33,
+      "Backend": 29,
+      "Frontend": 25,
+      "Data": 18,
+      "Infrastructure": 15,
+      "Security": 9,
+      "Mobile": 7
+    },
+    "2026-Q4": {
+      "Platform": 34,
+      "Backend": 30,
+      "Frontend": 26,
+      "Data": 18,
+      "Infrastructure": 15,
+      "Security": 10,
+      "Mobile": 7
+    }
+  },
+  "velocity_by_team": {
+    "2024-Q1": {
+      "Platform": 52,
+      "Backend": 48,
+      "Frontend": 45,
+      "Data": 42,
+      "Infrastructure": 38,
+      "Security": 35,
+      "Mobile": 32
+    },
+    "2024-Q2": {
+      "Platform": 53,
+      "Backend": 49,
+      "Frontend": 46,
+      "Data": 43,
+      "Infrastructure": 39,
+      "Security": 36,
+      "Mobile": 33
+    },
+    "2024-Q3": {
+      "Platform": 54,
+      "Backend": 50,
+      "Frontend": 47,
+      "Data": 44,
+      "Infrastructure": 40,
+      "Security": 37,
+      "Mobile": 34
+    },
+    "2024-Q4": {
+      "Platform": 55,
+      "Backend": 51,
+      "Frontend": 48,
+      "Data": 45,
+      "Infrastructure": 41,
+      "Security": 38,
+      "Mobile": 35
+    },
+    "2025-Q1": {
+      "Platform": 57,
+      "Backend": 53,
+      "Frontend": 50,
+      "Data": 47,
+      "Infrastructure": 43,
+      "Security": 40,
+      "Mobile": 37
+    },
+    "2025-Q2": {
+      "Platform": 58,
+      "Backend": 54,
+      "Frontend": 51,
+      "Data": 48,
+      "Infrastructure": 44,
+      "Security": 41,
+      "Mobile": 38
+    },
+    "2025-Q3": {
+      "Platform": 59,
+      "Backend": 55,
+      "Frontend": 52,
+      "Data": 49,
+      "Infrastructure": 45,
+      "Security": 42,
+      "Mobile": 39
+    },
+    "2025-Q4": {
+      "Platform": 60,
+      "Backend": 56,
+      "Frontend": 53,
+      "Data": 50,
+      "Infrastructure": 46,
+      "Security": 43,
+      "Mobile": 40
+    },
+    "2026-Q1": {
+      "Platform": 62,
+      "Backend": 58,
+      "Frontend": 55,
+      "Data": 52,
+      "Infrastructure": 48,
+      "Security": 45,
+      "Mobile": 42
+    },
+    "2026-Q2": {
+      "Platform": 63,
+      "Backend": 59,
+      "Frontend": 56,
+      "Data": 53,
+      "Infrastructure": 49,
+      "Security": 46,
+      "Mobile": 43
+    },
+    "2026-Q3": {
+      "Platform": 64,
+      "Backend": 60,
+      "Frontend": 57,
+      "Data": 54,
+      "Infrastructure": 50,
+      "Security": 47,
+      "Mobile": 44
+    },
+    "2026-Q4": {
+      "Platform": 65,
+      "Backend": 61,
+      "Frontend": 58,
+      "Data": 55,
+      "Infrastructure": 51,
+      "Security": 48,
+      "Mobile": 45
+    }
+  },
+  "incidents_by_service": {
+    "2024-Q1": {
+      "API": 4,
+      "Database": 2,
+      "Auth": 2,
+      "Billing": 1,
+      "Analytics": 2,
+      "Integrations": 0
+    },
+    "2024-Q2": {
+      "API": 4,
+      "Database": 2,
+      "Auth": 1,
+      "Billing": 1,
+      "Analytics": 1,
+      "Integrations": 0
+    },
+    "2024-Q3": {
+      "API": 3,
+      "Database": 2,
+      "Auth": 1,
+      "Billing": 1,
+      "Analytics": 1,
+      "Integrations": 0
+    },
+    "2024-Q4": {
+      "API": 3,
+      "Database": 2,
+      "Auth": 1,
+      "Billing": 1,
+      "Analytics": 1,
+      "Integrations": 0
+    },
+    "2025-Q1": {
+      "API": 3,
+      "Database": 2,
+      "Auth": 1,
+      "Billing": 1,
+      "Analytics": 1,
+      "Integrations": 0
+    },
+    "2025-Q2": {
+      "API": 3,
+      "Database": 2,
+      "Auth": 1,
+      "Billing": 1,
+      "Analytics": 1,
+      "Integrations": 0
+    },
+    "2025-Q3": {
+      "API": 2,
+      "Database": 1,
+      "Auth": 1,
+      "Billing": 0,
+      "Analytics": 1,
+      "Integrations": 0
+    },
+    "2025-Q4": {
+      "API": 2,
+      "Database": 1,
+      "Auth": 1,
+      "Billing": 0,
+      "Analytics": 1,
+      "Integrations": 0
+    },
+    "2026-Q1": {
+      "API": 2,
+      "Database": 1,
+      "Auth": 1,
+      "Billing": 0,
+      "Analytics": 1,
+      "Integrations": 0
+    },
+    "2026-Q2": {
+      "API": 2,
+      "Database": 1,
+      "Auth": 1,
+      "Billing": 0,
+      "Analytics": 1,
+      "Integrations": 0
+    },
+    "2026-Q3": {
+      "API": 1,
+      "Database": 1,
+      "Auth": 0,
+      "Billing": 0,
+      "Analytics": 0,
+      "Integrations": 0
+    },
+    "2026-Q4": {
+      "API": 1,
+      "Database": 1,
+      "Auth": 0,
+      "Billing": 0,
+      "Analytics": 0,
+      "Integrations": 0
+    }
+  },
+  "cloud_spend_by_category": {
+    "2024-Q1": {
+      "Compute": 0.22,
+      "Storage": 0.11,
+      "Database": 0.11,
+      "Network": 0.055,
+      "Other": 0.055
+    },
+    "2024-Q2": {
+      "Compute": 0.232,
+      "Storage": 0.116,
+      "Database": 0.116,
+      "Network": 0.058,
+      "Other": 0.058
+    },
+    "2024-Q3": {
+      "Compute": 0.244,
+      "Storage": 0.122,
+      "Database": 0.122,
+      "Network": 0.061,
+      "Other": 0.061
+    },
+    "2024-Q4": {
+      "Compute": 0.256,
+      "Storage": 0.128,
+      "Database": 0.128,
+      "Network": 0.064,
+      "Other": 0.064
+    },
+    "2025-Q1": {
+      "Compute": 0.28,
+      "Storage": 0.14,
+      "Database": 0.14,
+      "Network": 0.07,
+      "Other": 0.07
+    },
+    "2025-Q2": {
+      "Compute": 0.292,
+      "Storage": 0.146,
+      "Database": 0.146,
+      "Network": 0.073,
+      "Other": 0.073
+    },
+    "2025-Q3": {
+      "Compute": 0.304,
+      "Storage": 0.152,
+      "Database": 0.152,
+      "Network": 0.076,
+      "Other": 0.076
+    },
+    "2025-Q4": {
+      "Compute": 0.316,
+      "Storage": 0.158,
+      "Database": 0.158,
+      "Network": 0.079,
+      "Other": 0.079
+    },
+    "2026-Q1": {
+      "Compute": 0.34,
+      "Storage": 0.17,
+      "Database": 0.17,
+      "Network": 0.085,
+      "Other": 0.085
+    },
+    "2026-Q2": {
+      "Compute": 0.352,
+      "Storage": 0.176,
+      "Database": 0.176,
+      "Network": 0.088,
+      "Other": 0.088
+    },
+    "2026-Q3": {
+      "Compute": 0.364,
+      "Storage": 0.182,
+      "Database": 0.182,
+      "Network": 0.091,
+      "Other": 0.091
+    },
+    "2026-Q4": {
+      "Compute": 0.376,
+      "Storage": 0.188,
+      "Database": 0.188,
+      "Network": 0.094,
+      "Other": 0.094
+    }
+  },
+  "support_tickets_by_tier": {
+    "2024-Q1": {
+      "Tier1": 1959,
+      "Tier2": 700,
+      "Tier3": 140
+    },
+    "2024-Q2": {
+      "Tier1": 2065,
+      "Tier2": 737,
+      "Tier3": 147
+    },
+    "2024-Q3": {
+      "Tier1": 2170,
+      "Tier2": 775,
+      "Tier3": 155
+    },
+    "2024-Q4": {
+      "Tier1": 2275,
+      "Tier2": 812,
+      "Tier3": 162
+    },
+    "2025-Q1": {
+      "Tier1": 2520,
+      "Tier2": 900,
+      "Tier3": 180
+    },
+    "2025-Q2": {
+      "Tier1": 2660,
+      "Tier2": 950,
+      "Tier3": 190
+    },
+    "2025-Q3": {
+      "Tier1": 2800,
+      "Tier2": 1000,
+      "Tier3": 200
+    },
+    "2025-Q4": {
+      "Tier1": 3010,
+      "Tier2": 1075,
+      "Tier3": 215
+    },
+    "2026-Q1": {
+      "Tier1": 3220,
+      "Tier2": 1150,
+      "Tier3": 230
+    },
+    "2026-Q2": {
+      "Tier1": 3325,
+      "Tier2": 1187,
+      "Tier3": 237
+    },
+    "2026-Q3": {
+      "Tier1": 3430,
+      "Tier2": 1225,
+      "Tier3": 245
+    },
+    "2026-Q4": {
+      "Tier1": 3535,
+      "Tier2": 1262,
+      "Tier3": 252
+    }
+  },
+  "support_tickets_by_category": {
+    "2024-Q1": {
+      "Technical": 1120,
+      "Billing": 420,
+      "Feature Request": 560,
+      "Account": 280,
+      "Integration": 420
+    },
+    "2024-Q2": {
+      "Technical": 1180,
+      "Billing": 442,
+      "Feature Request": 590,
+      "Account": 295,
+      "Integration": 442
+    },
+    "2024-Q3": {
+      "Technical": 1240,
+      "Billing": 465,
+      "Feature Request": 620,
+      "Account": 310,
+      "Integration": 465
+    },
+    "2024-Q4": {
+      "Technical": 1300,
+      "Billing": 487,
+      "Feature Request": 650,
+      "Account": 325,
+      "Integration": 487
+    },
+    "2025-Q1": {
+      "Technical": 1440,
+      "Billing": 540,
+      "Feature Request": 720,
+      "Account": 360,
+      "Integration": 540
+    },
+    "2025-Q2": {
+      "Technical": 1520,
+      "Billing": 570,
+      "Feature Request": 760,
+      "Account": 380,
+      "Integration": 570
+    },
+    "2025-Q3": {
+      "Technical": 1600,
+      "Billing": 600,
+      "Feature Request": 800,
+      "Account": 400,
+      "Integration": 600
+    },
+    "2025-Q4": {
+      "Technical": 1720,
+      "Billing": 645,
+      "Feature Request": 860,
+      "Account": 430,
+      "Integration": 645
+    },
+    "2026-Q1": {
+      "Technical": 1840,
+      "Billing": 690,
+      "Feature Request": 920,
+      "Account": 460,
+      "Integration": 690
+    },
+    "2026-Q2": {
+      "Technical": 1900,
+      "Billing": 712,
+      "Feature Request": 950,
+      "Account": 475,
+      "Integration": 712
+    },
+    "2026-Q3": {
+      "Technical": 1960,
+      "Billing": 735,
+      "Feature Request": 980,
+      "Account": 490,
+      "Integration": 735
+    },
+    "2026-Q4": {
+      "Technical": 2020,
+      "Billing": 757,
+      "Feature Request": 1010,
+      "Account": 505,
+      "Integration": 757
+    }
+  },
+  "csat_by_segment": {
+    "2024-Q1": {
+      "Enterprise": 4.35,
+      "Mid-Market": 4.15,
+      "SMB": 3.95
+    },
+    "2024-Q2": {
+      "Enterprise": 4.37,
+      "Mid-Market": 4.17,
+      "SMB": 3.97
+    },
+    "2024-Q3": {
+      "Enterprise": 4.39,
+      "Mid-Market": 4.19,
+      "SMB": 3.99
+    },
+    "2024-Q4": {
+      "Enterprise": 4.41,
+      "Mid-Market": 4.21,
+      "SMB": 4.01
+    },
+    "2025-Q1": {
+      "Enterprise": 4.48,
+      "Mid-Market": 4.28,
+      "SMB": 4.08
+    },
+    "2025-Q2": {
+      "Enterprise": 4.5,
+      "Mid-Market": 4.3,
+      "SMB": 4.1
+    },
+    "2025-Q3": {
+      "Enterprise": 4.52,
+      "Mid-Market": 4.32,
+      "SMB": 4.12
+    },
+    "2025-Q4": {
+      "Enterprise": 4.56,
+      "Mid-Market": 4.36,
+      "SMB": 4.16
+    },
+    "2026-Q1": {
+      "Enterprise": 4.6,
+      "Mid-Market": 4.4,
+      "SMB": 4.2
+    },
+    "2026-Q2": {
+      "Enterprise": 4.62,
+      "Mid-Market": 4.42,
+      "SMB": 4.22
+    },
+    "2026-Q3": {
+      "Enterprise": 4.64,
+      "Mid-Market": 4.44,
+      "SMB": 4.24
+    },
+    "2026-Q4": {
+      "Enterprise": 4.66,
+      "Mid-Market": 4.46,
+      "SMB": 4.26
+    }
+  },
+  "implementation_by_segment": {
+    "2024-Q1": {
+      "Enterprise": 75,
+      "Mid-Market": 45,
+      "SMB": 21
+    },
+    "2024-Q2": {
+      "Enterprise": 74,
+      "Mid-Market": 44,
+      "SMB": 20
+    },
+    "2024-Q3": {
+      "Enterprise": 73,
+      "Mid-Market": 43,
+      "SMB": 19
+    },
+    "2024-Q4": {
+      "Enterprise": 72,
+      "Mid-Market": 42,
+      "SMB": 18
+    },
+    "2025-Q1": {
+      "Enterprise": 70,
+      "Mid-Market": 40,
+      "SMB": 16
+    },
+    "2025-Q2": {
+      "Enterprise": 69,
+      "Mid-Market": 39,
+      "SMB": 15
+    },
+    "2025-Q3": {
+      "Enterprise": 68,
+      "Mid-Market": 38,
+      "SMB": 14
+    },
+    "2025-Q4": {
+      "Enterprise": 67,
+      "Mid-Market": 37,
+      "SMB": 13
+    },
+    "2026-Q1": {
+      "Enterprise": 65,
+      "Mid-Market": 35,
+      "SMB": 11
+    },
+    "2026-Q2": {
+      "Enterprise": 64,
+      "Mid-Market": 34,
+      "SMB": 10
+    },
+    "2026-Q3": {
+      "Enterprise": 63,
+      "Mid-Market": 33,
+      "SMB": 9
+    },
+    "2026-Q4": {
+      "Enterprise": 62,
+      "Mid-Market": 32,
+      "SMB": 8
+    }
+  },
+  "dimension_hierarchies": {
+    "geography": {
+      "AMER": [
+        "West",
+        "East",
+        "Central"
+      ],
+      "EMEA": [
+        "UK/Ireland",
+        "DACH",
+        "Southern Europe",
+        "France/Benelux",
+        "Nordics",
+        "Eastern Europe"
+      ],
+      "APAC": [
+        "Japan",
+        "Greater China",
+        "India/SEA",
+        "ANZ",
+        "Korea"
+      ]
+    },
+    "product": {
+      "Core": [
+        "Enterprise",
+        "Professional"
+      ],
+      "Growth": [
+        "Team",
+        "Starter"
+      ]
+    },
+    "segment": {
+      "Strategic": [
+        "Enterprise"
+      ],
+      "Commercial": [
+        "Mid-Market",
+        "SMB"
+      ]
+    },
+    "engineering": {
+      "Product Engineering": [
+        "Platform",
+        "Backend",
+        "Frontend",
+        "Mobile"
+      ],
+      "Data & Infrastructure": [
+        "Data",
+        "Infrastructure"
+      ],
+      "Security": [
+        "Security"
+      ]
+    },
+    "support": {
+      "Customer Support": [
+        "Tier1",
+        "Tier2",
+        "Tier3"
+      ]
+    }
+  },
+  "people": {
+    "employees": [
+      {
+        "id": "E001",
+        "name": "Sarah Chen",
+        "title": "CEO",
+        "department": "Executive",
+        "manager": null,
+        "location": "SF HQ"
+      },
+      {
+        "id": "E002",
+        "name": "Michael Torres",
+        "title": "CFO",
+        "department": "Finance",
+        "manager": "Sarah Chen",
+        "location": "SF HQ"
+      },
+      {
+        "id": "E003",
+        "name": "Jennifer Park",
+        "title": "CRO",
+        "department": "Sales",
+        "manager": "Sarah Chen",
+        "location": "NYC"
+      },
+      {
+        "id": "E004",
+        "name": "David Kim",
+        "title": "COO",
+        "department": "Operations",
+        "manager": "Sarah Chen",
+        "location": "SF HQ"
+      },
+      {
+        "id": "E005",
+        "name": "Rachel Martinez",
+        "title": "CTO",
+        "department": "Engineering",
+        "manager": "Sarah Chen",
+        "location": "SF HQ"
+      },
+      {
+        "id": "E006",
+        "name": "Maria Garcia",
+        "title": "CHRO",
+        "department": "People",
+        "manager": "Sarah Chen",
+        "location": "SF HQ"
+      }
+    ],
+    "offices": [
+      {
+        "name": "SF HQ",
+        "address": "123 Market St, San Francisco, CA 94105",
+        "headcount": 200,
+        "timezone": "PST"
+      },
+      {
+        "name": "NYC",
+        "address": "456 Broadway, New York, NY 10013",
+        "headcount": 100,
+        "timezone": "EST"
+      },
+      {
+        "name": "Austin",
+        "address": "789 Congress Ave, Austin, TX 78701",
+        "headcount": 50,
+        "timezone": "CST"
+      }
+    ]
+  }
+}
