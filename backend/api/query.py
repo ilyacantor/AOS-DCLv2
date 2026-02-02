@@ -98,7 +98,7 @@ METRIC_TO_FACTBASE_KEY = {
     "pipeline": "pipeline",
     "pipeline_value": "pipeline",
     "win_rate": "win_rate",
-    "quota_attainment": "quota_attainment",
+    "quota_attainment": "quota",
     "churn_rate": "churn_pct",
     "churn_risk": "churn_risk",
     "nrr": "nrr",
@@ -194,7 +194,7 @@ DIMENSION_TO_FACTBASE_KEY = {
     "rep": {
         "pipeline": "pipeline_by_rep",
         "win_rate": "win_rate_by_rep",
-        "quota_attainment": "quota_attainment_by_rep",
+        "quota_attainment": "quota_by_rep",
         "quota": "quota_by_rep",
     },
     "team": {
@@ -310,6 +310,12 @@ def filter_periods(data: Dict, time_range: Optional[Dict[str, str]]) -> List[str
     return filtered if filtered else all_periods
 
 
+NESTED_VALUE_KEY_MAP: Dict[tuple, str] = {
+    ("quota_attainment", "quota_by_rep"): "attainment_pct",
+    ("pipeline", "pipeline_by_rep"): "pipeline",
+}
+
+
 def _get_value_key_for_metric(metric: str, dim_key: str) -> str:
     """Get the value field name for a metric in array-format dimensional data."""
     VALUE_KEY_MAP = {
@@ -334,6 +340,18 @@ def _get_value_key_for_metric(metric: str, dim_key: str) -> str:
         "slo_attainment_by_service": "slo_attainment",
     }
     return VALUE_KEY_MAP.get(dim_key, metric)
+
+
+def _extract_value(metric: str, dim_key: str, raw_value: Any) -> float:
+    """Extract numeric value from raw data, handling nested dicts."""
+    if isinstance(raw_value, dict):
+        nested_key = NESTED_VALUE_KEY_MAP.get((metric, dim_key))
+        if nested_key and nested_key in raw_value:
+            return float(raw_value[nested_key])
+        if metric in raw_value:
+            return float(raw_value[metric])
+        return float(list(raw_value.values())[0])
+    return float(raw_value)
 
 
 def execute_query(request: QueryRequest) -> QueryResponse:
@@ -388,7 +406,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
             else:
                 for period in periods:
                     if period in dim_data:
-                        for dim_value, value in dim_data[period].items():
+                        for dim_value, raw_value in dim_data[period].items():
                             if request.filters:
                                 filter_val = request.filters.get(dim)
                                 if filter_val:
@@ -399,7 +417,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                             
                             data_points.append(QueryDataPoint(
                                 period=period,
-                                value=float(value),
+                                value=_extract_value(request.metric, dim_key, raw_value),
                                 dimensions={dim: dim_value}
                             ))
         else:
