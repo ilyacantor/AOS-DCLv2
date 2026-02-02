@@ -1,6 +1,6 @@
 # DCL Engine - Data Connectivity Layer
 
-**Last Updated:** January 28, 2026
+**Last Updated:** February 02, 2026
 
 ## What is DCL?
 
@@ -169,11 +169,18 @@ The right sidebar contains:
 ## Recent Changes
 
 **February 02, 2026:**
+- Major NLQ data expansion: Added comprehensive fact data for all sample questions
+- CFO Pack: Added mrr, dso, burn_rate, ar_aging, services_revenue metrics with segment/region/aging_bucket dimensions
+- CRO Pack: Added pipeline_value, churn_risk, nrr_by_cohort metrics with rep/stage/cohort/customer dimensions
+- COO Pack: Added throughput, cycle_time, sla_compliance metrics with team/project_type/work_type/priority dimensions
+- CTO Pack: Added deploy_frequency, mttr, uptime, slo_attainment, cloud_cost metrics with service/severity/resource_type/environment dimensions
+- Expanded fact_base.json with 19 new dimensional data arrays (800+ records total)
+- Updated query.py to handle array-format dimensional data
+- Semantic catalog now exports 36 metrics and 29 entities
+
+**February 02, 2026 (earlier):**
 - Added CHRO as first-class persona (equal to CFO/CRO/COO/CTO)
-- Added 8 CHRO metrics: headcount, attrition_rate, time_to_fill, engagement_score, compensation_ratio, training_hours, promotion_rate, diversity_index
-- Added CHRO entities: department, level, tenure_band, role, training_type, location
-- Added CHRO demo bindings: Workday, Greenhouse, Culture Amp
-- Added team-level CHRO dimensional data for queries
+- Added 12 CHRO metrics with full dimensional support
 - Added query endpoint (POST /api/dcl/query) for NLQ data consumption
 
 **January 28, 2026:**
