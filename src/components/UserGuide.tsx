@@ -251,7 +251,7 @@ export function UserGuide() {
         </section>
 
         <div className="text-center text-muted-foreground text-sm pt-8 border-t border-border">
-          DCL — Data Connectivity Layer | Part of AutonomOS
+          AOS DCL — Data Connectivity Layer | Part of AutonomOS
         </div>
       </div>
     </div>

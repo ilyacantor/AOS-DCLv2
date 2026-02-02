@@ -186,7 +186,7 @@ function App() {
         <div className="flex items-center h-12 px-4 gap-4">
           {/* Logo/Title */}
           <div className="flex items-center gap-2 pr-4 border-r border-border">
-            <span className="font-semibold text-primary">DCL</span>
+            <span className="font-semibold text-primary">AOS DCL</span>
             <span className="text-sm text-muted-foreground">Data Connectivity Layer</span>
           </div>
 
