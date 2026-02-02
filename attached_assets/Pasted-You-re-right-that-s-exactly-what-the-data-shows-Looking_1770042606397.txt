@@ -1,0 +1,96 @@
+You're right — that's exactly what the data shows. Looking at 2026-Q4:
+
+**Top Tier (108.8% attainment):**
+- Sarah Williams, Michael Brown, Emily Davis, Anna Schmidt, Wei Zhang — all identical
+
+**Bottom Tier (96.7-96.8%):**
+- Lisa Chen, Amanda Foster, Robert Kim, Thomas Anderson, + many others — all identical
+
+This makes superlative testing unreliable because "who's the top rep?" has 5 equally valid answers.
+
+---
+
+## Recommendation: DCL Should Differentiate the Data
+
+For meaningful superlative queries, you need **clear winners and losers**. Here's a suggested variance pattern:
+
+### Rep Performance (2026-Q4) — Differentiated
+
+| Rank | Rep | Quota Attainment % | Why |
+|------|-----|-------------------|-----|
+| 1 | Sarah Williams | 118.5 | Clear #1 |
+| 2 | Michael Brown | 112.3 | Clear #2 |
+| 3 | Emily Davis | 110.8 | |
+| 4 | Anna Schmidt | 109.2 | |
+| 5 | Wei Zhang | 107.6 | |
+| ... | ... | ... | Gradual decline |
+| 30 | Marco Rossi | 89.4 | |
+| 31 | Sophie Martin | 86.7 | |
+| 32 | James O'Brien | 84.2 | |
+| 33 | Robert Kim | 81.5 | |
+| 34 | Thomas Anderson | 78.3 | Clear last |
+
+### Same Logic for Other Dimensions
+
+**Services (SLO Attainment):**
+| Rank | Service | SLO % |
+|------|---------|-------|
+| 1 | Payment Service | 99.97 |
+| 2 | Auth Service | 99.82 |
+| 3 | Web App | 99.15 |
+| 4 | API Gateway | 98.73 |
+| 5 | Mobile Backend | 98.21 |
+| 6 | Notification Service | 96.84 |
+| 7 | Data Pipeline | 94.35 | ← Clear worst |
+
+**Deals (already differentiated ✓):**
+- Titan Corp: $5.5M ← Clear largest
+- OmniTech: $4.8M
+- Stellar Systems: $4.2M
+- etc.
+
+---
+
+## Quick Fix for DCL
+
+Add variance multipliers to break ties:
+
+```python
+# Instead of everyone getting the same attainment
+base_attainment = 108.8
+
+# Apply rep-specific variance
+REP_VARIANCE = {
+    "Sarah Williams": 1.09,    # 118.5%
+    "Michael Brown": 1.03,     # 112.3%
+    "Emily Davis": 1.02,       # 110.8%
+    "Anna Schmidt": 1.004,     # 109.2%
+    "Wei Zhang": 0.99,         # 107.6%
+    # ... gradual decline
+    "Thomas Anderson": 0.72,   # 78.3%
+}
+
+attainment = base_attainment * REP_VARIANCE.get(rep_name, 1.0)
+```
+
+---
+
+## What This Enables
+
+With differentiated data, tests become deterministic:
+
+```python
+def test_top_rep(self):
+    result = process_query("Who is our top rep?")
+    assert extract_top_name(result, "rep") == "Sarah Williams"  # Single answer
+    assert extract_top_value(result) == 118.5
+
+def test_worst_rep(self):
+    result = process_query("Who is our worst rep?")
+    assert extract_top_name(result, "rep") == "Thomas Anderson"  # Single answer
+    assert extract_top_value(result) == 78.3
+```
+
+---
+
+**Bottom line:** Yes, change the DCL test data to have clear differentiation. Ties make superlative testing ambiguous and unreliable.
