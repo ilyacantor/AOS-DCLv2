@@ -31,6 +31,12 @@ from backend.api.semantic_export import (
     EntityDefinition,
     ModeInfo,
 )
+from backend.api.query import (
+    QueryRequest,
+    QueryResponse,
+    QueryError,
+    handle_query,
+)
 
 logger = get_logger(__name__)
 
@@ -319,6 +325,39 @@ def resolve_entity_alias(q: str):
             }
         )
     return entity
+
+
+@app.post("/api/dcl/query")
+def execute_dcl_query(request: QueryRequest):
+    """
+    Execute a data query against DCL's fact base.
+    
+    This endpoint validates the query against the semantic catalog and returns
+    data from the appropriate source (demo data or farm connections).
+    
+    Request:
+    {
+        "metric": "arr",
+        "dimensions": ["segment"],
+        "filters": {"region": "AMER"},
+        "time_range": {"start": "2025-Q1", "end": "2025-Q4"},
+        "grain": "quarter"
+    }
+    
+    Returns:
+    - 200: Query results with data points and metadata
+    - 400: Invalid dimension or grain for the requested metric
+    - 404: Metric not found
+    """
+    result = handle_query(request)
+    
+    if isinstance(result, QueryError):
+        if result.code == "METRIC_NOT_FOUND":
+            raise HTTPException(status_code=404, detail=result.model_dump())
+        else:
+            raise HTTPException(status_code=400, detail=result.model_dump())
+    
+    return result
 
 
 @app.get("/api/nlq/ask")
