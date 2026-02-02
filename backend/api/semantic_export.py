@@ -338,7 +338,7 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         id="engagement_score",
         name="Engagement Score",
         description="Employee engagement percentage",
-        aliases=["engagement", "eNPS", "employee engagement"],
+        aliases=["engagement", "employee engagement"],
         pack=Pack.CHRO,
         allowed_dims=["department", "team", "tenure_band"],
         allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
@@ -387,6 +387,50 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_dims=["department", "level", "location"],
         allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
         measure_op="ratio",
+        default_grain=TimeGrain.QUARTER
+    ),
+    MetricDefinition(
+        id="offer_acceptance_rate",
+        name="Offer Acceptance Rate",
+        description="Percentage of job offers accepted by candidates",
+        aliases=["offer rate", "acceptance rate", "recruiting funnel completion", "offer conversion"],
+        pack=Pack.CHRO,
+        allowed_dims=["department", "role", "location"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
+        measure_op="ratio",
+        default_grain=TimeGrain.QUARTER
+    ),
+    MetricDefinition(
+        id="internal_mobility_rate",
+        name="Internal Mobility Rate",
+        description="Percentage of roles filled by internal candidates",
+        aliases=["internal mobility", "career development", "internal transfers", "retention mobility"],
+        pack=Pack.CHRO,
+        allowed_dims=["department", "level", "tenure_band"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
+        measure_op="ratio",
+        default_grain=TimeGrain.QUARTER
+    ),
+    MetricDefinition(
+        id="span_of_control",
+        name="Span of Control",
+        description="Average number of direct reports per manager",
+        aliases=["org structure health", "manager ratio", "direct reports", "management span"],
+        pack=Pack.CHRO,
+        allowed_dims=["department", "level", "location"],
+        allowed_grains=[TimeGrain.QUARTER, TimeGrain.YEAR],
+        measure_op="avg",
+        default_grain=TimeGrain.QUARTER
+    ),
+    MetricDefinition(
+        id="enps",
+        name="Employee Net Promoter Score",
+        description="Employee willingness to recommend the company as a workplace",
+        aliases=["eNPS", "employee NPS", "employee net promoter", "workplace recommendation score"],
+        pack=Pack.CHRO,
+        allowed_dims=["department", "team", "tenure_band", "location"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
+        measure_op="avg",
         default_grain=TimeGrain.QUARTER
     ),
 ]
@@ -569,7 +613,7 @@ DEFAULT_PERSONA_CONCEPTS = {
     "cro": ["pipeline", "win_rate", "churn_rate", "nrr", "revenue", "arr"],
     "coo": ["throughput", "cycle_time", "sla_compliance"],
     "cto": ["deploy_frequency", "mttr", "uptime", "slo_attainment", "cloud_spend"],
-    "chro": ["headcount", "attrition_rate", "time_to_fill", "engagement_score", "compensation_ratio", "training_hours", "promotion_rate", "diversity_index"]
+    "chro": ["headcount", "attrition_rate", "time_to_fill", "engagement_score", "compensation_ratio", "training_hours", "promotion_rate", "diversity_index", "offer_acceptance_rate", "internal_mobility_rate", "span_of_control", "enps"]
 }
 
 

@@ -114,6 +114,10 @@ METRIC_TO_FACTBASE_KEY = {
     "training_hours": "training_hours_per_employee",
     "promotion_rate": None,
     "diversity_index": None,
+    "offer_acceptance_rate": "offer_acceptance_rate",
+    "internal_mobility_rate": None,
+    "span_of_control": None,
+    "enps": None,
 }
 
 METRIC_UNIT_MAP = {
@@ -145,6 +149,10 @@ METRIC_UNIT_MAP = {
     "training_hours": "hours",
     "promotion_rate": "percent",
     "diversity_index": "percent",
+    "offer_acceptance_rate": "percent",
+    "internal_mobility_rate": "percent",
+    "span_of_control": "ratio",
+    "enps": "score",
 }
 
 DIMENSION_TO_FACTBASE_KEY = {
