@@ -11,6 +11,7 @@ DEFAULT_PERSONA_CONCEPTS = {
     "CRO": ["Revenue", "Pipeline", "Conversion", "CustomerValue", "LeadScore"],
     "COO": ["Throughput", "Efficiency", "Cost", "AssetUtilization", "SLA"],
     "CTO": ["SystemHealth", "Latency", "Uptime", "SecurityScore", "TechDebt"],
+    "CHRO": ["Headcount", "Attrition", "Engagement", "Training", "Diversity"],
 }
 
 

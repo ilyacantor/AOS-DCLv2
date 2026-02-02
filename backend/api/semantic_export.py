@@ -20,6 +20,7 @@ class Pack(str, Enum):
     CRO = "cro"
     COO = "coo"
     CTO = "cto"
+    CHRO = "chro"
 
 
 class TimeGrain(str, Enum):
@@ -194,7 +195,7 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         id="churn_rate",
         name="Churn Rate",
         description="Percentage of customers or revenue lost",
-        aliases=["churn", "customer churn", "revenue churn", "attrition"],
+        aliases=["churn", "customer churn", "revenue churn"],
         pack=Pack.CRO,
         allowed_dims=["segment", "region", "cohort"],
         allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
@@ -299,6 +300,94 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         allowed_grains=[TimeGrain.DAY, TimeGrain.WEEK, TimeGrain.MONTH],
         measure_op="sum",
         default_grain=TimeGrain.MONTH
+    ),
+    MetricDefinition(
+        id="headcount",
+        name="Headcount",
+        description="Total employee count",
+        aliases=["employees", "employee count", "HC", "FTE"],
+        pack=Pack.CHRO,
+        allowed_dims=["department", "team", "location", "level"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
+        measure_op="count",
+        default_grain=TimeGrain.QUARTER
+    ),
+    MetricDefinition(
+        id="attrition_rate",
+        name="Attrition Rate",
+        description="Percentage of employees leaving",
+        aliases=["attrition", "turnover", "turnover rate"],
+        pack=Pack.CHRO,
+        allowed_dims=["department", "team", "tenure_band", "location"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
+        measure_op="ratio",
+        default_grain=TimeGrain.QUARTER
+    ),
+    MetricDefinition(
+        id="time_to_fill",
+        name="Time to Fill",
+        description="Average days to fill open roles",
+        aliases=["TTF", "hiring velocity", "requisition time"],
+        pack=Pack.CHRO,
+        allowed_dims=["department", "role", "location"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
+        measure_op="avg_days_between",
+        default_grain=TimeGrain.QUARTER
+    ),
+    MetricDefinition(
+        id="engagement_score",
+        name="Engagement Score",
+        description="Employee engagement percentage",
+        aliases=["engagement", "eNPS", "employee engagement"],
+        pack=Pack.CHRO,
+        allowed_dims=["department", "team", "tenure_band"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
+        measure_op="ratio",
+        default_grain=TimeGrain.QUARTER
+    ),
+    MetricDefinition(
+        id="compensation_ratio",
+        name="Compensation Ratio",
+        description="Ratio to market compensation",
+        aliases=["comp ratio", "pay ratio", "market ratio"],
+        pack=Pack.CHRO,
+        allowed_dims=["department", "level", "location"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
+        measure_op="ratio",
+        default_grain=TimeGrain.QUARTER
+    ),
+    MetricDefinition(
+        id="training_hours",
+        name="Training Hours",
+        description="Training hours per employee",
+        aliases=["L&D hours", "learning hours", "training"],
+        pack=Pack.CHRO,
+        allowed_dims=["department", "team", "training_type"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
+        measure_op="avg",
+        default_grain=TimeGrain.QUARTER
+    ),
+    MetricDefinition(
+        id="promotion_rate",
+        name="Promotion Rate",
+        description="Percentage of promotions",
+        aliases=["promotions", "advancement rate"],
+        pack=Pack.CHRO,
+        allowed_dims=["department", "level", "tenure_band"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
+        measure_op="ratio",
+        default_grain=TimeGrain.QUARTER
+    ),
+    MetricDefinition(
+        id="diversity_index",
+        name="Diversity Index",
+        description="Diversity percentage",
+        aliases=["diversity", "D&I", "DEI"],
+        pack=Pack.CHRO,
+        allowed_dims=["department", "level", "location"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
+        measure_op="ratio",
+        default_grain=TimeGrain.QUARTER
     ),
 ]
 
@@ -436,6 +525,42 @@ PUBLISHED_ENTITIES: List[EntityDefinition] = [
         description="Generic category dimension",
         aliases=["type", "class"]
     ),
+    EntityDefinition(
+        id="department",
+        name="Department",
+        description="Organizational department",
+        aliases=["dept", "division", "org unit"]
+    ),
+    EntityDefinition(
+        id="level",
+        name="Level",
+        description="Job level or grade",
+        aliases=["job_level", "grade", "band"]
+    ),
+    EntityDefinition(
+        id="tenure_band",
+        name="Tenure Band",
+        description="Employee tenure range",
+        aliases=["tenure", "years_of_service"]
+    ),
+    EntityDefinition(
+        id="role",
+        name="Role",
+        description="Job role or title",
+        aliases=["job_title", "position"]
+    ),
+    EntityDefinition(
+        id="training_type",
+        name="Training Type",
+        description="Type of training or learning",
+        aliases=["course_type", "learning_category"]
+    ),
+    EntityDefinition(
+        id="location",
+        name="Location",
+        description="Physical work location",
+        aliases=["office", "site", "workplace"]
+    ),
 ]
 
 
@@ -443,7 +568,8 @@ DEFAULT_PERSONA_CONCEPTS = {
     "cfo": ["arr", "mrr", "revenue", "services_revenue", "ar", "dso", "burn_rate", "gross_margin"],
     "cro": ["pipeline", "win_rate", "churn_rate", "nrr", "revenue", "arr"],
     "coo": ["throughput", "cycle_time", "sla_compliance"],
-    "cto": ["deploy_frequency", "mttr", "uptime", "slo_attainment", "cloud_spend"]
+    "cto": ["deploy_frequency", "mttr", "uptime", "slo_attainment", "cloud_spend"],
+    "chro": ["headcount", "attrition_rate", "time_to_fill", "engagement_score", "compensation_ratio", "training_hours", "promotion_rate", "diversity_index"]
 }
 
 
@@ -503,6 +629,41 @@ DEMO_BINDINGS: List[BindingSummary] = [
         quality_score=0.92,
         freshness_score=0.85,
         dims_coverage={"service": True, "team": True, "resource_type": True, "environment": True}
+    ),
+    BindingSummary(
+        source_system="Workday",
+        canonical_event="employee_hired",
+        quality_score=0.92,
+        freshness_score=0.95,
+        dims_coverage={"department": True, "team": True, "level": True, "location": True}
+    ),
+    BindingSummary(
+        source_system="Workday",
+        canonical_event="employee_terminated",
+        quality_score=0.90,
+        freshness_score=0.95,
+        dims_coverage={"department": True, "team": True, "tenure_band": True, "location": True}
+    ),
+    BindingSummary(
+        source_system="Greenhouse",
+        canonical_event="requisition_opened",
+        quality_score=0.88,
+        freshness_score=0.92,
+        dims_coverage={"department": True, "role": True, "location": True}
+    ),
+    BindingSummary(
+        source_system="Greenhouse",
+        canonical_event="requisition_filled",
+        quality_score=0.88,
+        freshness_score=0.92,
+        dims_coverage={"department": True, "role": True, "location": True}
+    ),
+    BindingSummary(
+        source_system="Culture Amp",
+        canonical_event="survey_completed",
+        quality_score=0.85,
+        freshness_score=0.90,
+        dims_coverage={"department": True, "team": True, "tenure_band": True}
     ),
 ]
 

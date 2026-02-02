@@ -7160,6 +7160,336 @@
       "G&A": 21
     }
   },
+  "headcount_by_team": {
+    "2024-Q1": {
+      "Platform": 11,
+      "Frontend": 14,
+      "Backend": 16,
+      "Data": 11,
+      "Infrastructure": 9,
+      "Security": 6,
+      "Mobile": 8
+    },
+    "2024-Q2": {
+      "Platform": 12,
+      "Frontend": 14,
+      "Backend": 17,
+      "Data": 12,
+      "Infrastructure": 9,
+      "Security": 6,
+      "Mobile": 7
+    },
+    "2024-Q3": {
+      "Platform": 12,
+      "Frontend": 14,
+      "Backend": 17,
+      "Data": 12,
+      "Infrastructure": 9,
+      "Security": 6,
+      "Mobile": 9
+    },
+    "2024-Q4": {
+      "Platform": 12,
+      "Frontend": 15,
+      "Backend": 18,
+      "Data": 12,
+      "Infrastructure": 10,
+      "Security": 6,
+      "Mobile": 8
+    },
+    "2025-Q1": {
+      "Platform": 14,
+      "Frontend": 17,
+      "Backend": 21,
+      "Data": 14,
+      "Infrastructure": 11,
+      "Security": 8,
+      "Mobile": 10
+    },
+    "2025-Q2": {
+      "Platform": 15,
+      "Frontend": 18,
+      "Backend": 22,
+      "Data": 15,
+      "Infrastructure": 12,
+      "Security": 8,
+      "Mobile": 10
+    },
+    "2025-Q3": {
+      "Platform": 16,
+      "Frontend": 19,
+      "Backend": 23,
+      "Data": 16,
+      "Infrastructure": 13,
+      "Security": 8,
+      "Mobile": 10
+    },
+    "2025-Q4": {
+      "Platform": 17,
+      "Frontend": 21,
+      "Backend": 25,
+      "Data": 17,
+      "Infrastructure": 14,
+      "Security": 9,
+      "Mobile": 12
+    },
+    "2026-Q1": {
+      "Platform": 20,
+      "Frontend": 23,
+      "Backend": 29,
+      "Data": 20,
+      "Infrastructure": 16,
+      "Security": 10,
+      "Mobile": 12
+    },
+    "2026-Q2": {
+      "Platform": 20,
+      "Frontend": 24,
+      "Backend": 30,
+      "Data": 20,
+      "Infrastructure": 16,
+      "Security": 11,
+      "Mobile": 14
+    },
+    "2026-Q3": {
+      "Platform": 21,
+      "Frontend": 25,
+      "Backend": 31,
+      "Data": 21,
+      "Infrastructure": 17,
+      "Security": 11,
+      "Mobile": 14
+    },
+    "2026-Q4": {
+      "Platform": 22,
+      "Frontend": 26,
+      "Backend": 32,
+      "Data": 22,
+      "Infrastructure": 17,
+      "Security": 12,
+      "Mobile": 14
+    }
+  },
+  "attrition_by_team": {
+    "2024-Q1": {
+      "Platform": 1.5,
+      "Frontend": 2.0,
+      "Backend": 1.8,
+      "Data": 1.6,
+      "Infrastructure": 1.4,
+      "Security": 1.2,
+      "Mobile": 2.2
+    },
+    "2024-Q2": {
+      "Platform": 1.6,
+      "Frontend": 2.1,
+      "Backend": 1.9,
+      "Data": 1.7,
+      "Infrastructure": 1.5,
+      "Security": 1.3,
+      "Mobile": 2.3
+    },
+    "2024-Q3": {
+      "Platform": 1.4,
+      "Frontend": 1.9,
+      "Backend": 1.7,
+      "Data": 1.5,
+      "Infrastructure": 1.3,
+      "Security": 1.1,
+      "Mobile": 2.1
+    },
+    "2024-Q4": {
+      "Platform": 1.5,
+      "Frontend": 2.0,
+      "Backend": 1.8,
+      "Data": 1.6,
+      "Infrastructure": 1.4,
+      "Security": 1.2,
+      "Mobile": 2.2
+    },
+    "2025-Q1": {
+      "Platform": 1.5,
+      "Frontend": 2.0,
+      "Backend": 1.8,
+      "Data": 1.6,
+      "Infrastructure": 1.4,
+      "Security": 1.2,
+      "Mobile": 2.2
+    },
+    "2025-Q2": {
+      "Platform": 1.6,
+      "Frontend": 2.1,
+      "Backend": 1.9,
+      "Data": 1.7,
+      "Infrastructure": 1.5,
+      "Security": 1.3,
+      "Mobile": 2.3
+    },
+    "2025-Q3": {
+      "Platform": 1.4,
+      "Frontend": 1.9,
+      "Backend": 1.7,
+      "Data": 1.5,
+      "Infrastructure": 1.3,
+      "Security": 1.1,
+      "Mobile": 2.1
+    },
+    "2025-Q4": {
+      "Platform": 1.5,
+      "Frontend": 2.0,
+      "Backend": 1.8,
+      "Data": 1.6,
+      "Infrastructure": 1.4,
+      "Security": 1.2,
+      "Mobile": 2.2
+    },
+    "2026-Q1": {
+      "Platform": 1.5,
+      "Frontend": 2.0,
+      "Backend": 1.8,
+      "Data": 1.6,
+      "Infrastructure": 1.4,
+      "Security": 1.2,
+      "Mobile": 2.2
+    },
+    "2026-Q2": {
+      "Platform": 1.6,
+      "Frontend": 2.1,
+      "Backend": 1.9,
+      "Data": 1.7,
+      "Infrastructure": 1.5,
+      "Security": 1.3,
+      "Mobile": 2.3
+    },
+    "2026-Q3": {
+      "Platform": 1.4,
+      "Frontend": 1.9,
+      "Backend": 1.7,
+      "Data": 1.5,
+      "Infrastructure": 1.3,
+      "Security": 1.1,
+      "Mobile": 2.1
+    },
+    "2026-Q4": {
+      "Platform": 1.5,
+      "Frontend": 2.0,
+      "Backend": 1.8,
+      "Data": 1.6,
+      "Infrastructure": 1.4,
+      "Security": 1.2,
+      "Mobile": 2.2
+    }
+  },
+  "engagement_by_team": {
+    "2024-Q1": {
+      "Platform": 78,
+      "Frontend": 75,
+      "Backend": 76,
+      "Data": 80,
+      "Infrastructure": 79,
+      "Security": 81,
+      "Mobile": 74
+    },
+    "2024-Q2": {
+      "Platform": 78,
+      "Frontend": 75,
+      "Backend": 76,
+      "Data": 80,
+      "Infrastructure": 79,
+      "Security": 81,
+      "Mobile": 74
+    },
+    "2024-Q3": {
+      "Platform": 78,
+      "Frontend": 75,
+      "Backend": 76,
+      "Data": 80,
+      "Infrastructure": 79,
+      "Security": 81,
+      "Mobile": 74
+    },
+    "2024-Q4": {
+      "Platform": 78,
+      "Frontend": 75,
+      "Backend": 76,
+      "Data": 80,
+      "Infrastructure": 79,
+      "Security": 81,
+      "Mobile": 74
+    },
+    "2025-Q1": {
+      "Platform": 79,
+      "Frontend": 76,
+      "Backend": 77,
+      "Data": 81,
+      "Infrastructure": 80,
+      "Security": 82,
+      "Mobile": 75
+    },
+    "2025-Q2": {
+      "Platform": 79,
+      "Frontend": 76,
+      "Backend": 77,
+      "Data": 81,
+      "Infrastructure": 80,
+      "Security": 82,
+      "Mobile": 75
+    },
+    "2025-Q3": {
+      "Platform": 79,
+      "Frontend": 76,
+      "Backend": 77,
+      "Data": 81,
+      "Infrastructure": 80,
+      "Security": 82,
+      "Mobile": 75
+    },
+    "2025-Q4": {
+      "Platform": 79,
+      "Frontend": 76,
+      "Backend": 77,
+      "Data": 81,
+      "Infrastructure": 80,
+      "Security": 82,
+      "Mobile": 75
+    },
+    "2026-Q1": {
+      "Platform": 80,
+      "Frontend": 77,
+      "Backend": 78,
+      "Data": 82,
+      "Infrastructure": 81,
+      "Security": 83,
+      "Mobile": 76
+    },
+    "2026-Q2": {
+      "Platform": 80,
+      "Frontend": 77,
+      "Backend": 78,
+      "Data": 82,
+      "Infrastructure": 81,
+      "Security": 83,
+      "Mobile": 76
+    },
+    "2026-Q3": {
+      "Platform": 80,
+      "Frontend": 77,
+      "Backend": 78,
+      "Data": 82,
+      "Infrastructure": 81,
+      "Security": 83,
+      "Mobile": 76
+    },
+    "2026-Q4": {
+      "Platform": 80,
+      "Frontend": 77,
+      "Backend": 78,
+      "Data": 82,
+      "Infrastructure": 81,
+      "Security": 83,
+      "Mobile": 76
+    }
+  },
   "engineering_by_team": {
     "2024-Q1": {
       "Platform": 18,

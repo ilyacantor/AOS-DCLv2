@@ -106,6 +106,14 @@ METRIC_TO_FACTBASE_KEY = {
     "uptime": "uptime_pct",
     "slo_attainment": None,
     "cloud_spend": "cloud_spend",
+    "headcount": "headcount",
+    "attrition_rate": "attrition_rate",
+    "time_to_fill": "time_to_fill_days",
+    "engagement_score": "engagement_score",
+    "compensation_ratio": None,
+    "training_hours": "training_hours_per_employee",
+    "promotion_rate": None,
+    "diversity_index": None,
 }
 
 METRIC_UNIT_MAP = {
@@ -129,6 +137,14 @@ METRIC_UNIT_MAP = {
     "uptime": "percent",
     "slo_attainment": "percent",
     "cloud_spend": "USD (millions)",
+    "headcount": "count",
+    "attrition_rate": "percent",
+    "time_to_fill": "days",
+    "engagement_score": "percent",
+    "compensation_ratio": "percent",
+    "training_hours": "hours",
+    "promotion_rate": "percent",
+    "diversity_index": "percent",
 }
 
 DIMENSION_TO_FACTBASE_KEY = {
@@ -156,12 +172,16 @@ DIMENSION_TO_FACTBASE_KEY = {
     "team": {
         "velocity": "velocity_by_team",
         "engineering": "engineering_by_team",
+        "headcount": "headcount_by_team",
+        "attrition_rate": "attrition_by_team",
+        "engagement_score": "engagement_by_team",
     },
     "department": {
         "headcount": "headcount_by_department",
-        "attrition": "attrition_by_department",
-        "engagement": "engagement_by_department",
+        "attrition_rate": "attrition_by_department",
+        "engagement_score": "engagement_by_department",
         "time_to_fill": "time_to_fill_by_department",
+        "training_hours": "training_by_department",
     },
     "service": {
         "incidents": "incidents_by_service",

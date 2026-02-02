@@ -11,6 +11,7 @@ class Persona(str, Enum):
     CRO = "CRO"
     COO = "COO"
     CTO = "CTO"
+    CHRO = "CHRO"
 
 
 class DiscoveryStatus(str, Enum):
