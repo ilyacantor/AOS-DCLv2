@@ -205,6 +205,17 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         default_grain=TimeGrain.QUARTER
     ),
     MetricDefinition(
+        id="quota_attainment",
+        name="Quota Attainment",
+        description="Percentage of sales quota achieved by rep",
+        aliases=["attainment", "quota achievement", "target attainment", "sales attainment"],
+        pack=Pack.CRO,
+        allowed_dims=["rep", "segment", "region"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
+        measure_op="ratio",
+        default_grain=TimeGrain.QUARTER
+    ),
+    MetricDefinition(
         id="churn_rate",
         name="Churn Rate",
         description="Percentage of customers or revenue lost",
@@ -688,7 +699,7 @@ PUBLISHED_ENTITIES: List[EntityDefinition] = [
 
 DEFAULT_PERSONA_CONCEPTS = {
     "cfo": ["arr", "mrr", "revenue", "services_revenue", "ar", "dso", "burn_rate", "gross_margin", "ar_aging"],
-    "cro": ["pipeline", "win_rate", "churn_rate", "nrr", "revenue", "arr", "pipeline_value", "churn_risk", "nrr_by_cohort"],
+    "cro": ["pipeline", "win_rate", "quota_attainment", "churn_rate", "nrr", "revenue", "arr", "pipeline_value", "churn_risk", "nrr_by_cohort"],
     "coo": ["throughput", "cycle_time", "sla_compliance"],
     "cto": ["deploy_frequency", "mttr", "uptime", "slo_attainment", "cloud_cost"],
     "chro": ["headcount", "attrition_rate", "time_to_fill", "engagement_score", "compensation_ratio", "training_hours", "promotion_rate", "diversity_index", "offer_acceptance_rate", "internal_mobility_rate", "span_of_control", "enps"]

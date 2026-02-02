@@ -3887,694 +3887,649 @@
   },
   "pipeline_by_rep": {
     "2024-Q1": {
-      "John Mitchell": {
-        "pipeline": 3.6,
-        "qualified": 2.16,
-        "deals": 10
-      },
       "Sarah Williams": {
-        "pipeline": 5.1,
-        "qualified": 3.06,
-        "deals": 14
-      },
-      "Marcus Johnson": {
-        "pipeline": 3.6,
-        "qualified": 2.16,
-        "deals": 10
-      },
-      "Lisa Chen": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
-      },
-      "David Rodriguez": {
-        "pipeline": 3.6,
-        "qualified": 2.16,
-        "deals": 10
-      },
-      "Amanda Foster": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+        "pipeline": 6.63,
+        "qualified": 3.98,
+        "deals": 18
       },
       "Michael Brown": {
-        "pipeline": 5.1,
-        "qualified": 3.06,
-        "deals": 14
-      },
-      "Jennifer Taylor": {
-        "pipeline": 3.6,
-        "qualified": 2.16,
-        "deals": 10
-      },
-      "Robert Kim": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+        "pipeline": 6.48,
+        "qualified": 3.89,
+        "deals": 18
       },
       "Emily Davis": {
-        "pipeline": 5.1,
-        "qualified": 3.06,
-        "deals": 14
+        "pipeline": 6.34,
+        "qualified": 3.8,
+        "deals": 17
       },
-      "Thomas Anderson": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+      "Anna Schmidt": {
+        "pipeline": 6.19,
+        "qualified": 3.71,
+        "deals": 17
+      },
+      "Wei Zhang": {
+        "pipeline": 6.05,
+        "qualified": 3.63,
+        "deals": 17
+      },
+      "John Mitchell": {
+        "pipeline": 4.17,
+        "qualified": 2.5,
+        "deals": 12
+      },
+      "Marcus Johnson": {
+        "pipeline": 4.06,
+        "qualified": 2.44,
+        "deals": 11
+      },
+      "David Rodriguez": {
+        "pipeline": 3.96,
+        "qualified": 2.38,
+        "deals": 11
+      },
+      "Jennifer Taylor": {
+        "pipeline": 3.86,
+        "qualified": 2.31,
+        "deals": 11
+      },
+      "Yuki Tanaka": {
+        "pipeline": 3.75,
+        "qualified": 2.25,
+        "deals": 10
       },
       "Rachel Martinez": {
-        "pipeline": 3.6,
-        "qualified": 2.16,
+        "pipeline": 3.65,
+        "qualified": 2.19,
         "deals": 10
       },
       "Pierre Dubois": {
-        "pipeline": 3.6,
-        "qualified": 2.16,
+        "pipeline": 3.55,
+        "qualified": 2.13,
         "deals": 10
-      },
-      "Anna Schmidt": {
-        "pipeline": 5.1,
-        "qualified": 3.06,
-        "deals": 14
-      },
-      "Marco Rossi": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
-      },
-      "Sophie Martin": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
       },
       "Erik Lindqvist": {
-        "pipeline": 3.6,
-        "qualified": 2.16,
+        "pipeline": 3.45,
+        "qualified": 2.07,
         "deals": 10
       },
-      "James O'Brien": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
+      "Lisa Chen": {
+        "pipeline": 2.14,
+        "qualified": 1.28,
         "deals": 6
       },
-      "Yuki Tanaka": {
-        "pipeline": 3.6,
-        "qualified": 2.16,
-        "deals": 10
-      },
-      "Wei Zhang": {
-        "pipeline": 5.1,
-        "qualified": 3.06,
-        "deals": 14
+      "Amanda Foster": {
+        "pipeline": 2.07,
+        "qualified": 1.24,
+        "deals": 5
       },
       "Priya Sharma": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+        "pipeline": 2.0,
+        "qualified": 1.2,
+        "deals": 5
       },
       "Chris Lee": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+        "pipeline": 1.94,
+        "qualified": 1.16,
+        "deals": 5
+      },
+      "Marco Rossi": {
+        "pipeline": 1.87,
+        "qualified": 1.12,
+        "deals": 5
+      },
+      "Sophie Martin": {
+        "pipeline": 1.81,
+        "qualified": 1.08,
+        "deals": 5
+      },
+      "James O'Brien": {
+        "pipeline": 1.74,
+        "qualified": 1.04,
+        "deals": 5
+      },
+      "Robert Kim": {
+        "pipeline": 1.68,
+        "qualified": 1.01,
+        "deals": 4
+      },
+      "Thomas Anderson": {
+        "pipeline": 1.61,
+        "qualified": 0.97,
+        "deals": 4
       }
     },
     "2024-Q2": {
-      "John Mitchell": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
-        "deals": 10
-      },
       "Sarah Williams": {
-        "pipeline": 5.3,
-        "qualified": 3.18,
-        "deals": 15
-      },
-      "Marcus Johnson": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
-        "deals": 10
-      },
-      "Lisa Chen": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
-      },
-      "David Rodriguez": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
-        "deals": 10
-      },
-      "Amanda Foster": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
+        "pipeline": 6.89,
+        "qualified": 4.13,
+        "deals": 20
       },
       "Michael Brown": {
-        "pipeline": 5.3,
-        "qualified": 3.18,
-        "deals": 15
-      },
-      "Jennifer Taylor": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
-        "deals": 10
-      },
-      "Robert Kim": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
+        "pipeline": 6.74,
+        "qualified": 4.04,
+        "deals": 19
       },
       "Emily Davis": {
-        "pipeline": 5.3,
-        "qualified": 3.18,
-        "deals": 15
+        "pipeline": 6.59,
+        "qualified": 3.95,
+        "deals": 19
       },
-      "Thomas Anderson": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
+      "Anna Schmidt": {
+        "pipeline": 6.43,
+        "qualified": 3.86,
+        "deals": 18
+      },
+      "Wei Zhang": {
+        "pipeline": 6.29,
+        "qualified": 3.77,
+        "deals": 18
+      },
+      "John Mitchell": {
+        "pipeline": 4.4,
+        "qualified": 2.64,
+        "deals": 12
+      },
+      "Marcus Johnson": {
+        "pipeline": 4.29,
+        "qualified": 2.57,
+        "deals": 11
+      },
+      "David Rodriguez": {
+        "pipeline": 4.18,
+        "qualified": 2.51,
+        "deals": 11
+      },
+      "Jennifer Taylor": {
+        "pipeline": 4.07,
+        "qualified": 2.44,
+        "deals": 11
+      },
+      "Yuki Tanaka": {
+        "pipeline": 3.96,
+        "qualified": 2.38,
+        "deals": 10
       },
       "Rachel Martinez": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
+        "pipeline": 3.85,
+        "qualified": 2.31,
         "deals": 10
       },
       "Pierre Dubois": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
+        "pipeline": 3.75,
+        "qualified": 2.25,
         "deals": 10
-      },
-      "Anna Schmidt": {
-        "pipeline": 5.3,
-        "qualified": 3.18,
-        "deals": 15
-      },
-      "Marco Rossi": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
-      },
-      "Sophie Martin": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
       },
       "Erik Lindqvist": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
+        "pipeline": 3.64,
+        "qualified": 2.18,
         "deals": 10
       },
-      "James O'Brien": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
+      "Lisa Chen": {
+        "pipeline": 2.23,
+        "qualified": 1.34,
         "deals": 6
       },
-      "Yuki Tanaka": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
-        "deals": 10
-      },
-      "Wei Zhang": {
-        "pipeline": 5.3,
-        "qualified": 3.18,
-        "deals": 15
+      "Amanda Foster": {
+        "pipeline": 2.16,
+        "qualified": 1.3,
+        "deals": 5
       },
       "Priya Sharma": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
+        "pipeline": 2.09,
+        "qualified": 1.25,
+        "deals": 5
       },
       "Chris Lee": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
+        "pipeline": 2.02,
+        "qualified": 1.21,
+        "deals": 5
+      },
+      "Marco Rossi": {
+        "pipeline": 1.95,
+        "qualified": 1.17,
+        "deals": 5
+      },
+      "Sophie Martin": {
+        "pipeline": 1.89,
+        "qualified": 1.13,
+        "deals": 5
+      },
+      "James O'Brien": {
+        "pipeline": 1.82,
+        "qualified": 1.09,
+        "deals": 5
+      },
+      "Robert Kim": {
+        "pipeline": 1.75,
+        "qualified": 1.05,
+        "deals": 4
+      },
+      "Thomas Anderson": {
+        "pipeline": 1.68,
+        "qualified": 1.01,
+        "deals": 4
       }
     },
     "2024-Q3": {
-      "John Mitchell": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
-        "deals": 11
-      },
       "Sarah Williams": {
-        "pipeline": 5.6,
-        "qualified": 3.36,
-        "deals": 16
-      },
-      "Marcus Johnson": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
-        "deals": 11
-      },
-      "Lisa Chen": {
-        "pipeline": 2.5,
-        "qualified": 1.5,
-        "deals": 7
-      },
-      "David Rodriguez": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
-        "deals": 11
-      },
-      "Amanda Foster": {
-        "pipeline": 2.5,
-        "qualified": 1.5,
-        "deals": 7
+        "pipeline": 7.28,
+        "qualified": 4.37,
+        "deals": 21
       },
       "Michael Brown": {
-        "pipeline": 5.6,
-        "qualified": 3.36,
-        "deals": 16
-      },
-      "Jennifer Taylor": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
-        "deals": 11
-      },
-      "Robert Kim": {
-        "pipeline": 2.5,
-        "qualified": 1.5,
-        "deals": 7
+        "pipeline": 7.12,
+        "qualified": 4.27,
+        "deals": 20
       },
       "Emily Davis": {
-        "pipeline": 5.6,
-        "qualified": 3.36,
-        "deals": 16
+        "pipeline": 6.96,
+        "qualified": 4.18,
+        "deals": 20
       },
-      "Thomas Anderson": {
-        "pipeline": 2.5,
-        "qualified": 1.5,
-        "deals": 7
+      "Anna Schmidt": {
+        "pipeline": 6.8,
+        "qualified": 4.08,
+        "deals": 19
+      },
+      "Wei Zhang": {
+        "pipeline": 6.64,
+        "qualified": 3.98,
+        "deals": 19
+      },
+      "John Mitchell": {
+        "pipeline": 4.63,
+        "qualified": 2.78,
+        "deals": 13
+      },
+      "Marcus Johnson": {
+        "pipeline": 4.52,
+        "qualified": 2.71,
+        "deals": 12
+      },
+      "David Rodriguez": {
+        "pipeline": 4.4,
+        "qualified": 2.64,
+        "deals": 12
+      },
+      "Jennifer Taylor": {
+        "pipeline": 4.28,
+        "qualified": 2.57,
+        "deals": 12
+      },
+      "Yuki Tanaka": {
+        "pipeline": 4.17,
+        "qualified": 2.5,
+        "deals": 11
       },
       "Rachel Martinez": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
+        "pipeline": 4.06,
+        "qualified": 2.43,
         "deals": 11
       },
       "Pierre Dubois": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
+        "pipeline": 3.94,
+        "qualified": 2.37,
         "deals": 11
-      },
-      "Anna Schmidt": {
-        "pipeline": 5.6,
-        "qualified": 3.36,
-        "deals": 16
-      },
-      "Marco Rossi": {
-        "pipeline": 2.5,
-        "qualified": 1.5,
-        "deals": 7
-      },
-      "Sophie Martin": {
-        "pipeline": 2.5,
-        "qualified": 1.5,
-        "deals": 7
       },
       "Erik Lindqvist": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
+        "pipeline": 3.83,
+        "qualified": 2.3,
         "deals": 11
       },
-      "James O'Brien": {
-        "pipeline": 2.5,
-        "qualified": 1.5,
+      "Lisa Chen": {
+        "pipeline": 2.32,
+        "qualified": 1.39,
         "deals": 7
       },
-      "Yuki Tanaka": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
-        "deals": 11
-      },
-      "Wei Zhang": {
-        "pipeline": 5.6,
-        "qualified": 3.36,
-        "deals": 16
+      "Amanda Foster": {
+        "pipeline": 2.25,
+        "qualified": 1.35,
+        "deals": 6
       },
       "Priya Sharma": {
-        "pipeline": 2.5,
-        "qualified": 1.5,
-        "deals": 7
+        "pipeline": 2.18,
+        "qualified": 1.31,
+        "deals": 6
       },
       "Chris Lee": {
-        "pipeline": 2.5,
-        "qualified": 1.5,
-        "deals": 7
+        "pipeline": 2.11,
+        "qualified": 1.26,
+        "deals": 6
+      },
+      "Marco Rossi": {
+        "pipeline": 2.03,
+        "qualified": 1.22,
+        "deals": 6
+      },
+      "Sophie Martin": {
+        "pipeline": 1.97,
+        "qualified": 1.18,
+        "deals": 6
+      },
+      "James O'Brien": {
+        "pipeline": 1.89,
+        "qualified": 1.14,
+        "deals": 5
+      },
+      "Robert Kim": {
+        "pipeline": 1.82,
+        "qualified": 1.09,
+        "deals": 5
+      },
+      "Thomas Anderson": {
+        "pipeline": 1.75,
+        "qualified": 1.05,
+        "deals": 5
       }
     },
     "2024-Q4": {
-      "John Mitchell": {
-        "pipeline": 4.2,
-        "qualified": 2.52,
-        "deals": 12
-      },
       "Sarah Williams": {
-        "pipeline": 5.8,
-        "qualified": 3.48,
-        "deals": 16
-      },
-      "Marcus Johnson": {
-        "pipeline": 4.2,
-        "qualified": 2.52,
-        "deals": 12
-      },
-      "Lisa Chen": {
-        "pipeline": 2.6,
-        "qualified": 1.56,
-        "deals": 7
-      },
-      "David Rodriguez": {
-        "pipeline": 4.2,
-        "qualified": 2.52,
-        "deals": 12
-      },
-      "Amanda Foster": {
-        "pipeline": 2.6,
-        "qualified": 1.56,
-        "deals": 7
+        "pipeline": 7.54,
+        "qualified": 4.52,
+        "deals": 21
       },
       "Michael Brown": {
-        "pipeline": 5.8,
-        "qualified": 3.48,
-        "deals": 16
-      },
-      "Jennifer Taylor": {
-        "pipeline": 4.2,
-        "qualified": 2.52,
-        "deals": 12
-      },
-      "Robert Kim": {
-        "pipeline": 2.6,
-        "qualified": 1.56,
-        "deals": 7
+        "pipeline": 7.37,
+        "qualified": 4.42,
+        "deals": 20
       },
       "Emily Davis": {
-        "pipeline": 5.8,
-        "qualified": 3.48,
-        "deals": 16
+        "pipeline": 7.21,
+        "qualified": 4.33,
+        "deals": 20
       },
-      "Thomas Anderson": {
-        "pipeline": 2.6,
-        "qualified": 1.56,
-        "deals": 7
+      "Anna Schmidt": {
+        "pipeline": 7.04,
+        "qualified": 4.22,
+        "deals": 19
+      },
+      "Wei Zhang": {
+        "pipeline": 6.88,
+        "qualified": 4.13,
+        "deals": 19
+      },
+      "John Mitchell": {
+        "pipeline": 4.86,
+        "qualified": 2.92,
+        "deals": 14
+      },
+      "Marcus Johnson": {
+        "pipeline": 4.74,
+        "qualified": 2.85,
+        "deals": 14
+      },
+      "David Rodriguez": {
+        "pipeline": 4.62,
+        "qualified": 2.77,
+        "deals": 13
+      },
+      "Jennifer Taylor": {
+        "pipeline": 4.5,
+        "qualified": 2.7,
+        "deals": 13
+      },
+      "Yuki Tanaka": {
+        "pipeline": 4.38,
+        "qualified": 2.63,
+        "deals": 13
       },
       "Rachel Martinez": {
-        "pipeline": 4.2,
-        "qualified": 2.52,
+        "pipeline": 4.26,
+        "qualified": 2.56,
         "deals": 12
       },
       "Pierre Dubois": {
-        "pipeline": 4.2,
-        "qualified": 2.52,
+        "pipeline": 4.14,
+        "qualified": 2.48,
         "deals": 12
-      },
-      "Anna Schmidt": {
-        "pipeline": 5.8,
-        "qualified": 3.48,
-        "deals": 16
-      },
-      "Marco Rossi": {
-        "pipeline": 2.6,
-        "qualified": 1.56,
-        "deals": 7
-      },
-      "Sophie Martin": {
-        "pipeline": 2.6,
-        "qualified": 1.56,
-        "deals": 7
       },
       "Erik Lindqvist": {
-        "pipeline": 4.2,
-        "qualified": 2.52,
-        "deals": 12
+        "pipeline": 4.02,
+        "qualified": 2.41,
+        "deals": 11
       },
-      "James O'Brien": {
-        "pipeline": 2.6,
-        "qualified": 1.56,
+      "Lisa Chen": {
+        "pipeline": 2.42,
+        "qualified": 1.45,
         "deals": 7
       },
-      "Yuki Tanaka": {
-        "pipeline": 4.2,
-        "qualified": 2.52,
-        "deals": 12
-      },
-      "Wei Zhang": {
-        "pipeline": 5.8,
-        "qualified": 3.48,
-        "deals": 16
+      "Amanda Foster": {
+        "pipeline": 2.34,
+        "qualified": 1.4,
+        "deals": 6
       },
       "Priya Sharma": {
-        "pipeline": 2.6,
-        "qualified": 1.56,
-        "deals": 7
+        "pipeline": 2.26,
+        "qualified": 1.36,
+        "deals": 6
       },
       "Chris Lee": {
-        "pipeline": 2.6,
-        "qualified": 1.56,
-        "deals": 7
+        "pipeline": 2.19,
+        "qualified": 1.32,
+        "deals": 6
+      },
+      "Marco Rossi": {
+        "pipeline": 2.12,
+        "qualified": 1.27,
+        "deals": 6
+      },
+      "Sophie Martin": {
+        "pipeline": 2.04,
+        "qualified": 1.23,
+        "deals": 6
+      },
+      "James O'Brien": {
+        "pipeline": 1.97,
+        "qualified": 1.18,
+        "deals": 5
+      },
+      "Robert Kim": {
+        "pipeline": 1.9,
+        "qualified": 1.14,
+        "deals": 5
+      },
+      "Thomas Anderson": {
+        "pipeline": 1.82,
+        "qualified": 1.09,
+        "deals": 5
       }
     },
     "2025-Q1": {
-      "John Mitchell": {
-        "pipeline": 4.7,
-        "qualified": 2.82,
-        "deals": 13
-      },
       "Sarah Williams": {
-        "pipeline": 6.6,
-        "qualified": 3.96,
-        "deals": 18
-      },
-      "Marcus Johnson": {
-        "pipeline": 4.7,
-        "qualified": 2.82,
-        "deals": 13
-      },
-      "Lisa Chen": {
-        "pipeline": 3.0,
-        "qualified": 1.8,
-        "deals": 8
-      },
-      "David Rodriguez": {
-        "pipeline": 4.7,
-        "qualified": 2.82,
-        "deals": 13
-      },
-      "Amanda Foster": {
-        "pipeline": 3.0,
-        "qualified": 1.8,
-        "deals": 8
+        "pipeline": 8.58,
+        "qualified": 5.15,
+        "deals": 23
       },
       "Michael Brown": {
-        "pipeline": 6.6,
-        "qualified": 3.96,
-        "deals": 18
-      },
-      "Jennifer Taylor": {
-        "pipeline": 4.7,
-        "qualified": 2.82,
-        "deals": 13
-      },
-      "Robert Kim": {
-        "pipeline": 3.0,
-        "qualified": 1.8,
-        "deals": 8
+        "pipeline": 8.41,
+        "qualified": 5.05,
+        "deals": 23
       },
       "Emily Davis": {
-        "pipeline": 6.6,
-        "qualified": 3.96,
-        "deals": 18
-      },
-      "Thomas Anderson": {
-        "pipeline": 3.0,
-        "qualified": 1.8,
-        "deals": 8
-      },
-      "Rachel Martinez": {
-        "pipeline": 4.7,
-        "qualified": 2.82,
-        "deals": 13
-      },
-      "Pierre Dubois": {
-        "pipeline": 4.7,
-        "qualified": 2.82,
-        "deals": 13
+        "pipeline": 8.25,
+        "qualified": 4.95,
+        "deals": 22
       },
       "Anna Schmidt": {
-        "pipeline": 6.6,
-        "qualified": 3.96,
-        "deals": 18
+        "pipeline": 8.09,
+        "qualified": 4.85,
+        "deals": 22
       },
-      "Marco Rossi": {
-        "pipeline": 3.0,
-        "qualified": 1.8,
-        "deals": 8
+      "Wei Zhang": {
+        "pipeline": 7.92,
+        "qualified": 4.75,
+        "deals": 22
       },
-      "Sophie Martin": {
-        "pipeline": 3.0,
-        "qualified": 1.8,
-        "deals": 8
+      "John Mitchell": {
+        "pipeline": 5.52,
+        "qualified": 3.31,
+        "deals": 15
+      },
+      "Marcus Johnson": {
+        "pipeline": 5.4,
+        "qualified": 3.24,
+        "deals": 15
+      },
+      "David Rodriguez": {
+        "pipeline": 5.29,
+        "qualified": 3.17,
+        "deals": 15
+      },
+      "Jennifer Taylor": {
+        "pipeline": 5.17,
+        "qualified": 3.1,
+        "deals": 14
+      },
+      "Yuki Tanaka": {
+        "pipeline": 5.05,
+        "qualified": 3.03,
+        "deals": 14
+      },
+      "Rachel Martinez": {
+        "pipeline": 4.94,
+        "qualified": 2.96,
+        "deals": 14
+      },
+      "Pierre Dubois": {
+        "pipeline": 4.82,
+        "qualified": 2.89,
+        "deals": 13
       },
       "Erik Lindqvist": {
         "pipeline": 4.7,
         "qualified": 2.82,
         "deals": 13
       },
-      "James O'Brien": {
-        "pipeline": 3.0,
-        "qualified": 1.8,
-        "deals": 8
-      },
-      "Yuki Tanaka": {
-        "pipeline": 4.7,
-        "qualified": 2.82,
-        "deals": 13
-      },
-      "Wei Zhang": {
-        "pipeline": 6.6,
-        "qualified": 3.96,
-        "deals": 18
-      },
-      "Priya Sharma": {
-        "pipeline": 3.0,
-        "qualified": 1.8,
-        "deals": 8
-      },
-      "Chris Lee": {
-        "pipeline": 3.0,
-        "qualified": 1.8,
-        "deals": 8
-      },
       "Kevin Patel": {
-        "pipeline": 1.8,
-        "qualified": 1.08,
+        "pipeline": 1.75,
+        "qualified": 1.05,
         "deals": 5
       },
       "Clara M\u00fcller": {
-        "pipeline": 1.8,
-        "qualified": 1.08,
+        "pipeline": 1.71,
+        "qualified": 1.03,
         "deals": 5
       },
       "Kenji Nakamura": {
-        "pipeline": 1.8,
-        "qualified": 1.08,
+        "pipeline": 1.67,
+        "qualified": 1.0,
         "deals": 5
+      },
+      "Lisa Chen": {
+        "pipeline": 2.7,
+        "qualified": 1.62,
+        "deals": 7
+      },
+      "Amanda Foster": {
+        "pipeline": 2.62,
+        "qualified": 1.57,
+        "deals": 7
+      },
+      "Priya Sharma": {
+        "pipeline": 2.55,
+        "qualified": 1.53,
+        "deals": 7
+      },
+      "Chris Lee": {
+        "pipeline": 2.47,
+        "qualified": 1.48,
+        "deals": 7
+      },
+      "Marco Rossi": {
+        "pipeline": 2.4,
+        "qualified": 1.44,
+        "deals": 6
+      },
+      "Sophie Martin": {
+        "pipeline": 2.33,
+        "qualified": 1.4,
+        "deals": 6
+      },
+      "James O'Brien": {
+        "pipeline": 2.25,
+        "qualified": 1.35,
+        "deals": 6
+      },
+      "Robert Kim": {
+        "pipeline": 2.17,
+        "qualified": 1.3,
+        "deals": 6
+      },
+      "Thomas Anderson": {
+        "pipeline": 2.1,
+        "qualified": 1.26,
+        "deals": 6
       }
     },
     "2025-Q2": {
-      "John Mitchell": {
-        "pipeline": 4.9,
-        "qualified": 2.94,
-        "deals": 14
-      },
       "Sarah Williams": {
-        "pipeline": 6.9,
-        "qualified": 4.14,
-        "deals": 19
-      },
-      "Marcus Johnson": {
-        "pipeline": 4.9,
-        "qualified": 2.94,
-        "deals": 14
-      },
-      "Lisa Chen": {
-        "pipeline": 3.1,
-        "qualified": 1.86,
-        "deals": 8
-      },
-      "David Rodriguez": {
-        "pipeline": 4.9,
-        "qualified": 2.94,
-        "deals": 14
-      },
-      "Amanda Foster": {
-        "pipeline": 3.1,
-        "qualified": 1.86,
-        "deals": 8
+        "pipeline": 8.97,
+        "qualified": 5.38,
+        "deals": 25
       },
       "Michael Brown": {
-        "pipeline": 6.9,
-        "qualified": 4.14,
-        "deals": 19
-      },
-      "Jennifer Taylor": {
-        "pipeline": 4.9,
-        "qualified": 2.94,
-        "deals": 14
-      },
-      "Robert Kim": {
-        "pipeline": 3.1,
-        "qualified": 1.86,
-        "deals": 8
+        "pipeline": 8.83,
+        "qualified": 5.3,
+        "deals": 24
       },
       "Emily Davis": {
-        "pipeline": 6.9,
-        "qualified": 4.14,
-        "deals": 19
-      },
-      "Thomas Anderson": {
-        "pipeline": 3.1,
-        "qualified": 1.86,
-        "deals": 8
-      },
-      "Rachel Martinez": {
-        "pipeline": 4.9,
-        "qualified": 2.94,
-        "deals": 14
-      },
-      "Pierre Dubois": {
-        "pipeline": 4.9,
-        "qualified": 2.94,
-        "deals": 14
+        "pipeline": 8.67,
+        "qualified": 5.2,
+        "deals": 24
       },
       "Anna Schmidt": {
-        "pipeline": 6.9,
-        "qualified": 4.14,
-        "deals": 19
-      },
-      "Marco Rossi": {
-        "pipeline": 3.1,
-        "qualified": 1.86,
-        "deals": 8
-      },
-      "Sophie Martin": {
-        "pipeline": 3.1,
-        "qualified": 1.86,
-        "deals": 8
-      },
-      "Erik Lindqvist": {
-        "pipeline": 4.9,
-        "qualified": 2.94,
-        "deals": 14
-      },
-      "James O'Brien": {
-        "pipeline": 3.1,
-        "qualified": 1.86,
-        "deals": 8
-      },
-      "Yuki Tanaka": {
-        "pipeline": 4.9,
-        "qualified": 2.94,
-        "deals": 14
+        "pipeline": 8.53,
+        "qualified": 5.12,
+        "deals": 23
       },
       "Wei Zhang": {
-        "pipeline": 6.9,
-        "qualified": 4.14,
-        "deals": 19
+        "pipeline": 8.38,
+        "qualified": 5.03,
+        "deals": 23
       },
-      "Priya Sharma": {
-        "pipeline": 3.1,
-        "qualified": 1.86,
-        "deals": 8
+      "John Mitchell": {
+        "pipeline": 5.85,
+        "qualified": 3.51,
+        "deals": 17
       },
-      "Chris Lee": {
-        "pipeline": 3.1,
-        "qualified": 1.86,
-        "deals": 8
+      "Marcus Johnson": {
+        "pipeline": 5.74,
+        "qualified": 3.44,
+        "deals": 16
+      },
+      "David Rodriguez": {
+        "pipeline": 5.63,
+        "qualified": 3.38,
+        "deals": 16
+      },
+      "Jennifer Taylor": {
+        "pipeline": 5.53,
+        "qualified": 3.32,
+        "deals": 16
+      },
+      "Yuki Tanaka": {
+        "pipeline": 5.42,
+        "qualified": 3.25,
+        "deals": 15
+      },
+      "Rachel Martinez": {
+        "pipeline": 5.32,
+        "qualified": 3.19,
+        "deals": 15
+      },
+      "Pierre Dubois": {
+        "pipeline": 5.21,
+        "qualified": 3.13,
+        "deals": 15
+      },
+      "Erik Lindqvist": {
+        "pipeline": 5.11,
+        "qualified": 3.07,
+        "deals": 15
       },
       "Kevin Patel": {
-        "pipeline": 1.8,
-        "qualified": 1.08,
+        "pipeline": 1.84,
+        "qualified": 1.1,
         "deals": 5
       },
       "Olivia Thompson": {
@@ -4583,145 +4538,145 @@
         "deals": 5
       },
       "Daniel Garcia": {
-        "pipeline": 1.8,
-        "qualified": 1.08,
+        "pipeline": 1.76,
+        "qualified": 1.06,
         "deals": 5
       },
       "Clara M\u00fcller": {
-        "pipeline": 1.8,
-        "qualified": 1.08,
+        "pipeline": 1.72,
+        "qualified": 1.03,
         "deals": 5
       },
       "Luca Bianchi": {
-        "pipeline": 1.8,
-        "qualified": 1.08,
+        "pipeline": 1.68,
+        "qualified": 1.01,
         "deals": 5
       },
       "Kenji Nakamura": {
-        "pipeline": 1.8,
-        "qualified": 1.08,
+        "pipeline": 1.65,
+        "qualified": 0.99,
         "deals": 5
       },
       "Min-ji Park": {
-        "pipeline": 1.8,
-        "qualified": 1.08,
-        "deals": 5
+        "pipeline": 1.61,
+        "qualified": 0.96,
+        "deals": 4
+      },
+      "Lisa Chen": {
+        "pipeline": 2.7,
+        "qualified": 1.62,
+        "deals": 7
+      },
+      "Amanda Foster": {
+        "pipeline": 2.63,
+        "qualified": 1.58,
+        "deals": 7
+      },
+      "Priya Sharma": {
+        "pipeline": 2.57,
+        "qualified": 1.54,
+        "deals": 7
+      },
+      "Chris Lee": {
+        "pipeline": 2.5,
+        "qualified": 1.5,
+        "deals": 6
+      },
+      "Marco Rossi": {
+        "pipeline": 2.44,
+        "qualified": 1.46,
+        "deals": 6
+      },
+      "Sophie Martin": {
+        "pipeline": 2.37,
+        "qualified": 1.42,
+        "deals": 6
+      },
+      "James O'Brien": {
+        "pipeline": 2.3,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Robert Kim": {
+        "pipeline": 2.24,
+        "qualified": 1.34,
+        "deals": 6
+      },
+      "Thomas Anderson": {
+        "pipeline": 2.17,
+        "qualified": 1.3,
+        "deals": 6
       }
     },
     "2025-Q3": {
-      "John Mitchell": {
-        "pipeline": 5.1,
-        "qualified": 3.06,
-        "deals": 14
-      },
       "Sarah Williams": {
-        "pipeline": 7.1,
-        "qualified": 4.26,
-        "deals": 20
-      },
-      "Marcus Johnson": {
-        "pipeline": 5.1,
-        "qualified": 3.06,
-        "deals": 14
-      },
-      "Lisa Chen": {
-        "pipeline": 3.2,
-        "qualified": 1.92,
-        "deals": 9
-      },
-      "David Rodriguez": {
-        "pipeline": 5.1,
-        "qualified": 3.06,
-        "deals": 14
-      },
-      "Amanda Foster": {
-        "pipeline": 3.2,
-        "qualified": 1.92,
-        "deals": 9
+        "pipeline": 9.23,
+        "qualified": 5.54,
+        "deals": 26
       },
       "Michael Brown": {
-        "pipeline": 7.1,
-        "qualified": 4.26,
-        "deals": 20
-      },
-      "Jennifer Taylor": {
-        "pipeline": 5.1,
-        "qualified": 3.06,
-        "deals": 14
-      },
-      "Robert Kim": {
-        "pipeline": 3.2,
-        "qualified": 1.92,
-        "deals": 9
+        "pipeline": 9.08,
+        "qualified": 5.45,
+        "deals": 26
       },
       "Emily Davis": {
-        "pipeline": 7.1,
-        "qualified": 4.26,
-        "deals": 20
-      },
-      "Thomas Anderson": {
-        "pipeline": 3.2,
-        "qualified": 1.92,
-        "deals": 9
-      },
-      "Rachel Martinez": {
-        "pipeline": 5.1,
-        "qualified": 3.06,
-        "deals": 14
-      },
-      "Pierre Dubois": {
-        "pipeline": 5.1,
-        "qualified": 3.06,
-        "deals": 14
+        "pipeline": 8.92,
+        "qualified": 5.35,
+        "deals": 25
       },
       "Anna Schmidt": {
-        "pipeline": 7.1,
-        "qualified": 4.26,
-        "deals": 20
-      },
-      "Marco Rossi": {
-        "pipeline": 3.2,
-        "qualified": 1.92,
-        "deals": 9
-      },
-      "Sophie Martin": {
-        "pipeline": 3.2,
-        "qualified": 1.92,
-        "deals": 9
-      },
-      "Erik Lindqvist": {
-        "pipeline": 5.1,
-        "qualified": 3.06,
-        "deals": 14
-      },
-      "James O'Brien": {
-        "pipeline": 3.2,
-        "qualified": 1.92,
-        "deals": 9
-      },
-      "Yuki Tanaka": {
-        "pipeline": 5.1,
-        "qualified": 3.06,
-        "deals": 14
+        "pipeline": 8.78,
+        "qualified": 5.27,
+        "deals": 25
       },
       "Wei Zhang": {
-        "pipeline": 7.1,
-        "qualified": 4.26,
-        "deals": 20
+        "pipeline": 8.62,
+        "qualified": 5.17,
+        "deals": 24
       },
-      "Priya Sharma": {
-        "pipeline": 3.2,
-        "qualified": 1.92,
-        "deals": 9
+      "John Mitchell": {
+        "pipeline": 6.08,
+        "qualified": 3.65,
+        "deals": 17
       },
-      "Chris Lee": {
-        "pipeline": 3.2,
-        "qualified": 1.92,
-        "deals": 9
+      "Marcus Johnson": {
+        "pipeline": 5.97,
+        "qualified": 3.58,
+        "deals": 16
+      },
+      "David Rodriguez": {
+        "pipeline": 5.86,
+        "qualified": 3.52,
+        "deals": 16
+      },
+      "Jennifer Taylor": {
+        "pipeline": 5.76,
+        "qualified": 3.45,
+        "deals": 16
+      },
+      "Yuki Tanaka": {
+        "pipeline": 5.65,
+        "qualified": 3.39,
+        "deals": 15
+      },
+      "Rachel Martinez": {
+        "pipeline": 5.54,
+        "qualified": 3.32,
+        "deals": 15
+      },
+      "Pierre Dubois": {
+        "pipeline": 5.43,
+        "qualified": 3.26,
+        "deals": 15
+      },
+      "Erik Lindqvist": {
+        "pipeline": 5.32,
+        "qualified": 3.19,
+        "deals": 15
       },
       "Kevin Patel": {
-        "pipeline": 1.9,
-        "qualified": 1.14,
+        "pipeline": 1.94,
+        "qualified": 1.16,
         "deals": 5
       },
       "Olivia Thompson": {
@@ -4730,145 +4685,145 @@
         "deals": 5
       },
       "Daniel Garcia": {
-        "pipeline": 1.9,
-        "qualified": 1.14,
+        "pipeline": 1.86,
+        "qualified": 1.12,
         "deals": 5
       },
       "Clara M\u00fcller": {
-        "pipeline": 1.9,
-        "qualified": 1.14,
+        "pipeline": 1.82,
+        "qualified": 1.09,
         "deals": 5
       },
       "Luca Bianchi": {
-        "pipeline": 1.9,
-        "qualified": 1.14,
+        "pipeline": 1.78,
+        "qualified": 1.07,
         "deals": 5
       },
       "Kenji Nakamura": {
-        "pipeline": 1.9,
-        "qualified": 1.14,
+        "pipeline": 1.74,
+        "qualified": 1.04,
         "deals": 5
       },
       "Min-ji Park": {
-        "pipeline": 1.9,
-        "qualified": 1.14,
-        "deals": 5
+        "pipeline": 1.7,
+        "qualified": 1.02,
+        "deals": 4
+      },
+      "Lisa Chen": {
+        "pipeline": 2.79,
+        "qualified": 1.67,
+        "deals": 8
+      },
+      "Amanda Foster": {
+        "pipeline": 2.72,
+        "qualified": 1.63,
+        "deals": 8
+      },
+      "Priya Sharma": {
+        "pipeline": 2.65,
+        "qualified": 1.59,
+        "deals": 7
+      },
+      "Chris Lee": {
+        "pipeline": 2.58,
+        "qualified": 1.55,
+        "deals": 7
+      },
+      "Marco Rossi": {
+        "pipeline": 2.52,
+        "qualified": 1.51,
+        "deals": 7
+      },
+      "Sophie Martin": {
+        "pipeline": 2.44,
+        "qualified": 1.47,
+        "deals": 7
+      },
+      "James O'Brien": {
+        "pipeline": 2.38,
+        "qualified": 1.43,
+        "deals": 7
+      },
+      "Robert Kim": {
+        "pipeline": 2.31,
+        "qualified": 1.38,
+        "deals": 6
+      },
+      "Thomas Anderson": {
+        "pipeline": 2.24,
+        "qualified": 1.34,
+        "deals": 6
       }
     },
     "2025-Q4": {
-      "John Mitchell": {
-        "pipeline": 5.3,
-        "qualified": 3.18,
-        "deals": 15
-      },
       "Sarah Williams": {
-        "pipeline": 7.4,
-        "qualified": 4.44,
-        "deals": 21
-      },
-      "Marcus Johnson": {
-        "pipeline": 5.3,
-        "qualified": 3.18,
-        "deals": 15
-      },
-      "Lisa Chen": {
-        "pipeline": 3.3,
-        "qualified": 1.98,
-        "deals": 9
-      },
-      "David Rodriguez": {
-        "pipeline": 5.3,
-        "qualified": 3.18,
-        "deals": 15
-      },
-      "Amanda Foster": {
-        "pipeline": 3.3,
-        "qualified": 1.98,
-        "deals": 9
+        "pipeline": 9.62,
+        "qualified": 5.77,
+        "deals": 27
       },
       "Michael Brown": {
-        "pipeline": 7.4,
-        "qualified": 4.44,
-        "deals": 21
-      },
-      "Jennifer Taylor": {
-        "pipeline": 5.3,
-        "qualified": 3.18,
-        "deals": 15
-      },
-      "Robert Kim": {
-        "pipeline": 3.3,
-        "qualified": 1.98,
-        "deals": 9
+        "pipeline": 9.46,
+        "qualified": 5.68,
+        "deals": 27
       },
       "Emily Davis": {
-        "pipeline": 7.4,
-        "qualified": 4.44,
-        "deals": 21
-      },
-      "Thomas Anderson": {
-        "pipeline": 3.3,
-        "qualified": 1.98,
-        "deals": 9
-      },
-      "Rachel Martinez": {
-        "pipeline": 5.3,
-        "qualified": 3.18,
-        "deals": 15
-      },
-      "Pierre Dubois": {
-        "pipeline": 5.3,
-        "qualified": 3.18,
-        "deals": 15
+        "pipeline": 9.3,
+        "qualified": 5.58,
+        "deals": 26
       },
       "Anna Schmidt": {
-        "pipeline": 7.4,
-        "qualified": 4.44,
-        "deals": 21
-      },
-      "Marco Rossi": {
-        "pipeline": 3.3,
-        "qualified": 1.98,
-        "deals": 9
-      },
-      "Sophie Martin": {
-        "pipeline": 3.3,
-        "qualified": 1.98,
-        "deals": 9
-      },
-      "Erik Lindqvist": {
-        "pipeline": 5.3,
-        "qualified": 3.18,
-        "deals": 15
-      },
-      "James O'Brien": {
-        "pipeline": 3.3,
-        "qualified": 1.98,
-        "deals": 9
-      },
-      "Yuki Tanaka": {
-        "pipeline": 5.3,
-        "qualified": 3.18,
-        "deals": 15
+        "pipeline": 9.15,
+        "qualified": 5.49,
+        "deals": 26
       },
       "Wei Zhang": {
-        "pipeline": 7.4,
-        "qualified": 4.44,
-        "deals": 21
+        "pipeline": 8.98,
+        "qualified": 5.39,
+        "deals": 25
       },
-      "Priya Sharma": {
-        "pipeline": 3.3,
-        "qualified": 1.98,
-        "deals": 9
+      "John Mitchell": {
+        "pipeline": 6.32,
+        "qualified": 3.79,
+        "deals": 18
       },
-      "Chris Lee": {
-        "pipeline": 3.3,
-        "qualified": 1.98,
-        "deals": 9
+      "Marcus Johnson": {
+        "pipeline": 6.21,
+        "qualified": 3.72,
+        "deals": 18
+      },
+      "David Rodriguez": {
+        "pipeline": 6.09,
+        "qualified": 3.66,
+        "deals": 17
+      },
+      "Jennifer Taylor": {
+        "pipeline": 5.98,
+        "qualified": 3.59,
+        "deals": 17
+      },
+      "Yuki Tanaka": {
+        "pipeline": 5.87,
+        "qualified": 3.52,
+        "deals": 17
+      },
+      "Rachel Martinez": {
+        "pipeline": 5.76,
+        "qualified": 3.45,
+        "deals": 16
+      },
+      "Pierre Dubois": {
+        "pipeline": 5.64,
+        "qualified": 3.38,
+        "deals": 16
+      },
+      "Erik Lindqvist": {
+        "pipeline": 5.53,
+        "qualified": 3.32,
+        "deals": 16
       },
       "Kevin Patel": {
-        "pipeline": 2.0,
-        "qualified": 1.2,
+        "pipeline": 2.04,
+        "qualified": 1.23,
         "deals": 5
       },
       "Olivia Thompson": {
@@ -4877,145 +4832,145 @@
         "deals": 5
       },
       "Daniel Garcia": {
-        "pipeline": 2.0,
-        "qualified": 1.2,
+        "pipeline": 1.96,
+        "qualified": 1.17,
         "deals": 5
       },
       "Clara M\u00fcller": {
-        "pipeline": 2.0,
-        "qualified": 1.2,
+        "pipeline": 1.91,
+        "qualified": 1.15,
         "deals": 5
       },
       "Luca Bianchi": {
-        "pipeline": 2.0,
-        "qualified": 1.2,
+        "pipeline": 1.87,
+        "qualified": 1.12,
         "deals": 5
       },
       "Kenji Nakamura": {
-        "pipeline": 2.0,
-        "qualified": 1.2,
+        "pipeline": 1.83,
+        "qualified": 1.1,
         "deals": 5
       },
       "Min-ji Park": {
-        "pipeline": 2.0,
-        "qualified": 1.2,
-        "deals": 5
+        "pipeline": 1.79,
+        "qualified": 1.07,
+        "deals": 4
+      },
+      "Lisa Chen": {
+        "pipeline": 2.87,
+        "qualified": 1.72,
+        "deals": 8
+      },
+      "Amanda Foster": {
+        "pipeline": 2.8,
+        "qualified": 1.68,
+        "deals": 8
+      },
+      "Priya Sharma": {
+        "pipeline": 2.74,
+        "qualified": 1.64,
+        "deals": 7
+      },
+      "Chris Lee": {
+        "pipeline": 2.66,
+        "qualified": 1.6,
+        "deals": 7
+      },
+      "Marco Rossi": {
+        "pipeline": 2.59,
+        "qualified": 1.56,
+        "deals": 7
+      },
+      "Sophie Martin": {
+        "pipeline": 2.52,
+        "qualified": 1.51,
+        "deals": 7
+      },
+      "James O'Brien": {
+        "pipeline": 2.45,
+        "qualified": 1.47,
+        "deals": 7
+      },
+      "Robert Kim": {
+        "pipeline": 2.38,
+        "qualified": 1.43,
+        "deals": 6
+      },
+      "Thomas Anderson": {
+        "pipeline": 2.31,
+        "qualified": 1.39,
+        "deals": 6
       }
     },
     "2026-Q1": {
-      "John Mitchell": {
-        "pipeline": 5.8,
-        "qualified": 3.48,
-        "deals": 16
-      },
       "Sarah Williams": {
-        "pipeline": 8.1,
-        "qualified": 4.86,
-        "deals": 23
-      },
-      "Marcus Johnson": {
-        "pipeline": 5.8,
-        "qualified": 3.48,
-        "deals": 16
-      },
-      "Lisa Chen": {
-        "pipeline": 3.7,
-        "qualified": 2.22,
-        "deals": 10
-      },
-      "David Rodriguez": {
-        "pipeline": 5.8,
-        "qualified": 3.48,
-        "deals": 16
-      },
-      "Amanda Foster": {
-        "pipeline": 3.7,
-        "qualified": 2.22,
-        "deals": 10
+        "pipeline": 10.53,
+        "qualified": 6.32,
+        "deals": 30
       },
       "Michael Brown": {
-        "pipeline": 8.1,
-        "qualified": 4.86,
-        "deals": 23
-      },
-      "Jennifer Taylor": {
-        "pipeline": 5.8,
-        "qualified": 3.48,
-        "deals": 16
-      },
-      "Robert Kim": {
-        "pipeline": 3.7,
-        "qualified": 2.22,
-        "deals": 10
+        "pipeline": 10.36,
+        "qualified": 6.22,
+        "deals": 29
       },
       "Emily Davis": {
-        "pipeline": 8.1,
-        "qualified": 4.86,
-        "deals": 23
-      },
-      "Thomas Anderson": {
-        "pipeline": 3.7,
-        "qualified": 2.22,
-        "deals": 10
-      },
-      "Rachel Martinez": {
-        "pipeline": 5.8,
-        "qualified": 3.48,
-        "deals": 16
-      },
-      "Pierre Dubois": {
-        "pipeline": 5.8,
-        "qualified": 3.48,
-        "deals": 16
+        "pipeline": 10.18,
+        "qualified": 6.11,
+        "deals": 29
       },
       "Anna Schmidt": {
-        "pipeline": 8.1,
-        "qualified": 4.86,
-        "deals": 23
-      },
-      "Marco Rossi": {
-        "pipeline": 3.7,
-        "qualified": 2.22,
-        "deals": 10
-      },
-      "Sophie Martin": {
-        "pipeline": 3.7,
-        "qualified": 2.22,
-        "deals": 10
-      },
-      "Erik Lindqvist": {
-        "pipeline": 5.8,
-        "qualified": 3.48,
-        "deals": 16
-      },
-      "James O'Brien": {
-        "pipeline": 3.7,
-        "qualified": 2.22,
-        "deals": 10
-      },
-      "Yuki Tanaka": {
-        "pipeline": 5.8,
-        "qualified": 3.48,
-        "deals": 16
+        "pipeline": 10.01,
+        "qualified": 6.01,
+        "deals": 28
       },
       "Wei Zhang": {
-        "pipeline": 8.1,
-        "qualified": 4.86,
-        "deals": 23
+        "pipeline": 9.83,
+        "qualified": 5.9,
+        "deals": 28
       },
-      "Priya Sharma": {
-        "pipeline": 3.7,
-        "qualified": 2.22,
-        "deals": 10
+      "John Mitchell": {
+        "pipeline": 6.92,
+        "qualified": 4.15,
+        "deals": 19
       },
-      "Chris Lee": {
-        "pipeline": 3.7,
-        "qualified": 2.22,
-        "deals": 10
+      "Marcus Johnson": {
+        "pipeline": 6.79,
+        "qualified": 4.08,
+        "deals": 19
+      },
+      "David Rodriguez": {
+        "pipeline": 6.67,
+        "qualified": 4.0,
+        "deals": 18
+      },
+      "Jennifer Taylor": {
+        "pipeline": 6.55,
+        "qualified": 3.93,
+        "deals": 18
+      },
+      "Yuki Tanaka": {
+        "pipeline": 6.42,
+        "qualified": 3.85,
+        "deals": 18
+      },
+      "Rachel Martinez": {
+        "pipeline": 6.3,
+        "qualified": 3.78,
+        "deals": 17
+      },
+      "Pierre Dubois": {
+        "pipeline": 6.17,
+        "qualified": 3.7,
+        "deals": 17
+      },
+      "Erik Lindqvist": {
+        "pipeline": 6.05,
+        "qualified": 3.63,
+        "deals": 17
       },
       "Kevin Patel": {
-        "pipeline": 2.2,
-        "qualified": 1.32,
+        "pipeline": 2.25,
+        "qualified": 1.35,
         "deals": 6
       },
       "Olivia Thompson": {
@@ -5024,155 +4979,145 @@
         "deals": 6
       },
       "Daniel Garcia": {
-        "pipeline": 2.2,
-        "qualified": 1.32,
+        "pipeline": 2.15,
+        "qualified": 1.29,
         "deals": 6
       },
       "Clara M\u00fcller": {
-        "pipeline": 2.2,
-        "qualified": 1.32,
+        "pipeline": 2.11,
+        "qualified": 1.26,
         "deals": 6
       },
       "Luca Bianchi": {
-        "pipeline": 2.2,
-        "qualified": 1.32,
+        "pipeline": 2.06,
+        "qualified": 1.24,
         "deals": 6
       },
       "Kenji Nakamura": {
-        "pipeline": 2.2,
-        "qualified": 1.32,
-        "deals": 6
+        "pipeline": 2.01,
+        "qualified": 1.21,
+        "deals": 5
       },
       "Min-ji Park": {
-        "pipeline": 2.2,
-        "qualified": 1.32,
-        "deals": 6
+        "pipeline": 1.96,
+        "qualified": 1.18,
+        "deals": 5
       },
-      "Jessica Wong": {
-        "pipeline": 2.2,
-        "qualified": 1.32,
-        "deals": 6
+      "Lisa Chen": {
+        "pipeline": 3.22,
+        "qualified": 1.93,
+        "deals": 9
       },
-      "Henrik Nielsen": {
-        "pipeline": 2.2,
-        "qualified": 1.32,
-        "deals": 6
+      "Amanda Foster": {
+        "pipeline": 3.15,
+        "qualified": 1.89,
+        "deals": 8
+      },
+      "Priya Sharma": {
+        "pipeline": 3.07,
+        "qualified": 1.84,
+        "deals": 8
+      },
+      "Chris Lee": {
+        "pipeline": 2.99,
+        "qualified": 1.79,
+        "deals": 8
+      },
+      "Marco Rossi": {
+        "pipeline": 2.91,
+        "qualified": 1.74,
+        "deals": 8
+      },
+      "Sophie Martin": {
+        "pipeline": 2.83,
+        "qualified": 1.7,
+        "deals": 8
+      },
+      "James O'Brien": {
+        "pipeline": 2.75,
+        "qualified": 1.65,
+        "deals": 7
+      },
+      "Robert Kim": {
+        "pipeline": 2.67,
+        "qualified": 1.6,
+        "deals": 7
+      },
+      "Thomas Anderson": {
+        "pipeline": 2.59,
+        "qualified": 1.55,
+        "deals": 7
       }
     },
     "2026-Q2": {
-      "John Mitchell": {
-        "pipeline": 6.0,
-        "qualified": 3.6,
-        "deals": 17
-      },
       "Sarah Williams": {
-        "pipeline": 8.4,
-        "qualified": 5.04,
-        "deals": 24
-      },
-      "Marcus Johnson": {
-        "pipeline": 6.0,
-        "qualified": 3.6,
-        "deals": 17
-      },
-      "Lisa Chen": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
-        "deals": 10
-      },
-      "David Rodriguez": {
-        "pipeline": 6.0,
-        "qualified": 3.6,
-        "deals": 17
-      },
-      "Amanda Foster": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
-        "deals": 10
+        "pipeline": 10.92,
+        "qualified": 6.55,
+        "deals": 31
       },
       "Michael Brown": {
-        "pipeline": 8.4,
-        "qualified": 5.04,
-        "deals": 24
-      },
-      "Jennifer Taylor": {
-        "pipeline": 6.0,
-        "qualified": 3.6,
-        "deals": 17
-      },
-      "Robert Kim": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
-        "deals": 10
+        "pipeline": 10.74,
+        "qualified": 6.45,
+        "deals": 31
       },
       "Emily Davis": {
-        "pipeline": 8.4,
-        "qualified": 5.04,
-        "deals": 24
-      },
-      "Thomas Anderson": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
-        "deals": 10
-      },
-      "Rachel Martinez": {
-        "pipeline": 6.0,
-        "qualified": 3.6,
-        "deals": 17
-      },
-      "Pierre Dubois": {
-        "pipeline": 6.0,
-        "qualified": 3.6,
-        "deals": 17
+        "pipeline": 10.56,
+        "qualified": 6.34,
+        "deals": 30
       },
       "Anna Schmidt": {
-        "pipeline": 8.4,
-        "qualified": 5.04,
-        "deals": 24
-      },
-      "Marco Rossi": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
-        "deals": 10
-      },
-      "Sophie Martin": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
-        "deals": 10
-      },
-      "Erik Lindqvist": {
-        "pipeline": 6.0,
-        "qualified": 3.6,
-        "deals": 17
-      },
-      "James O'Brien": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
-        "deals": 10
-      },
-      "Yuki Tanaka": {
-        "pipeline": 6.0,
-        "qualified": 3.6,
-        "deals": 17
+        "pipeline": 10.38,
+        "qualified": 6.23,
+        "deals": 30
       },
       "Wei Zhang": {
-        "pipeline": 8.4,
-        "qualified": 5.04,
-        "deals": 24
+        "pipeline": 10.2,
+        "qualified": 6.12,
+        "deals": 29
       },
-      "Priya Sharma": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
-        "deals": 10
+      "John Mitchell": {
+        "pipeline": 7.16,
+        "qualified": 4.29,
+        "deals": 20
       },
-      "Chris Lee": {
-        "pipeline": 3.8,
-        "qualified": 2.28,
-        "deals": 10
+      "Marcus Johnson": {
+        "pipeline": 7.03,
+        "qualified": 4.22,
+        "deals": 20
+      },
+      "David Rodriguez": {
+        "pipeline": 6.9,
+        "qualified": 4.14,
+        "deals": 20
+      },
+      "Jennifer Taylor": {
+        "pipeline": 6.77,
+        "qualified": 4.06,
+        "deals": 19
+      },
+      "Yuki Tanaka": {
+        "pipeline": 6.64,
+        "qualified": 3.99,
+        "deals": 19
+      },
+      "Rachel Martinez": {
+        "pipeline": 6.52,
+        "qualified": 3.91,
+        "deals": 18
+      },
+      "Pierre Dubois": {
+        "pipeline": 6.38,
+        "qualified": 3.83,
+        "deals": 18
+      },
+      "Erik Lindqvist": {
+        "pipeline": 6.26,
+        "qualified": 3.75,
+        "deals": 18
       },
       "Kevin Patel": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
+        "pipeline": 2.35,
+        "qualified": 1.41,
         "deals": 6
       },
       "Olivia Thompson": {
@@ -5181,170 +5126,145 @@
         "deals": 6
       },
       "Daniel Garcia": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
+        "pipeline": 2.25,
+        "qualified": 1.35,
         "deals": 6
       },
       "Clara M\u00fcller": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
+        "pipeline": 2.2,
+        "qualified": 1.32,
         "deals": 6
       },
       "Luca Bianchi": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
+        "pipeline": 2.15,
+        "qualified": 1.29,
         "deals": 6
       },
       "Kenji Nakamura": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+        "pipeline": 2.1,
+        "qualified": 1.26,
+        "deals": 5
       },
       "Min-ji Park": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+        "pipeline": 2.05,
+        "qualified": 1.23,
+        "deals": 5
       },
-      "Jessica Wong": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+      "Lisa Chen": {
+        "pipeline": 3.31,
+        "qualified": 1.99,
+        "deals": 9
       },
-      "Brandon Scott": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+      "Amanda Foster": {
+        "pipeline": 3.23,
+        "qualified": 1.94,
+        "deals": 8
       },
-      "Henrik Nielsen": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+      "Priya Sharma": {
+        "pipeline": 3.15,
+        "qualified": 1.89,
+        "deals": 8
       },
-      "Elena Petrova": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+      "Chris Lee": {
+        "pipeline": 3.07,
+        "qualified": 1.84,
+        "deals": 8
       },
-      "Rahul Patel": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+      "Marco Rossi": {
+        "pipeline": 2.99,
+        "qualified": 1.79,
+        "deals": 8
+      },
+      "Sophie Martin": {
+        "pipeline": 2.9,
+        "qualified": 1.74,
+        "deals": 8
+      },
+      "James O'Brien": {
+        "pipeline": 2.82,
+        "qualified": 1.69,
+        "deals": 7
+      },
+      "Robert Kim": {
+        "pipeline": 2.74,
+        "qualified": 1.64,
+        "deals": 7
+      },
+      "Thomas Anderson": {
+        "pipeline": 2.66,
+        "qualified": 1.6,
+        "deals": 7
       }
     },
     "2026-Q3": {
-      "John Mitchell": {
-        "pipeline": 6.2,
-        "qualified": 3.72,
-        "deals": 17
-      },
       "Sarah Williams": {
-        "pipeline": 8.6,
-        "qualified": 5.16,
-        "deals": 24
-      },
-      "Marcus Johnson": {
-        "pipeline": 6.2,
-        "qualified": 3.72,
-        "deals": 17
-      },
-      "Lisa Chen": {
-        "pipeline": 3.9,
-        "qualified": 2.34,
-        "deals": 11
-      },
-      "David Rodriguez": {
-        "pipeline": 6.2,
-        "qualified": 3.72,
-        "deals": 17
-      },
-      "Amanda Foster": {
-        "pipeline": 3.9,
-        "qualified": 2.34,
-        "deals": 11
+        "pipeline": 11.18,
+        "qualified": 6.71,
+        "deals": 31
       },
       "Michael Brown": {
-        "pipeline": 8.6,
-        "qualified": 5.16,
-        "deals": 24
-      },
-      "Jennifer Taylor": {
-        "pipeline": 6.2,
-        "qualified": 3.72,
-        "deals": 17
-      },
-      "Robert Kim": {
-        "pipeline": 3.9,
-        "qualified": 2.34,
-        "deals": 11
+        "pipeline": 11.0,
+        "qualified": 6.6,
+        "deals": 31
       },
       "Emily Davis": {
-        "pipeline": 8.6,
-        "qualified": 5.16,
-        "deals": 24
-      },
-      "Thomas Anderson": {
-        "pipeline": 3.9,
-        "qualified": 2.34,
-        "deals": 11
-      },
-      "Rachel Martinez": {
-        "pipeline": 6.2,
-        "qualified": 3.72,
-        "deals": 17
-      },
-      "Pierre Dubois": {
-        "pipeline": 6.2,
-        "qualified": 3.72,
-        "deals": 17
+        "pipeline": 10.81,
+        "qualified": 6.49,
+        "deals": 30
       },
       "Anna Schmidt": {
-        "pipeline": 8.6,
-        "qualified": 5.16,
-        "deals": 24
-      },
-      "Marco Rossi": {
-        "pipeline": 3.9,
-        "qualified": 2.34,
-        "deals": 11
-      },
-      "Sophie Martin": {
-        "pipeline": 3.9,
-        "qualified": 2.34,
-        "deals": 11
-      },
-      "Erik Lindqvist": {
-        "pipeline": 6.2,
-        "qualified": 3.72,
-        "deals": 17
-      },
-      "James O'Brien": {
-        "pipeline": 3.9,
-        "qualified": 2.34,
-        "deals": 11
-      },
-      "Yuki Tanaka": {
-        "pipeline": 6.2,
-        "qualified": 3.72,
-        "deals": 17
+        "pipeline": 10.63,
+        "qualified": 6.38,
+        "deals": 30
       },
       "Wei Zhang": {
-        "pipeline": 8.6,
-        "qualified": 5.16,
-        "deals": 24
+        "pipeline": 10.44,
+        "qualified": 6.26,
+        "deals": 29
       },
-      "Priya Sharma": {
-        "pipeline": 3.9,
-        "qualified": 2.34,
-        "deals": 11
+      "John Mitchell": {
+        "pipeline": 7.4,
+        "qualified": 4.44,
+        "deals": 20
       },
-      "Chris Lee": {
-        "pipeline": 3.9,
-        "qualified": 2.34,
-        "deals": 11
+      "Marcus Johnson": {
+        "pipeline": 7.26,
+        "qualified": 4.36,
+        "deals": 20
+      },
+      "David Rodriguez": {
+        "pipeline": 7.13,
+        "qualified": 4.28,
+        "deals": 20
+      },
+      "Jennifer Taylor": {
+        "pipeline": 7.0,
+        "qualified": 4.2,
+        "deals": 19
+      },
+      "Yuki Tanaka": {
+        "pipeline": 6.86,
+        "qualified": 4.12,
+        "deals": 19
+      },
+      "Rachel Martinez": {
+        "pipeline": 6.73,
+        "qualified": 4.04,
+        "deals": 18
+      },
+      "Pierre Dubois": {
+        "pipeline": 6.6,
+        "qualified": 3.96,
+        "deals": 18
+      },
+      "Erik Lindqvist": {
+        "pipeline": 6.47,
+        "qualified": 3.88,
+        "deals": 18
       },
       "Kevin Patel": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
+        "pipeline": 2.35,
+        "qualified": 1.41,
         "deals": 6
       },
       "Olivia Thompson": {
@@ -5353,180 +5273,145 @@
         "deals": 6
       },
       "Daniel Garcia": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
+        "pipeline": 2.25,
+        "qualified": 1.35,
         "deals": 6
       },
       "Clara M\u00fcller": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
+        "pipeline": 2.2,
+        "qualified": 1.32,
         "deals": 6
       },
       "Luca Bianchi": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
+        "pipeline": 2.15,
+        "qualified": 1.29,
         "deals": 6
       },
       "Kenji Nakamura": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+        "pipeline": 2.1,
+        "qualified": 1.26,
+        "deals": 5
       },
       "Min-ji Park": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+        "pipeline": 2.05,
+        "qualified": 1.23,
+        "deals": 5
       },
-      "Jessica Wong": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+      "Lisa Chen": {
+        "pipeline": 3.4,
+        "qualified": 2.04,
+        "deals": 10
       },
-      "Brandon Scott": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+      "Amanda Foster": {
+        "pipeline": 3.31,
+        "qualified": 1.99,
+        "deals": 9
       },
-      "Ashley Moore": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+      "Priya Sharma": {
+        "pipeline": 3.23,
+        "qualified": 1.94,
+        "deals": 9
       },
-      "Henrik Nielsen": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+      "Chris Lee": {
+        "pipeline": 3.15,
+        "qualified": 1.89,
+        "deals": 9
       },
-      "Elena Petrova": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+      "Marco Rossi": {
+        "pipeline": 3.07,
+        "qualified": 1.84,
+        "deals": 9
       },
-      "Rahul Patel": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+      "Sophie Martin": {
+        "pipeline": 2.98,
+        "qualified": 1.79,
+        "deals": 8
       },
-      "Emma Watson": {
-        "pipeline": 2.3,
-        "qualified": 1.38,
-        "deals": 6
+      "James O'Brien": {
+        "pipeline": 2.9,
+        "qualified": 1.74,
+        "deals": 8
+      },
+      "Robert Kim": {
+        "pipeline": 2.81,
+        "qualified": 1.69,
+        "deals": 8
+      },
+      "Thomas Anderson": {
+        "pipeline": 2.73,
+        "qualified": 1.64,
+        "deals": 8
       }
     },
     "2026-Q4": {
-      "John Mitchell": {
-        "pipeline": 6.4,
-        "qualified": 3.84,
-        "deals": 18
-      },
       "Sarah Williams": {
-        "pipeline": 8.9,
-        "qualified": 5.34,
-        "deals": 25
-      },
-      "Marcus Johnson": {
-        "pipeline": 6.4,
-        "qualified": 3.84,
-        "deals": 18
-      },
-      "Lisa Chen": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
-        "deals": 11
-      },
-      "David Rodriguez": {
-        "pipeline": 6.4,
-        "qualified": 3.84,
-        "deals": 18
-      },
-      "Amanda Foster": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
-        "deals": 11
+        "pipeline": 11.57,
+        "qualified": 6.94,
+        "deals": 32
       },
       "Michael Brown": {
-        "pipeline": 8.9,
-        "qualified": 5.34,
-        "deals": 25
-      },
-      "Jennifer Taylor": {
-        "pipeline": 6.4,
-        "qualified": 3.84,
-        "deals": 18
-      },
-      "Robert Kim": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
-        "deals": 11
+        "pipeline": 11.38,
+        "qualified": 6.83,
+        "deals": 32
       },
       "Emily Davis": {
-        "pipeline": 8.9,
-        "qualified": 5.34,
-        "deals": 25
-      },
-      "Thomas Anderson": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
-        "deals": 11
-      },
-      "Rachel Martinez": {
-        "pipeline": 6.4,
-        "qualified": 3.84,
-        "deals": 18
-      },
-      "Pierre Dubois": {
-        "pipeline": 6.4,
-        "qualified": 3.84,
-        "deals": 18
+        "pipeline": 11.19,
+        "qualified": 6.71,
+        "deals": 31
       },
       "Anna Schmidt": {
-        "pipeline": 8.9,
-        "qualified": 5.34,
-        "deals": 25
-      },
-      "Marco Rossi": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
-        "deals": 11
-      },
-      "Sophie Martin": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
-        "deals": 11
-      },
-      "Erik Lindqvist": {
-        "pipeline": 6.4,
-        "qualified": 3.84,
-        "deals": 18
-      },
-      "James O'Brien": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
-        "deals": 11
-      },
-      "Yuki Tanaka": {
-        "pipeline": 6.4,
-        "qualified": 3.84,
-        "deals": 18
+        "pipeline": 11.0,
+        "qualified": 6.6,
+        "deals": 31
       },
       "Wei Zhang": {
-        "pipeline": 8.9,
-        "qualified": 5.34,
-        "deals": 25
+        "pipeline": 10.8,
+        "qualified": 6.48,
+        "deals": 30
       },
-      "Priya Sharma": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
-        "deals": 11
+      "John Mitchell": {
+        "pipeline": 7.64,
+        "qualified": 4.58,
+        "deals": 21
       },
-      "Chris Lee": {
-        "pipeline": 4.0,
-        "qualified": 2.4,
-        "deals": 11
+      "Marcus Johnson": {
+        "pipeline": 7.49,
+        "qualified": 4.5,
+        "deals": 21
+      },
+      "David Rodriguez": {
+        "pipeline": 7.36,
+        "qualified": 4.42,
+        "deals": 21
+      },
+      "Jennifer Taylor": {
+        "pipeline": 7.23,
+        "qualified": 4.34,
+        "deals": 20
+      },
+      "Yuki Tanaka": {
+        "pipeline": 7.08,
+        "qualified": 4.25,
+        "deals": 20
+      },
+      "Rachel Martinez": {
+        "pipeline": 6.95,
+        "qualified": 4.17,
+        "deals": 20
+      },
+      "Pierre Dubois": {
+        "pipeline": 6.81,
+        "qualified": 4.09,
+        "deals": 19
+      },
+      "Erik Lindqvist": {
+        "pipeline": 6.68,
+        "qualified": 4.01,
+        "deals": 19
       },
       "Kevin Patel": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
+        "pipeline": 2.45,
+        "qualified": 1.47,
         "deals": 6
       },
       "Olivia Thompson": {
@@ -5535,428 +5420,417 @@
         "deals": 6
       },
       "Daniel Garcia": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
+        "pipeline": 2.35,
+        "qualified": 1.41,
         "deals": 6
       },
       "Clara M\u00fcller": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
+        "pipeline": 2.3,
+        "qualified": 1.38,
         "deals": 6
       },
       "Luca Bianchi": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
+        "pipeline": 2.25,
+        "qualified": 1.35,
         "deals": 6
       },
       "Kenji Nakamura": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
+        "pipeline": 2.19,
+        "qualified": 1.32,
+        "deals": 5
       },
       "Min-ji Park": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
+        "pipeline": 2.14,
+        "qualified": 1.29,
+        "deals": 5
       },
-      "Jessica Wong": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
+      "Lisa Chen": {
+        "pipeline": 3.48,
+        "qualified": 2.09,
+        "deals": 10
       },
-      "Brandon Scott": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
+      "Amanda Foster": {
+        "pipeline": 3.4,
+        "qualified": 2.04,
+        "deals": 9
       },
-      "Ashley Moore": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
+      "Priya Sharma": {
+        "pipeline": 3.32,
+        "qualified": 1.99,
+        "deals": 9
       },
-      "Henrik Nielsen": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
+      "Chris Lee": {
+        "pipeline": 3.23,
+        "qualified": 1.94,
+        "deals": 9
       },
-      "Elena Petrova": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
+      "Marco Rossi": {
+        "pipeline": 3.14,
+        "qualified": 1.89,
+        "deals": 9
       },
-      "Rahul Patel": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
+      "Sophie Martin": {
+        "pipeline": 3.06,
+        "qualified": 1.83,
+        "deals": 8
       },
-      "Emma Watson": {
-        "pipeline": 2.4,
-        "qualified": 1.44,
-        "deals": 6
+      "James O'Brien": {
+        "pipeline": 2.97,
+        "qualified": 1.78,
+        "deals": 8
+      },
+      "Robert Kim": {
+        "pipeline": 2.88,
+        "qualified": 1.73,
+        "deals": 8
+      },
+      "Thomas Anderson": {
+        "pipeline": 2.8,
+        "qualified": 1.68,
+        "deals": 8
       }
     }
   },
   "win_rate_by_rep": {
     "2024-Q1": {
-      "John Mitchell": 40,
-      "Sarah Williams": 45,
-      "Marcus Johnson": 40,
-      "Lisa Chen": 35,
-      "David Rodriguez": 40,
-      "Amanda Foster": 35,
-      "Michael Brown": 45,
-      "Jennifer Taylor": 40,
-      "Robert Kim": 35,
-      "Emily Davis": 45,
-      "Thomas Anderson": 35,
-      "Rachel Martinez": 40,
-      "Pierre Dubois": 40,
-      "Anna Schmidt": 45,
-      "Marco Rossi": 35,
-      "Sophie Martin": 35,
-      "Erik Lindqvist": 40,
-      "James O'Brien": 35,
-      "Yuki Tanaka": 40,
-      "Wei Zhang": 45,
-      "Priya Sharma": 35,
-      "Chris Lee": 35
+      "Sarah Williams": 44.0,
+      "Michael Brown": 43.0,
+      "Emily Davis": 42.1,
+      "Anna Schmidt": 41.1,
+      "Wei Zhang": 40.2,
+      "John Mitchell": 39.2,
+      "Marcus Johnson": 38.3,
+      "David Rodriguez": 37.3,
+      "Jennifer Taylor": 36.4,
+      "Yuki Tanaka": 35.4,
+      "Rachel Martinez": 34.5,
+      "Pierre Dubois": 33.5,
+      "Erik Lindqvist": 32.6,
+      "Lisa Chen": 31.6,
+      "Amanda Foster": 30.7,
+      "Priya Sharma": 29.7,
+      "Chris Lee": 28.8,
+      "Marco Rossi": 27.8,
+      "Sophie Martin": 26.9,
+      "James O'Brien": 25.9,
+      "Robert Kim": 25.0,
+      "Thomas Anderson": 24.0
     },
     "2024-Q2": {
-      "John Mitchell": 41,
-      "Sarah Williams": 46,
-      "Marcus Johnson": 41,
-      "Lisa Chen": 36,
-      "David Rodriguez": 41,
-      "Amanda Foster": 36,
-      "Michael Brown": 46,
-      "Jennifer Taylor": 41,
-      "Robert Kim": 36,
-      "Emily Davis": 46,
-      "Thomas Anderson": 36,
-      "Rachel Martinez": 41,
-      "Pierre Dubois": 41,
-      "Anna Schmidt": 46,
-      "Marco Rossi": 36,
-      "Sophie Martin": 36,
-      "Erik Lindqvist": 41,
-      "James O'Brien": 36,
-      "Yuki Tanaka": 41,
-      "Wei Zhang": 46,
-      "Priya Sharma": 36,
-      "Chris Lee": 36
+      "Sarah Williams": 46.0,
+      "Michael Brown": 45.0,
+      "Emily Davis": 44.1,
+      "Anna Schmidt": 43.1,
+      "Wei Zhang": 42.2,
+      "John Mitchell": 41.2,
+      "Marcus Johnson": 40.3,
+      "David Rodriguez": 39.3,
+      "Jennifer Taylor": 38.4,
+      "Yuki Tanaka": 37.4,
+      "Rachel Martinez": 36.5,
+      "Pierre Dubois": 35.5,
+      "Erik Lindqvist": 34.6,
+      "Lisa Chen": 33.6,
+      "Amanda Foster": 32.7,
+      "Priya Sharma": 31.7,
+      "Chris Lee": 30.8,
+      "Marco Rossi": 29.8,
+      "Sophie Martin": 28.9,
+      "James O'Brien": 27.9,
+      "Robert Kim": 27.0,
+      "Thomas Anderson": 26.0
     },
     "2024-Q3": {
-      "John Mitchell": 42,
-      "Sarah Williams": 47,
-      "Marcus Johnson": 42,
-      "Lisa Chen": 37,
-      "David Rodriguez": 42,
-      "Amanda Foster": 37,
-      "Michael Brown": 47,
-      "Jennifer Taylor": 42,
-      "Robert Kim": 37,
-      "Emily Davis": 47,
-      "Thomas Anderson": 37,
-      "Rachel Martinez": 42,
-      "Pierre Dubois": 42,
-      "Anna Schmidt": 47,
-      "Marco Rossi": 37,
-      "Sophie Martin": 37,
-      "Erik Lindqvist": 42,
-      "James O'Brien": 37,
-      "Yuki Tanaka": 42,
-      "Wei Zhang": 47,
-      "Priya Sharma": 37,
-      "Chris Lee": 37
+      "Sarah Williams": 48.0,
+      "Michael Brown": 47.0,
+      "Emily Davis": 46.1,
+      "Anna Schmidt": 45.1,
+      "Wei Zhang": 44.2,
+      "John Mitchell": 43.2,
+      "Marcus Johnson": 42.3,
+      "David Rodriguez": 41.3,
+      "Jennifer Taylor": 40.4,
+      "Yuki Tanaka": 39.4,
+      "Rachel Martinez": 38.5,
+      "Pierre Dubois": 37.5,
+      "Erik Lindqvist": 36.6,
+      "Lisa Chen": 35.6,
+      "Amanda Foster": 34.7,
+      "Priya Sharma": 33.7,
+      "Chris Lee": 32.8,
+      "Marco Rossi": 31.8,
+      "Sophie Martin": 30.9,
+      "James O'Brien": 29.9,
+      "Robert Kim": 29.0,
+      "Thomas Anderson": 28.0
     },
     "2024-Q4": {
-      "John Mitchell": 43,
-      "Sarah Williams": 48,
-      "Marcus Johnson": 43,
-      "Lisa Chen": 38,
-      "David Rodriguez": 43,
-      "Amanda Foster": 38,
-      "Michael Brown": 48,
-      "Jennifer Taylor": 43,
-      "Robert Kim": 38,
-      "Emily Davis": 48,
-      "Thomas Anderson": 38,
-      "Rachel Martinez": 43,
-      "Pierre Dubois": 43,
-      "Anna Schmidt": 48,
-      "Marco Rossi": 38,
-      "Sophie Martin": 38,
-      "Erik Lindqvist": 43,
-      "James O'Brien": 38,
-      "Yuki Tanaka": 43,
-      "Wei Zhang": 48,
-      "Priya Sharma": 38,
-      "Chris Lee": 38
+      "Sarah Williams": 50.0,
+      "Michael Brown": 49.0,
+      "Emily Davis": 48.1,
+      "Anna Schmidt": 47.1,
+      "Wei Zhang": 46.2,
+      "John Mitchell": 45.2,
+      "Marcus Johnson": 44.3,
+      "David Rodriguez": 43.3,
+      "Jennifer Taylor": 42.4,
+      "Yuki Tanaka": 41.4,
+      "Rachel Martinez": 40.5,
+      "Pierre Dubois": 39.5,
+      "Erik Lindqvist": 38.6,
+      "Lisa Chen": 37.6,
+      "Amanda Foster": 36.7,
+      "Priya Sharma": 35.7,
+      "Chris Lee": 34.8,
+      "Marco Rossi": 33.8,
+      "Sophie Martin": 32.9,
+      "James O'Brien": 31.9,
+      "Robert Kim": 31.0,
+      "Thomas Anderson": 30.0
     },
     "2025-Q1": {
-      "John Mitchell": 42,
-      "Sarah Williams": 47,
-      "Marcus Johnson": 42,
-      "Lisa Chen": 37,
-      "David Rodriguez": 42,
-      "Amanda Foster": 37,
-      "Michael Brown": 47,
-      "Jennifer Taylor": 42,
-      "Robert Kim": 37,
-      "Emily Davis": 47,
-      "Thomas Anderson": 37,
-      "Rachel Martinez": 42,
-      "Pierre Dubois": 42,
-      "Anna Schmidt": 47,
-      "Marco Rossi": 37,
-      "Sophie Martin": 37,
-      "Erik Lindqvist": 42,
-      "James O'Brien": 37,
-      "Yuki Tanaka": 42,
-      "Wei Zhang": 47,
-      "Priya Sharma": 37,
-      "Chris Lee": 37,
-      "Kevin Patel": 35,
-      "Clara M\u00fcller": 35,
-      "Kenji Nakamura": 35
+      "Sarah Williams": 48.0,
+      "Michael Brown": 47.2,
+      "Emily Davis": 46.3,
+      "Anna Schmidt": 45.5,
+      "Wei Zhang": 44.7,
+      "John Mitchell": 43.8,
+      "Marcus Johnson": 43.0,
+      "David Rodriguez": 42.2,
+      "Jennifer Taylor": 41.3,
+      "Yuki Tanaka": 40.5,
+      "Rachel Martinez": 39.7,
+      "Pierre Dubois": 38.8,
+      "Erik Lindqvist": 38.0,
+      "Kevin Patel": 37.2,
+      "Clara M\u00fcller": 36.3,
+      "Kenji Nakamura": 35.5,
+      "Lisa Chen": 34.7,
+      "Amanda Foster": 33.8,
+      "Priya Sharma": 33.0,
+      "Chris Lee": 32.2,
+      "Marco Rossi": 31.3,
+      "Sophie Martin": 30.5,
+      "James O'Brien": 29.7,
+      "Robert Kim": 28.8,
+      "Thomas Anderson": 28.0
     },
     "2025-Q2": {
-      "John Mitchell": 43,
-      "Sarah Williams": 48,
-      "Marcus Johnson": 43,
-      "Lisa Chen": 38,
-      "David Rodriguez": 43,
-      "Amanda Foster": 38,
-      "Michael Brown": 48,
-      "Jennifer Taylor": 43,
-      "Robert Kim": 38,
-      "Emily Davis": 48,
-      "Thomas Anderson": 38,
-      "Rachel Martinez": 43,
-      "Pierre Dubois": 43,
-      "Anna Schmidt": 48,
-      "Marco Rossi": 38,
-      "Sophie Martin": 38,
-      "Erik Lindqvist": 43,
-      "James O'Brien": 38,
-      "Yuki Tanaka": 43,
-      "Wei Zhang": 48,
-      "Priya Sharma": 38,
-      "Chris Lee": 38,
-      "Kevin Patel": 36,
-      "Olivia Thompson": 36,
-      "Daniel Garcia": 36,
-      "Clara M\u00fcller": 36,
-      "Luca Bianchi": 36,
-      "Kenji Nakamura": 36,
-      "Min-ji Park": 36
+      "Sarah Williams": 50.0,
+      "Michael Brown": 49.3,
+      "Emily Davis": 48.6,
+      "Anna Schmidt": 47.9,
+      "Wei Zhang": 47.1,
+      "John Mitchell": 46.4,
+      "Marcus Johnson": 45.7,
+      "David Rodriguez": 45.0,
+      "Jennifer Taylor": 44.3,
+      "Yuki Tanaka": 43.6,
+      "Rachel Martinez": 42.9,
+      "Pierre Dubois": 42.1,
+      "Erik Lindqvist": 41.4,
+      "Kevin Patel": 40.7,
+      "Olivia Thompson": 40.0,
+      "Daniel Garcia": 39.3,
+      "Clara M\u00fcller": 38.6,
+      "Luca Bianchi": 37.9,
+      "Kenji Nakamura": 37.1,
+      "Min-ji Park": 36.4,
+      "Lisa Chen": 35.7,
+      "Amanda Foster": 35.0,
+      "Priya Sharma": 34.3,
+      "Chris Lee": 33.6,
+      "Marco Rossi": 32.9,
+      "Sophie Martin": 32.1,
+      "James O'Brien": 31.4,
+      "Robert Kim": 30.7,
+      "Thomas Anderson": 30.0
     },
     "2025-Q3": {
-      "John Mitchell": 44,
-      "Sarah Williams": 49,
-      "Marcus Johnson": 44,
-      "Lisa Chen": 39,
-      "David Rodriguez": 44,
-      "Amanda Foster": 39,
-      "Michael Brown": 49,
-      "Jennifer Taylor": 44,
-      "Robert Kim": 39,
-      "Emily Davis": 49,
-      "Thomas Anderson": 39,
-      "Rachel Martinez": 44,
-      "Pierre Dubois": 44,
-      "Anna Schmidt": 49,
-      "Marco Rossi": 39,
-      "Sophie Martin": 39,
-      "Erik Lindqvist": 44,
-      "James O'Brien": 39,
-      "Yuki Tanaka": 44,
-      "Wei Zhang": 49,
-      "Priya Sharma": 39,
-      "Chris Lee": 39,
-      "Kevin Patel": 37,
-      "Olivia Thompson": 37,
-      "Daniel Garcia": 37,
-      "Clara M\u00fcller": 37,
-      "Luca Bianchi": 37,
-      "Kenji Nakamura": 37,
-      "Min-ji Park": 37
+      "Sarah Williams": 52.0,
+      "Michael Brown": 51.3,
+      "Emily Davis": 50.6,
+      "Anna Schmidt": 49.9,
+      "Wei Zhang": 49.1,
+      "John Mitchell": 48.4,
+      "Marcus Johnson": 47.7,
+      "David Rodriguez": 47.0,
+      "Jennifer Taylor": 46.3,
+      "Yuki Tanaka": 45.6,
+      "Rachel Martinez": 44.9,
+      "Pierre Dubois": 44.1,
+      "Erik Lindqvist": 43.4,
+      "Kevin Patel": 42.7,
+      "Olivia Thompson": 42.0,
+      "Daniel Garcia": 41.3,
+      "Clara M\u00fcller": 40.6,
+      "Luca Bianchi": 39.9,
+      "Kenji Nakamura": 39.1,
+      "Min-ji Park": 38.4,
+      "Lisa Chen": 37.7,
+      "Amanda Foster": 37.0,
+      "Priya Sharma": 36.3,
+      "Chris Lee": 35.6,
+      "Marco Rossi": 34.9,
+      "Sophie Martin": 34.1,
+      "James O'Brien": 33.4,
+      "Robert Kim": 32.7,
+      "Thomas Anderson": 32.0
     },
     "2025-Q4": {
-      "John Mitchell": 45,
-      "Sarah Williams": 50,
-      "Marcus Johnson": 45,
-      "Lisa Chen": 40,
-      "David Rodriguez": 45,
-      "Amanda Foster": 40,
-      "Michael Brown": 50,
-      "Jennifer Taylor": 45,
-      "Robert Kim": 40,
-      "Emily Davis": 50,
-      "Thomas Anderson": 40,
-      "Rachel Martinez": 45,
-      "Pierre Dubois": 45,
-      "Anna Schmidt": 50,
-      "Marco Rossi": 40,
-      "Sophie Martin": 40,
-      "Erik Lindqvist": 45,
-      "James O'Brien": 40,
-      "Yuki Tanaka": 45,
-      "Wei Zhang": 50,
-      "Priya Sharma": 40,
-      "Chris Lee": 40,
-      "Kevin Patel": 38,
-      "Olivia Thompson": 38,
-      "Daniel Garcia": 38,
-      "Clara M\u00fcller": 38,
-      "Luca Bianchi": 38,
-      "Kenji Nakamura": 38,
-      "Min-ji Park": 38
+      "Sarah Williams": 54.0,
+      "Michael Brown": 53.3,
+      "Emily Davis": 52.6,
+      "Anna Schmidt": 51.9,
+      "Wei Zhang": 51.1,
+      "John Mitchell": 50.4,
+      "Marcus Johnson": 49.7,
+      "David Rodriguez": 49.0,
+      "Jennifer Taylor": 48.3,
+      "Yuki Tanaka": 47.6,
+      "Rachel Martinez": 46.9,
+      "Pierre Dubois": 46.1,
+      "Erik Lindqvist": 45.4,
+      "Kevin Patel": 44.7,
+      "Olivia Thompson": 44.0,
+      "Daniel Garcia": 43.3,
+      "Clara M\u00fcller": 42.6,
+      "Luca Bianchi": 41.9,
+      "Kenji Nakamura": 41.1,
+      "Min-ji Park": 40.4,
+      "Lisa Chen": 39.7,
+      "Amanda Foster": 39.0,
+      "Priya Sharma": 38.3,
+      "Chris Lee": 37.6,
+      "Marco Rossi": 36.9,
+      "Sophie Martin": 36.1,
+      "James O'Brien": 35.4,
+      "Robert Kim": 34.7,
+      "Thomas Anderson": 34.0
     },
     "2026-Q1": {
-      "John Mitchell": 44,
-      "Sarah Williams": 49,
-      "Marcus Johnson": 44,
-      "Lisa Chen": 39,
-      "David Rodriguez": 44,
-      "Amanda Foster": 39,
-      "Michael Brown": 49,
-      "Jennifer Taylor": 44,
-      "Robert Kim": 39,
-      "Emily Davis": 49,
-      "Thomas Anderson": 39,
-      "Rachel Martinez": 44,
-      "Pierre Dubois": 44,
-      "Anna Schmidt": 49,
-      "Marco Rossi": 39,
-      "Sophie Martin": 39,
-      "Erik Lindqvist": 44,
-      "James O'Brien": 39,
-      "Yuki Tanaka": 44,
-      "Wei Zhang": 49,
-      "Priya Sharma": 39,
-      "Chris Lee": 39,
-      "Kevin Patel": 37,
-      "Olivia Thompson": 37,
-      "Daniel Garcia": 37,
-      "Clara M\u00fcller": 37,
-      "Luca Bianchi": 37,
-      "Kenji Nakamura": 37,
-      "Min-ji Park": 37,
-      "Jessica Wong": 37,
-      "Henrik Nielsen": 37
+      "Sarah Williams": 52.0,
+      "Michael Brown": 51.3,
+      "Emily Davis": 50.6,
+      "Anna Schmidt": 49.9,
+      "Wei Zhang": 49.1,
+      "John Mitchell": 48.4,
+      "Marcus Johnson": 47.7,
+      "David Rodriguez": 47.0,
+      "Jennifer Taylor": 46.3,
+      "Yuki Tanaka": 45.6,
+      "Rachel Martinez": 44.9,
+      "Pierre Dubois": 44.1,
+      "Erik Lindqvist": 43.4,
+      "Kevin Patel": 42.7,
+      "Olivia Thompson": 42.0,
+      "Daniel Garcia": 41.3,
+      "Clara M\u00fcller": 40.6,
+      "Luca Bianchi": 39.9,
+      "Kenji Nakamura": 39.1,
+      "Min-ji Park": 38.4,
+      "Lisa Chen": 37.7,
+      "Amanda Foster": 37.0,
+      "Priya Sharma": 36.3,
+      "Chris Lee": 35.6,
+      "Marco Rossi": 34.9,
+      "Sophie Martin": 34.1,
+      "James O'Brien": 33.4,
+      "Robert Kim": 32.7,
+      "Thomas Anderson": 32.0
     },
     "2026-Q2": {
-      "John Mitchell": 45,
-      "Sarah Williams": 50,
-      "Marcus Johnson": 45,
-      "Lisa Chen": 40,
-      "David Rodriguez": 45,
-      "Amanda Foster": 40,
-      "Michael Brown": 50,
-      "Jennifer Taylor": 45,
-      "Robert Kim": 40,
-      "Emily Davis": 50,
-      "Thomas Anderson": 40,
-      "Rachel Martinez": 45,
-      "Pierre Dubois": 45,
-      "Anna Schmidt": 50,
-      "Marco Rossi": 40,
-      "Sophie Martin": 40,
-      "Erik Lindqvist": 45,
-      "James O'Brien": 40,
-      "Yuki Tanaka": 45,
-      "Wei Zhang": 50,
-      "Priya Sharma": 40,
-      "Chris Lee": 40,
-      "Kevin Patel": 38,
-      "Olivia Thompson": 38,
-      "Daniel Garcia": 38,
-      "Clara M\u00fcller": 38,
-      "Luca Bianchi": 38,
-      "Kenji Nakamura": 38,
-      "Min-ji Park": 38,
-      "Jessica Wong": 38,
-      "Brandon Scott": 38,
-      "Henrik Nielsen": 38,
-      "Elena Petrova": 38,
-      "Rahul Patel": 38
+      "Sarah Williams": 53.0,
+      "Michael Brown": 52.3,
+      "Emily Davis": 51.6,
+      "Anna Schmidt": 50.9,
+      "Wei Zhang": 50.1,
+      "John Mitchell": 49.4,
+      "Marcus Johnson": 48.7,
+      "David Rodriguez": 48.0,
+      "Jennifer Taylor": 47.3,
+      "Yuki Tanaka": 46.6,
+      "Rachel Martinez": 45.9,
+      "Pierre Dubois": 45.1,
+      "Erik Lindqvist": 44.4,
+      "Kevin Patel": 43.7,
+      "Olivia Thompson": 43.0,
+      "Daniel Garcia": 42.3,
+      "Clara M\u00fcller": 41.6,
+      "Luca Bianchi": 40.9,
+      "Kenji Nakamura": 40.1,
+      "Min-ji Park": 39.4,
+      "Lisa Chen": 38.7,
+      "Amanda Foster": 38.0,
+      "Priya Sharma": 37.3,
+      "Chris Lee": 36.6,
+      "Marco Rossi": 35.9,
+      "Sophie Martin": 35.1,
+      "James O'Brien": 34.4,
+      "Robert Kim": 33.7,
+      "Thomas Anderson": 33.0
     },
     "2026-Q3": {
-      "John Mitchell": 46,
-      "Sarah Williams": 51,
-      "Marcus Johnson": 46,
-      "Lisa Chen": 41,
-      "David Rodriguez": 46,
-      "Amanda Foster": 41,
-      "Michael Brown": 51,
-      "Jennifer Taylor": 46,
-      "Robert Kim": 41,
-      "Emily Davis": 51,
-      "Thomas Anderson": 41,
-      "Rachel Martinez": 46,
-      "Pierre Dubois": 46,
-      "Anna Schmidt": 51,
-      "Marco Rossi": 41,
-      "Sophie Martin": 41,
-      "Erik Lindqvist": 46,
-      "James O'Brien": 41,
-      "Yuki Tanaka": 46,
-      "Wei Zhang": 51,
-      "Priya Sharma": 41,
-      "Chris Lee": 41,
-      "Kevin Patel": 39,
-      "Olivia Thompson": 39,
-      "Daniel Garcia": 39,
-      "Clara M\u00fcller": 39,
-      "Luca Bianchi": 39,
-      "Kenji Nakamura": 39,
-      "Min-ji Park": 39,
-      "Jessica Wong": 39,
-      "Brandon Scott": 39,
-      "Ashley Moore": 39,
-      "Henrik Nielsen": 39,
-      "Elena Petrova": 39,
-      "Rahul Patel": 39,
-      "Emma Watson": 39
+      "Sarah Williams": 54.0,
+      "Michael Brown": 53.3,
+      "Emily Davis": 52.6,
+      "Anna Schmidt": 51.9,
+      "Wei Zhang": 51.1,
+      "John Mitchell": 50.4,
+      "Marcus Johnson": 49.7,
+      "David Rodriguez": 49.0,
+      "Jennifer Taylor": 48.3,
+      "Yuki Tanaka": 47.6,
+      "Rachel Martinez": 46.9,
+      "Pierre Dubois": 46.1,
+      "Erik Lindqvist": 45.4,
+      "Kevin Patel": 44.7,
+      "Olivia Thompson": 44.0,
+      "Daniel Garcia": 43.3,
+      "Clara M\u00fcller": 42.6,
+      "Luca Bianchi": 41.9,
+      "Kenji Nakamura": 41.1,
+      "Min-ji Park": 40.4,
+      "Lisa Chen": 39.7,
+      "Amanda Foster": 39.0,
+      "Priya Sharma": 38.3,
+      "Chris Lee": 37.6,
+      "Marco Rossi": 36.9,
+      "Sophie Martin": 36.1,
+      "James O'Brien": 35.4,
+      "Robert Kim": 34.7,
+      "Thomas Anderson": 34.0
     },
     "2026-Q4": {
-      "John Mitchell": 47,
-      "Sarah Williams": 52,
-      "Marcus Johnson": 47,
-      "Lisa Chen": 42,
-      "David Rodriguez": 47,
-      "Amanda Foster": 42,
-      "Michael Brown": 52,
-      "Jennifer Taylor": 47,
-      "Robert Kim": 42,
-      "Emily Davis": 52,
-      "Thomas Anderson": 42,
-      "Rachel Martinez": 47,
-      "Pierre Dubois": 47,
-      "Anna Schmidt": 52,
-      "Marco Rossi": 42,
-      "Sophie Martin": 42,
-      "Erik Lindqvist": 47,
-      "James O'Brien": 42,
-      "Yuki Tanaka": 47,
-      "Wei Zhang": 52,
-      "Priya Sharma": 42,
-      "Chris Lee": 42,
-      "Kevin Patel": 40,
-      "Olivia Thompson": 40,
-      "Daniel Garcia": 40,
-      "Clara M\u00fcller": 40,
-      "Luca Bianchi": 40,
-      "Kenji Nakamura": 40,
-      "Min-ji Park": 40,
-      "Jessica Wong": 40,
-      "Brandon Scott": 40,
-      "Ashley Moore": 40,
-      "Henrik Nielsen": 40,
-      "Elena Petrova": 40,
-      "Rahul Patel": 40,
-      "Emma Watson": 40
+      "Sarah Williams": 52.0,
+      "Michael Brown": 51.3,
+      "Emily Davis": 50.6,
+      "Anna Schmidt": 49.9,
+      "Wei Zhang": 49.1,
+      "John Mitchell": 48.4,
+      "Marcus Johnson": 47.7,
+      "David Rodriguez": 47.0,
+      "Jennifer Taylor": 46.3,
+      "Yuki Tanaka": 45.6,
+      "Rachel Martinez": 44.9,
+      "Pierre Dubois": 44.1,
+      "Erik Lindqvist": 43.4,
+      "Kevin Patel": 42.7,
+      "Olivia Thompson": 42.0,
+      "Daniel Garcia": 41.3,
+      "Clara M\u00fcller": 40.6,
+      "Luca Bianchi": 39.9,
+      "Kenji Nakamura": 39.1,
+      "Min-ji Park": 38.4,
+      "Lisa Chen": 37.7,
+      "Amanda Foster": 37.0,
+      "Priya Sharma": 36.3,
+      "Chris Lee": 35.6,
+      "Marco Rossi": 34.9,
+      "Sophie Martin": 34.1,
+      "James O'Brien": 33.4,
+      "Robert Kim": 32.7,
+      "Thomas Anderson": 32.0
     }
   },
   "top_deals": {
@@ -14770,5 +14644,347 @@
       "service": "Mobile Backend",
       "slo_attainment": 98.2
     }
-  ]
+  ],
+  "quota_attainment_by_rep": {
+    "2024-Q1": {
+      "Sarah Williams": 105.0,
+      "Michael Brown": 103.5,
+      "Emily Davis": 102.0,
+      "Anna Schmidt": 100.4,
+      "Wei Zhang": 98.9,
+      "John Mitchell": 97.4,
+      "Marcus Johnson": 95.9,
+      "David Rodriguez": 94.3,
+      "Jennifer Taylor": 92.8,
+      "Yuki Tanaka": 91.3,
+      "Rachel Martinez": 89.8,
+      "Pierre Dubois": 88.2,
+      "Erik Lindqvist": 86.7,
+      "Lisa Chen": 85.2,
+      "Amanda Foster": 83.7,
+      "Priya Sharma": 82.1,
+      "Chris Lee": 80.6,
+      "Marco Rossi": 79.1,
+      "Sophie Martin": 77.6,
+      "James O'Brien": 76.0,
+      "Robert Kim": 74.5,
+      "Thomas Anderson": 73.0
+    },
+    "2024-Q2": {
+      "Sarah Williams": 107.0,
+      "Michael Brown": 105.5,
+      "Emily Davis": 104.0,
+      "Anna Schmidt": 102.4,
+      "Wei Zhang": 100.9,
+      "John Mitchell": 99.4,
+      "Marcus Johnson": 97.9,
+      "David Rodriguez": 96.3,
+      "Jennifer Taylor": 94.8,
+      "Yuki Tanaka": 93.3,
+      "Rachel Martinez": 91.8,
+      "Pierre Dubois": 90.2,
+      "Erik Lindqvist": 88.7,
+      "Lisa Chen": 87.2,
+      "Amanda Foster": 85.7,
+      "Priya Sharma": 84.1,
+      "Chris Lee": 82.6,
+      "Marco Rossi": 81.1,
+      "Sophie Martin": 79.6,
+      "James O'Brien": 78.0,
+      "Robert Kim": 76.5,
+      "Thomas Anderson": 75.0
+    },
+    "2024-Q3": {
+      "Sarah Williams": 110.0,
+      "Michael Brown": 108.5,
+      "Emily Davis": 107.0,
+      "Anna Schmidt": 105.4,
+      "Wei Zhang": 103.9,
+      "John Mitchell": 102.4,
+      "Marcus Johnson": 100.9,
+      "David Rodriguez": 99.3,
+      "Jennifer Taylor": 97.8,
+      "Yuki Tanaka": 96.3,
+      "Rachel Martinez": 94.8,
+      "Pierre Dubois": 93.2,
+      "Erik Lindqvist": 91.7,
+      "Lisa Chen": 90.2,
+      "Amanda Foster": 88.7,
+      "Priya Sharma": 87.1,
+      "Chris Lee": 85.6,
+      "Marco Rossi": 84.1,
+      "Sophie Martin": 82.6,
+      "James O'Brien": 81.0,
+      "Robert Kim": 79.5,
+      "Thomas Anderson": 78.0
+    },
+    "2024-Q4": {
+      "Sarah Williams": 112.0,
+      "Michael Brown": 110.5,
+      "Emily Davis": 109.0,
+      "Anna Schmidt": 107.4,
+      "Wei Zhang": 105.9,
+      "John Mitchell": 104.4,
+      "Marcus Johnson": 102.9,
+      "David Rodriguez": 101.3,
+      "Jennifer Taylor": 99.8,
+      "Yuki Tanaka": 98.3,
+      "Rachel Martinez": 96.8,
+      "Pierre Dubois": 95.2,
+      "Erik Lindqvist": 93.7,
+      "Lisa Chen": 92.2,
+      "Amanda Foster": 90.7,
+      "Priya Sharma": 89.1,
+      "Chris Lee": 87.6,
+      "Marco Rossi": 86.1,
+      "Sophie Martin": 84.6,
+      "James O'Brien": 83.0,
+      "Robert Kim": 81.5,
+      "Thomas Anderson": 80.0
+    },
+    "2025-Q1": {
+      "Sarah Williams": 109.0,
+      "Michael Brown": 107.7,
+      "Emily Davis": 106.3,
+      "Anna Schmidt": 105.0,
+      "Wei Zhang": 103.7,
+      "John Mitchell": 102.3,
+      "Marcus Johnson": 101.0,
+      "David Rodriguez": 99.7,
+      "Jennifer Taylor": 98.3,
+      "Yuki Tanaka": 97.0,
+      "Rachel Martinez": 95.7,
+      "Pierre Dubois": 94.3,
+      "Erik Lindqvist": 93.0,
+      "Kevin Patel": 91.7,
+      "Clara M\u00fcller": 90.3,
+      "Kenji Nakamura": 89.0,
+      "Lisa Chen": 87.7,
+      "Amanda Foster": 86.3,
+      "Priya Sharma": 85.0,
+      "Chris Lee": 83.7,
+      "Marco Rossi": 82.3,
+      "Sophie Martin": 81.0,
+      "James O'Brien": 79.7,
+      "Robert Kim": 78.3,
+      "Thomas Anderson": 77.0
+    },
+    "2025-Q2": {
+      "Sarah Williams": 112.0,
+      "Michael Brown": 110.9,
+      "Emily Davis": 109.7,
+      "Anna Schmidt": 108.6,
+      "Wei Zhang": 107.4,
+      "John Mitchell": 106.3,
+      "Marcus Johnson": 105.1,
+      "David Rodriguez": 104.0,
+      "Jennifer Taylor": 102.9,
+      "Yuki Tanaka": 101.7,
+      "Rachel Martinez": 100.6,
+      "Pierre Dubois": 99.4,
+      "Erik Lindqvist": 98.3,
+      "Kevin Patel": 97.1,
+      "Olivia Thompson": 96.0,
+      "Daniel Garcia": 94.9,
+      "Clara M\u00fcller": 93.7,
+      "Luca Bianchi": 92.6,
+      "Kenji Nakamura": 91.4,
+      "Min-ji Park": 90.3,
+      "Lisa Chen": 89.1,
+      "Amanda Foster": 88.0,
+      "Priya Sharma": 86.9,
+      "Chris Lee": 85.7,
+      "Marco Rossi": 84.6,
+      "Sophie Martin": 83.4,
+      "James O'Brien": 82.3,
+      "Robert Kim": 81.1,
+      "Thomas Anderson": 80.0
+    },
+    "2025-Q3": {
+      "Sarah Williams": 115.0,
+      "Michael Brown": 113.9,
+      "Emily Davis": 112.7,
+      "Anna Schmidt": 111.6,
+      "Wei Zhang": 110.4,
+      "John Mitchell": 109.3,
+      "Marcus Johnson": 108.1,
+      "David Rodriguez": 107.0,
+      "Jennifer Taylor": 105.9,
+      "Yuki Tanaka": 104.7,
+      "Rachel Martinez": 103.6,
+      "Pierre Dubois": 102.4,
+      "Erik Lindqvist": 101.3,
+      "Kevin Patel": 100.1,
+      "Olivia Thompson": 99.0,
+      "Daniel Garcia": 97.9,
+      "Clara M\u00fcller": 96.7,
+      "Luca Bianchi": 95.6,
+      "Kenji Nakamura": 94.4,
+      "Min-ji Park": 93.3,
+      "Lisa Chen": 92.1,
+      "Amanda Foster": 91.0,
+      "Priya Sharma": 89.9,
+      "Chris Lee": 88.7,
+      "Marco Rossi": 87.6,
+      "Sophie Martin": 86.4,
+      "James O'Brien": 85.3,
+      "Robert Kim": 84.1,
+      "Thomas Anderson": 83.0
+    },
+    "2025-Q4": {
+      "Sarah Williams": 118.0,
+      "Michael Brown": 116.9,
+      "Emily Davis": 115.7,
+      "Anna Schmidt": 114.6,
+      "Wei Zhang": 113.4,
+      "John Mitchell": 112.3,
+      "Marcus Johnson": 111.1,
+      "David Rodriguez": 110.0,
+      "Jennifer Taylor": 108.9,
+      "Yuki Tanaka": 107.7,
+      "Rachel Martinez": 106.6,
+      "Pierre Dubois": 105.4,
+      "Erik Lindqvist": 104.3,
+      "Kevin Patel": 103.1,
+      "Olivia Thompson": 102.0,
+      "Daniel Garcia": 100.9,
+      "Clara M\u00fcller": 99.7,
+      "Luca Bianchi": 98.6,
+      "Kenji Nakamura": 97.4,
+      "Min-ji Park": 96.3,
+      "Lisa Chen": 95.1,
+      "Amanda Foster": 94.0,
+      "Priya Sharma": 92.9,
+      "Chris Lee": 91.7,
+      "Marco Rossi": 90.6,
+      "Sophie Martin": 89.4,
+      "James O'Brien": 88.3,
+      "Robert Kim": 87.1,
+      "Thomas Anderson": 86.0
+    },
+    "2026-Q1": {
+      "Sarah Williams": 115.0,
+      "Michael Brown": 113.9,
+      "Emily Davis": 112.7,
+      "Anna Schmidt": 111.6,
+      "Wei Zhang": 110.4,
+      "John Mitchell": 109.3,
+      "Marcus Johnson": 108.1,
+      "David Rodriguez": 107.0,
+      "Jennifer Taylor": 105.9,
+      "Yuki Tanaka": 104.7,
+      "Rachel Martinez": 103.6,
+      "Pierre Dubois": 102.4,
+      "Erik Lindqvist": 101.3,
+      "Kevin Patel": 100.1,
+      "Olivia Thompson": 99.0,
+      "Daniel Garcia": 97.9,
+      "Clara M\u00fcller": 96.7,
+      "Luca Bianchi": 95.6,
+      "Kenji Nakamura": 94.4,
+      "Min-ji Park": 93.3,
+      "Lisa Chen": 92.1,
+      "Amanda Foster": 91.0,
+      "Priya Sharma": 89.9,
+      "Chris Lee": 88.7,
+      "Marco Rossi": 87.6,
+      "Sophie Martin": 86.4,
+      "James O'Brien": 85.3,
+      "Robert Kim": 84.1,
+      "Thomas Anderson": 83.0
+    },
+    "2026-Q2": {
+      "Sarah Williams": 117.0,
+      "Michael Brown": 115.9,
+      "Emily Davis": 114.7,
+      "Anna Schmidt": 113.6,
+      "Wei Zhang": 112.4,
+      "John Mitchell": 111.3,
+      "Marcus Johnson": 110.1,
+      "David Rodriguez": 109.0,
+      "Jennifer Taylor": 107.9,
+      "Yuki Tanaka": 106.7,
+      "Rachel Martinez": 105.6,
+      "Pierre Dubois": 104.4,
+      "Erik Lindqvist": 103.3,
+      "Kevin Patel": 102.1,
+      "Olivia Thompson": 101.0,
+      "Daniel Garcia": 99.9,
+      "Clara M\u00fcller": 98.7,
+      "Luca Bianchi": 97.6,
+      "Kenji Nakamura": 96.4,
+      "Min-ji Park": 95.3,
+      "Lisa Chen": 94.1,
+      "Amanda Foster": 93.0,
+      "Priya Sharma": 91.9,
+      "Chris Lee": 90.7,
+      "Marco Rossi": 89.6,
+      "Sophie Martin": 88.4,
+      "James O'Brien": 87.3,
+      "Robert Kim": 86.1,
+      "Thomas Anderson": 85.0
+    },
+    "2026-Q3": {
+      "Sarah Williams": 119.0,
+      "Michael Brown": 117.9,
+      "Emily Davis": 116.7,
+      "Anna Schmidt": 115.6,
+      "Wei Zhang": 114.4,
+      "John Mitchell": 113.3,
+      "Marcus Johnson": 112.1,
+      "David Rodriguez": 111.0,
+      "Jennifer Taylor": 109.9,
+      "Yuki Tanaka": 108.7,
+      "Rachel Martinez": 107.6,
+      "Pierre Dubois": 106.4,
+      "Erik Lindqvist": 105.3,
+      "Kevin Patel": 104.1,
+      "Olivia Thompson": 103.0,
+      "Daniel Garcia": 101.9,
+      "Clara M\u00fcller": 100.7,
+      "Luca Bianchi": 99.6,
+      "Kenji Nakamura": 98.4,
+      "Min-ji Park": 97.3,
+      "Lisa Chen": 96.1,
+      "Amanda Foster": 95.0,
+      "Priya Sharma": 93.9,
+      "Chris Lee": 92.7,
+      "Marco Rossi": 91.6,
+      "Sophie Martin": 90.4,
+      "James O'Brien": 89.3,
+      "Robert Kim": 88.1,
+      "Thomas Anderson": 87.0
+    },
+    "2026-Q4": {
+      "Sarah Williams": 115.0,
+      "Michael Brown": 113.9,
+      "Emily Davis": 112.7,
+      "Anna Schmidt": 111.6,
+      "Wei Zhang": 110.4,
+      "John Mitchell": 109.3,
+      "Marcus Johnson": 108.1,
+      "David Rodriguez": 107.0,
+      "Jennifer Taylor": 105.9,
+      "Yuki Tanaka": 104.7,
+      "Rachel Martinez": 103.6,
+      "Pierre Dubois": 102.4,
+      "Erik Lindqvist": 101.3,
+      "Kevin Patel": 100.1,
+      "Olivia Thompson": 99.0,
+      "Daniel Garcia": 97.9,
+      "Clara M\u00fcller": 96.7,
+      "Luca Bianchi": 95.6,
+      "Kenji Nakamura": 94.4,
+      "Min-ji Park": 93.3,
+      "Lisa Chen": 92.1,
+      "Amanda Foster": 91.0,
+      "Priya Sharma": 89.9,
+      "Chris Lee": 88.7,
+      "Marco Rossi": 87.6,
+      "Sophie Martin": 86.4,
+      "James O'Brien": 85.3,
+      "Robert Kim": 84.1,
+      "Thomas Anderson": 83.0
+    }
+  }
 }

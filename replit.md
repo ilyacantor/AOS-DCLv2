@@ -171,12 +171,13 @@ The right sidebar contains:
 **February 02, 2026:**
 - Major NLQ data expansion: Added comprehensive fact data for all sample questions
 - CFO Pack: Added mrr, dso, burn_rate, ar_aging, services_revenue metrics with segment/region/aging_bucket dimensions
-- CRO Pack: Added pipeline_value, churn_risk, nrr_by_cohort metrics with rep/stage/cohort/customer dimensions
+- CRO Pack: Added pipeline_value, churn_risk, nrr_by_cohort, quota_attainment metrics with rep/stage/cohort/customer dimensions
 - COO Pack: Added throughput, cycle_time, sla_compliance metrics with team/project_type/work_type/priority dimensions
 - CTO Pack: Added deploy_frequency, mttr, uptime, slo_attainment, cloud_cost metrics with service/severity/resource_type/environment dimensions
 - Expanded fact_base.json with 19 new dimensional data arrays (800+ records total)
 - Updated query.py to handle array-format dimensional data
-- Semantic catalog now exports 36 metrics and 29 entities
+- Semantic catalog now exports 37 metrics and 29 entities
+- Differentiated rep data for superlative queries: Sarah Williams (top) 115% attainment/52% win rate, Thomas Anderson (bottom) 83% attainment/32% win rate
 
 **February 02, 2026 (earlier):**
 - Added CHRO as first-class persona (equal to CFO/CRO/COO/CTO)

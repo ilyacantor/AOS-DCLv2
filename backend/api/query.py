@@ -98,6 +98,7 @@ METRIC_TO_FACTBASE_KEY = {
     "pipeline": "pipeline",
     "pipeline_value": "pipeline",
     "win_rate": "win_rate",
+    "quota_attainment": "quota_attainment",
     "churn_rate": "churn_pct",
     "churn_risk": "churn_risk",
     "nrr": "nrr",
@@ -193,6 +194,7 @@ DIMENSION_TO_FACTBASE_KEY = {
     "rep": {
         "pipeline": "pipeline_by_rep",
         "win_rate": "win_rate_by_rep",
+        "quota_attainment": "quota_attainment_by_rep",
         "quota": "quota_by_rep",
     },
     "team": {
