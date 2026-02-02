@@ -168,6 +168,13 @@ The right sidebar contains:
 
 ## Recent Changes
 
+**February 02, 2026 (latest):**
+- Consolidated rep performance data into single source of truth
+- `quota_by_rep` now contains `{quota, attainment, attainment_pct}` - no separate quota_attainment array
+- Extended differentiation to all 36 sales reps (was 29)
+- Updated query.py with `_extract_value()` helper for nested dictionary values
+- Graph rendering stable: 23 nodes, 134 links
+
 **February 02, 2026:**
 - Major NLQ data expansion: Added comprehensive fact data for all sample questions
 - CFO Pack: Added mrr, dso, burn_rate, ar_aging, services_revenue metrics with segment/region/aging_bucket dimensions
@@ -175,9 +182,8 @@ The right sidebar contains:
 - COO Pack: Added throughput, cycle_time, sla_compliance metrics with team/project_type/work_type/priority dimensions
 - CTO Pack: Added deploy_frequency, mttr, uptime, slo_attainment, cloud_cost metrics with service/severity/resource_type/environment dimensions
 - Expanded fact_base.json with 19 new dimensional data arrays (800+ records total)
-- Updated query.py to handle array-format dimensional data
-- Semantic catalog now exports 37 metrics and 29 entities
-- Differentiated rep data for superlative queries: Sarah Williams (top) 115% attainment/52% win rate, Thomas Anderson (bottom) 83% attainment/32% win rate
+- Semantic catalog: 37 metrics, 29 entities
+- Differentiated rep data: Sarah Williams (top: 115% attainment/52% win rate), Thomas Anderson (bottom: 83% attainment/32% win rate)
 
 **February 02, 2026 (earlier):**
 - Added CHRO as first-class persona (equal to CFO/CRO/COO/CTO)
