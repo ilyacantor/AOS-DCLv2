@@ -123,16 +123,34 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
         return sum + ((metrics?.source_count as number) || 0);
       }, 0);
 
-      const fabricBreakdown = fabricNodes.map(fn => {
+      // Group fabrics by type to count instances
+      const fabricTypeMap = new Map<string, { count: number; totalSources: number; vendors: Set<string>; allSources: string[] }>();
+      
+      fabricNodes.forEach(fn => {
         const metrics = fn.metrics as Record<string, unknown> | undefined;
-        return {
-          type: (metrics?.fabric_type as string) || 'unknown',
-          label: fn.label,
-          count: (metrics?.source_count as number) || 0,
-          vendor: (metrics?.vendor as string) || 'Unknown',
-          sources: (metrics?.sources as string[]) || []
-        };
+        const fabricType = (metrics?.fabric_type as string) || 'unknown';
+        const sourceCount = (metrics?.source_count as number) || 0;
+        const vendor = (metrics?.vendor as string) || 'Unknown';
+        const sources = (metrics?.sources as string[]) || [];
+        
+        if (!fabricTypeMap.has(fabricType)) {
+          fabricTypeMap.set(fabricType, { count: 0, totalSources: 0, vendors: new Set(), allSources: [] });
+        }
+        
+        const entry = fabricTypeMap.get(fabricType)!;
+        entry.count += 1;
+        entry.totalSources += sourceCount;
+        entry.vendors.add(vendor);
+        entry.allSources.push(...sources);
       });
+
+      const fabricBreakdown = Array.from(fabricTypeMap.entries()).map(([type, data]) => ({
+        type,
+        instanceCount: data.count,
+        count: data.totalSources,
+        vendors: Array.from(data.vendors),
+        sources: data.allSources
+      }));
 
       fabricStatsData = {
         totalCandidates,
@@ -237,14 +255,17 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
             <div 
               key={fabric.type} 
               className="bg-card rounded-lg p-3 border cursor-pointer hover:border-primary/50 transition-colors"
-              title={`Vendor: ${fabric.vendor}\nSources: ${fabric.sources.slice(0, 5).join(', ')}${fabric.sources.length > 5 ? '...' : ''}`}
+              title={`${fabric.instanceCount} instance${fabric.instanceCount > 1 ? 's' : ''}\nVendors: ${fabric.vendors.join(', ')}\nSources: ${fabric.sources.slice(0, 5).join(', ')}${fabric.sources.length > 5 ? '...' : ''}`}
             >
               <div className="flex items-center gap-2 text-blue-400 text-xs mb-1">
                 <Layers className="w-3.5 h-3.5" />
                 <span>{fabric.type.toUpperCase()}</span>
+                {fabric.instanceCount > 1 && (
+                  <span className="text-[10px] opacity-70">x{fabric.instanceCount}</span>
+                )}
               </div>
               <div className="text-2xl font-bold">{fabric.count}</div>
-              <div className="text-[10px] text-muted-foreground mt-1 truncate">{fabric.vendor}</div>
+              <div className="text-[10px] text-muted-foreground mt-1 truncate">{fabric.vendors.join(', ')}</div>
             </div>
           ))}
           <div className="bg-card rounded-lg p-3 border">

@@ -18,7 +18,7 @@ const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO'];
 function App() {
   const [graphData, setGraphData] = useState<GraphSnapshot | null>(null);
   const [runMode, setRunMode] = useState<'Dev' | 'Prod'>('Dev');
-  const [dataMode, setDataMode] = useState<'Demo' | 'Farm' | 'AAM'>('Demo');
+  const [dataMode, setDataMode] = useState<'Demo' | 'Farm' | 'AAM'>('AAM');
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>([]);
   const [runId, setRunId] = useState<string | undefined>(undefined);
   const [isRunning, setIsRunning] = useState(false);
