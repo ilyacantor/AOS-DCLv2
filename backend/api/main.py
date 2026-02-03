@@ -124,7 +124,8 @@ def run_dcl(request: RunRequest):
             run_mode=request.run_mode,
             personas=personas,
             run_id=run_id,
-            source_limit=request.source_limit or 5
+            source_limit=request.source_limit or 5,
+            aod_run_id=request.aod_run_id
         )
         
         return RunResponse(

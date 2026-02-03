@@ -259,12 +259,18 @@ class SchemaLoader:
         return sources
     
     @staticmethod
-    def load_aam_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 50) -> List[SourceSystem]:
+    def load_aam_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 50, aod_run_id: Optional[str] = None) -> List[SourceSystem]:
         """
         Load schemas from AAM's pipe export.
         
         AAM groups candidates by fabric plane and exports them for DCL consumption.
         This method fetches that export and converts it to SourceSystem objects.
+        
+        Args:
+            narration: Narration service for progress messages
+            run_id: DCL's internal run ID for narration
+            source_limit: Maximum sources to load
+            aod_run_id: Optional AOD run ID to filter AAM data (if not provided, gets all)
         """
         from backend.aam.client import get_aam_client
         
@@ -273,7 +279,7 @@ class SchemaLoader:
         
         try:
             aam_client = get_aam_client()
-            pipes_data = aam_client.get_pipes(aod_run_id=run_id)
+            pipes_data = aam_client.get_pipes(aod_run_id=aod_run_id)
         except Exception as e:
             logger.error(f"Failed to fetch from AAM: {e}")
             if narration and run_id:
@@ -288,9 +294,6 @@ class SchemaLoader:
                 run_id, "SchemaLoader",
                 f"Received {len(fabric_planes)} fabric planes with {total_connections} connections from AAM"
             )
-        
-        normalizer = get_normalizer()
-        normalizer.load_registry(narration, run_id)
         
         sources = []
         connection_count = 0
@@ -309,8 +312,8 @@ class SchemaLoader:
             for conn in connections:
                 source_name = conn.get("source_name", "Unknown")
                 fields_list = conn.get("fields", [])
-                category = conn.get("category", "other")
-                governance = conn.get("governance_status", "unknown")
+                category = conn.get("category") or "other"
+                governance = conn.get("governance_status") or "unknown"
                 
                 # Create FieldSchema objects from field names
                 fields = []
@@ -338,26 +341,27 @@ class SchemaLoader:
                     stats={"plane": plane_type, "vendor": vendor}
                 )
                 
-                # Normalize source name
-                norm_result = normalizer.normalize(source_name, narration, run_id)
-                canonical = norm_result.canonical_source
+                # Fast-path: AAM already provides canonical info, skip expensive normalizer
+                source_id = source_name.lower().replace(" ", "_").replace("-", "_")
+                trust_score = 85 if governance == "governed" else 60
+                data_quality_score = 80 if governance == "governed" else 50
                 
-                # Create SourceSystem
+                # Create SourceSystem directly from AAM data
                 source = SourceSystem(
-                    id=canonical.canonical_id,
-                    name=canonical.name,
+                    id=source_id,
+                    name=source_name,
                     type=category.upper(),
-                    tags=["aam", plane_type, vendor.lower(), governance],
+                    tags=["aam", plane_type, (vendor or "unknown").lower(), governance],
                     tables=[table],
-                    canonical_id=canonical.canonical_id,
+                    canonical_id=source_id,
                     raw_id=source_name,
-                    discovery_status=DiscoveryStatus(canonical.discovery_status.value),
-                    resolution_type=ResolutionType(norm_result.resolution_type.value),
-                    trust_score=canonical.trust_score,
-                    data_quality_score=canonical.data_quality_score,
+                    discovery_status=DiscoveryStatus.CANONICAL,
+                    resolution_type=ResolutionType.EXACT,
+                    trust_score=trust_score,
+                    data_quality_score=data_quality_score,
                     vendor=conn.get("vendor", vendor),
                     category=category,
-                    entities=canonical.entities,
+                    entities=[],
                 )
                 sources.append(source)
                 connection_count += 1

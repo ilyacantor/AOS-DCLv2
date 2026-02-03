@@ -101,7 +101,7 @@ class GraphNode(CamelCaseModel):
     id: str
     label: str
     level: Literal["L0", "L1", "L2", "L3"]
-    kind: Literal["pipe", "source", "ontology", "bll"]
+    kind: Literal["pipe", "source", "ontology", "bll", "fabric"]
     group: Optional[str] = None
     status: Optional[str] = "ok"
     metrics: Optional[Dict[str, Any]] = None

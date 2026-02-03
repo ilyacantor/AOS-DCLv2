@@ -30,7 +30,8 @@ class DCLEngine:
         run_mode: Literal["Dev", "Prod"],
         personas: List[Persona],
         run_id: str,
-        source_limit: int = 5
+        source_limit: int = 5,
+        aod_run_id: Optional[str] = None
     ) -> tuple[GraphSnapshot, RunMetrics]:
         
         start_time = time.time()
@@ -42,7 +43,7 @@ class DCLEngine:
             sources = SchemaLoader.load_demo_schemas(self.narration, run_id)
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Demo sources")
         elif mode == "AAM":
-            sources = SchemaLoader.load_aam_schemas(self.narration, run_id, source_limit=source_limit)
+            sources = SchemaLoader.load_aam_schemas(self.narration, run_id, source_limit=source_limit, aod_run_id=aod_run_id)
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} AAM sources (source_limit={source_limit})")
         else:
             sources = SchemaLoader.load_farm_schemas(self.narration, run_id, source_limit=source_limit)
