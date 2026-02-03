@@ -7,8 +7,6 @@ interface ControlsBarProps {
   setRunMode: (m: 'Dev' | 'Prod') => void;
   dataMode: 'Demo' | 'Farm' | 'AAM';
   setDataMode: (m: 'Demo' | 'Farm' | 'AAM') => void;
-  sourceLimit: number;
-  setSourceLimit: (n: number) => void;
   selectedPersonas: PersonaId[];
   togglePersona: (p: PersonaId) => void;
   onRun: () => void;
@@ -19,15 +17,11 @@ interface ControlsBarProps {
   setMainView: (v: 'graph' | 'dashboard') => void;
 }
 
-const SOURCE_LIMITS = [5, 10, 20, 50, 100];
-
 export function ControlsBar({
   runMode,
   setRunMode,
   dataMode,
   setDataMode,
-  sourceLimit,
-  setSourceLimit,
   selectedPersonas,
   togglePersona,
   onRun,
@@ -89,25 +83,11 @@ export function ControlsBar({
         <ToggleButton active={runMode === 'Prod'} onClick={() => setRunMode('Prod')}>Prod</ToggleButton>
       </ToggleGroup>
 
-      <div className="flex items-center gap-2">
-        <ToggleGroup label="Data">
-          <ToggleButton active={dataMode === 'Demo'} onClick={() => setDataMode('Demo')}>Demo</ToggleButton>
-          <ToggleButton active={dataMode === 'Farm'} onClick={() => setDataMode('Farm')}>Farm</ToggleButton>
-          <ToggleButton active={dataMode === 'AAM'} onClick={() => setDataMode('AAM')}>AAM</ToggleButton>
-        </ToggleGroup>
-        {(dataMode === 'Farm' || dataMode === 'AAM') && (
-          <select
-            value={sourceLimit}
-            onChange={(e) => setSourceLimit(Number(e.target.value))}
-            className="h-7 px-2 text-xs rounded-md border bg-background text-foreground cursor-pointer"
-            title="Number of sources"
-          >
-            {SOURCE_LIMITS.map(n => (
-              <option key={n} value={n}>{n} src</option>
-            ))}
-          </select>
-        )}
-      </div>
+      <ToggleGroup label="Data">
+        <ToggleButton active={dataMode === 'Demo'} onClick={() => setDataMode('Demo')}>Demo</ToggleButton>
+        <ToggleButton active={dataMode === 'Farm'} onClick={() => setDataMode('Farm')}>Farm</ToggleButton>
+        <ToggleButton active={dataMode === 'AAM'} onClick={() => setDataMode('AAM')}>AAM</ToggleButton>
+      </ToggleGroup>
 
       <ToggleGroup label="Display">
         <ToggleButton active={mainView === 'graph'} onClick={() => setMainView('graph')}>

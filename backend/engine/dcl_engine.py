@@ -31,7 +31,7 @@ class DCLEngine:
         run_mode: Literal["Dev", "Prod"],
         personas: List[Persona],
         run_id: str,
-        source_limit: int = 5,
+        source_limit: int = 1000,
         aod_run_id: Optional[str] = None
     ) -> tuple[GraphSnapshot, RunMetrics]:
         

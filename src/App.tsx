@@ -19,7 +19,6 @@ function App() {
   const [graphData, setGraphData] = useState<GraphSnapshot | null>(null);
   const [runMode, setRunMode] = useState<'Dev' | 'Prod'>('Dev');
   const [dataMode, setDataMode] = useState<'Demo' | 'Farm' | 'AAM'>('Demo');
-  const [sourceLimit, setSourceLimit] = useState<number>(5);
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>([]);
   const [runId, setRunId] = useState<string | undefined>(undefined);
   const [isRunning, setIsRunning] = useState(false);
@@ -100,7 +99,7 @@ function App() {
       const res = await fetch('/api/dcl/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: dataMode, run_mode: runMode, personas: selectedPersonas, source_limit: sourceLimit }),
+        body: JSON.stringify({ mode: dataMode, run_mode: runMode, personas: selectedPersonas }),
       });
 
       console.log('[App] fetch response:', res.status);
@@ -135,8 +134,7 @@ function App() {
         body: JSON.stringify({
           mode: dataMode,
           run_mode: runMode,
-          personas: selectedPersonas,
-          source_limit: sourceLimit
+          personas: selectedPersonas
         }),
       });
 
@@ -238,21 +236,6 @@ function App() {
                   <option value="Prod">Prod</option>
                 </select>
               </div>
-
-              {/* Source Limit (only for Farm mode) */}
-              {(dataMode === 'Farm' || dataMode === 'AAM') && (
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">Sources:</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={sourceLimit}
-                    onChange={(e) => setSourceLimit(parseInt(e.target.value) || 5)}
-                    className="w-12 px-1 py-1 text-xs rounded border border-border bg-background text-center"
-                  />
-                </div>
-              )}
 
               {/* Persona Selector */}
               <div className="flex items-center gap-1 pl-2 border-l border-border">

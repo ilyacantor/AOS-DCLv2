@@ -86,7 +86,7 @@ class RunRequest(BaseModel):
     mode: Literal["Demo", "Farm", "AAM"] = "Demo"
     run_mode: Literal["Dev", "Prod"] = "Dev"
     personas: Optional[List[Persona]] = None
-    source_limit: Optional[int] = 5
+    source_limit: Optional[int] = 1000
     aod_run_id: Optional[str] = Field(None, description="AOD run ID for AAM mode")
 
 
@@ -124,7 +124,7 @@ def run_dcl(request: RunRequest):
             run_mode=request.run_mode,
             personas=personas,
             run_id=run_id,
-            source_limit=request.source_limit or 5,
+            source_limit=request.source_limit or 1000,
             aod_run_id=request.aod_run_id
         )
         
