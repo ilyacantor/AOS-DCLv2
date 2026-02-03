@@ -100,7 +100,7 @@ function App() {
       const res = await fetch('/api/dcl/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'Demo', run_mode: 'Dev', personas: [] }),
+        body: JSON.stringify({ mode: dataMode, run_mode: runMode, personas: selectedPersonas, source_limit: sourceLimit }),
       });
 
       console.log('[App] fetch response:', res.status);
