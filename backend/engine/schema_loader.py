@@ -259,6 +259,142 @@ class SchemaLoader:
         return sources
     
     @staticmethod
+    def load_aam_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 50) -> List[SourceSystem]:
+        """
+        Load schemas from AAM's pipe export.
+        
+        AAM groups candidates by fabric plane and exports them for DCL consumption.
+        This method fetches that export and converts it to SourceSystem objects.
+        """
+        from backend.aam.client import get_aam_client
+        
+        if narration and run_id:
+            narration.add_message(run_id, "SchemaLoader", "Fetching pipes from AAM...")
+        
+        try:
+            aam_client = get_aam_client()
+            pipes_data = aam_client.get_pipes(aod_run_id=run_id)
+        except Exception as e:
+            logger.error(f"Failed to fetch from AAM: {e}")
+            if narration and run_id:
+                narration.add_message(run_id, "SchemaLoader", f"⚠ AAM fetch failed: {e}")
+            return []
+        
+        fabric_planes = pipes_data.get("fabric_planes", [])
+        total_connections = pipes_data.get("total_connections", 0)
+        
+        if narration and run_id:
+            narration.add_message(
+                run_id, "SchemaLoader",
+                f"Received {len(fabric_planes)} fabric planes with {total_connections} connections from AAM"
+            )
+        
+        normalizer = get_normalizer()
+        normalizer.load_registry(narration, run_id)
+        
+        sources = []
+        connection_count = 0
+        
+        for plane in fabric_planes:
+            plane_type = plane.get("plane_type", "unknown")
+            vendor = plane.get("vendor", "Unknown")
+            connections = plane.get("connections", [])
+            
+            if narration and run_id:
+                narration.add_message(
+                    run_id, "SchemaLoader",
+                    f"Processing {plane_type} plane ({vendor}): {len(connections)} connections"
+                )
+            
+            for conn in connections:
+                source_name = conn.get("source_name", "Unknown")
+                fields_list = conn.get("fields", [])
+                category = conn.get("category", "other")
+                governance = conn.get("governance_status", "unknown")
+                
+                # Create FieldSchema objects from field names
+                fields = []
+                for field_name in fields_list:
+                    semantic_hint = SchemaLoader._infer_semantic_hint_from_name(field_name)
+                    field = FieldSchema(
+                        name=field_name,
+                        type="string",  # Default type, AAM doesn't provide this yet
+                        semantic_hint=semantic_hint,
+                        nullable=True,
+                        distinct_count=0,
+                        null_percent=0.0,
+                        sample_values=[]
+                    )
+                    fields.append(field)
+                
+                # Create table schema
+                table_id = f"{source_name}.{plane_type}_data"
+                table = TableSchema(
+                    id=table_id,
+                    system_id=source_name,
+                    name=f"{plane_type}_data",
+                    fields=fields,
+                    record_count=0,  # Unknown from AAM
+                    stats={"plane": plane_type, "vendor": vendor}
+                )
+                
+                # Normalize source name
+                norm_result = normalizer.normalize(source_name, narration, run_id)
+                canonical = norm_result.canonical_source
+                
+                # Create SourceSystem
+                source = SourceSystem(
+                    id=canonical.canonical_id,
+                    name=canonical.name,
+                    type=category.upper(),
+                    tags=["aam", plane_type, vendor.lower(), governance],
+                    tables=[table],
+                    canonical_id=canonical.canonical_id,
+                    raw_id=source_name,
+                    discovery_status=DiscoveryStatus(canonical.discovery_status.value),
+                    resolution_type=ResolutionType(norm_result.resolution_type.value),
+                    trust_score=canonical.trust_score,
+                    data_quality_score=canonical.data_quality_score,
+                    vendor=conn.get("vendor", vendor),
+                    category=category,
+                    entities=canonical.entities,
+                )
+                sources.append(source)
+                connection_count += 1
+                
+                if narration and run_id:
+                    status_icon = "✓" if governance == "governed" else "⚠"
+                    narration.add_message(
+                        run_id, "SchemaLoader",
+                        f"{status_icon} {source_name} ({plane_type}): {len(fields)} fields"
+                    )
+        
+        # Sort by trust score and governance
+        sources.sort(key=lambda s: (
+            0 if "governed" in s.tags else 1,
+            -s.trust_score,
+            s.name
+        ))
+        
+        # Apply source_limit
+        total_available = len(sources)
+        if source_limit and source_limit < total_available:
+            sources = sources[:source_limit]
+            if narration and run_id:
+                narration.add_message(
+                    run_id, "SchemaLoader",
+                    f"Limited to {source_limit} sources (from {total_available} available)"
+                )
+        
+        if narration and run_id:
+            narration.add_message(
+                run_id, "SchemaLoader",
+                f"AAM schema loading complete: {len(sources)} sources loaded"
+            )
+        
+        return sources
+    
+    @staticmethod
     def _get_pool():
         try:
             from backend.semantic_mapper.persist_mappings import MappingPersistence

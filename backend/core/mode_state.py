@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 class ModeState(BaseModel):
     """Current DCL mode state."""
-    data_mode: Literal["Demo", "Farm"] = "Demo"
+    data_mode: Literal["Demo", "Farm", "AAM"] = "Demo"
     run_mode: Literal["Dev", "Prod"] = "Dev"
     last_updated: Optional[str] = None
     last_run_id: Optional[str] = None
@@ -27,7 +27,7 @@ def get_current_mode() -> ModeState:
 
 
 def set_current_mode(
-    data_mode: Literal["Demo", "Farm"],
+    data_mode: Literal["Demo", "Farm", "AAM"],
     run_mode: Literal["Dev", "Prod"] = "Dev",
     run_id: Optional[str] = None
 ) -> ModeState:
@@ -42,6 +42,6 @@ def set_current_mode(
     return _current_state
 
 
-def get_data_mode() -> Literal["Demo", "Farm"]:
+def get_data_mode() -> Literal["Demo", "Farm", "AAM"]:
     """Get just the current data mode."""
     return _current_state.data_mode

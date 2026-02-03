@@ -83,10 +83,11 @@ engine = DCLEngine()
 
 
 class RunRequest(BaseModel):
-    mode: Literal["Demo", "Farm"] = "Demo"
+    mode: Literal["Demo", "Farm", "AAM"] = "Demo"
     run_mode: Literal["Dev", "Prod"] = "Dev"
     personas: Optional[List[Persona]] = None
     source_limit: Optional[int] = 5
+    aod_run_id: Optional[str] = Field(None, description="AOD run ID for AAM mode")
 
 
 class RunResponse(BaseModel):

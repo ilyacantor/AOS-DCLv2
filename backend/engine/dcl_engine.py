@@ -26,7 +26,7 @@ class DCLEngine:
     
     def build_graph_snapshot(
         self,
-        mode: Literal["Demo", "Farm"],
+        mode: Literal["Demo", "Farm", "AAM"],
         run_mode: Literal["Dev", "Prod"],
         personas: List[Persona],
         run_id: str,
@@ -41,6 +41,9 @@ class DCLEngine:
         if mode == "Demo":
             sources = SchemaLoader.load_demo_schemas(self.narration, run_id)
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Demo sources")
+        elif mode == "AAM":
+            sources = SchemaLoader.load_aam_schemas(self.narration, run_id, source_limit=source_limit)
+            self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} AAM sources (source_limit={source_limit})")
         else:
             sources = SchemaLoader.load_farm_schemas(self.narration, run_id, source_limit=source_limit)
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Farm sources (source_limit={source_limit})")
@@ -212,8 +215,138 @@ class DCLEngine:
             metrics={"source_count": len(sources)}
         ))
         
-        source_mapping_count = {}
-        for source in sources:
+        # Initialize tracking for ontology and personas
+        relevant_concept_ids = self.persona_view.get_all_relevant_concept_ids(personas)
+        ontology_mapping_count = {}
+        concept_field_mappings = {}
+        for concept in ontology:
+            if concept.id in relevant_concept_ids:
+                concept_id = f"ontology_{concept.id}"
+                concept_field_mappings[concept.id] = []
+                ontology_mapping_count[concept.id] = 0
+        
+        # Determine if we should aggregate by fabric or show individual sources
+        use_fabric_aggregation = len(sources) > 20
+        
+        if use_fabric_aggregation and mode == "AAM":
+            self.narration.add_message(
+                run_id, "Graph",
+                f"⚡ {len(sources)} sources detected - aggregating by fabric plane for clean visualization"
+            )
+            # Aggregate sources by fabric plane
+            fabric_groups = {}
+            for source in sources:
+                # Extract fabric type from tags
+                fabric_type = None
+                for tag in source.tags:
+                    if tag in ["ipaas", "warehouse", "gateway", "eventbus"]:
+                        fabric_type = tag
+                        break
+                
+                if not fabric_type:
+                    fabric_type = "ipaas"  # Default
+                
+                if fabric_type not in fabric_groups:
+                    fabric_groups[fabric_type] = []
+                fabric_groups[fabric_type].append(source)
+            
+            # Create fabric plane nodes instead of individual sources
+            fabric_labels = {
+                "ipaas": "iPaaS Plane",
+                "warehouse": "Warehouse Plane",
+                "gateway": "API Gateway Plane",
+                "eventbus": "Event Bus Plane"
+            }
+            
+            for fabric_type, group_sources in fabric_groups.items():
+                fabric_id = f"fabric_{fabric_type}"
+                source_count = len(group_sources)
+                total_fields = sum(sum(len(t.fields) for t in s.tables) for s in group_sources)
+                
+                # Get vendor from first source with that tag
+                vendor = next((s.vendor for s in group_sources if s.vendor), "Multiple")
+                
+                nodes.append(GraphNode(
+                    id=fabric_id,
+                    label=f"{fabric_labels[fabric_type]} ({source_count} sources)",
+                    level="L1",
+                    kind="fabric",
+                    group=fabric_type,
+                    status="ok",
+                    metrics={
+                        "source_count": source_count,
+                        "total_fields": total_fields,
+                        "fabric_type": fabric_type,
+                        "vendor": vendor,
+                        "sources": [s.name for s in group_sources[:10]]  # Top 10 for hover
+                    }
+                ))
+                
+                links.append(GraphLink(
+                    id=f"link_pipe_{fabric_type}",
+                    source=pipe_id,
+                    target=fabric_id,
+                    value=float(source_count),
+                    flow_type="schema",
+                    info_summary=f"{source_count} sources, {total_fields} fields"
+                ))
+            
+            # Now create mappings from fabric planes to concepts
+            # We still use the original source mappings, but aggregate them by fabric
+            source_to_fabric = {}
+            for source in sources:
+                fabric_type = next((tag for tag in source.tags if tag in ["ipaas", "warehouse", "gateway", "eventbus"]), "ipaas")
+                source_to_fabric[source.id] = f"fabric_{fabric_type}"
+            
+            # Aggregate mappings by fabric → concept
+            fabric_concept_mappings = {}
+            for mapping in mappings:
+                fabric_id = source_to_fabric.get(mapping.source_system)
+                if not fabric_id:
+                    continue
+                
+                concept = mapping.ontology_concept
+                key = (fabric_id, concept)
+                if key not in fabric_concept_mappings:
+                    fabric_concept_mappings[key] = []
+                fabric_concept_mappings[key].append(mapping)
+            
+            # Create aggregated links from fabric → concept            
+            for (fabric_id, concept_id), mappings_list in fabric_concept_mappings.items():
+                if concept_id in relevant_concept_ids:
+                    concept_node_id = f"ontology_{concept_id}"
+                    avg_confidence = sum(m.confidence for m in mappings_list) / len(mappings_list)
+                    field_count = len(mappings_list)
+                    
+                    link_id = f"link_{fabric_id}_{concept_id}"
+                    links.append(GraphLink(
+                        id=link_id,
+                        source=fabric_id,
+                        target=concept_node_id,
+                        value=avg_confidence,
+                        confidence=avg_confidence,
+                        flow_type="mapping",
+                        info_summary=f"{field_count} fields → {concept_id} (avg {avg_confidence:.2f})",
+                        mapping_detail=None  # Aggregated, no single detail
+                    ))
+                    
+                    # Update counts for ontology node creation
+                    if concept_id in ontology_mapping_count:
+                        ontology_mapping_count[concept_id] += field_count
+                    
+                    # Track field mappings for ontology metrics
+                    if concept_id in concept_field_mappings:
+                        for m in mappings_list:
+                            concept_field_mappings[concept_id].append({
+                                "field": m.source_field,
+                                "table": m.source_table,
+                                "source": m.source_system,
+                                "confidence": m.confidence
+                            })
+        else:
+            # Normal path: show individual sources
+            source_mapping_count = {}
+            for source in sources:
             source_id = f"source_{source.id}"
             table_count = len(source.tables)
             field_count = sum(len(t.fields) for t in source.tables)
@@ -256,19 +389,10 @@ class DCLEngine:
                 info_summary=f"{table_count} tables, {field_count} fields"
             ))
             
-            source_mapping_count[source.id] = 0
-        
-        relevant_concept_ids = self.persona_view.get_all_relevant_concept_ids(personas)
-        
-        ontology_mapping_count = {}
-        concept_field_mappings = {}
-        for concept in ontology:
-            if concept.id in relevant_concept_ids:
-                concept_id = f"ontology_{concept.id}"
-                concept_field_mappings[concept.id] = []
-                ontology_mapping_count[concept.id] = 0
-        
-        for mapping in mappings:
+                source_mapping_count[source.id] = 0
+            
+            # Normal path: create individual source→concept mapping links
+            for mapping in mappings:
             if mapping.ontology_concept in relevant_concept_ids:
                 source_id = f"source_{mapping.source_system}"
                 concept_id = f"ontology_{mapping.ontology_concept}"
