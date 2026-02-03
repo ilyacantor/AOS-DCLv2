@@ -122,6 +122,7 @@ class RunMetrics(CamelCaseModel):
     llm_calls: int = 0
     rag_reads: int = 0
     rag_writes: int = 0
+    total_mappings: int = 0
     processing_ms: float = 0
     render_ms: float = 0
 
