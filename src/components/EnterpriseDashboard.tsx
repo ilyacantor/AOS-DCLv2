@@ -77,11 +77,21 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
   const [confidenceFilter, setConfidenceFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
 
-  const { mappings, sources, sourceNodes, stats } = useMemo(() => {
-    if (!data) return { mappings: [], sources: [], sourceNodes: [], stats: { total: 0, high: 0, medium: 0, low: 0, canonical: 0, pending: 0 } };
+  const { mappings, sources, sourceNodes, stats, fabricStats } = useMemo(() => {
+    if (!data) return { 
+      mappings: [], 
+      sources: [], 
+      sourceNodes: [], 
+      stats: { total: 0, high: 0, medium: 0, low: 0, canonical: 0, pending: 0 },
+      fabricStats: null
+    };
 
     const mappingItems: MappingItem[] = [];
     const sourceSet = new Set<string>();
+
+    // Check if we're in fabric aggregation mode
+    const fabricNodes = data.nodes.filter(n => n.level === 'L1' && n.kind === 'fabric');
+    const isFabricMode = fabricNodes.length > 0;
 
     // Sources can be at L1 (individual sources) OR fabrics can be at L1 (aggregated mode)
     const srcNodes = data.nodes
@@ -105,6 +115,31 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
       const status = metrics?.discoveryStatus ?? metrics?.discovery_status;
       return status === 'pending_triage';
     }).length;
+
+    // Extract fabric-specific stats if in fabric mode
+    let fabricStatsData = null;
+    if (isFabricMode) {
+      const totalCandidates = fabricNodes.reduce((sum, fn) => {
+        const metrics = fn.metrics as Record<string, unknown> | undefined;
+        return sum + ((metrics?.source_count as number) || 0);
+      }, 0);
+
+      const fabricBreakdown = fabricNodes.map(fn => {
+        const metrics = fn.metrics as Record<string, unknown> | undefined;
+        return {
+          type: (metrics?.fabric_type as string) || 'unknown',
+          label: fn.label,
+          count: (metrics?.source_count as number) || 0,
+          vendor: (metrics?.vendor as string) || 'Unknown',
+          sources: (metrics?.sources as string[]) || []
+        };
+      });
+
+      fabricStatsData = {
+        totalCandidates,
+        fabrics: fabricBreakdown
+      };
+    }
 
     data.links.forEach(link => {
       const flowType = link.flowType;
@@ -131,7 +166,8 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
       mappings: mappingItems,
       sources: Array.from(sourceSet).sort(),
       sourceNodes: srcNodes,
-      stats: { total: mappingItems.length, high, medium, low, canonical: canonicalCount, pending: pendingCount }
+      stats: { total: mappingItems.length, high, medium, low, canonical: canonicalCount, pending: pendingCount },
+      fabricStats: fabricStatsData
     };
   }, [data]);
 
@@ -186,43 +222,81 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <div className="grid grid-cols-5 gap-3 p-4 border-b shrink-0">
-        <div className="bg-card rounded-lg p-3 border">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-            <Layers className="w-3.5 h-3.5" />
-            <span>Sources</span>
+      {/* KPI Row */}
+      {fabricStats ? (
+        // Fabric Mode KPIs (AAM with >20 sources)
+        <div className="grid grid-cols-6 gap-3 p-4 border-b shrink-0">
+          <div className="bg-card rounded-lg p-3 border border-primary/30">
+            <div className="flex items-center gap-2 text-primary text-xs mb-1">
+              <Database className="w-3.5 h-3.5" />
+              <span>Total Candidates</span>
+            </div>
+            <div className="text-2xl font-bold">{fabricStats.totalCandidates}</div>
+            <div className="text-[10px] text-muted-foreground mt-1">Imported assets</div>
           </div>
-          <div className="text-2xl font-bold">{sourceNodes.length}</div>
-        </div>
-        <div className="bg-card rounded-lg p-3 border">
-          <div className="flex items-center gap-2 text-green-400 text-xs mb-1">
-            <Shield className="w-3.5 h-3.5" />
-            <span>Canonical</span>
+          {fabricStats.fabrics.map(fabric => (
+            <div 
+              key={fabric.type} 
+              className="bg-card rounded-lg p-3 border cursor-pointer hover:border-primary/50 transition-colors"
+              title={`Vendor: ${fabric.vendor}\nSources: ${fabric.sources.slice(0, 5).join(', ')}${fabric.sources.length > 5 ? '...' : ''}`}
+            >
+              <div className="flex items-center gap-2 text-blue-400 text-xs mb-1">
+                <Layers className="w-3.5 h-3.5" />
+                <span>{fabric.type.toUpperCase()}</span>
+              </div>
+              <div className="text-2xl font-bold">{fabric.count}</div>
+              <div className="text-[10px] text-muted-foreground mt-1 truncate">{fabric.vendor}</div>
+            </div>
+          ))}
+          <div className="bg-card rounded-lg p-3 border">
+            <div className="flex items-center gap-2 text-green-400 text-xs mb-1">
+              <Shield className="w-3.5 h-3.5" />
+              <span>SORs</span>
+            </div>
+            <div className="text-2xl font-bold text-green-400">{stats.canonical}</div>
+            <div className="text-[10px] text-muted-foreground mt-1">Systems of Record</div>
           </div>
-          <div className="text-2xl font-bold text-green-400">{stats.canonical}</div>
         </div>
-        <div className="bg-card rounded-lg p-3 border">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-            <GitBranch className="w-3.5 h-3.5" />
-            <span>Total Mappings</span>
+      ) : (
+        // Standard Mode KPIs (Demo/Farm or AAM ≤20 sources)
+        <div className="grid grid-cols-5 gap-3 p-4 border-b shrink-0">
+          <div className="bg-card rounded-lg p-3 border">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+              <Layers className="w-3.5 h-3.5" />
+              <span>Sources</span>
+            </div>
+            <div className="text-2xl font-bold">{sourceNodes.length}</div>
           </div>
-          <div className="text-2xl font-bold">{stats.total}</div>
-        </div>
-        <div className="bg-card rounded-lg p-3 border">
-          <div className="flex items-center gap-2 text-green-400 text-xs mb-1">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>High Confidence</span>
+          <div className="bg-card rounded-lg p-3 border">
+            <div className="flex items-center gap-2 text-green-400 text-xs mb-1">
+              <Shield className="w-3.5 h-3.5" />
+              <span>Canonical</span>
+            </div>
+            <div className="text-2xl font-bold text-green-400">{stats.canonical}</div>
           </div>
-          <div className="text-2xl font-bold text-green-400">{stats.high}</div>
-        </div>
-        <div className="bg-card rounded-lg p-3 border">
-          <div className="flex items-center gap-2 text-yellow-400 text-xs mb-1">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            <span>Needs Review</span>
+          <div className="bg-card rounded-lg p-3 border">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+              <GitBranch className="w-3.5 h-3.5" />
+              <span>Total Mappings</span>
+            </div>
+            <div className="text-2xl font-bold">{stats.total}</div>
           </div>
-          <div className="text-2xl font-bold text-yellow-400">{stats.medium + stats.low}</div>
+          <div className="bg-card rounded-lg p-3 border">
+            <div className="flex items-center gap-2 text-green-400 text-xs mb-1">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>High Confidence</span>
+            </div>
+            <div className="text-2xl font-bold text-green-400">{stats.high}</div>
+          </div>
+          <div className="bg-card rounded-lg p-3 border">
+            <div className="flex items-center gap-2 text-yellow-400 text-xs mb-1">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>Needs Review</span>
+            </div>
+            <div className="text-2xl font-bold text-yellow-400">{stats.medium + stats.low}</div>
+          </div>
         </div>
-      </div>
+      )}
 
       {sourceNodes.length > 0 && (
         <div className="p-3 border-b shrink-0 bg-card/20">
