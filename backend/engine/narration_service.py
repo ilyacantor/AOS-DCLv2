@@ -62,12 +62,9 @@ class NarrationService:
     
     def get_messages(self, run_id: str) -> List[Dict]:
         run_messages = self.messages.get(run_id, [])
-        ingest_logs = self._fetch_ingest_logs()
-        
-        for i, log in enumerate(ingest_logs):
-            log["number"] = len(run_messages) + i + 1
-        
-        return run_messages + ingest_logs
+        # Note: Ingest logs moved to AAM - no longer fetching from Redis
+        # ingest_logs = self._fetch_ingest_logs()
+        return run_messages
     
     def clear_messages(self, run_id: str):
         if run_id in self.messages:
