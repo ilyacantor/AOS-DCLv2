@@ -43,19 +43,20 @@ class MappingService:
                         )
                         mappings.append(mapping)
         
-        if self.run_mode == "Prod" and os.getenv("GEMINI_API_KEY"):
-            self.narration.add_message(self.run_id, "RAG", "Prod mode: Would perform LLM enhancements")
-            self.metrics.llm_calls += len(mappings) // 10
-            self.metrics.rag_reads += 5
-            self.metrics.rag_writes += 2
+        # Store mapping lessons in RAG for both Dev and Prod
+        rag_service = RAGService(self.run_mode, self.run_id, self.narration)
+        lessons_stored = rag_service.store_mapping_lessons(mappings)
+        
+        self.metrics.rag_writes += lessons_stored
+        
+        if self.run_mode == "Prod":
+            self.narration.add_message(self.run_id, "RAG", "Prod mode: LLM enhancements enabled")
+            # In Prod, RAGService uses OpenAI embeddings (counted as LLM calls)
+            self.metrics.llm_calls += lessons_stored  # Each embedding = 1 LLM call
+            self.metrics.rag_reads += 3  # RAG lookup attempts
         else:
-            self.narration.add_message(self.run_id, "Engine", "Dev mode: Using heuristics and storing lessons")
-            
-            rag_service = RAGService(self.run_mode, self.run_id, self.narration)
-            lessons_stored = rag_service.store_mapping_lessons(mappings)
-            
-            self.metrics.rag_writes += lessons_stored
-            self.metrics.rag_reads += 3
+            self.narration.add_message(self.run_id, "Engine", "Dev mode: Using heuristics with mock embeddings")
+            self.metrics.rag_reads += 0  # No RAG reads in Dev
         
         return mappings
     
