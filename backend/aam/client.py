@@ -17,10 +17,11 @@ class AAMClient:
     """Client for AAM's DCL export endpoints."""
     
     def __init__(self, base_url: Optional[str] = None, timeout: float = 30.0):
-        self.base_url = base_url or os.getenv(
+        raw_url = base_url or os.getenv(
             "AAM_URL",
             "http://localhost:5000"
         )
+        self.base_url = raw_url.rstrip("/")
         self.timeout = timeout
         self._client = None
     
