@@ -49,10 +49,13 @@ class FarmClient:
     """Client for Farm's DCL integration endpoints."""
     
     def __init__(self, base_url: Optional[str] = None, timeout: float = 30.0):
-        self.base_url = base_url or os.getenv(
-            "FARM_API_URL",
-            "https://63971109-a901-48bc-a71f-89583b2e11d4-00-1do0vncksilxt.janeway.replit.dev"
-        )
+        self.base_url = base_url or os.getenv("FARM_API_URL")
+        if not self.base_url:
+            raise ValueError(
+                "FARM_API_URL environment variable is required. "
+                "Set it in Replit Secrets or your environment."
+            )
+        self.base_url = self.base_url.rstrip("/")
         self.timeout = timeout
         self._client = None
     

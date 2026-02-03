@@ -17,10 +17,12 @@ class AAMClient:
     """Client for AAM's DCL export endpoints."""
     
     def __init__(self, base_url: Optional[str] = None, timeout: float = 30.0):
-        raw_url = base_url or os.getenv(
-            "AAM_URL",
-            "http://localhost:5000"
-        )
+        raw_url = base_url or os.getenv("AAM_URL")
+        if not raw_url:
+            raise ValueError(
+                "AAM_URL environment variable is required. "
+                "Set it in Replit Secrets or your environment."
+            )
         self.base_url = raw_url.rstrip("/")
         self.timeout = timeout
         self._client = None
