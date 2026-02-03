@@ -9,6 +9,7 @@ from backend.domain import (
 from backend.engine.schema_loader import SchemaLoader
 from backend.engine.ontology import get_ontology
 from backend.engine.mapping_service import MappingService
+from backend.engine.rag_service import RAGService
 from backend.engine.narration_service import NarrationService
 from backend.engine.persona_view import PersonaView
 from backend.semantic_mapper import SemanticMapper
