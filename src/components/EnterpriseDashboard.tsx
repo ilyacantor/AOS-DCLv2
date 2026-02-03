@@ -83,9 +83,9 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
     const mappingItems: MappingItem[] = [];
     const sourceSet = new Set<string>();
 
-    // Use camelCase properties (with fallback for snake_case during transition)
+    // Sources can be at L1 (individual sources) OR fabrics can be at L1 (aggregated mode)
     const srcNodes = data.nodes
-      .filter(n => n.level === 'L1' && n.kind === 'source')
+      .filter(n => (n.level === 'L1' && (n.kind === 'source' || n.kind === 'fabric')))
       .sort((a, b) => {
         const metrics = a.metrics as Record<string, unknown> | undefined;
         const metricsB = b.metrics as Record<string, unknown> | undefined;

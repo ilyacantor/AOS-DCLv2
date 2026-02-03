@@ -134,12 +134,20 @@ function App() {
         body: JSON.stringify({
           mode: dataMode,
           run_mode: runMode,
-          personas: selectedPersonas
+          personas: selectedPersonas.length > 0 ? selectedPersonas : undefined
         }),
       });
 
       if (!res.ok) throw new Error('Failed to run pipeline');
       const data = await res.json();
+      console.log('[handleRun] Received data:', {
+        nodes: data.graph?.nodes?.length,
+        links: data.graph?.links?.length,
+        mode: dataMode,
+        personas: selectedPersonas,
+        runMetrics: data.run_metrics
+      });
+      
       const graphWithViews = {
         ...data.graph,
         meta: {
@@ -151,7 +159,7 @@ function App() {
       setGraphData(graphWithViews);
       setRunId(data.run_id);
       setIsRunning(false);
-      toast({ title: 'Pipeline Complete', description: 'New graph snapshot generated.' });
+      toast({ title: 'Pipeline Complete', description: `${data.graph.nodes.length} nodes, ${data.graph.links.length} links` });
     } catch (e) {
       console.error('Failed to run pipeline:', e);
       setIsRunning(false);
