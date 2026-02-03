@@ -5,8 +5,8 @@ import { Play, Activity, Database, Cpu, Clock, LayoutGrid, GitBranch, Menu, X } 
 interface ControlsBarProps {
   runMode: 'Dev' | 'Prod';
   setRunMode: (m: 'Dev' | 'Prod') => void;
-  dataMode: 'Demo' | 'Farm';
-  setDataMode: (m: 'Demo' | 'Farm') => void;
+  dataMode: 'Demo' | 'Farm' | 'AAM';
+  setDataMode: (m: 'Demo' | 'Farm' | 'AAM') => void;
   sourceLimit: number;
   setSourceLimit: (n: number) => void;
   selectedPersonas: PersonaId[];
@@ -93,8 +93,9 @@ export function ControlsBar({
         <ToggleGroup label="Data">
           <ToggleButton active={dataMode === 'Demo'} onClick={() => setDataMode('Demo')}>Demo</ToggleButton>
           <ToggleButton active={dataMode === 'Farm'} onClick={() => setDataMode('Farm')}>Farm</ToggleButton>
+          <ToggleButton active={dataMode === 'AAM'} onClick={() => setDataMode('AAM')}>AAM</ToggleButton>
         </ToggleGroup>
-        {dataMode === 'Farm' && (
+        {(dataMode === 'Farm' || dataMode === 'AAM') && (
           <select
             value={sourceLimit}
             onChange={(e) => setSourceLimit(Number(e.target.value))}

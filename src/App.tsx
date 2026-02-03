@@ -18,7 +18,7 @@ const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO'];
 function App() {
   const [graphData, setGraphData] = useState<GraphSnapshot | null>(null);
   const [runMode, setRunMode] = useState<'Dev' | 'Prod'>('Dev');
-  const [dataMode, setDataMode] = useState<'Demo' | 'Farm'>('Demo');
+  const [dataMode, setDataMode] = useState<'Demo' | 'Farm' | 'AAM'>('Demo');
   const [sourceLimit, setSourceLimit] = useState<number>(5);
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>([]);
   const [runId, setRunId] = useState<string | undefined>(undefined);
@@ -217,11 +217,12 @@ function App() {
                 <span className="text-xs text-muted-foreground">Data:</span>
                 <select
                   value={dataMode}
-                  onChange={(e) => setDataMode(e.target.value as 'Demo' | 'Farm')}
+                  onChange={(e) => setDataMode(e.target.value as 'Demo' | 'Farm' | 'AAM')}
                   className="px-2 py-1 text-xs rounded border border-border bg-background"
                 >
                   <option value="Demo">Demo</option>
                   <option value="Farm">Farm</option>
+                  <option value="AAM">AAM</option>
                 </select>
               </div>
 
@@ -239,7 +240,7 @@ function App() {
               </div>
 
               {/* Source Limit (only for Farm mode) */}
-              {dataMode === 'Farm' && (
+              {(dataMode === 'Farm' || dataMode === 'AAM') && (
                 <div className="flex items-center gap-1">
                   <span className="text-xs text-muted-foreground">Sources:</span>
                   <input
