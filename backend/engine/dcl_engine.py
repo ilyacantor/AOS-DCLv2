@@ -347,88 +347,86 @@ class DCLEngine:
             # Normal path: show individual sources
             source_mapping_count = {}
             for source in sources:
-            source_id = f"source_{source.id}"
-            table_count = len(source.tables)
-            field_count = sum(len(t.fields) for t in source.tables)
-            
-            discovery_status = getattr(source, 'discovery_status', None)
-            discovery_value = discovery_status.value if discovery_status else "canonical"
-            status = "ok" if discovery_value == "canonical" else "pending"
-            
-            resolution_type = getattr(source, 'resolution_type', None)
-            resolution_value = resolution_type.value if resolution_type else "exact"
-            
-            nodes.append(GraphNode(
-                id=source_id,
-                label=source.name,
-                level="L1",
-                kind="source",
-                group=source.type,
-                status=status,
-                metrics={
-                    "tables": table_count,
-                    "fields": field_count,
-                    "type": source.type,
-                    "canonical_id": getattr(source, 'canonical_id', source.id),
-                    "raw_id": getattr(source, 'raw_id', source.id),
-                    "discovery_status": discovery_value,
-                    "resolution_type": resolution_value,
-                    "trust_score": getattr(source, 'trust_score', 50),
-                    "data_quality_score": getattr(source, 'data_quality_score', 50),
-                    "vendor": getattr(source, 'vendor', None),
-                    "category": getattr(source, 'category', None),
-                }
-            ))
-            
-            links.append(GraphLink(
-                id=f"link_pipe_{source.id}",
-                source=pipe_id,
-                target=source_id,
-                value=float(table_count),
-                flow_type="schema",
-                info_summary=f"{table_count} tables, {field_count} fields"
-            ))
-            
+                source_id = f"source_{source.id}"
+                table_count = len(source.tables)
+                field_count = sum(len(t.fields) for t in source.tables)
+                
+                discovery_status = getattr(source, 'discovery_status', None)
+                discovery_value = discovery_status.value if discovery_status else "canonical"
+                status = "ok" if discovery_value == "canonical" else "pending"
+                
+                resolution_type = getattr(source, 'resolution_type', None)
+                resolution_value = resolution_type.value if resolution_type else "exact"
+                
+                nodes.append(GraphNode(
+                    id=source_id,
+                    label=source.name,
+                    level="L1",
+                    kind="source",
+                    group=source.type,
+                    status=status,
+                    metrics={
+                        "tables": table_count,
+                        "fields": field_count,
+                        "type": source.type,
+                        "canonical_id": getattr(source, 'canonical_id', source.id),
+                        "raw_id": getattr(source, 'raw_id', source.id),
+                        "discovery_status": discovery_value,
+                        "resolution_type": resolution_value,
+                        "trust_score": getattr(source, 'trust_score', 50),
+                        "data_quality_score": getattr(source, 'data_quality_score', 50),
+                        "vendor": getattr(source, 'vendor', None),
+                        "category": getattr(source, 'category', None),
+                    }
+                ))
+                
+                links.append(GraphLink(
+                    id=f"link_pipe_{source.id}",
+                    source=pipe_id,
+                    target=source_id,
+                    value=float(table_count),
+                    flow_type="schema",
+                    info_summary=f"{table_count} tables, {field_count} fields"
+                ))
+                
                 source_mapping_count[source.id] = 0
             
             # Normal path: create individual source→concept mapping links
             for mapping in mappings:
-            if mapping.ontology_concept in relevant_concept_ids:
-                source_id = f"source_{mapping.source_system}"
-                concept_id = f"ontology_{mapping.ontology_concept}"
-                
-                if source_id and concept_id:
-                    link_id = f"link_{mapping.source_system}_{mapping.ontology_concept}_{uuid.uuid4().hex[:8]}"
-                    links.append(GraphLink(
-                        id=link_id,
-                        source=source_id,
-                        target=concept_id,
-                        value=mapping.confidence,
-                        confidence=mapping.confidence,
-                        flow_type="mapping",
-                        # Keep info_summary for backward compatibility
-                        info_summary=f"{mapping.source_field} → {mapping.ontology_concept} ({mapping.method}, {mapping.confidence:.2f})",
-                        # New structured field
-                        mapping_detail=MappingDetail(
-                            source_field=mapping.source_field,
-                            source_table=mapping.source_table,
-                            target_concept=mapping.ontology_concept,
-                            method=mapping.method,
-                            confidence=mapping.confidence
-                        )
-                    ))
+                if mapping.ontology_concept in relevant_concept_ids:
+                    source_id = f"source_{mapping.source_system}"
+                    concept_id = f"ontology_{mapping.ontology_concept}"
                     
-                    if mapping.source_system in source_mapping_count:
-                        source_mapping_count[mapping.source_system] += 1
-                    if mapping.ontology_concept in ontology_mapping_count:
-                        ontology_mapping_count[mapping.ontology_concept] += 1
-                    if mapping.ontology_concept in concept_field_mappings:
-                        concept_field_mappings[mapping.ontology_concept].append({
-                            "field": mapping.source_field,
-                            "table": mapping.source_table,
-                            "source": mapping.source_system,
-                            "confidence": mapping.confidence
-                        })
+                    if source_id and concept_id:
+                        link_id = f"link_{mapping.source_system}_{mapping.ontology_concept}_{uuid.uuid4().hex[:8]}"
+                        links.append(GraphLink(
+                            id=link_id,
+                            source=source_id,
+                            target=concept_id,
+                            value=mapping.confidence,
+                            confidence=mapping.confidence,
+                            flow_type="mapping",
+                            info_summary=f"{mapping.source_field} → {mapping.ontology_concept} ({mapping.method}, {mapping.confidence:.2f})",
+                            mapping_detail=MappingDetail(
+                                source_field=mapping.source_field,
+                                source_table=mapping.source_table,
+                                target_concept=mapping.ontology_concept,
+                                method=mapping.method,
+                                confidence=mapping.confidence
+                            )
+                        ))
+                        
+                        if mapping.source_system in source_mapping_count:
+                            source_mapping_count[mapping.source_system] += 1
+                        if mapping.ontology_concept in ontology_mapping_count:
+                            ontology_mapping_count[mapping.ontology_concept] += 1
+                        if mapping.ontology_concept in concept_field_mappings:
+                            concept_field_mappings[mapping.ontology_concept].append({
+                                "field": mapping.source_field,
+                                "table": mapping.source_table,
+                                "source": mapping.source_system,
+                                "confidence": mapping.confidence
+                            })
         
         for concept in ontology:
             if concept.id in relevant_concept_ids:
