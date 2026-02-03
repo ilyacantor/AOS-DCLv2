@@ -35,6 +35,7 @@ export function NarrationPanel({ runId }: NarrationPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    console.log('[NarrationPanel] runId changed:', runId);
     setMessages([]);
     if (!runId) return;
 
@@ -43,6 +44,7 @@ export function NarrationPanel({ runId }: NarrationPanelProps) {
         const response = await fetch(`/api/dcl/narration/${runId}`);
         const data = await response.json();
         const apiMessages = data.messages || [];
+        console.log('[NarrationPanel] Fetched', apiMessages.length, 'messages for runId', runId);
         const mappedMessages = apiMessages.map((m: any, idx: number) => ({
           id: m.id || `msg-${idx}`,
           seq: m.number || idx + 1,
