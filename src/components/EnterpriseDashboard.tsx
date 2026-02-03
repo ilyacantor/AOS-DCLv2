@@ -89,10 +89,9 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
     const mappingItems: MappingItem[] = [];
     const sourceSet = new Set<string>();
 
-    // Check if we're in fabric aggregation mode
-    const fabricNodes = data.nodes.filter(n => n.level === 'L1' && n.kind === 'fabric');
-    const isFabricMode = fabricNodes.length > 0;
-
+    // Check for fabric nodes (they carry the absolute truth in their metrics)
+    const fabricNodes = data.nodes.filter(n => n.kind === 'fabric');
+    
     // Sources can be at L1 (individual sources) OR fabrics can be at L1 (aggregated mode)
     const srcNodes = data.nodes
       .filter(n => (n.level === 'L1' && (n.kind === 'source' || n.kind === 'fabric')))
@@ -116,9 +115,9 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
       return status === 'pending_triage';
     }).length;
 
-    // Extract fabric-specific stats if in fabric mode
+    // Extract absolute fabric stats (always, regardless of graph aggregation)
     let fabricStatsData = null;
-    if (isFabricMode) {
+    if (fabricNodes.length > 0) {
       const totalCandidates = fabricNodes.reduce((sum, fn) => {
         const metrics = fn.metrics as Record<string, unknown> | undefined;
         return sum + ((metrics?.source_count as number) || 0);
@@ -222,9 +221,9 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* KPI Row */}
+      {/* KPI Row - Always shows absolute truth */}
       {fabricStats ? (
-        // Fabric Mode KPIs (AAM with >20 sources)
+        // AAM Mode - Absolute fabric stats (regardless of graph aggregation)
         <div className="grid grid-cols-6 gap-3 p-4 border-b shrink-0">
           <div className="bg-card rounded-lg p-3 border border-primary/30">
             <div className="flex items-center gap-2 text-primary text-xs mb-1">
@@ -258,7 +257,7 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
           </div>
         </div>
       ) : (
-        // Standard Mode KPIs (Demo/Farm or AAM ≤20 sources)
+        // Demo/Farm Mode - Standard KPIs
         <div className="grid grid-cols-5 gap-3 p-4 border-b shrink-0">
           <div className="bg-card rounded-lg p-3 border">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
