@@ -161,6 +161,21 @@ class DCLEngine:
                     "Prod mode: LLM validation skipped - OPENAI_API_KEY not configured"
                 )
         
+        # Store mapping lessons in RAG (both Dev and Prod modes)
+        rag_service = RAGService(run_mode, run_id, self.narration)
+        lessons_stored = rag_service.store_mapping_lessons(mappings)
+        metrics.rag_writes = lessons_stored
+        
+        if run_mode == "Prod" and lessons_stored > 0:
+            # OpenAI embeddings count as additional LLM calls
+            metrics.llm_calls += lessons_stored
+            metrics.rag_reads = 3  # Attempted RAG lookups during mapping
+        elif lessons_stored > 0:
+            # Dev mode uses mock embeddings (no LLM calls)
+            metrics.rag_reads = 0
+        
+        metrics.total_mappings = len(mappings)
+        
         graph = self._build_graph(mode, sources, ontology, mappings, personas, run_id)
         
         processing_time = (time.time() - start_time) * 1000
