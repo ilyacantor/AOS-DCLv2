@@ -250,7 +250,7 @@ class DCLEngine:
                 run_id, "Graph",
                 f"⚡ {len(sources)} sources detected - aggregating by fabric plane for clean visualization"
             )
-            # Aggregate sources by fabric plane
+            # Aggregate sources by fabric_type only (vendors are grouped within)
             fabric_groups = {}
             for source in sources:
                 # Extract fabric type from tags
@@ -267,12 +267,12 @@ class DCLEngine:
                     fabric_groups[fabric_type] = []
                 fabric_groups[fabric_type].append(source)
             
-            # Create fabric plane nodes instead of individual sources
+            # Create fabric plane nodes - one per fabric type
             fabric_labels = {
-                "ipaas": "iPaaS Plane",
-                "warehouse": "Warehouse Plane",
-                "gateway": "API Gateway Plane",
-                "eventbus": "Event Bus Plane"
+                "ipaas": "iPaaS",
+                "warehouse": "Warehouse",
+                "gateway": "API Gateway",
+                "eventbus": "Event Bus"
             }
             
             for fabric_type, group_sources in fabric_groups.items():
@@ -280,8 +280,9 @@ class DCLEngine:
                 source_count = len(group_sources)
                 total_fields = sum(sum(len(t.fields) for t in s.tables) for s in group_sources)
                 
-                # Get vendor from first source with that tag
-                vendor = next((s.vendor for s in group_sources if s.vendor), "Multiple")
+                # Collect unique vendors within this fabric type
+                vendors = sorted(set(s.vendor for s in group_sources if hasattr(s, 'vendor') and s.vendor))
+                vendor_summary = ", ".join(vendors) if vendors else "Multiple"
                 
                 nodes.append(GraphNode(
                     id=fabric_id,
@@ -294,7 +295,7 @@ class DCLEngine:
                         "source_count": source_count,
                         "total_fields": total_fields,
                         "fabric_type": fabric_type,
-                        "vendor": vendor,
+                        "vendors": vendors,
                         "sources": [s.name for s in group_sources[:10]]  # Top 10 for hover
                     }
                 ))
@@ -305,11 +306,11 @@ class DCLEngine:
                     target=fabric_id,
                     value=float(source_count),
                     flow_type="schema",
-                    info_summary=f"{source_count} sources, {total_fields} fields"
+                    info_summary=f"{vendor_summary}: {source_count} sources, {total_fields} fields"
                 ))
             
             # Now create mappings from fabric planes to concepts
-            # We still use the original source mappings, but aggregate them by fabric
+            # Map each source to its fabric plane (by type only)
             source_to_fabric = {}
             for source in sources:
                 fabric_type = next((tag for tag in source.tags if tag in ["ipaas", "warehouse", "gateway", "eventbus"]), "ipaas")

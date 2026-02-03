@@ -123,34 +123,22 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
         return sum + ((metrics?.source_count as number) || 0);
       }, 0);
 
-      // Group fabrics by type to count instances
-      const fabricTypeMap = new Map<string, { count: number; totalSources: number; vendors: Set<string>; allSources: string[] }>();
-      
-      fabricNodes.forEach(fn => {
+      // Extract fabric breakdown directly from nodes (no further grouping needed)
+      const fabricBreakdown = fabricNodes.map(fn => {
         const metrics = fn.metrics as Record<string, unknown> | undefined;
         const fabricType = (metrics?.fabric_type as string) || 'unknown';
         const sourceCount = (metrics?.source_count as number) || 0;
-        const vendor = (metrics?.vendor as string) || 'Unknown';
+        const vendorsArray = (metrics?.vendors as string[]) || [];
         const sources = (metrics?.sources as string[]) || [];
         
-        if (!fabricTypeMap.has(fabricType)) {
-          fabricTypeMap.set(fabricType, { count: 0, totalSources: 0, vendors: new Set(), allSources: [] });
-        }
-        
-        const entry = fabricTypeMap.get(fabricType)!;
-        entry.count += 1;
-        entry.totalSources += sourceCount;
-        entry.vendors.add(vendor);
-        entry.allSources.push(...sources);
-      });
-
-      const fabricBreakdown = Array.from(fabricTypeMap.entries()).map(([type, data]) => ({
-        type,
-        instanceCount: data.count,
-        count: data.totalSources,
-        vendors: Array.from(data.vendors),
-        sources: data.allSources
-      }));
+        return {
+          type: fabricType,
+          instanceCount: vendorsArray.length,  // Number of vendor instances
+          count: sourceCount,
+          vendors: vendorsArray,
+          sources: sources
+        };
+      }).filter(f => f.count > 0);  // Filter out empty fabrics
 
       fabricStatsData = {
         totalCandidates,
