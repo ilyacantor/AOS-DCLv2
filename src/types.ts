@@ -24,7 +24,7 @@ export interface GraphNode {
   id: string;
   label: string;
   level: 'L0' | 'L1' | 'L2' | 'L3';
-  kind: 'pipe' | 'source' | 'ontology' | 'bll';
+  kind: 'pipe' | 'source' | 'ontology' | 'bll' | 'fabric';
   group?: string;
   status?: string;
   metrics?: SourceMetrics & Record<string, unknown>;

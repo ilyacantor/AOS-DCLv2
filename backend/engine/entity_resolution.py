@@ -8,10 +8,14 @@ Two-pass approach:
 - Pass 2: LLM-assisted fuzzy matching with confidence scoring
 
 Human confirmation required for all fuzzy matches. Every merge is reversible.
+
+Data source: data/entity_test_scenarios.json -> entity_fragmentation
 """
 
+import json
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -22,6 +26,8 @@ logger = get_logger(__name__)
 
 
 ALLOWED_ENTITY_TYPES = {"company", "customer"}
+
+SCENARIO_FILE = Path("data/entity_test_scenarios.json")
 
 
 class SourceRecord(BaseModel):
@@ -70,6 +76,15 @@ class MergeHistoryEntry(BaseModel):
     previous_state: Optional[Dict[str, Any]] = None
 
 
+def _load_scenario_data() -> Dict[str, Any]:
+    """Load entity test scenarios from JSON file."""
+    if not SCENARIO_FILE.exists():
+        logger.warning(f"Scenario file not found: {SCENARIO_FILE}")
+        return {}
+    with open(SCENARIO_FILE, "r") as f:
+        return json.load(f)
+
+
 class EntityResolutionStore:
     """In-memory store for entity resolution data."""
 
@@ -78,124 +93,44 @@ class EntityResolutionStore:
         self._canonical_entities: Dict[str, CanonicalEntity] = {}
         self._match_candidates: Dict[str, MatchCandidate] = {}
         self._merge_history: List[MergeHistoryEntry] = []
-        self._seed_test_data()
+        self._seed_from_scenarios()
 
-    def _seed_test_data(self):
-        """Seed test data for entity resolution scenarios."""
-        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    def _seed_from_scenarios(self):
+        """Load source records from entity_test_scenarios.json."""
+        data = _load_scenario_data()
+        frag = data.get("entity_fragmentation", {})
 
-        # Scenario 1: Deterministic match - same email
-        rec_a = SourceRecord(
-            source_system="Salesforce",
-            record_id="SF-001",
-            entity_type="company",
-            name="Acme Corp",
-            field_values={
-                "email": "contact@acme.com",
-                "domain": "acme.com",
-                "revenue": 4200000,
-                "industry": "Software",
-                "address": "123 Main St, San Francisco, CA",
-                "phone": "+1-415-555-0100",
-            },
-        )
-        rec_b = SourceRecord(
-            source_system="NetSuite",
-            record_id="NS-001",
-            entity_type="company",
-            name="ACME CORPORATION",
-            field_values={
-                "email": "contact@acme.com",
-                "domain": "acme.com",
-                "revenue": 3800000,
-                "industry": "Technology",
-                "address": "123 Main Street, SF, CA",
-                "phone": "+14155550100",
-            },
-        )
-        rec_c = SourceRecord(
-            source_system="HubSpot",
-            record_id="HS-001",
-            entity_type="company",
-            name="Acme Corp.",
-            field_values={
-                "email": "contact@acme.com",
-                "domain": "acme.com",
-                "revenue": 4000000,
-                "industry": "Software",
-                "employees": 250,
-            },
-        )
+        # Load company records
+        for company in frag.get("companies", []):
+            for rec_data in company.get("records", []):
+                rec = SourceRecord(
+                    source_system=rec_data["source_system"],
+                    record_id=rec_data["record_id"],
+                    entity_type="company",
+                    name=rec_data["name"],
+                    field_values=rec_data.get("field_values", {}),
+                )
+                self._source_records.append(rec)
 
-        # Scenario 2: Fuzzy match - no shared keys
-        rec_d = SourceRecord(
-            source_system="Salesforce",
-            record_id="SF-002",
-            entity_type="company",
-            name="Acme Corp",
-            field_values={
-                "industry": "Software",
-                "revenue": 4200000,
-            },
-        )
-        rec_e = SourceRecord(
-            source_system="SAP",
-            record_id="SAP-001",
-            entity_type="company",
-            name="Acme Corporation LLC",
-            field_values={
-                "industry": "Software",
-                "revenue": 4100000,
-            },
-        )
+        # Load non-match records (they exist in the pool for browse/search)
+        for pair in frag.get("non_matches", []):
+            for rec_data in pair.get("records", []):
+                # Check if this record_id is already loaded (might overlap with company records)
+                already = any(
+                    r.record_id == rec_data["record_id"] and r.source_system == rec_data["source_system"]
+                    for r in self._source_records
+                )
+                if not already:
+                    rec = SourceRecord(
+                        source_system=rec_data["source_system"],
+                        record_id=rec_data["record_id"],
+                        entity_type="company",
+                        name=rec_data["name"],
+                        field_values=rec_data.get("field_values", {}),
+                    )
+                    self._source_records.append(rec)
 
-        # Scenario 3: Non-match - different companies
-        rec_f = SourceRecord(
-            source_system="Salesforce",
-            record_id="SF-003",
-            entity_type="company",
-            name="Acme Corp",
-            field_values={
-                "industry": "Software",
-                "domain": "acme.com",
-            },
-        )
-        rec_g = SourceRecord(
-            source_system="NetSuite",
-            record_id="NS-003",
-            entity_type="company",
-            name="Acme Foods LLC",
-            field_values={
-                "industry": "Food & Beverage",
-                "domain": "acmefoods.com",
-            },
-        )
-
-        # Additional companies for browse
-        rec_h = SourceRecord(
-            source_system="Salesforce",
-            record_id="SF-004",
-            entity_type="company",
-            name="TechStart Inc",
-            field_values={
-                "email": "hello@techstart.io",
-                "industry": "Technology",
-                "revenue": 2500000,
-            },
-        )
-        rec_i = SourceRecord(
-            source_system="NetSuite",
-            record_id="NS-004",
-            entity_type="company",
-            name="TechStart",
-            field_values={
-                "email": "hello@techstart.io",
-                "industry": "Technology",
-                "revenue": 2500000,
-            },
-        )
-
-        self._source_records = [rec_a, rec_b, rec_c, rec_d, rec_e, rec_f, rec_g, rec_h, rec_i]
+        logger.info(f"Loaded {len(self._source_records)} source records from scenarios")
 
     def add_source_record(self, record: SourceRecord):
         """Add a source record to the store."""
@@ -222,7 +157,6 @@ class EntityResolutionStore:
                 if rec_a.source_system == rec_b.source_system:
                     continue
 
-                # Check if already matched
                 already_matched = self._already_matched(rec_a, rec_b)
                 if already_matched:
                     continue
@@ -333,9 +267,12 @@ class EntityResolutionStore:
         ind_b = rec_b.field_values.get("industry", "").lower()
         if not ind_a or not ind_b:
             return True  # Unknown industries don't disqualify
-        # Simple synonym matching
+        # Synonym groups
         tech_terms = {"software", "technology", "tech", "saas", "it"}
         if ind_a in tech_terms and ind_b in tech_terms:
+            return True
+        conglomerate_terms = {"conglomerate", "diversified", "holding company"}
+        if ind_a in conglomerate_terms and ind_b in conglomerate_terms:
             return True
         return ind_a == ind_b
 
@@ -348,6 +285,12 @@ class EntityResolutionStore:
         # Synonym groups
         tech_terms = {"software", "technology", "tech", "saas", "it"}
         if ind_a in tech_terms and ind_b in tech_terms:
+            return False
+        conglomerate_terms = {"conglomerate", "diversified", "holding company"}
+        if ind_a in conglomerate_terms and ind_b in conglomerate_terms:
+            return False
+        manufacturing_terms = {"manufacturing", "industrial"}
+        if ind_a in manufacturing_terms and ind_b in manufacturing_terms:
             return False
         return ind_a != ind_b
 
@@ -400,11 +343,17 @@ class EntityResolutionStore:
             self._canonical_entities[global_id] = entity
         else:
             entity = self._canonical_entities[global_id]
+            # One-record-per-system constraint: don't add a second record from the same system
+            existing_systems = {sr.source_system: sr.record_id for sr in entity.source_records}
             for rec in [candidate.record_a, candidate.record_b]:
-                if not any(
+                is_in_entity = any(
                     sr.source_system == rec.source_system and sr.record_id == rec.record_id
                     for sr in entity.source_records
-                ):
+                )
+                if not is_in_entity:
+                    if rec.source_system in existing_systems:
+                        # Different record from same system - skip this match entirely
+                        return
                     entity.source_records.append(rec)
             entity.updated_at = now
             entity.golden_record = self._build_golden_record(entity)
@@ -439,13 +388,13 @@ class EntityResolutionStore:
         return None
 
     def _build_golden_record(self, entity: CanonicalEntity) -> Dict[str, Any]:
-        """Build a golden record from source records using trust-based selection."""
-        # SOR priority: NetSuite > Salesforce > HubSpot > SAP > others
+        """Build a golden record from source records using trust-based selection with freshness tiebreaker."""
+        # SOR priority: netsuite_erp = sap_erp (ERP) > salesforce_crm > hubspot_crm > others
         SOR_PRIORITY = {
-            "NetSuite": 4,
-            "Salesforce": 3,
-            "HubSpot": 2,
-            "SAP": 2,
+            "netsuite_erp": 4,
+            "sap_erp": 4,
+            "salesforce_crm": 3,
+            "hubspot_crm": 2,
         }
 
         golden: Dict[str, Any] = {"canonical_name": entity.canonical_name}
@@ -453,14 +402,39 @@ class EntityResolutionStore:
 
         for rec in entity.source_records:
             priority = SOR_PRIORITY.get(rec.source_system, 1)
+            last_updated = rec.field_values.get("last_updated", "1970-01-01T00:00:00Z")
+
             for field, value in rec.field_values.items():
-                if field not in field_sources or priority > field_sources[field]["priority"]:
+                if field == "last_updated":
+                    continue
+
+                if field not in field_sources:
                     field_sources[field] = {
                         "value": value,
                         "source_system": rec.source_system,
                         "priority": priority,
+                        "last_updated": last_updated,
                         "reason": f"Highest SOR priority ({rec.source_system})",
                     }
+                else:
+                    existing = field_sources[field]
+                    # Prefer higher priority; tiebreak by freshness
+                    if priority > existing["priority"]:
+                        field_sources[field] = {
+                            "value": value,
+                            "source_system": rec.source_system,
+                            "priority": priority,
+                            "last_updated": last_updated,
+                            "reason": f"Highest SOR priority ({rec.source_system})",
+                        }
+                    elif priority == existing["priority"] and last_updated > existing["last_updated"]:
+                        field_sources[field] = {
+                            "value": value,
+                            "source_system": rec.source_system,
+                            "priority": priority,
+                            "last_updated": last_updated,
+                            "reason": f"Most recent data ({rec.source_system}, updated {last_updated[:10]})",
+                        }
 
         for field, info in field_sources.items():
             golden[field] = {

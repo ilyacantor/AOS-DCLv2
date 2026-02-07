@@ -57,7 +57,7 @@ class ConflictInfo(BaseModel):
     systems: List[str]
     values: Dict[str, Any]
     root_cause: str
-    severity: float
+    severity: str
     trust_recommendation: str
 
 class TemporalWarningInfo(BaseModel):
@@ -578,9 +578,9 @@ def execute_query(request: QueryRequest) -> QueryResponse:
         try:
             from backend.engine.conflict_detection import get_conflict_store
             cd_store = get_conflict_store()
-            active = cd_store.get_active_conflicts()
+            all_conflicts = cd_store.get_all_conflicts()
             entity_conflicts = [
-                c for c in active
+                c for c in all_conflicts
                 if request.entity.lower() in c.entity_name.lower()
                 and c.metric == request.metric
             ]

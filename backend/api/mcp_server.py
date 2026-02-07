@@ -35,7 +35,7 @@ class MCPToolResult(BaseModel):
     """MCP tool call result."""
     tool: str
     success: bool
-    data: Any = None
+    result: Any = None
     error: Optional[str] = None
 
 
@@ -131,7 +131,7 @@ def _handle_concept_lookup(tool_call: MCPToolCall) -> MCPToolResult:
     """Handle concept_lookup tool."""
     from backend.api.semantic_export import resolve_metric, resolve_entity
 
-    query = tool_call.arguments.get("query", "")
+    query = tool_call.arguments.get("query") or tool_call.arguments.get("concept", "")
     if not query:
         return MCPToolResult(
             tool="concept_lookup",
@@ -145,7 +145,7 @@ def _handle_concept_lookup(tool_call: MCPToolCall) -> MCPToolResult:
         return MCPToolResult(
             tool="concept_lookup",
             success=True,
-            data={
+            result={
                 "type": "metric",
                 "id": metric.id,
                 "name": metric.name,
@@ -163,7 +163,7 @@ def _handle_concept_lookup(tool_call: MCPToolCall) -> MCPToolResult:
         return MCPToolResult(
             tool="concept_lookup",
             success=True,
-            data={
+            result={
                 "type": "entity",
                 "id": entity.id,
                 "name": entity.name,
@@ -187,7 +187,7 @@ def _handle_semantic_export(tool_call: MCPToolCall) -> MCPToolResult:
     return MCPToolResult(
         tool="semantic_export",
         success=True,
-        data=export.model_dump(),
+        result=export.model_dump(),
     )
 
 
@@ -220,13 +220,13 @@ def _handle_query(tool_call: MCPToolCall) -> MCPToolResult:
             tool="query",
             success=False,
             error=result.error,
-            data=result.model_dump(),
+            result=result.model_dump(),
         )
 
     return MCPToolResult(
         tool="query",
         success=True,
-        data=result.model_dump(),
+        result=result.model_dump(),
     )
 
 
@@ -234,7 +234,7 @@ def _handle_provenance(tool_call: MCPToolCall) -> MCPToolResult:
     """Handle provenance tool."""
     from backend.engine.provenance_service import get_provenance
 
-    metric = tool_call.arguments.get("metric")
+    metric = tool_call.arguments.get("metric") or tool_call.arguments.get("metric_id")
     if not metric:
         return MCPToolResult(
             tool="provenance",
@@ -253,5 +253,5 @@ def _handle_provenance(tool_call: MCPToolCall) -> MCPToolResult:
     return MCPToolResult(
         tool="provenance",
         success=True,
-        data=trace.model_dump(),
+        result=trace.model_dump(),
     )

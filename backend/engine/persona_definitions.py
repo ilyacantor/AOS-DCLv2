@@ -61,9 +61,9 @@ class PersonaDefinitionStore:
                 id="pcd-customers-coo",
                 metric_id="customers",
                 persona="COO",
-                definition="Accounts with active product usage in the last 30 days",
-                calculation_method="COUNT(DISTINCT account_id) WHERE last_activity_date > NOW() - INTERVAL '30 days'",
-                value_override=5200,
+                definition="Accounts with active support contracts or SLA agreements",
+                calculation_method="COUNT(DISTINCT account_id) WHERE has_support_contract = true OR has_sla = true",
+                value_override=3200,
             ),
             PersonaDefinition(
                 id="pcd-customers-cto",
@@ -80,15 +80,15 @@ class PersonaDefinitionStore:
                 persona="CFO",
                 definition="GAAP recognized revenue, net of returns and allowances",
                 calculation_method="SUM(recognized_amount) - SUM(returns) - SUM(allowances)",
-                value_multiplier=0.92,
+                value_override=200000000,
             ),
             PersonaDefinition(
                 id="pcd-revenue-cro",
                 metric_id="revenue",
                 persona="CRO",
-                definition="Booked revenue from closed-won deals",
+                definition="Booked revenue from closed-won deals including services",
                 calculation_method="SUM(amount) WHERE stage = 'Closed-Won'",
-                value_multiplier=1.0,
+                value_override=228000000,
             ),
             # Pipeline: Different scope per persona
             PersonaDefinition(

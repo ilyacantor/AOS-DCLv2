@@ -63,17 +63,31 @@ class TemporalVersioningStore:
                 )
             ]
 
-        # Seed a known definition change for revenue (for temporal warning tests)
+        # Seed definition changes from entity_test_scenarios.json -> temporal_versioning
+        # Revenue redefined on 2025-03-01
         self._histories["revenue"].append(
             VersionEntry(
                 version=2,
                 changed_by="finance_team",
-                change_description="Changed from bookings to recognized revenue",
+                change_description="Changed from bookings at close to GAAP recognized at delivery",
                 changed_at="2025-03-01T00:00:00Z",
-                previous_value="Total bookings revenue across all sources",
-                new_value="Total recognized revenue across all sources",
+                previous_value="Total bookings revenue at deal close",
+                new_value="GAAP recognized revenue at delivery",
             )
         )
+
+        # Customers redefined on 2025-06-15
+        if "customers" in self._histories:
+            self._histories["customers"].append(
+                VersionEntry(
+                    version=2,
+                    changed_by="ops_team",
+                    change_description="Changed from closed-won accounts to active subscription or services",
+                    changed_at="2025-06-15T00:00:00Z",
+                    previous_value="Count of accounts with at least one closed-won deal",
+                    new_value="Count of accounts with active subscription or professional services engagement",
+                )
+            )
 
     def get_history(self, metric_id: str) -> Optional[List[VersionEntry]]:
         """Get version history for a metric. Returns None if metric not found."""

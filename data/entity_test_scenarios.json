@@ -1,483 +1,600 @@
 {
-  "description": "DCL test fixtures for entity resolution and conflict detection. This file is the source of truth for testing — DCL must read from this file, not from in-memory stubs.",
-  "version": "1.0",
-  "created": "2026-02-07",
+  "metadata": {
+    "description": "Entity test scenarios for DCL expansion — entity resolution, conflict detection, provenance, temporal versioning, persona definitions",
+    "version": "1.0",
+    "created": "2026-02-07"
+  },
 
   "entity_fragmentation": {
-    "description": "Same real-world companies appearing under different names/IDs across simulated source systems. Used to test entity resolution.",
-
     "companies": [
       {
-        "canonical_name": "Acme Corporation",
-        "industry": "Enterprise Software",
-        "expected_match": true,
-        "match_type": "deterministic",
-        "shared_key": "contact@acmecorp.com",
-        "appearances": [
+        "name": "Acme Corporation",
+        "description": "3-system match: shared email, domain, and tax_id across Salesforce, NetSuite, HubSpot",
+        "records": [
           {
             "source_system": "salesforce_crm",
             "record_id": "SF-001847",
-            "name_as_stored": "Acme Corp",
-            "email": "contact@acmecorp.com",
-            "domain": "acmecorp.com",
-            "tax_id": "47-3829156",
-            "address": "100 Market St, San Francisco, CA 94105",
-            "revenue": 4200000,
-            "currency": "USD",
-            "last_updated": "2026-01-15T08:00:00Z"
+            "name": "Acme Corp",
+            "field_values": {
+              "email": "contact@acmecorp.com",
+              "domain": "acmecorp.com",
+              "tax_id": "47-3829156",
+              "industry": "Software",
+              "revenue": 4200000,
+              "address": "100 Market St, San Francisco, CA",
+              "phone": "+1-415-555-0100",
+              "employees": 280,
+              "last_updated": "2026-01-25T00:00:00Z"
+            }
           },
           {
             "source_system": "netsuite_erp",
             "record_id": "NS-29384",
-            "name_as_stored": "ACME CORPORATION",
-            "email": "contact@acmecorp.com",
-            "domain": "acmecorp.com",
-            "tax_id": "47-3829156",
-            "address": "100 Market Street, San Francisco, CA 94105",
-            "revenue": 3800000,
-            "currency": "USD",
-            "last_updated": "2026-01-31T12:00:00Z"
+            "name": "ACME CORPORATION",
+            "field_values": {
+              "email": "contact@acmecorp.com",
+              "domain": "acmecorp.com",
+              "tax_id": "47-3829156",
+              "industry": "Technology",
+              "revenue": 3800000,
+              "address": "100 Market Street, San Francisco, CA 94105",
+              "phone": "+14155550100",
+              "last_updated": "2026-01-25T00:00:00Z"
+            }
           },
           {
             "source_system": "hubspot_crm",
             "record_id": "HS-44721",
-            "name_as_stored": "Acme Corp.",
-            "email": "contact@acmecorp.com",
-            "domain": "acmecorp.com",
-            "tax_id": null,
-            "address": "100 Market St, SF, CA",
-            "revenue": null,
-            "currency": null,
-            "last_updated": "2025-11-02T14:30:00Z"
+            "name": "Acme Corp.",
+            "field_values": {
+              "email": "contact@acmecorp.com",
+              "domain": "acmecorp.com",
+              "tax_id": "47-3829156",
+              "industry": "Software",
+              "revenue": 4000000,
+              "employees": 280,
+              "last_updated": "2026-01-20T00:00:00Z"
+            }
           }
         ]
       },
       {
-        "canonical_name": "Globex International",
-        "industry": "Manufacturing",
-        "expected_match": true,
-        "match_type": "fuzzy",
-        "shared_key": null,
-        "appearances": [
+        "name": "Globex International",
+        "description": "2-system match: same tax_id but different domains",
+        "records": [
           {
             "source_system": "salesforce_crm",
             "record_id": "SF-003291",
-            "name_as_stored": "Globex International",
-            "email": "sales@globex-intl.com",
-            "domain": "globex-intl.com",
-            "tax_id": "82-5519473",
-            "address": "2500 Industrial Blvd, Detroit, MI 48201",
-            "revenue": 12500000,
-            "currency": "USD",
-            "last_updated": "2026-01-28T10:00:00Z"
+            "name": "Globex International",
+            "field_values": {
+              "email": "info@globex-intl.com",
+              "domain": "globex-intl.com",
+              "tax_id": "82-5519473",
+              "industry": "Manufacturing",
+              "revenue": 12500000,
+              "address": "500 Industrial Blvd, Detroit, MI 48201",
+              "employees": 850,
+              "last_updated": "2026-02-01T00:00:00Z"
+            }
           },
           {
             "source_system": "sap_erp",
             "record_id": "SAP-GL-0847",
-            "name_as_stored": "Globex International LLC",
-            "email": "ap@globex-international.com",
-            "domain": "globex-international.com",
-            "tax_id": "82-5519473",
-            "address": "2500 Industrial Boulevard, Detroit, MI 48201",
-            "revenue": 12500000,
-            "currency": "USD",
-            "last_updated": "2026-01-28T10:00:00Z"
+            "name": "Globex International LLC",
+            "field_values": {
+              "email": "accounts@globex-international.com",
+              "domain": "globex-international.com",
+              "tax_id": "82-5519473",
+              "industry": "Manufacturing",
+              "revenue": 12500000,
+              "address": "500 Industrial Boulevard, Detroit, MI 48201",
+              "employees": 850,
+              "last_updated": "2026-02-01T00:00:00Z"
+            }
           }
         ]
       },
       {
-        "canonical_name": "Initech Solutions",
-        "industry": "IT Consulting",
-        "expected_match": true,
-        "match_type": "fuzzy",
-        "shared_key": null,
-        "appearances": [
+        "name": "Initech Solutions",
+        "description": "2-system match: shared domain initech.io",
+        "records": [
           {
             "source_system": "salesforce_crm",
             "record_id": "SF-005512",
-            "name_as_stored": "Initech Solutions",
-            "email": "info@initech.io",
-            "domain": "initech.io",
-            "tax_id": null,
-            "address": "800 Congress Ave, Austin, TX 78701",
-            "revenue": 2100000,
-            "currency": "USD",
-            "last_updated": "2026-01-20T09:00:00Z"
+            "name": "Initech Solutions",
+            "field_values": {
+              "email": "hello@initech.io",
+              "domain": "initech.io",
+              "industry": "Software",
+              "revenue": 2100000,
+              "address": "200 Tech Park Dr, Austin, TX 78701",
+              "employees": 120,
+              "last_updated": "2026-01-28T00:00:00Z"
+            }
           },
           {
             "source_system": "netsuite_erp",
             "record_id": "NS-81023",
-            "name_as_stored": "Initech Solutions Inc.",
-            "email": "billing@initech.io",
-            "domain": "initech.io",
-            "tax_id": "74-1928364",
-            "address": "800 Congress Avenue, Suite 400, Austin, TX 78701",
-            "revenue": 1950000,
-            "currency": "USD",
-            "last_updated": "2026-02-01T16:00:00Z"
+            "name": "Initech Solutions Inc.",
+            "field_values": {
+              "email": "billing@initech.io",
+              "domain": "initech.io",
+              "industry": "Software",
+              "revenue": 1950000,
+              "address": "200 Tech Park Drive, Austin, TX 78701",
+              "employees": 120,
+              "last_updated": "2026-01-28T00:00:00Z"
+            }
           }
         ]
       },
       {
-        "canonical_name": "Massive Dynamic",
-        "industry": "Biotech",
-        "expected_match": true,
-        "match_type": "fuzzy",
-        "shared_key": null,
-        "appearances": [
+        "name": "Massive Dynamic",
+        "description": "3-system match: shared tax_id across Salesforce, NetSuite, SAP. Different domains (massivedynamic.com vs massive-dynamic.com)",
+        "records": [
           {
             "source_system": "salesforce_crm",
             "record_id": "SF-007834",
-            "name_as_stored": "Massive Dynamic Inc",
-            "email": "procurement@massivedynamic.com",
-            "domain": "massivedynamic.com",
-            "tax_id": "91-6627381",
-            "address": "One Massive Plaza, New York, NY 10001",
-            "revenue": 8900000,
-            "currency": "USD",
-            "last_updated": "2026-01-25T11:00:00Z"
+            "name": "Massive Dynamic Inc",
+            "field_values": {
+              "email": "contact@massivedynamic.com",
+              "domain": "massivedynamic.com",
+              "tax_id": "91-6627381",
+              "industry": "Conglomerate",
+              "revenue": 8900000,
+              "address": "1 World Trade Center, New York, NY 10007",
+              "employees": 2400,
+              "last_updated": "2026-01-25T00:00:00Z"
+            }
           },
           {
             "source_system": "netsuite_erp",
             "record_id": "NS-45102",
-            "name_as_stored": "MASSIVE DYNAMIC",
-            "email": "ap@massivedynamic.com",
-            "domain": "massivedynamic.com",
-            "tax_id": "91-6627381",
-            "address": "1 Massive Plaza, New York, NY 10001",
-            "revenue": 8900000,
-            "currency": "USD",
-            "last_updated": "2026-01-25T11:00:00Z"
+            "name": "MASSIVE DYNAMIC",
+            "field_values": {
+              "email": "finance@massivedynamic.com",
+              "domain": "massivedynamic.com",
+              "tax_id": "91-6627381",
+              "industry": "Conglomerate",
+              "revenue": 8900000,
+              "address": "1 WTC, New York, NY 10007",
+              "employees": 2400,
+              "last_updated": "2026-01-25T00:00:00Z"
+            }
           },
           {
             "source_system": "sap_erp",
             "record_id": "SAP-MD-2291",
-            "name_as_stored": "Massive Dynamic, Inc.",
-            "email": "finance@massive-dynamic.com",
-            "domain": "massive-dynamic.com",
-            "tax_id": "91-6627381",
-            "address": "1 Massive Plaza, NYC, NY 10001",
-            "revenue": 9100000,
-            "currency": "USD",
-            "last_updated": "2026-02-03T08:00:00Z"
+            "name": "Massive Dynamic, Inc.",
+            "field_values": {
+              "email": "erp@massive-dynamic.com",
+              "domain": "massive-dynamic.com",
+              "tax_id": "91-6627381",
+              "industry": "Conglomerate",
+              "revenue": 9100000,
+              "address": "1 World Trade Center, New York, NY 10007",
+              "employees": 2450,
+              "last_updated": "2026-02-03T00:00:00Z"
+            }
+          }
+        ]
+      }
+      ,
+      {
+        "name": "Pinnacle Systems",
+        "description": "2-system match: shared domain pinnaclesys.com across Salesforce and NetSuite",
+        "records": [
+          {
+            "source_system": "salesforce_crm",
+            "record_id": "SF-011201",
+            "name": "Pinnacle Systems",
+            "field_values": {
+              "email": "info@pinnaclesys.com",
+              "domain": "pinnaclesys.com",
+              "industry": "Software",
+              "revenue": 6500000,
+              "employees": 340,
+              "last_updated": "2026-01-30T00:00:00Z"
+            }
+          },
+          {
+            "source_system": "netsuite_erp",
+            "record_id": "NS-55201",
+            "name": "Pinnacle Systems Inc.",
+            "field_values": {
+              "email": "billing@pinnaclesys.com",
+              "domain": "pinnaclesys.com",
+              "industry": "Technology",
+              "revenue": 6100000,
+              "employees": 340,
+              "last_updated": "2026-01-30T00:00:00Z"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Vertex Solutions",
+        "description": "2-system match: shared domain vertex-solutions.io across Salesforce and NetSuite",
+        "records": [
+          {
+            "source_system": "salesforce_crm",
+            "record_id": "SF-012305",
+            "name": "Vertex Solutions",
+            "field_values": {
+              "email": "hello@vertex-solutions.io",
+              "domain": "vertex-solutions.io",
+              "industry": "Software",
+              "revenue": 3200000,
+              "employees": 150,
+              "last_updated": "2026-01-28T00:00:00Z"
+            }
+          },
+          {
+            "source_system": "netsuite_erp",
+            "record_id": "NS-68402",
+            "name": "Vertex Solutions LLC",
+            "field_values": {
+              "email": "finance@vertex-solutions.io",
+              "domain": "vertex-solutions.io",
+              "industry": "Software",
+              "revenue": 3000000,
+              "employees": 150,
+              "last_updated": "2026-01-28T00:00:00Z"
+            }
           }
         ]
       }
     ],
-
     "non_matches": [
       {
-        "description": "Similar names, completely different companies. Must NOT be matched.",
-        "company_a": {
-          "source_system": "salesforce_crm",
-          "record_id": "SF-009102",
-          "name_as_stored": "Acme Corp",
-          "email": "contact@acmecorp.com",
-          "domain": "acmecorp.com",
-          "industry": "Enterprise Software",
-          "address": "100 Market St, San Francisco, CA 94105"
-        },
-        "company_b": {
-          "source_system": "salesforce_crm",
-          "record_id": "SF-009477",
-          "name_as_stored": "Acme Foods LLC",
-          "email": "orders@acmefoods.com",
-          "domain": "acmefoods.com",
-          "industry": "Food Distribution",
-          "address": "45 Warehouse Rd, Newark, NJ 07101"
-        },
-        "expected_match": false,
-        "max_allowed_confidence": 0.5,
-        "reason": "Different domain, different industry, different location. Name overlap is coincidental."
+        "description": "Acme Corp vs Acme Foods — similar name, different companies (different domains, industries)",
+        "records": [
+          {
+            "source_system": "salesforce_crm",
+            "record_id": "SF-009102",
+            "name": "Acme Corp",
+            "field_values": {
+              "domain": "acmecorp.com",
+              "industry": "Software",
+              "revenue": 4200000,
+              "address": "100 Market St, San Francisco, CA"
+            }
+          },
+          {
+            "source_system": "salesforce_crm",
+            "record_id": "SF-009477",
+            "name": "Acme Foods LLC",
+            "field_values": {
+              "domain": "acmefoods.com",
+              "industry": "Food & Beverage",
+              "revenue": 8500000,
+              "address": "742 Evergreen Terrace, Springfield, IL"
+            }
+          }
+        ]
       },
       {
-        "description": "Same first word, entirely different companies.",
-        "company_a": {
-          "source_system": "salesforce_crm",
-          "record_id": "SF-010234",
-          "name_as_stored": "Alpha Technologies",
-          "email": "info@alphatech.com",
-          "domain": "alphatech.com",
-          "industry": "Semiconductors",
-          "address": "3000 Sand Hill Rd, Menlo Park, CA 94025"
-        },
-        "company_b": {
-          "source_system": "netsuite_erp",
-          "record_id": "NS-67891",
-          "name_as_stored": "Alpha Labs",
-          "email": "hello@alphalabs.io",
-          "domain": "alphalabs.io",
-          "industry": "Clinical Research",
-          "address": "200 Longwood Ave, Boston, MA 02115"
-        },
-        "expected_match": false,
-        "max_allowed_confidence": 0.5,
-        "reason": "Different domain, different industry, different location. Only share the word 'Alpha'."
+        "description": "Alpha Technologies vs Alpha Labs — shared word only, completely different companies",
+        "records": [
+          {
+            "source_system": "salesforce_crm",
+            "record_id": "SF-010234",
+            "name": "Alpha Technologies",
+            "field_values": {
+              "domain": "alphatech.com",
+              "industry": "Semiconductors",
+              "revenue": 34000000,
+              "address": "3000 Sand Hill Rd, Menlo Park, CA"
+            }
+          },
+          {
+            "source_system": "netsuite_erp",
+            "record_id": "NS-67891",
+            "name": "Alpha Labs",
+            "field_values": {
+              "domain": "alphalabs.org",
+              "industry": "Clinical Research",
+              "revenue": 5200000,
+              "address": "100 Science Way, Boston, MA"
+            }
+          }
+        ]
       }
     ]
   },
 
   "embedded_conflicts": {
-    "description": "Same resolved entity with deliberately different values across systems. Each conflict has a known root cause for validating conflict classification.",
-
     "conflicts": [
       {
         "id": "CONFLICT-001",
         "entity": "Acme Corporation",
         "metric": "revenue",
-        "severity": "critical",
         "root_cause": "timing",
-        "explanation": "Salesforce books revenue at deal close. NetSuite recognizes revenue at delivery/fulfillment. The $400K gap represents deals closed in CRM but not yet delivered/recognized in ERP.",
-        "trust_recommendation": {
-          "trusted_system": "netsuite_erp",
-          "reason": "NetSuite is system of record for recognized revenue per GAAP. CRM revenue is pipeline/bookings, not recognized."
-        },
+        "description": "CRM books revenue at deal close, ERP books at delivery/recognition",
+        "expected_severity": "critical",
         "values": [
           {
             "source_system": "salesforce_crm",
             "record_id": "SF-001847",
-            "field": "revenue",
             "value": 4200000,
-            "currency": "USD",
-            "as_of": "2026-01-15T08:00:00Z",
-            "recognition_method": "booking_at_close"
+            "method": "booked at close",
+            "last_updated": "2026-01-25T00:00:00Z"
           },
           {
             "source_system": "netsuite_erp",
             "record_id": "NS-29384",
-            "field": "revenue",
             "value": 3800000,
-            "currency": "USD",
-            "as_of": "2026-01-31T12:00:00Z",
-            "recognition_method": "recognized_at_delivery"
+            "method": "GAAP recognized at delivery",
+            "last_updated": "2026-01-25T00:00:00Z"
           }
-        ]
+        ],
+        "trust_recommendation": {
+          "system": "netsuite_erp",
+          "reasoning": "NetSuite is SOR for revenue. GAAP recognized revenue is the authoritative number for financial reporting."
+        }
       },
       {
         "id": "CONFLICT-002",
         "entity": "Initech Solutions",
         "metric": "revenue",
-        "severity": "medium",
         "root_cause": "scope",
-        "explanation": "Salesforce includes services revenue bundled with the subscription. NetSuite breaks out services separately. The $150K difference is professional services revenue that CRM bundles but ERP itemizes.",
-        "trust_recommendation": {
-          "trusted_system": "netsuite_erp",
-          "reason": "NetSuite provides granular breakdown. Use NetSuite for recognized subscription revenue; CRM number includes services that should be reported separately."
-        },
+        "description": "CRM includes total contract value (subscription + services), ERP records subscription only",
+        "expected_severity": "medium",
         "values": [
           {
             "source_system": "salesforce_crm",
             "record_id": "SF-005512",
-            "field": "revenue",
             "value": 2100000,
-            "currency": "USD",
-            "as_of": "2026-01-20T09:00:00Z",
-            "recognition_method": "total_contract_value"
+            "method": "total contract value (subscription + services)",
+            "last_updated": "2026-01-28T00:00:00Z"
           },
           {
             "source_system": "netsuite_erp",
             "record_id": "NS-81023",
-            "field": "revenue",
             "value": 1950000,
-            "currency": "USD",
-            "as_of": "2026-02-01T16:00:00Z",
-            "recognition_method": "subscription_only"
+            "method": "subscription revenue only",
+            "last_updated": "2026-01-28T00:00:00Z"
           }
-        ]
+        ],
+        "trust_recommendation": {
+          "system": "netsuite_erp",
+          "reasoning": "NetSuite is SOR for revenue. Subscription-only figure is more precise for recurring revenue analysis."
+        }
       },
       {
         "id": "CONFLICT-003",
         "entity": "Massive Dynamic",
         "metric": "revenue",
-        "severity": "medium",
         "root_cause": "stale_data",
-        "explanation": "Salesforce and NetSuite agree at $8.9M (January data). SAP shows $9.1M from a February update that includes a contract amendment not yet reflected in the other systems.",
-        "trust_recommendation": {
-          "trusted_system": "sap_erp",
-          "reason": "SAP has the most recent data (Feb 3) reflecting the contract amendment. Salesforce and NetSuite are stale by ~9 days."
-        },
+        "description": "SAP has most recent data (Feb 3, includes contract amendment), SF and NS are stale (Jan 25)",
+        "expected_severity": "medium",
         "values": [
           {
             "source_system": "salesforce_crm",
             "record_id": "SF-007834",
-            "field": "revenue",
             "value": 8900000,
-            "currency": "USD",
-            "as_of": "2026-01-25T11:00:00Z",
-            "recognition_method": "booking_at_close"
+            "method": "CRM pipeline value",
+            "last_updated": "2026-01-25T00:00:00Z"
           },
           {
             "source_system": "netsuite_erp",
             "record_id": "NS-45102",
-            "field": "revenue",
             "value": 8900000,
-            "currency": "USD",
-            "as_of": "2026-01-25T11:00:00Z",
-            "recognition_method": "recognized_at_delivery"
+            "method": "ERP recognized",
+            "last_updated": "2026-01-25T00:00:00Z"
           },
           {
             "source_system": "sap_erp",
             "record_id": "SAP-MD-2291",
-            "field": "revenue",
             "value": 9100000,
-            "currency": "USD",
-            "as_of": "2026-02-03T08:00:00Z",
-            "recognition_method": "recognized_at_delivery"
+            "method": "ERP with contract amendment",
+            "last_updated": "2026-02-03T00:00:00Z"
           }
-        ]
+        ],
+        "trust_recommendation": {
+          "system": "sap_erp",
+          "reasoning": "SAP has the most recently updated data (Feb 3 vs Jan 25) and includes the latest contract amendment."
+        }
       },
       {
         "id": "CONFLICT-004",
         "entity": "Globex International",
         "metric": "revenue",
-        "severity": "low",
         "root_cause": "none",
-        "explanation": "Both systems agree. No conflict. This record exists to validate that the system does NOT flag false positives.",
-        "trust_recommendation": null,
+        "description": "No conflict — both systems agree on revenue",
+        "expected_severity": "none",
         "values": [
           {
             "source_system": "salesforce_crm",
             "record_id": "SF-003291",
-            "field": "revenue",
             "value": 12500000,
-            "currency": "USD",
-            "as_of": "2026-01-28T10:00:00Z",
-            "recognition_method": "booking_at_close"
+            "method": "CRM",
+            "last_updated": "2026-02-01T00:00:00Z"
           },
           {
             "source_system": "sap_erp",
             "record_id": "SAP-GL-0847",
-            "field": "revenue",
             "value": 12500000,
-            "currency": "USD",
-            "as_of": "2026-01-28T10:00:00Z",
-            "recognition_method": "recognized_at_delivery"
+            "method": "ERP",
+            "last_updated": "2026-02-01T00:00:00Z"
           }
-        ]
-      }
-    ]
-  },
-
-  "temporal_versioning": {
-    "description": "Metric definition changes with known dates. Used to test temporal warnings on cross-period comparisons.",
-
-    "definition_changes": [
-      {
-        "metric": "revenue",
-        "change_date": "2025-03-01",
-        "previous_definition": "Total bookings recognized at deal close",
-        "new_definition": "GAAP-recognized revenue at delivery/fulfillment",
-        "changed_by": "CFO Office",
-        "reason": "Aligned with ASC 606 revenue recognition standard for audit compliance"
+        ],
+        "trust_recommendation": null
       },
       {
-        "metric": "customers",
-        "change_date": "2025-06-15",
-        "previous_definition": "Count of active accounts with at least one closed-won deal",
-        "new_definition": "Count of accounts with active subscription OR active services engagement",
-        "changed_by": "RevOps",
-        "reason": "Expanded definition to include services-only customers for total customer count"
-      }
-    ]
-  },
-
-  "persona_definitions": {
-    "description": "Same metric, different correct values depending on persona context.",
-
-    "contextual_metrics": [
-      {
-        "metric": "customers",
-        "persona_values": {
-          "CFO": {
-            "value": 2400,
-            "definition": "Billing entities with active invoices in the current fiscal year",
-            "source": "netsuite_erp"
+        "id": "CONFLICT-005",
+        "entity": "Pinnacle Systems",
+        "metric": "revenue",
+        "root_cause": "timing",
+        "description": "CRM books revenue at deal close, ERP books at delivery/recognition",
+        "expected_severity": "medium",
+        "values": [
+          {
+            "source_system": "salesforce_crm",
+            "record_id": "SF-011201",
+            "value": 6500000,
+            "method": "booked at close",
+            "last_updated": "2026-01-30T00:00:00Z"
           },
-          "CRO": {
-            "value": 8100,
-            "definition": "Active opportunities and accounts with engagement in the last 90 days",
-            "source": "salesforce_crm"
-          },
-          "COO": {
-            "value": 3200,
-            "definition": "Accounts with active support tickets or SLA contracts",
-            "source": "jira"
+          {
+            "source_system": "netsuite_erp",
+            "record_id": "NS-55201",
+            "value": 6100000,
+            "method": "GAAP recognized at delivery",
+            "last_updated": "2026-01-30T00:00:00Z"
           }
+        ],
+        "trust_recommendation": {
+          "system": "netsuite_erp",
+          "reasoning": "NetSuite is SOR for revenue. GAAP recognized revenue is authoritative."
         }
       },
       {
+        "id": "CONFLICT-006",
+        "entity": "Vertex Solutions",
         "metric": "revenue",
-        "persona_values": {
-          "CFO": {
-            "value": 200000000,
-            "definition": "GAAP-recognized revenue per ASC 606",
-            "source": "netsuite_erp"
+        "root_cause": "timing",
+        "description": "CRM books revenue at deal close, ERP books at delivery/recognition",
+        "expected_severity": "medium",
+        "values": [
+          {
+            "source_system": "salesforce_crm",
+            "record_id": "SF-012305",
+            "value": 3200000,
+            "method": "booked at close",
+            "last_updated": "2026-01-28T00:00:00Z"
           },
-          "CRO": {
-            "value": 228000000,
-            "definition": "Total bookings including closed-won deals not yet delivered",
-            "source": "salesforce_crm"
+          {
+            "source_system": "netsuite_erp",
+            "record_id": "NS-68402",
+            "value": 3000000,
+            "method": "GAAP recognized at delivery",
+            "last_updated": "2026-01-28T00:00:00Z"
           }
+        ],
+        "trust_recommendation": {
+          "system": "netsuite_erp",
+          "reasoning": "NetSuite is SOR for revenue. GAAP recognized revenue is authoritative."
         }
       }
     ]
   },
 
   "provenance": {
-    "description": "Source lineage for key metrics. Used to test provenance trace responses.",
+    "metric_sources": {
+      "revenue": [
+        {
+          "source_system": "salesforce_crm",
+          "table": "Opportunity",
+          "field": "Amount",
+          "is_sor": false,
+          "freshness": "2026-02-07T00:00:00Z",
+          "quality_score": 0.92
+        },
+        {
+          "source_system": "netsuite_erp",
+          "table": "RevenueRecognition",
+          "field": "recognized_amount",
+          "is_sor": true,
+          "freshness": "2026-02-06T00:00:00Z",
+          "quality_score": 0.95
+        }
+      ],
+      "pipeline": [
+        {
+          "source_system": "salesforce_crm",
+          "table": "Opportunity",
+          "field": "Amount",
+          "is_sor": true,
+          "freshness": "2026-02-07T00:00:00Z",
+          "quality_score": 0.95
+        }
+      ],
+      "headcount": [
+        {
+          "source_system": "workday_hcm",
+          "table": "Workers",
+          "field": "active_count",
+          "is_sor": true,
+          "freshness": "2026-02-07T00:00:00Z",
+          "quality_score": 0.95
+        }
+      ],
+      "arr": [
+        {
+          "source_system": "chargebee_billing",
+          "table": "Subscriptions",
+          "field": "annual_value",
+          "is_sor": true,
+          "freshness": "2026-02-07T00:00:00Z",
+          "quality_score": 0.90
+        }
+      ],
+      "quota_attainment": [
+        {
+          "source_system": "salesforce_crm",
+          "table": "Quotas",
+          "field": "attainment_pct",
+          "is_sor": true,
+          "freshness": "2026-02-07T00:00:00Z",
+          "quality_score": 0.95
+        }
+      ]
+    }
+  },
 
-    "metric_sources": [
+  "temporal_versioning": {
+    "definition_changes": [
       {
-        "metric": "revenue",
-        "sources": [
-          {
-            "source_system": "salesforce_crm",
-            "table": "Opportunity",
-            "field": "Amount",
-            "is_sor": false,
-            "freshness_hours": 4,
-            "quality_score": 0.92,
-            "notes": "Bookings value. Updated on deal close."
-          },
-          {
-            "source_system": "netsuite_erp",
-            "table": "RevenueRecognition",
-            "field": "recognized_amount",
-            "is_sor": true,
-            "freshness_hours": 24,
-            "quality_score": 0.95,
-            "notes": "GAAP-recognized revenue. System of record."
-          }
-        ]
+        "metric_id": "revenue",
+        "change_date": "2025-03-01T00:00:00Z",
+        "changed_by": "finance_team",
+        "change_description": "Changed from bookings at close to GAAP recognized at delivery",
+        "previous_value": "Total bookings revenue at deal close",
+        "new_value": "GAAP recognized revenue at delivery"
       },
       {
-        "metric": "pipeline",
-        "sources": [
-          {
-            "source_system": "salesforce_crm",
-            "table": "Opportunity",
-            "field": "Amount",
-            "is_sor": true,
-            "freshness_hours": 1,
-            "quality_score": 0.95,
-            "notes": "Open pipeline value. Filtered to active stages."
-          }
-        ]
-      },
-      {
-        "metric": "headcount",
-        "sources": [
-          {
-            "source_system": "workday",
-            "table": "Worker",
-            "field": "active_count",
-            "is_sor": true,
-            "freshness_hours": 24,
-            "quality_score": 0.98,
-            "notes": "Active employee count. System of record for all HR metrics."
-          }
-        ]
+        "metric_id": "customers",
+        "change_date": "2025-06-15T00:00:00Z",
+        "changed_by": "ops_team",
+        "change_description": "Changed from closed-won accounts to active subscription or services",
+        "previous_value": "Count of accounts with at least one closed-won deal",
+        "new_value": "Count of accounts with active subscription or professional services engagement"
       }
     ]
+  },
+
+  "persona_definitions": {
+    "contextual_metrics": {
+      "customers": {
+        "CFO": {
+          "value": 2400,
+          "definition": "Active billing entities with at least one paid invoice in the last 12 months",
+          "calculation": "COUNT(DISTINCT billing_entity_id) WHERE last_invoice_date > NOW() - INTERVAL '12 months'"
+        },
+        "CRO": {
+          "value": 8100,
+          "definition": "Active accounts with at least one open opportunity or active subscription",
+          "calculation": "COUNT(DISTINCT account_id) WHERE has_active_opportunity = true OR has_active_subscription = true"
+        },
+        "COO": {
+          "value": 3200,
+          "definition": "Accounts with active support contracts or SLA agreements",
+          "calculation": "COUNT(DISTINCT account_id) WHERE has_support_contract = true OR has_sla = true"
+        }
+      },
+      "revenue": {
+        "CFO": {
+          "value": 200000000,
+          "definition": "GAAP recognized revenue, net of returns and allowances",
+          "calculation": "SUM(recognized_amount) - SUM(returns) - SUM(allowances)"
+        },
+        "CRO": {
+          "value": 228000000,
+          "definition": "Booked revenue from closed-won deals including services",
+          "calculation": "SUM(amount) WHERE stage = 'Closed-Won'"
+        }
+      }
+    }
   }
 }

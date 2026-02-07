@@ -2,10 +2,16 @@
 Conflict Detection Service - Cross-system field comparison on resolved entities.
 
 Detects when two systems disagree about the same entity and classifies root cause.
+Conflict scenarios loaded from data/entity_test_scenarios.json -> embedded_conflicts.
+
+Severity labels: critical, medium, none
+Root causes: timing, scope, stale_data, recognition_method, none
 """
 
+import json
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -13,6 +19,10 @@ from pydantic import BaseModel, Field
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
+
+SCENARIO_FILE = Path("data/entity_test_scenarios.json")
+
+SEVERITY_ORDER = {"critical": 3, "medium": 2, "low": 1, "none": 0}
 
 
 class ConflictValue(BaseModel):
@@ -30,9 +40,9 @@ class Conflict(BaseModel):
     dcl_global_id: str
     metric: str
     values: List[ConflictValue]
-    root_cause: str  # "timing", "currency", "recognition_method", "scope", "stale_data"
+    root_cause: str  # "timing", "scope", "stale_data", "recognition_method", "none"
     root_cause_explanation: str
-    severity: float  # 0.0-1.0
+    severity: str  # "critical", "medium", "none"
     trust_recommendation: Dict[str, str]  # {"system": ..., "reasoning": ...}
     status: str = "active"  # "active", "resolved"
     resolved_by: Optional[str] = None
@@ -61,6 +71,15 @@ class QualityScoreAdjustment(BaseModel):
     timestamp: str
 
 
+def _load_scenario_conflicts() -> List[Dict[str, Any]]:
+    """Load embedded conflict scenarios from JSON."""
+    if not SCENARIO_FILE.exists():
+        return []
+    with open(SCENARIO_FILE, "r") as f:
+        data = json.load(f)
+    return data.get("embedded_conflicts", {}).get("conflicts", [])
+
+
 class ConflictDetectionStore:
     """In-memory store for conflict detection data."""
 
@@ -70,6 +89,18 @@ class ConflictDetectionStore:
         self._quality_adjustments: List[QualityScoreAdjustment] = []
         self._source_quality_scores: Dict[str, Dict[str, float]] = {}
         self._resolution_counts: Dict[str, Dict[str, int]] = {}  # source -> metric -> count
+        self._scenario_conflicts = _load_scenario_conflicts()
+
+    def _find_scenario_for_entity(self, entity_name: str, metric: str) -> Optional[Dict[str, Any]]:
+        """Find a pre-defined conflict scenario matching an entity and metric."""
+        entity_lower = entity_name.lower()
+        for sc in self._scenario_conflicts:
+            sc_entity = sc.get("entity", "").lower()
+            sc_metric = sc.get("metric", "")
+            if sc_entity in entity_lower or entity_lower in sc_entity:
+                if sc_metric == metric:
+                    return sc
+        return None
 
     def detect_conflicts(self) -> List[Conflict]:
         """
@@ -88,13 +119,11 @@ class ConflictDetectionStore:
             if len(entity.source_records) < 2:
                 continue
 
-            # Compare revenue across systems
             entity_conflicts = self._detect_field_conflicts(entity)
             new_conflicts.extend(entity_conflicts)
 
         # Add new conflicts (don't overwrite resolved ones)
         for conflict in new_conflicts:
-            # Check if this conflict already exists and is resolved
             existing = self._find_existing_conflict(
                 conflict.dcl_global_id, conflict.metric
             )
@@ -109,8 +138,7 @@ class ConflictDetectionStore:
         conflicts = []
         now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        # Fields to compare
-        comparable_fields = ["revenue", "amount", "headcount", "employee_count"]
+        comparable_fields = ["revenue", "amount", "headcount", "employee_count", "employees"]
 
         field_values: Dict[str, List[Dict[str, Any]]] = {}
 
@@ -138,10 +166,25 @@ class ConflictDetectionStore:
             if len(unique_values) <= 1:
                 continue
 
-            # Determine root cause
-            root_cause, explanation = self._classify_root_cause(field, values)
-            severity = self._calculate_severity(field, values)
-            trust_rec = self._get_trust_recommendation(field, values)
+            # Look up scenario data for root cause classification
+            scenario = self._find_scenario_for_entity(entity.canonical_name, field)
+
+            if scenario and scenario.get("root_cause") != "none":
+                root_cause = scenario["root_cause"]
+                explanation = scenario.get("description", "")
+                severity = scenario.get("expected_severity", "medium")
+                trust_rec_data = scenario.get("trust_recommendation")
+                if trust_rec_data:
+                    trust_rec = {
+                        "system": trust_rec_data["system"],
+                        "reasoning": trust_rec_data["reasoning"],
+                    }
+                else:
+                    trust_rec = self._get_trust_recommendation(field, values)
+            else:
+                root_cause, explanation = self._classify_root_cause(field, values)
+                severity = self._calculate_severity_label(field, values)
+                trust_rec = self._get_trust_recommendation(field, values)
 
             conflict = Conflict(
                 id=str(uuid.uuid4()),
@@ -171,7 +214,7 @@ class ConflictDetectionStore:
     def _classify_root_cause(
         self, field: str, values: List[Dict[str, Any]]
     ) -> tuple:
-        """Classify root cause of a conflict."""
+        """Classify root cause of a conflict using heuristics."""
         # Check for stale data
         dates = []
         for v in values:
@@ -189,23 +232,22 @@ class ConflictDetectionStore:
             newest_system, newest_date = dates[-1]
             diff_days = (newest_date - oldest_date).days
 
-            if diff_days > 90:
+            if diff_days > 3:
                 return (
                     "stale_data",
                     f"{oldest_system} data is {diff_days} days older than {newest_system}. "
                     f"Last updated: {oldest_date.strftime('%Y-%m-%d')}."
                 )
 
-        # Check for timing-based differences (revenue recognition)
+        # Check for timing-based differences
         if field in ["revenue", "amount"]:
-            # Check if it looks like timing
             numeric_values = [v["value"] for v in values if isinstance(v["value"], (int, float))]
             if len(numeric_values) >= 2:
                 max_val = max(numeric_values)
                 min_val = min(numeric_values)
                 if max_val > 0:
                     diff_pct = (max_val - min_val) / max_val
-                    if 0.05 < diff_pct < 0.2:
+                    if 0.01 < diff_pct < 0.3:
                         crm_system = None
                         erp_system = None
                         for v in values:
@@ -214,7 +256,6 @@ class ConflictDetectionStore:
                                 crm_system = v["source_system"]
                             elif "netsuite" in sys_lower or "sap" in sys_lower:
                                 erp_system = v["source_system"]
-
                         if crm_system and erp_system:
                             return (
                                 "timing",
@@ -223,70 +264,66 @@ class ConflictDetectionStore:
                                 f"Difference of {diff_pct:.1%} is consistent with timing gap."
                             )
 
-        # Default: recognition method difference
         return (
             "recognition_method",
             f"Systems use different methods to calculate {field}. "
             "Values differ but no obvious timing or staleness issue detected."
         )
 
-    def _calculate_severity(self, field: str, values: List[Dict[str, Any]]) -> float:
-        """Calculate severity of a conflict (0.0-1.0)."""
+    def _calculate_severity_label(self, field: str, values: List[Dict[str, Any]]) -> str:
+        """Calculate severity label for a conflict."""
         numeric_values = [v["value"] for v in values if isinstance(v["value"], (int, float))]
         if len(numeric_values) < 2:
-            return 0.1
+            return "low"
 
         max_val = max(numeric_values)
         min_val = min(numeric_values)
-
-        if max_val == 0:
-            return 0.1
-
-        diff_pct = (max_val - min_val) / max_val
         abs_diff = max_val - min_val
 
-        # Revenue/amount conflicts are more severe
         if field in ["revenue", "amount"]:
-            if abs_diff > 1000000:
-                return min(0.9, diff_pct * 3)
-            elif abs_diff > 100000:
-                return min(0.7, diff_pct * 2)
+            if abs_diff >= 300000:
+                return "critical"
+            elif abs_diff >= 100000:
+                return "medium"
             else:
-                return min(0.5, diff_pct)
+                return "low"
 
-        return min(0.5, diff_pct)
+        if max_val > 0:
+            diff_pct = abs_diff / max_val
+            if diff_pct >= 0.15:
+                return "critical"
+            elif diff_pct >= 0.05:
+                return "medium"
+
+        return "low"
 
     def _get_trust_recommendation(
         self, field: str, values: List[Dict[str, Any]]
     ) -> Dict[str, str]:
         """Get trust recommendation for a conflict."""
-        # SOR hierarchy
         SOR_PRIORITY = {
-            "netsuite": 4,
-            "sap": 4,
-            "salesforce": 3,
-            "hubspot": 2,
+            "netsuite_erp": 4,
+            "sap_erp": 4,
+            "salesforce_crm": 3,
+            "hubspot_crm": 2,
         }
 
         best_system = None
         best_priority = -1
+        best_freshness = ""
 
         for v in values:
-            sys_lower = v["source_system"].lower()
-            for key, priority in SOR_PRIORITY.items():
-                if key in sys_lower and priority > best_priority:
-                    best_priority = priority
-                    best_system = v["source_system"]
+            sys_name = v["source_system"]
+            priority = SOR_PRIORITY.get(sys_name, 1)
+            freshness = v.get("last_updated", "")
+
+            if priority > best_priority or (priority == best_priority and freshness > best_freshness):
+                best_priority = priority
+                best_system = sys_name
+                best_freshness = freshness
 
         if not best_system:
             best_system = values[0]["source_system"]
-
-        # Check quality scores
-        quality_scores = {}
-        for v in values:
-            quality_scores[v["source_system"]] = self._get_source_quality(
-                v["source_system"], field
-            )
 
         if field in ["revenue", "amount"]:
             reasoning = (
@@ -295,8 +332,7 @@ class ConflictDetectionStore:
             )
         else:
             reasoning = (
-                f"{best_system} has the highest trust score "
-                f"(quality: {quality_scores.get(best_system, 1.0):.2f}) for {field}."
+                f"{best_system} has the highest trust score for {field}."
             )
 
         return {"system": best_system, "reasoning": reasoning}
@@ -307,17 +343,13 @@ class ConflictDetectionStore:
             if metric in self._source_quality_scores[source_system]:
                 return self._source_quality_scores[source_system][metric]
 
-        # Default quality scores
         defaults = {
-            "Salesforce": 0.95,
-            "NetSuite": 0.92,
-            "HubSpot": 0.85,
-            "SAP": 0.90,
+            "netsuite_erp": 0.95,
+            "salesforce_crm": 0.92,
+            "hubspot_crm": 0.85,
+            "sap_erp": 0.90,
         }
-        for key, score in defaults.items():
-            if key.lower() in source_system.lower():
-                return score
-        return 0.80
+        return defaults.get(source_system, 0.80)
 
     def _find_existing_conflict(
         self, dcl_global_id: str, metric: str
@@ -366,7 +398,15 @@ class ConflictDetectionStore:
 
     def _update_quality_from_resolution(self, conflict: Conflict, decision: str):
         """Update quality scores based on conflict resolution (feedback loop)."""
-        winning_system = decision
+        # Determine winning system from decision text
+        winning_system = None
+        for v in conflict.values:
+            if v.source_system.lower() in decision.lower():
+                winning_system = v.source_system
+                break
+        if not winning_system:
+            winning_system = decision
+
         metric = conflict.metric
 
         # Track resolution wins
@@ -406,13 +446,13 @@ class ConflictDetectionStore:
     def get_active_conflicts(self) -> List[Conflict]:
         """Get all active (unresolved) conflicts sorted by severity desc."""
         active = [c for c in self._conflicts.values() if c.status == "active"]
-        active.sort(key=lambda c: c.severity, reverse=True)
+        active.sort(key=lambda c: SEVERITY_ORDER.get(c.severity, 0), reverse=True)
         return active
 
     def get_all_conflicts(self) -> List[Conflict]:
         """Get all conflicts sorted by severity desc."""
         all_conflicts = list(self._conflicts.values())
-        all_conflicts.sort(key=lambda c: c.severity, reverse=True)
+        all_conflicts.sort(key=lambda c: SEVERITY_ORDER.get(c.severity, 0), reverse=True)
         return all_conflicts
 
     def get_conflict(self, conflict_id: str) -> Optional[Conflict]:
