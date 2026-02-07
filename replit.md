@@ -1,6 +1,6 @@
 # DCL Engine - Data Connectivity Layer
 
-**Last Updated:** February 02, 2026
+**Last Updated:** February 7, 2026
 
 ## What is DCL?
 
@@ -26,7 +26,7 @@ The centerpiece of DCL is a **4-layer Sankey diagram** showing data flow:
 | **L0** | Pipeline | Entry point showing data mode | Demo Pipeline, Farm Pipeline |
 | **L1** | Sources | Connected data systems | Salesforce CRM, SAP ERP, MongoDB |
 | **L2** | Ontology | Business concepts | Revenue, Cost, Account, Opportunity |
-| **L3** | Personas | Who uses this data | CFO, CRO, COO, CTO |
+| **L3** | Personas | Who uses this data | CFO, CRO, COO, CTO, CHRO |
 
 Users can:
 - **Filter by persona** to see only data relevant to their role
@@ -34,12 +34,13 @@ Users can:
 - **Click nodes** to explore source details
 - **Collapse/expand** the side panel for more graph space
 
-### 2. Dual Operating Modes
+### 2. Three Data Modes
 
 | Mode | Description | Use Case |
 |------|-------------|----------|
 | **Demo** | Pre-configured schemas from CSV files | Training, demonstrations, testing |
 | **Farm** | Live schemas from AOS-Farm API | Production data discovery |
+| **AAM** | Live connections from AAM fabric planes | Connection discovery across iPaaS, Gateway, EventBus, DW |
 
 ### 3. Run Modes (Dev vs Prod)
 
@@ -146,9 +147,9 @@ The right sidebar contains:
 ### Top Navigation Bar
 - **DCL Logo** - Application identifier
 - **Graph / Dashboard** - Toggle between views
-- **Data Mode** - Switch between Demo and Farm
+- **Data Mode** - Switch between Demo, Farm, and AAM
 - **Run Mode** - Switch between Dev and Prod
-- **Persona Toggles** - CFO, CRO, COO, CTO buttons
+- **Persona Toggles** - CFO, CRO, COO, CTO, CHRO buttons
 - **Run Button** - Execute the pipeline
 
 ### Main Graph Area
@@ -168,37 +169,25 @@ The right sidebar contains:
 
 ## Recent Changes
 
-**February 02, 2026 (latest):**
-- Consolidated rep performance data into single source of truth
-- `quota_by_rep` now contains `{quota, attainment, attainment_pct}` - no separate quota_attainment array
-- Extended differentiation to all 36 sales reps (was 29)
-- Updated query.py with `_extract_value()` helper for nested dictionary values
-- Graph rendering stable: 23 nodes, 134 links
+**February 7, 2026:**
+- Updated all docs: merged ARCH + Functionality into DCL_ARCHITECTURE.md
+- Refreshed DCL_SEMANTIC_CATALOG.md from live API (37 metrics, 29 entities, 13 bindings)
+- Fixed AAM mode performance: skip expensive normalizer for AAM connections (2s vs timeout)
+- Added "fabric" node kind for AAM fabric plane grouping
+- Fixed RunMetrics missing `total_mappings` field
 
-**February 02, 2026:**
-- Major NLQ data expansion: Added comprehensive fact data for all sample questions
-- CFO Pack: Added mrr, dso, burn_rate, ar_aging, services_revenue metrics with segment/region/aging_bucket dimensions
-- CRO Pack: Added pipeline_value, churn_risk, nrr_by_cohort, quota_attainment metrics with rep/stage/cohort/customer dimensions
-- COO Pack: Added throughput, cycle_time, sla_compliance metrics with team/project_type/work_type/priority dimensions
-- CTO Pack: Added deploy_frequency, mttr, uptime, slo_attainment, cloud_cost metrics with service/severity/resource_type/environment dimensions
-- Expanded fact_base.json with 19 new dimensional data arrays (800+ records total)
-- Semantic catalog: 37 metrics, 29 entities
-- Differentiated rep data: Sarah Williams (top: 115% attainment/52% win rate), Thomas Anderson (bottom: 83% attainment/32% win rate)
-
-**February 02, 2026 (earlier):**
-- Added CHRO as first-class persona (equal to CFO/CRO/COO/CTO)
-- Added 12 CHRO metrics with full dimensional support
-- Added query endpoint (POST /api/dcl/query) for NLQ data consumption
+**February 2, 2026:**
+- Consolidated rep performance data, extended to all 36 reps
+- Major NLQ data expansion: 51 data arrays, 1500+ records in fact_base.json
+- Added CHRO as first-class persona with 12 metrics
+- Semantic catalog: 37 metrics, 29 entities, 13 bindings
+- Added query endpoint (POST /api/dcl/query) for NLQ consumption
 
 **January 28, 2026:**
-- Fixed cache mutation bug causing duplicate MuleSoft nodes
-- Made right panel collapsible with toggle button
-- Timer now displays 1 decimal place
-- Improved overall UI polish
+- Fixed cache mutation bug, collapsible right panel, UI polish
 
 **January 27, 2026:**
-- Moved NLQ & BLL functionality to AOS-NLQ repository
-- DCL refocused as metadata-only semantic layer
+- Moved NLQ & BLL to AOS-NLQ; DCL refocused as metadata-only semantic layer
 
 ## User Preferences
 - Communication style: Simple, everyday language
@@ -232,7 +221,7 @@ The right sidebar contains:
 | `MonitorPanel.tsx` | src/components/ | Persona metrics display |
 | `NarrationPanel.tsx` | src/components/ | Real-time log viewer |
 | `dcl_engine.py` | backend/engine/ | Main orchestrator |
-| `schema_loader.py` | backend/engine/ | Demo/Farm schema loading |
+| `schema_loader.py` | backend/engine/ | Demo/Farm/AAM schema loading |
 | `mapping_service.py` | backend/engine/ | Heuristic field mapping |
 | `rag_service.py` | backend/engine/ | Pinecone RAG queries |
 
@@ -281,32 +270,50 @@ Returns data points with metadata (sources, freshness, quality_score).
 | `OPENAI_API_KEY` | Prod mode | OpenAI API for embeddings |
 | `PINECONE_API_KEY` | Prod mode | Pinecone vector database |
 | `FARM_API_URL` | Farm mode | AOS-Farm API base URL |
+| `AAM_URL` | AAM mode | AAM API base URL |
 
 ## File Structure
 
 ```
 ├── backend/
-│   ├── api/main.py           # FastAPI app, endpoints
-│   ├── domain/models.py      # Pydantic data models
+│   ├── api/
+│   │   ├── main.py              # FastAPI app, endpoints
+│   │   ├── query.py             # Query endpoint logic
+│   │   └── semantic_export.py   # Semantic catalog export
+│   ├── aam/
+│   │   └── client.py            # AAM Fabric Plane client
+│   ├── domain/models.py         # Pydantic data models
 │   ├── engine/
-│   │   ├── dcl_engine.py     # Main orchestrator
-│   │   ├── schema_loader.py  # CSV/Farm schema loading
-│   │   ├── mapping_service.py # Heuristic mapping
-│   │   ├── rag_service.py    # Pinecone RAG
+│   │   ├── dcl_engine.py        # Main orchestrator
+│   │   ├── schema_loader.py     # Demo/Farm/AAM schema loading
+│   │   ├── mapping_service.py   # Heuristic mapping
+│   │   ├── rag_service.py       # Pinecone RAG
+│   │   ├── ontology.py          # Core ontology concepts
+│   │   ├── persona_view.py      # Persona filtering
 │   │   └── source_normalizer.py # Source deduplication
+│   ├── semantic_mapper/
+│   │   ├── heuristic_mapper.py  # Pattern matching
+│   │   └── persist_mappings.py  # DB persistence
 │   ├── core/
-│   │   ├── fabric_plane.py   # Fabric Plane types
-│   │   └── pointer_buffer.py # Pointer buffering
+│   │   ├── fabric_plane.py      # Fabric Plane types
+│   │   └── pointer_buffer.py    # Pointer buffering
+│   ├── farm/
+│   │   └── client.py            # AOS-Farm API client
 │   └── llm/
 │       └── mapping_validator.py # GPT-4o-mini validation
 ├── src/
-│   ├── App.tsx               # Main React app
+│   ├── App.tsx                  # Main React app
 │   └── components/
-│       ├── SankeyGraph.tsx   # D3 visualization
-│       ├── MonitorPanel.tsx  # Metrics dashboard
-│       └── NarrationPanel.tsx # Log viewer
-├── data/schemas/             # Demo mode CSV files
-└── run_backend.py            # Backend entry point
+│       ├── SankeyGraph.tsx      # D3 visualization
+│       ├── MonitorPanel.tsx     # Metrics dashboard
+│       └── NarrationPanel.tsx   # Log viewer
+├── data/
+│   ├── schemas/                 # Demo mode CSV files
+│   └── fact_base.json           # Demo mode query data
+├── docs/
+│   ├── DCL_ARCHITECTURE.md      # Architecture & functionality
+│   └── DCL_SEMANTIC_CATALOG.md  # Semantic catalog reference
+└── run_backend.py               # Backend entry point
 ```
 
 ## Related Systems
