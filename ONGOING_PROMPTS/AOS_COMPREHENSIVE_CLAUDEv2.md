@@ -78,19 +78,12 @@ AutonomOS overlays your current systems, abstracts the complexity, and delivers 
 
 ### 2.1 The Moat
 
-> **"The Moat is NOT the Runtime. The Moat is the Data."**
-
 **What AOS Builds (Differentiators):**
-- Introspective data tools exposing DCL/AAM/AOD to agents
-- Semantic schema discovery and mapping
-- Cross-system lineage tracking
-- Enterprise governance controls
-- Fabric Plane compliance
-
-**What AOS Buys/Integrates (Commodity):**
-- Agent execution (LangGraph)
-- Tool protocol (MCP)
-- LLM routing (AI Gateway)
+- We abstract your crappy IT stack with a lightweight, inexpensive, easy and quick to install layer that discovers, connects, unifies your data for agents and humans to consume easily and reliably.  
+- Our platform includes a Natural Language Query and interactive automated dashboard builder which are tuned to answer 90%+ of questions reliably, quickly while learning on the go to reduce inference costs.  
+- Our Agentic Orchestration function harnesses the complexity of agentic sprawl in a governed, secure, coordinated layer
+- In short, AOS is the new operating system for enterprise.  
+- Unlike the masses of start-ups claiming to be creating a data flywheel, we give our clients the promise that we do not see or store your data.  This also facilitates our claim that we can implement in days not months or years, as time consuming governance reviews are minimized. It doesn't mean we will not sell use cases in the future that engage in data modalities, but in order to get in the door fast, this is our strategy.
 
 ### 2.2 Core Development Principles
 
@@ -120,12 +113,10 @@ Every feature must satisfy ALL four criteria:
 
 ### 2.5 User Interaction
 - Main user / developer (Ilya) is the CEO and co-founder.
-- Ilya is not a developer, but he knows enough about software development to be dangerous and mess up the codebase - keep him away from code.
-- His IDE is Replit which he uses because its an integrated env - chat - see - debug - deploy - repeat.
+- Ilya is not a developer, he is at the moment both a Chief Architect and a Product Manager.  
+- His IDE is Replit which he uses because its an integrated env - chat - see - debug - deploy - repeat.  His prime developer is Claude Code for Web.
 - DO NOT alter the build/run configuration which has been set to deploy from Replit.
-- He vowed never to set up a terminal and work in CLI env as he hates that setup, and he works from as many as 4 different machines.  So far it's working well - the entire AOS Suite has been developed via remote. 
-- Now with addition of Claude Code for Web, things are proceeding much better / faster.
-- Bottom line is that he hates shortcuts, bandaids, tech debt, overhead, janky code and monoliths. If you the developer avoid these things, you will be rewarded handsomely.
+- Ilya hates shortcuts, bandaids, tech debt, overhead, janky code and monoliths. If you the developer avoid these things, you will be rewarded handsomely.
 
 ## Environment: Replit
 
