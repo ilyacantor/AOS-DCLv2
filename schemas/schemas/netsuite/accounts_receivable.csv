@@ -1,0 +1,6 @@
+invoice_id,customer_id,balance,days_outstanding,aging_bucket,due_date,status
+INV-001,ACC-001,45000,15,Current,2025-03-15,Open
+INV-002,ACC-003,125000,45,31-60 days,2025-01-20,Overdue
+INV-003,ACC-005,32000,5,Current,2025-03-25,Open
+INV-004,ACC-004,18000,75,61-90 days,2024-12-01,Overdue
+INV-005,ACC-002,22000,30,1-30 days,2025-02-10,Open

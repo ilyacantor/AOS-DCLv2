@@ -1,5 +1,5 @@
 """
-DCL Engine API - Metadata-only semantic mapping layer.
+DCL Engine API - Metadata-only semantic mapping layer + DCL expansion capabilities.
 
 NLQ and BLL functionality has been moved to AOS-NLQ repository.
 DCL focuses on:
@@ -7,11 +7,17 @@ DCL focuses on:
 - Ontology management
 - Graph visualization (Sankey diagrams)
 - Topology API
+- Temporal Versioning
+- Provenance Trace
+- Persona-Contextual Definitions
+- Entity Resolution
+- Conflict Detection
+- MCP Server
 """
 import os
 import uuid
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -36,6 +42,19 @@ from backend.api.query import (
     QueryResponse,
     QueryError,
     handle_query,
+)
+from backend.engine.temporal_versioning import get_temporal_store
+from backend.engine.provenance_service import get_provenance, ProvenanceTrace
+from backend.engine.persona_definitions import get_persona_definition_store
+from backend.engine.entity_resolution import get_entity_store
+from backend.engine.conflict_detection import get_conflict_store
+from backend.api.mcp_server import (
+    MCPToolCall,
+    MCPToolResult,
+    MCPServerInfo,
+    get_server_info,
+    handle_tool_call,
+    validate_api_key,
 )
 
 logger = get_logger(__name__)
@@ -360,6 +379,282 @@ def execute_dcl_query(request: QueryRequest):
             raise HTTPException(status_code=400, detail=result.model_dump())
     
     return result
+
+
+# =============================================================================
+# Temporal Versioning Endpoints
+# =============================================================================
+
+
+@app.get("/api/dcl/temporal/history/{metric_id}")
+def get_metric_version_history(metric_id: str):
+    """Get version history for a metric definition."""
+    store = get_temporal_store()
+    history = store.get_history(metric_id)
+    if history is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "METRIC_NOT_FOUND", "metric": metric_id}
+        )
+    return {"metric": metric_id, "version_history": [h.model_dump() for h in history]}
+
+
+class DefinitionChangeRequest(BaseModel):
+    metric_id: str
+    changed_by: str
+    change_description: str
+    previous_value: str
+    new_value: str
+
+
+@app.post("/api/dcl/temporal/change")
+def create_definition_change(request: DefinitionChangeRequest):
+    """Record a definition change (append-only)."""
+    store = get_temporal_store()
+    entry = store.add_version(
+        metric_id=request.metric_id,
+        changed_by=request.changed_by,
+        change_description=request.change_description,
+        previous_value=request.previous_value,
+        new_value=request.new_value,
+    )
+    return {"status": "ok", "entry": entry.model_dump()}
+
+
+@app.delete("/api/dcl/temporal/history/{metric_id}/{version}")
+def delete_version_entry(metric_id: str, version: int):
+    """Attempt to delete a version entry - ALWAYS FAILS (append-only)."""
+    raise HTTPException(
+        status_code=403,
+        detail={
+            "error": "APPEND_ONLY",
+            "message": "Version history is append-only. Entries cannot be deleted or modified."
+        }
+    )
+
+
+@app.put("/api/dcl/temporal/history/{metric_id}/{version}")
+def update_version_entry(metric_id: str, version: int):
+    """Attempt to update a version entry - ALWAYS FAILS (append-only)."""
+    raise HTTPException(
+        status_code=403,
+        detail={
+            "error": "APPEND_ONLY",
+            "message": "Version history is append-only. Entries cannot be deleted or modified."
+        }
+    )
+
+
+# =============================================================================
+# Provenance Trace Endpoints
+# =============================================================================
+
+
+@app.get("/api/dcl/provenance/{metric_id}")
+def get_metric_provenance(metric_id: str):
+    """
+    Trace a metric back to its source systems, tables, and fields.
+
+    Returns complete lineage with freshness and quality information.
+    """
+    trace = get_provenance(metric_id)
+    if trace is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "METRIC_NOT_FOUND",
+                "metric": metric_id,
+                "message": f"Metric '{metric_id}' not found in the semantic catalog"
+            }
+        )
+    return trace.model_dump()
+
+
+# =============================================================================
+# Persona-Contextual Definitions Endpoints
+# =============================================================================
+
+
+@app.get("/api/dcl/persona-definitions/{metric_id}")
+def get_persona_definitions(metric_id: str):
+    """Get all persona-specific definitions for a metric."""
+    store = get_persona_definition_store()
+    defs = store.get_all_definitions(metric_id)
+    return {
+        "metric": metric_id,
+        "definitions": [d.model_dump() for d in defs],
+    }
+
+
+# =============================================================================
+# Entity Resolution Endpoints
+# =============================================================================
+
+
+@app.post("/api/dcl/entities/resolve")
+def run_entity_resolution(entity_type: str = "company"):
+    """
+    Run entity resolution across all source records.
+
+    v1 scope: Companies/Customers ONLY.
+    """
+    store = get_entity_store()
+
+    if not store.is_entity_type_allowed(entity_type):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "ENTITY_TYPE_NOT_SUPPORTED",
+                "message": f"Entity type '{entity_type}' is not supported in v1. Only company/customer entities are supported.",
+                "supported_types": ["company", "customer"],
+            }
+        )
+
+    candidates = store.run_entity_resolution()
+    return {
+        "status": "ok",
+        "candidates": [c.model_dump() for c in candidates],
+        "canonical_entities": [e.model_dump() for e in store.get_all_canonical_entities()],
+    }
+
+
+class ConfirmMatchRequest(BaseModel):
+    approved: bool
+    resolved_by: str = "admin"
+
+
+@app.post("/api/dcl/entities/confirm/{candidate_id}")
+def confirm_entity_match(candidate_id: str, request: ConfirmMatchRequest):
+    """Confirm or reject a match candidate."""
+    store = get_entity_store()
+    candidate = store.confirm_match(candidate_id, request.approved, request.resolved_by)
+    if not candidate:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "CANDIDATE_NOT_FOUND", "candidate_id": candidate_id}
+        )
+    return {
+        "status": "ok",
+        "candidate": candidate.model_dump(),
+    }
+
+
+@app.post("/api/dcl/entities/undo/{dcl_global_id}")
+def undo_entity_merge(dcl_global_id: str, performed_by: str = "admin"):
+    """Undo a confirmed merge - split entity back into separate records."""
+    store = get_entity_store()
+    success = store.undo_merge(dcl_global_id, performed_by)
+    if not success:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "ENTITY_NOT_FOUND", "dcl_global_id": dcl_global_id}
+        )
+    return {"status": "ok", "message": "Merge undone successfully", "dcl_global_id": dcl_global_id}
+
+
+@app.get("/api/dcl/entities/{search_term}")
+def browse_entities(search_term: str):
+    """Browse entities matching a search term across all systems."""
+    store = get_entity_store()
+    results = store.browse_entities(search_term)
+    return {
+        "search_term": search_term,
+        "results": results,
+        "count": len(results),
+    }
+
+
+@app.get("/api/dcl/entities/canonical/{dcl_global_id}")
+def get_canonical_entity(dcl_global_id: str):
+    """Get a canonical entity by its global ID."""
+    store = get_entity_store()
+    entity = store.get_canonical_entity(dcl_global_id)
+    if not entity:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "ENTITY_NOT_FOUND", "dcl_global_id": dcl_global_id}
+        )
+    return entity.model_dump()
+
+
+# =============================================================================
+# Conflict Detection Endpoints
+# =============================================================================
+
+
+@app.post("/api/dcl/conflicts/detect")
+def run_conflict_detection():
+    """Run conflict detection across all resolved entities."""
+    store = get_conflict_store()
+    conflicts = store.detect_conflicts()
+    return {
+        "status": "ok",
+        "conflicts": [c.model_dump() for c in conflicts],
+        "count": len(conflicts),
+    }
+
+
+@app.get("/api/dcl/conflicts")
+def get_conflicts():
+    """Get all active conflicts sorted by severity (conflict dashboard)."""
+    store = get_conflict_store()
+    conflicts = store.get_active_conflicts()
+    return {
+        "conflicts": [c.model_dump() for c in conflicts],
+        "count": len(conflicts),
+    }
+
+
+class ConflictResolutionRequest(BaseModel):
+    decision: str
+    rationale: str
+    resolved_by: str = "admin"
+
+
+@app.post("/api/dcl/conflicts/{conflict_id}/resolve")
+def resolve_conflict(conflict_id: str, request: ConflictResolutionRequest):
+    """Resolve a conflict with a decision and rationale."""
+    store = get_conflict_store()
+    conflict = store.resolve_conflict(
+        conflict_id=conflict_id,
+        decision=request.decision,
+        rationale=request.rationale,
+        resolved_by=request.resolved_by,
+    )
+    if not conflict:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "CONFLICT_NOT_FOUND", "conflict_id": conflict_id}
+        )
+    return {
+        "status": "ok",
+        "conflict": conflict.model_dump(),
+    }
+
+
+# =============================================================================
+# MCP Server Endpoints
+# =============================================================================
+
+
+@app.get("/api/mcp/info")
+def mcp_server_info():
+    """Get MCP server information and available tools."""
+    return get_server_info().model_dump()
+
+
+@app.post("/api/mcp/tools/call")
+def mcp_tool_call(tool_call: MCPToolCall):
+    """Execute an MCP tool call."""
+    result = handle_tool_call(tool_call)
+    if not result.success and result.error and "Authentication" in result.error:
+        raise HTTPException(status_code=401, detail=result.model_dump())
+    return result.model_dump()
+
+
+# =============================================================================
+# Deprecated / Moved Endpoints
+# =============================================================================
 
 
 @app.get("/api/nlq/ask")

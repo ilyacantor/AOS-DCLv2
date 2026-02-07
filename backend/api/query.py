@@ -27,6 +27,8 @@ class QueryRequest(BaseModel):
     grain: Optional[str] = None
     order_by: Optional[str] = None
     limit: Optional[int] = None
+    persona: Optional[str] = None
+    entity: Optional[str] = None
 
 
 class QueryDataPoint(BaseModel):
@@ -36,6 +38,35 @@ class QueryDataPoint(BaseModel):
     dimensions: Dict[str, str] = Field(default_factory=dict)
     rank: Optional[int] = None
 
+
+class ProvenanceInfo(BaseModel):
+    """Provenance information in query response."""
+    source_system: str
+    freshness: str
+    quality_score: float
+
+class EntityInfo(BaseModel):
+    """Entity resolution information in query response."""
+    resolved_name: str
+    candidates: List[str] = Field(default_factory=list)
+    confidence: float = 1.0
+    match_type: str = "exact"
+
+class ConflictInfo(BaseModel):
+    """Conflict information in query response."""
+    systems: List[str]
+    values: Dict[str, Any]
+    root_cause: str
+    severity: float
+    trust_recommendation: str
+
+class TemporalWarningInfo(BaseModel):
+    """Temporal warning information in query response."""
+    metric: str
+    change_date: str
+    old_definition: str
+    new_definition: str
+    message: str
 
 class QueryMetadata(BaseModel):
     """Metadata about the query execution."""
@@ -47,6 +78,8 @@ class QueryMetadata(BaseModel):
     total_count: Optional[int] = None
     ranking_type: Optional[str] = None
     order: Optional[str] = None
+    persona: Optional[str] = None
+    persona_definition: Optional[str] = None
 
 
 class QueryResponse(BaseModel):
@@ -58,6 +91,10 @@ class QueryResponse(BaseModel):
     unit: str
     data: List[QueryDataPoint]
     metadata: QueryMetadata
+    provenance: Optional[List[ProvenanceInfo]] = None
+    entity: Optional[EntityInfo] = None
+    conflicts: Optional[List[ConflictInfo]] = None
+    temporal_warning: Optional[TemporalWarningInfo] = None
 
 
 class QueryError(BaseModel):
@@ -130,6 +167,7 @@ METRIC_TO_FACTBASE_KEY = {
     "internal_mobility_rate": "internal_mobility_rate",
     "span_of_control": "span_of_control",
     "enps": "enps",
+    "customers": "customer_count",
 }
 
 METRIC_UNIT_MAP = {
@@ -170,6 +208,8 @@ METRIC_UNIT_MAP = {
     "internal_mobility_rate": "percent",
     "span_of_control": "ratio",
     "enps": "score",
+    "customers": "count",
+    "quota_attainment": "percent",
 }
 
 DIMENSION_TO_FACTBASE_KEY = {
@@ -364,19 +404,19 @@ def execute_query(request: QueryRequest) -> QueryResponse:
     """Execute a validated query against the fact base."""
     fb = load_fact_base()
     metric_def = resolve_metric(request.metric)
-    
+
     if metric_def is None:
         raise ValueError(f"Metric '{request.metric}' not found")
-    
+
     grain = request.grain or metric_def.default_grain or "quarter"
     unit = METRIC_UNIT_MAP.get(request.metric, "unknown")
-    
+
     periods = filter_periods(fb, request.time_range)
     data_points: List[QueryDataPoint] = []
-    
+
     if request.dimensions:
         dim = request.dimensions[0]
-        
+
         dim_key = None
         if dim in DIMENSION_TO_FACTBASE_KEY:
             metric_dims = DIMENSION_TO_FACTBASE_KEY[dim]
@@ -386,7 +426,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                 dim_key = metric_dims["revenue"]
             elif "pipeline" in metric_dims and request.metric == "pipeline":
                 dim_key = metric_dims["pipeline"]
-        
+
         if dim_key and dim_key in fb:
             dim_data = fb[dim_key]
             if isinstance(dim_data, list):
@@ -420,7 +460,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                                         continue
                                     elif isinstance(filter_val, str) and dim_value != filter_val:
                                         continue
-                            
+
                             data_points.append(QueryDataPoint(
                                 period=period,
                                 value=_extract_value(request.metric, dim_key, raw_value),
@@ -446,28 +486,136 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                         value=float(q[fb_key]),
                         dimensions={}
                     ))
-    
+
+    # Apply persona-contextual definitions
+    persona_label = None
+    persona_definition_text = None
+    if request.persona:
+        from backend.engine.persona_definitions import get_persona_definition_store
+        pcd_store = get_persona_definition_store()
+        persona_label = request.persona.upper()
+
+        pcd_def = pcd_store.get_definition(request.metric, persona_label)
+        if pcd_def:
+            persona_definition_text = pcd_def.definition
+
+            # Apply value adjustments
+            if pcd_def.value_override is not None:
+                # For override metrics like "customers", replace all data points
+                if data_points:
+                    for dp in data_points:
+                        dp.value = pcd_def.value_override
+                else:
+                    data_points = [QueryDataPoint(
+                        period="current",
+                        value=pcd_def.value_override,
+                        dimensions={},
+                    )]
+            elif pcd_def.value_multiplier is not None and pcd_def.value_multiplier != 1.0:
+                for dp in data_points:
+                    dp.value = round(dp.value * pcd_def.value_multiplier, 2)
+
     mode = get_current_mode()
-    
+
     total_count = len(data_points)
     ranking_type = None
     order = None
-    
+
     if request.order_by:
         order = request.order_by.lower()
         reverse = order == "desc"
         data_points.sort(key=lambda dp: dp.value, reverse=reverse)
-        
+
         for i, dp in enumerate(data_points):
             dp.rank = i + 1
-        
+
         if request.limit:
             if request.limit == 1:
                 ranking_type = "max" if reverse else "min"
             else:
                 ranking_type = "top_n" if reverse else "bottom_n"
             data_points = data_points[:request.limit]
-    
+
+    # Build enriched response fields
+    # Provenance
+    provenance_info = None
+    try:
+        from backend.engine.provenance_service import get_provenance
+        trace = get_provenance(request.metric)
+        if trace and trace.sources:
+            provenance_info = [
+                ProvenanceInfo(
+                    source_system=s.source_system,
+                    freshness=s.freshness,
+                    quality_score=s.quality_score,
+                )
+                for s in trace.sources
+            ]
+    except Exception:
+        pass
+
+    # Entity resolution
+    entity_info = None
+    if request.entity:
+        try:
+            from backend.engine.entity_resolution import get_entity_store
+            er_store = get_entity_store()
+            results = er_store.browse_entities(request.entity)
+            if results:
+                confirmed = [r for r in results if r.get("match_status") == "confirmed"]
+                entity_info = EntityInfo(
+                    resolved_name=confirmed[0]["name"] if confirmed else results[0]["name"],
+                    candidates=[r["name"] for r in results],
+                    confidence=confirmed[0].get("confidence", 1.0) if confirmed else results[0].get("confidence", 0.5),
+                    match_type="confirmed" if confirmed else "candidate",
+                )
+        except Exception:
+            pass
+
+    # Conflict info
+    conflicts_info = None
+    if request.entity:
+        try:
+            from backend.engine.conflict_detection import get_conflict_store
+            cd_store = get_conflict_store()
+            active = cd_store.get_active_conflicts()
+            entity_conflicts = [
+                c for c in active
+                if request.entity.lower() in c.entity_name.lower()
+                and c.metric == request.metric
+            ]
+            if entity_conflicts:
+                conflicts_info = [
+                    ConflictInfo(
+                        systems=[v.source_system for v in c.values],
+                        values={v.source_system: v.value for v in c.values},
+                        root_cause=c.root_cause,
+                        severity=c.severity,
+                        trust_recommendation=c.trust_recommendation.get("system", "unknown"),
+                    )
+                    for c in entity_conflicts
+                ]
+        except Exception:
+            pass
+
+    # Temporal warning
+    temporal_warning = None
+    if request.time_range:
+        try:
+            from backend.engine.temporal_versioning import get_temporal_store
+            tv_store = get_temporal_store()
+            warning = tv_store.check_temporal_warning(request.metric, request.time_range)
+            if warning:
+                temporal_warning = TemporalWarningInfo(
+                    metric=warning.metric,
+                    change_date=warning.change_date,
+                    old_definition=warning.old_definition,
+                    new_definition=warning.new_definition,
+                    message=warning.message,
+                )
+        except Exception:
+            pass
+
     return QueryResponse(
         metric=request.metric,
         metric_name=metric_def.name,
@@ -483,8 +631,14 @@ def execute_query(request: QueryRequest) -> QueryResponse:
             record_count=len(data_points),
             total_count=total_count if request.order_by else None,
             ranking_type=ranking_type,
-            order=order
-        )
+            order=order,
+            persona=persona_label,
+            persona_definition=persona_definition_text,
+        ),
+        provenance=provenance_info,
+        entity=entity_info,
+        conflicts=conflicts_info,
+        temporal_warning=temporal_warning,
     )
 
 

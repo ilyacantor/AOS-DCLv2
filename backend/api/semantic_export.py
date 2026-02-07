@@ -31,6 +31,16 @@ class TimeGrain(str, Enum):
     YEAR = "year"
 
 
+class VersionHistoryEntry(BaseModel):
+    """Version history entry for a metric definition."""
+    version: int
+    changed_by: str
+    change_description: str
+    changed_at: str
+    previous_value: Optional[str] = None
+    new_value: Optional[str] = None
+
+
 class MetricDefinition(BaseModel):
     """Published metric definition for NLQ consumption."""
     id: str
@@ -44,6 +54,7 @@ class MetricDefinition(BaseModel):
     default_grain: Optional[TimeGrain] = None
     best_direction: str = "high"
     rankable_dimensions: List[str] = Field(default_factory=list)
+    version_history: Optional[List[VersionHistoryEntry]] = None
 
 
 class EntityDefinition(BaseModel):
@@ -522,6 +533,17 @@ PUBLISHED_METRICS: List[MetricDefinition] = [
         measure_op="avg",
         default_grain=TimeGrain.QUARTER
     ),
+    MetricDefinition(
+        id="customers",
+        name="Customers",
+        description="Total customer count (definition varies by persona)",
+        aliases=["customer count", "number of customers", "active customers", "client count"],
+        pack=Pack.CRO,
+        allowed_dims=["segment", "region"],
+        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
+        measure_op="count",
+        default_grain=TimeGrain.QUARTER
+    ),
 ]
 
 
@@ -877,24 +899,59 @@ def resolve_entity(query: str) -> Optional[EntityDefinition]:
 def get_semantic_export(tenant_id: str = "default") -> SemanticExport:
     """Build the full semantic export payload reflecting current DCL mode."""
     from backend.core.mode_state import get_current_mode
-    
+
     current_mode = get_current_mode()
-    
+
     mode_info = ModeInfo(
         data_mode=current_mode.data_mode,
         run_mode=current_mode.run_mode,
         last_updated=current_mode.last_updated
     )
-    
+
     bindings = get_bindings_for_mode(current_mode.data_mode)
-    
+
+    # Enrich metrics with version history from temporal versioning store
+    enriched_metrics = _enrich_metrics_with_version_history(PUBLISHED_METRICS)
+
     return SemanticExport(
         version="1.0.0",
         tenant_id=tenant_id,
         mode=mode_info,
-        metrics=PUBLISHED_METRICS,
+        metrics=enriched_metrics,
         entities=PUBLISHED_ENTITIES,
         persona_concepts=DEFAULT_PERSONA_CONCEPTS,
         bindings=bindings,
         metric_entity_matrix=build_metric_entity_matrix()
     )
+
+
+def _enrich_metrics_with_version_history(
+    metrics: List[MetricDefinition],
+) -> List[MetricDefinition]:
+    """Add version history to each metric from the temporal versioning store."""
+    try:
+        from backend.engine.temporal_versioning import get_temporal_store
+        store = get_temporal_store()
+
+        enriched = []
+        for metric in metrics:
+            history = store.get_history(metric.id)
+            if history:
+                enriched_metric = metric.model_copy()
+                enriched_metric.version_history = [
+                    VersionHistoryEntry(
+                        version=h.version,
+                        changed_by=h.changed_by,
+                        change_description=h.change_description,
+                        changed_at=h.changed_at,
+                        previous_value=h.previous_value,
+                        new_value=h.new_value,
+                    )
+                    for h in history
+                ]
+                enriched.append(enriched_metric)
+            else:
+                enriched.append(metric)
+        return enriched
+    except Exception:
+        return metrics

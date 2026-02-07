@@ -1,0 +1,6 @@
+opportunity_id,account_name,amount,stage,close_date,owner,region,segment
+OPP-001,Acme Corp,450000,Closed-Won,2025-01-15,James Wilson,AMER,Enterprise
+OPP-002,TechStart Inc,125000,Proposal,2025-02-28,Sarah Chen,AMER,Mid-Market
+OPP-003,GlobalBank,780000,Negotiation,2025-03-15,Mike Johnson,EMEA,Enterprise
+OPP-004,HealthCare Plus,95000,Qualified,2025-04-01,Lisa Park,AMER,SMB
+OPP-005,RetailMax,320000,Closed-Won,2025-01-30,David Kim,APAC,Enterprise

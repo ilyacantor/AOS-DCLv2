@@ -1,0 +1,6 @@
+account_id,account_name,industry,revenue,health_score,owner,region
+ACC-001,Acme Corp,Software,4200000,85,James Wilson,AMER
+ACC-002,TechStart Inc,Technology,2500000,72,Sarah Chen,AMER
+ACC-003,GlobalBank,Financial Services,12000000,90,Mike Johnson,EMEA
+ACC-004,HealthCare Plus,Healthcare,850000,68,Lisa Park,AMER
+ACC-005,RetailMax,Retail,3100000,78,David Kim,APAC
