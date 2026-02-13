@@ -10,9 +10,14 @@ NLQ uses this data to:
 - Fail fast with helpful messages when metrics don't exist
 """
 
+import logging
+import yaml
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from enum import Enum
+
+logger = logging.getLogger(__name__)
 
 
 class Pack(str, Enum):
@@ -95,765 +100,87 @@ class SemanticExport(BaseModel):
     metric_entity_matrix: Dict[str, List[str]] = Field(default_factory=dict)
 
 
-PUBLISHED_METRICS: List[MetricDefinition] = [
-    MetricDefinition(
-        id="arr",
-        name="Annual Recurring Revenue",
-        description="Total annual value of recurring subscription revenue",
-        aliases=["ARR", "annual recurring revenue", "recurring revenue", "annual revenue"],
-        pack=Pack.CFO,
-        allowed_dims=["customer", "service_line", "region", "segment"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="point_in_time_sum",
-        default_grain=TimeGrain.MONTH
-    ),
-    MetricDefinition(
-        id="mrr",
-        name="Monthly Recurring Revenue",
-        description="Total monthly value of recurring subscription revenue",
-        aliases=["MRR", "monthly recurring revenue", "monthly revenue"],
-        pack=Pack.CFO,
-        allowed_dims=["customer", "service_line", "region", "segment"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="point_in_time_sum",
-        default_grain=TimeGrain.MONTH
-    ),
-    MetricDefinition(
-        id="revenue",
-        name="Total Revenue",
-        description="Total recognized revenue across all sources",
-        aliases=["total revenue", "sales", "income", "top line"],
-        pack=Pack.CFO,
-        allowed_dims=["customer", "service_line", "region", "product", "segment"],
-        allowed_grains=[TimeGrain.DAY, TimeGrain.WEEK, TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="sum",
-        default_grain=TimeGrain.MONTH,
-        best_direction="high",
-        rankable_dimensions=["region", "segment", "product"]
-    ),
-    MetricDefinition(
-        id="services_revenue",
-        name="Services Revenue",
-        description="Revenue from professional services",
-        aliases=["professional services", "PS revenue", "consulting revenue"],
-        pack=Pack.CFO,
-        allowed_dims=["customer", "service_line", "region", "project"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="sum",
-        default_grain=TimeGrain.MONTH
-    ),
-    MetricDefinition(
-        id="ar",
-        name="Accounts Receivable",
-        description="Outstanding customer balances owed",
-        aliases=["AR", "accounts receivable", "receivables", "outstanding invoices", "A/R"],
-        pack=Pack.CFO,
-        allowed_dims=["customer", "invoice", "aging_bucket"],
-        allowed_grains=[TimeGrain.DAY, TimeGrain.WEEK, TimeGrain.MONTH],
-        measure_op="point_in_time_sum",
-        default_grain=TimeGrain.MONTH
-    ),
-    MetricDefinition(
-        id="dso",
-        name="Days Sales Outstanding",
-        description="Average days to collect payment from customers",
-        aliases=["DSO", "days sales outstanding", "collection days", "AR days"],
-        pack=Pack.CFO,
-        allowed_dims=["customer", "segment", "region"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="avg_days_between",
-        default_grain=TimeGrain.MONTH,
-        best_direction="low",
-        rankable_dimensions=["segment", "region"]
-    ),
-    MetricDefinition(
-        id="burn_rate",
-        name="Burn Rate",
-        description="Monthly cash consumption rate",
-        aliases=["burn", "cash burn", "monthly burn", "spending rate"],
-        pack=Pack.CFO,
-        allowed_dims=["cost_center", "category"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="sum",
-        default_grain=TimeGrain.MONTH,
-        best_direction="low",
-        rankable_dimensions=["cost_center", "category"]
-    ),
-    MetricDefinition(
-        id="gross_margin",
-        name="Gross Margin",
-        description="Revenue minus cost of goods sold as percentage",
-        aliases=["margin", "GM", "gross profit margin"],
-        pack=Pack.CFO,
-        allowed_dims=["product", "service_line", "segment"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="ratio",
-        default_grain=TimeGrain.QUARTER
-    ),
-    MetricDefinition(
-        id="ar_aging",
-        name="Accounts Receivable Aging",
-        description="Accounts receivable broken down by aging buckets",
-        aliases=["AR aging", "receivables aging", "aged receivables"],
-        pack=Pack.CFO,
-        allowed_dims=["aging_bucket"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="sum",
-        default_grain=TimeGrain.MONTH
-    ),
-    MetricDefinition(
-        id="pipeline",
-        name="Sales Pipeline",
-        description="Total value of open opportunities",
-        aliases=["sales pipeline", "open pipeline", "pipeline value", "opportunities"],
-        pack=Pack.CRO,
-        allowed_dims=["rep", "stage", "region", "segment"],
-        allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="point_in_time_sum",
-        default_grain=TimeGrain.MONTH,
-        best_direction="high",
-        rankable_dimensions=["rep", "stage", "region", "segment"]
-    ),
-    MetricDefinition(
-        id="win_rate",
-        name="Win Rate",
-        description="Percentage of opportunities won",
-        aliases=["close rate", "conversion rate", "deal win rate"],
-        pack=Pack.CRO,
-        allowed_dims=["rep", "segment", "region", "product"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="ratio",
-        default_grain=TimeGrain.QUARTER,
-        best_direction="high",
-        rankable_dimensions=["rep", "segment", "region"]
-    ),
-    MetricDefinition(
-        id="quota_attainment",
-        name="Quota Attainment",
-        description="Percentage of sales quota achieved by rep",
-        aliases=["attainment", "quota achievement", "target attainment", "sales attainment"],
-        pack=Pack.CRO,
-        allowed_dims=["rep", "segment", "region"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="ratio",
-        default_grain=TimeGrain.QUARTER,
-        best_direction="high",
-        rankable_dimensions=["rep", "region"]
-    ),
-    MetricDefinition(
-        id="churn_rate",
-        name="Churn Rate",
-        description="Percentage of customers or revenue lost",
-        aliases=["churn", "customer churn", "revenue churn"],
-        pack=Pack.CRO,
-        allowed_dims=["segment", "region", "cohort"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="ratio",
-        default_grain=TimeGrain.MONTH,
-        best_direction="low",
-        rankable_dimensions=["segment", "region", "cohort"]
-    ),
-    MetricDefinition(
-        id="nrr",
-        name="Net Revenue Retention",
-        description="Revenue retained plus expansion from existing customers",
-        aliases=["NRR", "net retention", "dollar retention", "NDR"],
-        pack=Pack.CRO,
-        allowed_dims=["segment", "region", "cohort"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="ratio",
-        default_grain=TimeGrain.MONTH
-    ),
-    MetricDefinition(
-        id="pipeline_value",
-        name="Total Pipeline Value",
-        description="Total value of all open opportunities in the sales pipeline",
-        aliases=["pipeline", "total pipeline", "sales pipeline"],
-        pack=Pack.CRO,
-        allowed_dims=["rep", "stage", "region", "segment"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="sum",
-        default_grain=TimeGrain.MONTH
-    ),
-    MetricDefinition(
-        id="churn_risk",
-        name="Churn Risk Score",
-        description="Score indicating likelihood of customer churn",
-        aliases=["churn risk score", "risk score"],
-        pack=Pack.CRO,
-        allowed_dims=["segment", "customer"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="avg",
-        default_grain=TimeGrain.MONTH,
-        best_direction="low",
-        rankable_dimensions=["segment", "customer"]
-    ),
-    MetricDefinition(
-        id="nrr_by_cohort",
-        name="NRR by Cohort",
-        description="Net Revenue Retention analyzed by customer cohort",
-        aliases=["cohort NRR", "retention by cohort"],
-        pack=Pack.CRO,
-        allowed_dims=["cohort", "product"],
-        allowed_grains=[TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="avg",
-        default_grain=TimeGrain.QUARTER
-    ),
-    MetricDefinition(
-        id="throughput",
-        name="Work Throughput",
-        description="Work items completed per time period",
-        aliases=["work throughput", "items completed", "tickets resolved"],
-        pack=Pack.COO,
-        allowed_dims=["team", "work_type", "priority"],
-        allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="sum",
-        default_grain=TimeGrain.WEEK
-    ),
-    MetricDefinition(
-        id="cycle_time",
-        name="Cycle Time",
-        description="Average time to complete work items",
-        aliases=["lead time", "delivery time", "time to complete"],
-        pack=Pack.COO,
-        allowed_dims=["team", "project_type", "priority"],
-        allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="avg",
-        default_grain=TimeGrain.WEEK,
-        best_direction="low",
-        rankable_dimensions=["team", "project_type"]
-    ),
-    MetricDefinition(
-        id="sla_compliance",
-        name="SLA Compliance Rate",
-        description="Percentage of SLAs met",
-        aliases=["SLA attainment", "SLA rate", "service level compliance"],
-        pack=Pack.COO,
-        allowed_dims=["team", "tier", "work_type"],
-        allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="avg",
-        default_grain=TimeGrain.MONTH
-    ),
-    MetricDefinition(
-        id="deploy_frequency",
-        name="Deployment Frequency",
-        description="Number of deployments per time period",
-        aliases=["deployment rate", "deploys per week", "release frequency"],
-        pack=Pack.CTO,
-        allowed_dims=["service", "team", "environment"],
-        allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH],
-        measure_op="sum",
-        default_grain=TimeGrain.WEEK
-    ),
-    MetricDefinition(
-        id="mttr",
-        name="Mean Time to Recovery",
-        description="Average time to recover from incidents",
-        aliases=["MTTR", "recovery time", "incident recovery"],
-        pack=Pack.CTO,
-        allowed_dims=["team", "service", "severity"],
-        allowed_grains=[TimeGrain.WEEK, TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="avg",
-        default_grain=TimeGrain.MONTH,
-        best_direction="low",
-        rankable_dimensions=["team", "service", "severity"]
-    ),
-    MetricDefinition(
-        id="uptime",
-        name="Service Uptime",
-        description="Percentage of time services are available",
-        aliases=["availability", "uptime percentage", "service availability"],
-        pack=Pack.CTO,
-        allowed_dims=["service"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="avg",
-        default_grain=TimeGrain.MONTH
-    ),
-    MetricDefinition(
-        id="slo_attainment",
-        name="SLO Attainment",
-        description="Percentage of Service Level Objectives met",
-        aliases=["SLO compliance", "service level objective", "SLO rate"],
-        pack=Pack.CTO,
-        allowed_dims=["service"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="avg",
-        default_grain=TimeGrain.MONTH,
-        best_direction="high",
-        rankable_dimensions=["service"]
-    ),
-    MetricDefinition(
-        id="cloud_cost",
-        name="Cloud Spend",
-        description="Total cloud infrastructure costs",
-        aliases=["cloud spend", "infrastructure cost", "AWS cost", "cloud expenses"],
-        pack=Pack.CTO,
-        allowed_dims=["resource_type", "team", "environment"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER],
-        measure_op="sum",
-        default_grain=TimeGrain.MONTH,
-        best_direction="low",
-        rankable_dimensions=["resource_type", "team", "environment"]
-    ),
-    MetricDefinition(
-        id="headcount",
-        name="Headcount",
-        description="Total employee count",
-        aliases=["employees", "employee count", "HC", "FTE"],
-        pack=Pack.CHRO,
-        allowed_dims=["department", "team", "location", "level"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="count",
-        default_grain=TimeGrain.QUARTER,
-        best_direction="high",
-        rankable_dimensions=["department", "team"]
-    ),
-    MetricDefinition(
-        id="attrition_rate",
-        name="Attrition Rate",
-        description="Percentage of employees leaving",
-        aliases=["attrition", "turnover", "turnover rate"],
-        pack=Pack.CHRO,
-        allowed_dims=["department", "team", "tenure_band", "location"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="ratio",
-        default_grain=TimeGrain.QUARTER,
-        best_direction="low",
-        rankable_dimensions=["department", "team"]
-    ),
-    MetricDefinition(
-        id="time_to_fill",
-        name="Time to Fill",
-        description="Average days to fill open roles",
-        aliases=["TTF", "hiring velocity", "requisition time"],
-        pack=Pack.CHRO,
-        allowed_dims=["department", "role", "location"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="avg_days_between",
-        default_grain=TimeGrain.QUARTER,
-        best_direction="low",
-        rankable_dimensions=["department"]
-    ),
-    MetricDefinition(
-        id="engagement_score",
-        name="Engagement Score",
-        description="Employee engagement percentage",
-        aliases=["engagement", "employee engagement"],
-        pack=Pack.CHRO,
-        allowed_dims=["department", "team", "tenure_band"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="ratio",
-        default_grain=TimeGrain.QUARTER
-    ),
-    MetricDefinition(
-        id="compensation_ratio",
-        name="Compensation Ratio",
-        description="Ratio to market compensation",
-        aliases=["comp ratio", "pay ratio", "market ratio"],
-        pack=Pack.CHRO,
-        allowed_dims=["department", "level", "location"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="ratio",
-        default_grain=TimeGrain.QUARTER
-    ),
-    MetricDefinition(
-        id="training_hours",
-        name="Training Hours",
-        description="Training hours per employee",
-        aliases=["L&D hours", "learning hours", "training"],
-        pack=Pack.CHRO,
-        allowed_dims=["department", "team", "training_type"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="avg",
-        default_grain=TimeGrain.QUARTER
-    ),
-    MetricDefinition(
-        id="promotion_rate",
-        name="Promotion Rate",
-        description="Percentage of promotions",
-        aliases=["promotions", "advancement rate"],
-        pack=Pack.CHRO,
-        allowed_dims=["department", "level", "tenure_band"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="ratio",
-        default_grain=TimeGrain.QUARTER
-    ),
-    MetricDefinition(
-        id="diversity_index",
-        name="Diversity Index",
-        description="Diversity percentage",
-        aliases=["diversity", "D&I", "DEI"],
-        pack=Pack.CHRO,
-        allowed_dims=["department", "level", "location"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="ratio",
-        default_grain=TimeGrain.QUARTER
-    ),
-    MetricDefinition(
-        id="offer_acceptance_rate",
-        name="Offer Acceptance Rate",
-        description="Percentage of job offers accepted by candidates",
-        aliases=["offer rate", "acceptance rate", "recruiting funnel completion", "offer conversion"],
-        pack=Pack.CHRO,
-        allowed_dims=["department", "role", "location"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="ratio",
-        default_grain=TimeGrain.QUARTER
-    ),
-    MetricDefinition(
-        id="internal_mobility_rate",
-        name="Internal Mobility Rate",
-        description="Percentage of roles filled by internal candidates",
-        aliases=["internal mobility", "career development", "internal transfers", "retention mobility"],
-        pack=Pack.CHRO,
-        allowed_dims=["department", "level", "tenure_band"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="ratio",
-        default_grain=TimeGrain.QUARTER
-    ),
-    MetricDefinition(
-        id="span_of_control",
-        name="Span of Control",
-        description="Average number of direct reports per manager",
-        aliases=["org structure health", "manager ratio", "direct reports", "management span"],
-        pack=Pack.CHRO,
-        allowed_dims=["department", "level", "location"],
-        allowed_grains=[TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="avg",
-        default_grain=TimeGrain.QUARTER
-    ),
-    MetricDefinition(
-        id="enps",
-        name="Employee Net Promoter Score",
-        description="Employee willingness to recommend the company as a workplace",
-        aliases=["eNPS", "nps", "employee NPS", "employee net promoter", "workplace recommendation score"],
-        pack=Pack.CHRO,
-        allowed_dims=["department", "team", "tenure_band", "location"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="avg",
-        default_grain=TimeGrain.QUARTER
-    ),
-    MetricDefinition(
-        id="customers",
-        name="Customers",
-        description="Total customer count (definition varies by persona)",
-        aliases=["customer count", "number of customers", "active customers", "client count"],
-        pack=Pack.CRO,
-        allowed_dims=["segment", "region"],
-        allowed_grains=[TimeGrain.MONTH, TimeGrain.QUARTER, TimeGrain.YEAR],
-        measure_op="count",
-        default_grain=TimeGrain.QUARTER
-    ),
-]
+CONFIG_DIR = Path(__file__).parent.parent / "config" / "definitions"
 
 
-PUBLISHED_ENTITIES: List[EntityDefinition] = [
-    EntityDefinition(
-        id="customer",
-        name="Customer",
-        description="Business customer or account",
-        aliases=["account", "company", "client"],
-        pack=Pack.CRO,
-        allowed_values=["Acme Corp", "TechStart Inc", "GlobalBank", "HealthCare Plus", "RetailMax", "Manufacturing Co", "FinServ Group", "EduTech Academy"]
-    ),
-    EntityDefinition(
-        id="service_line",
-        name="Service Line",
-        description="Business service offering category",
-        aliases=["service type", "professional service"],
-        pack=Pack.CFO,
-        allowed_values=["Implementation", "Consulting", "Training", "Support Premium"]
-    ),
-    EntityDefinition(
-        id="region",
-        name="Region",
-        description="Geographic region",
-        aliases=["geography", "geo", "territory", "area", "location"]
-    ),
-    EntityDefinition(
-        id="segment",
-        name="Segment",
-        description="Customer or market segment",
-        aliases=["market segment", "customer segment", "tier", "size"]
-    ),
-    EntityDefinition(
-        id="rep",
-        name="Sales Representative",
-        description="Sales representative",
-        aliases=["sales rep", "account executive", "AE", "seller"],
-        pack=Pack.CRO,
-        allowed_values=["James Wilson", "Sarah Chen", "Mike Johnson", "Lisa Park", "David Kim", "Emily Brown", "Chris Lee", "Amanda Garcia"]
-    ),
-    EntityDefinition(
-        id="team",
-        name="Team",
-        description="Organizational team",
-        aliases=["squad", "group", "department", "unit"]
-    ),
-    EntityDefinition(
-        id="product",
-        name="Product",
-        description="Product or SKU",
-        aliases=["SKU", "item", "offering"]
-    ),
-    EntityDefinition(
-        id="project",
-        name="Project",
-        description="Work project or initiative",
-        aliases=["initiative", "program", "engagement"]
-    ),
-    EntityDefinition(
-        id="invoice",
-        name="Invoice",
-        description="Billing invoice",
-        aliases=["bill", "statement"]
-    ),
-    EntityDefinition(
-        id="stage",
-        name="Pipeline Stage",
-        description="Pipeline or deal stage",
-        aliases=["deal stage", "opportunity stage", "sales stage"],
-        pack=Pack.CRO,
-        allowed_values=["Lead", "Qualified", "Proposal", "Negotiation", "Closed-Won", "Closed-Lost"]
-    ),
-    EntityDefinition(
-        id="cohort",
-        name="Customer Cohort",
-        description="Time-based customer cohort",
-        aliases=["customer cohort", "signup cohort"],
-        pack=Pack.CRO,
-        allowed_values=["2022-H1", "2022-H2", "2023-H1", "2023-H2", "2024-H1", "2024-H2", "2025-H1"]
-    ),
-    EntityDefinition(
-        id="cost_center",
-        name="Cost Center",
-        description="Budget allocation unit",
-        aliases=["budget", "department budget"]
-    ),
-    EntityDefinition(
-        id="aging_bucket",
-        name="AR Aging Bucket",
-        description="AR aging time range",
-        aliases=["aging period", "days outstanding bucket"],
-        pack=Pack.CFO,
-        allowed_values=["Current", "1-30 days", "31-60 days", "61-90 days", "90+ days"]
-    ),
-    EntityDefinition(
-        id="project_type",
-        name="Project Type",
-        description="Type of project or initiative",
-        aliases=["initiative type", "work category"],
-        pack=Pack.COO,
-        allowed_values=["Feature", "Bug Fix", "Infrastructure", "Compliance", "Maintenance"]
-    ),
-    EntityDefinition(
-        id="work_type",
-        name="Work Type",
-        description="Category of work item",
-        aliases=["task type", "item type"],
-        pack=Pack.COO,
-        allowed_values=["Development", "Design", "QA", "Documentation", "Support"]
-    ),
-    EntityDefinition(
-        id="priority",
-        name="Priority Level",
-        description="Work item priority level",
-        aliases=["urgency", "priority level"],
-        pack=Pack.COO,
-        allowed_values=["Critical", "High", "Medium", "Low"]
-    ),
-    EntityDefinition(
-        id="service",
-        name="Service/Application",
-        description="Technical service or microservice",
-        aliases=["application", "system", "microservice"],
-        pack=Pack.CTO,
-        allowed_values=["API Gateway", "Auth Service", "Payment Service", "Notification Service", "Data Pipeline", "Web App", "Mobile Backend"]
-    ),
-    EntityDefinition(
-        id="resource_type",
-        name="Cloud Resource Type",
-        description="Cloud resource category",
-        aliases=["infrastructure type", "cloud resource"],
-        pack=Pack.CTO,
-        allowed_values=["Compute", "Storage", "Database", "Network", "ML/AI", "Other"]
-    ),
-    EntityDefinition(
-        id="environment",
-        name="Deployment Environment",
-        description="Deployment environment",
-        aliases=["env", "stage"],
-        pack=Pack.CTO,
-        allowed_values=["Production", "Staging", "Development"]
-    ),
-    EntityDefinition(
-        id="sla_type",
-        name="SLA Type",
-        description="Service level agreement category",
-        aliases=["SLA category"]
-    ),
-    EntityDefinition(
-        id="slo_type",
-        name="SLO Type",
-        description="Service level objective category",
-        aliases=["objective type"]
-    ),
-    EntityDefinition(
-        id="severity",
-        name="Incident Severity",
-        description="Incident severity level",
-        aliases=["incident level", "priority"],
-        pack=Pack.CTO,
-        allowed_values=["P1", "P2", "P3", "P4"]
-    ),
-    EntityDefinition(
-        id="category",
-        name="Category",
-        description="Generic category dimension",
-        aliases=["type", "class"]
-    ),
-    EntityDefinition(
-        id="department",
-        name="Department",
-        description="Organizational department",
-        aliases=["dept", "division", "org unit"]
-    ),
-    EntityDefinition(
-        id="level",
-        name="Level",
-        description="Job level or grade",
-        aliases=["job_level", "grade", "band"]
-    ),
-    EntityDefinition(
-        id="tenure_band",
-        name="Tenure Band",
-        description="Employee tenure range",
-        aliases=["tenure", "years_of_service"]
-    ),
-    EntityDefinition(
-        id="role",
-        name="Role",
-        description="Job role or title",
-        aliases=["job_title", "position"]
-    ),
-    EntityDefinition(
-        id="training_type",
-        name="Training Type",
-        description="Type of training or learning",
-        aliases=["course_type", "learning_category"]
-    ),
-    EntityDefinition(
-        id="location",
-        name="Location",
-        description="Physical work location",
-        aliases=["office", "site", "workplace"]
-    ),
-]
+def _load_metrics() -> List[MetricDefinition]:
+    config_path = CONFIG_DIR / "metrics.yaml"
+    if not config_path.exists():
+        logger.warning(f"Metrics config not found: {config_path}")
+        return []
+    with open(config_path) as f:
+        data = yaml.safe_load(f)
+    metrics = []
+    for m in data.get("metrics", []):
+        metrics.append(MetricDefinition(
+            id=m["id"],
+            name=m["name"],
+            description=m["description"],
+            aliases=m.get("aliases", []),
+            pack=Pack(m["pack"]),
+            allowed_dims=m.get("allowed_dims", []),
+            allowed_grains=[TimeGrain(g) for g in m.get("allowed_grains", [])],
+            measure_op=m.get("measure_op"),
+            default_grain=TimeGrain(m["default_grain"]) if m.get("default_grain") else None,
+            best_direction=m.get("best_direction", "high"),
+            rankable_dimensions=m.get("rankable_dimensions", []),
+        ))
+    return metrics
 
 
-DEFAULT_PERSONA_CONCEPTS = {
-    "cfo": ["arr", "mrr", "revenue", "services_revenue", "ar", "dso", "burn_rate", "gross_margin", "ar_aging"],
-    "cro": ["pipeline", "win_rate", "quota_attainment", "churn_rate", "nrr", "revenue", "arr", "pipeline_value", "churn_risk", "nrr_by_cohort"],
-    "coo": ["throughput", "cycle_time", "sla_compliance"],
-    "cto": ["deploy_frequency", "mttr", "uptime", "slo_attainment", "cloud_cost"],
-    "chro": ["headcount", "attrition_rate", "time_to_fill", "engagement_score", "compensation_ratio", "training_hours", "promotion_rate", "diversity_index", "offer_acceptance_rate", "internal_mobility_rate", "span_of_control", "enps"]
-}
+def _load_entities() -> List[EntityDefinition]:
+    config_path = CONFIG_DIR / "entities.yaml"
+    if not config_path.exists():
+        logger.warning(f"Entities config not found: {config_path}")
+        return []
+    with open(config_path) as f:
+        data = yaml.safe_load(f)
+    entities = []
+    for e in data.get("entities", []):
+        entities.append(EntityDefinition(
+            id=e["id"],
+            name=e["name"],
+            description=e["description"],
+            aliases=e.get("aliases", []),
+            pack=Pack(e["pack"]) if e.get("pack") else None,
+            allowed_values=e.get("allowed_values", []),
+        ))
+    return entities
 
 
-DEMO_BINDINGS: List[BindingSummary] = [
-    BindingSummary(
-        source_system="Salesforce CRM",
-        canonical_event="deal_won",
-        quality_score=0.95,
-        freshness_score=0.98,
-        dims_coverage={"customer": True, "rep": True, "region": True, "segment": True}
-    ),
-    BindingSummary(
-        source_system="NetSuite ERP",
-        canonical_event="revenue_recognized",
-        quality_score=0.92,
-        freshness_score=0.95,
-        dims_coverage={"customer": True, "service_line": True, "region": False}
-    ),
-    BindingSummary(
-        source_system="NetSuite ERP",
-        canonical_event="invoice_posted",
-        quality_score=0.90,
-        freshness_score=0.95,
-        dims_coverage={"customer": True, "invoice": True, "aging_bucket": True}
-    ),
-    BindingSummary(
-        source_system="Chargebee",
-        canonical_event="subscription_started",
-        quality_score=0.88,
-        freshness_score=0.92,
-        dims_coverage={"customer": True, "product": True, "segment": True}
-    ),
-    BindingSummary(
-        source_system="Jira",
-        canonical_event="work_item_completed",
-        quality_score=0.85,
-        freshness_score=0.90,
-        dims_coverage={"team": True, "project": True, "work_type": True, "priority": True}
-    ),
-    BindingSummary(
-        source_system="GitHub Actions",
-        canonical_event="deployment_completed",
-        quality_score=0.90,
-        freshness_score=0.98,
-        dims_coverage={"service": True, "team": True, "environment": True}
-    ),
-    BindingSummary(
-        source_system="PagerDuty",
-        canonical_event="incident_resolved",
-        quality_score=0.88,
-        freshness_score=0.95,
-        dims_coverage={"service": True, "team": True, "severity": True}
-    ),
-    BindingSummary(
-        source_system="AWS Cost Explorer",
-        canonical_event="cloud_cost_incurred",
-        quality_score=0.92,
-        freshness_score=0.85,
-        dims_coverage={"service": True, "team": True, "resource_type": True, "environment": True}
-    ),
-    BindingSummary(
-        source_system="Workday",
-        canonical_event="employee_hired",
-        quality_score=0.92,
-        freshness_score=0.95,
-        dims_coverage={"department": True, "team": True, "level": True, "location": True}
-    ),
-    BindingSummary(
-        source_system="Workday",
-        canonical_event="employee_terminated",
-        quality_score=0.90,
-        freshness_score=0.95,
-        dims_coverage={"department": True, "team": True, "tenure_band": True, "location": True}
-    ),
-    BindingSummary(
-        source_system="Greenhouse",
-        canonical_event="requisition_opened",
-        quality_score=0.88,
-        freshness_score=0.92,
-        dims_coverage={"department": True, "role": True, "location": True}
-    ),
-    BindingSummary(
-        source_system="Greenhouse",
-        canonical_event="requisition_filled",
-        quality_score=0.88,
-        freshness_score=0.92,
-        dims_coverage={"department": True, "role": True, "location": True}
-    ),
-    BindingSummary(
-        source_system="Culture Amp",
-        canonical_event="survey_completed",
-        quality_score=0.85,
-        freshness_score=0.90,
-        dims_coverage={"department": True, "team": True, "tenure_band": True}
-    ),
-]
+def _load_bindings() -> List[BindingSummary]:
+    config_path = CONFIG_DIR / "bindings.yaml"
+    if not config_path.exists():
+        logger.warning(f"Bindings config not found: {config_path}")
+        return []
+    with open(config_path) as f:
+        data = yaml.safe_load(f)
+    bindings = []
+    for b in data.get("bindings", []):
+        bindings.append(BindingSummary(
+            source_system=b["source_system"],
+            canonical_event=b["canonical_event"],
+            quality_score=b["quality_score"],
+            freshness_score=b["freshness_score"],
+            dims_coverage=b.get("dims_coverage", {}),
+        ))
+    return bindings
 
+
+def _load_persona_concepts() -> Dict[str, List[str]]:
+    config_path = CONFIG_DIR / "persona_concepts.yaml"
+    if not config_path.exists():
+        logger.warning(f"Persona concepts config not found: {config_path}")
+        return {}
+    with open(config_path) as f:
+        data = yaml.safe_load(f)
+    return data.get("persona_concepts", {})
+
+
+PUBLISHED_METRICS: List[MetricDefinition] = _load_metrics()
+PUBLISHED_ENTITIES: List[EntityDefinition] = _load_entities()
+DEMO_BINDINGS: List[BindingSummary] = _load_bindings()
+DEFAULT_PERSONA_CONCEPTS: Dict[str, List[str]] = _load_persona_concepts()
 FARM_BINDINGS: List[BindingSummary] = []
 
 
@@ -910,7 +237,6 @@ def get_semantic_export(tenant_id: str = "default") -> SemanticExport:
 
     bindings = get_bindings_for_mode(current_mode.data_mode)
 
-    # Enrich metrics with version history from temporal versioning store
     enriched_metrics = _enrich_metrics_with_version_history(PUBLISHED_METRICS)
 
     return SemanticExport(

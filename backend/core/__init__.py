@@ -69,7 +69,6 @@ from backend.core.security_constraints import (
 
 from backend.core.fabric_plane import (
     FabricPlaneType,
-    FabricProvider,
     FabricPointer,
     KafkaPointer,
     SnowflakePointer,
@@ -78,8 +77,8 @@ from backend.core.fabric_plane import (
     IPaaSPointer,
     APIGatewayPointer,
     FabricPlaneClient,
-    PLANE_TO_PROVIDERS,
     get_pointer_class,
+    register_pointer_class,
 )
 
 from backend.core.pointer_buffer import (
@@ -113,7 +112,6 @@ __all__ = [
     "assert_metadata_only_mode",
     "MetadataOnlyDict",
     "FabricPlaneType",
-    "FabricProvider",
     "FabricPointer",
     "KafkaPointer",
     "SnowflakePointer",
@@ -122,8 +120,8 @@ __all__ = [
     "IPaaSPointer",
     "APIGatewayPointer",
     "FabricPlaneClient",
-    "PLANE_TO_PROVIDERS",
     "get_pointer_class",
+    "register_pointer_class",
     "BufferedPointer",
     "FabricPointerBuffer",
     "fabric_pointer_buffer",

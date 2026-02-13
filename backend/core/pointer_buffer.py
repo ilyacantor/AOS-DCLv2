@@ -19,7 +19,6 @@ import logging
 from backend.core.fabric_plane import (
     FabricPointer,
     FabricPlaneType,
-    FabricProvider,
     FabricPlaneClient,
     KafkaPointer,
     SnowflakePointer,
@@ -103,7 +102,7 @@ class FabricPointerBuffer:
         self._buffer: OrderedDict[str, BufferedPointer] = OrderedDict()
         self._max_size = max_size
         self._ttl_seconds = ttl_seconds
-        self._fabric_clients: Dict[FabricProvider, FabricPlaneClient] = {}
+        self._fabric_clients: Dict[str, FabricPlaneClient] = {}
         
         self._stats = {
             "pointers_buffered": 0,
@@ -115,10 +114,10 @@ class FabricPointerBuffer:
         
         logger.info(f"[POINTER_BUFFER] Initialized with max_size={max_size}, ttl={ttl_seconds}s")
     
-    def register_fabric_client(self, provider: FabricProvider, client: FabricPlaneClient) -> None:
+    def register_fabric_client(self, provider: str, client: FabricPlaneClient) -> None:
         """Register a Fabric Plane client for JIT fetching."""
         self._fabric_clients[provider] = client
-        logger.info(f"[POINTER_BUFFER] Registered client for {provider.value}")
+        logger.info(f"[POINTER_BUFFER] Registered client for {provider}")
     
     def buffer_pointer(self, pointer: FabricPointer) -> str:
         """
@@ -138,7 +137,7 @@ class FabricPointerBuffer:
         self._buffer[fingerprint] = BufferedPointer(pointer=pointer)
         self._stats["pointers_buffered"] += 1
         
-        logger.debug(f"[POINTER_BUFFER] Buffered pointer: {fingerprint} ({pointer.provider.value})")
+        logger.debug(f"[POINTER_BUFFER] Buffered pointer: {fingerprint} ({pointer.provider})")
         return fingerprint
     
     def buffer_kafka_pointer(
@@ -214,8 +213,8 @@ class FabricPointerBuffer:
         client = self._fabric_clients.get(pointer.provider)
         
         if not client:
-            logger.warning(f"[JIT_FETCH] No client registered for {pointer.provider.value}")
-            buffered.mark_error(f"No client for {pointer.provider.value}")
+            logger.warning(f"[JIT_FETCH] No client registered for {pointer.provider}")
+            buffered.mark_error(f"No client for {pointer.provider}")
             return False
         
         self._stats["jit_fetches"] += 1
@@ -267,7 +266,7 @@ class FabricPointerBuffer:
             **self._stats,
             "current_size": len(self._buffer),
             "max_size": self._max_size,
-            "registered_clients": list(c.value for c in self._fabric_clients.keys()),
+            "registered_clients": list(self._fabric_clients.keys()),
             "pending_count": sum(1 for bp in self._buffer.values() if bp.state == "pending"),
             "fetched_count": sum(1 for bp in self._buffer.values() if bp.state == "fetched"),
             "mapped_count": sum(1 for bp in self._buffer.values() if bp.state == "mapped"),

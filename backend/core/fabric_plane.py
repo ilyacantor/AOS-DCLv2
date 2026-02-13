@@ -4,6 +4,9 @@ Fabric Plane Abstraction for DCL Engine.
 **ARCHITECTURE PIVOT (January 2026)**: AAM connects to Fabric Planes, not individual SaaS apps.
 DCL ingests metadata from these Planes using Pointer Buffering (Zero-Trust compliance).
 
+Providers are dynamic — DCL accepts whatever providers AAM sends via a string-based
+registry pattern, rather than presuming a fixed set.
+
 The 4 Fabric Planes:
 1. IPAAS (Workato, MuleSoft) - Control plane for integration flows
 2. API_GATEWAY (Kong, Apigee) - Direct managed API access
@@ -35,17 +38,15 @@ class FabricPlaneType(Enum):
     DATA_WAREHOUSE = "data_warehouse"
 
 
-class FabricProvider(Enum):
-    """Specific providers within each Fabric Plane."""
-    WORKATO = "workato"
-    MULESOFT = "mulesoft"
-    KONG = "kong"
-    APIGEE = "apigee"
-    KAFKA = "kafka"
-    EVENTBRIDGE = "eventbridge"
-    SNOWFLAKE = "snowflake"
-    BIGQUERY = "bigquery"
-    REDSHIFT = "redshift"
+_PROVIDER_REGISTRY: Dict[str, type] = {}
+
+
+def register_pointer_class(provider_name: str):
+    """Decorator to register a pointer class for a provider name."""
+    def decorator(cls):
+        _PROVIDER_REGISTRY[provider_name.lower()] = cls
+        return cls
+    return decorator
 
 
 @dataclass(frozen=True)
@@ -57,23 +58,24 @@ class FabricPointer:
     It contains ONLY offset/cursor information - never the actual payload.
     """
     plane_type: FabricPlaneType = FabricPlaneType.EVENT_BUS
-    provider: FabricProvider = FabricProvider.KAFKA
+    provider: str = "kafka"
     timestamp: datetime = field(default_factory=datetime.utcnow)
     
     def fingerprint(self) -> str:
         """Generate a unique fingerprint for this pointer."""
-        content = f"{self.plane_type.value}:{self.provider.value}:{self.timestamp.isoformat()}"
+        content = f"{self.plane_type.value}:{self.provider}:{self.timestamp.isoformat()}"
         return hashlib.sha256(content.encode()).hexdigest()[:16]
     
     def to_dict(self) -> Dict[str, Any]:
         return {
             "plane_type": self.plane_type.value,
-            "provider": self.provider.value,
+            "provider": self.provider,
             "timestamp": self.timestamp.isoformat(),
             "fingerprint": self.fingerprint()
         }
 
 
+@register_pointer_class("kafka")
 @dataclass(frozen=True)
 class KafkaPointer(FabricPointer):
     """
@@ -83,7 +85,7 @@ class KafkaPointer(FabricPointer):
     The actual payload remains in Kafka until JIT fetch.
     """
     plane_type: FabricPlaneType = FabricPlaneType.EVENT_BUS
-    provider: FabricProvider = FabricProvider.KAFKA
+    provider: str = "kafka"
     topic: str = ""
     partition: int = 0
     offset: int = 0
@@ -96,7 +98,7 @@ class KafkaPointer(FabricPointer):
     def to_dict(self) -> Dict[str, Any]:
         return {
             "plane_type": self.plane_type.value,
-            "provider": self.provider.value,
+            "provider": self.provider,
             "topic": self.topic,
             "partition": self.partition,
             "offset": self.offset,
@@ -106,6 +108,7 @@ class KafkaPointer(FabricPointer):
         }
 
 
+@register_pointer_class("snowflake")
 @dataclass(frozen=True)
 class SnowflakePointer(FabricPointer):
     """
@@ -115,7 +118,7 @@ class SnowflakePointer(FabricPointer):
     The actual data remains in Snowflake until JIT fetch.
     """
     plane_type: FabricPlaneType = FabricPlaneType.DATA_WAREHOUSE
-    provider: FabricProvider = FabricProvider.SNOWFLAKE
+    provider: str = "snowflake"
     database: str = ""
     schema: str = ""
     table: str = ""
@@ -130,7 +133,7 @@ class SnowflakePointer(FabricPointer):
     def to_dict(self) -> Dict[str, Any]:
         return {
             "plane_type": self.plane_type.value,
-            "provider": self.provider.value,
+            "provider": self.provider,
             "database": self.database,
             "schema": self.schema,
             "table": self.table,
@@ -142,11 +145,12 @@ class SnowflakePointer(FabricPointer):
         }
 
 
+@register_pointer_class("bigquery")
 @dataclass(frozen=True)
 class BigQueryPointer(FabricPointer):
     """Pointer for BigQuery Data Warehouse."""
     plane_type: FabricPlaneType = FabricPlaneType.DATA_WAREHOUSE
-    provider: FabricProvider = FabricProvider.BIGQUERY
+    provider: str = "bigquery"
     project: str = ""
     dataset: str = ""
     table: str = ""
@@ -160,7 +164,7 @@ class BigQueryPointer(FabricPointer):
     def to_dict(self) -> Dict[str, Any]:
         return {
             "plane_type": self.plane_type.value,
-            "provider": self.provider.value,
+            "provider": self.provider,
             "project": self.project,
             "dataset": self.dataset,
             "table": self.table,
@@ -171,11 +175,12 @@ class BigQueryPointer(FabricPointer):
         }
 
 
+@register_pointer_class("eventbridge")
 @dataclass(frozen=True)
 class EventBridgePointer(FabricPointer):
     """Pointer for AWS EventBridge Event Bus."""
     plane_type: FabricPlaneType = FabricPlaneType.EVENT_BUS
-    provider: FabricProvider = FabricProvider.EVENTBRIDGE
+    provider: str = "eventbridge"
     event_bus_name: str = ""
     event_id: str = ""
     source: str = ""
@@ -189,7 +194,7 @@ class EventBridgePointer(FabricPointer):
     def to_dict(self) -> Dict[str, Any]:
         return {
             "plane_type": self.plane_type.value,
-            "provider": self.provider.value,
+            "provider": self.provider,
             "event_bus_name": self.event_bus_name,
             "event_id": self.event_id,
             "source": self.source,
@@ -200,24 +205,26 @@ class EventBridgePointer(FabricPointer):
         }
 
 
+@register_pointer_class("workato")
+@register_pointer_class("mulesoft")
 @dataclass(frozen=True)
 class IPaaSPointer(FabricPointer):
     """Pointer for iPaaS integration flows (Workato, MuleSoft)."""
     plane_type: FabricPlaneType = FabricPlaneType.IPAAS
-    provider: FabricProvider = FabricProvider.WORKATO
+    provider: str = "workato"
     flow_id: str = ""
     execution_id: str = ""
     step_id: Optional[str] = None
     connection_id: Optional[str] = None
     
     def fingerprint(self) -> str:
-        content = f"ipaas:{self.provider.value}:{self.flow_id}:{self.execution_id}"
+        content = f"ipaas:{self.provider}:{self.flow_id}:{self.execution_id}"
         return hashlib.sha256(content.encode()).hexdigest()[:16]
     
     def to_dict(self) -> Dict[str, Any]:
         return {
             "plane_type": self.plane_type.value,
-            "provider": self.provider.value,
+            "provider": self.provider,
             "flow_id": self.flow_id,
             "execution_id": self.execution_id,
             "step_id": self.step_id,
@@ -227,24 +234,26 @@ class IPaaSPointer(FabricPointer):
         }
 
 
+@register_pointer_class("kong")
+@register_pointer_class("apigee")
 @dataclass(frozen=True)
 class APIGatewayPointer(FabricPointer):
     """Pointer for API Gateway access logs/requests."""
     plane_type: FabricPlaneType = FabricPlaneType.API_GATEWAY
-    provider: FabricProvider = FabricProvider.KONG
+    provider: str = "kong"
     gateway_id: str = ""
     request_id: str = ""
     route: str = ""
     method: str = ""
     
     def fingerprint(self) -> str:
-        content = f"api_gateway:{self.provider.value}:{self.gateway_id}:{self.request_id}"
+        content = f"api_gateway:{self.provider}:{self.gateway_id}:{self.request_id}"
         return hashlib.sha256(content.encode()).hexdigest()[:16]
     
     def to_dict(self) -> Dict[str, Any]:
         return {
             "plane_type": self.plane_type.value,
-            "provider": self.provider.value,
+            "provider": self.provider,
             "gateway_id": self.gateway_id,
             "request_id": self.request_id,
             "route": self.route,
@@ -293,24 +302,6 @@ class FabricPlaneClient(ABC):
         pass
 
 
-PLANE_TO_PROVIDERS = {
-    FabricPlaneType.IPAAS: [FabricProvider.WORKATO, FabricProvider.MULESOFT],
-    FabricPlaneType.API_GATEWAY: [FabricProvider.KONG, FabricProvider.APIGEE],
-    FabricPlaneType.EVENT_BUS: [FabricProvider.KAFKA, FabricProvider.EVENTBRIDGE],
-    FabricPlaneType.DATA_WAREHOUSE: [FabricProvider.SNOWFLAKE, FabricProvider.BIGQUERY, FabricProvider.REDSHIFT],
-}
-
-
-def get_pointer_class(provider: FabricProvider):
-    """Get the appropriate pointer class for a given provider."""
-    mapping = {
-        FabricProvider.KAFKA: KafkaPointer,
-        FabricProvider.EVENTBRIDGE: EventBridgePointer,
-        FabricProvider.SNOWFLAKE: SnowflakePointer,
-        FabricProvider.BIGQUERY: BigQueryPointer,
-        FabricProvider.WORKATO: IPaaSPointer,
-        FabricProvider.MULESOFT: IPaaSPointer,
-        FabricProvider.KONG: APIGatewayPointer,
-        FabricProvider.APIGEE: APIGatewayPointer,
-    }
-    return mapping.get(provider, FabricPointer)
+def get_pointer_class(provider: str) -> type:
+    """Get the appropriate pointer class for a provider. Returns FabricPointer for unknown providers."""
+    return _PROVIDER_REGISTRY.get(provider.lower(), FabricPointer)

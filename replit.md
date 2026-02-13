@@ -169,6 +169,15 @@ The right sidebar contains:
 
 ## Recent Changes
 
+**February 13, 2026:**
+- Externalized semantic catalog: metrics, entities, bindings, persona concepts moved from Python code to YAML config files (backend/config/definitions/)
+- semantic_export.py refactored from 958 to ~283 lines — now loads from YAML at startup
+- Replaced hardcoded FabricProvider enum with dynamic string-based provider registry
+- Removed PLANE_TO_PROVIDERS map (caused "5 fabrics instead of 4" bug)
+- Pointer classes now self-register via @register_pointer_class decorator
+- Unknown providers gracefully fall back to base FabricPointer
+- Default startup mode changed from AAM to Demo
+
 **February 7, 2026:**
 - Updated all docs: merged ARCH + Functionality into DCL_ARCHITECTURE.md
 - Refreshed DCL_SEMANTIC_CATALOG.md from live API (37 metrics, 29 entities, 13 bindings)
@@ -279,7 +288,13 @@ Returns data points with metadata (sources, freshness, quality_score).
 │   ├── api/
 │   │   ├── main.py              # FastAPI app, endpoints
 │   │   ├── query.py             # Query endpoint logic
-│   │   └── semantic_export.py   # Semantic catalog export
+│   │   └── semantic_export.py   # Semantic catalog loader (from YAML)
+│   ├── config/
+│   │   └── definitions/         # Externalized semantic catalog
+│   │       ├── metrics.yaml     # 38 metric definitions
+│   │       ├── entities.yaml    # 29 entity definitions
+│   │       ├── bindings.yaml    # 13 source system bindings
+│   │       └── persona_concepts.yaml  # Persona-to-metric mappings
 │   ├── aam/
 │   │   └── client.py            # AAM Fabric Plane client
 │   ├── domain/models.py         # Pydantic data models
