@@ -737,44 +737,39 @@ def mcp_tool_call(tool_call: MCPToolCall):
 
 @app.get("/api/dcl/reconciliation")
 def get_reconciliation():
-    """
-    Reconcile AAM's export-pipes against DCL's ACTUAL loaded sources.
-
-    Compares:
-    - AAM side: fresh connections from get_pipes() (what AAM reports)
-    - DCL side: actual loaded source names from last pipeline run (what DCL ingested)
-
-    This is a REAL diff - AAM vs DCL, not AAM vs AAM.
-    """
     try:
         _invalidate_aam_caches()
         from backend.aam.client import get_aam_client
         client = get_aam_client()
 
         aod_run_id = _last_aam_run.get("aod_run_id")
-
-        # AAM side: fresh export-pipes (what AAM says exists)
-        aam_export = client.get_pipes(aod_run_id=aod_run_id)
-
-        # DCL side: what DCL ACTUALLY loaded (source labels from graph)
         dcl_loaded_sources = list(app.state.loaded_sources)
-
-        # Real diff: AAM connections vs DCL loaded sources
-        result = reconcile(aam_export, dcl_loaded_sources)
 
         import time as _time
         import hashlib as _hashlib
 
-        # Build a hash from AAM connection names for change detection
-        aam_names = sorted([
-            c.get("source_name", "")
-            for plane in aam_export.get("fabric_planes", [])
-            for c in plane.get("connections", [])
-        ])
-        payload_hash = _hashlib.sha256(str(aam_names).encode()).hexdigest()[:12]
+        aam_export = client.get_pipes(aod_run_id=aod_run_id)
+        aam_pipes = []
+        for plane in aam_export.get("fabric_planes", []):
+            plane_type = (plane.get("plane_type") or "UNMAPPED").upper()
+            plane_vendor = plane.get("vendor", "unknown")
+            for conn in plane.get("connections", []):
+                aam_pipes.append({
+                    "display_name": conn.get("source_name", "Unknown"),
+                    "fabric_plane": plane_type,
+                    "source_system": conn.get("vendor", plane_vendor),
+                    "pipe_id": conn.get("pipe_id"),
+                    "schema_info": conn.get("fields"),
+                })
 
-        # Also fetch push history for push metadata display
+        result = reconcile(aam_pipes, dcl_loaded_sources)
+
+        aam_names = sorted([p.get("display_name", "") for p in aam_pipes])
+        payload_hash = _hashlib.sha256(str(aam_names).encode()).hexdigest()[:12]
+        unmapped_count = sum(1 for p in aam_pipes if (p.get("fabric_plane") or "").upper() == "UNMAPPED")
+
         push_meta = None
+        push_pipe_count = 0
         try:
             pushes = client.get_push_history()
             if pushes:
@@ -784,10 +779,11 @@ def get_reconciliation():
                     reverse=True,
                 )
                 latest = sorted_pushes[0][1]
+                push_pipe_count = latest.get("pipe_count", 0)
                 push_meta = {
                     "pushId": latest.get("push_id"),
                     "pushedAt": latest.get("pushed_at"),
-                    "pipeCount": latest.get("pipe_count"),
+                    "pipeCount": push_pipe_count,
                     "payloadHash": latest.get("payload_hash", payload_hash),
                     "aodRunId": latest.get("aod_run_id"),
                 }
@@ -798,7 +794,7 @@ def get_reconciliation():
             push_meta = {
                 "pushId": "export-pipes",
                 "pushedAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "pipeCount": len(aam_names),
+                "pipeCount": len(aam_pipes),
                 "payloadHash": payload_hash,
                 "aodRunId": aod_run_id,
             }
@@ -810,17 +806,15 @@ def get_reconciliation():
             "dclRunAt": _last_aam_run.get("timestamp"),
             "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "dclSourceCount": len(dcl_loaded_sources),
-            "aamConnectionCount": len(aam_names),
+            "aamConnectionCount": len(aam_pipes),
         }
 
-        push_pipe_count = (push_meta.get("pipeCount") or 0) if push_meta else 0
-        export_connection_count = len(aam_names)
         result["trace"] = {
-            "aamConnectionNames": aam_names,
+            "aamPipeNames": aam_names,
             "dclLoadedSourceNames": dcl_loaded_sources,
+            "exportPipeCount": len(aam_pipes),
             "pushPipeCount": push_pipe_count,
-            "exportConnectionCount": export_connection_count,
-            "pipeVsConnectionGap": push_pipe_count - export_connection_count,
+            "unmappedCount": unmapped_count,
         }
 
         return result

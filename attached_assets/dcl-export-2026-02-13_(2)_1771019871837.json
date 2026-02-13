@@ -1,0 +1,3307 @@
+{
+  "export_version": "1.0",
+  "exported_at": "2026-02-13T20:03:35.993794",
+  "pipe_count": 100,
+  "pipes": [
+    {
+      "pipe_id": "2780225f-52e3-4645-b558-5cb1f87fdc09",
+      "display_name": "Tableau",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "salesforce",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://tableau.com"
+        ]
+      },
+      "entity_scope": [
+        "crm"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.847309",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.847309",
+      "updated_at": "2026-02-13T18:43:50.994855"
+    },
+    {
+      "pipe_id": "31ae7960-8120-40f0-956e-3f6ef11fd355",
+      "display_name": "Slack",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "salesforce",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://slack.com"
+        ]
+      },
+      "entity_scope": [
+        "crm"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.787438",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.787438",
+      "updated_at": "2026-02-13T18:43:51.359944"
+    },
+    {
+      "pipe_id": "f0bf9732-5bc6-432c-984d-9ab1746ea7bb",
+      "display_name": "Salesforce",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "salesforce",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://salesforce.com"
+        ]
+      },
+      "entity_scope": [
+        "crm"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.752898",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.752898",
+      "updated_at": "2026-02-13T18:43:51.371765"
+    },
+    {
+      "pipe_id": "7c5c71c0-475e-40d9-a3d6-cd2e224bd0f6",
+      "display_name": "Pipedrive",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "pipedrive",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://pipedrive.com"
+        ]
+      },
+      "entity_scope": [
+        "crm"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.674587",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.674587",
+      "updated_at": "2026-02-13T18:43:51.382838"
+    },
+    {
+      "pipe_id": "eb837f5f-56be-4fb4-ae57-06fc46b39b54",
+      "display_name": "HubSpot",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "hubspot",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://hubspot.com"
+        ]
+      },
+      "entity_scope": [
+        "crm"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.335712",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.335712",
+      "updated_at": "2026-02-13T18:43:51.393714"
+    },
+    {
+      "pipe_id": "01a8defe-b803-41f3-9fd9-efe97ca0d4d0",
+      "display_name": "Snowflake",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "snowflake",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://snowflakecomputing.com"
+        ]
+      },
+      "entity_scope": [
+        "data"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.797558",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.797558",
+      "updated_at": "2026-02-13T18:43:51.403957"
+    },
+    {
+      "pipe_id": "7556ee3f-0921-4c56-89d0-3f2bce4544c0",
+      "display_name": "Databricks - Data Warehouse",
+      "fabric_plane": "DATA_WAREHOUSE",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "Databricks",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://databricks.com"
+        ]
+      },
+      "entity_scope": [
+        "data"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.883045",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.883045",
+      "updated_at": "2026-02-13T18:43:51.414375"
+    },
+    {
+      "pipe_id": "6f57ef56-8a77-4efb-888a-11511cf932df",
+      "display_name": "SAP SuccessFactors",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "sap",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://sap.com"
+        ]
+      },
+      "entity_scope": [
+        "erp"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.765408",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.765408",
+      "updated_at": "2026-02-13T18:43:51.425584"
+    },
+    {
+      "pipe_id": "b82fdfd7-9f06-48da-af6e-8e063f0236f4",
+      "display_name": "NetSuite",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "oracle",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://netsuite.com"
+        ]
+      },
+      "entity_scope": [
+        "erp"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.539594",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.539594",
+      "updated_at": "2026-02-13T18:43:51.435959"
+    },
+    {
+      "pipe_id": "f8341621-3862-4462-bced-b05840734dd4",
+      "display_name": "Sage_Legacy",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "sage",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://sage.com"
+        ]
+      },
+      "entity_scope": [
+        "finance"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.740226",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "zombie"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.740226",
+      "updated_at": "2026-02-13T18:43:51.446241"
+    },
+    {
+      "pipe_id": "8059a595-2c5d-4465-834c-a3d78c33831c",
+      "display_name": "QuickBooks Online",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "intuit",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://quickbooks.com"
+        ]
+      },
+      "entity_scope": [
+        "finance"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.727273",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.727273",
+      "updated_at": "2026-02-13T18:43:51.457054"
+    },
+    {
+      "pipe_id": "4956f092-a4af-4c6e-9b33-9017a95e6403",
+      "display_name": "Workday",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "workday",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://workday.com"
+        ]
+      },
+      "entity_scope": [
+        "hcm"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.969128",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.969128",
+      "updated_at": "2026-02-13T18:43:51.467904"
+    },
+    {
+      "pipe_id": "bcd0a1c3-ab33-492f-86ac-50e86a0f3bb5",
+      "display_name": "BambooHR",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "bamboohr",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://bamboohr.com"
+        ]
+      },
+      "entity_scope": [
+        "hcm"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.791081",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.791081",
+      "updated_at": "2026-02-13T18:43:51.478489"
+    },
+    {
+      "pipe_id": "0a084102-e01e-48c3-945f-caa25317a7a7",
+      "display_name": "ADP Workforce",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "adp",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://adp.com"
+        ]
+      },
+      "entity_scope": [
+        "hcm"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.716600",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.716600",
+      "updated_at": "2026-02-13T18:43:51.488698"
+    },
+    {
+      "pipe_id": "338ee85a-1085-487b-8645-f15fa0999c5e",
+      "display_name": "Okta",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "okta",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://okta.com"
+        ]
+      },
+      "entity_scope": [
+        "idp"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.589299",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.589299",
+      "updated_at": "2026-02-13T18:43:51.508920"
+    },
+    {
+      "pipe_id": "9bf427cf-c901-4276-87d3-3a0111f93e5d",
+      "display_name": "Zendesk",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "zendesk",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://zendesk.com"
+        ]
+      },
+      "entity_scope": [
+        "itsm"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:45.116437",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:45.116437",
+      "updated_at": "2026-02-13T18:43:51.520281"
+    },
+    {
+      "pipe_id": "8cd756a1-4847-4f00-a7c6-4f108f234c43",
+      "display_name": "ServiceNow",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "servicenow",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://servicenow.com"
+        ]
+      },
+      "entity_scope": [
+        "itsm"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.776664",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.776664",
+      "updated_at": "2026-02-13T18:43:51.540790"
+    },
+    {
+      "pipe_id": "c8dd1f92-abd8-4adb-832e-b3c402b3140b",
+      "display_name": "Zoom Legacy",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "zoom",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://zoom-legacy.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:45.136530",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "zombie"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:45.136530",
+      "updated_at": "2026-02-13T18:43:51.561062"
+    },
+    {
+      "pipe_id": "1b0a260b-d109-40bd-a721-cf52797d8f27",
+      "display_name": "Zoom",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "zoom",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://zoom.us"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:45.125873",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:45.125873",
+      "updated_at": "2026-02-13T18:43:51.581234"
+    },
+    {
+      "pipe_id": "78938c09-9130-4ac4-821d-c3a7d0fbdabd",
+      "display_name": "Zapier",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "zapier",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://zapier.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:45.105642",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:45.105642",
+      "updated_at": "2026-02-13T18:43:51.592041"
+    },
+    {
+      "pipe_id": "3d7b3de0-7e5c-42a4-956c-f57a592a5748",
+      "display_name": "Yammer",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "microsoft",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://yammer.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:45.094317",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:45.094317",
+      "updated_at": "2026-02-13T18:43:51.601773"
+    },
+    {
+      "pipe_id": "001c9afb-cb6f-42fe-afb5-f15d160d5473",
+      "display_name": "Workgrid",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "workgrid inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://workgrid.co"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.979083",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.979083",
+      "updated_at": "2026-02-13T18:43:51.611443"
+    },
+    {
+      "pipe_id": "b6f455aa-d362-4043-bb55-4efabc73b835",
+      "display_name": "Workato - Ipaas",
+      "fabric_plane": "IPAAS",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "Workato",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://workato.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.960054",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.960054",
+      "updated_at": "2026-02-13T18:43:51.621910"
+    },
+    {
+      "pipe_id": "4a891961-874b-4566-9a11-84ef5de8299d",
+      "display_name": "Webex",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "cisco",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://webex.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.947293",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.947293",
+      "updated_at": "2026-02-13T18:43:51.634039"
+    },
+    {
+      "pipe_id": "d43978a4-bbed-460c-9f77-70462341c0ee",
+      "display_name": "Ultrasync",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "ultrasync inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://ultrasync.org"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.937268",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.937268",
+      "updated_at": "2026-02-13T18:43:51.644920"
+    },
+    {
+      "pipe_id": "1663d854-8cc1-42bd-b5d4-0a3c9b53d32c",
+      "display_name": "Ultraspot",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "ultraspot inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://ultraspot.org"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.926946",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.926946",
+      "updated_at": "2026-02-13T18:43:51.655399"
+    },
+    {
+      "pipe_id": "2c12cf50-75ef-40c0-8af4-bae564ec458e",
+      "display_name": "Ultrabox",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "ultrabox inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://ultrabox.app"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.917600",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.917600",
+      "updated_at": "2026-02-13T18:43:51.676437"
+    },
+    {
+      "pipe_id": "96d7e164-9380-4f12-b172-58a6eeb01ff5",
+      "display_name": "UltiPro Legacy",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "ultimate software",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://ultipro.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.908280",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "zombie"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.908280",
+      "updated_at": "2026-02-13T18:43:51.687971"
+    },
+    {
+      "pipe_id": "0ead3726-da6d-4f01-a188-682004a980b1",
+      "display_name": "Typeform",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "typeform",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://typeform.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.898658",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.898658",
+      "updated_at": "2026-02-13T18:43:51.698353"
+    },
+    {
+      "pipe_id": "1388982c-b10d-4ac9-bb72-fb05cc0bf3b9",
+      "display_name": "Trello",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "atlassian",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://trello.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.888239",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.888239",
+      "updated_at": "2026-02-13T18:43:51.709770"
+    },
+    {
+      "pipe_id": "6b016faa-0401-4229-b19a-a48256a9b614",
+      "display_name": "Topbox",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "topbox inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://topbox.org"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.878442",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.878442",
+      "updated_at": "2026-02-13T18:43:51.722545"
+    },
+    {
+      "pipe_id": "8d96ceb9-1666-427f-8471-a42643f2887d",
+      "display_name": "TikTok",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "bytedance",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://tiktok.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.868550",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.868550",
+      "updated_at": "2026-02-13T18:43:51.744690"
+    },
+    {
+      "pipe_id": "209aaa22-49e7-40cf-a593-74c441c50c95",
+      "display_name": "Teampad",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "teampad inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://teampad.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.857898",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.857898",
+      "updated_at": "2026-02-13T18:43:51.757487"
+    },
+    {
+      "pipe_id": "d7b786a2-ac81-484f-bc07-0c3b7a12792a",
+      "display_name": "syncio",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "syncio inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://syncio.org"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.837654",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.837654",
+      "updated_at": "2026-02-13T18:43:51.769197"
+    },
+    {
+      "pipe_id": "e203c50e-9a42-4a10-bc95-7f4ca7a4adb3",
+      "display_name": "svc-stream-015",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "unknown",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://sysworks-3jnf.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.827451",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.827451",
+      "updated_at": "2026-02-13T18:43:51.781320"
+    },
+    {
+      "pipe_id": "c1e1ff25-ecca-4271-8dd6-d1cd0d89b2c7",
+      "display_name": "SurveyMonkey",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "momentive",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://surveymonkey.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.817399",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.817399",
+      "updated_at": "2026-02-13T18:43:51.794557"
+    },
+    {
+      "pipe_id": "60004107-b16c-4583-98fb-3be5ccea405d",
+      "display_name": "Splunk",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "splunk",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://splunk.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.807501",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.807501",
+      "updated_at": "2026-02-13T18:43:51.810782"
+    },
+    {
+      "pipe_id": "f1ee6bc7-8b7a-4fa7-af79-2cc0808c009d",
+      "display_name": "Prospot",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "prospot inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://prospot.tech"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.713551",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.713551",
+      "updated_at": "2026-02-13T18:43:51.826924"
+    },
+    {
+      "pipe_id": "887ec57f-b55b-48ca-b243-3435ca4ab969",
+      "display_name": "Primepad",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "primepad inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://primepad.co"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.699920",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.699920",
+      "updated_at": "2026-02-13T18:43:51.841481"
+    },
+    {
+      "pipe_id": "bd614730-1af2-45c4-8110-fc3497b253f7",
+      "display_name": "Pivotal Tracker",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "pivotal",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://pivotaltracker.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.686359",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "zombie"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.686359",
+      "updated_at": "2026-02-13T18:43:51.860480"
+    },
+    {
+      "pipe_id": "b53e6a9d-7e6b-4d74-870e-c68c660c356b",
+      "display_name": "PagerDuty",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "pagerduty",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://pagerduty.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.663299",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.663299",
+      "updated_at": "2026-02-13T18:43:51.872585"
+    },
+    {
+      "pipe_id": "87c44224-c7fd-4e96-a50e-db6b85942000",
+      "display_name": "Opensync",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "opensync inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://opensync.ai"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.653241",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.653241",
+      "updated_at": "2026-02-13T18:43:51.885110"
+    },
+    {
+      "pipe_id": "19c6d811-089a-4215-bf2d-d261ccc30a7f",
+      "display_name": "Openforce",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "openforce inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://openforce.io"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.641138",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.641138",
+      "updated_at": "2026-02-13T18:43:51.903424"
+    },
+    {
+      "pipe_id": "93cd9391-6919-4b0c-a930-fcabe6a8876a",
+      "display_name": "Openbox",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "openbox inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://openbox.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.630744",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.630744",
+      "updated_at": "2026-02-13T18:43:51.925492"
+    },
+    {
+      "pipe_id": "46cf7051-2dc4-455c-9eb2-738a396f8db3",
+      "display_name": "Onezone",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "onezone inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://onezone.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.618406",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.618406",
+      "updated_at": "2026-02-13T18:43:51.943003"
+    },
+    {
+      "pipe_id": "fef00c80-1e7b-4cd3-a35c-565a5e6654a8",
+      "display_name": "ONENEST",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "onenest inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://onenest.app"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.603161",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.603161",
+      "updated_at": "2026-02-13T18:43:51.960348"
+    },
+    {
+      "pipe_id": "245d8a05-e69d-462e-9f5a-68192700cd92",
+      "display_name": "NOTION",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "notion",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://notion.so"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.574142",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.574142",
+      "updated_at": "2026-02-13T18:43:51.978053"
+    },
+    {
+      "pipe_id": "ad7fd4e8-bb90-45b9-884a-3399ec16ca88",
+      "display_name": "Nextpoint",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "nextpoint inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://nextpoint.app"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.558387",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.558387",
+      "updated_at": "2026-02-13T18:43:52.001570"
+    },
+    {
+      "pipe_id": "6c4fa0c3-d18e-486f-b027-2f92376ea109",
+      "display_name": "Netpad",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "netpad inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://netpad.ai"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.524195",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.524195",
+      "updated_at": "2026-02-13T18:43:52.021596"
+    },
+    {
+      "pipe_id": "e010f700-6bed-4807-b00b-e7ba2150d65d",
+      "display_name": "Netly",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "netly inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://netly.io"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.509976",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "zombie"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.509976",
+      "updated_at": "2026-02-13T18:43:52.040263"
+    },
+    {
+      "pipe_id": "2d5ef75f-fafe-4e80-9b76-57fbbab8790f",
+      "display_name": "Netapp",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "netapp inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://netapp.co"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.498848",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.498848",
+      "updated_at": "2026-02-13T18:43:52.061392"
+    },
+    {
+      "pipe_id": "7b80cbab-96fc-42c0-a353-0aebf3e9b717",
+      "display_name": "Myview",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "myview inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://myview.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.486663",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.486663",
+      "updated_at": "2026-02-13T18:43:52.078960"
+    },
+    {
+      "pipe_id": "a4c59fc5-4ebc-46de-a413-f3bd49feaeb8",
+      "display_name": "Mysync",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "mysync inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://mysync.cloud"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.470372",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.470372",
+      "updated_at": "2026-02-13T18:43:52.091827"
+    },
+    {
+      "pipe_id": "bd43e55f-b26b-47c3-8ffc-5db0dd63c589",
+      "display_name": "Monday.com",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "monday.com",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://monday.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.455972",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.455972",
+      "updated_at": "2026-02-13T18:43:52.102386"
+    },
+    {
+      "pipe_id": "e49c20a7-eb15-4fc3-b0e0-180dba3f481f",
+      "display_name": "miro",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "miro",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://miro.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.442020",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.442020",
+      "updated_at": "2026-02-13T18:43:52.113894"
+    },
+    {
+      "pipe_id": "3f74eeb2-3c5a-48b4-aee8-98fa150ea2f8",
+      "display_name": "Microsoft_365",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "microsoft",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://microsoft.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.429640",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.429640",
+      "updated_at": "2026-02-13T18:43:52.125083"
+    },
+    {
+      "pipe_id": "2f6b9eee-65cc-4793-ae18-9a70e5bce035",
+      "display_name": "Maxgrid",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "maxgrid inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://maxgrid.cloud"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.418165",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.418165",
+      "updated_at": "2026-02-13T18:43:52.136705"
+    },
+    {
+      "pipe_id": "6ce0b553-6d75-45c6-8f86-5cf846c8cb02",
+      "display_name": "Loom",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "loom",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://loom.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.406328",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.406328",
+      "updated_at": "2026-02-13T18:43:52.148574"
+    },
+    {
+      "pipe_id": "1223fbe4-f496-4d09-8164-1bd1e9145efb",
+      "display_name": "linkspot",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "linkspot inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://linkspot.cloud"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.389725",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "zombie"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.389725",
+      "updated_at": "2026-02-13T18:43:52.159582"
+    },
+    {
+      "pipe_id": "6ce5fc90-93a7-4bc3-98dd-a1df1e9a7b25",
+      "display_name": "Linkspace",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "linkspace inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://linkspace.tech"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.372580",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.372580",
+      "updated_at": "2026-02-13T18:43:52.171778"
+    },
+    {
+      "pipe_id": "10cf3572-0559-4653-afb6-ab36c7c2d0f7",
+      "display_name": "Linkpad",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "unknown",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://linkpad.cloud"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.359769",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.359769",
+      "updated_at": "2026-02-13T18:43:52.184482"
+    },
+    {
+      "pipe_id": "15b8c8b3-e265-4412-8778-f211234482fa",
+      "display_name": "Linkflow",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "linkflow inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://linkflow.io"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.348224",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.348224",
+      "updated_at": "2026-02-13T18:43:52.198262"
+    },
+    {
+      "pipe_id": "0e69280b-1f32-465d-929c-ffae03a073db",
+      "display_name": "Hubbase",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "hubbase inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://hubbase.ai"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.318462",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.318462",
+      "updated_at": "2026-02-13T18:43:52.209969"
+    },
+    {
+      "pipe_id": "a857639c-3347-4bcb-b9d7-0488453aa974",
+      "display_name": "Hipchat",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "atlassian",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://hipchat.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.306544",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.306544",
+      "updated_at": "2026-02-13T18:43:52.221531"
+    },
+    {
+      "pipe_id": "a86536f7-3246-492b-9a92-44fa738e50f7",
+      "display_name": "Grammarly",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "grammarly",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://grammarly.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.293526",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.293526",
+      "updated_at": "2026-02-13T18:43:52.237102"
+    },
+    {
+      "pipe_id": "a2bbd1cc-5ead-4c6d-8ffe-bbc4b755d0a3",
+      "display_name": "Gospot",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "gospot inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://gospot.io"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.282768",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.282768",
+      "updated_at": "2026-02-13T18:43:52.248282"
+    },
+    {
+      "pipe_id": "f7de66d5-53d2-42fe-ac5a-46e6443cf903",
+      "display_name": "Google Workspace",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "google",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://google.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.265870",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.265870",
+      "updated_at": "2026-02-13T18:43:52.260174"
+    },
+    {
+      "pipe_id": "684f42c6-d114-49a2-b559-81946f57b102",
+      "display_name": "GitLab",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "gitlab",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://gitlab.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.250975",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.250975",
+      "updated_at": "2026-02-13T18:43:52.271470"
+    },
+    {
+      "pipe_id": "6f9f7f94-8c21-4ef2-aea0-d0bc1154f2d3",
+      "display_name": "GitHub",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "microsoft",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://github.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.238238",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.238238",
+      "updated_at": "2026-02-13T18:43:52.282040"
+    },
+    {
+      "pipe_id": "071db24f-f20d-4baa-a948-b38ae97764b4",
+      "display_name": "Getworks",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "getworks inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://getworks.cloud"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.228384",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.228384",
+      "updated_at": "2026-02-13T18:43:52.292693"
+    },
+    {
+      "pipe_id": "45bf875a-8708-4325-8b29-e2f97ed7f85d",
+      "display_name": "Getview",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "getview inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://getview.app"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.219234",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.219234",
+      "updated_at": "2026-02-13T18:43:52.304300"
+    },
+    {
+      "pipe_id": "0fdf5c82-6d41-4556-82d7-80ceff8b90bf",
+      "display_name": "Getspot",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "getspot inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://getspot.ai"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.209318",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.209318",
+      "updated_at": "2026-02-13T18:43:52.314744"
+    },
+    {
+      "pipe_id": "961d2c37-b2e4-46ce-8073-6c2f653cadae",
+      "display_name": "Getnest",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "getnest inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://getnest.ai"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.198754",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.198754",
+      "updated_at": "2026-02-13T18:43:52.325486"
+    },
+    {
+      "pipe_id": "ee1e913b-bd5d-4517-8c67-be228e16c719",
+      "display_name": "Getlabs",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "getlabs inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://getlabs.co"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.189414",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.189414",
+      "updated_at": "2026-02-13T18:43:52.335857"
+    },
+    {
+      "pipe_id": "3732e1d7-2cc8-4d25-b3b9-fd4c7760cde0",
+      "display_name": "Getio",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "getio inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://getio.ai"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.179624",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.179624",
+      "updated_at": "2026-02-13T18:43:52.346154"
+    },
+    {
+      "pipe_id": "c23a1597-1281-4e8e-87e4-01a52aae738e",
+      "display_name": "getdesk",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "getdesk inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://getdesk.org"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.169803",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.169803",
+      "updated_at": "2026-02-13T18:43:52.355947"
+    },
+    {
+      "pipe_id": "eae5a414-37e6-4304-9b2a-ef0701b6b90e",
+      "display_name": "Freshworks CRM",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "freshworks",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://freshworks.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.160548",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.160548",
+      "updated_at": "2026-02-13T18:43:52.367735"
+    },
+    {
+      "pipe_id": "352b376e-cec7-4bc7-adc4-78628fd7523a",
+      "display_name": "Flowdock",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "ca technologies",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://flowdock.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.150966",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.150966",
+      "updated_at": "2026-02-13T18:43:52.377635"
+    },
+    {
+      "pipe_id": "958fc716-4ea5-45ea-a038-9eef5a61a2fd",
+      "display_name": "Flexspace",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "flexspace inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://flexspace.io"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.140325",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.140325",
+      "updated_at": "2026-02-13T18:43:52.473228"
+    },
+    {
+      "pipe_id": "f64a6066-4891-425d-a7af-b35975824dcd",
+      "display_name": "Figma",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "figma",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://figma.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.129678",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.129678",
+      "updated_at": "2026-02-13T18:43:52.486170"
+    },
+    {
+      "pipe_id": "71b0bac0-4ecf-4a30-9031-7dba75bbb20d",
+      "display_name": "Fastspot",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "fastspot inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://fastspot.cloud"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:44.001754",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:44.001754",
+      "updated_at": "2026-02-13T18:43:52.496478"
+    },
+    {
+      "pipe_id": "4762f794-49a8-4ad8-9352-6492cb467bf8",
+      "display_name": "Fastflow",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "fastflow inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://fastflow.tech"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.992979",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.992979",
+      "updated_at": "2026-02-13T18:43:52.508239"
+    },
+    {
+      "pipe_id": "b746299e-420d-4e01-b6b0-3590cf28160e",
+      "display_name": "Evernote",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "evernote",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://evernote.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.984614",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.984614",
+      "updated_at": "2026-02-13T18:43:52.520182"
+    },
+    {
+      "pipe_id": "1a81269a-69dc-43cb-be68-989c905e53a7",
+      "display_name": "easypoint",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "easypoint inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://easypoint.dev"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.974723",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.974723",
+      "updated_at": "2026-02-13T18:43:52.531416"
+    },
+    {
+      "pipe_id": "6f024f1e-6e63-42a1-adec-e3358593a664",
+      "display_name": "Dropbox",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "dropbox",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://dropbox.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.965501",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.965501",
+      "updated_at": "2026-02-13T18:43:52.542691"
+    },
+    {
+      "pipe_id": "d7a343be-dd99-4f3a-93a1-7b1389b2ec94",
+      "display_name": "DocuSign",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "docusign",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://docusign.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.956562",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.956562",
+      "updated_at": "2026-02-13T18:43:52.554315"
+    },
+    {
+      "pipe_id": "6d4d12a2-3339-4b94-874e-429324db98d5",
+      "display_name": "Datadog",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "datadog",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://datadoghq.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.946872",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.946872",
+      "updated_at": "2026-02-13T18:43:52.565141"
+    },
+    {
+      "pipe_id": "2aefb9ba-5238-449b-b92c-cec09dc55b94",
+      "display_name": "Confluence",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "atlassian",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://atlassian.net"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.872910",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.872910",
+      "updated_at": "2026-02-13T18:43:52.576750"
+    },
+    {
+      "pipe_id": "1fdd22ee-8821-472c-8bb5-0ccf50506df9",
+      "display_name": "ClickUp",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "clickup",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://clickup.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.863623",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.863623",
+      "updated_at": "2026-02-13T18:43:52.588776"
+    },
+    {
+      "pipe_id": "08414d72-9d95-4cb5-814e-52bac9dc2040",
+      "display_name": "Canva",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "canva",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://canva.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.855416",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.855416",
+      "updated_at": "2026-02-13T18:43:52.600144"
+    },
+    {
+      "pipe_id": "69f1a808-a17d-4561-b221-6d76459fa311",
+      "display_name": "Calendly",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "calendly",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://calendly.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.846708",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.846708",
+      "updated_at": "2026-02-13T18:43:52.611943"
+    },
+    {
+      "pipe_id": "e73681c4-ab2f-4606-8915-d7d4608edbe1",
+      "display_name": "Box",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "box",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://box.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.836729",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.836729",
+      "updated_at": "2026-02-13T18:43:52.623554"
+    },
+    {
+      "pipe_id": "8d6466cd-c11b-4c45-a596-0d04b1690b8b",
+      "display_name": "BIGWAY",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "bigway inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://bigway.cloud"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.826693",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.826693",
+      "updated_at": "2026-02-13T18:43:52.634817"
+    },
+    {
+      "pipe_id": "2bd1dd16-f224-4b44-9cff-658dcbca9091",
+      "display_name": "BIGSPOT",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "bigspot inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://bigspot.org"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.817643",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.817643",
+      "updated_at": "2026-02-13T18:43:52.645977"
+    },
+    {
+      "pipe_id": "fdc746c5-b445-454a-bd0f-494f44e57082",
+      "display_name": "Basecamp",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "basecamp",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://basecamp.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.808754",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.808754",
+      "updated_at": "2026-02-13T18:43:52.658534"
+    },
+    {
+      "pipe_id": "6ba26437-c5cf-4060-9969-be6640f3a442",
+      "display_name": "AWS EventBridge - Event Bus",
+      "fabric_plane": "EVENT_BUS",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "AWS EventBridge",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://amazonaws.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.782385",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.782385",
+      "updated_at": "2026-02-13T18:43:52.668889"
+    },
+    {
+      "pipe_id": "7179bffc-10fe-430f-9286-fd8e435516c6",
+      "display_name": "Asana",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "asana",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://asana.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.764230",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.764230",
+      "updated_at": "2026-02-13T18:43:52.679674"
+    },
+    {
+      "pipe_id": "9c90e854-a0e2-447c-8bc2-50322b795a91",
+      "display_name": "Apigee - Api Gateway",
+      "fabric_plane": "API_GATEWAY",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "Apigee",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://apigee.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.753539",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.753539",
+      "updated_at": "2026-02-13T18:43:52.692380"
+    },
+    {
+      "pipe_id": "5f79a34a-12c3-4712-8512-6440db53031f",
+      "display_name": "allstack",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "allstack inc",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://allstack.app"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.735383",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.735383",
+      "updated_at": "2026-02-13T18:43:52.703419"
+    },
+    {
+      "pipe_id": "3b5c5584-bf9d-4db8-94a5-63669e5c62cf",
+      "display_name": "Airtable",
+      "fabric_plane": "UNMAPPED",
+      "modality": "DECLARED_INTERFACE",
+      "source_system": "airtable",
+      "transport_kind": "API",
+      "endpoint_ref": {
+        "endpoints": [
+          "https://airtable.com"
+        ]
+      },
+      "entity_scope": [
+        "other"
+      ],
+      "identity_keys": [],
+      "change_semantics": "UNKNOWN",
+      "provenance": {
+        "discovered_by": "aod",
+        "discovered_at": "2026-02-13T18:43:43.726074",
+        "aod_run_id": "run_ddffee887af5"
+      },
+      "owner_signals": [],
+      "trust_labels": [
+        "governed"
+      ],
+      "schema_info": null,
+      "freshness": null,
+      "access": null,
+      "version": 1,
+      "created_at": "2026-02-13T18:43:43.726074",
+      "updated_at": "2026-02-13T18:43:52.714438"
+    }
+  ]
+}

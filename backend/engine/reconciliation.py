@@ -1,12 +1,3 @@
-"""
-Reconciliation engine: compares AAM's export-pipes against DCL's ACTUAL loaded sources.
-
-AAM side = all connections AAM reports via export-pipes (fabric planes + connections)
-DCL side = what DCL actually loaded into its graph (source node labels from last run)
-
-This is a REAL diff - not reconciling AAM to itself.
-"""
-
 from typing import Dict, Any, List, Set
 from backend.utils.log_utils import get_logger
 
@@ -14,20 +5,9 @@ logger = get_logger(__name__)
 
 
 def reconcile(
-    aam_export: Dict[str, Any],
+    aam_pipes: List[Dict[str, Any]],
     dcl_loaded_sources: List[str],
 ) -> Dict[str, Any]:
-    """
-    Compare AAM's export-pipes response against DCL's actually-loaded source names.
-
-    Args:
-        aam_export: Raw response from AAM's get_pipes() endpoint (fabric_planes structure)
-        dcl_loaded_sources: List of source name strings that DCL actually loaded into the graph
-
-    Returns structured diff showing real discrepancies between AAM and DCL.
-    """
-    fabric_planes = aam_export.get("fabric_planes", [])
-
     dcl_source_set: Set[str] = set()
     for s in dcl_loaded_sources:
         dcl_source_set.add(s.lower().strip())
@@ -36,26 +16,28 @@ def reconcile(
     aam_source_set: Set[str] = set()
     aam_by_plane: Dict[str, List[Dict[str, Any]]] = {}
 
-    for plane in fabric_planes:
-        plane_type = (plane.get("plane_type") or "UNMAPPED").upper()
-        vendor = plane.get("vendor", "unknown")
-        for conn in plane.get("connections", []):
-            source_name = conn.get("source_name", "Unknown")
-            normalized = source_name.lower().strip()
-            entry = {
-                "sourceName": source_name,
-                "normalized": normalized,
-                "vendor": conn.get("vendor", vendor),
-                "fabricPlane": plane_type,
-                "pipeId": conn.get("pipe_id"),
-                "fieldCount": len(conn.get("fields", [])) if conn.get("fields") else 0,
-            }
-            aam_connections.append(entry)
-            aam_source_set.add(normalized)
+    for pipe in aam_pipes:
+        source_name = pipe.get("display_name", "Unknown")
+        normalized = source_name.lower().strip()
+        plane_type = (pipe.get("fabric_plane") or "UNMAPPED").upper()
+        vendor = pipe.get("source_system", "unknown")
+        schema_info = pipe.get("schema_info")
+        field_count = len(schema_info) if isinstance(schema_info, list) else 0
 
-            if plane_type not in aam_by_plane:
-                aam_by_plane[plane_type] = []
-            aam_by_plane[plane_type].append(entry)
+        entry = {
+            "sourceName": source_name,
+            "normalized": normalized,
+            "vendor": vendor,
+            "fabricPlane": plane_type,
+            "pipeId": pipe.get("pipe_id"),
+            "fieldCount": field_count,
+        }
+        aam_connections.append(entry)
+        aam_source_set.add(normalized)
+
+        if plane_type not in aam_by_plane:
+            aam_by_plane[plane_type] = []
+        aam_by_plane[plane_type].append(entry)
 
     in_aam_not_dcl = []
     for conn in aam_connections:
@@ -119,6 +101,7 @@ def reconcile(
     total_aam = len(aam_connections)
     total_dcl = len(dcl_loaded_sources)
     matched = len(aam_source_set & dcl_source_set)
+    unmapped_count = len(aam_by_plane.get("UNMAPPED", []))
 
     if total_aam == 0 and total_dcl == 0:
         status = "empty"
@@ -137,7 +120,7 @@ def reconcile(
             "matched": matched,
             "inAamNotDcl": len(in_aam_not_dcl),
             "inDclNotAam": len(in_dcl_not_aam),
-            "fabricCount": len(fabric_planes),
+            "unmappedCount": unmapped_count,
         },
         "diffCauses": diff_causes,
         "fabricBreakdown": fabric_breakdown,

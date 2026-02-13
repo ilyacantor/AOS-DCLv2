@@ -8,7 +8,7 @@ interface ReconciliationData {
     matched: number;
     inAamNotDcl: number;
     inDclNotAam: number;
-    fabricCount: number;
+    unmappedCount: number;
   };
   diffCauses: Array<{
     cause: string;
@@ -51,11 +51,11 @@ interface ReconciliationData {
     aamConnectionCount: number;
   };
   trace?: {
-    aamConnectionNames: string[];
+    aamPipeNames: string[];
     dclLoadedSourceNames: string[];
     pushPipeCount: number;
-    exportConnectionCount: number;
-    pipeVsConnectionGap: number;
+    exportPipeCount: number;
+    unmappedCount: number;
   };
 }
 
@@ -245,7 +245,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
       { label: 'Matched', value: data.summary.matched ?? 0 },
       { label: 'In AAM Not DCL', value: data.summary.inAamNotDcl ?? 0 },
       { label: 'In DCL Not AAM', value: data.summary.inDclNotAam ?? 0 },
-      { label: 'Fabrics', value: data.summary.fabricCount ?? 0 },
+      { label: 'Unmapped', value: data.summary.unmappedCount ?? 0 },
     ];
 
     return (
@@ -261,7 +261,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                   {data.pushMeta.payloadHash}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {data.pushMeta.pipeCount} pipes
+                  {data.reconMeta?.aamConnectionCount ?? data.pushMeta.pipeCount} pipes
                 </span>
               </>
             )}
@@ -427,25 +427,26 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
             </button>
             {traceExpanded && (
               <div className="rounded-lg border border-border bg-card/30 p-4 space-y-4">
-                {data.trace.pipeVsConnectionGap > 0 && (
-                  <div className="rounded-lg border p-3 bg-amber-500/10 border-amber-500/20">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-amber-400">⚠</span>
-                      <span className="text-xs text-amber-400 font-medium">Pipe Gap</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      AAM push reports {data.trace.pushPipeCount} pipes but export-pipes only returned {data.trace.exportConnectionCount} connections. {data.trace.pipeVsConnectionGap} pipes are not surfaced in the fabric plane structure.
-                    </p>
+                <div className="rounded-lg border p-3 bg-blue-500/10 border-blue-500/20">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-blue-400">ℹ</span>
+                    <span className="text-xs text-blue-400 font-medium">Data Sources</span>
                   </div>
-                )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Export-pipes (current): <span className="font-mono text-foreground">{data.trace.exportPipeCount}</span> pipes ({data.trace.unmappedCount} unmapped).
+                    {data.trace.pushPipeCount > 0 && data.trace.pushPipeCount !== data.trace.exportPipeCount && (
+                      <> Last push history: <span className="font-mono text-amber-400">{data.trace.pushPipeCount}</span> (stale — different from current).</>
+                    )}
+                  </p>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h4 className="text-[10px] uppercase text-muted-foreground tracking-wide mb-2">AAM Connections ({data.trace.aamConnectionNames.length})</h4>
+                    <h4 className="text-[10px] uppercase text-muted-foreground tracking-wide mb-2">AAM Pipes ({data.trace.aamPipeNames.length})</h4>
                     <div className="space-y-1 max-h-60 overflow-y-auto">
-                      {data.trace.aamConnectionNames.map((name, i) => (
+                      {data.trace.aamPipeNames.map((name, i) => (
                         <div key={i} className="text-[11px] font-mono text-foreground/80 truncate" title={name}>{name}</div>
                       ))}
-                      {data.trace.aamConnectionNames.length === 0 && (
+                      {data.trace.aamPipeNames.length === 0 && (
                         <div className="text-[11px] text-muted-foreground italic">None</div>
                       )}
                     </div>
