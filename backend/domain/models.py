@@ -125,6 +125,8 @@ class RunMetrics(CamelCaseModel):
     total_mappings: int = 0
     processing_ms: float = 0
     render_ms: float = 0
+    data_status: Optional[str] = None
+    payload_kpis: Optional[Dict[str, Any]] = None
 
 
 class GraphSnapshot(CamelCaseModel):

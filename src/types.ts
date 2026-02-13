@@ -94,19 +94,31 @@ export interface PersonaView {
   alerts: PersonaAlert[];
 }
 
+export interface PayloadKpis {
+  planesReceived: number;
+  totalConnections: number;
+  totalFields: number;
+  emptyPlanes: number;
+  planesDetail: Array<{ planeType: string; vendor: string; connections: number; fields: number }>;
+  governedPct: number;
+}
+
 export interface RunMetrics {
   llmCalls: number;
   ragReads: number;
   ragWrites: number;
+  totalMappings: number;
   processingMs: number;
   renderMs: number;
+  dataStatus?: string | null;
+  payloadKpis?: PayloadKpis | null;
 }
 
 export interface GraphSnapshot {
   nodes: GraphNode[];
   links: GraphLink[];
   meta: {
-    mode: 'Demo' | 'Farm';
+    mode: 'Demo' | 'Farm' | 'AAM';
     runId: string;
     generatedAt: string;
     stats?: Record<string, unknown>;

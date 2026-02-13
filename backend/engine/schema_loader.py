@@ -1,7 +1,7 @@
 import os
 import csv
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 import pandas as pd
 import httpx
 import psycopg2
@@ -259,7 +259,7 @@ class SchemaLoader:
         return sources
     
     @staticmethod
-    def load_aam_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 50, aod_run_id: Optional[str] = None) -> List[SourceSystem]:
+    def load_aam_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 50, aod_run_id: Optional[str] = None) -> Tuple[List[SourceSystem], Dict[str, Any]]:
         """
         Load schemas from AAM's pipe export.
         
@@ -284,7 +284,7 @@ class SchemaLoader:
             logger.error(f"Failed to fetch from AAM: {e}")
             if narration and run_id:
                 narration.add_message(run_id, "SchemaLoader", f"⚠ AAM fetch failed: {e}")
-            return []
+            return [], {"planesReceived": 0, "totalConnections": 0, "totalFields": 0, "emptyPlanes": 0, "planesDetail": [], "governedPct": 0}
         
         fabric_planes = pipes_data.get("fabric_planes", [])
         total_connections = pipes_data.get("total_connections", 0)
@@ -396,7 +396,33 @@ class SchemaLoader:
                 f"AAM schema loading complete: {len(sources)} sources loaded"
             )
         
-        return sources
+        total_fields_count = sum(sum(len(t.fields) for t in s.tables) for s in sources)
+        governed_count = sum(1 for s in sources if "governed" in s.tags)
+        governed_pct = round((governed_count / connection_count * 100) if connection_count > 0 else 0, 1)
+        
+        planes_detail = []
+        for plane in fabric_planes:
+            plane_conns = plane.get("connections", [])
+            plane_fields = sum(len(c.get("fields", [])) for c in plane_conns)
+            planes_detail.append({
+                "planeType": plane.get("plane_type", "unknown"),
+                "vendor": plane.get("vendor", "Unknown"),
+                "connections": len(plane_conns),
+                "fields": plane_fields,
+            })
+        
+        empty_planes = sum(1 for p in planes_detail if p["connections"] == 0)
+        
+        kpis = {
+            "planesReceived": len(fabric_planes),
+            "totalConnections": connection_count,
+            "totalFields": total_fields_count,
+            "emptyPlanes": empty_planes,
+            "planesDetail": planes_detail,
+            "governedPct": governed_pct,
+        }
+        
+        return sources, kpis
     
     @staticmethod
     def _get_pool():

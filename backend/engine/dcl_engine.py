@@ -40,11 +40,13 @@ class DCLEngine:
         
         self.narration.add_message(run_id, "Engine", f"Starting DCL engine in {mode} mode, {run_mode} run mode")
         
+        payload_kpis: Optional[Dict[str, Any]] = None
+        
         if mode == "Demo":
             sources = SchemaLoader.load_demo_schemas(self.narration, run_id)
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Demo sources")
         elif mode == "AAM":
-            sources = SchemaLoader.load_aam_schemas(self.narration, run_id, source_limit=source_limit, aod_run_id=aod_run_id)
+            sources, payload_kpis = SchemaLoader.load_aam_schemas(self.narration, run_id, source_limit=source_limit, aod_run_id=aod_run_id)
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} AAM sources (source_limit={source_limit})")
         else:
             sources = SchemaLoader.load_farm_schemas(self.narration, run_id, source_limit=source_limit)
@@ -176,6 +178,15 @@ class DCLEngine:
             metrics.rag_reads = 0
         
         metrics.total_mappings = len(mappings)
+        
+        if mode == "AAM" and payload_kpis is not None:
+            metrics.payload_kpis = payload_kpis
+            if payload_kpis.get("planesReceived", 0) == 0:
+                metrics.data_status = "empty"
+            elif payload_kpis.get("emptyPlanes", 0) > 0:
+                metrics.data_status = "partial"
+            else:
+                metrics.data_status = "ok"
         
         graph = self._build_graph(mode, sources, ontology, mappings, personas, run_id)
         

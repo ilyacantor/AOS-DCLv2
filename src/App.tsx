@@ -280,9 +280,25 @@ function App() {
                   </span>
                 )}
                 {!isRunning && graphData?.meta.runMetrics && (
-                  <span className="text-xs text-muted-foreground">
-                    {(graphData.meta.runMetrics.processingMs / 1000).toFixed(1)}s
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {(graphData.meta.runMetrics.processingMs / 1000).toFixed(1)}s
+                    </span>
+                    {graphData.meta.runMetrics.dataStatus && (
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-block w-1.5 h-1.5 rounded-full ${
+                          graphData.meta.runMetrics.dataStatus === 'ok' ? 'bg-emerald-400' :
+                          graphData.meta.runMetrics.dataStatus === 'partial' ? 'bg-amber-400' :
+                          'bg-red-400'
+                        }`} />
+                        {graphData.meta.runMetrics.payloadKpis && (
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {graphData.meta.runMetrics.payloadKpis.planesReceived}P·{graphData.meta.runMetrics.payloadKpis.totalConnections}C·{graphData.meta.runMetrics.payloadKpis.totalFields}F
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
