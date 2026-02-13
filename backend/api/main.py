@@ -813,6 +813,16 @@ def get_reconciliation():
             "aamConnectionCount": len(aam_names),
         }
 
+        push_pipe_count = (push_meta.get("pipeCount") or 0) if push_meta else 0
+        export_connection_count = len(aam_names)
+        result["trace"] = {
+            "aamConnectionNames": aam_names,
+            "dclLoadedSourceNames": dcl_loaded_sources,
+            "pushPipeCount": push_pipe_count,
+            "exportConnectionCount": export_connection_count,
+            "pipeVsConnectionGap": push_pipe_count - export_connection_count,
+        }
+
         return result
     except Exception as e:
         logger.error(f"Reconciliation failed: {e}", exc_info=True)

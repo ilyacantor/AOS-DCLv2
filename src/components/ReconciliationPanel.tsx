@@ -50,6 +50,13 @@ interface ReconciliationData {
     dclSourceCount: number;
     aamConnectionCount: number;
   };
+  trace?: {
+    aamConnectionNames: string[];
+    dclLoadedSourceNames: string[];
+    pushPipeCount: number;
+    exportConnectionCount: number;
+    pipeVsConnectionGap: number;
+  };
 }
 
 interface SorCoverageSource {
@@ -158,6 +165,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
   const [sorError, setSorError] = useState<string | null>(null);
   const [unmappedExpanded, setUnmappedExpanded] = useState(false);
   const [unmappedLimit, setUnmappedLimit] = useState(50);
+  const [traceExpanded, setTraceExpanded] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -405,6 +413,57 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {data.trace && (
+          <div>
+            <button
+              onClick={() => setTraceExpanded(!traceExpanded)}
+              className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3 hover:text-foreground transition-colors"
+            >
+              <span>{traceExpanded ? '▾' : '▸'}</span>
+              <span>Trace</span>
+            </button>
+            {traceExpanded && (
+              <div className="rounded-lg border border-border bg-card/30 p-4 space-y-4">
+                {data.trace.pipeVsConnectionGap > 0 && (
+                  <div className="rounded-lg border p-3 bg-amber-500/10 border-amber-500/20">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-amber-400">⚠</span>
+                      <span className="text-xs text-amber-400 font-medium">Pipe Gap</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      AAM push reports {data.trace.pushPipeCount} pipes but export-pipes only returned {data.trace.exportConnectionCount} connections. {data.trace.pipeVsConnectionGap} pipes are not surfaced in the fabric plane structure.
+                    </p>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-[10px] uppercase text-muted-foreground tracking-wide mb-2">AAM Connections ({data.trace.aamConnectionNames.length})</h4>
+                    <div className="space-y-1 max-h-60 overflow-y-auto">
+                      {data.trace.aamConnectionNames.map((name, i) => (
+                        <div key={i} className="text-[11px] font-mono text-foreground/80 truncate" title={name}>{name}</div>
+                      ))}
+                      {data.trace.aamConnectionNames.length === 0 && (
+                        <div className="text-[11px] text-muted-foreground italic">None</div>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] uppercase text-muted-foreground tracking-wide mb-2">DCL Loaded Sources ({data.trace.dclLoadedSourceNames.length})</h4>
+                    <div className="space-y-1 max-h-60 overflow-y-auto">
+                      {data.trace.dclLoadedSourceNames.map((name, i) => (
+                        <div key={i} className="text-[11px] font-mono text-foreground/80 truncate" title={name}>{name}</div>
+                      ))}
+                      {data.trace.dclLoadedSourceNames.length === 0 && (
+                        <div className="text-[11px] text-muted-foreground italic">None</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
