@@ -199,6 +199,16 @@ def run_dcl(request: RunRequest):
                 n.model_dump() for n in snapshot.nodes if n.level == "L1"
             ]
             _last_aam_run["link_count"] = len(snapshot.links)
+            import time as _time
+            _last_aam_run["timestamp"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            # Capture the raw export-pipes response DCL actually used
+            try:
+                from backend.aam.client import get_aam_client
+                _last_aam_run["dcl_view"] = get_aam_client().get_pipes(
+                    aod_run_id=request.aod_run_id
+                )
+            except Exception:
+                _last_aam_run["dcl_view"] = None
 
         return RunResponse(
             graph=snapshot,
@@ -709,14 +719,20 @@ def mcp_tool_call(tool_call: MCPToolCall):
 def get_reconciliation():
     """
     Reconcile AAM push payload against DCL's loaded state.
-    
-    Fetches the latest push from AAM and compares against export-pipes.
-    Shows real diffs: unmapped pipes, missing connections, fabric mismatches.
+
+    Always resets the AAM client to avoid stale httpx connections, then:
+    1. Fetches push history fresh from AAM
+    2. Picks the MOST RECENT push (by pushed_at descending, then by index)
+    3. Compares push payload against DCL's ACTUAL loaded view
+       (captured during the last /api/dcl/run with mode=AAM)
     """
     try:
+        # Reset AAM client so we never read from a stale httpx connection
+        _invalidate_aam_caches()
+
         from backend.aam.client import get_aam_client
         client = get_aam_client()
-        
+
         pushes = client.get_push_history()
         if not pushes:
             return {
@@ -728,13 +744,30 @@ def get_reconciliation():
                 "missingFromDcl": [],
                 "pushMeta": None,
             }
-        
-        latest_push = max(pushes, key=lambda p: p.get("pushed_at", ""))
+
+        # Sort pushes by pushed_at descending — most recent first.
+        # If AAM returns them in insertion order, the last element is
+        # newest, so we also use the list index as a tiebreaker.
+        def _push_sort_key(item):
+            idx, p = item
+            return (p.get("pushed_at", ""), idx)
+
+        sorted_pushes = sorted(enumerate(pushes), key=_push_sort_key, reverse=True)
+        latest_push = sorted_pushes[0][1]
+
         push_detail = client.get_push_detail(latest_push["push_id"])
-        dcl_view = client.get_pipes()
-        
+
+        # Use the DCL view captured during the actual run,
+        # NOT a fresh fetch that could reflect a different state.
+        dcl_view = _last_aam_run.get("dcl_view")
+        if dcl_view is None:
+            # Fallback: no AAM run has been done yet, fetch live
+            dcl_view = client.get_pipes(
+                aod_run_id=_last_aam_run.get("aod_run_id")
+            )
+
         result = reconcile(push_detail.get("payload", {}), dcl_view)
-        
+
         result["pushMeta"] = {
             "pushId": latest_push.get("push_id"),
             "pushedAt": latest_push.get("pushed_at"),
@@ -742,7 +775,7 @@ def get_reconciliation():
             "payloadHash": latest_push.get("payload_hash"),
             "aodRunId": latest_push.get("aod_run_id"),
         }
-        
+
         return result
     except Exception as e:
         logger.error(f"Reconciliation failed: {e}", exc_info=True)
