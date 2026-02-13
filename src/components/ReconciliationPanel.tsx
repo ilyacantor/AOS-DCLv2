@@ -133,7 +133,11 @@ function getDateString(): string {
   return `${y}-${m}-${d}`;
 }
 
-export function ReconciliationPanel() {
+interface ReconciliationPanelProps {
+  runId?: string;
+}
+
+export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
   const [activeTab, setActiveTab] = useState<'aam' | 'sor'>('aam');
   const [data, setData] = useState<ReconciliationData | null>(null);
   const [sorData, setSorData] = useState<SorReconciliationData | null>(null);
@@ -177,7 +181,7 @@ export function ReconciliationPanel() {
   useEffect(() => {
     fetchData();
     fetchSorData();
-  }, []);
+  }, [runId]);
 
   const formatTimestamp = (ts: string) => {
     try {

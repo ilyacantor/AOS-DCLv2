@@ -314,7 +314,7 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
         {mainView === 'recon' ? (
-          <ReconciliationPanel />
+          <ReconciliationPanel runId={runId} />
         ) : mainView === 'guide' ? (
           <UserGuide />
         ) : mainView === 'dashboard' ? (
