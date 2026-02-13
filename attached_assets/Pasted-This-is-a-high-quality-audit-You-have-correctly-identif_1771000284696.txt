@@ -1,0 +1,70 @@
+This is a high-quality audit. You have correctly identified the "Tech Debt" vs. "Platform Risk" distinction.
+
+The **High Severity** items (1 & 6) are not just "hardcoding"—they are **architectural blockers**. They couple your deployment cycle to your business logic. You cannot scale or let customers/partners define their own metrics if these remain in Python.
+
+Here is my specific advice on how to tackle these, ranked by ROI.
+
+### 1. The "Code Red" Fix: `backend/api/semantic_export.py`
+
+**Why:** This is your Semantic Layer. Currently, adding a metric (e.g., "Churn Rate") requires a backend engineer, a PR, and a deployment. This defeats the purpose of an autonomous/flexible system.
+
+**Immediate Action (Step 1): Externalize to YAML/JSON**
+
+* Create a new directory: `backend/config/definitions/`.
+* Move `PUBLISHED_METRICS`, `PUBLISHED_ENTITIES`, and `DEMO_BINDINGS` into separate `.yaml` files.
+* **Refactor:** Change `semantic_export.py` to generic logic that loads these files at startup.
+* **Benefit:** You can now hot-reload definitions without restarting the binary (if you build a watcher), or at least update them without touching code logic.
+
+**Long-Term Action (Step 2): Database-Driven Catalog**
+
+* Move these definitions into a `semantic_catalog` table.
+* Build a simple internal endpoint (`POST /api/admin/metrics`) to update them.
+* This enables the "Temporal Versioning" you mentioned—you can version rows in the DB rather than files in git.
+
+### 2. The "Stability" Fix: `backend/core/fabric_plane.py`
+
+**Why:** The "5 instead of 4" bug happened because the *code* thought it knew the truth, but the *reality* (AAM/Architecture) had changed. The Data Plane (DCL) should never presume to know the topology of the Fabric; it should be told.
+
+**Action: The Registry Pattern**
+
+* **Delete the Enum.** Enums imply a closed, static set of options. Providers are an open set.
+* **Dynamic Injection:** On startup (or periodically), DCL should query AAM: `GET /api/fabric/topology`.
+* **Map Logic:** Replace `PLANE_TO_PROVIDERS` with a logic check:
+```python
+# Old (Bad)
+if provider in PLANE_TO_PROVIDERS['control_plane']: ...
+
+# New (Good)
+# provider_config = { 'name': 'Workato', 'type': 'control_plane', ... }
+if provider_config['type'] == 'control_plane': ...
+
+```
+
+
+* **Pointer Classes:** Instead of `get_pointer_class()` switching on names, use a dynamic registry where classes register themselves via a decorator:
+```python
+@register_provider("workato")
+class WorkatoPointer: ...
+
+```
+
+
+
+### 3. The "Strategic" Fix: `backend/engine/ontology.py`
+
+**Why:** Hardcoding "Account" or "Opportunity" locks you into CRM-centric thinking. If you want to support a Healthcare vertical later (e.g., "Patient," "Treatment"), you're stuck.
+
+**Action:**
+
+* Adopt a **Generic Ontology Model**.
+* Instead of `class Account`, use `class Entity` with a `type` property.
+* Define the *properties* of an Account in a config (or the DB), effectively a meta-model.
+* *Note:* This is a heavier lift. If you are focused on CRM/ERP right now, you can delay this, but know that it sets the ceiling for your platform's adaptability.
+
+### Summary of What to Leave (The "Low" Severity)
+
+* **Keep** `source_normalizer.py` aliases as they are. They are a harmless safety net.
+* **Keep** `schema_loader.py` (Demo) hardcoded. It is isolated to demo mode. Over-engineering demo code is a classic trap.
+* **Keep** `persona_view.py` defaults. As long as they are just fallbacks for a DB outage, they are fine.
+
+**Recommendation:** Assign one engineer to tackle `semantic_export.py` (YAML extraction) immediately. That gives you the biggest velocity win for the least effort.
