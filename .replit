@@ -72,7 +72,6 @@ externalPort = 3000
 localPort = 8000
 externalPort = 8000
 
-[userenv]
 
 [userenv.shared]
 FARM_API_URL = "https://63971109-a901-48bc-a71f-89583b2e11d4-00-1do0vncksilxt.janeway.replit.dev"
@@ -82,6 +81,18 @@ DCL_DATASET_ID = "nlq_test"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["python", "-m", "uvicorn", "backend.api.main:app", "--host", "0.0.0.0", "--port", "5000"]
-build = ["bash", "-c", "pip install -r requirements.txt && npm ci && npm run build"]
-
+run = [
+  "python",
+  "-m",
+  "uvicorn",
+  "backend.api.main:app",
+  "--host",
+  "0.0.0.0",
+  "--port",
+  "5000",
+]
+build = [
+  "bash",
+  "-c",
+  "pip install -r requirements.txt && npm ci && npm run build",
+]
