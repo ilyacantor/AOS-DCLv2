@@ -3,13 +3,12 @@ import { useState, useEffect } from 'react';
 interface ReconciliationData {
   status: string;
   summary: {
-    totalPushed: number;
-    mappedPipes: number;
-    unmappedPipes: number;
-    dclConnections: number;
-    dclFabrics: number;
-    uniqueSourceSystems: number;
-    missingFromDcl: number;
+    aamConnections: number;
+    dclLoadedSources: number;
+    matched: number;
+    inAamNotDcl: number;
+    inDclNotAam: number;
+    fabricCount: number;
   };
   diffCauses: Array<{
     cause: string;
@@ -20,23 +19,22 @@ interface ReconciliationData {
   fabricBreakdown: Array<{
     planeType: string;
     vendor: string;
-    pushedPipes: number;
-    dclConnections: number;
+    aamConnections: number;
+    dclLoaded: number;
     delta: number;
+    missingFromDcl: string[];
   }>;
-  unmappedPipes: Array<{
-    pipeId: string;
-    displayName: string;
-    sourceSystem: string;
-    transportKind: string;
-    trustLabels: string[];
-    hasSchema: boolean;
-  }>;
-  missingFromDcl: Array<{
-    pipeId: string;
-    displayName: string;
-    sourceSystem: string;
+  inAamNotDcl: Array<{
+    sourceName: string;
+    vendor: string;
     fabricPlane: string;
+    pipeId: string;
+    fieldCount: number;
+    cause: string;
+  }>;
+  inDclNotAam: Array<{
+    sourceName: string;
+    cause: string;
   }>;
   pushMeta: {
     pushId: string;
@@ -49,7 +47,8 @@ interface ReconciliationData {
     dclRunId: string | null;
     dclRunAt: string | null;
     reconAt: string;
-    sourceCount: number;
+    dclSourceCount: number;
+    aamConnectionCount: number;
   };
 }
 
@@ -233,15 +232,13 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
     if (!data) return null;
 
     const summaryCards = [
-      { label: 'Pushed', value: data.summary.totalPushed },
-      { label: 'Mapped', value: data.summary.mappedPipes },
-      { label: 'Unmapped', value: data.summary.unmappedPipes },
-      { label: 'DCL Loaded', value: data.summary.dclConnections },
-      { label: 'Sources', value: data.summary.uniqueSourceSystems },
-      { label: 'Missing', value: data.summary.missingFromDcl },
+      { label: 'AAM Connections', value: data.summary.aamConnections ?? 0 },
+      { label: 'DCL Loaded', value: data.summary.dclLoadedSources ?? 0 },
+      { label: 'Matched', value: data.summary.matched ?? 0 },
+      { label: 'In AAM Not DCL', value: data.summary.inAamNotDcl ?? 0 },
+      { label: 'In DCL Not AAM', value: data.summary.inDclNotAam ?? 0 },
+      { label: 'Fabrics', value: data.summary.fabricCount ?? 0 },
     ];
-
-    const visibleUnmapped = data.unmappedPipes.slice(0, unmappedLimit);
 
     return (
       <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
@@ -250,7 +247,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
             <span className={`px-2.5 py-1 text-xs font-medium rounded border ${statusColors[data.status] || statusColors.empty}`}>
               {data.status.toUpperCase()}
             </span>
-            {data.pushMeta ? (
+            {data.pushMeta && (
               <>
                 <span className="text-xs font-mono text-muted-foreground bg-secondary/30 px-2 py-0.5 rounded">
                   {data.pushMeta.payloadHash}
@@ -259,8 +256,6 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                   {data.pushMeta.pipeCount} pipes
                 </span>
               </>
-            ) : (
-              <span className="text-xs text-muted-foreground italic">No push data available</span>
             )}
           </div>
           {data.reconMeta && (
@@ -272,6 +267,8 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
               {data.reconMeta.dclRunAt && (
                 <span>Pipeline: <span className="text-foreground font-mono">{formatTimestamp(data.reconMeta.dclRunAt)}</span></span>
               )}
+              <span>AAM: <span className="text-foreground font-mono">{data.reconMeta.aamConnectionCount}</span></span>
+              <span>DCL: <span className="text-foreground font-mono">{data.reconMeta.dclSourceCount}</span></span>
             </div>
           )}
         </div>
@@ -285,7 +282,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
           ))}
         </div>
 
-        {data.diffCauses.length > 0 && (
+        {(data.diffCauses?.length ?? 0) > 0 && (
           <div>
             <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3">Diff Causes</h3>
             <div className="space-y-2">
@@ -296,7 +293,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                     <div className="flex items-center gap-2">
                       <span className={`text-sm ${style.text}`}>{style.icon}</span>
                       <span className="text-sm font-medium">{cause.cause}</span>
-                      <span className={`ml-auto text-xs font-mono ${style.text}`}>×{cause.count}</span>
+                      <span className={`ml-auto text-xs font-mono ${style.text}`}>{cause.count}</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{cause.description}</p>
                   </div>
@@ -306,7 +303,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
           </div>
         )}
 
-        {data.fabricBreakdown.length > 0 && (
+        {(data.fabricBreakdown?.length ?? 0) > 0 && (
           <div>
             <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3">Fabric Breakdown</h3>
             <div className="rounded-lg border border-border overflow-hidden">
@@ -314,7 +311,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                 <thead>
                   <tr className="border-b border-border bg-card/50">
                     <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Plane</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Pushed</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">AAM</th>
                     <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">DCL</th>
                     <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Delta</th>
                   </tr>
@@ -326,8 +323,8 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                         <span className="font-mono text-xs">{row.planeType}</span>
                         {row.vendor && <span className="text-xs text-muted-foreground ml-1">({row.vendor})</span>}
                       </td>
-                      <td className="text-right px-3 py-2 font-mono">{row.pushedPipes}</td>
-                      <td className="text-right px-3 py-2 font-mono">{row.dclConnections}</td>
+                      <td className="text-right px-3 py-2 font-mono">{row.aamConnections}</td>
+                      <td className="text-right px-3 py-2 font-mono">{row.dclLoaded}</td>
                       <td className={`text-right px-3 py-2 font-mono font-medium ${row.delta === 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                         {row.delta === 0 ? '0' : (row.delta > 0 ? `+${row.delta}` : row.delta)}
                       </td>
@@ -339,46 +336,44 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
           </div>
         )}
 
-        {data.unmappedPipes.length > 0 && (
+        {(data.inAamNotDcl?.length ?? 0) > 0 && (
           <div>
             <button
               onClick={() => setUnmappedExpanded(!unmappedExpanded)}
               className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3 hover:text-foreground transition-colors"
             >
               <span>{unmappedExpanded ? '▾' : '▸'}</span>
-              <span>Unmapped Pipes ({data.unmappedPipes.length.toLocaleString()})</span>
+              <span>In AAM but Not DCL ({data.inAamNotDcl?.length ?? 0})</span>
             </button>
             {unmappedExpanded && (
               <div className="rounded-lg border border-border overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-card/50">
-                      <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Name</th>
-                      <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Source System</th>
-                      <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Transport</th>
-                      <th className="text-center px-3 py-2 text-xs font-medium text-muted-foreground">Governed</th>
+                      <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Source</th>
+                      <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Vendor</th>
+                      <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Fabric</th>
+                      <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Fields</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleUnmapped.map((pipe) => (
-                      <tr key={pipe.pipeId} className="border-b border-border/50 last:border-0">
-                        <td className="px-3 py-2 font-mono text-xs truncate max-w-[200px]" title={pipe.displayName}>{pipe.displayName}</td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">{pipe.sourceSystem}</td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">{pipe.transportKind}</td>
-                        <td className="text-center px-3 py-2">
-                          <span className={`inline-block w-2 h-2 rounded-full ${pipe.hasSchema ? 'bg-emerald-400' : 'bg-gray-500'}`} />
-                        </td>
+                    {(data.inAamNotDcl ?? []).slice(0, unmappedLimit).map((item, i) => (
+                      <tr key={i} className="border-b border-border/50 last:border-0">
+                        <td className="px-3 py-2 font-mono text-xs truncate max-w-[200px]" title={item.sourceName}>{item.sourceName}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">{item.vendor}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">{item.fabricPlane}</td>
+                        <td className="text-right px-3 py-2 font-mono text-xs">{item.fieldCount}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {unmappedLimit < data.unmappedPipes.length && (
+                {unmappedLimit < (data.inAamNotDcl?.length ?? 0) && (
                   <div className="border-t border-border px-3 py-2 text-center">
                     <button
                       onClick={() => setUnmappedLimit(prev => prev + 50)}
                       className="text-xs text-primary hover:text-primary/80"
                     >
-                      Show more ({data.unmappedPipes.length - unmappedLimit} remaining)
+                      Show more ({(data.inAamNotDcl?.length ?? 0) - unmappedLimit} remaining)
                     </button>
                   </div>
                 )}
@@ -387,26 +382,24 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
           </div>
         )}
 
-        {data.missingFromDcl.length > 0 && (
+        {(data.inDclNotAam?.length ?? 0) > 0 && (
           <div>
             <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3">
-              Missing from DCL ({data.missingFromDcl.length})
+              In DCL but Not AAM ({data.inDclNotAam?.length ?? 0})
             </h3>
             <div className="rounded-lg border border-border overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-card/50">
-                    <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Name</th>
                     <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Source</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Fabric Plane</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Cause</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.missingFromDcl.map((item) => (
-                    <tr key={item.pipeId} className="border-b border-border/50 last:border-0">
-                      <td className="px-3 py-2 font-mono text-xs">{item.displayName}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">{item.sourceSystem}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">{item.fabricPlane}</td>
+                  {(data.inDclNotAam ?? []).map((item, i) => (
+                    <tr key={i} className="border-b border-border/50 last:border-0">
+                      <td className="px-3 py-2 font-mono text-xs">{item.sourceName}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">{item.cause}</td>
                     </tr>
                   ))}
                 </tbody>

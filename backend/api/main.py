@@ -228,16 +228,7 @@ def run_dcl(request: RunRequest):
             import time as _time
             _last_aam_run["timestamp"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            # Capture the export-pipes view DCL actually consumed
-            # (used as DCL side in reconciliation)
-            try:
-                from backend.aam.client import get_aam_client
-                _client = get_aam_client()
-                _last_aam_run["dcl_view"] = _client.get_pipes(
-                    aod_run_id=request.aod_run_id
-                )
-            except Exception:
-                _last_aam_run["dcl_view"] = None
+            _last_aam_run["dcl_loaded_sources"] = source_names
 
         return RunResponse(
             graph=snapshot,
@@ -747,14 +738,13 @@ def mcp_tool_call(tool_call: MCPToolCall):
 @app.get("/api/dcl/reconciliation")
 def get_reconciliation():
     """
-    Reconcile AAM push payload (individual pipes) against DCL's fabric view.
+    Reconcile AAM's export-pipes against DCL's ACTUAL loaded sources.
 
-    Uses two AAM endpoints:
-    - get_push_detail() for push_payload (flat list of ~100 individual pipes)
-    - get_pipes() for dcl_view (fabric planes with connections)
+    Compares:
+    - AAM side: fresh connections from get_pipes() (what AAM reports)
+    - DCL side: actual loaded source names from last pipeline run (what DCL ingested)
 
-    Falls back to building synthetic push from export-pipes if push history
-    is unavailable.
+    This is a REAL diff - AAM vs DCL, not AAM vs AAM.
     """
     try:
         _invalidate_aam_caches()
@@ -763,11 +753,27 @@ def get_reconciliation():
 
         aod_run_id = _last_aam_run.get("aod_run_id")
 
-        # DCL view: always fetch fresh fabric planes from export-pipes
-        dcl_view = client.get_pipes(aod_run_id=aod_run_id)
+        # AAM side: fresh export-pipes (what AAM says exists)
+        aam_export = client.get_pipes(aod_run_id=aod_run_id)
 
-        # Push payload: fetch latest push detail (has individual pipes)
-        push_payload = None
+        # DCL side: what DCL ACTUALLY loaded (source labels from graph)
+        dcl_loaded_sources = list(app.state.loaded_sources)
+
+        # Real diff: AAM connections vs DCL loaded sources
+        result = reconcile(aam_export, dcl_loaded_sources)
+
+        import time as _time
+        import hashlib as _hashlib
+
+        # Build a hash from AAM connection names for change detection
+        aam_names = sorted([
+            c.get("source_name", "")
+            for plane in aam_export.get("fabric_planes", [])
+            for c in plane.get("connections", [])
+        ])
+        payload_hash = _hashlib.sha256(str(aam_names).encode()).hexdigest()[:12]
+
+        # Also fetch push history for push metadata display
         push_meta = None
         try:
             pushes = client.get_push_history()
@@ -778,53 +784,33 @@ def get_reconciliation():
                     reverse=True,
                 )
                 latest = sorted_pushes[0][1]
-                detail = client.get_push_detail(latest["push_id"])
-                push_payload = detail.get("payload", {})
                 push_meta = {
                     "pushId": latest.get("push_id"),
                     "pushedAt": latest.get("pushed_at"),
                     "pipeCount": latest.get("pipe_count"),
-                    "payloadHash": latest.get("payload_hash"),
+                    "payloadHash": latest.get("payload_hash", payload_hash),
                     "aodRunId": latest.get("aod_run_id"),
                 }
         except Exception as e:
-            logger.warning(f"Push history unavailable, falling back to export-pipes: {e}")
+            logger.warning(f"Push history unavailable: {e}")
 
-        # Fallback: if push history is empty, build synthetic from export-pipes
-        if not push_payload or not push_payload.get("pipes"):
-            push_payload = _build_push_from_export(dcl_view)
-            push_meta = push_meta or {
-                "source": "export-pipes (synthetic)",
-                "pipeCount": len(push_payload.get("pipes", [])),
-            }
-
-        result = reconcile(push_payload, dcl_view)
-
-        import time as _time
-
-        # Use push_meta from get_push_detail() if available;
-        # otherwise build it from what we have
-        if push_meta and push_meta.get("pushId"):
-            result["pushMeta"] = push_meta
-        else:
-            import hashlib as _hashlib
-            pipe_json = str(sorted([p.get("pipe_id", "") for p in push_payload.get("pipes", [])]))
-            payload_hash = _hashlib.sha256(pipe_json.encode()).hexdigest()[:12]
-            result["pushMeta"] = {
-                "source": "export-pipes",
-                "fetchedAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        if not push_meta:
+            push_meta = {
+                "pushId": "export-pipes",
                 "pushedAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "aodRunId": aod_run_id,
-                "pipeCount": len(push_payload.get("pipes", [])),
+                "pipeCount": len(aam_names),
                 "payloadHash": payload_hash,
-                "pushId": _last_aam_run.get("run_id", "none"),
+                "aodRunId": aod_run_id,
             }
+
+        result["pushMeta"] = push_meta
 
         result["reconMeta"] = {
             "dclRunId": _last_aam_run.get("run_id"),
             "dclRunAt": _last_aam_run.get("timestamp"),
             "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "sourceCount": len(dcl_view.get("fabric_planes", [])),
+            "dclSourceCount": len(dcl_loaded_sources),
+            "aamConnectionCount": len(aam_names),
         }
 
         return result

@@ -1,174 +1,146 @@
 """
-Reconciliation engine: compares AAM push payload against DCL's loaded view.
+Reconciliation engine: compares AAM's export-pipes against DCL's ACTUAL loaded sources.
 
-AAM push payload = full list of pipes AAM exported to DCL
-DCL loaded view = what export-pipes returns (fabric plane connections)
+AAM side = all connections AAM reports via export-pipes (fabric planes + connections)
+DCL side = what DCL actually loaded into its graph (source node labels from last run)
+
+This is a REAL diff - not reconciling AAM to itself.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Set
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
 
-def reconcile(push_payload: Dict[str, Any], dcl_view: Dict[str, Any]) -> Dict[str, Any]:
+def reconcile(
+    aam_export: Dict[str, Any],
+    dcl_loaded_sources: List[str],
+) -> Dict[str, Any]:
     """
-    Compare AAM's push payload against DCL's live export-pipes view.
-    
-    Returns a structured diff with:
-    - summary: counts and high-level status
-    - unmapped: pipes not assigned to any fabric plane
-    - missing: pipes in push but not found in DCL connections
-    - fabric_breakdown: per-plane comparison
+    Compare AAM's export-pipes response against DCL's actually-loaded source names.
+
+    Args:
+        aam_export: Raw response from AAM's get_pipes() endpoint (fabric_planes structure)
+        dcl_loaded_sources: List of source name strings that DCL actually loaded into the graph
+
+    Returns structured diff showing real discrepancies between AAM and DCL.
     """
-    push_pipes = push_payload.get("pipes", [])
-    fabric_planes = dcl_view.get("fabric_planes", [])
-    
-    # Build DCL connection set: source names that DCL loaded
-    dcl_sources = set()
-    dcl_by_plane = {}
+    fabric_planes = aam_export.get("fabric_planes", [])
+
+    dcl_source_set: Set[str] = set()
+    for s in dcl_loaded_sources:
+        dcl_source_set.add(s.lower().strip())
+
+    aam_connections: List[Dict[str, Any]] = []
+    aam_source_set: Set[str] = set()
+    aam_by_plane: Dict[str, List[Dict[str, Any]]] = {}
+
     for plane in fabric_planes:
-        plane_type = plane.get("plane_type", "unknown")
-        conns = plane.get("connections", [])
-        dcl_by_plane[plane_type] = {
-            "vendor": plane.get("vendor", "unknown"),
-            "connectionCount": len(conns),
-            "sourceNames": [c.get("source_name", "") for c in conns],
-        }
-        for c in conns:
-            dcl_sources.add(c.get("source_name", "").lower().strip())
-    
-    # Analyze push pipes
-    total_pushed = len(push_pipes)
-    unmapped_pipes = []
-    mapped_pipes = []
-    push_by_plane = {}
-    
-    for pipe in push_pipes:
-        fp = pipe.get("fabric_plane", "UNMAPPED")
-        if fp == "UNMAPPED" or not fp:
-            unmapped_pipes.append({
-                "pipeId": pipe.get("pipe_id"),
-                "displayName": pipe.get("display_name"),
-                "sourceSystem": pipe.get("source_system"),
-                "transportKind": pipe.get("transport_kind"),
-                "trustLabels": pipe.get("trust_labels", []),
-                "hasSchema": pipe.get("schema_info") is not None,
+        plane_type = (plane.get("plane_type") or "UNMAPPED").upper()
+        vendor = plane.get("vendor", "unknown")
+        for conn in plane.get("connections", []):
+            source_name = conn.get("source_name", "Unknown")
+            normalized = source_name.lower().strip()
+            entry = {
+                "sourceName": source_name,
+                "normalized": normalized,
+                "vendor": conn.get("vendor", vendor),
+                "fabricPlane": plane_type,
+                "pipeId": conn.get("pipe_id"),
+                "fieldCount": len(conn.get("fields", [])) if conn.get("fields") else 0,
+            }
+            aam_connections.append(entry)
+            aam_source_set.add(normalized)
+
+            if plane_type not in aam_by_plane:
+                aam_by_plane[plane_type] = []
+            aam_by_plane[plane_type].append(entry)
+
+    in_aam_not_dcl = []
+    for conn in aam_connections:
+        if conn["normalized"] not in dcl_source_set:
+            in_aam_not_dcl.append({
+                "sourceName": conn["sourceName"],
+                "vendor": conn["vendor"],
+                "fabricPlane": conn["fabricPlane"],
+                "pipeId": conn["pipeId"],
+                "fieldCount": conn["fieldCount"],
+                "cause": "AAM reports this connection but DCL did not load it",
             })
-        else:
-            mapped_pipes.append(pipe)
-            if fp not in push_by_plane:
-                push_by_plane[fp] = []
-            push_by_plane[fp].append(pipe)
-    
-    # Fabric breakdown: compare push mapped pipes vs DCL loaded connections
+
+    in_dcl_not_aam = []
+    for s in dcl_loaded_sources:
+        if s.lower().strip() not in aam_source_set:
+            in_dcl_not_aam.append({
+                "sourceName": s,
+                "cause": "DCL loaded this source but AAM does not report it",
+            })
+
     fabric_breakdown = []
-    all_plane_types = set(list(push_by_plane.keys()) + list(dcl_by_plane.keys()))
-    for plane_type in sorted(all_plane_types):
-        push_count = len(push_by_plane.get(plane_type, []))
-        dcl_info = dcl_by_plane.get(plane_type, {})
-        dcl_count = dcl_info.get("connectionCount", 0)
+    all_planes = set(aam_by_plane.keys())
+    for plane_type in sorted(all_planes):
+        conns = aam_by_plane.get(plane_type, [])
+        aam_count = len(conns)
+        dcl_count = sum(1 for c in conns if c["normalized"] in dcl_source_set)
         fabric_breakdown.append({
             "planeType": plane_type,
-            "vendor": dcl_info.get("vendor", push_by_plane.get(plane_type, [{}])[0].get("source_system", "unknown") if push_by_plane.get(plane_type) else "unknown"),
-            "pushedPipes": push_count,
-            "dclConnections": dcl_count,
-            "delta": push_count - dcl_count,
+            "vendor": conns[0]["vendor"] if conns else "unknown",
+            "aamConnections": aam_count,
+            "dclLoaded": dcl_count,
+            "delta": aam_count - dcl_count,
+            "missingFromDcl": [c["sourceName"] for c in conns if c["normalized"] not in dcl_source_set],
         })
-    
-    # Build DCL pipe_id set from connections (if they carry pipe_id)
-    dcl_pipe_ids = set()
-    dcl_normalized_keys = set()
-    for plane in fabric_planes:
-        for c in plane.get("connections", []):
-            pid = c.get("pipe_id")
-            if pid:
-                dcl_pipe_ids.add(pid)
-            name = (c.get("source_name") or "").lower().strip()
-            vendor = (plane.get("vendor") or "").lower().strip()
-            dcl_normalized_keys.add(f"{plane.get('plane_type','')}__{vendor}__{name}")
-    
-    # Match mapped pipes to DCL connections using pipe_id first, then exact plane+vendor key
-    missing_from_dcl = []
-    for pipe in mapped_pipes:
-        pid = pipe.get("pipe_id")
-        if pid and pid in dcl_pipe_ids:
-            continue
-        
-        fp = (pipe.get("fabric_plane") or "").upper()
-        display = (pipe.get("display_name") or "").lower().strip()
-        source = (pipe.get("source_system") or "").lower().strip()
-        key1 = f"{fp}__{source}__{display}"
-        key2 = f"{fp}__{source}__{source}"
-        if key1 in dcl_normalized_keys or key2 in dcl_normalized_keys:
-            continue
-        
-        # Check if display name or source matches any DCL source name exactly
-        if display in dcl_sources or source in dcl_sources:
-            continue
-        
-        missing_from_dcl.append({
-            "pipeId": pid,
-            "displayName": pipe.get("display_name"),
-            "sourceSystem": pipe.get("source_system"),
-            "fabricPlane": pipe.get("fabric_plane"),
-        })
-    
-    # Unique source systems in push
-    push_source_systems = set()
-    for p in push_pipes:
-        ss = p.get("source_system")
-        if ss:
-            push_source_systems.add(ss)
-    
-    # Diff causes
+
     diff_causes = []
-    if unmapped_pipes:
+    if in_aam_not_dcl:
         diff_causes.append({
-            "cause": "UNMAPPED_PIPES",
-            "description": f"{len(unmapped_pipes)} pipes have no fabric plane assignment in AAM",
-            "severity": "warning",
-            "count": len(unmapped_pipes),
-        })
-    if missing_from_dcl:
-        diff_causes.append({
-            "cause": "MAPPED_BUT_MISSING",
-            "description": f"{len(missing_from_dcl)} mapped pipes not found in DCL connections",
+            "cause": "IN_AAM_NOT_DCL",
+            "description": f"{len(in_aam_not_dcl)} connections reported by AAM but not loaded by DCL",
             "severity": "error",
-            "count": len(missing_from_dcl),
+            "count": len(in_aam_not_dcl),
         })
-    no_schema = sum(1 for p in push_pipes if p.get("schema_info") is None)
-    if no_schema > 0:
+    if in_dcl_not_aam:
+        diff_causes.append({
+            "cause": "IN_DCL_NOT_AAM",
+            "description": f"{len(in_dcl_not_aam)} sources loaded by DCL but not reported by AAM",
+            "severity": "warning",
+            "count": len(in_dcl_not_aam),
+        })
+    no_fields = sum(1 for c in aam_connections if c["fieldCount"] == 0)
+    if no_fields > 0:
         diff_causes.append({
             "cause": "NO_SCHEMA",
-            "description": f"{no_schema} pipes have no schema information",
+            "description": f"{no_fields} AAM connections have no field/schema information",
             "severity": "info",
-            "count": no_schema,
+            "count": no_fields,
         })
-    
-    # Status
-    if total_pushed == 0:
+
+    total_aam = len(aam_connections)
+    total_dcl = len(dcl_loaded_sources)
+    matched = len(aam_source_set & dcl_source_set)
+
+    if total_aam == 0 and total_dcl == 0:
         status = "empty"
-    elif len(unmapped_pipes) == total_pushed:
-        status = "critical"
-    elif len(unmapped_pipes) > 0 or len(missing_from_dcl) > 0:
-        status = "drifted"
-    else:
+    elif len(in_aam_not_dcl) == 0 and len(in_dcl_not_aam) == 0:
         status = "synced"
-    
+    elif len(in_aam_not_dcl) > total_aam * 0.5:
+        status = "critical"
+    else:
+        status = "drifted"
+
     return {
         "status": status,
         "summary": {
-            "totalPushed": total_pushed,
-            "mappedPipes": len(mapped_pipes),
-            "unmappedPipes": len(unmapped_pipes),
-            "dclConnections": sum(v.get("connectionCount", 0) for v in dcl_by_plane.values()),
-            "dclFabrics": len(fabric_planes),
-            "uniqueSourceSystems": len(push_source_systems),
-            "missingFromDcl": len(missing_from_dcl),
+            "aamConnections": total_aam,
+            "dclLoadedSources": total_dcl,
+            "matched": matched,
+            "inAamNotDcl": len(in_aam_not_dcl),
+            "inDclNotAam": len(in_dcl_not_aam),
+            "fabricCount": len(fabric_planes),
         },
         "diffCauses": diff_causes,
         "fabricBreakdown": fabric_breakdown,
-        "unmappedPipes": unmapped_pipes,
-        "missingFromDcl": missing_from_dcl,
+        "inAamNotDcl": in_aam_not_dcl,
+        "inDclNotAam": in_dcl_not_aam,
     }
