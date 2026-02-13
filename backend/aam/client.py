@@ -6,7 +6,7 @@ Fetches pipe definitions grouped by fabric plane from AAM.
 
 import os
 import httpx
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from pydantic import BaseModel
 from backend.utils.log_utils import get_logger
 
@@ -63,6 +63,61 @@ class AAMClient:
             raise
         except Exception as e:
             logger.error(f"[AAMClient] Pipes fetch error: {e}")
+            raise
+    
+    def get_push_history(self) -> List[Dict[str, Any]]:
+        """
+        Fetch list of pushes from AAM.
+        
+        GET /api/export/dcl/pushes
+        
+        Returns a list of push objects.
+        """
+        url = f"{self.base_url}/api/export/dcl/pushes"
+        
+        logger.info("[AAMClient] Fetching push history from AAM")
+        
+        try:
+            response = self._get_client().get(url)
+            response.raise_for_status()
+            data = response.json()
+            
+            push_count = len(data) if isinstance(data, list) else 0
+            logger.info(f"[AAMClient] Fetched {push_count} pushes")
+            return data
+        except httpx.HTTPStatusError as e:
+            logger.error(f"[AAMClient] Push history fetch failed: HTTP {e.response.status_code}")
+            raise
+        except Exception as e:
+            logger.error(f"[AAMClient] Push history fetch error: {e}")
+            raise
+    
+    def get_push_detail(self, push_id: str) -> Dict[str, Any]:
+        """
+        Fetch full push detail with payload from AAM.
+        
+        GET /api/export/dcl/pushes/{push_id}
+        
+        Returns the push detail object with payload.
+        """
+        url = f"{self.base_url}/api/export/dcl/pushes/{push_id}"
+        
+        logger.info(f"[AAMClient] Fetching push detail for push_id: {push_id}")
+        
+        try:
+            response = self._get_client().get(url)
+            response.raise_for_status()
+            data = response.json()
+            
+            pipe_count = data.get("pipe_count", 0)
+            logger.info(f"[AAMClient] Fetched push detail for push_id: {push_id}, "
+                       f"pipe_count: {pipe_count}")
+            return data
+        except httpx.HTTPStatusError as e:
+            logger.error(f"[AAMClient] Push detail fetch failed: HTTP {e.response.status_code}")
+            raise
+        except Exception as e:
+            logger.error(f"[AAMClient] Push detail fetch error: {e}")
             raise
     
     def health_check(self) -> Dict[str, Any]:

@@ -48,6 +48,7 @@ from backend.engine.provenance_service import get_provenance, ProvenanceTrace
 from backend.engine.persona_definitions import get_persona_definition_store
 from backend.engine.entity_resolution import get_entity_store
 from backend.engine.conflict_detection import get_conflict_store
+from backend.engine.reconciliation import reconcile
 from backend.api.mcp_server import (
     MCPToolCall,
     MCPToolResult,
@@ -650,6 +651,50 @@ def mcp_tool_call(tool_call: MCPToolCall):
     if not result.success and result.error and "Authentication" in result.error:
         raise HTTPException(status_code=401, detail=result.model_dump())
     return result.model_dump()
+
+
+@app.get("/api/dcl/reconciliation")
+def get_reconciliation():
+    """
+    Reconcile AAM push payload against DCL's loaded state.
+    
+    Fetches the latest push from AAM and compares against export-pipes.
+    Shows real diffs: unmapped pipes, missing connections, fabric mismatches.
+    """
+    try:
+        from backend.aam.client import get_aam_client
+        client = get_aam_client()
+        
+        pushes = client.get_push_history()
+        if not pushes:
+            return {
+                "status": "no_pushes",
+                "summary": {"totalPushed": 0, "mappedPipes": 0, "unmappedPipes": 0, "dclConnections": 0, "dclFabrics": 0, "uniqueSourceSystems": 0, "missingFromDcl": 0},
+                "diffCauses": [],
+                "fabricBreakdown": [],
+                "unmappedPipes": [],
+                "missingFromDcl": [],
+                "pushMeta": None,
+            }
+        
+        latest_push = max(pushes, key=lambda p: p.get("pushed_at", ""))
+        push_detail = client.get_push_detail(latest_push["push_id"])
+        dcl_view = client.get_pipes()
+        
+        result = reconcile(push_detail.get("payload", {}), dcl_view)
+        
+        result["pushMeta"] = {
+            "pushId": latest_push.get("push_id"),
+            "pushedAt": latest_push.get("pushed_at"),
+            "pipeCount": latest_push.get("pipe_count"),
+            "payloadHash": latest_push.get("payload_hash"),
+            "aodRunId": latest_push.get("aod_run_id"),
+        }
+        
+        return result
+    except Exception as e:
+        logger.error(f"Reconciliation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # =============================================================================

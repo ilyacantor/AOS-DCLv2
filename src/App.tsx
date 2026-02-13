@@ -10,8 +10,9 @@ import { Toaster } from './components/ui/toaster';
 import { useToast } from './hooks/use-toast';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { UserGuide } from './components/UserGuide';
+import { ReconciliationPanel } from './components/ReconciliationPanel';
 
-type MainView = 'graph' | 'dashboard' | 'guide';
+type MainView = 'graph' | 'dashboard' | 'guide' | 'recon';
 
 const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO'];
 
@@ -183,6 +184,7 @@ function App() {
     { id: 'graph', label: 'Graph' },
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'guide', label: 'Guide' },
+    { id: 'recon', label: 'Recon' },
   ];
 
   return (
@@ -311,7 +313,9 @@ function App() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        {mainView === 'guide' ? (
+        {mainView === 'recon' ? (
+          <ReconciliationPanel />
+        ) : mainView === 'guide' ? (
           <UserGuide />
         ) : mainView === 'dashboard' ? (
           <ResizablePanelGroup direction="horizontal">
