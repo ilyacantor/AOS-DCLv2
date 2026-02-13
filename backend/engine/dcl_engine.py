@@ -181,9 +181,9 @@ class DCLEngine:
         
         if mode == "AAM" and payload_kpis is not None:
             metrics.payload_kpis = payload_kpis
-            if payload_kpis.get("planesReceived", 0) == 0:
+            if payload_kpis.get("fabrics", 0) == 0:
                 metrics.data_status = "empty"
-            elif payload_kpis.get("emptyPlanes", 0) > 0:
+            elif payload_kpis.get("unpipedCount", 0) > 0:
                 metrics.data_status = "partial"
             else:
                 metrics.data_status = "ok"

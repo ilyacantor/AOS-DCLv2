@@ -284,7 +284,7 @@ class SchemaLoader:
             logger.error(f"Failed to fetch from AAM: {e}")
             if narration and run_id:
                 narration.add_message(run_id, "SchemaLoader", f"⚠ AAM fetch failed: {e}")
-            return [], {"planesReceived": 0, "totalConnections": 0, "totalFields": 0, "emptyPlanes": 0, "planesDetail": [], "governedPct": 0}
+            return [], {"fabrics": 0, "pipes": 0, "sources": 0, "unpipedCount": 0}
         
         fabric_planes = pipes_data.get("fabric_planes", [])
         total_connections = pipes_data.get("total_connections", 0)
@@ -396,30 +396,11 @@ class SchemaLoader:
                 f"AAM schema loading complete: {len(sources)} sources loaded"
             )
         
-        total_fields_count = sum(sum(len(t.fields) for t in s.tables) for s in sources)
-        governed_count = sum(1 for s in sources if "governed" in s.tags)
-        governed_pct = round((governed_count / connection_count * 100) if connection_count > 0 else 0, 1)
-        
-        planes_detail = []
-        for plane in fabric_planes:
-            plane_conns = plane.get("connections", [])
-            plane_fields = sum(len(c.get("fields", [])) for c in plane_conns)
-            planes_detail.append({
-                "planeType": plane.get("plane_type", "unknown"),
-                "vendor": plane.get("vendor", "Unknown"),
-                "connections": len(plane_conns),
-                "fields": plane_fields,
-            })
-        
-        empty_planes = sum(1 for p in planes_detail if p["connections"] == 0)
-        
         kpis = {
-            "planesReceived": len(fabric_planes),
-            "totalConnections": connection_count,
-            "totalFields": total_fields_count,
-            "emptyPlanes": empty_planes,
-            "planesDetail": planes_detail,
-            "governedPct": governed_pct,
+            "fabrics": len(fabric_planes),
+            "pipes": sum(1 for s in sources if any(len(t.fields) > 0 for t in s.tables)),
+            "sources": len(sources),
+            "unpipedCount": sum(1 for s in sources if all(len(t.fields) == 0 for t in s.tables)),
         }
         
         return sources, kpis

@@ -18,8 +18,8 @@ const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO'];
 function App() {
   const [graphData, setGraphData] = useState<GraphSnapshot | null>(null);
   const [runMode, setRunMode] = useState<'Dev' | 'Prod'>('Dev');
-  const [dataMode, setDataMode] = useState<'Demo' | 'Farm' | 'AAM'>('Demo');
-  const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>([]);
+  const [dataMode, setDataMode] = useState<'Demo' | 'Farm' | 'AAM'>('AAM');
+  const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>(['CFO', 'CRO', 'COO', 'CTO']);
   const [runId, setRunId] = useState<string | undefined>(undefined);
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -222,7 +222,12 @@ function App() {
               }`} />
               {graphData.meta.runMetrics.payloadKpis && (
                 <span className="text-xs text-muted-foreground font-mono">
-                  {graphData.meta.runMetrics.payloadKpis.planesReceived}P·{graphData.meta.runMetrics.payloadKpis.totalConnections}C·{graphData.meta.runMetrics.payloadKpis.totalFields}F
+                  {graphData.meta.runMetrics.payloadKpis.fabrics}F·{graphData.meta.runMetrics.payloadKpis.pipes}P·{graphData.meta.runMetrics.payloadKpis.sources}S
+                </span>
+              )}
+              {graphData.meta.runMetrics.payloadKpis && graphData.meta.runMetrics.payloadKpis.unpipedCount > 0 && (
+                <span className="text-xs text-amber-400 font-mono">
+                  {graphData.meta.runMetrics.payloadKpis.unpipedCount}!
                 </span>
               )}
             </div>

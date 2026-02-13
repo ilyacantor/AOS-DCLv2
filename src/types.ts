@@ -95,12 +95,10 @@ export interface PersonaView {
 }
 
 export interface PayloadKpis {
-  planesReceived: number;
-  totalConnections: number;
-  totalFields: number;
-  emptyPlanes: number;
-  planesDetail: Array<{ planeType: string; vendor: string; connections: number; fields: number }>;
-  governedPct: number;
+  fabrics: number;
+  pipes: number;
+  sources: number;
+  unpipedCount: number;
 }
 
 export interface RunMetrics {
