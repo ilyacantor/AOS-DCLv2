@@ -45,6 +45,12 @@ interface ReconciliationData {
     payloadHash: string;
     aodRunId: string | null;
   } | null;
+  reconMeta?: {
+    dclRunId: string | null;
+    dclRunAt: string | null;
+    reconAt: string;
+    sourceCount: number;
+  };
 }
 
 interface SorCoverageSource {
@@ -94,6 +100,12 @@ interface SorReconciliationData {
   orphanSources: string[];
   missingSources: string[];
   entityGaps: SorEntityGap[];
+  reconMeta?: {
+    dclRunId: string | null;
+    dclRunAt: string | null;
+    reconAt: string;
+    loadedSourceCount: number;
+  };
 }
 
 const statusColors: Record<string, string> = {
@@ -233,18 +245,15 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
 
     return (
       <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
-        <div className="rounded-lg border border-border bg-card/30 p-4">
+        <div className="rounded-lg border border-border bg-card/30 p-4 space-y-2">
           <div className="flex items-center gap-3 flex-wrap">
             <span className={`px-2.5 py-1 text-xs font-medium rounded border ${statusColors[data.status] || statusColors.empty}`}>
               {data.status.toUpperCase()}
             </span>
             {data.pushMeta ? (
               <>
-                <span className="text-xs text-muted-foreground">
-                  {formatTimestamp(data.pushMeta.pushedAt)}
-                </span>
                 <span className="text-xs font-mono text-muted-foreground bg-secondary/30 px-2 py-0.5 rounded">
-                  {data.pushMeta.payloadHash.slice(0, 12)}…
+                  {data.pushMeta.payloadHash}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {data.pushMeta.pipeCount} pipes
@@ -254,6 +263,17 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
               <span className="text-xs text-muted-foreground italic">No push data available</span>
             )}
           </div>
+          {data.reconMeta && (
+            <div className="flex items-center gap-3 flex-wrap text-[10px] text-muted-foreground border-t border-border pt-2">
+              <span>Reconciled: <span className="text-foreground font-mono">{formatTimestamp(data.reconMeta.reconAt)}</span></span>
+              {data.reconMeta.dclRunId && (
+                <span>Run: <span className="text-foreground font-mono">{data.reconMeta.dclRunId.slice(0, 8)}</span></span>
+              )}
+              {data.reconMeta.dclRunAt && (
+                <span>Pipeline: <span className="text-foreground font-mono">{formatTimestamp(data.reconMeta.dclRunAt)}</span></span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -414,7 +434,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
 
     return (
       <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
-        <div className="rounded-lg border border-border bg-card/30 p-4">
+        <div className="rounded-lg border border-border bg-card/30 p-4 space-y-2">
           <div className="flex items-center gap-3 flex-wrap">
             <span className={`px-2.5 py-1 text-xs font-medium rounded border ${statusColors[sorData.status] || statusColors.empty}`}>
               {sorData.status.toUpperCase()}
@@ -423,6 +443,18 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
               {sorData.summary.totalEntities} entities, {sorData.summary.totalMetrics} metrics
             </span>
           </div>
+          {sorData.reconMeta && (
+            <div className="flex items-center gap-3 flex-wrap text-[10px] text-muted-foreground border-t border-border pt-2">
+              <span>Reconciled: <span className="text-foreground font-mono">{formatTimestamp(sorData.reconMeta.reconAt)}</span></span>
+              {sorData.reconMeta.dclRunId && (
+                <span>Run: <span className="text-foreground font-mono">{sorData.reconMeta.dclRunId.slice(0, 8)}</span></span>
+              )}
+              {sorData.reconMeta.dclRunAt && (
+                <span>Pipeline: <span className="text-foreground font-mono">{formatTimestamp(sorData.reconMeta.dclRunAt)}</span></span>
+              )}
+              <span>Sources: <span className="text-foreground font-mono">{sorData.reconMeta.loadedSourceCount}</span></span>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">

@@ -775,13 +775,26 @@ def get_reconciliation():
 
         result = reconcile(push_payload, dcl_view)
 
-        # Add metadata about the data source
         import time as _time
+        import hashlib as _hashlib
+        pipe_json = str(sorted([p.get("pipe_id", "") for p in push_payload.get("pipes", [])]))
+        payload_hash = _hashlib.sha256(pipe_json.encode()).hexdigest()[:12]
+
         result["pushMeta"] = {
             "source": "export-pipes",
             "fetchedAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "pushedAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "aodRunId": aod_run_id,
             "pipeCount": len(push_payload.get("pipes", [])),
+            "payloadHash": payload_hash,
+            "pushId": _last_aam_run.get("run_id", "none"),
+        }
+
+        result["reconMeta"] = {
+            "dclRunId": _last_aam_run.get("run_id"),
+            "dclRunAt": _last_aam_run.get("timestamp"),
+            "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "sourceCount": len(dcl_view.get("fabric_planes", [])),
         }
 
         return result
@@ -818,6 +831,15 @@ def get_sor_reconciliation():
         loaded_sources = list(app.state.loaded_sources)
 
         result = reconcile_sor(bindings, metrics_list, entities_list, loaded_sources)
+
+        import time as _time
+        result["reconMeta"] = {
+            "dclRunId": _last_aam_run.get("run_id"),
+            "dclRunAt": _last_aam_run.get("timestamp"),
+            "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "loadedSourceCount": len(loaded_sources),
+        }
+
         return result
     except Exception as e:
         logger.error(f"SOR Reconciliation failed: {e}", exc_info=True)
