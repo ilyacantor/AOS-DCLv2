@@ -50,10 +50,11 @@ class DCLEngine:
             sources = SchemaLoader.load_farm_schemas(self.narration, run_id, source_limit=source_limit)
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Farm sources (source_limit={source_limit})")
         
-        stream_sources = SchemaLoader.load_stream_sources(self.narration, run_id)
-        if stream_sources:
-            sources.extend(stream_sources)
-            self.narration.add_message(run_id, "Engine", f"Loaded {len(stream_sources)} real-time stream sources")
+        if mode != "AAM":
+            stream_sources = SchemaLoader.load_stream_sources(self.narration, run_id)
+            if stream_sources:
+                sources.extend(stream_sources)
+                self.narration.add_message(run_id, "Engine", f"Loaded {len(stream_sources)} real-time stream sources")
         
         ontology = get_ontology()
         self.narration.add_message(run_id, "Engine", f"Loaded {len(ontology)} ontology concepts")
