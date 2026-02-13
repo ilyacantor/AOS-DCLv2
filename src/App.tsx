@@ -193,7 +193,6 @@ function App() {
           {/* Logo/Title */}
           <div className="flex items-center gap-2 pr-4 border-r border-border">
             <span className="font-semibold text-primary">AOS DCL</span>
-            <span className="text-sm text-muted-foreground">Data Connectivity Layer</span>
           </div>
 
           {/* Main Navigation Tabs */}
@@ -212,6 +211,22 @@ function App() {
               </button>
             ))}
           </nav>
+
+          {/* AAM Payload KPIs */}
+          {!isRunning && graphData?.meta.runMetrics?.dataStatus && (
+            <div className="flex items-center gap-1.5 px-2">
+              <span className={`inline-block w-2 h-2 rounded-full ${
+                graphData.meta.runMetrics.dataStatus === 'ok' ? 'bg-emerald-400' :
+                graphData.meta.runMetrics.dataStatus === 'partial' ? 'bg-amber-400' :
+                'bg-red-400'
+              }`} />
+              {graphData.meta.runMetrics.payloadKpis && (
+                <span className="text-xs text-muted-foreground font-mono">
+                  {graphData.meta.runMetrics.payloadKpis.planesReceived}P·{graphData.meta.runMetrics.payloadKpis.totalConnections}C·{graphData.meta.runMetrics.payloadKpis.totalFields}F
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Spacer */}
           <div className="flex-1" />
@@ -280,25 +295,9 @@ function App() {
                   </span>
                 )}
                 {!isRunning && graphData?.meta.runMetrics && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {(graphData.meta.runMetrics.processingMs / 1000).toFixed(1)}s
-                    </span>
-                    {graphData.meta.runMetrics.dataStatus && (
-                      <div className="flex items-center gap-1.5">
-                        <span className={`inline-block w-1.5 h-1.5 rounded-full ${
-                          graphData.meta.runMetrics.dataStatus === 'ok' ? 'bg-emerald-400' :
-                          graphData.meta.runMetrics.dataStatus === 'partial' ? 'bg-amber-400' :
-                          'bg-red-400'
-                        }`} />
-                        {graphData.meta.runMetrics.payloadKpis && (
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {graphData.meta.runMetrics.payloadKpis.planesReceived}P·{graphData.meta.runMetrics.payloadKpis.totalConnections}C·{graphData.meta.runMetrics.payloadKpis.totalFields}F
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {(graphData.meta.runMetrics.processingMs / 1000).toFixed(1)}s
+                  </span>
                 )}
               </div>
             </div>
