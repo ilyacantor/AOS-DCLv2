@@ -747,14 +747,14 @@ def mcp_tool_call(tool_call: MCPToolCall):
 @app.get("/api/dcl/reconciliation")
 def get_reconciliation():
     """
-    Reconcile AAM's current export-pipes endpoint against DCL's loaded state.
+    Reconcile AAM push payload (individual pipes) against DCL's fabric view.
 
-    Always fetches FRESH data from AAM's get_pipes() endpoint (export-pipes).
-    No dependency on push history or downloaded JSON files.
+    Uses two AAM endpoints:
+    - get_push_detail() for push_payload (flat list of ~100 individual pipes)
+    - get_pipes() for dcl_view (fabric planes with connections)
 
-    Compares:
-    - AAM side (push_payload): built from current get_pipes() response
-    - DCL side (dcl_view): what DCL loaded during last run, or current endpoint
+    Falls back to building synthetic push from export-pipes if push history
+    is unavailable.
     """
     try:
         _invalidate_aam_caches()
@@ -763,32 +763,62 @@ def get_reconciliation():
 
         aod_run_id = _last_aam_run.get("aod_run_id")
 
-        # Always fetch CURRENT state from AAM's export-pipes endpoint
-        aam_export = client.get_pipes(aod_run_id=aod_run_id)
+        # DCL view: always fetch fresh fabric planes from export-pipes
+        dcl_view = client.get_pipes(aod_run_id=aod_run_id)
 
-        # Build push payload (flat pipe list) from the live endpoint
-        push_payload = _build_push_from_export(aam_export)
+        # Push payload: fetch latest push detail (has individual pipes)
+        push_payload = None
+        push_meta = None
+        try:
+            pushes = client.get_push_history()
+            if pushes:
+                sorted_pushes = sorted(
+                    enumerate(pushes),
+                    key=lambda x: (x[1].get("pushed_at", ""), x[0]),
+                    reverse=True,
+                )
+                latest = sorted_pushes[0][1]
+                detail = client.get_push_detail(latest["push_id"])
+                push_payload = detail.get("payload", {})
+                push_meta = {
+                    "pushId": latest.get("push_id"),
+                    "pushedAt": latest.get("pushed_at"),
+                    "pipeCount": latest.get("pipe_count"),
+                    "payloadHash": latest.get("payload_hash"),
+                    "aodRunId": latest.get("aod_run_id"),
+                }
+        except Exception as e:
+            logger.warning(f"Push history unavailable, falling back to export-pipes: {e}")
 
-        # DCL view: prefer what DCL actually loaded last run;
-        # fall back to current endpoint data
-        dcl_view = _last_aam_run.get("dcl_view") or aam_export
+        # Fallback: if push history is empty, build synthetic from export-pipes
+        if not push_payload or not push_payload.get("pipes"):
+            push_payload = _build_push_from_export(dcl_view)
+            push_meta = push_meta or {
+                "source": "export-pipes (synthetic)",
+                "pipeCount": len(push_payload.get("pipes", [])),
+            }
 
         result = reconcile(push_payload, dcl_view)
 
         import time as _time
-        import hashlib as _hashlib
-        pipe_json = str(sorted([p.get("pipe_id", "") for p in push_payload.get("pipes", [])]))
-        payload_hash = _hashlib.sha256(pipe_json.encode()).hexdigest()[:12]
 
-        result["pushMeta"] = {
-            "source": "export-pipes",
-            "fetchedAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "pushedAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "aodRunId": aod_run_id,
-            "pipeCount": len(push_payload.get("pipes", [])),
-            "payloadHash": payload_hash,
-            "pushId": _last_aam_run.get("run_id", "none"),
-        }
+        # Use push_meta from get_push_detail() if available;
+        # otherwise build it from what we have
+        if push_meta and push_meta.get("pushId"):
+            result["pushMeta"] = push_meta
+        else:
+            import hashlib as _hashlib
+            pipe_json = str(sorted([p.get("pipe_id", "") for p in push_payload.get("pipes", [])]))
+            payload_hash = _hashlib.sha256(pipe_json.encode()).hexdigest()[:12]
+            result["pushMeta"] = {
+                "source": "export-pipes",
+                "fetchedAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "pushedAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "aodRunId": aod_run_id,
+                "pipeCount": len(push_payload.get("pipes", [])),
+                "payloadHash": payload_hash,
+                "pushId": _last_aam_run.get("run_id", "none"),
+            }
 
         result["reconMeta"] = {
             "dclRunId": _last_aam_run.get("run_id"),
