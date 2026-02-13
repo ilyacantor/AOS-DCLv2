@@ -49,6 +49,7 @@ from backend.engine.persona_definitions import get_persona_definition_store
 from backend.engine.entity_resolution import get_entity_store
 from backend.engine.conflict_detection import get_conflict_store
 from backend.engine.reconciliation import reconcile
+from backend.engine.sor_reconciliation import reconcile_sor
 from backend.api.mcp_server import (
     MCPToolCall,
     MCPToolResult,
@@ -100,6 +101,7 @@ app.add_middleware(
 )
 
 engine = DCLEngine()
+app.state.loaded_sources = []
 
 
 class RunRequest(BaseModel):
@@ -147,6 +149,12 @@ def run_dcl(request: RunRequest):
             source_limit=request.source_limit or 1000,
             aod_run_id=request.aod_run_id
         )
+        
+        source_names = []
+        for node in snapshot.nodes:
+            if node.kind == "source":
+                source_names.append(node.label)
+        app.state.loaded_sources = source_names
         
         return RunResponse(
             graph=snapshot,
@@ -694,6 +702,40 @@ def get_reconciliation():
         return result
     except Exception as e:
         logger.error(f"Reconciliation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/dcl/reconciliation/sor")
+def get_sor_reconciliation():
+    try:
+        import yaml
+        config_dir = Path(__file__).parent.parent / "config" / "definitions"
+
+        bindings_path = config_dir / "bindings.yaml"
+        metrics_path = config_dir / "metrics.yaml"
+        entities_path = config_dir / "entities.yaml"
+
+        bindings = []
+        if bindings_path.exists():
+            with open(bindings_path) as f:
+                bindings = yaml.safe_load(f).get("bindings", [])
+
+        metrics_list = []
+        if metrics_path.exists():
+            with open(metrics_path) as f:
+                metrics_list = yaml.safe_load(f).get("metrics", [])
+
+        entities_list = []
+        if entities_path.exists():
+            with open(entities_path) as f:
+                entities_list = yaml.safe_load(f).get("entities", [])
+
+        loaded_sources = list(app.state.loaded_sources)
+
+        result = reconcile_sor(bindings, metrics_list, entities_list, loaded_sources)
+        return result
+    except Exception as e:
+        logger.error(f"SOR Reconciliation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

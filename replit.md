@@ -52,6 +52,8 @@ Concepts include Account, Opportunity, Revenue, Cost, Date/Timestamp, Health Sco
 -   `/api/dcl/batch-mapping`: Runs semantic mapping in batch.
 -   `/api/dcl/semantic-export`: Provides the full semantic catalog.
 -   `/api/dcl/query`: Executes data queries against the fact base using metrics, dimensions, filters, and time ranges.
+-   `/api/dcl/reconciliation`: AAM reconciliation - compares push payload vs DCL loaded state.
+-   `/api/dcl/reconciliation/sor`: SOR reconciliation - compares bindings.yaml expected sources vs DCL loaded sources; detects coverage gaps, SOR conflicts, orphan/missing sources.
 -   `/api/topology`, `/api/topology/health`: Unified topology and connection health data.
 
 ## External Dependencies
