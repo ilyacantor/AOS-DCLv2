@@ -103,6 +103,36 @@ app.add_middleware(
 engine = DCLEngine()
 app.state.loaded_sources = []
 
+# ── AAM reconciliation state ────────────────────────────────────────────
+_last_aam_run: Dict[str, Any] = {}
+
+
+def _invalidate_aam_caches():
+    """Clear all caches that could return stale AAM data on a new run."""
+    # 1. Mapping persistence cache (60s TTL normally)
+    try:
+        from backend.semantic_mapper.persist_mappings import MappingPersistence
+        MappingPersistence.clear_all_caches()
+        logger.info("[AAM] Cleared mapping persistence caches")
+    except Exception:
+        pass
+
+    # 2. AAM client singleton — recreate so httpx picks up fresh AAM state
+    try:
+        import backend.aam.client as aam_mod
+        if aam_mod._aam_client is not None:
+            aam_mod._aam_client.close()
+            aam_mod._aam_client = None
+            logger.info("[AAM] Reset AAM client singleton")
+    except Exception:
+        pass
+
+    # 3. Schema loader demo cache (shouldn't matter for AAM, but safety)
+    SchemaLoader._demo_cache = None
+    SchemaLoader._stream_cache = None
+    SchemaLoader._cache_time = 0
+    logger.info("[AAM] All stale caches invalidated for fresh AAM run")
+
 
 class RunRequest(BaseModel):
     mode: Literal["Demo", "Farm", "AAM"] = "Demo"
@@ -131,15 +161,19 @@ def health():
 @app.post("/api/dcl/run", response_model=RunResponse)
 def run_dcl(request: RunRequest):
     run_id = str(uuid.uuid4())
-    
+
     set_current_mode(
         data_mode=request.mode,
         run_mode=request.run_mode,
         run_id=run_id
     )
-    
+
+    # AAM mode: clear stale caches so new payload is fetched fresh
+    if request.mode == "AAM":
+        _invalidate_aam_caches()
+
     personas = request.personas or [Persona.CFO, Persona.CRO, Persona.COO, Persona.CTO]
-    
+
     try:
         snapshot, metrics = engine.build_graph_snapshot(
             mode=request.mode,
@@ -149,13 +183,23 @@ def run_dcl(request: RunRequest):
             source_limit=request.source_limit or 1000,
             aod_run_id=request.aod_run_id
         )
-        
+
         source_names = []
         for node in snapshot.nodes:
             if node.kind == "source":
                 source_names.append(node.label)
         app.state.loaded_sources = source_names
-        
+
+        # Store the latest AAM run result for reconciliation
+        if request.mode == "AAM":
+            _last_aam_run["run_id"] = run_id
+            _last_aam_run["aod_run_id"] = request.aod_run_id
+            _last_aam_run["source_count"] = len(snapshot.nodes)
+            _last_aam_run["sources"] = [
+                n.model_dump() for n in snapshot.nodes if n.level == "L1"
+            ]
+            _last_aam_run["link_count"] = len(snapshot.links)
+
         return RunResponse(
             graph=snapshot,
             run_metrics=metrics,
@@ -737,6 +781,145 @@ def get_sor_reconciliation():
     except Exception as e:
         logger.error(f"SOR Reconciliation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# AAM Reconciliation Endpoints
+# =============================================================================
+
+
+class ReconcileRequest(BaseModel):
+    """Request to reconcile AAM payload against DCL's ingested state."""
+    aod_run_id: Optional[str] = Field(None, description="AOD run ID to reconcile against")
+    aam_source_ids: Optional[List[str]] = Field(
+        None,
+        description="Expected source IDs from AAM payload. If omitted, fetches live from AAM.",
+    )
+
+
+@app.post("/api/reconcile")
+def reconcile_aam(request: ReconcileRequest):
+    """
+    Compare what AAM sent (expected) vs what DCL actually ingested (actual).
+
+    Returns per-source match/mismatch and an overall reconciliation verdict.
+    """
+    # ── 1. Build "expected" set from AAM ────────────────────────────────
+    expected_sources: Dict[str, Dict[str, Any]] = {}
+
+    if request.aam_source_ids:
+        # Caller supplied the expected list directly
+        for sid in request.aam_source_ids:
+            expected_sources[sid] = {"source_id": sid, "origin": "caller"}
+    else:
+        # Fetch live from AAM
+        try:
+            from backend.aam.client import get_aam_client
+            aam_client = get_aam_client()
+            pipes_data = aam_client.get_pipes(aod_run_id=request.aod_run_id)
+
+            for plane in pipes_data.get("fabric_planes", []):
+                plane_type = plane.get("plane_type", "unknown")
+                for conn in plane.get("connections", []):
+                    source_name = conn.get("source_name", "Unknown")
+                    source_id = source_name.lower().replace(" ", "_").replace("-", "_")
+                    expected_sources[source_id] = {
+                        "source_id": source_id,
+                        "source_name": source_name,
+                        "plane_type": plane_type,
+                        "field_count": len(conn.get("fields", [])),
+                        "origin": "aam_live",
+                    }
+        except Exception as e:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Cannot reach AAM to fetch expected sources: {e}",
+            )
+
+    if not expected_sources:
+        raise HTTPException(
+            status_code=400,
+            detail="No expected sources — provide aam_source_ids or ensure AAM returns data.",
+        )
+
+    # ── 2. Build "actual" set from last DCL run ─────────────────────────
+    actual_sources: Dict[str, Dict[str, Any]] = {}
+
+    if _last_aam_run.get("sources"):
+        for node in _last_aam_run["sources"]:
+            nid = node.get("id", "")
+            # Strip "source_" or "fabric_" prefix to get canonical id
+            canonical = nid.replace("source_", "").replace("fabric_", "")
+            actual_sources[canonical] = {
+                "node_id": nid,
+                "label": node.get("label", ""),
+                "level": node.get("level", ""),
+                "kind": node.get("kind", ""),
+                "metrics": node.get("metrics", {}),
+            }
+    else:
+        # No AAM run captured yet
+        return {
+            "status": "no_run",
+            "message": "No AAM run has been executed yet. Run POST /api/dcl/run with mode=AAM first.",
+            "expected_count": len(expected_sources),
+            "actual_count": 0,
+        }
+
+    # ── 3. Reconcile ────────────────────────────────────────────────────
+    matched = []
+    missing_in_dcl = []      # in AAM but not ingested
+    extra_in_dcl = []         # in DCL but not in AAM payload
+
+    for sid, aam_info in expected_sources.items():
+        if sid in actual_sources:
+            matched.append({
+                "source_id": sid,
+                "aam": aam_info,
+                "dcl": actual_sources[sid],
+                "status": "matched",
+            })
+        else:
+            missing_in_dcl.append({
+                "source_id": sid,
+                "aam": aam_info,
+                "status": "missing_in_dcl",
+            })
+
+    for sid, dcl_info in actual_sources.items():
+        if sid not in expected_sources:
+            extra_in_dcl.append({
+                "source_id": sid,
+                "dcl": dcl_info,
+                "status": "extra_in_dcl",
+            })
+
+    total_expected = len(expected_sources)
+    total_actual = len(actual_sources)
+    match_count = len(matched)
+
+    if match_count == total_expected and not extra_in_dcl:
+        verdict = "fully_reconciled"
+    elif match_count == total_expected:
+        verdict = "reconciled_with_extras"
+    elif missing_in_dcl:
+        verdict = "drift_detected"
+    else:
+        verdict = "partial_match"
+
+    return {
+        "status": verdict,
+        "run_id": _last_aam_run.get("run_id"),
+        "aod_run_id": _last_aam_run.get("aod_run_id"),
+        "expected_count": total_expected,
+        "actual_count": total_actual,
+        "matched_count": match_count,
+        "missing_in_dcl_count": len(missing_in_dcl),
+        "extra_in_dcl_count": len(extra_in_dcl),
+        "matched": matched,
+        "missing_in_dcl": missing_in_dcl,
+        "extra_in_dcl": extra_in_dcl,
+    }
 
 
 # =============================================================================
