@@ -134,6 +134,32 @@ def _invalidate_aam_caches():
     logger.info("[AAM] All stale caches invalidated for fresh AAM run")
 
 
+def _build_push_from_export(export_pipes: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Build a synthetic push payload from a get_pipes() (export-pipes) response.
+
+    Used when push history is stale/empty so the Recon tab still shows
+    current reality. Each connection in each fabric plane becomes a pipe
+    with its fabric_plane set, giving reconcile() something to compare.
+    """
+    pipes = []
+    for plane in export_pipes.get("fabric_planes", []):
+        plane_type = (plane.get("plane_type") or "UNMAPPED").upper()
+        vendor = plane.get("vendor", "unknown")
+        for conn in plane.get("connections", []):
+            source_name = conn.get("source_name", "Unknown")
+            pipes.append({
+                "pipe_id": conn.get("pipe_id") or source_name,
+                "display_name": source_name,
+                "source_system": conn.get("vendor", vendor),
+                "fabric_plane": plane_type,
+                "transport_kind": plane.get("plane_type", "unknown"),
+                "schema_info": conn.get("fields") if conn.get("fields") else None,
+                "trust_labels": [],
+            })
+    return {"pipes": pipes}
+
+
 class RunRequest(BaseModel):
     mode: Literal["Demo", "Farm", "AAM"] = "Demo"
     run_mode: Literal["Dev", "Prod"] = "Dev"
@@ -201,14 +227,46 @@ def run_dcl(request: RunRequest):
             _last_aam_run["link_count"] = len(snapshot.links)
             import time as _time
             _last_aam_run["timestamp"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ")
-            # Capture the raw export-pipes response DCL actually used
+
             try:
                 from backend.aam.client import get_aam_client
-                _last_aam_run["dcl_view"] = get_aam_client().get_pipes(
+                _client = get_aam_client()
+
+                # Capture the export-pipes view DCL actually consumed
+                _last_aam_run["dcl_view"] = _client.get_pipes(
                     aod_run_id=request.aod_run_id
                 )
+
+                # Capture push payload NOW so recon doesn't depend on
+                # stale push history later.
+                try:
+                    _pushes = _client.get_push_history()
+                    if _pushes:
+                        _sorted = sorted(
+                            enumerate(_pushes),
+                            key=lambda x: (x[1].get("pushed_at", ""), x[0]),
+                            reverse=True,
+                        )
+                        _latest = _sorted[0][1]
+                        _detail = _client.get_push_detail(_latest["push_id"])
+                        _last_aam_run["push_payload"] = _detail.get("payload", {})
+                        _last_aam_run["push_meta"] = {
+                            "pushId": _latest.get("push_id"),
+                            "pushedAt": _latest.get("pushed_at"),
+                            "pipeCount": _latest.get("pipe_count"),
+                            "payloadHash": _latest.get("payload_hash"),
+                            "aodRunId": _latest.get("aod_run_id"),
+                        }
+                    else:
+                        _last_aam_run["push_payload"] = None
+                        _last_aam_run["push_meta"] = None
+                except Exception:
+                    _last_aam_run["push_payload"] = None
+                    _last_aam_run["push_meta"] = None
             except Exception:
                 _last_aam_run["dcl_view"] = None
+                _last_aam_run["push_payload"] = None
+                _last_aam_run["push_meta"] = None
 
         return RunResponse(
             graph=snapshot,
@@ -720,62 +778,67 @@ def get_reconciliation():
     """
     Reconcile AAM push payload against DCL's loaded state.
 
-    Always resets the AAM client to avoid stale httpx connections, then:
-    1. Fetches push history fresh from AAM
-    2. Picks the MOST RECENT push (by pushed_at descending, then by index)
-    3. Compares push payload against DCL's ACTUAL loaded view
-       (captured during the last /api/dcl/run with mode=AAM)
+    Strategy (in priority order):
+    1. Use push_payload + dcl_view captured at DCL run time
+       (avoids stale push history from AAM)
+    2. If no stored data, fetch FRESH from AAM (reset client first)
+    3. If push history is empty/stale, build a synthetic push
+       from current get_pipes() so recon always reflects reality
     """
-    try:
-        # Reset AAM client so we never read from a stale httpx connection
-        _invalidate_aam_caches()
+    # ── Fast path: use data captured during last AAM run ────────────
+    stored_push = _last_aam_run.get("push_payload")
+    stored_view = _last_aam_run.get("dcl_view")
+    stored_meta = _last_aam_run.get("push_meta")
 
+    if stored_push and stored_view:
+        result = reconcile(stored_push, stored_view)
+        result["pushMeta"] = stored_meta
+        return result
+
+    # ── Slow path: no stored data, fetch live from AAM ──────────────
+    try:
+        _invalidate_aam_caches()
         from backend.aam.client import get_aam_client
         client = get_aam_client()
 
-        pushes = client.get_push_history()
-        if not pushes:
-            return {
-                "status": "no_pushes",
-                "summary": {"totalPushed": 0, "mappedPipes": 0, "unmappedPipes": 0, "dclConnections": 0, "dclFabrics": 0, "uniqueSourceSystems": 0, "missingFromDcl": 0},
-                "diffCauses": [],
-                "fabricBreakdown": [],
-                "unmappedPipes": [],
-                "missingFromDcl": [],
-                "pushMeta": None,
-            }
+        aod_run_id = _last_aam_run.get("aod_run_id")
 
-        # Sort pushes by pushed_at descending — most recent first.
-        # If AAM returns them in insertion order, the last element is
-        # newest, so we also use the list index as a tiebreaker.
-        def _push_sort_key(item):
-            idx, p = item
-            return (p.get("pushed_at", ""), idx)
-
-        sorted_pushes = sorted(enumerate(pushes), key=_push_sort_key, reverse=True)
-        latest_push = sorted_pushes[0][1]
-
-        push_detail = client.get_push_detail(latest_push["push_id"])
-
-        # Use the DCL view captured during the actual run,
-        # NOT a fresh fetch that could reflect a different state.
-        dcl_view = _last_aam_run.get("dcl_view")
+        # Get DCL view (what AAM currently exports)
+        dcl_view = stored_view
         if dcl_view is None:
-            # Fallback: no AAM run has been done yet, fetch live
-            dcl_view = client.get_pipes(
-                aod_run_id=_last_aam_run.get("aod_run_id")
-            )
+            dcl_view = client.get_pipes(aod_run_id=aod_run_id)
 
-        result = reconcile(push_detail.get("payload", {}), dcl_view)
+        # Try push history
+        push_payload = None
+        push_meta = None
+        try:
+            pushes = client.get_push_history()
+            if pushes:
+                sorted_pushes = sorted(
+                    enumerate(pushes),
+                    key=lambda x: (x[1].get("pushed_at", ""), x[0]),
+                    reverse=True,
+                )
+                latest_push = sorted_pushes[0][1]
+                push_detail = client.get_push_detail(latest_push["push_id"])
+                push_payload = push_detail.get("payload", {})
+                push_meta = {
+                    "pushId": latest_push.get("push_id"),
+                    "pushedAt": latest_push.get("pushed_at"),
+                    "pipeCount": latest_push.get("pipe_count"),
+                    "payloadHash": latest_push.get("payload_hash"),
+                    "aodRunId": latest_push.get("aod_run_id"),
+                }
+        except Exception as e:
+            logger.warning(f"Push history unavailable: {e}")
 
-        result["pushMeta"] = {
-            "pushId": latest_push.get("push_id"),
-            "pushedAt": latest_push.get("pushed_at"),
-            "pipeCount": latest_push.get("pipe_count"),
-            "payloadHash": latest_push.get("payload_hash"),
-            "aodRunId": latest_push.get("aod_run_id"),
-        }
+        # If no push payload, build a synthetic one from get_pipes()
+        # so the recon tab always shows CURRENT state
+        if not push_payload or not push_payload.get("pipes"):
+            push_payload = _build_push_from_export(dcl_view)
 
+        result = reconcile(push_payload, dcl_view)
+        result["pushMeta"] = push_meta
         return result
     except Exception as e:
         logger.error(f"Reconciliation failed: {e}", exc_info=True)
