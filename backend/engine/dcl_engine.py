@@ -206,7 +206,8 @@ class DCLEngine:
                     "ontology_concepts": len(ontology),
                     "mappings": len(mappings),
                     "personas": [p.value for p in personas]
-                }
+                },
+                "source_canonical_ids": [s.id for s in sources],
             }
         )
         

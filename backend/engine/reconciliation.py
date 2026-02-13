@@ -1,49 +1,54 @@
 from typing import Dict, Any, List, Set
+
+from backend.aam.ingress import NormalizedPipe
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
 
 def reconcile(
-    aam_pipes: List[Dict[str, Any]],
-    dcl_loaded_sources: List[str],
+    aam_pipes: List[NormalizedPipe],
+    dcl_canonical_ids: List[str],
 ) -> Dict[str, Any]:
-    dcl_source_set: Set[str] = set()
-    for s in dcl_loaded_sources:
-        dcl_source_set.add(s.lower().strip())
+    """
+    Reconcile AAM's pipe payload against DCL's loaded sources.
+
+    Both sides use canonical IDs produced by normalize_source_id() — no
+    ad-hoc normalization happens in this function.
+
+    Args:
+        aam_pipes: Validated+normalized pipes from AAMIngressAdapter
+        dcl_canonical_ids: Canonical source IDs loaded by DCL
+    """
+    dcl_id_set: Set[str] = set(dcl_canonical_ids)
 
     aam_connections: List[Dict[str, Any]] = []
-    aam_source_set: Set[str] = set()
+    aam_id_set: Set[str] = set()
     aam_by_plane: Dict[str, List[Dict[str, Any]]] = {}
 
     for pipe in aam_pipes:
-        source_name = pipe.get("display_name", "Unknown")
-        normalized = source_name.lower().strip()
-        plane_type = (pipe.get("fabric_plane") or "UNMAPPED").upper()
-        vendor = pipe.get("source_system", "unknown")
-        schema_info = pipe.get("schema_info")
-        field_count = len(schema_info) if isinstance(schema_info, list) else 0
-
+        plane_key = pipe.fabric_plane.upper()
         entry = {
-            "sourceName": source_name,
-            "normalized": normalized,
-            "vendor": vendor,
-            "fabricPlane": plane_type,
-            "pipeId": pipe.get("pipe_id"),
-            "fieldCount": field_count,
+            "sourceName": pipe.display_name,
+            "canonicalId": pipe.canonical_id,
+            "vendor": pipe.vendor,
+            "fabricPlane": plane_key,
+            "pipeId": pipe.pipe_id,
+            "fieldCount": pipe.field_count,
         }
         aam_connections.append(entry)
-        aam_source_set.add(normalized)
+        aam_id_set.add(pipe.canonical_id)
 
-        if plane_type not in aam_by_plane:
-            aam_by_plane[plane_type] = []
-        aam_by_plane[plane_type].append(entry)
+        if plane_key not in aam_by_plane:
+            aam_by_plane[plane_key] = []
+        aam_by_plane[plane_key].append(entry)
 
     in_aam_not_dcl = []
     for conn in aam_connections:
-        if conn["normalized"] not in dcl_source_set:
+        if conn["canonicalId"] not in dcl_id_set:
             in_aam_not_dcl.append({
                 "sourceName": conn["sourceName"],
+                "canonicalId": conn["canonicalId"],
                 "vendor": conn["vendor"],
                 "fabricPlane": conn["fabricPlane"],
                 "pipeId": conn["pipeId"],
@@ -52,26 +57,26 @@ def reconcile(
             })
 
     in_dcl_not_aam = []
-    for s in dcl_loaded_sources:
-        if s.lower().strip() not in aam_source_set:
+    for cid in dcl_canonical_ids:
+        if cid not in aam_id_set:
             in_dcl_not_aam.append({
-                "sourceName": s,
+                "sourceName": cid,
+                "canonicalId": cid,
                 "cause": "DCL loaded this source but AAM does not report it",
             })
 
     fabric_breakdown = []
-    all_planes = set(aam_by_plane.keys())
-    for plane_type in sorted(all_planes):
-        conns = aam_by_plane.get(plane_type, [])
+    for plane_type in sorted(aam_by_plane.keys()):
+        conns = aam_by_plane[plane_type]
         aam_count = len(conns)
-        dcl_count = sum(1 for c in conns if c["normalized"] in dcl_source_set)
+        dcl_count = sum(1 for c in conns if c["canonicalId"] in dcl_id_set)
         fabric_breakdown.append({
             "planeType": plane_type,
             "vendor": conns[0]["vendor"] if conns else "unknown",
             "aamConnections": aam_count,
             "dclLoaded": dcl_count,
             "delta": aam_count - dcl_count,
-            "missingFromDcl": [c["sourceName"] for c in conns if c["normalized"] not in dcl_source_set],
+            "missingFromDcl": [c["sourceName"] for c in conns if c["canonicalId"] not in dcl_id_set],
         })
 
     diff_causes = []
@@ -99,8 +104,8 @@ def reconcile(
         })
 
     total_aam = len(aam_connections)
-    total_dcl = len(dcl_loaded_sources)
-    matched = len(aam_source_set & dcl_source_set)
+    total_dcl = len(dcl_canonical_ids)
+    matched = len(aam_id_set & dcl_id_set)
     unmapped_count = len(aam_by_plane.get("UNMAPPED", []))
 
     if total_aam == 0 and total_dcl == 0:

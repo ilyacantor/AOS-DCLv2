@@ -102,6 +102,7 @@ app.add_middleware(
 
 engine = DCLEngine()
 app.state.loaded_sources = []
+app.state.loaded_source_ids = []
 
 # ── AAM reconciliation state ────────────────────────────────────────────
 _last_aam_run: Dict[str, Any] = {}
@@ -215,20 +216,15 @@ def run_dcl(request: RunRequest):
             if node.kind == "source":
                 source_names.append(node.label)
         app.state.loaded_sources = source_names
+        app.state.loaded_source_ids = snapshot.meta.get("source_canonical_ids", [])
 
         # Store the latest AAM run result for reconciliation
         if request.mode == "AAM":
+            import time as _time
             _last_aam_run["run_id"] = run_id
             _last_aam_run["aod_run_id"] = request.aod_run_id
-            _last_aam_run["source_count"] = len(snapshot.nodes)
-            _last_aam_run["sources"] = [
-                n.model_dump() for n in snapshot.nodes if n.level == "L1"
-            ]
-            _last_aam_run["link_count"] = len(snapshot.links)
-            import time as _time
+            _last_aam_run["dcl_canonical_ids"] = list(app.state.loaded_source_ids)
             _last_aam_run["timestamp"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-            _last_aam_run["dcl_loaded_sources"] = source_names
 
         return RunResponse(
             graph=snapshot,
@@ -737,55 +733,39 @@ def mcp_tool_call(tool_call: MCPToolCall):
 
 @app.get("/api/dcl/reconciliation")
 def get_reconciliation():
+    """Reconcile AAM payload against DCL loaded sources via ingress adapter."""
     try:
         _invalidate_aam_caches()
         from backend.aam.client import get_aam_client
+        from backend.aam.ingress import AAMIngressAdapter
+        import time as _time
+
+        adapter = AAMIngressAdapter()
         client = get_aam_client()
 
         aod_run_id = _last_aam_run.get("aod_run_id")
-        dcl_loaded_sources = list(app.state.loaded_sources)
-
-        import time as _time
-        import hashlib as _hashlib
+        dcl_canonical_ids = list(getattr(app.state, "loaded_source_ids", []))
 
         aam_export = client.get_pipes(aod_run_id=aod_run_id)
-        aam_pipes = []
-        for plane in aam_export.get("fabric_planes", []):
-            plane_type = (plane.get("plane_type") or "UNMAPPED").upper()
-            plane_vendor = plane.get("vendor", "unknown")
-            for conn in plane.get("connections", []):
-                aam_pipes.append({
-                    "display_name": conn.get("source_name", "Unknown"),
-                    "fabric_plane": plane_type,
-                    "source_system": conn.get("vendor", plane_vendor),
-                    "pipe_id": conn.get("pipe_id"),
-                    "schema_info": conn.get("fields"),
-                })
+        payload = adapter.ingest_pipes(aam_export)
 
-        result = reconcile(aam_pipes, dcl_loaded_sources)
+        result = reconcile(payload.pipes, dcl_canonical_ids)
 
-        aam_names = sorted([p.get("display_name", "") for p in aam_pipes])
-        payload_hash = _hashlib.sha256(str(aam_names).encode()).hexdigest()[:12]
-        unmapped_count = sum(1 for p in aam_pipes if (p.get("fabric_plane") or "").upper() == "UNMAPPED")
-
+        # Push metadata
         push_meta = None
         push_pipe_count = 0
         try:
-            pushes = client.get_push_history()
+            pushes_raw = client.get_push_history()
+            pushes = adapter.ingest_push_history(pushes_raw)
             if pushes:
-                sorted_pushes = sorted(
-                    enumerate(pushes),
-                    key=lambda x: (x[1].get("pushed_at", ""), x[0]),
-                    reverse=True,
-                )
-                latest = sorted_pushes[0][1]
-                push_pipe_count = latest.get("pipe_count", 0)
+                latest = pushes[0]
+                push_pipe_count = latest.pipe_count
                 push_meta = {
-                    "pushId": latest.get("push_id"),
-                    "pushedAt": latest.get("pushed_at"),
+                    "pushId": latest.push_id,
+                    "pushedAt": latest.pushed_at,
                     "pipeCount": push_pipe_count,
-                    "payloadHash": latest.get("payload_hash", payload_hash),
-                    "aodRunId": latest.get("aod_run_id"),
+                    "payloadHash": latest.payload_hash or payload.payload_hash,
+                    "aodRunId": latest.aod_run_id,
                 }
         except Exception as e:
             logger.warning(f"Push history unavailable: {e}")
@@ -794,8 +774,8 @@ def get_reconciliation():
             push_meta = {
                 "pushId": "export-pipes",
                 "pushedAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "pipeCount": len(aam_pipes),
-                "payloadHash": payload_hash,
+                "pipeCount": payload.total_connections_actual,
+                "payloadHash": payload.payload_hash,
                 "aodRunId": aod_run_id,
             }
 
@@ -805,16 +785,17 @@ def get_reconciliation():
             "dclRunId": _last_aam_run.get("run_id"),
             "dclRunAt": _last_aam_run.get("timestamp"),
             "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "dclSourceCount": len(dcl_loaded_sources),
-            "aamConnectionCount": len(aam_pipes),
+            "dclSourceCount": len(dcl_canonical_ids),
+            "aamConnectionCount": payload.total_connections_actual,
         }
 
+        aam_names = sorted(p.display_name for p in payload.pipes)
         result["trace"] = {
             "aamPipeNames": aam_names,
-            "dclLoadedSourceNames": dcl_loaded_sources,
-            "exportPipeCount": len(aam_pipes),
+            "dclLoadedSourceNames": dcl_canonical_ids,
+            "exportPipeCount": payload.total_connections_actual,
             "pushPipeCount": push_pipe_count,
-            "unmappedCount": unmapped_count,
+            "unmappedCount": sum(1 for p in payload.pipes if p.fabric_plane == "unmapped"),
         }
 
         return result
@@ -885,34 +866,35 @@ def reconcile_aam(request: ReconcileRequest):
     """
     Compare what AAM sent (expected) vs what DCL actually ingested (actual).
 
-    Returns per-source match/mismatch and an overall reconciliation verdict.
+    Uses AAMIngressAdapter for consistent normalization on both sides.
     """
+    from backend.aam.ingress import AAMIngressAdapter, normalize_source_id
+
     # ── 1. Build "expected" set from AAM ────────────────────────────────
     expected_sources: Dict[str, Dict[str, Any]] = {}
 
     if request.aam_source_ids:
-        # Caller supplied the expected list directly
+        # Caller supplied the expected list — normalize through the same function
         for sid in request.aam_source_ids:
-            expected_sources[sid] = {"source_id": sid, "origin": "caller"}
+            canonical = normalize_source_id(sid)
+            expected_sources[canonical] = {"source_id": canonical, "origin": "caller"}
     else:
-        # Fetch live from AAM
+        # Fetch live from AAM via ingress adapter
         try:
             from backend.aam.client import get_aam_client
+            adapter = AAMIngressAdapter()
             aam_client = get_aam_client()
             pipes_data = aam_client.get_pipes(aod_run_id=request.aod_run_id)
+            payload = adapter.ingest_pipes(pipes_data)
 
-            for plane in pipes_data.get("fabric_planes", []):
-                plane_type = plane.get("plane_type", "unknown")
-                for conn in plane.get("connections", []):
-                    source_name = conn.get("source_name", "Unknown")
-                    source_id = source_name.lower().replace(" ", "_").replace("-", "_")
-                    expected_sources[source_id] = {
-                        "source_id": source_id,
-                        "source_name": source_name,
-                        "plane_type": plane_type,
-                        "field_count": len(conn.get("fields", [])),
-                        "origin": "aam_live",
-                    }
+            for pipe in payload.pipes:
+                expected_sources[pipe.canonical_id] = {
+                    "source_id": pipe.canonical_id,
+                    "source_name": pipe.display_name,
+                    "plane_type": pipe.fabric_plane,
+                    "field_count": pipe.field_count,
+                    "origin": "aam_live",
+                }
         except Exception as e:
             raise HTTPException(
                 status_code=502,
@@ -925,23 +907,10 @@ def reconcile_aam(request: ReconcileRequest):
             detail="No expected sources — provide aam_source_ids or ensure AAM returns data.",
         )
 
-    # ── 2. Build "actual" set from last DCL run ─────────────────────────
-    actual_sources: Dict[str, Dict[str, Any]] = {}
+    # ── 2. Build "actual" set from last DCL run (canonical IDs) ─────────
+    actual_canonical_ids = set(_last_aam_run.get("dcl_canonical_ids", []))
 
-    if _last_aam_run.get("sources"):
-        for node in _last_aam_run["sources"]:
-            nid = node.get("id", "")
-            # Strip "source_" or "fabric_" prefix to get canonical id
-            canonical = nid.replace("source_", "").replace("fabric_", "")
-            actual_sources[canonical] = {
-                "node_id": nid,
-                "label": node.get("label", ""),
-                "level": node.get("level", ""),
-                "kind": node.get("kind", ""),
-                "metrics": node.get("metrics", {}),
-            }
-    else:
-        # No AAM run captured yet
+    if not actual_canonical_ids:
         return {
             "status": "no_run",
             "message": "No AAM run has been executed yet. Run POST /api/dcl/run with mode=AAM first.",
@@ -951,15 +920,14 @@ def reconcile_aam(request: ReconcileRequest):
 
     # ── 3. Reconcile ────────────────────────────────────────────────────
     matched = []
-    missing_in_dcl = []      # in AAM but not ingested
-    extra_in_dcl = []         # in DCL but not in AAM payload
+    missing_in_dcl = []
+    extra_in_dcl = []
 
     for sid, aam_info in expected_sources.items():
-        if sid in actual_sources:
+        if sid in actual_canonical_ids:
             matched.append({
                 "source_id": sid,
                 "aam": aam_info,
-                "dcl": actual_sources[sid],
                 "status": "matched",
             })
         else:
@@ -969,16 +937,15 @@ def reconcile_aam(request: ReconcileRequest):
                 "status": "missing_in_dcl",
             })
 
-    for sid, dcl_info in actual_sources.items():
-        if sid not in expected_sources:
+    for cid in sorted(actual_canonical_ids):
+        if cid not in expected_sources:
             extra_in_dcl.append({
-                "source_id": sid,
-                "dcl": dcl_info,
+                "source_id": cid,
                 "status": "extra_in_dcl",
             })
 
     total_expected = len(expected_sources)
-    total_actual = len(actual_sources)
+    total_actual = len(actual_canonical_ids)
     match_count = len(matched)
 
     if match_count == total_expected and not extra_in_dcl:

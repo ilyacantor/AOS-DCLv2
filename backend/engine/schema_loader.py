@@ -261,22 +261,17 @@ class SchemaLoader:
     @staticmethod
     def load_aam_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 50, aod_run_id: Optional[str] = None) -> Tuple[List[SourceSystem], Dict[str, Any]]:
         """
-        Load schemas from AAM's pipe export.
-        
-        AAM groups candidates by fabric plane and exports them for DCL consumption.
-        This method fetches that export and converts it to SourceSystem objects.
-        
-        Args:
-            narration: Narration service for progress messages
-            run_id: DCL's internal run ID for narration
-            source_limit: Maximum sources to load
-            aod_run_id: Optional AOD run ID to filter AAM data (if not provided, gets all)
+        Load schemas from AAM's pipe export via the AAM Ingress Adapter.
+
+        All AAM data is validated and normalized at the ingress boundary.
+        No ad-hoc normalization happens in this method.
         """
         from backend.aam.client import get_aam_client
-        
+        from backend.aam.ingress import AAMIngressAdapter
+
         if narration and run_id:
             narration.add_message(run_id, "SchemaLoader", "Fetching pipes from AAM...")
-        
+
         try:
             aam_client = get_aam_client()
             pipes_data = aam_client.get_pipes(aod_run_id=aod_run_id)
@@ -284,40 +279,30 @@ class SchemaLoader:
             logger.error(f"Failed to fetch from AAM: {e}")
             if narration and run_id:
                 narration.add_message(run_id, "SchemaLoader", f"⚠ AAM fetch failed: {e}")
-            return [], {"fabrics": 0, "pipes": 0, "sources": 0, "unpipedCount": 0}
-        
-        fabric_planes = pipes_data.get("fabric_planes", [])
-        total_connections = pipes_data.get("total_connections", 0)
-        
+            return [], {"fabrics": 0, "pipes": 0, "sources": 0, "unpipedCount": 0, "totalAamConnections": 0}
+
+        adapter = AAMIngressAdapter()
+        payload = adapter.ingest_pipes(pipes_data)
+
         if narration and run_id:
             narration.add_message(
                 run_id, "SchemaLoader",
-                f"Received {len(fabric_planes)} fabric planes with {total_connections} connections from AAM"
+                f"Received {len(payload.planes)} fabric planes with {payload.total_connections_actual} connections from AAM"
             )
-        
+
         sources = []
-        connection_count = 0
-        
-        for plane in fabric_planes:
-            plane_type = plane.get("plane_type", "unknown")
-            vendor = plane.get("vendor", "Unknown")
-            connections = plane.get("connections", [])
-            
+
+        for plane in payload.planes:
             if narration and run_id:
                 narration.add_message(
                     run_id, "SchemaLoader",
-                    f"Processing {plane_type} plane ({vendor}): {len(connections)} connections"
+                    f"Processing {plane.plane_type} plane ({plane.vendor}): {plane.pipe_count} connections"
                 )
-            
-            for conn in connections:
-                source_name = conn.get("source_name", "Unknown")
-                fields_list = conn.get("fields", [])
-                category = conn.get("category") or "other"
-                governance = conn.get("governance_status") or "unknown"
-                
+
+            for pipe in plane.pipes:
                 # Create FieldSchema objects from field names
                 fields = []
-                for field_name in fields_list:
+                for field_name in pipe.fields:
                     semantic_hint = SchemaLoader._infer_semantic_hint_from_name(field_name)
                     field = FieldSchema(
                         name=field_name,
@@ -329,59 +314,58 @@ class SchemaLoader:
                         sample_values=[]
                     )
                     fields.append(field)
-                
+
                 # Create table schema
-                table_id = f"{source_name}.{plane_type}_data"
+                table_id = f"{pipe.display_name}.{pipe.fabric_plane}_data"
                 table = TableSchema(
                     id=table_id,
-                    system_id=source_name,
-                    name=f"{plane_type}_data",
+                    system_id=pipe.display_name,
+                    name=f"{pipe.fabric_plane}_data",
                     fields=fields,
-                    record_count=0,  # Unknown from AAM
-                    stats={"plane": plane_type, "vendor": vendor}
+                    record_count=0,
+                    stats={"plane": pipe.fabric_plane, "vendor": pipe.vendor}
                 )
-                
-                # Fast-path: AAM already provides canonical info, skip expensive normalizer
-                source_id = source_name.lower().replace(" ", "_").replace("-", "_")
-                trust_score = 85 if governance == "governed" else 60
-                data_quality_score = 80 if governance == "governed" else 50
-                
-                # Create SourceSystem directly from AAM data
+
+                # Create SourceSystem from adapter-normalized pipe data
+                # canonical_id, trust_score, data_quality_score all come from the adapter
                 source = SourceSystem(
-                    id=source_id,
-                    name=source_name,
-                    type=category.upper(),
-                    tags=["aam", plane_type, (vendor or "unknown").lower(), governance],
+                    id=pipe.canonical_id,
+                    name=pipe.display_name,
+                    type=pipe.category.upper(),
+                    tags=["aam", pipe.fabric_plane, pipe.vendor.lower(), pipe.governance_status],
                     tables=[table],
-                    canonical_id=source_id,
-                    raw_id=source_name,
+                    canonical_id=pipe.canonical_id,
+                    raw_id=pipe.display_name,
                     discovery_status=DiscoveryStatus.CANONICAL,
                     resolution_type=ResolutionType.EXACT,
-                    trust_score=trust_score,
-                    data_quality_score=data_quality_score,
-                    vendor=conn.get("vendor", vendor),
-                    category=category,
+                    trust_score=pipe.trust_score,
+                    data_quality_score=pipe.data_quality_score,
+                    vendor=pipe.vendor,
+                    category=pipe.category,
                     entities=[],
                 )
                 sources.append(source)
-                connection_count += 1
-                
+
                 if narration and run_id:
-                    status_icon = "✓" if governance == "governed" else "⚠"
+                    status_icon = "✓" if pipe.governance_status == "governed" else "⚠"
                     narration.add_message(
                         run_id, "SchemaLoader",
-                        f"{status_icon} {source_name} ({plane_type}): {len(fields)} fields"
+                        f"{status_icon} {pipe.display_name} ({pipe.fabric_plane}): {pipe.field_count} fields"
                     )
-        
+
         # Sort by trust score and governance
         sources.sort(key=lambda s: (
             0 if "governed" in s.tags else 1,
             -s.trust_score,
             s.name
         ))
-        
-        # Apply source_limit
+
+        # Compute KPIs from FULL source list BEFORE truncation
         total_available = len(sources)
+        total_piped = sum(1 for s in sources if any(len(t.fields) > 0 for t in s.tables))
+        total_unpiped = sum(1 for s in sources if all(len(t.fields) == 0 for t in s.tables))
+
+        # Apply source_limit
         if source_limit and source_limit < total_available:
             sources = sources[:source_limit]
             if narration and run_id:
@@ -389,20 +373,23 @@ class SchemaLoader:
                     run_id, "SchemaLoader",
                     f"Limited to {source_limit} sources (from {total_available} available)"
                 )
-        
+
         if narration and run_id:
             narration.add_message(
                 run_id, "SchemaLoader",
                 f"AAM schema loading complete: {len(sources)} sources loaded"
             )
-        
+
         kpis = {
-            "fabrics": len(fabric_planes),
-            "pipes": sum(1 for s in sources if any(len(t.fields) > 0 for t in s.tables)),
-            "sources": len(sources),
-            "unpipedCount": sum(1 for s in sources if all(len(t.fields) == 0 for t in s.tables)),
+            "fabrics": len(payload.planes),
+            "pipes": total_piped,
+            "sources": total_available,
+            "unpipedCount": total_unpiped,
+            "totalAamConnections": payload.total_connections_reported,
+            "limited": source_limit < total_available if source_limit else False,
+            "loadedSources": len(sources),
         }
-        
+
         return sources, kpis
     
     @staticmethod
