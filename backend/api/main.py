@@ -228,45 +228,16 @@ def run_dcl(request: RunRequest):
             import time as _time
             _last_aam_run["timestamp"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
+            # Capture the export-pipes view DCL actually consumed
+            # (used as DCL side in reconciliation)
             try:
                 from backend.aam.client import get_aam_client
                 _client = get_aam_client()
-
-                # Capture the export-pipes view DCL actually consumed
                 _last_aam_run["dcl_view"] = _client.get_pipes(
                     aod_run_id=request.aod_run_id
                 )
-
-                # Capture push payload NOW so recon doesn't depend on
-                # stale push history later.
-                try:
-                    _pushes = _client.get_push_history()
-                    if _pushes:
-                        _sorted = sorted(
-                            enumerate(_pushes),
-                            key=lambda x: (x[1].get("pushed_at", ""), x[0]),
-                            reverse=True,
-                        )
-                        _latest = _sorted[0][1]
-                        _detail = _client.get_push_detail(_latest["push_id"])
-                        _last_aam_run["push_payload"] = _detail.get("payload", {})
-                        _last_aam_run["push_meta"] = {
-                            "pushId": _latest.get("push_id"),
-                            "pushedAt": _latest.get("pushed_at"),
-                            "pipeCount": _latest.get("pipe_count"),
-                            "payloadHash": _latest.get("payload_hash"),
-                            "aodRunId": _latest.get("aod_run_id"),
-                        }
-                    else:
-                        _last_aam_run["push_payload"] = None
-                        _last_aam_run["push_meta"] = None
-                except Exception:
-                    _last_aam_run["push_payload"] = None
-                    _last_aam_run["push_meta"] = None
             except Exception:
                 _last_aam_run["dcl_view"] = None
-                _last_aam_run["push_payload"] = None
-                _last_aam_run["push_meta"] = None
 
         return RunResponse(
             graph=snapshot,
@@ -776,26 +747,15 @@ def mcp_tool_call(tool_call: MCPToolCall):
 @app.get("/api/dcl/reconciliation")
 def get_reconciliation():
     """
-    Reconcile AAM push payload against DCL's loaded state.
+    Reconcile AAM's current export-pipes endpoint against DCL's loaded state.
 
-    Strategy (in priority order):
-    1. Use push_payload + dcl_view captured at DCL run time
-       (avoids stale push history from AAM)
-    2. If no stored data, fetch FRESH from AAM (reset client first)
-    3. If push history is empty/stale, build a synthetic push
-       from current get_pipes() so recon always reflects reality
+    Always fetches FRESH data from AAM's get_pipes() endpoint (export-pipes).
+    No dependency on push history or downloaded JSON files.
+
+    Compares:
+    - AAM side (push_payload): built from current get_pipes() response
+    - DCL side (dcl_view): what DCL loaded during last run, or current endpoint
     """
-    # ── Fast path: use data captured during last AAM run ────────────
-    stored_push = _last_aam_run.get("push_payload")
-    stored_view = _last_aam_run.get("dcl_view")
-    stored_meta = _last_aam_run.get("push_meta")
-
-    if stored_push and stored_view:
-        result = reconcile(stored_push, stored_view)
-        result["pushMeta"] = stored_meta
-        return result
-
-    # ── Slow path: no stored data, fetch live from AAM ──────────────
     try:
         _invalidate_aam_caches()
         from backend.aam.client import get_aam_client
@@ -803,42 +763,27 @@ def get_reconciliation():
 
         aod_run_id = _last_aam_run.get("aod_run_id")
 
-        # Get DCL view (what AAM currently exports)
-        dcl_view = stored_view
-        if dcl_view is None:
-            dcl_view = client.get_pipes(aod_run_id=aod_run_id)
+        # Always fetch CURRENT state from AAM's export-pipes endpoint
+        aam_export = client.get_pipes(aod_run_id=aod_run_id)
 
-        # Try push history
-        push_payload = None
-        push_meta = None
-        try:
-            pushes = client.get_push_history()
-            if pushes:
-                sorted_pushes = sorted(
-                    enumerate(pushes),
-                    key=lambda x: (x[1].get("pushed_at", ""), x[0]),
-                    reverse=True,
-                )
-                latest_push = sorted_pushes[0][1]
-                push_detail = client.get_push_detail(latest_push["push_id"])
-                push_payload = push_detail.get("payload", {})
-                push_meta = {
-                    "pushId": latest_push.get("push_id"),
-                    "pushedAt": latest_push.get("pushed_at"),
-                    "pipeCount": latest_push.get("pipe_count"),
-                    "payloadHash": latest_push.get("payload_hash"),
-                    "aodRunId": latest_push.get("aod_run_id"),
-                }
-        except Exception as e:
-            logger.warning(f"Push history unavailable: {e}")
+        # Build push payload (flat pipe list) from the live endpoint
+        push_payload = _build_push_from_export(aam_export)
 
-        # If no push payload, build a synthetic one from get_pipes()
-        # so the recon tab always shows CURRENT state
-        if not push_payload or not push_payload.get("pipes"):
-            push_payload = _build_push_from_export(dcl_view)
+        # DCL view: prefer what DCL actually loaded last run;
+        # fall back to current endpoint data
+        dcl_view = _last_aam_run.get("dcl_view") or aam_export
 
         result = reconcile(push_payload, dcl_view)
-        result["pushMeta"] = push_meta
+
+        # Add metadata about the data source
+        import time as _time
+        result["pushMeta"] = {
+            "source": "export-pipes",
+            "fetchedAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "aodRunId": aod_run_id,
+            "pipeCount": len(push_payload.get("pipes", [])),
+        }
+
         return result
     except Exception as e:
         logger.error(f"Reconciliation failed: {e}", exc_info=True)
