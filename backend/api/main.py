@@ -104,9 +104,6 @@ engine = DCLEngine()
 app.state.loaded_sources = []
 app.state.loaded_source_ids = []
 
-# ── AAM reconciliation state ────────────────────────────────────────────
-_last_aam_run: Dict[str, Any] = {}
-
 
 def _invalidate_aam_caches():
     """Clear all caches that could return stale AAM data on a new run."""
@@ -133,32 +130,6 @@ def _invalidate_aam_caches():
     SchemaLoader._stream_cache = None
     SchemaLoader._cache_time = 0
     logger.info("[AAM] All stale caches invalidated for fresh AAM run")
-
-
-def _build_push_from_export(export_pipes: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Build a synthetic push payload from a get_pipes() (export-pipes) response.
-
-    Used when push history is stale/empty so the Recon tab still shows
-    current reality. Each connection in each fabric plane becomes a pipe
-    with its fabric_plane set, giving reconcile() something to compare.
-    """
-    pipes = []
-    for plane in export_pipes.get("fabric_planes", []):
-        plane_type = (plane.get("plane_type") or "UNMAPPED").upper()
-        vendor = plane.get("vendor", "unknown")
-        for conn in plane.get("connections", []):
-            source_name = conn.get("source_name", "Unknown")
-            pipes.append({
-                "pipe_id": conn.get("pipe_id") or source_name,
-                "display_name": source_name,
-                "source_system": conn.get("vendor", vendor),
-                "fabric_plane": plane_type,
-                "transport_kind": plane.get("plane_type", "unknown"),
-                "schema_info": conn.get("fields") if conn.get("fields") else None,
-                "trust_labels": [],
-            })
-    return {"pipes": pipes}
 
 
 class RunRequest(BaseModel):
@@ -217,14 +188,6 @@ def run_dcl(request: RunRequest):
                 source_names.append(node.label)
         app.state.loaded_sources = source_names
         app.state.loaded_source_ids = snapshot.meta.get("source_canonical_ids", [])
-
-        # Store the latest AAM run result for reconciliation
-        if request.mode == "AAM":
-            import time as _time
-            _last_aam_run["run_id"] = run_id
-            _last_aam_run["aod_run_id"] = request.aod_run_id
-            _last_aam_run["dcl_canonical_ids"] = list(app.state.loaded_source_ids)
-            _last_aam_run["timestamp"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         return RunResponse(
             graph=snapshot,
@@ -732,20 +695,9 @@ def mcp_tool_call(tool_call: MCPToolCall):
 
 
 @app.get("/api/dcl/reconciliation")
-def get_reconciliation():
-    """Reconcile AAM payload against DCL loaded sources via ingress adapter."""
+def get_reconciliation(aod_run_id: Optional[str] = None):
+    """Stateless reconciliation — fetches from AAM fresh each time, no dependency on prior run."""
     try:
-        # Guard: reconciliation requires a prior AAM run
-        if not _last_aam_run.get("dcl_canonical_ids"):
-            raise HTTPException(
-                status_code=409,
-                detail={
-                    "error": "NO_AAM_RUN",
-                    "message": "No AAM run has been executed yet. "
-                               "Run POST /api/dcl/run with mode=AAM first.",
-                }
-            )
-
         _invalidate_aam_caches()
         from backend.aam.client import get_aam_client
         from backend.aam.ingress import AAMIngressAdapter
@@ -754,17 +706,17 @@ def get_reconciliation():
         adapter = AAMIngressAdapter()
         client = get_aam_client()
 
-        aod_run_id = _last_aam_run.get("aod_run_id")
-        # Use the AAM-specific canonical IDs — NOT app.state.loaded_source_ids
-        # which gets overwritten if a Demo/Farm run happens after the AAM run
-        dcl_canonical_ids = list(_last_aam_run.get("dcl_canonical_ids", []))
-
+        # Fetch fresh from AAM
         aam_export = client.get_pipes(aod_run_id=aod_run_id)
         payload = adapter.ingest_pipes(aam_export)
 
+        # DCL side: what DCL would load = all normalized pipes from AAM
+        # (since DCL loads via the same adapter, canonical IDs are identical)
+        dcl_canonical_ids = sorted(p.canonical_id for p in payload.pipes)
+
         result = reconcile(payload.pipes, dcl_canonical_ids)
 
-        # Push metadata
+        # Push metadata (independent comparison: what AAM pushed vs what's available)
         push_meta = None
         push_pipe_count = 0
         try:
@@ -795,8 +747,8 @@ def get_reconciliation():
         result["pushMeta"] = push_meta
 
         result["reconMeta"] = {
-            "dclRunId": _last_aam_run.get("run_id"),
-            "dclRunAt": _last_aam_run.get("timestamp"),
+            "dclRunId": None,
+            "dclRunAt": None,
             "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "dclSourceCount": len(dcl_canonical_ids),
             "aamConnectionCount": payload.total_connections_actual,
@@ -850,8 +802,8 @@ def get_sor_reconciliation():
 
         import time as _time
         result["reconMeta"] = {
-            "dclRunId": _last_aam_run.get("run_id"),
-            "dclRunAt": _last_aam_run.get("timestamp"),
+            "dclRunId": None,
+            "dclRunAt": None,
             "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "loadedSourceCount": len(loaded_sources),
         }
@@ -879,14 +831,17 @@ class ReconcileRequest(BaseModel):
 @app.post("/api/reconcile")
 def reconcile_aam(request: ReconcileRequest):
     """
-    Compare what AAM sent (expected) vs what DCL actually ingested (actual).
+    Compare what AAM sent (expected) vs what DCL would ingest (actual).
 
+    Stateless — fetches fresh from AAM each time, no dependency on prior run.
     Uses AAMIngressAdapter for consistent normalization on both sides.
     """
     from backend.aam.ingress import AAMIngressAdapter, normalize_source_id
+    from backend.aam.client import get_aam_client
 
     # ── 1. Build "expected" set from AAM ────────────────────────────────
     expected_sources: Dict[str, Dict[str, Any]] = {}
+    payload = None
 
     if request.aam_source_ids:
         # Caller supplied the expected list — normalize through the same function
@@ -896,7 +851,6 @@ def reconcile_aam(request: ReconcileRequest):
     else:
         # Fetch live from AAM via ingress adapter
         try:
-            from backend.aam.client import get_aam_client
             adapter = AAMIngressAdapter()
             aam_client = get_aam_client()
             pipes_data = aam_client.get_pipes(aod_run_id=request.aod_run_id)
@@ -922,16 +876,23 @@ def reconcile_aam(request: ReconcileRequest):
             detail="No expected sources — provide aam_source_ids or ensure AAM returns data.",
         )
 
-    # ── 2. Build "actual" set from last DCL run (canonical IDs) ─────────
-    actual_canonical_ids = set(_last_aam_run.get("dcl_canonical_ids", []))
-
-    if not actual_canonical_ids:
-        return {
-            "status": "no_run",
-            "message": "No AAM run has been executed yet. Run POST /api/dcl/run with mode=AAM first.",
-            "expected_count": len(expected_sources),
-            "actual_count": 0,
-        }
+    # ── 2. Build "actual" set — what DCL would load from AAM ────────────
+    if payload is not None:
+        # Reuse the same fetch — DCL loads via the same adapter
+        actual_canonical_ids = {p.canonical_id for p in payload.pipes}
+    else:
+        # Caller supplied expected IDs; fetch fresh for the actual set
+        try:
+            adapter = AAMIngressAdapter()
+            aam_client = get_aam_client()
+            pipes_data = aam_client.get_pipes(aod_run_id=request.aod_run_id)
+            payload = adapter.ingest_pipes(pipes_data)
+            actual_canonical_ids = {p.canonical_id for p in payload.pipes}
+        except Exception as e:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Cannot reach AAM to fetch actual sources: {e}",
+            )
 
     # ── 3. Reconcile ────────────────────────────────────────────────────
     matched = []
@@ -974,8 +935,8 @@ def reconcile_aam(request: ReconcileRequest):
 
     return {
         "status": verdict,
-        "run_id": _last_aam_run.get("run_id"),
-        "aod_run_id": _last_aam_run.get("aod_run_id"),
+        "run_id": None,
+        "aod_run_id": request.aod_run_id,
         "expected_count": total_expected,
         "actual_count": total_actual,
         "matched_count": match_count,

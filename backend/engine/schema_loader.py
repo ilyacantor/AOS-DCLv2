@@ -131,7 +131,7 @@ class SchemaLoader:
         return list(sources)
 
     @staticmethod
-    def load_farm_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 50) -> List[SourceSystem]:
+    def load_farm_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 1000) -> List[SourceSystem]:
         farm_url = os.getenv("FARM_API_URL", "https://autonomos.farm")
         
         if narration and run_id:
@@ -259,7 +259,7 @@ class SchemaLoader:
         return sources
     
     @staticmethod
-    def load_aam_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 50, aod_run_id: Optional[str] = None) -> Tuple[List[SourceSystem], Dict[str, Any]]:
+    def load_aam_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 1000, aod_run_id: Optional[str] = None) -> Tuple[List[SourceSystem], Dict[str, Any]]:
         """
         Load schemas from AAM's pipe export via the AAM Ingress Adapter.
 
