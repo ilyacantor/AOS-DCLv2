@@ -255,9 +255,11 @@ class DCLEngine:
                 concept_field_mappings[concept.id] = []
                 ontology_mapping_count[concept.id] = 0
 
-        # Decide aggregation strategy: fabric-level for AAM, individual for Demo/Farm
+        # Decide aggregation strategy: fabric-level for AAM with 30+ pipes,
+        # individual nodes when under threshold for readability
         use_fabric_aggregation = (
             mode == "AAM"
+            and len(sources) >= 30
             and any(s.fabric_plane for s in sources)
         )
 
