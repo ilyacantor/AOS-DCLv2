@@ -706,19 +706,10 @@ def get_reconciliation(aod_run_id: Optional[str] = None):
         adapter = AAMIngressAdapter()
         client = get_aam_client()
 
-        # Fetch fresh from AAM
-        aam_export = client.get_pipes(aod_run_id=aod_run_id)
-        payload = adapter.ingest_pipes(aam_export)
-
-        # DCL side: what DCL would load = all normalized pipes from AAM
-        # (since DCL loads via the same adapter, canonical IDs are identical)
-        dcl_canonical_ids = sorted(p.canonical_id for p in payload.pipes)
-
-        result = reconcile(payload.pipes, dcl_canonical_ids)
-
-        # Push metadata (independent comparison: what AAM pushed vs what's available)
+        # Discover aod_run_id from latest push if not provided
         push_meta = None
         push_pipe_count = 0
+        pushes = []
         try:
             pushes_raw = client.get_push_history()
             pushes = adapter.ingest_push_history(pushes_raw)
@@ -729,11 +720,29 @@ def get_reconciliation(aod_run_id: Optional[str] = None):
                     "pushId": latest.push_id,
                     "pushedAt": latest.pushed_at,
                     "pipeCount": push_pipe_count,
-                    "payloadHash": latest.payload_hash or payload.payload_hash,
+                    "payloadHash": latest.payload_hash,
                     "aodRunId": latest.aod_run_id,
                 }
+                # Auto-discover aod_run_id from latest push
+                if not aod_run_id and latest.aod_run_id:
+                    aod_run_id = latest.aod_run_id
+                    logger.info(f"[Recon] Auto-discovered aod_run_id={aod_run_id} from latest push")
         except Exception as e:
             logger.warning(f"Push history unavailable: {e}")
+
+        # Fetch pipes from AAM using the (possibly discovered) aod_run_id
+        aam_export = client.get_pipes(aod_run_id=aod_run_id)
+        payload = adapter.ingest_pipes(aam_export)
+
+        # Update push_meta hash now that we have the payload
+        if push_meta:
+            push_meta["payloadHash"] = push_meta["payloadHash"] or payload.payload_hash
+
+        # DCL side: what DCL would load = all normalized pipes from AAM
+        # (since DCL loads via the same adapter, canonical IDs are identical)
+        dcl_canonical_ids = sorted(p.canonical_id for p in payload.pipes)
+
+        result = reconcile(payload.pipes, dcl_canonical_ids)
 
         if not push_meta:
             push_meta = {
@@ -750,6 +759,7 @@ def get_reconciliation(aod_run_id: Optional[str] = None):
             "dclRunId": None,
             "dclRunAt": None,
             "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "aodRunId": aod_run_id,
             "dclSourceCount": len(dcl_canonical_ids),
             "aamConnectionCount": payload.total_connections_actual,
         }
@@ -839,6 +849,21 @@ def reconcile_aam(request: ReconcileRequest):
     from backend.aam.ingress import AAMIngressAdapter, normalize_source_id
     from backend.aam.client import get_aam_client
 
+    adapter = AAMIngressAdapter()
+    aam_client = get_aam_client()
+
+    # Auto-discover aod_run_id from latest push if not provided
+    effective_run_id = request.aod_run_id
+    if not effective_run_id:
+        try:
+            pushes_raw = aam_client.get_push_history()
+            pushes = adapter.ingest_push_history(pushes_raw)
+            if pushes and pushes[0].aod_run_id:
+                effective_run_id = pushes[0].aod_run_id
+                logger.info(f"[Reconcile] Auto-discovered aod_run_id={effective_run_id} from latest push")
+        except Exception:
+            pass
+
     # ── 1. Build "expected" set from AAM ────────────────────────────────
     expected_sources: Dict[str, Dict[str, Any]] = {}
     payload = None
@@ -851,9 +876,7 @@ def reconcile_aam(request: ReconcileRequest):
     else:
         # Fetch live from AAM via ingress adapter
         try:
-            adapter = AAMIngressAdapter()
-            aam_client = get_aam_client()
-            pipes_data = aam_client.get_pipes(aod_run_id=request.aod_run_id)
+            pipes_data = aam_client.get_pipes(aod_run_id=effective_run_id)
             payload = adapter.ingest_pipes(pipes_data)
 
             for pipe in payload.pipes:
@@ -883,9 +906,7 @@ def reconcile_aam(request: ReconcileRequest):
     else:
         # Caller supplied expected IDs; fetch fresh for the actual set
         try:
-            adapter = AAMIngressAdapter()
-            aam_client = get_aam_client()
-            pipes_data = aam_client.get_pipes(aod_run_id=request.aod_run_id)
+            pipes_data = aam_client.get_pipes(aod_run_id=effective_run_id)
             payload = adapter.ingest_pipes(pipes_data)
             actual_canonical_ids = {p.canonical_id for p in payload.pipes}
         except Exception as e:
@@ -936,7 +957,7 @@ def reconcile_aam(request: ReconcileRequest):
     return {
         "status": verdict,
         "run_id": None,
-        "aod_run_id": request.aod_run_id,
+        "aod_run_id": effective_run_id,
         "expected_count": total_expected,
         "actual_count": total_actual,
         "matched_count": match_count,
