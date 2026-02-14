@@ -734,6 +734,11 @@ def get_reconciliation(aod_run_id: Optional[str] = None):
         aam_export = client.get_pipes(aod_run_id=aod_run_id)
         payload = adapter.ingest_pipes(aam_export)
 
+        # Fallback: discover aod_run_id from pipe provenance if still missing
+        if not aod_run_id and payload.aod_run_id:
+            aod_run_id = payload.aod_run_id
+            logger.info(f"[Recon] Discovered aod_run_id={aod_run_id} from pipe provenance")
+
         # Update push_meta hash now that we have the payload
         if push_meta:
             push_meta["payloadHash"] = push_meta["payloadHash"] or payload.payload_hash

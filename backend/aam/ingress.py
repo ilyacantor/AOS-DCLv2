@@ -51,30 +51,61 @@ def normalize_source_id(raw_name: str) -> str:
 # =============================================================================
 
 
-class AAMConnectionWire(BaseModel):
-    """Schema for a single connection in AAM's export-pipes response."""
+class AAMProvenanceWire(BaseModel):
+    """Provenance block inside each pipe."""
 
-    source_name: str = Field(default="Unknown")
+    discovered_by: Optional[str] = None
+    discovered_at: Optional[str] = None
+    aod_run_id: Optional[str] = None
+
+
+class AAMPipeWire(BaseModel):
+    """Schema for a single pipe in AAM's export-pipes flat response.
+
+    Matches the actual AAM API format:
+    {
+        "pipe_id": "uuid",
+        "display_name": "Tableau",
+        "fabric_plane": "IPAAS",
+        "source_system": "salesforce",
+        "trust_labels": ["governed"],
+        "schema_info": null | {...},
+        "provenance": {"aod_run_id": "run_xxx"},
+        ...
+    }
+    """
+
     pipe_id: Optional[str] = None
-    vendor: Optional[str] = None
-    fields: List[str] = Field(default_factory=list)
-    category: Optional[str] = None
-    governance_status: Optional[str] = None
-
-
-class AAMFabricPlaneWire(BaseModel):
-    """Schema for a fabric plane in AAM's export-pipes response."""
-
-    plane_type: str = Field(default="unknown")
-    vendor: str = Field(default="unknown")
-    connections: List[AAMConnectionWire] = Field(default_factory=list)
+    display_name: str = Field(default="Unknown")
+    fabric_plane: str = Field(default="UNMAPPED")
+    modality: Optional[str] = None
+    source_system: Optional[str] = None
+    transport_kind: Optional[str] = None
+    endpoint_ref: Optional[Dict[str, Any]] = None
+    entity_scope: List[str] = Field(default_factory=list)
+    identity_keys: List[str] = Field(default_factory=list)
+    change_semantics: Optional[str] = None
+    provenance: AAMProvenanceWire = Field(default_factory=AAMProvenanceWire)
+    owner_signals: List[Any] = Field(default_factory=list)
+    trust_labels: List[str] = Field(default_factory=list)
+    schema_info: Optional[Dict[str, Any]] = None
+    freshness: Optional[Dict[str, Any]] = None
+    access: Optional[Dict[str, Any]] = None
+    version: Optional[int] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
 
 class AAMPipesExportWire(BaseModel):
-    """Schema for the top-level AAM export-pipes response."""
+    """Schema for the top-level AAM export-pipes response (flat format).
 
-    fabric_planes: List[AAMFabricPlaneWire] = Field(default_factory=list)
-    total_connections: int = Field(default=0)
+    AAM returns: { "pipe_count": N, "pipes": [...] }
+    """
+
+    export_version: Optional[str] = None
+    exported_at: Optional[str] = None
+    pipe_count: int = Field(default=0)
+    pipes: List[AAMPipeWire] = Field(default_factory=list)
 
 
 class AAMPushWire(BaseModel):
@@ -125,6 +156,7 @@ class IngestedPayload(BaseModel):
     total_connections_reported: int
     total_connections_actual: int
     payload_hash: str
+    aod_run_id: Optional[str] = None
 
     def get_canonical_ids(self) -> set:
         """Return the set of all canonical source IDs in this payload."""
@@ -168,46 +200,68 @@ class AAMIngressAdapter:
         """
         Validate and normalize an AAM export-pipes response.
 
-        Args:
-            raw: The raw dict from AAMClient.get_pipes()
-
-        Returns:
-            IngestedPayload with all pipes validated and normalized
-
-        Raises:
-            ValidationError: If the raw data doesn't match expected schema
+        Handles the flat AAM format: { "pipe_count": N, "pipes": [...] }
+        Each pipe has display_name, fabric_plane, trust_labels, provenance, etc.
         """
         wire = AAMPipesExportWire.model_validate(raw)
 
         all_pipes: List[NormalizedPipe] = []
+        plane_buckets: Dict[str, List[NormalizedPipe]] = {}
+        discovered_run_id: Optional[str] = None
+
+        for pipe_wire in wire.pipes:
+            canonical_id = normalize_source_id(pipe_wire.display_name)
+            fabric_plane = (pipe_wire.fabric_plane or "UNMAPPED").lower()
+            vendor = pipe_wire.source_system or "unknown"
+
+            # Governance from trust_labels list
+            trust_labels = [t.lower() for t in pipe_wire.trust_labels]
+            governance = "governed" if "governed" in trust_labels else "ungoverned"
+
+            # Extract fields from schema_info if available
+            fields: List[str] = []
+            if pipe_wire.schema_info and isinstance(pipe_wire.schema_info, dict):
+                fields = list(pipe_wire.schema_info.get("fields", {}).keys()) if isinstance(pipe_wire.schema_info.get("fields"), dict) else []
+                if not fields:
+                    fields = pipe_wire.schema_info.get("columns", []) if isinstance(pipe_wire.schema_info.get("columns"), list) else []
+
+            # Category from entity_scope or source_system
+            category = "other"
+            if pipe_wire.entity_scope:
+                category = pipe_wire.entity_scope[0]
+            elif pipe_wire.source_system:
+                category = pipe_wire.source_system
+
+            # Extract aod_run_id from provenance
+            if pipe_wire.provenance and pipe_wire.provenance.aod_run_id:
+                discovered_run_id = pipe_wire.provenance.aod_run_id
+
+            pipe = NormalizedPipe(
+                canonical_id=canonical_id,
+                display_name=pipe_wire.display_name,
+                pipe_id=pipe_wire.pipe_id,
+                fabric_plane=fabric_plane,
+                vendor=vendor,
+                fields=fields,
+                field_count=len(fields),
+                category=category,
+                governance_status=governance,
+                trust_score=85 if governance == "governed" else 60,
+                data_quality_score=80 if governance == "governed" else 50,
+            )
+            all_pipes.append(pipe)
+
+            if fabric_plane not in plane_buckets:
+                plane_buckets[fabric_plane] = []
+            plane_buckets[fabric_plane].append(pipe)
+
+        # Build plane summaries
         planes: List[NormalizedFabricPlane] = []
-
-        for plane_wire in wire.fabric_planes:
-            plane_pipes: List[NormalizedPipe] = []
-
-            for conn in plane_wire.connections:
-                canonical_id = normalize_source_id(conn.source_name)
-                governance = (conn.governance_status or "unknown").lower()
-
-                pipe = NormalizedPipe(
-                    canonical_id=canonical_id,
-                    display_name=conn.source_name,
-                    pipe_id=conn.pipe_id,
-                    fabric_plane=plane_wire.plane_type.lower(),
-                    vendor=conn.vendor or plane_wire.vendor,
-                    fields=conn.fields,
-                    field_count=len(conn.fields),
-                    category=(conn.category or "other").lower(),
-                    governance_status=governance,
-                    trust_score=85 if governance == "governed" else 60,
-                    data_quality_score=80 if governance == "governed" else 50,
-                )
-                plane_pipes.append(pipe)
-                all_pipes.append(pipe)
-
+        for plane_type, plane_pipes in sorted(plane_buckets.items()):
+            vendors = set(p.vendor for p in plane_pipes)
             planes.append(NormalizedFabricPlane(
-                plane_type=plane_wire.plane_type.lower(),
-                vendor=plane_wire.vendor,
+                plane_type=plane_type,
+                vendor=", ".join(sorted(vendors)),
                 pipes=plane_pipes,
                 pipe_count=len(plane_pipes),
             ))
@@ -218,12 +272,18 @@ class AAMIngressAdapter:
             "|".join(sorted_ids).encode()
         ).hexdigest()[:12]
 
+        logger.info(
+            f"[AAMIngress] Ingested {len(all_pipes)} pipes across "
+            f"{len(planes)} fabric planes (aod_run_id={discovered_run_id})"
+        )
+
         return IngestedPayload(
             planes=planes,
             pipes=all_pipes,
-            total_connections_reported=wire.total_connections,
+            total_connections_reported=wire.pipe_count,
             total_connections_actual=len(all_pipes),
             payload_hash=payload_hash,
+            aod_run_id=discovered_run_id,
         )
 
     def ingest_push_history(self, raw: Any) -> List[NormalizedPush]:
