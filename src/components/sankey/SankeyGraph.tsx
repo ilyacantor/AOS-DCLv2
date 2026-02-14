@@ -15,7 +15,7 @@ import { useRef, useMemo, useCallback, useState } from 'react';
 import { sankey, sankeyLinkHorizontal, sankeyLeft } from 'd3-sankey';
 
 import { useResizeObserver } from '../../hooks/useResizeObserver';
-import { SANKEY_CONFIG, LEVEL_COLORS, LEVEL_TEXT_COLORS } from './constants';
+import { SANKEY_CONFIG, LEVEL_COLORS, LEVEL_TEXT_COLORS, FABRIC_COLORS, FABRIC_DEFAULT_COLOR } from './constants';
 import type {
   SankeyGraphProps,
   SankeyGraphData,
@@ -172,8 +172,15 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
         {/* Gradient definitions for links */}
         <defs>
           {visibleLinks.map((link, idx) => {
-            const sourceColor = getNodeColor(link.source?.level || 'L0');
-            const targetColor = getNodeColor(link.target?.level || 'L0');
+            // Use fabric-specific color for fabric nodes in link gradients
+            const srcNode = link.source;
+            const tgtNode = link.target;
+            const sourceColor = srcNode?.kind === 'fabric'
+              ? (FABRIC_COLORS[(srcNode.group || '').toUpperCase()] || FABRIC_DEFAULT_COLOR)
+              : getNodeColor(srcNode?.level || 'L0');
+            const targetColor = tgtNode?.kind === 'fabric'
+              ? (FABRIC_COLORS[(tgtNode.group || '').toUpperCase()] || FABRIC_DEFAULT_COLOR)
+              : getNodeColor(tgtNode?.level || 'L0');
             const gradientId = getLinkGradientId(link, idx);
 
             return (
@@ -230,9 +237,15 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
         {/* Nodes layer */}
         <g className="nodes" aria-label="Data entities">
           {graphData.nodes.map((node) => {
-            const color = LEVEL_COLORS[node.level as keyof typeof LEVEL_COLORS] || '#999';
-            const textColor =
-              LEVEL_TEXT_COLORS[node.level as keyof typeof LEVEL_TEXT_COLORS] || '#fff';
+            // Fabric nodes get plane-specific colors; others use level colors
+            const isFabric = node.kind === 'fabric';
+            const fabricPlane = isFabric ? (node.group || '').toUpperCase() : '';
+            const color = isFabric
+              ? (FABRIC_COLORS[fabricPlane] || FABRIC_DEFAULT_COLOR)
+              : (LEVEL_COLORS[node.level as keyof typeof LEVEL_COLORS] || '#999');
+            const textColor = isFabric
+              ? '#ffffff'
+              : (LEVEL_TEXT_COLORS[node.level as keyof typeof LEVEL_TEXT_COLORS] || '#fff');
 
             return (
               <SankeyNodeLabel

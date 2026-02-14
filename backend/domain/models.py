@@ -62,6 +62,7 @@ class SourceSystem(BaseModel):
     data_quality_score: int = 50
     vendor: Optional[str] = None
     category: Optional[str] = None
+    fabric_plane: Optional[str] = None
     entities: List[str] = Field(default_factory=list)
 
 

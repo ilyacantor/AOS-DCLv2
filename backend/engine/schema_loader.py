@@ -342,6 +342,7 @@ class SchemaLoader:
                     data_quality_score=pipe.data_quality_score,
                     vendor=pipe.vendor,
                     category=pipe.category,
+                    fabric_plane=pipe.fabric_plane,
                     entities=[],
                 )
                 sources.append(source)

@@ -254,90 +254,188 @@ class DCLEngine:
                 concept_id = f"ontology_{concept.id}"
                 concept_field_mappings[concept.id] = []
                 ontology_mapping_count[concept.id] = 0
-        
-        # Show individual sources — every source gets its own node
-        source_mapping_count = {}
+
+        # Decide aggregation strategy: fabric-level for AAM, individual for Demo/Farm
+        use_fabric_aggregation = (
+            mode == "AAM"
+            and any(s.fabric_plane for s in sources)
+        )
+
+        # Build source_id → fabric_plane lookup (needed for routing mappings)
+        source_to_fabric: Dict[str, str] = {}
         for source in sources:
-            source_id = f"source_{source.id}"
-            table_count = len(source.tables)
-            field_count = sum(len(t.fields) for t in source.tables)
+            plane = (source.fabric_plane or "unmapped").upper()
+            source_to_fabric[source.id] = plane
 
-            discovery_status = getattr(source, 'discovery_status', None)
-            discovery_value = discovery_status.value if discovery_status else "canonical"
-            status = "ok" if discovery_value == "canonical" else "pending"
+        if use_fabric_aggregation:
+            # ── Fabric-level aggregation: group sources by fabric_plane ──
+            fabric_groups: Dict[str, List[SourceSystem]] = {}
+            for source in sources:
+                plane = source_to_fabric[source.id]
+                if plane not in fabric_groups:
+                    fabric_groups[plane] = []
+                fabric_groups[plane].append(source)
 
-            resolution_type = getattr(source, 'resolution_type', None)
-            resolution_value = resolution_type.value if resolution_type else "exact"
+            for plane, plane_sources in sorted(fabric_groups.items()):
+                fabric_node_id = f"fabric_{plane.lower()}"
+                pipe_count = len(plane_sources)
+                total_fields = sum(
+                    sum(len(t.fields) for t in s.tables) for s in plane_sources
+                )
+                governed = sum(1 for s in plane_sources if "governed" in s.tags)
+                avg_trust = (
+                    sum(s.trust_score for s in plane_sources) // pipe_count
+                    if pipe_count else 0
+                )
 
-            nodes.append(GraphNode(
-                id=source_id,
-                label=source.name,
-                level="L1",
-                kind="source",
-                group=source.type,
-                status=status,
-                metrics={
-                    "tables": table_count,
-                    "fields": field_count,
-                    "type": source.type,
-                    "canonical_id": getattr(source, 'canonical_id', source.id),
-                    "raw_id": getattr(source, 'raw_id', source.id),
-                    "discovery_status": discovery_value,
-                    "resolution_type": resolution_value,
-                    "trust_score": getattr(source, 'trust_score', 50),
-                    "data_quality_score": getattr(source, 'data_quality_score', 50),
-                    "vendor": getattr(source, 'vendor', None),
-                    "category": getattr(source, 'category', None),
-                }
-            ))
+                nodes.append(GraphNode(
+                    id=fabric_node_id,
+                    label=f"{plane} ({pipe_count})",
+                    level="L1",
+                    kind="fabric",
+                    group=plane,
+                    status="ok",
+                    metrics={
+                        "pipe_count": pipe_count,
+                        "fields": total_fields,
+                        "governed": governed,
+                        "ungoverned": pipe_count - governed,
+                        "trust_score": avg_trust,
+                        "sources": [s.name for s in plane_sources],
+                    }
+                ))
 
-            links.append(GraphLink(
-                id=f"link_pipe_{source.id}",
-                source=pipe_id,
-                target=source_id,
-                value=float(table_count),
-                flow_type="schema",
-                info_summary=f"{table_count} tables, {field_count} fields"
-            ))
+                links.append(GraphLink(
+                    id=f"link_pipe_{plane.lower()}",
+                    source=pipe_id,
+                    target=fabric_node_id,
+                    value=float(pipe_count),
+                    flow_type="schema",
+                    info_summary=f"{pipe_count} pipes, {total_fields} fields"
+                ))
 
-            source_mapping_count[source.id] = 0
+            # Aggregate mapping links: one link per (fabric, concept) pair
+            fabric_concept_agg: Dict[tuple, list] = {}
+            for mapping in mappings:
+                if mapping.ontology_concept not in relevant_concept_ids:
+                    continue
+                plane = source_to_fabric.get(mapping.source_system, "UNMAPPED")
+                key = (plane, mapping.ontology_concept)
+                if key not in fabric_concept_agg:
+                    fabric_concept_agg[key] = []
+                fabric_concept_agg[key].append(mapping)
 
-        # Create individual source→concept mapping links
-        for mapping in mappings:
-            if mapping.ontology_concept in relevant_concept_ids:
-                source_id = f"source_{mapping.source_system}"
-                concept_id = f"ontology_{mapping.ontology_concept}"
+            for (plane, concept_key), agg_mappings in fabric_concept_agg.items():
+                fabric_node_id = f"fabric_{plane.lower()}"
+                concept_id = f"ontology_{concept_key}"
+                count = len(agg_mappings)
+                avg_conf = sum(m.confidence for m in agg_mappings) / count
 
-                if source_id and concept_id:
-                    link_id = f"link_{mapping.source_system}_{mapping.ontology_concept}_{uuid.uuid4().hex[:8]}"
-                    links.append(GraphLink(
-                        id=link_id,
-                        source=source_id,
-                        target=concept_id,
-                        value=mapping.confidence,
-                        confidence=mapping.confidence,
-                        flow_type="mapping",
-                        info_summary=f"{mapping.source_field} → {mapping.ontology_concept} ({mapping.method}, {mapping.confidence:.2f})",
-                        mapping_detail=MappingDetail(
-                            source_field=mapping.source_field,
-                            source_table=mapping.source_table,
-                            target_concept=mapping.ontology_concept,
-                            method=mapping.method,
-                            confidence=mapping.confidence
-                        )
-                    ))
+                links.append(GraphLink(
+                    id=f"link_{plane.lower()}_{concept_key}_{uuid.uuid4().hex[:8]}",
+                    source=fabric_node_id,
+                    target=concept_id,
+                    value=float(count),
+                    confidence=avg_conf,
+                    flow_type="mapping",
+                    info_summary=f"{count} mappings (avg conf {avg_conf:.2f})"
+                ))
 
-                    if mapping.source_system in source_mapping_count:
-                        source_mapping_count[mapping.source_system] += 1
-                    if mapping.ontology_concept in ontology_mapping_count:
-                        ontology_mapping_count[mapping.ontology_concept] += 1
-                    if mapping.ontology_concept in concept_field_mappings:
-                        concept_field_mappings[mapping.ontology_concept].append({
-                            "field": mapping.source_field,
-                            "table": mapping.source_table,
-                            "source": mapping.source_system,
-                            "confidence": mapping.confidence
+                if concept_key in ontology_mapping_count:
+                    ontology_mapping_count[concept_key] += count
+                if concept_key in concept_field_mappings:
+                    for m in agg_mappings:
+                        concept_field_mappings[concept_key].append({
+                            "field": m.source_field,
+                            "table": m.source_table,
+                            "source": m.source_system,
+                            "confidence": m.confidence
                         })
+
+        else:
+            # ── Individual source nodes: Demo / Farm mode ──
+            source_mapping_count = {}
+            for source in sources:
+                source_id = f"source_{source.id}"
+                table_count = len(source.tables)
+                field_count = sum(len(t.fields) for t in source.tables)
+
+                discovery_status = getattr(source, 'discovery_status', None)
+                discovery_value = discovery_status.value if discovery_status else "canonical"
+                status = "ok" if discovery_value == "canonical" else "pending"
+
+                resolution_type = getattr(source, 'resolution_type', None)
+                resolution_value = resolution_type.value if resolution_type else "exact"
+
+                nodes.append(GraphNode(
+                    id=source_id,
+                    label=source.name,
+                    level="L1",
+                    kind="source",
+                    group=source.type,
+                    status=status,
+                    metrics={
+                        "tables": table_count,
+                        "fields": field_count,
+                        "type": source.type,
+                        "canonical_id": getattr(source, 'canonical_id', source.id),
+                        "raw_id": getattr(source, 'raw_id', source.id),
+                        "discovery_status": discovery_value,
+                        "resolution_type": resolution_value,
+                        "trust_score": getattr(source, 'trust_score', 50),
+                        "data_quality_score": getattr(source, 'data_quality_score', 50),
+                        "vendor": getattr(source, 'vendor', None),
+                        "category": getattr(source, 'category', None),
+                    }
+                ))
+
+                links.append(GraphLink(
+                    id=f"link_pipe_{source.id}",
+                    source=pipe_id,
+                    target=source_id,
+                    value=float(table_count),
+                    flow_type="schema",
+                    info_summary=f"{table_count} tables, {field_count} fields"
+                ))
+
+                source_mapping_count[source.id] = 0
+
+            # Create individual source→concept mapping links
+            for mapping in mappings:
+                if mapping.ontology_concept in relevant_concept_ids:
+                    source_id = f"source_{mapping.source_system}"
+                    concept_id = f"ontology_{mapping.ontology_concept}"
+
+                    if source_id and concept_id:
+                        link_id = f"link_{mapping.source_system}_{mapping.ontology_concept}_{uuid.uuid4().hex[:8]}"
+                        links.append(GraphLink(
+                            id=link_id,
+                            source=source_id,
+                            target=concept_id,
+                            value=mapping.confidence,
+                            confidence=mapping.confidence,
+                            flow_type="mapping",
+                            info_summary=f"{mapping.source_field} → {mapping.ontology_concept} ({mapping.method}, {mapping.confidence:.2f})",
+                            mapping_detail=MappingDetail(
+                                source_field=mapping.source_field,
+                                source_table=mapping.source_table,
+                                target_concept=mapping.ontology_concept,
+                                method=mapping.method,
+                                confidence=mapping.confidence
+                            )
+                        ))
+
+                        if mapping.source_system in source_mapping_count:
+                            source_mapping_count[mapping.source_system] += 1
+                        if mapping.ontology_concept in ontology_mapping_count:
+                            ontology_mapping_count[mapping.ontology_concept] += 1
+                        if mapping.ontology_concept in concept_field_mappings:
+                            concept_field_mappings[mapping.ontology_concept].append({
+                                "field": mapping.source_field,
+                                "table": mapping.source_table,
+                                "source": mapping.source_system,
+                                "confidence": mapping.confidence
+                            })
         
         for concept in ontology:
             if concept.id in relevant_concept_ids:

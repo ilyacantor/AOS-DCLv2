@@ -73,4 +73,15 @@ export const LEVEL_TEXT_COLORS = {
   L3: '#ede9fe', // Violet light
 } as const;
 
+// Colors for fabric plane nodes (AAM mode aggregation)
+export const FABRIC_COLORS: Record<string, string> = {
+  IPAAS: '#f59e0b',          // Amber
+  API_GATEWAY: '#ec4899',    // Pink
+  EVENT_BUS: '#8b5cf6',      // Violet
+  DATA_WAREHOUSE: '#06b6d4', // Cyan
+  UNMAPPED: '#6b7280',       // Gray
+} as const;
+
+export const FABRIC_DEFAULT_COLOR = '#10b981'; // Emerald fallback
+
 export type LayerLevel = keyof typeof LEVEL_COLORS;
