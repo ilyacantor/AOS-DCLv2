@@ -735,6 +735,17 @@ def mcp_tool_call(tool_call: MCPToolCall):
 def get_reconciliation():
     """Reconcile AAM payload against DCL loaded sources via ingress adapter."""
     try:
+        # Guard: reconciliation requires a prior AAM run
+        if not _last_aam_run.get("dcl_canonical_ids"):
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "NO_AAM_RUN",
+                    "message": "No AAM run has been executed yet. "
+                               "Run POST /api/dcl/run with mode=AAM first.",
+                }
+            )
+
         _invalidate_aam_caches()
         from backend.aam.client import get_aam_client
         from backend.aam.ingress import AAMIngressAdapter
@@ -744,7 +755,9 @@ def get_reconciliation():
         client = get_aam_client()
 
         aod_run_id = _last_aam_run.get("aod_run_id")
-        dcl_canonical_ids = list(getattr(app.state, "loaded_source_ids", []))
+        # Use the AAM-specific canonical IDs — NOT app.state.loaded_source_ids
+        # which gets overwritten if a Demo/Farm run happens after the AAM run
+        dcl_canonical_ids = list(_last_aam_run.get("dcl_canonical_ids", []))
 
         aam_export = client.get_pipes(aod_run_id=aod_run_id)
         payload = adapter.ingest_pipes(aam_export)
@@ -799,6 +812,8 @@ def get_reconciliation():
         }
 
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Reconciliation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

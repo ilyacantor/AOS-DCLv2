@@ -172,6 +172,11 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
     setError(null);
     try {
       const res = await fetch('/api/dcl/reconciliation');
+      if (res.status === 409) {
+        const body = await res.json();
+        setError(body?.detail?.message || 'No AAM run found. Run the pipeline in AAM mode first.');
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setData(json);
