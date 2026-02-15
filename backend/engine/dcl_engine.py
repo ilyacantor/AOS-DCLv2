@@ -208,6 +208,7 @@ class DCLEngine:
                     "personas": [p.value for p in personas]
                 },
                 "source_canonical_ids": [s.id for s in sources],
+                "source_names": [s.name for s in sources],
             }
         )
         

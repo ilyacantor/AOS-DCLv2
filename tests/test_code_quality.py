@@ -288,5 +288,65 @@ class TestConstantsUsedByConsumers(unittest.TestCase):
             "SchemaLoader._CACHE_TTL should use the centralized constant")
 
 
+class TestSourceTrackingDisplayModeIndependent(unittest.TestCase):
+    """Fix: Source tracking must NOT depend on graph display mode (kind=source vs kind=fabric)."""
+
+    def test_meta_contains_source_names(self):
+        """GraphSnapshot meta must include source_names derived from source data, not graph nodes."""
+        from backend.engine.dcl_engine import DCLEngine
+        import inspect
+        source = inspect.getsource(DCLEngine.build_graph_snapshot)
+        self.assertIn(
+            "source_names",
+            source,
+            "BUG REGRESSION: DCLEngine.build_graph_snapshot must populate 'source_names' in meta "
+            "so run_dcl can track loaded sources independently of display mode (fabric vs source nodes)."
+        )
+
+    def test_run_dcl_uses_meta_not_node_kind(self):
+        """run_dcl must derive loaded_sources from meta, not by filtering nodes by kind."""
+        import inspect
+        from backend.api.main import run_dcl
+        source = inspect.getsource(run_dcl)
+        # Should NOT contain the old display-mode-dependent pattern
+        self.assertNotIn(
+            'node.kind == "source"',
+            source,
+            "BUG REGRESSION: run_dcl still filters by node.kind=='source'. "
+            "In AAM fabric mode, nodes are kind='fabric', so loaded_sources stays empty."
+        )
+        # Should use meta-derived source names
+        self.assertIn(
+            "source_names",
+            source,
+            "run_dcl should derive loaded_sources from snapshot.meta['source_names']"
+        )
+
+
+class TestSORReconSelfSufficient(unittest.TestCase):
+    """Fix: SOR recon must work even before a DCL run has been executed."""
+
+    def test_reconcile_sor_returns_data_with_bindings(self):
+        """reconcile_sor should return meaningful data when loaded_sources comes from bindings."""
+        from backend.engine.sor_reconciliation import reconcile_sor
+
+        bindings = [
+            {"source_system": "Salesforce CRM", "canonical_event": "deal_won",
+             "quality_score": 0.95, "dims_coverage": {"customer": True}},
+            {"source_system": "NetSuite ERP", "canonical_event": "revenue_recognized",
+             "quality_score": 0.92, "dims_coverage": {"customer": True}},
+        ]
+        metrics = [{"id": "arr", "allowed_dims": ["customer"]}]
+        entities = [{"id": "customer", "name": "Customer"}]
+        # Simulate the fallback: derive loaded_sources from bindings
+        loaded_sources = sorted(set(b["source_system"] for b in bindings))
+
+        result = reconcile_sor(bindings, metrics, entities, loaded_sources)
+        self.assertNotEqual(result["status"], "no_data",
+            "SOR recon should not return 'no_data' when bindings are available")
+        self.assertGreater(result["summary"]["totalBindings"], 0)
+        self.assertGreater(result["summary"]["loadedSources"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()

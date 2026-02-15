@@ -186,11 +186,11 @@ def run_dcl(request: RunRequest):
             aod_run_id=request.aod_run_id
         )
 
-        source_names = []
-        for node in snapshot.nodes:
-            if node.kind == "source":
-                source_names.append(node.label)
-        app.state.loaded_sources = source_names
+        # Derive loaded sources from source data (in meta), NOT from graph nodes.
+        # Graph nodes are display-mode dependent (kind="source" vs kind="fabric")
+        # but meta.source_names is populated from the raw sources list before
+        # any display-mode decisions.
+        app.state.loaded_sources = snapshot.meta.get("source_names", [])
         app.state.loaded_source_ids = snapshot.meta.get("source_canonical_ids", [])
 
         return RunResponse(
@@ -813,6 +813,16 @@ def get_sor_reconciliation():
                 entities_list = yaml.safe_load(f).get("entities", [])
 
         loaded_sources = list(app.state.loaded_sources)
+
+        # Self-sufficient fallback: if no DCL run has happened yet,
+        # derive loaded sources from the bindings' source_system values
+        # so the recon can still show the binding structure (all sources
+        # will appear as "missing" until a run populates actual data).
+        if not loaded_sources and bindings:
+            loaded_sources = sorted(set(
+                b.get("source_system", "") for b in bindings if b.get("source_system")
+            ))
+            logger.info(f"[SOR] No prior run — derived {len(loaded_sources)} sources from bindings")
 
         result = reconcile_sor(bindings, metrics_list, entities_list, loaded_sources)
 
