@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GraphSnapshot, PersonaId } from './types';
 import { MonitorPanel } from './components/MonitorPanel';
 import { NarrationPanel } from './components/NarrationPanel';
@@ -29,8 +29,12 @@ function App() {
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const { toast } = useToast();
 
+  const hasLoadedRef = useRef(false);
   useEffect(() => {
-    loadData();
+    if (mainView === 'graph' && !hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      loadData();
+    }
   }, [mainView]);
 
   useEffect(() => {
@@ -136,7 +140,8 @@ function App() {
         body: JSON.stringify({
           mode: dataMode,
           run_mode: runMode,
-          personas: selectedPersonas.length > 0 ? selectedPersonas : undefined
+          personas: selectedPersonas.length > 0 ? selectedPersonas : undefined,
+          force_refresh: true,
         }),
       });
 

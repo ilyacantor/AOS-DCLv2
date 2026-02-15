@@ -74,6 +74,8 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
     const nodes = data.nodes.map(n => ({ ...n }));
     const links = data.links.map(l => ({ ...l }));
 
+    if (links.length === 0) return null;
+
     // Configure D3 Sankey generator
     const sankeyGenerator = sankey<SankeyNode, SankeyLink>()
       .nodeId((d) => d.id)
@@ -155,15 +157,20 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
     return hasFabric ? 'Fabric-Aggregated' : 'Detailed';
   }, [graphData]);
 
-  // Always render container with ref for consistent size measurement
   const isLoading = !data || !graphData;
+  const hasNoLinks = data && !graphData && data.nodes?.length > 0 && (data.links?.length ?? 0) === 0;
 
   return (
     <div
       ref={containerRef}
       className="w-full h-full bg-[#020617] overflow-hidden relative select-none"
     >
-      {isLoading ? (
+      {hasNoLinks ? (
+        <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
+          <span className="text-sm">No data connections found</span>
+          <span className="text-xs text-slate-500">External source may be unreachable — try running again</span>
+        </div>
+      ) : isLoading ? (
         <div className="w-full h-full flex items-center justify-center text-muted-foreground">
           Loading visualization...
         </div>

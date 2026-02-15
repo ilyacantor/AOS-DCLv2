@@ -136,10 +136,12 @@ def _invalidate_aam_caches():
     except Exception as e:
         logger.warning(f"[AAM] Failed to reset AAM client: {e}")
 
-    # 3. Schema loader demo cache (shouldn't matter for AAM, but safety)
+    # 3. Schema loader caches
     SchemaLoader._demo_cache = None
     SchemaLoader._stream_cache = None
     SchemaLoader._cache_time = 0
+    SchemaLoader._aam_cache = None
+    SchemaLoader._aam_cache_time = 0
     logger.info("[AAM] All stale caches invalidated for fresh AAM run")
 
 
@@ -149,6 +151,7 @@ class RunRequest(BaseModel):
     personas: Optional[List[Persona]] = None
     source_limit: Optional[int] = 1000
     aod_run_id: Optional[str] = Field(None, description="AOD run ID for AAM mode")
+    force_refresh: bool = Field(False, description="Force clear all caches and fetch fresh data from AAM")
 
 
 class RunResponse(BaseModel):
@@ -177,8 +180,7 @@ def run_dcl(request: RunRequest):
         run_id=run_id
     )
 
-    # AAM mode: clear stale caches so new payload is fetched fresh
-    if request.mode == "AAM":
+    if request.mode == "AAM" and request.force_refresh:
         _invalidate_aam_caches()
 
     personas = request.personas or [Persona.CFO, Persona.CRO, Persona.COO, Persona.CTO]

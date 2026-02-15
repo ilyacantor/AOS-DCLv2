@@ -19,6 +19,10 @@ class SchemaLoader:
     _stream_cache: Optional[List[SourceSystem]] = None
     _cache_time: float = 0
     _CACHE_TTL: float = SCHEMA_CACHE_TTL
+
+    _aam_cache: Optional[Tuple[List[SourceSystem], Dict[str, Any]]] = None
+    _aam_cache_time: float = 0
+    _AAM_CACHE_TTL: float = 120
     
     @staticmethod
     def load_demo_schemas(narration=None, run_id: Optional[str] = None) -> List[SourceSystem]:
@@ -267,6 +271,16 @@ class SchemaLoader:
         All AAM data is validated and normalized at the ingress boundary.
         No ad-hoc normalization happens in this method.
         """
+        import time as _time
+        import copy
+
+        now = _time.time()
+        if SchemaLoader._aam_cache is not None and (now - SchemaLoader._aam_cache_time) < SchemaLoader._AAM_CACHE_TTL:
+            cached_sources, cached_kpis = SchemaLoader._aam_cache
+            if narration and run_id:
+                narration.add_message(run_id, "SchemaLoader", f"Using cached AAM schemas ({len(cached_sources)} sources)")
+            return copy.deepcopy(cached_sources), dict(cached_kpis)
+
         from backend.aam.client import get_aam_client
         from backend.aam.ingress import AAMIngressAdapter
 
@@ -280,6 +294,10 @@ class SchemaLoader:
             logger.error(f"Failed to fetch from AAM: {e}")
             if narration and run_id:
                 narration.add_message(run_id, "SchemaLoader", f"⚠ AAM fetch failed: {e}")
+            if SchemaLoader._aam_cache is not None:
+                logger.info("AAM fetch failed, falling back to stale cache")
+                cached_sources, cached_kpis = SchemaLoader._aam_cache
+                return copy.deepcopy(cached_sources), dict(cached_kpis)
             return [], {"fabrics": 0, "pipes": 0, "sources": 0, "unpipedCount": 0, "totalAamConnections": 0}
 
         adapter = AAMIngressAdapter()
@@ -391,6 +409,9 @@ class SchemaLoader:
             "limited": source_limit < total_available if source_limit else False,
             "loadedSources": len(sources),
         }
+
+        SchemaLoader._aam_cache = (copy.deepcopy(sources), dict(kpis))
+        SchemaLoader._aam_cache_time = _time.time()
 
         return sources, kpis
     
