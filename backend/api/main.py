@@ -50,6 +50,12 @@ from backend.engine.entity_resolution import get_entity_store
 from backend.engine.conflict_detection import get_conflict_store
 from backend.engine.reconciliation import reconcile
 from backend.engine.sor_reconciliation import reconcile_sor
+from backend.api.ingest import (
+    IngestRequest,
+    IngestResponse,
+    get_ingest_store,
+    compute_schema_hash,
+)
 from backend.api.mcp_server import (
     MCPToolCall,
     MCPToolResult,
@@ -239,6 +245,164 @@ def get_monitor(run_id: str):
 def ingest_telemetry_gone():
     """Ingest pipeline moved to AAM."""
     raise HTTPException(status_code=410, detail={"error": "MOVED_TO_AAM"})
+
+
+# =============================================================================
+# DCL Ingestion — Runner push endpoint
+# =============================================================================
+
+
+@app.post("/api/dcl/ingest", response_model=IngestResponse)
+def dcl_ingest(
+    request: IngestRequest,
+    x_run_id: Optional[str] = Header(None),
+    x_pipe_id: Optional[str] = Header(None),
+    x_schema_hash: Optional[str] = Header(None),
+    x_api_key: Optional[str] = Header(None),
+):
+    """
+    Accept a data push from an AAM Runner.
+
+    Headers (set by Runner):
+      x-run-id       — UUID for this execution run
+      x-pipe-id      — Pipe ID from AAM manifest
+      x-schema-hash  — SHA-256 of the transformed schema
+      x-api-key      — Auth token (validated if DCL_INGEST_KEY is set)
+
+    The endpoint:
+      1. Validates the row count matches declared count
+      2. Detects schema drift against last-seen hash for this pipe
+      3. Buffers rows in-memory (Zero-Trust: never written to disk)
+      4. Records a RunReceipt with full provenance metadata
+    """
+    # --- auth (optional: only enforced if env var is set) ---
+    expected_key = os.environ.get("DCL_INGEST_KEY")
+    if expected_key and x_api_key != expected_key:
+        raise HTTPException(status_code=401, detail="Invalid or missing x-api-key")
+
+    # --- resolve identifiers ---
+    run_id = x_run_id or str(uuid.uuid4())
+    pipe_id = x_pipe_id or f"pipe_{request.source_system}"
+
+    # --- schema hash (prefer header, fall back to computed) ---
+    if x_schema_hash:
+        schema_hash = x_schema_hash
+    else:
+        schema_hash = compute_schema_hash(request.rows)
+
+    # --- row-count validation (warn, don't reject) ---
+    actual_rows = len(request.rows)
+    if actual_rows != request.row_count:
+        logger.warning(
+            f"[Ingest] Row count mismatch: declared={request.row_count} "
+            f"actual={actual_rows} pipe={pipe_id} run={run_id}"
+        )
+
+    # --- ingest ---
+    store = get_ingest_store()
+    try:
+        receipt = store.ingest(
+            run_id=run_id,
+            pipe_id=pipe_id,
+            schema_hash=schema_hash,
+            request=request,
+        )
+    except Exception as e:
+        logger.error(f"[Ingest] Failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+    logger.info(
+        f"[Ingest] Accepted {actual_rows} rows from {request.source_system} "
+        f"pipe={pipe_id} run={run_id} drift={receipt.schema_drift}"
+    )
+
+    return IngestResponse(
+        status="ingested",
+        run_id=run_id,
+        pipe_id=pipe_id,
+        rows_accepted=actual_rows,
+        schema_drift=receipt.schema_drift,
+        drift_fields=receipt.drift_fields,
+    )
+
+
+@app.get("/api/dcl/ingest/runs")
+def list_ingest_runs():
+    """List all ingestion run receipts (metadata only)."""
+    store = get_ingest_store()
+    receipts = store.get_all_receipts()
+    return {
+        "runs": [
+            {
+                "run_id": r.run_id,
+                "pipe_id": r.pipe_id,
+                "source_system": r.source_system,
+                "canonical_source_id": r.canonical_source_id,
+                "tenant_id": r.tenant_id,
+                "snapshot_name": r.snapshot_name,
+                "run_timestamp": r.run_timestamp,
+                "received_at": r.received_at,
+                "schema_version": r.schema_version,
+                "row_count": r.row_count,
+                "schema_drift": r.schema_drift,
+                "drift_fields": r.drift_fields,
+                "runner_id": r.runner_id,
+            }
+            for r in receipts
+        ],
+        "stats": store.get_stats(),
+    }
+
+
+@app.get("/api/dcl/ingest/runs/{run_id}")
+def get_ingest_run(run_id: str):
+    """Get a single run receipt + buffered rows."""
+    store = get_ingest_store()
+    receipt = store.get_receipt(run_id)
+    if not receipt:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+    rows = store.get_rows(run_id)
+    return {
+        "receipt": {
+            "run_id": receipt.run_id,
+            "pipe_id": receipt.pipe_id,
+            "source_system": receipt.source_system,
+            "canonical_source_id": receipt.canonical_source_id,
+            "tenant_id": receipt.tenant_id,
+            "snapshot_name": receipt.snapshot_name,
+            "run_timestamp": receipt.run_timestamp,
+            "received_at": receipt.received_at,
+            "schema_version": receipt.schema_version,
+            "schema_hash": receipt.schema_hash,
+            "row_count": receipt.row_count,
+            "schema_drift": receipt.schema_drift,
+            "drift_fields": receipt.drift_fields,
+        },
+        "row_count": len(rows),
+        "rows": rows,
+    }
+
+
+@app.get("/api/dcl/ingest/drift")
+def list_schema_drift():
+    """List all schema drift events."""
+    store = get_ingest_store()
+    events = store.get_drift_events()
+    return {
+        "drift_events": [
+            {
+                "pipe_id": e.pipe_id,
+                "run_id": e.run_id,
+                "previous_hash": e.previous_hash,
+                "incoming_hash": e.incoming_hash,
+                "added_fields": e.added_fields,
+                "removed_fields": e.removed_fields,
+                "detected_at": e.detected_at,
+            }
+            for e in events
+        ],
+        "total": len(events),
+    }
 
 
 class MappingRequest(BaseModel):
