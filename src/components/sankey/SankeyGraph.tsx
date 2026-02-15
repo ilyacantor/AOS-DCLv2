@@ -148,6 +148,13 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
     setTooltip((prev) => ({ ...prev, visible: false }));
   }, []);
 
+  // Detect display mode: fabric-aggregated vs detailed (individual sources)
+  const displayMode = useMemo(() => {
+    if (!graphData) return null;
+    const hasFabric = graphData.nodes.some(n => n.kind === 'fabric');
+    return hasFabric ? 'Fabric-Aggregated' : 'Detailed';
+  }, [graphData]);
+
   // Always render container with ref for consistent size measurement
   const isLoading = !data || !graphData;
 
@@ -259,6 +266,11 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
         </g>
       </svg>
       <SankeyTooltip tooltip={tooltip} />
+      {displayMode && (
+        <span className="absolute bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none">
+          {displayMode}
+        </span>
+      )}
       </>
       )}
     </div>
