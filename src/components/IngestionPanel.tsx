@@ -21,6 +21,12 @@ interface IngestStats {
   total_rows_buffered: number;
   total_drift_events: number;
   pipes_tracked: number;
+  unique_sources: number;
+  unique_tenants: number;
+  tenant_names: string[];
+  latest_run_id: string | null;
+  latest_run_at: string | null;
+  first_run_at: string | null;
   max_runs: number;
   max_rows: number;
 }
@@ -150,26 +156,56 @@ export function IngestionPanel() {
 
   return (
     <div className="h-full flex flex-col min-h-0">
-      <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b border-border bg-card/50">
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold">Recent Ingestions</h2>
-          {stats && (
-            <span className="text-[10px] text-muted-foreground font-mono bg-secondary/30 px-2 py-0.5 rounded">
-              {stats.total_runs} runs / {stats.total_rows_buffered.toLocaleString()} rows buffered
+      <div className="shrink-0 px-6 py-3 border-b border-border bg-card/50 space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Ingest Buffer</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground">
+              Auto-refresh {POLL_INTERVAL_MS / 1000}s
             </span>
-          )}
+            <button
+              onClick={fetchRuns}
+              className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-muted-foreground">
-            Auto-refresh {POLL_INTERVAL_MS / 1000}s
-          </span>
-          <button
-            onClick={fetchRuns}
-            className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            Refresh
-          </button>
-        </div>
+        {stats && stats.total_runs > 0 && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-muted-foreground">
+            <span>
+              <span className="text-foreground font-semibold">{stats.total_runs}</span> runs
+            </span>
+            <span className="text-border">|</span>
+            <span>
+              <span className="text-foreground font-semibold">{stats.total_rows_buffered.toLocaleString()}</span> rows
+            </span>
+            <span className="text-border">|</span>
+            <span>
+              <span className="text-foreground font-semibold">{stats.unique_sources}</span> sources
+            </span>
+            <span className="text-border">|</span>
+            <span>
+              tenant: <span className="text-foreground font-semibold">{stats.tenant_names.join(', ')}</span>
+            </span>
+            {stats.latest_run_id && (
+              <>
+                <span className="text-border">|</span>
+                <span>
+                  latest: <span className="text-foreground font-semibold" title={stats.latest_run_id}>{stats.latest_run_id}</span>
+                </span>
+              </>
+            )}
+            {stats.latest_run_at && (
+              <>
+                <span className="text-border">|</span>
+                <span>
+                  @ {formatTimestamp(stats.latest_run_at)}
+                </span>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
@@ -186,7 +222,7 @@ export function IngestionPanel() {
         )}
 
         {stats && (
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-5 gap-3">
             <div className="rounded-lg border border-border bg-card/30 p-3">
               <div className="text-[10px] uppercase text-muted-foreground tracking-wide">Total Runs</div>
               <div className="text-xl font-mono font-semibold mt-1">{stats.total_runs}</div>
@@ -194,6 +230,10 @@ export function IngestionPanel() {
             <div className="rounded-lg border border-border bg-card/30 p-3">
               <div className="text-[10px] uppercase text-muted-foreground tracking-wide">Rows Buffered</div>
               <div className="text-xl font-mono font-semibold mt-1">{stats.total_rows_buffered.toLocaleString()}</div>
+            </div>
+            <div className="rounded-lg border border-border bg-card/30 p-3">
+              <div className="text-[10px] uppercase text-muted-foreground tracking-wide">Unique Sources</div>
+              <div className="text-xl font-mono font-semibold mt-1">{stats.unique_sources}</div>
             </div>
             <div className="rounded-lg border border-border bg-card/30 p-3">
               <div className="text-[10px] uppercase text-muted-foreground tracking-wide">Pipes Tracked</div>

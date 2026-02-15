@@ -292,11 +292,22 @@ class IngestStore:
 
     def get_stats(self) -> Dict[str, Any]:
         with self._lock:
+            receipts = list(self._receipts.values())
+            unique_sources = set(r.source_system for r in receipts)
+            unique_tenants = set(r.tenant_id for r in receipts)
+            latest = max(receipts, key=lambda r: r.received_at) if receipts else None
+            first = min(receipts, key=lambda r: r.received_at) if receipts else None
             return {
                 "total_runs": len(self._receipts),
                 "total_rows_buffered": self._total_rows,
                 "total_drift_events": len(self._drift_events),
                 "pipes_tracked": len(self._schema_registry),
+                "unique_sources": len(unique_sources),
+                "unique_tenants": len(unique_tenants),
+                "tenant_names": sorted(unique_tenants),
+                "latest_run_id": latest.run_id if latest else None,
+                "latest_run_at": latest.received_at if latest else None,
+                "first_run_at": first.received_at if first else None,
                 "max_runs": _MAX_RUNS,
                 "max_rows": _MAX_BUFFERED_ROWS,
             }
