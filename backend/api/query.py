@@ -3,14 +3,19 @@ DCL Query Endpoint - executes data queries against the fact base.
 
 This module handles:
 - Query validation against the semantic catalog
-- Data retrieval from fact_base.json (Demo mode)
+- Data retrieval from fact_base.json (Demo mode) OR the ingest buffer (Runner-pushed data)
 - Filtering and aggregation based on dimensions and time ranges
+
+Data path priority:
+  1. Ingest buffer (rows pushed by AAM Runners via POST /api/dcl/ingest)
+  2. fact_base.json (static seed data)
+  When ingested rows exist for the requested metric, they take priority.
 """
 
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from pydantic import BaseModel, Field
 
@@ -404,8 +409,89 @@ def _extract_value(metric: str, dim_key: str, raw_value: Any) -> float:
     return float(raw_value)
 
 
+def _query_ingest_store(
+    metric: str,
+    dimensions: List[str],
+    filters: Dict[str, Union[str, List[str]]],
+    time_range: Optional[Dict[str, str]],
+) -> Tuple[List[QueryDataPoint], Optional["RunReceipt"]]:
+    """
+    Search the ingest buffer for rows matching the requested metric.
+
+    Runner-pushed rows use DCL semantic-catalog field names as keys
+    (e.g. ``{"revenue": 50.0, "region": "AMER", "period": "2026-Q4"}``).
+
+    Returns:
+        (data_points, receipt) — receipt is the most-recent run that
+        contributed rows, or None if no ingested data matches.
+    """
+    from backend.api.ingest import get_ingest_store, RunReceipt
+
+    store = get_ingest_store()
+    all_receipts = store.get_all_receipts()
+    if not all_receipts:
+        return [], None
+
+    data_points: List[QueryDataPoint] = []
+    contributing_receipt: Optional[RunReceipt] = None
+
+    # Walk receipts newest-first so the last match wins for provenance
+    for receipt in reversed(all_receipts):
+        rows = store.get_rows(receipt.run_id)
+        for row in rows:
+            # Row must contain the requested metric as a field
+            if metric not in row:
+                continue
+
+            value = row[metric]
+            if not isinstance(value, (int, float)):
+                continue
+
+            period = row.get("period", "current")
+
+            # time_range filter
+            if time_range:
+                start = time_range.get("start", "")
+                end = time_range.get("end", "")
+                if start and period < start:
+                    continue
+                if end and period > end:
+                    continue
+
+            # dimension + filter matching
+            dim_vals: Dict[str, str] = {}
+            skip = False
+            for dim in dimensions:
+                dv = row.get(dim)
+                if dv is None:
+                    skip = True
+                    break
+                dim_vals[dim] = str(dv)
+
+                # apply filter for this dimension
+                fv = filters.get(dim)
+                if fv:
+                    if isinstance(fv, list) and str(dv) not in fv:
+                        skip = True
+                        break
+                    elif isinstance(fv, str) and str(dv) != fv:
+                        skip = True
+                        break
+            if skip:
+                continue
+
+            data_points.append(QueryDataPoint(
+                period=period,
+                value=float(value),
+                dimensions=dim_vals,
+            ))
+            contributing_receipt = receipt
+
+    return data_points, contributing_receipt
+
+
 def execute_query(request: QueryRequest) -> QueryResponse:
-    """Execute a validated query against the fact base."""
+    """Execute a validated query against the fact base or ingest buffer."""
     fb = load_fact_base()
     metric_def = resolve_metric(request.metric)
 
@@ -415,48 +501,51 @@ def execute_query(request: QueryRequest) -> QueryResponse:
     grain = request.grain or metric_def.default_grain or "quarter"
     unit = METRIC_UNIT_MAP.get(request.metric, "unknown")
 
-    periods = filter_periods(fb, request.time_range)
-    data_points: List[QueryDataPoint] = []
+    # ------------------------------------------------------------------
+    # Path B (preferred): try the ingest buffer first.
+    # If Runners have pushed rows containing this metric, serve those
+    # and tag the response with the Runner's provenance.
+    # ------------------------------------------------------------------
+    ingest_receipt = None  # will be set if we serve from ingest
+    ingested_points, ingest_receipt = _query_ingest_store(
+        metric=request.metric,
+        dimensions=request.dimensions,
+        filters=request.filters,
+        time_range=request.time_range,
+    )
+    data_points: List[QueryDataPoint] = ingested_points
 
-    if request.dimensions:
-        dim = request.dimensions[0]
+    # ------------------------------------------------------------------
+    # Path A (fallback): fact_base.json
+    # Only used when the ingest buffer has nothing for this metric.
+    # ------------------------------------------------------------------
+    if not data_points:
+        ingest_receipt = None   # no ingest provenance to carry
+        periods = filter_periods(fb, request.time_range)
 
-        dim_key = None
-        if dim in DIMENSION_TO_FACTBASE_KEY:
-            metric_dims = DIMENSION_TO_FACTBASE_KEY[dim]
-            if request.metric in metric_dims:
-                dim_key = metric_dims[request.metric]
-            elif "revenue" in metric_dims and request.metric in ["arr", "mrr", "revenue"]:
-                dim_key = metric_dims["revenue"]
-            elif "pipeline" in metric_dims and request.metric == "pipeline":
-                dim_key = metric_dims["pipeline"]
+        if request.dimensions:
+            dim = request.dimensions[0]
 
-        if dim_key and dim_key in fb:
-            dim_data = fb[dim_key]
-            if isinstance(dim_data, list):
-                value_key = _get_value_key_for_metric(request.metric, dim_key)
-                for record in dim_data:
-                    if record.get("period") not in periods:
-                        continue
-                    dim_value = record.get(dim)
-                    value = record.get(value_key, record.get(request.metric))
-                    if dim_value is not None and value is not None:
-                        if request.filters:
-                            filter_val = request.filters.get(dim)
-                            if filter_val:
-                                if isinstance(filter_val, list) and dim_value not in filter_val:
-                                    continue
-                                elif isinstance(filter_val, str) and dim_value != filter_val:
-                                    continue
-                        data_points.append(QueryDataPoint(
-                            period=record["period"],
-                            value=float(value),
-                            dimensions={dim: dim_value}
-                        ))
-            else:
-                for period in periods:
-                    if period in dim_data:
-                        for dim_value, raw_value in dim_data[period].items():
+            dim_key = None
+            if dim in DIMENSION_TO_FACTBASE_KEY:
+                metric_dims = DIMENSION_TO_FACTBASE_KEY[dim]
+                if request.metric in metric_dims:
+                    dim_key = metric_dims[request.metric]
+                elif "revenue" in metric_dims and request.metric in ["arr", "mrr", "revenue"]:
+                    dim_key = metric_dims["revenue"]
+                elif "pipeline" in metric_dims and request.metric == "pipeline":
+                    dim_key = metric_dims["pipeline"]
+
+            if dim_key and dim_key in fb:
+                dim_data = fb[dim_key]
+                if isinstance(dim_data, list):
+                    value_key = _get_value_key_for_metric(request.metric, dim_key)
+                    for record in dim_data:
+                        if record.get("period") not in periods:
+                            continue
+                        dim_value = record.get(dim)
+                        value = record.get(value_key, record.get(request.metric))
+                        if dim_value is not None and value is not None:
                             if request.filters:
                                 filter_val = request.filters.get(dim)
                                 if filter_val:
@@ -464,11 +553,37 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                                         continue
                                     elif isinstance(filter_val, str) and dim_value != filter_val:
                                         continue
-
                             data_points.append(QueryDataPoint(
-                                period=period,
-                                value=_extract_value(request.metric, dim_key, raw_value),
+                                period=record["period"],
+                                value=float(value),
                                 dimensions={dim: dim_value}
+                            ))
+                else:
+                    for period in periods:
+                        if period in dim_data:
+                            for dim_value, raw_value in dim_data[period].items():
+                                if request.filters:
+                                    filter_val = request.filters.get(dim)
+                                    if filter_val:
+                                        if isinstance(filter_val, list) and dim_value not in filter_val:
+                                            continue
+                                        elif isinstance(filter_val, str) and dim_value != filter_val:
+                                            continue
+
+                                data_points.append(QueryDataPoint(
+                                    period=period,
+                                    value=_extract_value(request.metric, dim_key, raw_value),
+                                    dimensions={dim: dim_value}
+                                ))
+            else:
+                fb_key = METRIC_TO_FACTBASE_KEY.get(request.metric)
+                for q in fb.get("quarterly", []):
+                    if q["period"] in periods:
+                        if fb_key and fb_key in q:
+                            data_points.append(QueryDataPoint(
+                                period=q["period"],
+                                value=float(q[fb_key]),
+                                dimensions={}
                             ))
         else:
             fb_key = METRIC_TO_FACTBASE_KEY.get(request.metric)
@@ -480,16 +595,6 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                             value=float(q[fb_key]),
                             dimensions={}
                         ))
-    else:
-        fb_key = METRIC_TO_FACTBASE_KEY.get(request.metric)
-        for q in fb.get("quarterly", []):
-            if q["period"] in periods:
-                if fb_key and fb_key in q:
-                    data_points.append(QueryDataPoint(
-                        period=q["period"],
-                        value=float(q[fb_key]),
-                        dimensions={}
-                    ))
 
     # Apply persona-contextual definitions
     persona_label = None
@@ -521,11 +626,22 @@ def execute_query(request: QueryRequest) -> QueryResponse:
 
     mode = get_current_mode()
 
-    # Build provenance tracking fields for NLQ
-    fb_meta = fb.get("metadata", {})
-    run_id = mode.last_run_id
-    run_timestamp = mode.last_updated
-    snapshot_name = f"{mode.data_mode}-v{fb_meta.get('version', 'unknown')}"
+    # Build provenance tracking fields for NLQ.
+    # When data came from the ingest buffer (Path B), use the Runner's
+    # receipt for provenance.  Otherwise fall back to mode state + fact_base.
+    if ingest_receipt:
+        run_id = ingest_receipt.run_id
+        run_timestamp = ingest_receipt.run_timestamp
+        snapshot_name = ingest_receipt.snapshot_name
+        tenant_id = ingest_receipt.tenant_id
+        source_label = ingest_receipt.source_system
+    else:
+        fb_meta = fb.get("metadata", {})
+        run_id = mode.last_run_id
+        run_timestamp = mode.last_updated
+        snapshot_name = f"{mode.data_mode}-v{fb_meta.get('version', 'unknown')}"
+        tenant_id = "default"
+        source_label = None
 
     total_count = len(data_points)
     ranking_type = None
@@ -634,13 +750,15 @@ def execute_query(request: QueryRequest) -> QueryResponse:
         unit=unit,
         data=data_points,
         metadata=QueryMetadata(
-            sources=["demo"] if mode.data_mode == "Demo" else ["farm"],
+            sources=[source_label] if source_label else (
+                ["demo"] if mode.data_mode == "Demo" else ["farm"]
+            ),
             freshness=datetime.utcnow().isoformat() + "Z",
             quality_score=1.0,
-            mode=mode.data_mode,
+            mode="Ingest" if ingest_receipt else mode.data_mode,
             record_count=len(data_points),
             run_id=run_id,
-            tenant_id="default",
+            tenant_id=tenant_id,
             snapshot_name=snapshot_name,
             run_timestamp=run_timestamp,
             total_count=total_count if request.order_by else None,
