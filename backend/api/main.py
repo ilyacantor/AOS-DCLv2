@@ -66,6 +66,7 @@ from backend.core.security_constraints import (
     assert_metadata_only_mode,
 )
 from backend.core.mode_state import get_current_mode, set_current_mode
+from backend.core.constants import CORS_ORIGINS
 
 app = FastAPI(title="DCL Engine API")
 
@@ -92,9 +93,12 @@ async def enforce_security_constraints():
     
     logger.info("=== DCL Engine Ready (Metadata-Only Mode) ===")
 
+if CORS_ORIGINS == ["*"]:
+    logger.warning("[SECURITY] CORS allows all origins. Set CORS_ORIGINS env var for production.")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -112,8 +116,8 @@ def _invalidate_aam_caches():
         from backend.semantic_mapper.persist_mappings import MappingPersistence
         MappingPersistence.clear_all_caches()
         logger.info("[AAM] Cleared mapping persistence caches")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[AAM] Failed to clear mapping caches: {e}")
 
     # 2. AAM client singleton — recreate so httpx picks up fresh AAM state
     try:
@@ -122,8 +126,8 @@ def _invalidate_aam_caches():
             aam_mod._aam_client.close()
             aam_mod._aam_client = None
             logger.info("[AAM] Reset AAM client singleton")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[AAM] Failed to reset AAM client: {e}")
 
     # 3. Schema loader demo cache (shouldn't matter for AAM, but safety)
     SchemaLoader._demo_cache = None

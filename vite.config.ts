@@ -9,11 +9,13 @@ export default defineConfig({
     strictPort: true,
     allowedHosts: [
       '.replit.dev',
-      'aab3c90e-30cf-4951-8ddd-e8c2f4334aa7-00-ytm76ihwy3bl.picard.replit.dev'
     ],
     hmr: {
       protocol: 'wss',
-      host: 'aab3c90e-30cf-4951-8ddd-e8c2f4334aa7-00-ytm76ihwy3bl.picard.replit.dev',
+      // Replit sets REPL_SLUG at runtime; falls back to wildcard match via allowedHosts
+      host: process.env.REPL_SLUG
+        ? `${process.env.REPL_SLUG}.picard.replit.dev`
+        : undefined,
       clientPort: 443,
     },
     proxy: {

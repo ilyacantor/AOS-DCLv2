@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { GraphSnapshot, GraphLink } from '../types';
+import { CONFIDENCE } from '../constants';
 import {
   Database,
   ArrowRight,
@@ -163,9 +164,9 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
       }
     });
 
-    const high = mappingItems.filter(m => m.confidence >= 0.85).length;
-    const medium = mappingItems.filter(m => m.confidence >= 0.6 && m.confidence < 0.85).length;
-    const low = mappingItems.filter(m => m.confidence < 0.6).length;
+    const high = mappingItems.filter(m => m.confidence >= CONFIDENCE.HIGH).length;
+    const medium = mappingItems.filter(m => m.confidence >= CONFIDENCE.MEDIUM && m.confidence < CONFIDENCE.HIGH).length;
+    const low = mappingItems.filter(m => m.confidence < CONFIDENCE.MEDIUM).length;
 
     return {
       mappings: mappingItems,
@@ -185,9 +186,9 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
         m.targetConcept.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesConfidence = confidenceFilter === 'all' ||
-        (confidenceFilter === 'high' && m.confidence >= 0.85) ||
-        (confidenceFilter === 'medium' && m.confidence >= 0.6 && m.confidence < 0.85) ||
-        (confidenceFilter === 'low' && m.confidence < 0.6);
+        (confidenceFilter === 'high' && m.confidence >= CONFIDENCE.HIGH) ||
+        (confidenceFilter === 'medium' && m.confidence >= CONFIDENCE.MEDIUM && m.confidence < CONFIDENCE.HIGH) ||
+        (confidenceFilter === 'low' && m.confidence < CONFIDENCE.MEDIUM);
 
       const matchesSource = sourceFilter === 'all' || m.sourceSystem === sourceFilter;
 
@@ -196,20 +197,20 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
   }, [mappings, searchTerm, confidenceFilter, sourceFilter]);
 
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.85) return 'text-green-400';
-    if (confidence >= 0.6) return 'text-yellow-400';
+    if (confidence >= CONFIDENCE.HIGH) return 'text-green-400';
+    if (confidence >= CONFIDENCE.MEDIUM) return 'text-yellow-400';
     return 'text-red-400';
   };
 
   const getConfidenceBg = (confidence: number) => {
-    if (confidence >= 0.85) return 'bg-green-500/10 border-green-500/30';
-    if (confidence >= 0.6) return 'bg-yellow-500/10 border-yellow-500/30';
+    if (confidence >= CONFIDENCE.HIGH) return 'bg-green-500/10 border-green-500/30';
+    if (confidence >= CONFIDENCE.MEDIUM) return 'bg-yellow-500/10 border-yellow-500/30';
     return 'bg-red-500/10 border-red-500/30';
   };
 
   const getConfidenceIcon = (confidence: number) => {
-    if (confidence >= 0.85) return <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />;
-    if (confidence >= 0.6) return <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />;
+    if (confidence >= CONFIDENCE.HIGH) return <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />;
+    if (confidence >= CONFIDENCE.MEDIUM) return <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />;
     return <AlertCircle className="w-3.5 h-3.5 text-red-400" />;
   };
 

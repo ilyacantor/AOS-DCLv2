@@ -4,6 +4,10 @@ import json
 from datetime import datetime
 from backend.domain import Mapping
 from backend.engine.narration_service import NarrationService
+from backend.core.constants import (
+    RAG_CONFIDENCE_THRESHOLD, PINECONE_INDEX_NAME,
+    PINECONE_DIMENSION, PINECONE_CLOUD, PINECONE_REGION,
+)
 
 
 class RAGService:
@@ -24,7 +28,7 @@ class RAGService:
             )
             return 0
         
-        high_confidence_mappings = [m for m in mappings if m.confidence >= 0.75]
+        high_confidence_mappings = [m for m in mappings if m.confidence >= RAG_CONFIDENCE_THRESHOLD]
         
         if not high_confidence_mappings:
             self.narration.add_message(
@@ -94,8 +98,8 @@ class RAGService:
             
             pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
             
-            index_name = "dcl-mapping-lessons"
-            
+            index_name = PINECONE_INDEX_NAME
+
             existing_indexes = pc.list_indexes()
             if index_name not in [idx.name for idx in existing_indexes]:
                 self.narration.add_message(
@@ -105,11 +109,11 @@ class RAGService:
                 )
                 pc.create_index(
                     name=index_name,
-                    dimension=1536,
+                    dimension=PINECONE_DIMENSION,
                     metric='cosine',
-                    spec=ServerlessSpec(cloud='aws', region='us-east-1')
+                    spec=ServerlessSpec(cloud=PINECONE_CLOUD, region=PINECONE_REGION)
                 )
-            
+
             index = pc.Index(index_name)
             
             if self.run_mode == "Prod" and self.openai_enabled:
@@ -130,16 +134,16 @@ class RAGService:
             self.narration.add_message(
                 self.run_id,
                 "RAG",
-                "Pinecone package not installed - simulating storage"
+                "Pinecone package not installed - storage skipped (0 stored)"
             )
-            return len(mappings)
+            return 0
         except Exception as e:
             self.narration.add_message(
                 self.run_id,
                 "RAG",
-                f"Pinecone error: {str(e)} - simulating storage"
+                f"Pinecone error: {str(e)} - storage failed (0 stored)"
             )
-            return len(mappings)
+            return 0
     
     def _create_embeddings_openai(self, mappings: List[Mapping]) -> List[tuple]:
         try:

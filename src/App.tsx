@@ -43,8 +43,8 @@ function App() {
     return () => clearInterval(interval);
   }, [isRunning]);
 
-  const generatePersonaViews = (graphData: any, personas: PersonaId[]) => {
-    if (!graphData || personas.length === 0) return [];
+  const generatePersonaViews = (graph: GraphSnapshot, personas: PersonaId[]) => {
+    if (!graph || personas.length === 0) return [];
 
     const personaTitles: Record<PersonaId, string> = {
       CFO: 'Chief Financial Officer',
@@ -69,19 +69,19 @@ function App() {
 
     return personas.map((persona) => {
       const ontologies = personaOntologies[persona];
-      const ontologyNodes = graphData.nodes.filter((n: any) =>
+      const ontologyNodes = graph.nodes.filter(n =>
         n.level === 'L2' && ontologies.some(ont => n.id.includes(ont))
       );
 
-      const sourceConnections = graphData.links.filter((l: any) =>
-        ontologyNodes.some((n: any) => l.target === n.id)
+      const sourceConnections = graph.links.filter(l =>
+        ontologyNodes.some(n => l.target === n.id)
       );
 
       return {
         personaId: persona,
         title: personaTitles[persona],
         focusAreas: personaFocusAreas[persona],
-        keyEntities: ontologyNodes.map((n: any) => n.label),
+        keyEntities: ontologyNodes.map(n => n.label),
         metrics: [
           { id: 'm1', label: 'Data Sources', value: sourceConnections.length, unit: '', trend: 'up' as const },
           { id: 'm2', label: 'Ontologies', value: ontologyNodes.length, unit: '', trend: 'flat' as const },

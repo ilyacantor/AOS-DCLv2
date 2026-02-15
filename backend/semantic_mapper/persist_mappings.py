@@ -6,6 +6,11 @@ from typing import List, Dict, Any, Optional
 from contextlib import contextmanager
 from backend.domain import Mapping
 from backend.utils.log_utils import get_logger
+from backend.core.constants import (
+    ONTOLOGY_CACHE_TTL as _ONTOLOGY_CACHE_TTL,
+    MAPPINGS_CACHE_TTL as _MAPPINGS_CACHE_TTL,
+    POOL_RETRY_COOLDOWN as _POOL_RETRY_COOLDOWN,
+)
 
 logger = get_logger(__name__)
 
@@ -14,17 +19,19 @@ class MappingPersistence:
     
     _pool: Optional[pool.SimpleConnectionPool] = None
     _pool_initialized = False
-    
+    _pool_last_attempt: float = 0
+
     _ontology_cache: Optional[List[Dict[str, Any]]] = None
     _ontology_cache_time: float = 0
     _mappings_cache: Optional[Dict[str, List[Mapping]]] = None
     _mappings_cache_time: float = 0
-    
+
     POOL_MIN_CONN = 1
     POOL_MAX_CONN = 5
     CONNECT_TIMEOUT = 5
-    ONTOLOGY_CACHE_TTL = 300.0
-    MAPPINGS_CACHE_TTL = 60.0
+    ONTOLOGY_CACHE_TTL = _ONTOLOGY_CACHE_TTL
+    MAPPINGS_CACHE_TTL = _MAPPINGS_CACHE_TTL
+    POOL_RETRY_COOLDOWN = _POOL_RETRY_COOLDOWN
     
     def __init__(self):
         self.database_url = os.getenv('DATABASE_URL')
@@ -33,10 +40,18 @@ class MappingPersistence:
         self._ensure_pool()
     
     def _ensure_pool(self):
-        if MappingPersistence._pool_initialized:
+        if MappingPersistence._pool_initialized and MappingPersistence._pool is not None:
             return
-        
+
+        # Avoid hammering reconnection on every request after a failure
+        now = time.time()
+        if (MappingPersistence._pool is None
+                and MappingPersistence._pool_last_attempt > 0
+                and (now - MappingPersistence._pool_last_attempt) < self.POOL_RETRY_COOLDOWN):
+            return
+
         try:
+            MappingPersistence._pool_last_attempt = now
             MappingPersistence._pool = pool.SimpleConnectionPool(
                 minconn=self.POOL_MIN_CONN,
                 maxconn=self.POOL_MAX_CONN,
@@ -48,7 +63,6 @@ class MappingPersistence:
         except Exception as e:
             logger.error(f"Failed to initialize connection pool: {e}")
             MappingPersistence._pool = None
-            MappingPersistence._pool_initialized = True
     
     @contextmanager
     def _get_connection(self):

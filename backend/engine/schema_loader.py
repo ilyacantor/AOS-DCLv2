@@ -8,6 +8,7 @@ import psycopg2
 from backend.domain import SourceSystem, TableSchema, FieldSchema, DiscoveryStatus, ResolutionType, Mapping
 from backend.engine.source_normalizer import get_normalizer, NormalizationResult
 from backend.utils.log_utils import get_logger
+from backend.core.constants import SCHEMA_CACHE_TTL
 
 logger = get_logger(__name__)
 
@@ -17,7 +18,7 @@ class SchemaLoader:
     _demo_cache: Optional[List[SourceSystem]] = None
     _stream_cache: Optional[List[SourceSystem]] = None
     _cache_time: float = 0
-    _CACHE_TTL: float = 300.0
+    _CACHE_TTL: float = SCHEMA_CACHE_TTL
     
     @staticmethod
     def load_demo_schemas(narration=None, run_id: Optional[str] = None) -> List[SourceSystem]:

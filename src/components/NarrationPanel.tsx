@@ -1,6 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { Terminal as TerminalIcon } from 'lucide-react';
 
+interface ApiNarrationMessage {
+  id?: string;
+  number?: number;
+  timestamp: string;
+  source: string;
+  message: string;
+  type?: string;
+}
+
 interface Message {
   id: string;
   seq: number;
@@ -42,10 +51,14 @@ export function NarrationPanel({ runId }: NarrationPanelProps) {
     const fetchMessages = async () => {
       try {
         const response = await fetch(`/api/dcl/narration/${runId}`);
+        if (!response.ok) {
+          console.warn(`Narration fetch failed: ${response.status}`);
+          return;
+        }
         const data = await response.json();
         const apiMessages = data.messages || [];
         console.log('[NarrationPanel] Fetched', apiMessages.length, 'messages for runId', runId);
-        const mappedMessages = apiMessages.map((m: any, idx: number) => ({
+        const mappedMessages = apiMessages.map((m: ApiNarrationMessage, idx: number) => ({
           id: m.id || `msg-${idx}`,
           seq: m.number || idx + 1,
           timestamp: m.timestamp,
