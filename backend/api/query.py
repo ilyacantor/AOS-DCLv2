@@ -75,6 +75,10 @@ class QueryMetadata(BaseModel):
     quality_score: float
     mode: str
     record_count: int
+    run_id: Optional[str] = None
+    tenant_id: str = "default"
+    snapshot_name: Optional[str] = None
+    run_timestamp: Optional[str] = None
     total_count: Optional[int] = None
     ranking_type: Optional[str] = None
     order: Optional[str] = None
@@ -517,6 +521,12 @@ def execute_query(request: QueryRequest) -> QueryResponse:
 
     mode = get_current_mode()
 
+    # Build provenance tracking fields for NLQ
+    fb_meta = fb.get("metadata", {})
+    run_id = mode.last_run_id
+    run_timestamp = mode.last_updated
+    snapshot_name = f"{mode.data_mode}-v{fb_meta.get('version', 'unknown')}"
+
     total_count = len(data_points)
     ranking_type = None
     order = None
@@ -629,6 +639,10 @@ def execute_query(request: QueryRequest) -> QueryResponse:
             quality_score=1.0,
             mode=mode.data_mode,
             record_count=len(data_points),
+            run_id=run_id,
+            tenant_id="default",
+            snapshot_name=snapshot_name,
+            run_timestamp=run_timestamp,
             total_count=total_count if request.order_by else None,
             ranking_type=ranking_type,
             order=order,
