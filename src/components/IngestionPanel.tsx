@@ -178,14 +178,14 @@ export function IngestionPanel() {
         )}
 
         {/* Recent Runs Table */}
-        {recentRuns.length === 0 ? (
+        {recentRuns.length === 0 && !error ? (
           <div className="rounded-lg border border-border bg-card/30 p-8 text-center">
             <div className="text-muted-foreground text-sm">No ingestion runs yet.</div>
             <div className="text-muted-foreground text-xs mt-1">
               Waiting for AAM Runners to push data...
             </div>
           </div>
-        ) : (
+        ) : recentRuns.length > 0 ? (
           <div>
             <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3">
               Last {recentRuns.length} Runs
@@ -254,7 +254,7 @@ export function IngestionPanel() {
               </table>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Drift details for runs with drift */}
         {recentRuns.some(r => r.schema_drift) && (
