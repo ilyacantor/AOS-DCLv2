@@ -47,6 +47,8 @@ interface ReconciliationData {
     dclRunId: string | null;
     dclRunAt: string | null;
     reconAt: string;
+    aodRunId: string | null;
+    dataMode: string | null;
     dclSourceCount: number;
     aamConnectionCount: number;
   };
@@ -110,6 +112,7 @@ interface SorReconciliationData {
     dclRunId: string | null;
     dclRunAt: string | null;
     reconAt: string;
+    dataMode: string | null;
     loadedSourceCount: number;
   };
 }
@@ -209,7 +212,16 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
 
   const formatTimestamp = (ts: string) => {
     try {
-      return new Date(ts).toLocaleString();
+      return new Date(ts).toLocaleString('en-US', {
+        timeZone: 'America/Los_Angeles',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      }) + ' PST';
     } catch {
       return ts;
     }
@@ -260,25 +272,25 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
             <span className={`px-2.5 py-1 text-xs font-medium rounded border ${statusColors[data.status] || statusColors.empty}`}>
               {data.status.toUpperCase()}
             </span>
-            {data.pushMeta && (
-              <>
-                <span className="text-xs font-mono text-muted-foreground bg-secondary/30 px-2 py-0.5 rounded">
-                  {data.pushMeta.payloadHash}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {data.reconMeta?.aamConnectionCount ?? data.pushMeta.pipeCount} pipes
-                </span>
-              </>
+            {data.reconMeta?.dclRunId && (
+              <span className="text-xs font-mono text-muted-foreground bg-secondary/30 px-2 py-0.5 rounded">
+                Run {data.reconMeta.dclRunId.slice(0, 8)}
+              </span>
             )}
+            {data.reconMeta?.dataMode && (
+              <span className="text-xs font-medium text-muted-foreground bg-secondary/30 px-2 py-0.5 rounded">
+                {data.reconMeta.dataMode}
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground">
+              {data.reconMeta?.aamConnectionCount ?? data.pushMeta?.pipeCount ?? 0} pipes
+            </span>
           </div>
           {data.reconMeta && (
             <div className="flex items-center gap-3 flex-wrap text-[10px] text-muted-foreground border-t border-border pt-2">
               <span>Reconciled: <span className="text-foreground font-mono">{formatTimestamp(data.reconMeta.reconAt)}</span></span>
-              {data.reconMeta.dclRunId && (
-                <span>Run: <span className="text-foreground font-mono">{data.reconMeta.dclRunId.slice(0, 8)}</span></span>
-              )}
               {data.reconMeta.dclRunAt && (
-                <span>Pipeline: <span className="text-foreground font-mono">{formatTimestamp(data.reconMeta.dclRunAt)}</span></span>
+                <span>Pipeline ran: <span className="text-foreground font-mono">{formatTimestamp(data.reconMeta.dclRunAt)}</span></span>
               )}
               <span>AAM: <span className="text-foreground font-mono">{data.reconMeta.aamConnectionCount}</span></span>
               <span>DCL: <span className="text-foreground font-mono">{data.reconMeta.dclSourceCount}</span></span>
@@ -497,6 +509,16 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
             <span className={`px-2.5 py-1 text-xs font-medium rounded border ${statusColors[sorData.status] || statusColors.empty}`}>
               {sorData.status.toUpperCase()}
             </span>
+            {sorData.reconMeta?.dclRunId && (
+              <span className="text-xs font-mono text-muted-foreground bg-secondary/30 px-2 py-0.5 rounded">
+                Run {sorData.reconMeta.dclRunId.slice(0, 8)}
+              </span>
+            )}
+            {sorData.reconMeta?.dataMode && (
+              <span className="text-xs font-medium text-muted-foreground bg-secondary/30 px-2 py-0.5 rounded">
+                {sorData.reconMeta.dataMode}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground">
               {sorData.summary.totalEntities} entities, {sorData.summary.totalMetrics} metrics
             </span>
@@ -504,11 +526,8 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
           {sorData.reconMeta && (
             <div className="flex items-center gap-3 flex-wrap text-[10px] text-muted-foreground border-t border-border pt-2">
               <span>Reconciled: <span className="text-foreground font-mono">{formatTimestamp(sorData.reconMeta.reconAt)}</span></span>
-              {sorData.reconMeta.dclRunId && (
-                <span>Run: <span className="text-foreground font-mono">{sorData.reconMeta.dclRunId.slice(0, 8)}</span></span>
-              )}
               {sorData.reconMeta.dclRunAt && (
-                <span>Pipeline: <span className="text-foreground font-mono">{formatTimestamp(sorData.reconMeta.dclRunAt)}</span></span>
+                <span>Pipeline ran: <span className="text-foreground font-mono">{formatTimestamp(sorData.reconMeta.dclRunAt)}</span></span>
               )}
               <span>Sources: <span className="text-foreground font-mono">{sorData.reconMeta.loadedSourceCount}</span></span>
             </div>

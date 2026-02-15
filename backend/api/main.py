@@ -755,11 +755,13 @@ def get_reconciliation(aod_run_id: Optional[str] = None):
 
         result["pushMeta"] = push_meta
 
+        current_mode = get_current_mode()
         result["reconMeta"] = {
-            "dclRunId": None,
-            "dclRunAt": None,
+            "dclRunId": current_mode.last_run_id,
+            "dclRunAt": current_mode.last_updated,
             "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "aodRunId": aod_run_id,
+            "dataMode": current_mode.data_mode,
             "dclSourceCount": len(dcl_canonical_ids),
             "aamConnectionCount": payload.total_connections_actual,
         }
@@ -811,10 +813,12 @@ def get_sor_reconciliation():
         result = reconcile_sor(bindings, metrics_list, entities_list, loaded_sources)
 
         import time as _time
+        sor_current_mode = get_current_mode()
         result["reconMeta"] = {
-            "dclRunId": None,
-            "dclRunAt": None,
+            "dclRunId": sor_current_mode.last_run_id,
+            "dclRunAt": sor_current_mode.last_updated,
             "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "dataMode": sor_current_mode.data_mode,
             "loadedSourceCount": len(loaded_sources),
         }
 
