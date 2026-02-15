@@ -11,8 +11,9 @@ import { useToast } from './hooks/use-toast';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { UserGuide } from './components/UserGuide';
 import { ReconciliationPanel } from './components/ReconciliationPanel';
+import { IngestionPanel } from './components/IngestionPanel';
 
-type MainView = 'graph' | 'dashboard' | 'guide' | 'recon';
+type MainView = 'graph' | 'dashboard' | 'guide' | 'recon' | 'ingest';
 
 const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO'];
 
@@ -185,6 +186,7 @@ function App() {
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'guide', label: 'Guide' },
     { id: 'recon', label: 'Recon' },
+    { id: 'ingest', label: 'Ingest' },
   ];
 
   return (
@@ -313,7 +315,9 @@ function App() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        {mainView === 'recon' ? (
+        {mainView === 'ingest' ? (
+          <IngestionPanel />
+        ) : mainView === 'recon' ? (
           <ReconciliationPanel runId={runId} />
         ) : mainView === 'guide' ? (
           <UserGuide />
