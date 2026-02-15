@@ -17,7 +17,8 @@ DCL focuses on:
 import os
 import uuid
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Header
+from datetime import datetime, timezone
+from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -252,9 +253,9 @@ def ingest_telemetry_gone():
 # =============================================================================
 
 
-@app.post("/api/dcl/ingest", response_model=IngestResponse)
-def dcl_ingest(
-    request: IngestRequest,
+@app.post("/api/dcl/ingest")
+async def dcl_ingest(
+    request: Request,
     x_run_id: Optional[str] = Header(None),
     x_pipe_id: Optional[str] = Header(None),
     x_schema_hash: Optional[str] = Header(None),
@@ -262,57 +263,78 @@ def dcl_ingest(
 ):
     """
     Accept a data push from an AAM Runner.
-
-    Headers (set by Runner):
-      x-run-id       — UUID for this execution run
-      x-pipe-id      — Pipe ID from AAM manifest
-      x-schema-hash  — SHA-256 of the transformed schema
-      x-api-key      — Auth token (validated if DCL_INGEST_KEY is set)
-
-    The endpoint:
-      1. Validates the row count matches declared count
-      2. Detects schema drift against last-seen hash for this pipe
-      3. Buffers rows in-memory (Zero-Trust: never written to disk)
-      4. Records a RunReceipt with full provenance metadata
+    Accepts any JSON body and adapts to match IngestRequest schema.
     """
-    # --- auth (optional: only enforced if env var is set) ---
+    raw_body = await request.json()
+    logger.info(f"[Ingest] Received keys: {list(raw_body.keys()) if isinstance(raw_body, dict) else type(raw_body).__name__}")
+
+    if isinstance(raw_body, dict):
+        body = dict(raw_body)
+        if "source_system" not in body and "source" in body:
+            body["source_system"] = body.pop("source")
+        if "tenant_id" not in body:
+            body.setdefault("tenant_id", body.get("tenantId", body.get("tenant", "default")))
+        if "snapshot_name" not in body:
+            body.setdefault("snapshot_name", body.get("snapshotName", body.get("snapshot", "default")))
+        if "run_timestamp" not in body:
+            body.setdefault("run_timestamp", body.get("runTimestamp", body.get("timestamp", datetime.now(timezone.utc).isoformat())))
+        if "schema_version" not in body:
+            body.setdefault("schema_version", body.get("schemaVersion", body.get("schema_ver", "1.0")))
+        if "rows" not in body:
+            if "data" in body:
+                body["rows"] = body.pop("data")
+            elif "records" in body:
+                body["rows"] = body.pop("records")
+            elif "payload" in body:
+                body["rows"] = body.pop("payload")
+            else:
+                body["rows"] = []
+        if "row_count" not in body:
+            body["row_count"] = body.get("rowCount", len(body.get("rows", [])))
+        if "runner_id" not in body and "runnerId" in body:
+            body["runner_id"] = body.pop("runnerId")
+    else:
+        body = raw_body
+
+    try:
+        ingest_req = IngestRequest(**body)
+    except Exception as e:
+        logger.error(f"[Ingest] Validation failed: {e} | keys={list(body.keys()) if isinstance(body, dict) else 'N/A'}")
+        raise HTTPException(status_code=422, detail=str(e))
+
     expected_key = os.environ.get("DCL_INGEST_KEY")
     if expected_key and x_api_key != expected_key:
         raise HTTPException(status_code=401, detail="Invalid or missing x-api-key")
 
-    # --- resolve identifiers ---
     run_id = x_run_id or str(uuid.uuid4())
-    pipe_id = x_pipe_id or f"pipe_{request.source_system}"
+    pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
 
-    # --- schema hash (prefer header, fall back to computed) ---
     if x_schema_hash:
         schema_hash = x_schema_hash
     else:
-        schema_hash = compute_schema_hash(request.rows)
+        schema_hash = compute_schema_hash(ingest_req.rows)
 
-    # --- row-count validation (warn, don't reject) ---
-    actual_rows = len(request.rows)
-    if actual_rows != request.row_count:
+    actual_rows = len(ingest_req.rows)
+    if actual_rows != ingest_req.row_count:
         logger.warning(
-            f"[Ingest] Row count mismatch: declared={request.row_count} "
+            f"[Ingest] Row count mismatch: declared={ingest_req.row_count} "
             f"actual={actual_rows} pipe={pipe_id} run={run_id}"
         )
 
-    # --- ingest ---
     store = get_ingest_store()
     try:
         receipt = store.ingest(
             run_id=run_id,
             pipe_id=pipe_id,
             schema_hash=schema_hash,
-            request=request,
+            request=ingest_req,
         )
     except Exception as e:
         logger.error(f"[Ingest] Failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
     logger.info(
-        f"[Ingest] Accepted {actual_rows} rows from {request.source_system} "
+        f"[Ingest] Accepted {actual_rows} rows from {ingest_req.source_system} "
         f"pipe={pipe_id} run={run_id} drift={receipt.schema_drift}"
     )
 
