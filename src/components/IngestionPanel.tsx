@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 interface IngestRun {
   run_id: string;
@@ -42,12 +42,28 @@ interface RunDetail {
   rows: Record<string, unknown>[];
 }
 
+interface IngestBatch {
+  batch_id: string;
+  snapshot_name: string;
+  tenant_id: string;
+  run_count: number;
+  total_rows: number;
+  unique_sources: number;
+  source_list: string[];
+  first_run_id: string;
+  latest_run_id: string;
+  first_received_at: string;
+  latest_received_at: string;
+  drift_count: number;
+}
+
 const POLL_INTERVAL_MS = 5000;
 const DISPLAY_LIMIT = 5;
 
 export function IngestionPanel() {
   const [runs, setRuns] = useState<IngestRun[]>([]);
   const [stats, setStats] = useState<IngestStats | null>(null);
+  const [batches, setBatches] = useState<IngestBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const prevRunIdsRef = useRef<Set<string>>(new Set());
@@ -55,6 +71,7 @@ export function IngestionPanel() {
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [runDetail, setRunDetail] = useState<RunDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [expandedBatchIds, setExpandedBatchIds] = useState<Set<string>>(new Set());
 
   const fetchRuns = async () => {
     try {
@@ -89,6 +106,20 @@ export function IngestionPanel() {
     }
   };
 
+  const fetchBatches = async () => {
+    try {
+      const res = await fetch('/api/dcl/ingest/batches');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      setBatches(json.batches);
+    } catch {}
+  };
+
+  const fetchAll = useCallback(() => {
+    fetchRuns();
+    fetchBatches();
+  }, []);
+
   const fetchRunDetail = useCallback(async (runId: string) => {
     setDetailLoading(true);
     try {
@@ -113,11 +144,23 @@ export function IngestionPanel() {
     }
   }, [expandedRunId, fetchRunDetail]);
 
-  useEffect(() => {
-    fetchRuns();
-    const interval = setInterval(fetchRuns, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+  const toggleBatchExpand = useCallback((batchId: string) => {
+    setExpandedBatchIds(prev => {
+      const next = new Set(prev);
+      if (next.has(batchId)) {
+        next.delete(batchId);
+      } else {
+        next.add(batchId);
+      }
+      return next;
+    });
   }, []);
+
+  useEffect(() => {
+    fetchAll();
+    const interval = setInterval(fetchAll, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [fetchAll]);
 
   const formatTimestamp = (ts: string) => {
     try {
@@ -164,7 +207,7 @@ export function IngestionPanel() {
               Auto-refresh {POLL_INTERVAL_MS / 1000}s
             </span>
             <button
-              onClick={fetchRuns}
+              onClick={fetchAll}
               className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Refresh
@@ -213,7 +256,7 @@ export function IngestionPanel() {
           <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-center">
             <span className="text-sm text-red-400">{error}</span>
             <button
-              onClick={fetchRuns}
+              onClick={fetchAll}
               className="ml-3 px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Retry
@@ -221,39 +264,113 @@ export function IngestionPanel() {
           </div>
         )}
 
-        {stats && (
-          <div className="grid grid-cols-5 gap-3">
-            <div className="rounded-lg border border-border bg-card/30 p-3">
-              <div className="text-[10px] uppercase text-muted-foreground tracking-wide">Total Runs</div>
-              <div className="text-xl font-mono font-semibold mt-1">{stats.total_runs}</div>
+        <div>
+          <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3">
+            Batches ({batches.length})
+          </h3>
+          {batches.length === 0 ? (
+            <div className="rounded-lg border border-border bg-card/30 p-6 text-center">
+              <div className="text-muted-foreground text-sm">No batches yet</div>
+              <div className="text-muted-foreground text-xs mt-1">
+                Waiting for AAM Runners to push data...
+              </div>
             </div>
-            <div className="rounded-lg border border-border bg-card/30 p-3">
-              <div className="text-[10px] uppercase text-muted-foreground tracking-wide">Rows Buffered</div>
-              <div className="text-xl font-mono font-semibold mt-1">{stats.total_rows_buffered.toLocaleString()}</div>
-            </div>
-            <div className="rounded-lg border border-border bg-card/30 p-3">
-              <div className="text-[10px] uppercase text-muted-foreground tracking-wide">Unique Sources</div>
-              <div className="text-xl font-mono font-semibold mt-1">{stats.unique_sources}</div>
-            </div>
-            <div className="rounded-lg border border-border bg-card/30 p-3">
-              <div className="text-[10px] uppercase text-muted-foreground tracking-wide">Pipes Tracked</div>
-              <div className="text-xl font-mono font-semibold mt-1">{stats.pipes_tracked}</div>
-            </div>
-            <div className="rounded-lg border border-border bg-card/30 p-3">
-              <div className="text-[10px] uppercase text-muted-foreground tracking-wide">Drift Events</div>
-              <div className="text-xl font-mono font-semibold mt-1">{stats.total_drift_events}</div>
-            </div>
-          </div>
-        )}
+          ) : (
+            <div className="space-y-2">
+              {batches.map((batch) => {
+                const isExpanded = expandedBatchIds.has(batch.batch_id);
+                return (
+                  <div
+                    key={batch.batch_id}
+                    className="rounded-lg border border-border bg-card/30 overflow-hidden"
+                  >
+                    <div className="px-4 py-3 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-semibold text-foreground">{batch.snapshot_name}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20 text-muted-foreground">
+                            {batch.tenant_id}
+                          </span>
+                        </div>
+                      </div>
 
-        {recentRuns.length === 0 && !error ? (
-          <div className="rounded-lg border border-border bg-card/30 p-8 text-center">
-            <div className="text-muted-foreground text-sm">No ingestion runs yet.</div>
-            <div className="text-muted-foreground text-xs mt-1">
-              Waiting for AAM Runners to push data...
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono">
+                        <span>
+                          <span className="text-emerald-400 font-semibold">{batch.run_count}</span>
+                          <span className="text-muted-foreground ml-1">runs</span>
+                        </span>
+                        <span className="text-border">|</span>
+                        <span>
+                          <span className="text-emerald-400 font-semibold">{batch.total_rows.toLocaleString()}</span>
+                          <span className="text-muted-foreground ml-1">rows</span>
+                        </span>
+                        <span className="text-border">|</span>
+                        <span>
+                          <span className="text-emerald-400 font-semibold">{batch.unique_sources}</span>
+                          <span className="text-muted-foreground ml-1">sources</span>
+                        </span>
+                        <span className="text-border">|</span>
+                        <span>
+                          <span className={`font-semibold ${batch.drift_count > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                            {batch.drift_count}
+                          </span>
+                          <span className="text-muted-foreground ml-1">drift</span>
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                        <span>
+                          {formatTimestamp(batch.first_received_at)}
+                          {batch.first_received_at !== batch.latest_received_at && (
+                            <> → {formatTimestamp(batch.latest_received_at)}</>
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-mono text-muted-foreground">
+                        <span>first: {batch.first_run_id.slice(0, 12)}...</span>
+                        {batch.first_run_id !== batch.latest_run_id && (
+                          <span>latest: {batch.latest_run_id.slice(0, 12)}...</span>
+                        )}
+                      </div>
+
+                      {batch.source_list.length > 0 && (
+                        <div>
+                          <button
+                            onClick={() => toggleBatchExpand(batch.batch_id)}
+                            className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors"
+                          >
+                            <svg
+                              className={`w-2.5 h-2.5 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                            {batch.source_list.length} source{batch.source_list.length !== 1 ? 's' : ''}
+                          </button>
+                          {isExpanded && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {batch.source_list.map(s => (
+                                <span
+                                  key={s}
+                                  className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-card/50 border border-border text-muted-foreground"
+                                >
+                                  {s}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        ) : recentRuns.length > 0 ? (
+          )}
+        </div>
+
+        {recentRuns.length > 0 && (
           <div>
             <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3">
               Last {recentRuns.length} Runs
@@ -276,9 +393,8 @@ export function IngestionPanel() {
                     const isNew = newRunIds.has(run.run_id);
                     const isExpanded = expandedRunId === run.run_id;
                     return (
-                      <>
+                      <React.Fragment key={run.run_id}>
                         <tr
-                          key={run.run_id}
                           onClick={() => toggleExpand(run.run_id)}
                           className={`border-b border-border/50 last:border-0 transition-colors duration-300 cursor-pointer hover:bg-primary/5 ${
                             isNew ? 'bg-emerald-500/10' : ''
@@ -329,7 +445,7 @@ export function IngestionPanel() {
                           </td>
                         </tr>
                         {isExpanded && (
-                          <tr key={`${run.run_id}-detail`}>
+                          <tr>
                             <td colSpan={7} className="p-0">
                               <RunDetailPanel
                                 detail={runDetail}
@@ -340,14 +456,14 @@ export function IngestionPanel() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
               </table>
             </div>
           </div>
-        ) : null}
+        )}
 
         {recentRuns.some(r => r.schema_drift) && (
           <div>

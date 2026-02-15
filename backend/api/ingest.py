@@ -290,6 +290,61 @@ class IngestStore:
         with self._lock:
             return dict(self._schema_registry)
 
+    def get_batches(self) -> List[Dict[str, Any]]:
+        _BATCH_GAP_SECONDS = 60
+
+        with self._lock:
+            snap_groups: Dict[str, List[RunReceipt]] = {}
+            for r in self._receipts.values():
+                snap_groups.setdefault(r.snapshot_name, []).append(r)
+
+            batches: List[Dict[str, Any]] = []
+            batch_seq = 0
+
+            for snap_name, receipts in snap_groups.items():
+                sorted_by_time = sorted(receipts, key=lambda r: r.received_at)
+
+                current_window: List[RunReceipt] = [sorted_by_time[0]]
+                for i in range(1, len(sorted_by_time)):
+                    prev_ts = datetime.fromisoformat(sorted_by_time[i - 1].received_at)
+                    curr_ts = datetime.fromisoformat(sorted_by_time[i].received_at)
+                    gap = (curr_ts - prev_ts).total_seconds()
+
+                    if gap > _BATCH_GAP_SECONDS:
+                        batches.append(self._build_batch_summary(snap_name, current_window, batch_seq))
+                        batch_seq += 1
+                        current_window = [sorted_by_time[i]]
+                    else:
+                        current_window.append(sorted_by_time[i])
+
+                batches.append(self._build_batch_summary(snap_name, current_window, batch_seq))
+                batch_seq += 1
+
+            batches.sort(key=lambda b: b["latest_received_at"], reverse=True)
+            return batches
+
+    @staticmethod
+    def _build_batch_summary(
+        snap_name: str,
+        receipts: List["RunReceipt"],
+        seq: int,
+    ) -> Dict[str, Any]:
+        sources = sorted(set(r.source_system for r in receipts))
+        return {
+            "batch_id": f"{snap_name}#{seq}",
+            "snapshot_name": snap_name,
+            "tenant_id": receipts[0].tenant_id,
+            "run_count": len(receipts),
+            "total_rows": sum(r.row_count for r in receipts),
+            "unique_sources": len(sources),
+            "source_list": sources,
+            "first_run_id": receipts[0].run_id,
+            "latest_run_id": receipts[-1].run_id,
+            "first_received_at": receipts[0].received_at,
+            "latest_received_at": receipts[-1].received_at,
+            "drift_count": sum(1 for r in receipts if r.schema_drift),
+        }
+
     def get_stats(self) -> Dict[str, Any]:
         with self._lock:
             receipts = list(self._receipts.values())

@@ -376,6 +376,13 @@ def list_ingest_runs():
     }
 
 
+@app.get("/api/dcl/ingest/batches")
+def list_ingest_batches():
+    """List ingestion batches grouped by snapshot_name."""
+    store = get_ingest_store()
+    return {"batches": store.get_batches()}
+
+
 @app.get("/api/dcl/ingest/runs/{run_id}")
 def get_ingest_run(run_id: str):
     """Get a single run receipt + buffered rows."""
