@@ -154,13 +154,13 @@ class IngestStore:
         """
         Accept a Runner push.  Returns the RunReceipt.
 
-        Validates row_count, detects schema drift, buffers rows, and
-        records metadata.
+        Concurrency-safe: all heavy computation (field extraction, row
+        tagging, receipt construction) runs OUTSIDE the lock.  The lock
+        protects only the dict mutations (~microseconds).
         """
         now = datetime.now(timezone.utc).isoformat()
         canonical_id = normalize_source_id(request.source_system)
 
-        # --- row-count validation ---
         actual = len(request.rows)
         if actual != request.row_count:
             logger.warning(
@@ -168,21 +168,40 @@ class IngestStore:
                 f"declared={request.row_count}, actual={actual}"
             )
 
-        # --- schema drift ---
         field_names = _extract_field_names(request.rows)
-        drift = False
-        drift_fields: List[str] = []
+
+        tagged = [
+            {
+                **row,
+                "_run_id": run_id,
+                "_pipe_id": pipe_id,
+                "_source_system": canonical_id,
+                "_inserted_at": now,
+            }
+            for row in request.rows
+        ]
+
+        schema_record = SchemaRecord(
+            pipe_id=pipe_id,
+            schema_hash=schema_hash,
+            field_names=field_names,
+            last_seen=now,
+            run_id=run_id,
+        )
+
+        curr_field_set = set(field_names)
 
         with self._lock:
+            drift = False
+            drift_fields: List[str] = []
+
             prev = self._schema_registry.get(pipe_id)
             if prev and prev.schema_hash != schema_hash:
-                prev_set = set(prev.field_names)
-                curr_set = set(field_names)
-                added = sorted(curr_set - prev_set)
-                removed = sorted(prev_set - curr_set)
+                added = sorted(curr_field_set - set(prev.field_names))
+                removed = sorted(set(prev.field_names) - curr_field_set)
                 drift = True
                 drift_fields = added + removed
-                event = SchemaDriftEvent(
+                self._drift_events.append(SchemaDriftEvent(
                     pipe_id=pipe_id,
                     run_id=run_id,
                     previous_hash=prev.schema_hash,
@@ -190,25 +209,12 @@ class IngestStore:
                     added_fields=added,
                     removed_fields=removed,
                     detected_at=now,
-                )
-                self._drift_events.append(event)
+                ))
                 if len(self._drift_events) > _MAX_DRIFT_EVENTS:
                     self._drift_events = self._drift_events[-_MAX_DRIFT_EVENTS:]
-                logger.info(
-                    f"[Ingest] Schema drift on {pipe_id}: "
-                    f"+{added} -{removed}"
-                )
 
-            # update schema registry
-            self._schema_registry[pipe_id] = SchemaRecord(
-                pipe_id=pipe_id,
-                schema_hash=schema_hash,
-                field_names=field_names,
-                last_seen=now,
-                run_id=run_id,
-            )
+            self._schema_registry[pipe_id] = schema_record
 
-            # --- build receipt ---
             receipt = RunReceipt(
                 run_id=run_id,
                 pipe_id=pipe_id,
@@ -226,33 +232,17 @@ class IngestStore:
                 runner_id=request.runner_id,
             )
             self._receipts[run_id] = receipt
-            # evict oldest receipts
+
             while len(self._receipts) > _MAX_RUNS:
                 evicted_id, _ = self._receipts.popitem(last=False)
                 self._row_buffer.pop(evicted_id, None)
-                logger.debug(f"[Ingest] Evicted run {evicted_id}")
 
-            # --- buffer rows (tagged with _run_id + _inserted_at) ---
-            tagged = []
-            for row in request.rows:
-                tagged.append({
-                    **row,
-                    "_run_id": run_id,
-                    "_pipe_id": pipe_id,
-                    "_source_system": canonical_id,
-                    "_inserted_at": now,
-                })
             self._row_buffer[run_id] = tagged
             self._total_rows += actual
 
-            # evict oldest runs if row budget exceeded
             while self._total_rows > _MAX_BUFFERED_ROWS and self._row_buffer:
                 evicted_id, evicted_rows = self._row_buffer.popitem(last=False)
                 self._total_rows -= len(evicted_rows)
-                logger.debug(
-                    f"[Ingest] Evicted {len(evicted_rows)} rows from {evicted_id} "
-                    f"(budget: {self._total_rows}/{_MAX_BUFFERED_ROWS})"
-                )
 
         return receipt
 

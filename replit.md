@@ -18,9 +18,10 @@ The Data Connectivity Layer (DCL) is a **semantic mapping and visualization plat
 
 ### Backend
 - **FastAPI** with Python 3.11 and Pydantic V2
-- **Uvicorn**
+- **Uvicorn** on port 5000 (serves both API and built frontend)
 - **PostgreSQL** for persistence
 - **Redis** for real-time pub/sub
+- **Concurrency**: Ingest endpoint uses minimal-lock pattern — heavy computation (field extraction, row tagging, schema hashing) runs outside the lock; only dict mutations are protected
 
 ### Core Functional Capabilities
 1.  **Interactive Data Flow Visualization**: A 4-layer Sankey diagram illustrating data flow from Pipelines (L0) and Sources (L1) to Ontology (L2) and Personas (L3). Users can filter by persona, hover for details, and click nodes for source information.

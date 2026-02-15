@@ -16,10 +16,6 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Frontend Dev Server"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Backend API"
 
 [[workflows.workflow.tasks]]
@@ -27,27 +23,16 @@ task = "workflow.run"
 args = "Redis Server"
 
 [[workflows.workflow]]
-name = "Frontend Dev Server"
+name = "Backend API"
 author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
-waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
 
-[[workflows.workflow]]
-name = "Backend API"
-author = "agent"
-
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python run_backend.py"
-
-[workflows.workflow.metadata]
-outputType = "console"
+waitForPort = 5000
 
 [[workflows.workflow]]
 name = "Redis Server"
@@ -65,10 +50,6 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 6379
-externalPort = 3000
-
-[[ports]]
 localPort = 8000
 externalPort = 8000
 
@@ -81,18 +62,5 @@ DCL_DATASET_ID = "nlq_test"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = [
-  "python",
-  "-m",
-  "uvicorn",
-  "backend.api.main:app",
-  "--host",
-  "0.0.0.0",
-  "--port",
-  "5000",
-]
-build = [
-  "bash",
-  "-c",
-  "pip install -r requirements.txt && npm ci && npm run build",
-]
+run = ["python", "run_backend.py"]
+build = ["bash", "-c", "npm run build"]
