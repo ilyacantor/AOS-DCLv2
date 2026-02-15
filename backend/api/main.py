@@ -812,7 +812,12 @@ def get_sor_reconciliation():
             with open(entities_path) as f:
                 entities_list = yaml.safe_load(f).get("entities", [])
 
-        loaded_sources = list(app.state.loaded_sources)
+        # Prefer canonical IDs (stable across display-name changes) over
+        # raw display names.  The reconciliation function canonicalizes
+        # both sides internally, but feeding it IDs that are already
+        # canonical avoids double-normalization edge cases.
+        loaded_source_ids = list(app.state.loaded_source_ids)
+        loaded_sources = loaded_source_ids if loaded_source_ids else list(app.state.loaded_sources)
 
         # Self-sufficient fallback: if no DCL run has happened yet,
         # derive loaded sources from the bindings' source_system values

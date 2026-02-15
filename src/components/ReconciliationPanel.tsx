@@ -74,6 +74,14 @@ interface SorCoverageRow {
   sources: SorCoverageSource[];
   isCovered: boolean;
   conflictCount: number;
+  resolutionStatus?: 'single_source' | 'resolved' | 'needs_resolution';
+}
+
+interface SorResolvedEntity {
+  entity: string;
+  entityName: string;
+  winner: string;
+  sourceCount: number;
 }
 
 interface SorConflict {
@@ -102,9 +110,11 @@ interface SorReconciliationData {
     missingSources: number;
     entityCoverageGaps: number;
     sorConflicts: number;
+    resolvedEntities?: number;
   };
   coverageMatrix: SorCoverageRow[];
   sorConflicts: SorConflict[];
+  resolvedEntities?: SorResolvedEntity[];
   orphanSources: string[];
   missingSources: string[];
   entityGaps: SorEntityGap[];
@@ -499,6 +509,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
       { label: 'Binding Sources', value: sorData.summary.bindingSources },
       { label: 'Orphan Sources', value: sorData.summary.orphanSources },
       { label: 'Missing Sources', value: sorData.summary.missingSources },
+      { label: 'Resolved', value: sorData.summary.resolvedEntities ?? 0 },
       { label: 'SOR Conflicts', value: sorData.summary.sorConflicts },
     ];
 
@@ -553,7 +564,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                     <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Entity</th>
                     <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Sources</th>
                     <th className="text-center px-3 py-2 text-xs font-medium text-muted-foreground">Covered</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Conflicts</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">SOR Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -583,17 +594,43 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                       <td className="text-center px-3 py-2">
                         <span className={`inline-block w-2 h-2 rounded-full ${row.isCovered ? 'bg-emerald-400' : 'bg-red-400'}`} />
                       </td>
-                      <td className="text-right px-3 py-2 font-mono text-xs">
-                        {row.conflictCount > 0 ? (
-                          <span className="text-amber-400">{row.conflictCount}</span>
+                      <td className="text-right px-3 py-2 text-xs">
+                        {row.resolutionStatus === 'resolved' ? (
+                          <span className="text-emerald-400">Resolved</span>
+                        ) : row.resolutionStatus === 'needs_resolution' ? (
+                          <span className="text-amber-400">Needs SOR</span>
                         ) : (
-                          <span className="text-muted-foreground">0</span>
+                          <span className="text-muted-foreground">Single</span>
                         )}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {(sorData.resolvedEntities ?? []).length > 0 && (
+          <div>
+            <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3">
+              Resolved Multi-Source ({sorData.resolvedEntities!.length})
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {sorData.resolvedEntities!.map((r) => (
+                <span
+                  key={r.entity}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-lg border bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                >
+                  {r.entityName}
+                  <span className="text-[9px] text-muted-foreground">
+                    {r.sourceCount} sources
+                  </span>
+                  <span className="text-[9px] font-mono">
+                    SOR: {r.winner}
+                  </span>
+                </span>
+              ))}
             </div>
           </div>
         )}
