@@ -49,57 +49,32 @@ class DCLEngine:
             sources, payload_kpis = SchemaLoader.load_aam_schemas(self.narration, run_id, source_limit=source_limit, aod_run_id=aod_run_id)
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} AAM sources (source_limit={source_limit})")
         else:
-            # Farm mode: prefer v2 ingested data from the IngestStore,
-            # auto-trigger Farm generation if empty (e.g. after DCL restart),
-            # fall back to legacy browser-scraping only as last resort.
+            # Farm mode: Farm pushes data to DCL via POST /api/dcl/ingest.
+            # DCL reads from IngestStore. No fallbacks — if empty, say so.
             from backend.farm.ingest_bridge import build_sources_from_ingest, get_ingest_summary
             ingest_summary = get_ingest_summary()
 
             if ingest_summary["pipe_count"] == 0:
-                # IngestStore is empty (likely DCL restarted since last Farm push).
-                # Auto-trigger Farm to regenerate and push data to DCL.
                 self.narration.add_message(
                     run_id, "Engine",
-                    "Farm v2: No ingested data — requesting fresh data from Farm..."
+                    "Farm mode: No data. Farm has not pushed to POST /api/dcl/ingest yet."
                 )
-                try:
-                    from backend.farm.client import get_farm_client
-                    client = get_farm_client()
-                    gen_result = client.generate_business_data(push_to_dcl=True)
-                    pipes_pushed = gen_result.get("pipes_pushed", 0)
-                    farm_run_id = gen_result.get("run_id", "unknown")
-                    self.narration.add_message(
-                        run_id, "Engine",
-                        f"Farm v2: Generation complete — {pipes_pushed} pipes pushed (farm_run_id={farm_run_id})"
-                    )
-                    # Re-check IngestStore after Farm push
-                    ingest_summary = get_ingest_summary()
-                except Exception as e:
-                    logger.warning(f"Farm auto-generation failed: {e}")
-                    self.narration.add_message(
-                        run_id, "Engine",
-                        f"Farm v2: Auto-generation failed: {e}"
-                    )
+                raise ValueError(
+                    "Farm mode requires Farm to push data first. "
+                    "No pipes found in IngestStore. "
+                    "Farm pushes to POST {DCL_INGEST_URL}/api/dcl/ingest with x-run-id header."
+                )
 
-            if ingest_summary["pipe_count"] > 0:
-                self.narration.add_message(
-                    run_id, "Engine",
-                    f"Farm v2: {ingest_summary['pipe_count']} ingested pipes from "
-                    f"{ingest_summary['source_count']} sources "
-                    f"({ingest_summary['total_records']:,} records)"
-                )
-                sources = build_sources_from_ingest(
-                    narration=self.narration, dcl_run_id=run_id
-                )
-            else:
-                self.narration.add_message(
-                    run_id, "Engine",
-                    "Farm v2: No ingested data after auto-trigger — falling back to legacy browser endpoints"
-                )
-                sources = SchemaLoader.load_farm_schemas(
-                    self.narration, run_id, source_limit=source_limit
-                )
-            self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Farm sources (source_limit={source_limit})")
+            self.narration.add_message(
+                run_id, "Engine",
+                f"Farm: {ingest_summary['pipe_count']} pipes from "
+                f"{ingest_summary['source_count']} sources "
+                f"({ingest_summary['total_records']:,} records)"
+            )
+            sources = build_sources_from_ingest(
+                narration=self.narration, dcl_run_id=run_id
+            )
+            self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Farm sources")
         
         if mode != "AAM":
             stream_sources = SchemaLoader.load_stream_sources(self.narration, run_id)
