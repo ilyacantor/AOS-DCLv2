@@ -3,12 +3,15 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
 
+from backend.domain.base import CamelCaseModel
+
 
 class Persona(str, Enum):
     CFO = "CFO"
     CRO = "CRO"
     COO = "COO"
     CTO = "CTO"
+    CHRO = "CHRO"
 
 
 class DiscoveryStatus(str, Enum):
@@ -59,6 +62,7 @@ class SourceSystem(BaseModel):
     data_quality_score: int = 50
     vendor: Optional[str] = None
     category: Optional[str] = None
+    fabric_plane: Optional[str] = None
     entities: List[str] = Field(default_factory=list)
 
 
@@ -82,35 +86,51 @@ class Mapping(BaseModel):
     rationale: Optional[str] = None
 
 
-class GraphNode(BaseModel):
+class MappingDetail(CamelCaseModel):
+    """
+    Structured mapping information for graph links.
+    Replaces string-based info_summary for mapping flow types.
+    """
+    source_field: str
+    source_table: str
+    target_concept: str
+    method: Literal["heuristic", "rag", "llm", "llm_validated"]
+    confidence: float
+
+
+class GraphNode(CamelCaseModel):
     id: str
     label: str
     level: Literal["L0", "L1", "L2", "L3"]
-    kind: Literal["pipe", "source", "ontology", "bll"]
+    kind: Literal["pipe", "source", "ontology", "bll", "fabric"]
     group: Optional[str] = None
     status: Optional[str] = "ok"
     metrics: Optional[Dict[str, Any]] = None
 
 
-class GraphLink(BaseModel):
+class GraphLink(CamelCaseModel):
     id: str
     source: str
     target: str
     value: float
     confidence: Optional[float] = None
     flow_type: Optional[str] = None
-    info_summary: Optional[str] = None
+    info_summary: Optional[str] = None  # Kept for backward compatibility
+    mapping_detail: Optional[MappingDetail] = None  # New structured field
 
 
-class GraphSnapshot(BaseModel):
-    nodes: List[GraphNode]
-    links: List[GraphLink]
-    meta: Dict[str, Any]
-
-
-class RunMetrics(BaseModel):
+class RunMetrics(CamelCaseModel):
     llm_calls: int = 0
     rag_reads: int = 0
     rag_writes: int = 0
+    total_mappings: int = 0
     processing_ms: float = 0
     render_ms: float = 0
+    data_status: Optional[str] = None
+    payload_kpis: Optional[Dict[str, Any]] = None
+
+
+class GraphSnapshot(CamelCaseModel):
+    nodes: List[GraphNode]
+    links: List[GraphLink]
+    meta: Dict[str, Any]

@@ -1,41 +1,50 @@
 import os
 import csv
 import json
-import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 import pandas as pd
 import httpx
-from backend.domain import SourceSystem, TableSchema, FieldSchema, DiscoveryStatus, ResolutionType
+import psycopg2
+from backend.domain import SourceSystem, TableSchema, FieldSchema, DiscoveryStatus, ResolutionType, Mapping
 from backend.engine.source_normalizer import get_normalizer, NormalizationResult
+from backend.utils.log_utils import get_logger
+from backend.core.constants import SCHEMA_CACHE_TTL
 
-logger = logging.getLogger(__name__)
-
-
-class SchemaLoaderError(Exception):
-    """Structured error with machine-readable context."""
-
-    def __init__(self, reason: str, missing_dependency: str, resolution: str):
-        self.reason = reason
-        self.missing_dependency = missing_dependency
-        self.resolution = resolution
-        super().__init__(
-            f"{reason} | missing: {missing_dependency} | fix: {resolution}"
-        )
+logger = get_logger(__name__)
 
 
 class SchemaLoader:
     
+    _demo_cache: Optional[List[SourceSystem]] = None
+    _stream_cache: Optional[List[SourceSystem]] = None
+    _cache_time: float = 0
+    _CACHE_TTL: float = SCHEMA_CACHE_TTL
+
+    _aam_cache: Optional[Tuple[List[SourceSystem], Dict[str, Any]]] = None
+    _aam_cache_time: float = 0
+    _AAM_CACHE_TTL: float = 120
+    
     @staticmethod
     def load_demo_schemas(narration=None, run_id: Optional[str] = None) -> List[SourceSystem]:
+        import time
+        now = time.time()
+        if SchemaLoader._demo_cache is not None and (now - SchemaLoader._cache_time) < SchemaLoader._CACHE_TTL:
+            if narration and run_id:
+                narration.add_message(run_id, "SchemaLoader", f"Using cached demo schemas ({len(SchemaLoader._demo_cache)} sources)")
+            # Return a copy to prevent callers from modifying the cache
+            return list(SchemaLoader._demo_cache)
+        
         schemas_path = "schemas/schemas"
         if not os.path.exists(schemas_path):
             return []
         
         normalizer = get_normalizer()
-        normalizer.load_registry(narration, run_id)
-        
+        # Skip Farm API registry call for Demo mode — it only uses local CSV
+        # files and built-in aliases are sufficient for normalization.
+        normalizer._registry_loaded = True
+
         sources = []
-        
+
         source_dirs = {
             "salesforce": ("salesforce", "CRM"),
             "dynamics": ("dynamics", "CRM"),
@@ -93,6 +102,7 @@ class SchemaLoader:
                     tables.append(table)
                 
                 except Exception as e:
+                    logger.warning(f"Failed to load CSV schema {csv_path}: {e}")
                     continue
             
             if tables:
@@ -120,10 +130,15 @@ class SchemaLoader:
         if narration and run_id:
             narration.add_message(run_id, "SchemaLoader", f"Loaded {len(sources)} demo sources with normalization")
         
-        return sources
+        import time
+        SchemaLoader._demo_cache = sources
+        SchemaLoader._cache_time = time.time()
+        
+        # Return a copy to prevent caller from mutating the cache
+        return list(sources)
 
     @staticmethod
-    def load_farm_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 50) -> List[SourceSystem]:
+    def load_farm_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 1000) -> List[SourceSystem]:
         farm_url = os.getenv("FARM_API_URL", "https://autonomos.farm")
         
         if narration and run_id:
@@ -251,207 +266,253 @@ class SchemaLoader:
         return sources
     
     @staticmethod
-    def load_farm_schemas_from_pipes(
-        narration=None, run_id: Optional[str] = None, source_limit: int = 50
-    ) -> List[SourceSystem]:
-        """Load Farm schemas from AAM's /api/dcl/export-pipes endpoint.
-
-        Expected response shape from AAM:
-            {
-              "fabric_planes": [
-                {
-                  "plane_type": "api_gateway",
-                  "vendor": "apigee",
-                  "connections": [
-                    {
-                      "pipe_id": "uuid",
-                      "source_name": "Hubspot",
-                      "vendor": "hubspot inc",
-                      "category": "crm",
-                      "fields": ["account_id", "account_name", "revenue", ...],
-                      "governance_status": "governed",
-                      "health": "unknown",
-                      "last_sync": "2026-02-16T..."
-                    }
-                  ]
-                }
-              ],
-              "total_connections": 739
-            }
-
-        Each connection is turned into a table under a SourceSystem keyed by
-        normalised source_name. The `fields` list (strings) becomes FieldSchema
-        objects with inferred semantic hints.
+    def load_aam_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 1000, aod_run_id: Optional[str] = None) -> Tuple[List[SourceSystem], Dict[str, Any]]:
         """
-        aam_url = os.getenv("AAM_API_URL")
-        if not aam_url:
-            raise SchemaLoaderError(
-                reason="Farm mode requires AAM_API_URL but it is not set",
-                missing_dependency="AAM_API_URL environment variable",
-                resolution="Set AAM_API_URL to the AAM base URL (e.g. https://aam.autonomos.farm)",
-            )
+        Load schemas from AAM's pipe export via the AAM Ingress Adapter.
 
-        export_url = f"{aam_url}/api/dcl/export-pipes"
-        if narration and run_id:
-            narration.add_message(run_id, "SchemaLoader", f"Fetching pipe schemas from {export_url}")
+        All AAM data is validated and normalized at the ingress boundary.
+        No ad-hoc normalization happens in this method.
+        """
+        import time as _time
+        import copy
 
-        # -- fetch --
-        try:
-            with httpx.Client(timeout=60.0) as client:
-                response = client.get(export_url)
-                response.raise_for_status()
-                payload = response.json()
-        except httpx.HTTPStatusError as e:
-            raise SchemaLoaderError(
-                reason=f"AAM export-pipes returned HTTP {e.response.status_code}",
-                missing_dependency=export_url,
-                resolution="Check that AAM is running and the /api/dcl/export-pipes endpoint is deployed",
-            )
-        except (httpx.TimeoutException, httpx.ConnectError) as e:
-            raise SchemaLoaderError(
-                reason=f"Cannot reach AAM at {aam_url}: {type(e).__name__}",
-                missing_dependency=export_url,
-                resolution="Check AAM_API_URL and network connectivity",
-            )
-
-        fabric_planes = payload.get("fabric_planes", [])
-        total_connections = payload.get("total_connections", 0)
-        if narration and run_id:
-            narration.add_message(
-                run_id, "SchemaLoader",
-                f"Received {len(fabric_planes)} fabric planes, {total_connections} total connections",
-            )
-
-        # -- normalise & group connections by canonical source --
-        normalizer = get_normalizer()
-        normalizer.load_registry(narration, run_id)
-
-        # canonical_id → { table_name → connection_dict }
-        source_connections: Dict[str, Dict[str, Dict[str, Any]]] = {}
-        source_norm_cache: Dict[str, NormalizationResult] = {}
-        piped_count = 0
-        empty_count = 0
-
-        for plane in fabric_planes:
-            plane_type = plane.get("plane_type", "unknown")
-            for conn in plane.get("connections", []):
-                raw_source = conn.get("source_name", "unknown")
-                pipe_id = conn.get("pipe_id", "unknown")
-                fields = conn.get("fields", [])
-
-                if not fields:
-                    empty_count += 1
-                    continue
-                piped_count += 1
-
-                if raw_source not in source_norm_cache:
-                    source_norm_cache[raw_source] = normalizer.normalize(raw_source, narration, run_id)
-
-                canonical_id = source_norm_cache[raw_source].canonical_id
-
-                # Use pipe_id as the table name (each connection = one table/pipe)
-                table_name = conn.get("table_name") or pipe_id
-                if canonical_id not in source_connections:
-                    source_connections[canonical_id] = {}
-                source_connections[canonical_id][table_name] = conn
-
-        if narration and run_id:
-            narration.add_message(
-                run_id, "SchemaLoader",
-                f"Pipes: {piped_count} with fields, {empty_count} empty (skipped)",
-            )
-
-        # -- build SourceSystem list --
-        sources: List[SourceSystem] = []
-        for canonical_id, tables_map in source_connections.items():
-            raw_sources = [raw for raw, norm in source_norm_cache.items()
-                           if norm.canonical_id == canonical_id]
-            first_raw = raw_sources[0] if raw_sources else canonical_id
-            norm_result = source_norm_cache.get(first_raw)
-            if not norm_result:
-                continue
-
-            canonical = norm_result.canonical_source
-
-            tables: List[TableSchema] = []
-            for table_name, conn in tables_map.items():
-                field_names = conn.get("fields", [])
-                field_schemas = [
-                    FieldSchema(
-                        name=fname,
-                        type="string",  # AAM doesn't send types yet
-                        semantic_hint=SchemaLoader._infer_semantic_hint_from_name(fname),
-                        nullable=True,
-                    )
-                    for fname in field_names
-                ]
-                tables.append(TableSchema(
-                    id=f"{canonical_id}.{table_name}",
-                    system_id=canonical_id,
-                    name=table_name,
-                    fields=field_schemas,
-                    record_count=None,
-                    stats={
-                        "fields": len(field_schemas),
-                        "pipe_id": conn.get("pipe_id"),
-                        "governance_status": conn.get("governance_status"),
-                        "health": conn.get("health"),
-                    },
-                ))
-
-            all_raw_ids = ", ".join(sorted(set(raw_sources))) if len(raw_sources) > 1 else first_raw
-            source = SourceSystem(
-                id=canonical_id,
-                name=canonical.name,
-                type=canonical.category.upper() if canonical.category else "Unknown",
-                tags=["farm", "pipes", canonical.category or "unknown"] + raw_sources,
-                tables=tables,
-                canonical_id=canonical_id,
-                raw_id=all_raw_ids,
-                discovery_status=DiscoveryStatus(canonical.discovery_status.value),
-                resolution_type=ResolutionType(norm_result.resolution_type.value),
-                trust_score=canonical.trust_score,
-                data_quality_score=canonical.data_quality_score,
-                vendor=canonical.vendor,
-                category=canonical.category,
-                entities=canonical.entities,
-            )
-            sources.append(source)
-
+        now = _time.time()
+        if SchemaLoader._aam_cache is not None and (now - SchemaLoader._aam_cache_time) < SchemaLoader._AAM_CACHE_TTL:
+            cached_sources, cached_kpis = SchemaLoader._aam_cache
             if narration and run_id:
-                total_fields = sum(len(t.fields) for t in tables)
-                status_icon = "✓" if canonical.discovery_status.value == "canonical" else "?"
+                narration.add_message(run_id, "SchemaLoader", f"Using cached AAM schemas ({len(cached_sources)} sources)")
+            return copy.deepcopy(cached_sources), dict(cached_kpis)
+
+        from backend.aam.client import get_aam_client
+        from backend.aam.ingress import AAMIngressAdapter
+
+        if narration and run_id:
+            narration.add_message(run_id, "SchemaLoader", "Fetching pipes from AAM...")
+
+        try:
+            aam_client = get_aam_client()
+            pipes_data = aam_client.get_pipes(aod_run_id=aod_run_id)
+        except Exception as e:
+            logger.error(f"Failed to fetch from AAM: {e}")
+            if narration and run_id:
+                narration.add_message(run_id, "SchemaLoader", f"⚠ AAM fetch failed: {e}")
+            if SchemaLoader._aam_cache is not None:
+                logger.info("AAM fetch failed, falling back to stale cache")
+                cached_sources, cached_kpis = SchemaLoader._aam_cache
+                return copy.deepcopy(cached_sources), dict(cached_kpis)
+            return [], {"fabrics": 0, "pipes": 0, "sources": 0, "unpipedCount": 0, "totalAamConnections": 0}
+
+        adapter = AAMIngressAdapter()
+        payload = adapter.ingest_pipes(pipes_data)
+
+        if narration and run_id:
+            narration.add_message(
+                run_id, "SchemaLoader",
+                f"Received {len(payload.planes)} fabric planes with {payload.total_connections_actual} connections from AAM"
+            )
+
+        sources = []
+
+        for plane in payload.planes:
+            if narration and run_id:
                 narration.add_message(
                     run_id, "SchemaLoader",
-                    f"{status_icon} {canonical.name}: {len(tables)} pipes, {total_fields} fields",
+                    f"Processing {plane.plane_type} plane ({plane.vendor}): {plane.pipe_count} connections"
                 )
 
-        # Sort: canonical + high-trust first
+            for pipe in plane.pipes:
+                # Create FieldSchema objects from field names
+                fields = []
+                for field_name in pipe.fields:
+                    semantic_hint = SchemaLoader._infer_semantic_hint_from_name(field_name)
+                    field = FieldSchema(
+                        name=field_name,
+                        type="string",  # Default type, AAM doesn't provide this yet
+                        semantic_hint=semantic_hint,
+                        nullable=True,
+                        distinct_count=0,
+                        null_percent=0.0,
+                        sample_values=[]
+                    )
+                    fields.append(field)
+
+                # Create table schema
+                table_id = f"{pipe.display_name}.{pipe.fabric_plane}_data"
+                table = TableSchema(
+                    id=table_id,
+                    system_id=pipe.display_name,
+                    name=f"{pipe.fabric_plane}_data",
+                    fields=fields,
+                    record_count=0,
+                    stats={"plane": pipe.fabric_plane, "vendor": pipe.vendor}
+                )
+
+                # Create SourceSystem from adapter-normalized pipe data
+                # canonical_id, trust_score, data_quality_score all come from the adapter
+                source = SourceSystem(
+                    id=pipe.canonical_id,
+                    name=pipe.display_name,
+                    type=pipe.category.upper(),
+                    tags=["aam", pipe.fabric_plane, pipe.vendor.lower(), pipe.governance_status],
+                    tables=[table],
+                    canonical_id=pipe.canonical_id,
+                    raw_id=pipe.display_name,
+                    discovery_status=DiscoveryStatus.CANONICAL,
+                    resolution_type=ResolutionType.EXACT,
+                    trust_score=pipe.trust_score,
+                    data_quality_score=pipe.data_quality_score,
+                    vendor=pipe.vendor,
+                    category=pipe.category,
+                    fabric_plane=pipe.fabric_plane,
+                    entities=[],
+                )
+                sources.append(source)
+
+                if narration and run_id:
+                    status_icon = "✓" if pipe.governance_status == "governed" else "⚠"
+                    narration.add_message(
+                        run_id, "SchemaLoader",
+                        f"{status_icon} {pipe.display_name} ({pipe.fabric_plane}): {pipe.field_count} fields"
+                    )
+
+        # Sort by trust score and governance
         sources.sort(key=lambda s: (
-            0 if s.discovery_status == DiscoveryStatus.CANONICAL else 1,
+            0 if "governed" in s.tags else 1,
             -s.trust_score,
-            s.name,
+            s.name
         ))
 
+        # Compute KPIs from FULL source list BEFORE truncation
         total_available = len(sources)
+        total_piped = sum(1 for s in sources if any(len(t.fields) > 0 for t in s.tables))
+        total_unpiped = sum(1 for s in sources if all(len(t.fields) == 0 for t in s.tables))
+
+        # Apply source_limit
         if source_limit and source_limit < total_available:
             sources = sources[:source_limit]
             if narration and run_id:
                 narration.add_message(
                     run_id, "SchemaLoader",
-                    f"Limited to {source_limit} sources (from {total_available} available)",
+                    f"Limited to {source_limit} sources (from {total_available} available)"
                 )
 
-        norm_stats = normalizer.get_stats()
         if narration and run_id:
             narration.add_message(
                 run_id, "SchemaLoader",
-                f"Pipe import complete: {norm_stats['registry_sources']} canonical, "
-                f"{norm_stats['discovered_sources']} discovered, {len(sources)} returned",
+                f"AAM schema loading complete: {len(sources)} sources loaded"
             )
 
-        return sources
+        kpis = {
+            "fabrics": len(payload.planes),
+            "pipes": total_piped,
+            "sources": total_available,
+            "unpipedCount": total_unpiped,
+            "totalAamConnections": payload.total_connections_reported,
+            "limited": source_limit < total_available if source_limit else False,
+            "loadedSources": len(sources),
+        }
 
+        SchemaLoader._aam_cache = (copy.deepcopy(sources), dict(kpis))
+        SchemaLoader._aam_cache_time = _time.time()
+
+        return sources, kpis
+    
+    @staticmethod
+    def _get_pool():
+        try:
+            from backend.semantic_mapper.persist_mappings import MappingPersistence
+            persistence = MappingPersistence()
+            return persistence
+        except Exception as e:
+            logger.warning(f"Failed to get connection pool: {e}")
+            return None
+    
+    @staticmethod
+    def load_stream_sources(narration=None, run_id: Optional[str] = None) -> List[SourceSystem]:
+        """Load stream sources from the database (registered by Consumer)."""
+        database_url = os.getenv("DATABASE_URL")
+        if not database_url:
+            return []
+        
+        pool = SchemaLoader._get_pool()
+        if pool is None:
+            return []
+        
+        try:
+            with pool._get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT id, name, type, vendor, category, trust_score, discovery_status
+                        FROM source_systems
+                        WHERE type = 'stream'
+                    """)
+                    
+                    sources = []
+                    rows = cursor.fetchall()
+                    
+                for row in rows:
+                    source_id = row[0]
+                    
+                    with pool._get_connection() as conn2:
+                        with conn2.cursor() as cursor2:
+                            cursor2.execute("""
+                                SELECT DISTINCT table_name, field_name, concept_id, confidence
+                                FROM field_concept_mappings
+                                WHERE source_id = %s
+                                ORDER BY table_name, field_name
+                            """, (source_id,))
+                            
+                            tables_data: Dict[str, List[FieldSchema]] = {}
+                            for mapping_row in cursor2.fetchall():
+                                table_name = mapping_row[0]
+                                field_name = mapping_row[1]
+                                
+                                if table_name not in tables_data:
+                                    tables_data[table_name] = []
+                                
+                                tables_data[table_name].append(FieldSchema(
+                                    name=field_name,
+                                    type="string",
+                                    semantic_hint=None,
+                                    nullable=True
+                                ))
+                    
+                    tables = []
+                    for table_name, fields in tables_data.items():
+                        tables.append(TableSchema(
+                            id=f"{source_id}.{table_name}",
+                            system_id=source_id,
+                            name=table_name,
+                            fields=fields
+                        ))
+                    
+                    source = SourceSystem(
+                        id=source_id,
+                        name=row[1],
+                        type=row[2] or "stream",
+                        tags=["stream", "real-time", "farm-synced"],
+                        tables=tables,
+                        discovery_status=DiscoveryStatus.CUSTOM,
+                        resolution_type=ResolutionType.PATTERN,
+                        trust_score=row[5] or 75,
+                        vendor=row[3],
+                        category=row[4],
+                    )
+                    sources.append(source)
+                    
+                    if narration and run_id:
+                        total_fields = sum(len(t.fields) for t in tables)
+                        narration.add_message(
+                            run_id, "SchemaLoader",
+                            f"Stream source: {row[1]} - {len(tables)} tables, {total_fields} fields"
+                        )
+                
+                return sources
+            
+        except Exception as e:
+            logger.warning(f"Failed to load stream sources: {e}")
+            return []
+    
     @staticmethod
     def _fetch_browser_endpoint(
         base_url: str, 
@@ -464,7 +525,7 @@ class SchemaLoader:
         params = {"limit": limit}
         
         try:
-            with httpx.Client(timeout=60.0) as client:
+            with httpx.Client(timeout=10.0) as client:
                 response = client.get(f"{base_url}{endpoint}", params=params)
                 response.raise_for_status()
                 data = response.json()
@@ -583,7 +644,7 @@ class SchemaLoader:
             return "email"
         if any(k in name_lower for k in ['amount', 'cost', 'price', 'revenue', 'spend']):
             return "amount"
-        if any(k in name_lower for k in ['date', 'time', 'timestamp', 'created', 'updated', '_at']):
+        if any(k in name_lower for k in ['date', 'time', 'timestamp', 'created', 'updated', 'at']):
             return "timestamp"
         if any(k in name_lower for k in ['status', 'state', 'stage', 'tier']):
             return "status"

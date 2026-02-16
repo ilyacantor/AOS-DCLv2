@@ -45,6 +45,48 @@ class HeuristicMapper:
             r'invoice_id',
             r'invoicenumber',
         ],
+        'subscription': [
+            r'subscription_id',
+            r'subscription_status',
+            r'plan_id',
+            r'plan_name',
+            r'billing_period',
+            r'^mrr$',
+        ],
+        'employee': [
+            r'worker_id',
+            r'employee_id',
+            r'employee_name',
+            r'position_id',
+            r'hire_date',
+            r'termination_date',
+            r'headcount',
+        ],
+        'ticket': [
+            r'ticket_id',
+            r'ticket_number',
+            r'satisfaction_rating',
+            r'csat',
+            r'first_response',
+            r'resolution_time',
+        ],
+        'engineering_work': [
+            r'issue_key',
+            r'issue_id',
+            r'sprint_id',
+            r'sprint_name',
+            r'story_points',
+            r'issue_type',
+        ],
+        'incident': [
+            r'incident_id',
+            r'slo_id',
+            r'slo_name',
+            r'slo_target',
+            r'mttr',
+            r'mtta',
+            r'severity',
+        ],
     }
     
     FINANCIAL_TABLE_PATTERNS = [
@@ -56,6 +98,10 @@ class HeuristicMapper:
         r'cost',
         r'expense',
         r'revenue',
+        r'subscription',
+        r'ar$',   # accounts receivable
+        r'ap$',   # accounts payable
+        r'rev.schedule',
     ]
     
     def __init__(self, ontology_concepts: List[Dict[str, Any]]):
@@ -98,10 +144,18 @@ class HeuristicMapper:
         for pattern in self.FINANCIAL_TABLE_PATTERNS:
             if re.search(pattern, table_lower):
                 return "financial"
-        if re.search(r'customer|contact|lead|account', table_lower):
+        if re.search(r'customer|contact|lead|account|opportunity', table_lower):
             return "crm"
-        if re.search(r'resource|instance|host|service', table_lower):
+        if re.search(r'resource|instance|host|service|aws|cloud', table_lower):
             return "infrastructure"
+        if re.search(r'worker|employee|position|timeoff|wd[-_]', table_lower):
+            return "hr"
+        if re.search(r'ticket|zendesk|organization', table_lower):
+            return "support"
+        if re.search(r'issue|sprint|jira', table_lower):
+            return "engineering"
+        if re.search(r'incident|slo|datadog', table_lower):
+            return "monitoring"
         return "general"
     
     def _is_blocked_by_negative_pattern(self, field_name: str, concept_id: str) -> bool:
@@ -166,7 +220,19 @@ class HeuristicMapper:
                 match_confidence = max(match_confidence, 0.80)
             
             if match_confidence > 0 and table_context == "financial":
-                if concept_id in ['revenue', 'cost', 'invoice', 'currency', 'date']:
+                if concept_id in ['revenue', 'cost', 'invoice', 'currency', 'date', 'subscription']:
+                    match_confidence = min(match_confidence + 0.05, 0.95)
+            if match_confidence > 0 and table_context == "hr":
+                if concept_id in ['employee', 'date']:
+                    match_confidence = min(match_confidence + 0.05, 0.95)
+            if match_confidence > 0 and table_context == "support":
+                if concept_id in ['ticket', 'health', 'account']:
+                    match_confidence = min(match_confidence + 0.05, 0.95)
+            if match_confidence > 0 and table_context == "engineering":
+                if concept_id in ['engineering_work', 'date']:
+                    match_confidence = min(match_confidence + 0.05, 0.95)
+            if match_confidence > 0 and table_context == "monitoring":
+                if concept_id in ['incident', 'health', 'aws_resource']:
                     match_confidence = min(match_confidence + 0.05, 0.95)
             
             if match_confidence > best_confidence:

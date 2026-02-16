@@ -7,6 +7,7 @@ import os
 import json
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
+from backend.core.constants import LLM_MODEL_NAME, LLM_VALIDATION_THRESHOLD
 
 
 @dataclass
@@ -119,7 +120,7 @@ Respond in JSON format:
         
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=LLM_MODEL_NAME,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={"type": "json_object"},
                 max_tokens=500,
@@ -158,7 +159,7 @@ Respond in JSON format:
         self,
         mappings: List[Dict[str, Any]],
         ontology_concepts: List[Dict[str, Any]],
-        confidence_threshold: float = 0.80,
+        confidence_threshold: float = LLM_VALIDATION_THRESHOLD,
         max_validations: int = 10
     ) -> Tuple[List[ValidationResult], Dict[str, Any]]:
         
