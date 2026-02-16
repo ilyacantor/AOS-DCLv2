@@ -1,0 +1,9 @@
+opportunity_id,account_id,deal_name,amount,stage,close_date
+OPP-001,ACC-001,Acme Platform Expansion,150000.00,Negotiation,2024-06-30
+OPP-002,ACC-002,GlobalTech Enterprise License,480000.50,Proposal,2024-07-15
+OPP-003,ACC-003,Meridian EHR Integration,95000.00,Discovery,2024-09-01
+OPP-004,ACC-004,Pinnacle Risk Analytics Suite,720000.00,Closed Won,2024-03-20
+OPP-005,ACC-005,Redwood IoT Deployment,210000.75,Negotiation,2024-08-10
+OPP-006,ACC-006,Atlas Pipeline Monitoring,335000.00,Proposal,2024-07-22
+OPP-007,ACC-007,Nimbus Migration Project,128000.00,Closed Won,2024-04-05
+OPP-008,ACC-001,Acme Security Add-On,67500.25,Discovery,2024-10-15

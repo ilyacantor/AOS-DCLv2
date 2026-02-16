@@ -1,0 +1,9 @@
+account_id,account_name,industry,revenue,health_score,created_at
+ACC-001,Acme Corporation,Technology,4500000.00,92,2024-01-15
+ACC-002,GlobalTech Solutions,Software,12800000.50,87,2024-02-03
+ACC-003,Meridian Healthcare,Healthcare,7250000.00,74,2024-03-10
+ACC-004,Pinnacle Financial Group,Financial Services,31500000.00,95,2024-01-22
+ACC-005,Redwood Manufacturing,Manufacturing,9100000.75,68,2024-04-18
+ACC-006,Atlas Energy Partners,Energy,18700000.00,81,2024-05-02
+ACC-007,Nimbus Cloud Services,Cloud Computing,6300000.25,90,2024-02-28
+ACC-008,Sterling Logistics Inc,Transportation,11450000.00,77,2024-06-14

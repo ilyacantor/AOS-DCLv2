@@ -40,7 +40,28 @@ class RunResponse(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"status": "DCL Engine API is running", "version": "1.0.0"}
+    """Structured health check — surfaces exact dependency status."""
+    schemas_path = Path("schemas/schemas")
+    config_dir = Path(__file__).parent.parent.parent / "config"
+
+    checks = {
+        "database_url": "set" if os.getenv("DATABASE_URL") else "not set (Demo uses YAML/in-memory)",
+        "persona_profiles_yaml": "ok" if (config_dir / "persona_profiles.yaml").exists() else "MISSING",
+        "ontology_concepts_yaml": "ok" if (config_dir / "ontology_concepts.yaml").exists() else "MISSING",
+        "demo_schemas_dir": "ok" if schemas_path.exists() else "MISSING — Demo mode will return empty graph",
+    }
+
+    if schemas_path.exists():
+        source_dirs = [d for d in schemas_path.iterdir() if d.is_dir()]
+        checks["demo_source_count"] = len(source_dirs)
+
+    all_ok = all(v not in ("MISSING", "MISSING — Demo mode will return empty graph") for v in checks.values())
+
+    return {
+        "status": "healthy" if all_ok else "degraded",
+        "version": "1.0.0",
+        "checks": checks,
+    }
 
 
 @app.post("/api/dcl/run", response_model=RunResponse)
@@ -64,7 +85,15 @@ def run_dcl(request: RunRequest):
             run_id=run_id
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Surface structured errors with actionable detail
+        detail = {"error": str(e)}
+        if hasattr(e, "reason"):
+            detail["reason"] = e.reason
+        if hasattr(e, "missing_dependency"):
+            detail["missing_dependency"] = e.missing_dependency
+        if hasattr(e, "resolution"):
+            detail["resolution"] = e.resolution
+        raise HTTPException(status_code=500, detail=detail)
 
 
 @app.get("/api/dcl/narration/{run_id}")
