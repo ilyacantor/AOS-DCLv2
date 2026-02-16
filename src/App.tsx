@@ -29,6 +29,8 @@ function App() {
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const { toast } = useToast();
 
+  const [ingestStats, setIngestStats] = useState<{ total_runs: number; total_rows_buffered: number; pipes_tracked: number; unique_sources: number } | null>(null);
+
   const hasLoadedRef = useRef(false);
   useEffect(() => {
     if (mainView === 'graph' && !hasLoadedRef.current) {
@@ -36,6 +38,20 @@ function App() {
       loadData();
     }
   }, [mainView]);
+
+  // Poll ingest stats when in Farm mode
+  useEffect(() => {
+    if (dataMode !== 'Farm') { setIngestStats(null); return; }
+    const poll = () => {
+      fetch('/api/dcl/ingest/stats')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setIngestStats(data); })
+        .catch(() => {});
+    };
+    poll();
+    const id = setInterval(poll, 5000);
+    return () => clearInterval(id);
+  }, [dataMode]);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -239,6 +255,18 @@ function App() {
                   {graphData.meta.runMetrics.payloadKpis.unpipedCount}!
                 </span>
               )}
+            </div>
+          )}
+
+          {/* Farm Ingest Status */}
+          {dataMode === 'Farm' && ingestStats && (
+            <div className="flex items-center gap-1.5 px-2">
+              <span className={`inline-block w-2 h-2 rounded-full ${
+                ingestStats.total_runs > 0 ? 'bg-emerald-400' : 'bg-zinc-500'
+              }`} />
+              <span className="text-xs text-muted-foreground font-mono">
+                {ingestStats.pipes_tracked}pipes·{ingestStats.unique_sources}src·{ingestStats.total_rows_buffered.toLocaleString()}rows
+              </span>
             </div>
           )}
 

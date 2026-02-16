@@ -50,10 +50,37 @@ class DCLEngine:
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} AAM sources (source_limit={source_limit})")
         else:
             # Farm mode: prefer v2 ingested data from the IngestStore,
-            # fall back to legacy browser-scraping if no ingested data exists.
-            # Lazy import to avoid circular dependency (farm.ingest_bridge → engine)
+            # auto-trigger Farm generation if empty (e.g. after DCL restart),
+            # fall back to legacy browser-scraping only as last resort.
             from backend.farm.ingest_bridge import build_sources_from_ingest, get_ingest_summary
             ingest_summary = get_ingest_summary()
+
+            if ingest_summary["pipe_count"] == 0:
+                # IngestStore is empty (likely DCL restarted since last Farm push).
+                # Auto-trigger Farm to regenerate and push data to DCL.
+                self.narration.add_message(
+                    run_id, "Engine",
+                    "Farm v2: No ingested data — requesting fresh data from Farm..."
+                )
+                try:
+                    from backend.farm.client import get_farm_client
+                    client = get_farm_client()
+                    gen_result = client.generate_business_data(push_to_dcl=True)
+                    pipes_pushed = gen_result.get("pipes_pushed", 0)
+                    farm_run_id = gen_result.get("run_id", "unknown")
+                    self.narration.add_message(
+                        run_id, "Engine",
+                        f"Farm v2: Generation complete — {pipes_pushed} pipes pushed (farm_run_id={farm_run_id})"
+                    )
+                    # Re-check IngestStore after Farm push
+                    ingest_summary = get_ingest_summary()
+                except Exception as e:
+                    logger.warning(f"Farm auto-generation failed: {e}")
+                    self.narration.add_message(
+                        run_id, "Engine",
+                        f"Farm v2: Auto-generation failed: {e}"
+                    )
+
             if ingest_summary["pipe_count"] > 0:
                 self.narration.add_message(
                     run_id, "Engine",
@@ -67,7 +94,7 @@ class DCLEngine:
             else:
                 self.narration.add_message(
                     run_id, "Engine",
-                    "Farm v2: No ingested data — falling back to legacy browser endpoints"
+                    "Farm v2: No ingested data after auto-trigger — falling back to legacy browser endpoints"
                 )
                 sources = SchemaLoader.load_farm_schemas(
                     self.narration, run_id, source_limit=source_limit
