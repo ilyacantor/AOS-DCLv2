@@ -1,0 +1,9 @@
+deal_id,company_name,deal_amount,pipeline,stage,create_date
+DEAL-001,BrightPath Analytics,85000.00,Enterprise,Contract Sent,2024-02-10
+DEAL-002,CrestView Consulting,42000.50,Mid-Market,Qualified,2024-03-05
+DEAL-003,Horizon Biotech,310000.00,Enterprise,Closed Won,2024-01-20
+DEAL-004,Velocity Payments,175000.75,Enterprise,Negotiation,2024-04-12
+DEAL-005,QuickShip Logistics,28500.00,SMB,Demo Scheduled,2024-05-08
+DEAL-006,TerraFirm Construction,96000.00,Mid-Market,Proposal Made,2024-03-22
+DEAL-007,Apex Digital Media,53000.25,Mid-Market,Closed Lost,2024-02-18
+DEAL-008,NovaStar Semiconductors,420000.00,Enterprise,Contract Sent,2024-06-01

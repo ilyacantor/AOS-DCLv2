@@ -1,0 +1,9 @@
+id,customer_name,total_spend,health_score,last_active_date,region
+1001,Westfield Dynamics,892000.50,88,2024-06-15,North America
+1002,Sapphire Technologies,1245000.00,92,2024-06-18,Europe
+1003,Orion Supply Chain,456000.75,65,2024-05-20,Asia Pacific
+1004,Ironbridge Partners,2310000.00,94,2024-06-20,North America
+1005,Coral Bay Resorts,178000.25,71,2024-04-10,Latin America
+1006,Summit Edge Solutions,567000.00,83,2024-06-12,Europe
+1007,Falcon Aerospace,3450000.50,96,2024-06-19,North America
+1008,Maple Creek Foods,234000.00,58,2024-03-28,Asia Pacific

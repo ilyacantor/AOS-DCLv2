@@ -1,0 +1,9 @@
+customer_id,customer_name,email,account_id,status,updated_at
+CUST-001,Sarah Mitchell,s.mitchell@acmecorp.com,ACC-001,Active,2024-06-10
+CUST-002,James Rodriguez,j.rodriguez@globaltech.io,ACC-002,Active,2024-05-22
+CUST-003,Dr. Karen Walsh,k.walsh@meridianhc.org,ACC-003,Inactive,2024-04-15
+CUST-004,Thomas Chen,t.chen@pinnaclefg.com,ACC-004,Active,2024-06-18
+CUST-005,Anita Patel,a.patel@redwoodmfg.com,ACC-005,Pending,2024-03-30
+CUST-006,Robert Andersson,r.andersson@atlasenergy.com,ACC-006,Active,2024-07-01
+CUST-007,Lisa Nakamura,l.nakamura@nimbuscloud.io,ACC-007,Active,2024-05-14
+CUST-008,David Okoye,d.okoye@sterlinglogi.com,ACC-008,Churned,2024-02-28

@@ -1,0 +1,16 @@
+TransactionID,VendorName,VendorID,ServiceCategory,Monthly_Cost,Currency,PurchaseDate,CostCenter,UsageType,Region,PaymentTerms,InvoiceNumber,PurchaseOrderNumber,ApprovalStatus,Department
+NS-CS-1000,AWS,VND-AWS-001,ALB-LoadBalancer,47836.0,USD,2025-09-22,Infrastructure,Instance-Hours,eu-west-1,NET60,INV-82961,PO-64348,Pending,IT
+NS-CS-1001,AWS,VND-AWS-001,S3-Storage,25919.93,USD,2025-07-24,DataScience,ProcessedBytes,us-west-2,NET60,INV-45872,PO-62439,Paid,Operations
+NS-CS-1002,AWS,VND-AWS-001,S3-Storage,6522.92,USD,2025-09-25,Engineering,Requests,ap-southeast-1,NET30,INV-18254,PO-18525,Paid,IT
+NS-CS-1003,AWS,VND-AWS-001,RDS-Database,6999.64,USD,2025-08-30,Infrastructure,Requests,us-east-1,Prepaid,INV-56271,PO-29726,Approved,IT
+NS-CS-1004,AWS,VND-AWS-001,RDS-Database,48834.92,USD,2025-09-21,Engineering,ProcessedBytes,us-west-2,Prepaid,INV-95375,PO-58351,Paid,Operations
+NS-CS-1005,AWS,VND-AWS-001,EC2-Instance,40928.84,USD,2025-07-19,Infrastructure,ProcessedBytes,us-east-1,NET60,INV-97818,PO-43207,Pending,IT
+NS-CS-1006,AWS,VND-AWS-001,S3-Storage,15406.24,USD,2025-09-22,Engineering,GB-Month,us-west-2,Prepaid,INV-13758,PO-96706,Paid,R&D
+NS-CS-1007,AWS,VND-AWS-001,RDS-Database,13797.0,USD,2025-07-22,Infrastructure,ProcessedBytes,ap-southeast-1,NET30,INV-23484,PO-84617,Pending,R&D
+NS-CS-1008,AWS,VND-AWS-001,RDS-Database,41433.15,USD,2025-10-02,Engineering,ProcessedBytes,us-west-2,NET60,INV-36554,PO-93956,Approved,IT
+NS-CS-1009,AWS,VND-AWS-001,EC2-Instance,35005.34,USD,2025-07-18,DataScience,ProcessedBytes,us-east-1,NET30,INV-76222,PO-33968,Paid,R&D
+NS-CS-1010,AWS,VND-AWS-001,S3-Storage,35273.77,USD,2025-10-10,Infrastructure,Requests,eu-west-1,NET60,INV-23382,PO-45210,Approved,R&D
+NS-CS-1011,AWS,VND-AWS-001,ALB-LoadBalancer,18709.73,USD,2025-07-27,Infrastructure,ProcessedBytes,eu-west-1,NET60,INV-99625,PO-15444,Approved,R&D
+NS-CS-1012,AWS,VND-AWS-001,EC2-Instance,24292.79,USD,2025-10-06,DataScience,Instance-Hours,ap-southeast-1,NET30,INV-58880,PO-62372,Paid,IT
+NS-CS-1013,AWS,VND-AWS-001,EC2-Instance,9826.76,USD,2025-10-11,Engineering,GB-Month,us-west-2,NET60,INV-19708,PO-11309,Paid,Operations
+NS-CS-1014,AWS,VND-AWS-001,RDS-Database,46029.47,USD,2025-08-27,Infrastructure,GB-Month,ap-southeast-1,NET60,INV-19751,PO-76958,Paid,Operations

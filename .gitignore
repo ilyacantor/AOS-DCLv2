@@ -49,8 +49,9 @@ build/
 .DS_Store
 Thumbs.db
 
-# Project specific
-schemas/
+# Project specific — ignore generated schema caches, but track demo fixtures
+schemas/*
+!schemas/schemas/
 *.db
 *.sqlite
 

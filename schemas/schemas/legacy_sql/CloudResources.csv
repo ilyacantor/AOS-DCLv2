@@ -1,0 +1,8 @@
+ResourceID,Type,CloudService,AwsRegion,AccountID,CreatedAt
+LG-R-001,compute,EC2,us-east-1,ACC-998877,2024-01-08 09:00:00
+LG-R-002,storage,S3,us-west-1,ACC-998877,2024-01-14 11:30:00
+LG-R-003,database,RDS,eu-central-1,ACC-998877,2024-01-22 15:45:00
+LG-R-004,serverless,Lambda,ap-southeast-1,ACC-556644,2024-02-05 10:20:00
+LG-R-005,network,VPC,us-east-1,ACC-556644,2024-02-18 14:00:00
+LG-R-006,analytics,Redshift,us-west-2,ACC-998877,2024-03-02 08:15:00
+LG-R-007,cache,ElastiCache,us-east-1,ACC-556644,2024-03-12 16:30:00

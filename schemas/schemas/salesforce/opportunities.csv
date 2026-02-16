@@ -1,6 +1,9 @@
-opportunity_id,account_name,amount,stage,close_date,owner,region,segment
-OPP-001,Acme Corp,450000,Closed-Won,2025-01-15,James Wilson,AMER,Enterprise
-OPP-002,TechStart Inc,125000,Proposal,2025-02-28,Sarah Chen,AMER,Mid-Market
-OPP-003,GlobalBank,780000,Negotiation,2025-03-15,Mike Johnson,EMEA,Enterprise
-OPP-004,HealthCare Plus,95000,Qualified,2025-04-01,Lisa Park,AMER,SMB
-OPP-005,RetailMax,320000,Closed-Won,2025-01-30,David Kim,APAC,Enterprise
+opportunity_id,account_id,deal_name,amount,stage,close_date
+OPP-001,ACC-001,Acme Platform Expansion,150000.00,Negotiation,2024-06-30
+OPP-002,ACC-002,GlobalTech Enterprise License,480000.50,Proposal,2024-07-15
+OPP-003,ACC-003,Meridian EHR Integration,95000.00,Discovery,2024-09-01
+OPP-004,ACC-004,Pinnacle Risk Analytics Suite,720000.00,Closed Won,2024-03-20
+OPP-005,ACC-005,Redwood IoT Deployment,210000.75,Negotiation,2024-08-10
+OPP-006,ACC-006,Atlas Pipeline Monitoring,335000.00,Proposal,2024-07-22
+OPP-007,ACC-007,Nimbus Migration Project,128000.00,Closed Won,2024-04-05
+OPP-008,ACC-001,Acme Security Add-On,67500.25,Discovery,2024-10-15
