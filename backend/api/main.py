@@ -931,91 +931,236 @@ def mcp_tool_call(tool_call: MCPToolCall):
 
 @app.get("/api/dcl/reconciliation")
 def get_reconciliation(aod_run_id: Optional[str] = None):
-    """Stateless reconciliation — fetches from AAM fresh each time, no dependency on prior run."""
+    """Mode-aware reconciliation — Farm uses IngestStore, AAM uses AAM client."""
     try:
-        _invalidate_aam_caches()
-        from backend.aam.client import get_aam_client
-        from backend.aam.ingress import AAMIngressAdapter
-        import time as _time
-
-        adapter = AAMIngressAdapter()
-        client = get_aam_client()
-
-        # Discover aod_run_id from latest push if not provided
-        push_meta = None
-        push_pipe_count = 0
-        pushes = []
-        try:
-            pushes_raw = client.get_push_history()
-            pushes = adapter.ingest_push_history(pushes_raw)
-            if pushes:
-                latest = pushes[0]
-                push_pipe_count = latest.pipe_count
-                push_meta = {
-                    "pushId": latest.push_id,
-                    "pushedAt": latest.pushed_at,
-                    "pipeCount": push_pipe_count,
-                    "payloadHash": latest.payload_hash,
-                    "aodRunId": latest.aod_run_id,
-                }
-                # Auto-discover aod_run_id from latest push
-                if not aod_run_id and latest.aod_run_id:
-                    aod_run_id = latest.aod_run_id
-                    logger.info(f"[Recon] Auto-discovered aod_run_id={aod_run_id} from latest push")
-        except Exception as e:
-            logger.warning(f"Push history unavailable: {e}")
-
-        # Fetch pipes from AAM using the (possibly discovered) aod_run_id
-        aam_export = client.get_pipes(aod_run_id=aod_run_id)
-        payload = adapter.ingest_pipes(aam_export)
-
-        # Update push_meta hash now that we have the payload
-        if push_meta:
-            push_meta["payloadHash"] = push_meta["payloadHash"] or payload.payload_hash
-
-        # DCL side: what DCL would load = all normalized pipes from AAM
-        # (since DCL loads via the same adapter, canonical IDs are identical)
-        dcl_canonical_ids = sorted(p.canonical_id for p in payload.pipes)
-
-        result = reconcile(payload.pipes, dcl_canonical_ids)
-
-        if not push_meta:
-            push_meta = {
-                "pushId": "export-pipes",
-                "pushedAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "pipeCount": payload.total_connections_actual,
-                "payloadHash": payload.payload_hash,
-                "aodRunId": aod_run_id,
-            }
-
-        result["pushMeta"] = push_meta
-
         current_mode = get_current_mode()
-        result["reconMeta"] = {
-            "dclRunId": current_mode.last_run_id,
-            "dclRunAt": current_mode.last_updated,
-            "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "aodRunId": aod_run_id,
-            "dataMode": current_mode.data_mode,
-            "dclSourceCount": len(dcl_canonical_ids),
-            "aamConnectionCount": payload.total_connections_actual,
-        }
-
-        aam_names = sorted(p.display_name for p in payload.pipes)
-        result["trace"] = {
-            "aamPipeNames": aam_names,
-            "dclLoadedSourceNames": dcl_canonical_ids,
-            "exportPipeCount": payload.total_connections_actual,
-            "pushPipeCount": push_pipe_count,
-            "unmappedCount": sum(1 for p in payload.pipes if p.fabric_plane == "unmapped"),
-        }
-
-        return result
+        if current_mode.data_mode == "Farm":
+            return _farm_reconciliation()
+        return _aam_reconciliation(aod_run_id)
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Reconciliation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _farm_reconciliation() -> Dict[str, Any]:
+    """Reconcile Farm push receipts against DCL loaded sources."""
+    import time as _time
+    from backend.aam.ingress import NormalizedPipe
+    from backend.farm.ingest_bridge import PIPE_SOURCE_MAP, TIER_TRUST
+
+    store = get_ingest_store()
+    receipts = store.get_all_receipts()
+    current_mode = get_current_mode()
+    now = _time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    if not receipts:
+        return {
+            "status": "empty",
+            "summary": {
+                "aamConnections": 0, "dclLoadedSources": 0, "matched": 0,
+                "inAamNotDcl": 0, "inDclNotAam": 0, "unmappedCount": 0,
+            },
+            "diffCauses": [{
+                "cause": "NO_PUSH", "severity": "info", "count": 0,
+                "description": "No Farm data received — push from Farm first",
+            }],
+            "fabricBreakdown": [], "inAamNotDcl": [], "inDclNotAam": [],
+            "pushMeta": None,
+            "reconMeta": {
+                "dclRunId": current_mode.last_run_id,
+                "dclRunAt": current_mode.last_updated,
+                "reconAt": now, "aodRunId": None,
+                "dataMode": "Farm", "dclSourceCount": 0, "aamConnectionCount": 0,
+            },
+            "trace": {
+                "aamPipeNames": [], "dclLoadedSourceNames": [],
+                "exportPipeCount": 0, "pushPipeCount": 0, "unmappedCount": 0,
+            },
+        }
+
+    # Group receipts by canonical source via PIPE_SOURCE_MAP
+    source_groups: Dict[str, Dict[str, Any]] = {}
+    unmapped_pipes: List[str] = []
+    schema_registry = store.get_schema_registry()
+    total_records = 0
+
+    for receipt in receipts:
+        total_records += receipt.row_count
+        pipe_info = PIPE_SOURCE_MAP.get(receipt.pipe_id)
+        if not pipe_info:
+            unmapped_pipes.append(receipt.pipe_id)
+            continue
+        canonical_id, display_name, category, tier = pipe_info
+        grp = source_groups.setdefault(canonical_id, {
+            "canonical_id": canonical_id, "display_name": display_name,
+            "category": category, "tier": tier,
+            "pipes": [], "total_records": 0, "fields": set(),
+        })
+        grp["pipes"].append(receipt.pipe_id)
+        grp["total_records"] += receipt.row_count
+        schema = schema_registry.get(receipt.pipe_id)
+        if schema:
+            grp["fields"].update(f for f in schema.field_names if not f.startswith("_"))
+
+    # Build NormalizedPipe objects so we can reuse reconcile()
+    farm_pipes: List[NormalizedPipe] = []
+    for canonical_id, grp in source_groups.items():
+        farm_pipes.append(NormalizedPipe(
+            canonical_id=canonical_id,
+            display_name=grp["display_name"],
+            pipe_id=canonical_id,
+            fabric_plane=grp["category"],
+            vendor=grp["display_name"],
+            fields=sorted(grp["fields"]),
+            field_count=len(grp["fields"]),
+            category=grp["category"],
+            governance_status="canonical",
+            trust_score=TIER_TRUST.get(grp["tier"], 70),
+            data_quality_score=85,
+        ))
+
+    # DCL side: what was actually loaded
+    dcl_ids = list(app.state.loaded_source_ids) if app.state.loaded_source_ids else list(app.state.loaded_sources)
+
+    result = reconcile(farm_pipes, dcl_ids)
+
+    # Extra diff causes for Farm-specific issues
+    if unmapped_pipes:
+        result["diffCauses"].append({
+            "cause": "UNMAPPED_PIPES",
+            "description": f"{len(unmapped_pipes)} pipes have no entry in PIPE_SOURCE_MAP: {', '.join(unmapped_pipes)}",
+            "severity": "warning",
+            "count": len(unmapped_pipes),
+        })
+    drift_events = store.get_drift_events()
+    if drift_events:
+        result["diffCauses"].append({
+            "cause": "SCHEMA_DRIFT",
+            "description": f"{len(drift_events)} schema drift events detected across pushes",
+            "severity": "info",
+            "count": len(drift_events),
+        })
+
+    # Source breakdown with record counts (extra detail for Farm)
+    result["sourceBreakdown"] = [
+        {
+            "sourceName": grp["display_name"], "canonicalId": cid,
+            "category": grp["category"], "tier": grp["tier"],
+            "pipeCount": len(grp["pipes"]), "recordCount": grp["total_records"],
+            "fieldCount": len(grp["fields"]), "loaded": cid in set(dcl_ids),
+        }
+        for cid, grp in sorted(source_groups.items())
+    ]
+
+    # Push metadata
+    latest_receipt = max(receipts, key=lambda r: r.received_at)
+    result["pushMeta"] = {
+        "pushId": latest_receipt.run_id,
+        "pushedAt": latest_receipt.received_at,
+        "pipeCount": len(receipts),
+        "payloadHash": None,
+        "aodRunId": None,
+    }
+
+    result["reconMeta"] = {
+        "dclRunId": current_mode.last_run_id,
+        "dclRunAt": current_mode.last_updated,
+        "reconAt": now,
+        "aodRunId": None,
+        "dataMode": "Farm",
+        "dclSourceCount": len(dcl_ids),
+        "aamConnectionCount": len(farm_pipes),
+    }
+
+    farm_pipe_names = sorted(grp["display_name"] for grp in source_groups.values())
+    result["trace"] = {
+        "aamPipeNames": farm_pipe_names,
+        "dclLoadedSourceNames": dcl_ids,
+        "exportPipeCount": len(receipts),
+        "pushPipeCount": len(receipts),
+        "unmappedCount": len(unmapped_pipes),
+    }
+
+    return result
+
+
+def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
+    """Original AAM reconciliation — fetches from AAM fresh each time."""
+    _invalidate_aam_caches()
+    from backend.aam.client import get_aam_client
+    from backend.aam.ingress import AAMIngressAdapter
+    import time as _time
+
+    adapter = AAMIngressAdapter()
+    client = get_aam_client()
+
+    # Discover aod_run_id from latest push if not provided
+    push_meta = None
+    push_pipe_count = 0
+    pushes = []
+    try:
+        pushes_raw = client.get_push_history()
+        pushes = adapter.ingest_push_history(pushes_raw)
+        if pushes:
+            latest = pushes[0]
+            push_pipe_count = latest.pipe_count
+            push_meta = {
+                "pushId": latest.push_id,
+                "pushedAt": latest.pushed_at,
+                "pipeCount": push_pipe_count,
+                "payloadHash": latest.payload_hash,
+                "aodRunId": latest.aod_run_id,
+            }
+            if not aod_run_id and latest.aod_run_id:
+                aod_run_id = latest.aod_run_id
+                logger.info(f"[Recon] Auto-discovered aod_run_id={aod_run_id} from latest push")
+    except Exception as e:
+        logger.warning(f"Push history unavailable: {e}")
+
+    aam_export = client.get_pipes(aod_run_id=aod_run_id)
+    payload = adapter.ingest_pipes(aam_export)
+
+    if push_meta:
+        push_meta["payloadHash"] = push_meta["payloadHash"] or payload.payload_hash
+
+    dcl_canonical_ids = sorted(p.canonical_id for p in payload.pipes)
+
+    result = reconcile(payload.pipes, dcl_canonical_ids)
+
+    if not push_meta:
+        push_meta = {
+            "pushId": "export-pipes",
+            "pushedAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "pipeCount": payload.total_connections_actual,
+            "payloadHash": payload.payload_hash,
+            "aodRunId": aod_run_id,
+        }
+
+    result["pushMeta"] = push_meta
+
+    current_mode = get_current_mode()
+    result["reconMeta"] = {
+        "dclRunId": current_mode.last_run_id,
+        "dclRunAt": current_mode.last_updated,
+        "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "aodRunId": aod_run_id,
+        "dataMode": current_mode.data_mode,
+        "dclSourceCount": len(dcl_canonical_ids),
+        "aamConnectionCount": payload.total_connections_actual,
+    }
+
+    aam_names = sorted(p.display_name for p in payload.pipes)
+    result["trace"] = {
+        "aamPipeNames": aam_names,
+        "dclLoadedSourceNames": dcl_canonical_ids,
+        "exportPipeCount": payload.total_connections_actual,
+        "pushPipeCount": push_pipe_count,
+        "unmappedCount": sum(1 for p in payload.pipes if p.fabric_plane == "unmapped"),
+    }
+
+    return result
 
 
 @app.get("/api/dcl/reconciliation/sor")

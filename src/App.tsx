@@ -321,7 +321,7 @@ function App() {
         {mainView === 'ingest' ? (
           <IngestionPanel />
         ) : mainView === 'recon' ? (
-          <ReconciliationPanel runId={runId} />
+          <ReconciliationPanel runId={runId} dataMode={dataMode} />
         ) : mainView === 'guide' ? (
           <UserGuide />
         ) : mainView === 'dashboard' ? (

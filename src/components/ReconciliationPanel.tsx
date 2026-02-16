@@ -166,9 +166,11 @@ function getDateString(): string {
 
 interface ReconciliationPanelProps {
   runId?: string;
+  dataMode?: 'Demo' | 'Farm' | 'AAM';
 }
 
-export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
+export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProps) {
+  const isFarm = dataMode === 'Farm';
   const [activeTab, setActiveTab] = useState<'aam' | 'sor'>('aam');
   const [data, setData] = useState<ReconciliationData | null>(null);
   const [sorData, setSorData] = useState<SorReconciliationData | null>(null);
@@ -266,12 +268,15 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
     if (error) return renderError(error, fetchData);
     if (!data) return null;
 
+    const sourceLabel = isFarm ? 'Farm Sources' : 'AAM Connections';
+    const notDclLabel = isFarm ? 'In Farm Not DCL' : 'In AAM Not DCL';
+    const notSourceLabel = isFarm ? 'In DCL Not Farm' : 'In DCL Not AAM';
     const summaryCards = [
-      { label: 'AAM Connections', value: data.summary.aamConnections ?? 0 },
+      { label: sourceLabel, value: data.summary.aamConnections ?? 0 },
       { label: 'DCL Loaded', value: data.summary.dclLoadedSources ?? 0 },
       { label: 'Matched', value: data.summary.matched ?? 0 },
-      { label: 'In AAM Not DCL', value: data.summary.inAamNotDcl ?? 0 },
-      { label: 'In DCL Not AAM', value: data.summary.inDclNotAam ?? 0 },
+      { label: notDclLabel, value: data.summary.inAamNotDcl ?? 0 },
+      { label: notSourceLabel, value: data.summary.inDclNotAam ?? 0 },
       { label: 'Unmapped', value: data.summary.unmappedCount ?? 0 },
     ];
 
@@ -302,7 +307,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
               {data.reconMeta.dclRunAt && (
                 <span>Pipeline ran: <span className="text-foreground font-mono">{formatTimestamp(data.reconMeta.dclRunAt)}</span></span>
               )}
-              <span>AAM: <span className="text-foreground font-mono">{data.reconMeta.aamConnectionCount}</span></span>
+              <span>{isFarm ? 'Farm' : 'AAM'}: <span className="text-foreground font-mono">{data.reconMeta.aamConnectionCount}</span></span>
               <span>DCL: <span className="text-foreground font-mono">{data.reconMeta.dclSourceCount}</span></span>
             </div>
           )}
@@ -346,7 +351,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                 <thead>
                   <tr className="border-b border-border bg-card/50">
                     <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Plane</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">AAM</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">{isFarm ? 'Farm' : 'AAM'}</th>
                     <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">DCL</th>
                     <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Delta</th>
                   </tr>
@@ -378,7 +383,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
               className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3 hover:text-foreground transition-colors"
             >
               <span>{unmappedExpanded ? '▾' : '▸'}</span>
-              <span>In AAM but Not DCL ({data.inAamNotDcl?.length ?? 0})</span>
+              <span>{isFarm ? 'In Farm but Not DCL' : 'In AAM but Not DCL'} ({data.inAamNotDcl?.length ?? 0})</span>
             </button>
             {unmappedExpanded && (
               <div className="rounded-lg border border-border overflow-hidden">
@@ -420,7 +425,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
         {(data.inDclNotAam?.length ?? 0) > 0 && (
           <div>
             <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3">
-              In DCL but Not AAM ({data.inDclNotAam?.length ?? 0})
+              {isFarm ? 'In DCL but Not Farm' : 'In DCL but Not AAM'} ({data.inDclNotAam?.length ?? 0})
             </h3>
             <div className="rounded-lg border border-border overflow-hidden">
               <table className="w-full text-sm">
@@ -468,7 +473,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h4 className="text-[10px] uppercase text-muted-foreground tracking-wide mb-2">AAM Pipes ({data.trace.aamPipeNames.length})</h4>
+                    <h4 className="text-[10px] uppercase text-muted-foreground tracking-wide mb-2">{isFarm ? 'Farm Sources' : 'AAM Pipes'} ({data.trace.aamPipeNames.length})</h4>
                     <div className="space-y-1 max-h-60 overflow-y-auto">
                       {data.trace.aamPipeNames.map((name, i) => (
                         <div key={i} className="text-[11px] font-mono text-foreground/80 truncate" title={name}>{name}</div>
@@ -794,7 +799,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          AAM Recon
+          {isFarm ? 'Farm Recon' : 'AAM Recon'}
         </button>
         <button
           onClick={() => setActiveTab('sor')}
