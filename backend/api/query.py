@@ -437,7 +437,7 @@ def _query_ingest_store(
 
     # Walk receipts newest-first so the last match wins for provenance
     for receipt in reversed(all_receipts):
-        rows = store.get_rows(receipt.run_id)
+        rows = store.get_rows(receipt.run_id, receipt.pipe_id)
         for row in rows:
             # Row must contain the requested metric as a field
             if metric not in row:

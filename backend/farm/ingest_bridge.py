@@ -126,7 +126,7 @@ def build_sources_from_ingest(
         total_records = 0
 
         for receipt in group_receipts:
-            rows = store.get_rows(receipt.run_id)
+            rows = store.get_rows(receipt.run_id, receipt.pipe_id)
             if not rows:
                 # Rows may have been evicted — use receipt metadata only
                 table = TableSchema(

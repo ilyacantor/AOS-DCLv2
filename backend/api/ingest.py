@@ -137,6 +137,11 @@ _MAX_BUFFERED_ROWS = 200_000   # total rows across all runs
 _MAX_DRIFT_EVENTS = 1000
 
 
+def _make_key(run_id: str, pipe_id: str) -> str:
+    """Composite storage key — unique per push (run_id is shared across pipes)."""
+    return f"{run_id}:{pipe_id}"
+
+
 class IngestStore:
     """
     In-memory store for ingested data with Redis write-through.
@@ -177,25 +182,32 @@ class IngestStore:
         try:
             r = self._redis
 
-            # Load receipt order
+            # Load receipt order (keys are composite: "run_id:pipe_id")
             order = r.lrange(f"{_REDIS_PREFIX}receipt_order", 0, -1)
             loaded_receipts = 0
             loaded_rows = 0
 
-            for run_id in order:
-                raw = r.hget(f"{_REDIS_PREFIX}receipts", run_id)
+            for storage_key in order:
+                raw = r.hget(f"{_REDIS_PREFIX}receipts", storage_key)
                 if not raw:
                     continue
                 d = json.loads(raw)
                 receipt = RunReceipt(**d)
-                self._receipts[run_id] = receipt
+
+                # Migrate old keys: if storage_key lacks ":" it's pre-fix data
+                if ":" not in storage_key:
+                    storage_key = _make_key(receipt.run_id, receipt.pipe_id)
+
+                self._receipts[storage_key] = receipt
                 loaded_receipts += 1
 
-                # Load rows
-                rows_raw = r.get(f"{_REDIS_PREFIX}rows:{run_id}")
+                # Load rows (try composite key first, fall back to old key)
+                rows_raw = r.get(f"{_REDIS_PREFIX}rows:{storage_key}")
+                if not rows_raw:
+                    rows_raw = r.get(f"{_REDIS_PREFIX}rows:{receipt.run_id}")
                 if rows_raw:
                     rows = json.loads(rows_raw)
-                    self._row_buffer[run_id] = rows
+                    self._row_buffer[storage_key] = rows
                     self._total_rows += len(rows)
                     loaded_rows += len(rows)
 
@@ -221,25 +233,25 @@ class IngestStore:
         except Exception as e:
             logger.warning(f"[IngestStore] Redis rehydration failed: {e}")
 
-    def _persist_receipt(self, run_id: str, receipt: RunReceipt) -> None:
+    def _persist_receipt(self, storage_key: str, receipt: RunReceipt) -> None:
         """Write a receipt to Redis."""
         if not self._redis:
             return
         try:
             r = self._redis
-            r.hset(f"{_REDIS_PREFIX}receipts", run_id, json.dumps(asdict(receipt)))
-            r.rpush(f"{_REDIS_PREFIX}receipt_order", run_id)
+            r.hset(f"{_REDIS_PREFIX}receipts", storage_key, json.dumps(asdict(receipt)))
+            r.rpush(f"{_REDIS_PREFIX}receipt_order", storage_key)
             r.expire(f"{_REDIS_PREFIX}receipts", _REDIS_TTL)
             r.expire(f"{_REDIS_PREFIX}receipt_order", _REDIS_TTL)
         except Exception as e:
             logger.warning(f"[IngestStore] Redis persist receipt failed: {e}")
 
-    def _persist_rows(self, run_id: str, rows: List[Dict[str, Any]]) -> None:
+    def _persist_rows(self, storage_key: str, rows: List[Dict[str, Any]]) -> None:
         """Write rows to Redis with TTL."""
         if not self._redis:
             return
         try:
-            key = f"{_REDIS_PREFIX}rows:{run_id}"
+            key = f"{_REDIS_PREFIX}rows:{storage_key}"
             self._redis.set(key, json.dumps(rows, default=str))
             self._redis.expire(key, _REDIS_TTL)
         except Exception as e:
@@ -270,14 +282,14 @@ class IngestStore:
         except Exception as e:
             logger.warning(f"[IngestStore] Redis persist drift failed: {e}")
 
-    def _evict_from_redis(self, run_id: str) -> None:
-        """Remove evicted run from Redis."""
+    def _evict_from_redis(self, storage_key: str) -> None:
+        """Remove evicted entry from Redis."""
         if not self._redis:
             return
         try:
-            self._redis.hdel(f"{_REDIS_PREFIX}receipts", run_id)
-            self._redis.lrem(f"{_REDIS_PREFIX}receipt_order", 1, run_id)
-            self._redis.delete(f"{_REDIS_PREFIX}rows:{run_id}")
+            self._redis.hdel(f"{_REDIS_PREFIX}receipts", storage_key)
+            self._redis.lrem(f"{_REDIS_PREFIX}receipt_order", 1, storage_key)
+            self._redis.delete(f"{_REDIS_PREFIX}rows:{storage_key}")
         except Exception as e:
             logger.warning(f"[IngestStore] Redis evict failed: {e}")
 
@@ -374,14 +386,15 @@ class IngestStore:
                 drift_fields=drift_fields,
                 runner_id=request.runner_id,
             )
-            self._receipts[run_id] = receipt
+            key = _make_key(run_id, pipe_id)
+            self._receipts[key] = receipt
 
             while len(self._receipts) > _MAX_RUNS:
-                evicted_id, _ = self._receipts.popitem(last=False)
-                self._row_buffer.pop(evicted_id, None)
-                evicted_ids.append(evicted_id)
+                evicted_key, _ = self._receipts.popitem(last=False)
+                self._row_buffer.pop(evicted_key, None)
+                evicted_ids.append(evicted_key)
 
-            self._row_buffer[run_id] = tagged
+            self._row_buffer[key] = tagged
             self._total_rows += actual
 
             while self._total_rows > _MAX_BUFFERED_ROWS and self._row_buffer:
@@ -390,8 +403,8 @@ class IngestStore:
                 evicted_ids.append(evicted_id)
 
         # Write-through to Redis (outside lock)
-        self._persist_receipt(run_id, receipt)
-        self._persist_rows(run_id, tagged)
+        self._persist_receipt(key, receipt)
+        self._persist_rows(key, tagged)
         self._persist_schema(pipe_id, schema_record)
         if drift:
             self._persist_drift_events()
@@ -402,17 +415,34 @@ class IngestStore:
 
     # --- Query helpers ---
 
-    def get_receipt(self, run_id: str) -> Optional[RunReceipt]:
+    def get_receipt(self, run_id: str, pipe_id: str = None) -> Optional[RunReceipt]:
         with self._lock:
-            return self._receipts.get(run_id)
+            if pipe_id:
+                return self._receipts.get(_make_key(run_id, pipe_id))
+            # Search by run_id (returns first match)
+            for receipt in self._receipts.values():
+                if receipt.run_id == run_id:
+                    return receipt
+            return None
+
+    def get_receipts_by_run(self, run_id: str) -> List[RunReceipt]:
+        """Return all receipts for a given Farm run_id."""
+        with self._lock:
+            return [r for r in self._receipts.values() if r.run_id == run_id]
 
     def get_all_receipts(self) -> List[RunReceipt]:
         with self._lock:
             return list(self._receipts.values())
 
-    def get_rows(self, run_id: str) -> List[Dict[str, Any]]:
+    def get_rows(self, run_id: str, pipe_id: str = None) -> List[Dict[str, Any]]:
         with self._lock:
-            return list(self._row_buffer.get(run_id, []))
+            if pipe_id:
+                return list(self._row_buffer.get(_make_key(run_id, pipe_id), []))
+            # Search by run_id (returns first match)
+            for key, rows in self._row_buffer.items():
+                if key.startswith(f"{run_id}:") or key == run_id:
+                    return list(rows)
+            return []
 
     def get_rows_by_source(self, source_system: str) -> List[Dict[str, Any]]:
         canonical = normalize_source_id(source_system)

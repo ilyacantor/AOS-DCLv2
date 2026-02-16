@@ -347,7 +347,7 @@ def _build_dcl_actuals_from_ingest() -> Dict[str, Any]:
 
     # Compute numeric aggregates from buffered rows for each pipe
     for receipt in receipts:
-        rows = store.get_rows(receipt.run_id)
+        rows = store.get_rows(receipt.run_id, receipt.pipe_id)
         if not rows:
             continue
 

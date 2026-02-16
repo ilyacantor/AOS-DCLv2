@@ -418,30 +418,28 @@ def list_ingest_batches():
 
 @app.get("/api/dcl/ingest/runs/{run_id}")
 def get_ingest_run(run_id: str):
-    """Get a single run receipt + buffered rows."""
+    """Get all pipe receipts for a Farm run_id."""
     store = get_ingest_store()
-    receipt = store.get_receipt(run_id)
-    if not receipt:
+    receipts = store.get_receipts_by_run(run_id)
+    if not receipts:
         raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
-    rows = store.get_rows(run_id)
-    return {
-        "receipt": {
+    pipes = []
+    for receipt in receipts:
+        rows = store.get_rows(receipt.run_id, receipt.pipe_id)
+        pipes.append({
             "run_id": receipt.run_id,
             "pipe_id": receipt.pipe_id,
             "source_system": receipt.source_system,
             "canonical_source_id": receipt.canonical_source_id,
-            "tenant_id": receipt.tenant_id,
-            "snapshot_name": receipt.snapshot_name,
-            "run_timestamp": receipt.run_timestamp,
-            "received_at": receipt.received_at,
-            "schema_version": receipt.schema_version,
-            "schema_hash": receipt.schema_hash,
             "row_count": receipt.row_count,
+            "rows_buffered": len(rows),
             "schema_drift": receipt.schema_drift,
-            "drift_fields": receipt.drift_fields,
-        },
-        "row_count": len(rows),
-        "rows": rows,
+        })
+    return {
+        "run_id": run_id,
+        "pipe_count": len(pipes),
+        "total_rows": sum(p["row_count"] for p in pipes),
+        "pipes": pipes,
     }
 
 
