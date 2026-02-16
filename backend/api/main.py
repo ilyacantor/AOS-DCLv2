@@ -527,35 +527,25 @@ async def dcl_ingest(
     run_id = x_run_id or str(uuid.uuid4())
     pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
 
-    # ── Schema-on-write gate: validate pipe_id against export-pipes ──
+    # ── Schema-on-write check: validate pipe_id against export-pipes ──
+    # Accept data regardless, but flag mismatches for reconciliation.
+    # The pipe_id mismatch IS the signal — blocking it hides the diff.
     pipe_store = get_pipe_store()
     pipe_def = pipe_store.lookup(pipe_id)
     guard_active = pipe_store.count() > 0
+    pipe_matched = pipe_def is not None
 
-    if guard_active and pipe_def is None:
-        # Pipe definitions exist but this pipe_id has no match → REJECT
-        logger.error(
-            f"[Ingest] REJECTED: No matching pipe definition for pipe_id={pipe_id} "
-            f"(run_id={run_id}, source={ingest_req.source_system}). "
-            f"Available pipes: {pipe_store.list_pipe_ids()}"
-        )
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "error": "NO_MATCHING_PIPE",
-                "pipe_id": pipe_id,
-                "message": f"No schema blueprint exists for pipe_id: {pipe_id}.",
-                "hint": "Ensure AAM has run /export-pipes and that the pipe_id "
-                        "matches between Export and Runner manifest.",
-                "available_pipes": pipe_store.list_pipe_ids(),
-                "timestamp": now,
-            },
-        )
-
-    if not guard_active:
+    if guard_active and not pipe_matched:
         logger.warning(
-            "[Ingest] Ingest guard BYPASSED — no pipe definitions registered. "
-            "Run AAM /export-pipes to activate schema-on-write validation."
+            f"[Ingest] UNREGISTERED pipe_id={pipe_id} "
+            f"(run_id={run_id}, source={ingest_req.source_system}). "
+            f"Data accepted — mismatch will surface in reconciliation. "
+            f"Registered pipes: {pipe_store.count()}"
+        )
+    elif not guard_active:
+        logger.info(
+            "[Ingest] No pipe definitions registered yet — "
+            "accepting data without schema validation."
         )
 
     # ── Proceed with ingest ──────────────────────────────────────────
