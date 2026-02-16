@@ -951,11 +951,11 @@ def _farm_reconciliation() -> Dict[str, Any]:
     from backend.farm.ingest_bridge import PIPE_SOURCE_MAP, TIER_TRUST
 
     store = get_ingest_store()
-    receipts = store.get_all_receipts()
+    all_receipts = store.get_all_receipts()
     current_mode = get_current_mode()
     now = _time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    if not receipts:
+    if not all_receipts:
         return {
             "status": "empty",
             "summary": {
@@ -979,6 +979,11 @@ def _farm_reconciliation() -> Dict[str, Any]:
                 "exportPipeCount": 0, "pushPipeCount": 0, "unmappedCount": 0,
             },
         }
+
+    # Use only the latest push (Farm sends same run_id for all pipes in a push)
+    latest = max(all_receipts, key=lambda r: r.received_at)
+    receipts = [r for r in all_receipts if r.run_id == latest.run_id]
+    logger.info(f"[FarmRecon] Using latest push run_id={latest.run_id} ({len(receipts)} pipes)")
 
     # Group receipts by canonical source via PIPE_SOURCE_MAP
     source_groups: Dict[str, Dict[str, Any]] = {}

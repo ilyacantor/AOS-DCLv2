@@ -60,7 +60,7 @@ def build_sources_from_ingest(
 
     Args:
         farm_run_id: If provided, only use receipts matching this Farm run_id.
-                     If None, uses ALL receipts in the store.
+                     If None, auto-selects the latest push (by received_at).
         narration: Optional NarrationService for progress messages.
         dcl_run_id: Optional DCL run_id for narration.
 
@@ -78,15 +78,18 @@ def build_sources_from_ingest(
             )
         return []
 
-    # Filter by farm_run_id if specified
+    # Filter to a single Farm push
     if farm_run_id:
         receipts = [r for r in receipts if r.run_id == farm_run_id]
-        if not receipts:
-            # Farm uses a single run_id across all 20 pipe pushes, but the
-            # ingest endpoint may assign new run_ids. Try matching by
-            # checking if the farm_run_id appears in any receipt's run_id.
-            all_receipts = store.get_all_receipts()
-            receipts = all_receipts  # fallback to all
+    else:
+        # Auto-select latest push: find the most recent run_id
+        latest = max(receipts, key=lambda r: r.received_at)
+        latest_run_id = latest.run_id
+        receipts = [r for r in receipts if r.run_id == latest_run_id]
+        logger.info(
+            f"[FarmBridge] Auto-selected latest push run_id={latest_run_id} "
+            f"({len(receipts)} pipes)"
+        )
 
     if narration and dcl_run_id:
         narration.add_message(
