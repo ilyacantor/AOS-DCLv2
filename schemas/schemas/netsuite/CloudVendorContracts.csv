@@ -1,0 +1,4 @@
+ContractID,VendorID,CloudProvider,ContractType,MonthlyCommit,StartDate,EndDate
+NS-CT-001,VEND-AWS-001,Amazon Web Services,Enterprise Agreement,50000,2024-01-01,2025-12-31
+NS-CT-002,VEND-AWS-001,Amazon Web Services,Reserved Instances,15000,2024-02-01,2027-01-31
+NS-CT-003,VEND-AWS-001,Amazon Web Services,Savings Plan,8000,2024-03-01,2027-02-28
