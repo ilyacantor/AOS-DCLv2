@@ -2,15 +2,27 @@
 Farm API Client for DCL Integration.
 
 Provides client methods to call Farm's DCL integration endpoints:
+
+v1 (legacy):
 1. Source of Truth API - GET /api/source/salesforce/invoice/{invoice_id}
 2. Verification API - POST /api/verify/salesforce/invoice
 3. Toxic Stream API - GET /api/stream/synthetic/mulesoft
+
+v2 (business data):
+4. Generation - POST /api/business-data/generate
+5. Ground Truth - GET /api/business-data/ground-truth/{run_id}
+6. Metrics - GET /api/business-data/ground-truth/{run_id}/metric/{metric}
+7. Dimensional - GET /api/business-data/ground-truth/{run_id}/dimensional/{dim}
+8. Conflicts - GET /api/business-data/ground-truth/{run_id}/conflicts
+9. Profile - GET /api/business-data/profile/{run_id}
+10. Payload - GET /api/business-data/payload/{run_id}/{pipe_id}
+11. Runs - GET /api/business-data/runs
 """
 
 import os
 import httpx
 from typing import Dict, Any, List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -302,6 +314,185 @@ class FarmClient:
             logger.error(f"[FarmClient] Vendor spend fetch error: {e}")
             raise
     
+    # =========================================================================
+    # v2 Business Data Endpoints
+    # =========================================================================
+
+    def generate_business_data(
+        self,
+        push_to_dcl: bool = True,
+        dcl_ingest_url: Optional[str] = None,
+        seed: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Trigger Farm v2 business data generation.
+
+        POST /api/business-data/generate
+
+        When push_to_dcl=True, Farm will POST each of the 20 pipe payloads
+        to DCL's ingest endpoint automatically.
+
+        Returns:
+            {
+                "run_id": "...",
+                "record_counts": {...},
+                "manifest_valid": true,
+                "pipes_pushed": 20
+            }
+        """
+        url = f"{self.base_url}/api/business-data/generate"
+        payload: Dict[str, Any] = {"push_to_dcl": push_to_dcl}
+        if dcl_ingest_url:
+            payload["dcl_ingest_url"] = dcl_ingest_url
+        if seed is not None:
+            payload["seed"] = seed
+
+        logger.info(
+            f"[FarmClient] Generating business data: push_to_dcl={push_to_dcl}"
+        )
+
+        try:
+            response = self._get_client().post(url, json=payload, timeout=120.0)
+            response.raise_for_status()
+            data = response.json()
+            run_id = data.get("run_id", "unknown")
+            logger.info(
+                f"[FarmClient] Business data generated: run_id={run_id}, "
+                f"pipes_pushed={data.get('pipes_pushed', 0)}"
+            )
+            return data
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"[FarmClient] Generation failed: HTTP {e.response.status_code} "
+                f"body={e.response.text[:500]}"
+            )
+            raise
+        except Exception as e:
+            logger.error(f"[FarmClient] Generation error: {e}")
+            raise
+
+    def get_ground_truth(self, run_id: str) -> Dict[str, Any]:
+        """
+        Fetch full v2.0 ground truth manifest.
+
+        GET /api/business-data/ground-truth/{run_id}
+
+        Returns 89 metrics/quarter, 13 dimensional breakdowns,
+        36 expected conflicts.
+        """
+        url = f"{self.base_url}/api/business-data/ground-truth/{run_id}"
+        logger.info(f"[FarmClient] Fetching ground truth: run_id={run_id}")
+
+        response = self._get_client().get(url, timeout=30.0)
+        response.raise_for_status()
+        data = response.json()
+        metrics_count = len(data.get("metrics", {}))
+        logger.info(
+            f"[FarmClient] Ground truth fetched: {metrics_count} metrics"
+        )
+        return data
+
+    def get_ground_truth_metric(
+        self, run_id: str, metric: str, quarter: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Look up a single metric from the ground truth.
+
+        GET /api/business-data/ground-truth/{run_id}/metric/{metric}?quarter=2024-Q1
+        """
+        url = (
+            f"{self.base_url}/api/business-data/ground-truth/{run_id}"
+            f"/metric/{metric}"
+        )
+        params = {}
+        if quarter:
+            params["quarter"] = quarter
+
+        response = self._get_client().get(url, params=params)
+        response.raise_for_status()
+        return response.json()
+
+    def get_ground_truth_dimensional(
+        self, run_id: str, dimension: str
+    ) -> Dict[str, Any]:
+        """
+        Fetch a dimensional breakdown from the ground truth.
+
+        GET /api/business-data/ground-truth/{run_id}/dimensional/{dimension}
+
+        13 dimensions available in v2.0 (e.g., revenue_by_region,
+        pipeline_by_stage).
+        """
+        url = (
+            f"{self.base_url}/api/business-data/ground-truth/{run_id}"
+            f"/dimensional/{dimension}"
+        )
+
+        response = self._get_client().get(url)
+        response.raise_for_status()
+        return response.json()
+
+    def get_ground_truth_conflicts(self, run_id: str) -> Dict[str, Any]:
+        """
+        Fetch expected cross-system conflicts.
+
+        GET /api/business-data/ground-truth/{run_id}/conflicts
+
+        Returns the 3 intentional conflicts DCL should detect:
+        - Revenue timing (~5%)
+        - Headcount (+3 contractors)
+        - CSAT (~4% missing data)
+        """
+        url = (
+            f"{self.base_url}/api/business-data/ground-truth/{run_id}/conflicts"
+        )
+
+        response = self._get_client().get(url)
+        response.raise_for_status()
+        data = response.json()
+        conflict_count = len(data.get("conflicts", []))
+        logger.info(
+            f"[FarmClient] Ground truth conflicts: {conflict_count} expected"
+        )
+        return data
+
+    def get_business_profile(self, run_id: str) -> Dict[str, Any]:
+        """
+        Fetch full financial model trajectory.
+
+        GET /api/business-data/profile/{run_id}
+
+        Returns ARR waterfall, P&L, BS, CF, SaaS metrics per quarter.
+        """
+        url = f"{self.base_url}/api/business-data/profile/{run_id}"
+        response = self._get_client().get(url)
+        response.raise_for_status()
+        return response.json()
+
+    def get_pipe_payload(self, run_id: str, pipe_id: str) -> Dict[str, Any]:
+        """
+        Fetch raw DCL payload for a specific pipe (debugging).
+
+        GET /api/business-data/payload/{run_id}/{pipe_id}
+        """
+        url = (
+            f"{self.base_url}/api/business-data/payload/{run_id}/{pipe_id}"
+        )
+        response = self._get_client().get(url, timeout=30.0)
+        response.raise_for_status()
+        return response.json()
+
+    def list_business_data_runs(self) -> Dict[str, Any]:
+        """
+        List all stored generation runs.
+
+        GET /api/business-data/runs
+        """
+        url = f"{self.base_url}/api/business-data/runs"
+        response = self._get_client().get(url)
+        response.raise_for_status()
+        return response.json()
+
     def close(self):
         """Close the HTTP client."""
         if self._client:

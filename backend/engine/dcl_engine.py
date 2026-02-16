@@ -49,7 +49,29 @@ class DCLEngine:
             sources, payload_kpis = SchemaLoader.load_aam_schemas(self.narration, run_id, source_limit=source_limit, aod_run_id=aod_run_id)
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} AAM sources (source_limit={source_limit})")
         else:
-            sources = SchemaLoader.load_farm_schemas(self.narration, run_id, source_limit=source_limit)
+            # Farm mode: prefer v2 ingested data from the IngestStore,
+            # fall back to legacy browser-scraping if no ingested data exists.
+            # Lazy import to avoid circular dependency (farm.ingest_bridge → engine)
+            from backend.farm.ingest_bridge import build_sources_from_ingest, get_ingest_summary
+            ingest_summary = get_ingest_summary()
+            if ingest_summary["pipe_count"] > 0:
+                self.narration.add_message(
+                    run_id, "Engine",
+                    f"Farm v2: {ingest_summary['pipe_count']} ingested pipes from "
+                    f"{ingest_summary['source_count']} sources "
+                    f"({ingest_summary['total_records']:,} records)"
+                )
+                sources = build_sources_from_ingest(
+                    narration=self.narration, dcl_run_id=run_id
+                )
+            else:
+                self.narration.add_message(
+                    run_id, "Engine",
+                    "Farm v2: No ingested data — falling back to legacy browser endpoints"
+                )
+                sources = SchemaLoader.load_farm_schemas(
+                    self.narration, run_id, source_limit=source_limit
+                )
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Farm sources (source_limit={source_limit})")
         
         if mode != "AAM":

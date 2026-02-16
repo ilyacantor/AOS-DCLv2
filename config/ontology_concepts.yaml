@@ -171,6 +171,104 @@ concepts:
         - activity
         - throughput
 
+  - id: subscription
+    name: Subscription
+    description: Subscription or recurring billing record
+    cluster: Finance
+    metadata:
+      example_fields:
+        - subscription_id
+        - plan_id
+        - plan_name
+        - subscription_status
+        - mrr
+        - billing_period
+      expected_type: string
+      synonyms:
+        - plan
+        - recurring_billing
+        - membership
+
+  - id: employee
+    name: Employee
+    description: Employee or worker record
+    cluster: People
+    metadata:
+      example_fields:
+        - worker_id
+        - employee_id
+        - employee_name
+        - position_id
+        - department
+        - hire_date
+      expected_type: string
+      synonyms:
+        - worker
+        - staff
+        - headcount
+        - team_member
+
+  - id: ticket
+    name: Support Ticket
+    description: Customer support ticket or case
+    cluster: Ops
+    metadata:
+      example_fields:
+        - ticket_id
+        - subject
+        - priority
+        - status
+        - assignee
+        - satisfaction_rating
+        - csat
+      expected_type: string
+      synonyms:
+        - case
+        - support_request
+        - issue
+        - inquiry
+
+  - id: engineering_work
+    name: Engineering Work Item
+    description: Engineering issue, sprint, or development work item
+    cluster: Ops
+    metadata:
+      example_fields:
+        - issue_key
+        - issue_id
+        - sprint_id
+        - sprint_name
+        - story_points
+        - issue_type
+        - priority
+      expected_type: string
+      synonyms:
+        - issue
+        - story
+        - task
+        - bug
+        - sprint
+
+  - id: incident
+    name: Incident
+    description: Infrastructure incident or SLO record
+    cluster: Infra
+    metadata:
+      example_fields:
+        - incident_id
+        - severity
+        - slo_id
+        - slo_name
+        - target
+        - current_value
+        - mttr
+      expected_type: string
+      synonyms:
+        - alert
+        - outage
+        - slo
+        - service_level
+
   - id: date
     name: Date/Timestamp
     description: Date or timestamp field

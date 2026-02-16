@@ -6,13 +6,41 @@ from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
-DEFAULT_PERSONA_CONCEPTS = {
-    "CFO": ["Revenue", "Cost", "Margin", "CustomerValue", "ARR", "Churn"],
-    "CRO": ["Revenue", "Pipeline", "Conversion", "CustomerValue", "LeadScore"],
-    "COO": ["Throughput", "Efficiency", "Cost", "AssetUtilization", "SLA"],
-    "CTO": ["SystemHealth", "Latency", "Uptime", "SecurityScore", "TechDebt"],
-    "CHRO": ["Headcount", "Attrition", "Engagement", "Training", "Diversity"],
+def _load_persona_concepts_from_yaml() -> Dict[str, List[str]]:
+    """Load persona→concept mappings from config/persona_profiles.yaml."""
+    import yaml
+    yaml_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        "config", "persona_profiles.yaml"
+    )
+    try:
+        with open(yaml_path, "r") as f:
+            data = yaml.safe_load(f)
+        result: Dict[str, List[str]] = {}
+        for persona in data.get("personas", []):
+            key = persona.get("persona_key", "")
+            concepts = [
+                cr["concept_id"]
+                for cr in persona.get("concept_relevance", [])
+            ]
+            result[key] = concepts
+        return result
+    except Exception as e:
+        logger.warning(f"Failed to load persona_profiles.yaml: {e}")
+        return {}
+
+
+# Hardcoded fallback using actual ontology concept IDs
+_HARDCODED_DEFAULTS = {
+    "CFO": ["revenue", "cost", "subscription", "account", "invoice", "date"],
+    "CRO": ["account", "opportunity", "revenue", "health", "date"],
+    "COO": ["usage", "health", "ticket", "employee", "account", "date"],
+    "CTO": ["aws_resource", "incident", "engineering_work", "usage", "cost", "health", "date"],
+    "CHRO": ["employee", "date"],
 }
+
+# Try YAML first, fall back to hardcoded
+DEFAULT_PERSONA_CONCEPTS = _load_persona_concepts_from_yaml() or _HARDCODED_DEFAULTS
 
 
 class PersonaView:
