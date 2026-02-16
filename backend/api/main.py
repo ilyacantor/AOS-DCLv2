@@ -14,6 +14,7 @@ DCL focuses on:
 - Conflict Detection
 - MCP Server
 """
+import hashlib
 import os
 import uuid
 from pathlib import Path
@@ -450,6 +451,7 @@ async def dcl_ingest(
     x_pipe_id: Optional[str] = Header(None),
     x_schema_hash: Optional[str] = Header(None),
     x_api_key: Optional[str] = Header(None),
+    x_dispatch_id: Optional[str] = Header(None, alias="x-dispatch-id"),
 ):
     """
     Accept a data push from Farm (Path 3 — Content Path).
@@ -527,6 +529,14 @@ async def dcl_ingest(
     run_id = x_run_id or str(uuid.uuid4())
     pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
 
+    if x_dispatch_id:
+        dispatch_id = x_dispatch_id
+    else:
+        from backend.api.ingest import _derive_dispatch_id
+        dispatch_id = _derive_dispatch_id(
+            ingest_req.run_timestamp, ingest_req.tenant_id, ingest_req.snapshot_name
+        )
+
     # ── Schema-on-write gate: validate pipe_id against export-pipes ──
     pipe_store = get_pipe_store()
     pipe_def = pipe_store.lookup(pipe_id)
@@ -577,6 +587,7 @@ async def dcl_ingest(
             pipe_id=pipe_id,
             schema_hash=schema_hash,
             request=ingest_req,
+            dispatch_id=dispatch_id,
         )
     except Exception as e:
         logger.error(f"[Ingest] Failed: {e}", exc_info=True)
@@ -596,6 +607,7 @@ async def dcl_ingest(
         status="ingested",
         dcl_run_id=run_id,
         run_id=run_id,
+        dispatch_id=dispatch_id,
         pipe_id=pipe_id,
         rows_accepted=actual_rows,
         schema_drift=receipt.schema_drift,
@@ -615,6 +627,7 @@ def list_ingest_runs():
         "runs": [
             {
                 "run_id": r.run_id,
+                "dispatch_id": r.dispatch_id,
                 "pipe_id": r.pipe_id,
                 "source_system": r.source_system,
                 "canonical_source_id": r.canonical_source_id,
@@ -695,6 +708,36 @@ def get_ingest_stats():
     """Quick summary of what's in the ingest store."""
     store = get_ingest_store()
     return store.get_stats()
+
+
+@app.get("/api/dcl/ingest/dispatches")
+def list_dispatches():
+    """List all Farm dispatches — each dispatch groups pipes from one manifest push."""
+    store = get_ingest_store()
+    return {"dispatches": store.get_dispatches()}
+
+
+@app.get("/api/dcl/ingest/dispatches/{dispatch_id}")
+def get_dispatch_detail(dispatch_id: str):
+    """Get detailed breakdown for a single Farm dispatch."""
+    store = get_ingest_store()
+    summary = store.get_dispatch_summary(dispatch_id)
+    if not summary:
+        raise HTTPException(status_code=404, detail=f"Dispatch {dispatch_id} not found")
+    receipts = store.get_receipts_by_dispatch(dispatch_id)
+    summary["pipes"] = [
+        {
+            "run_id": r.run_id,
+            "pipe_id": r.pipe_id,
+            "source_system": r.source_system,
+            "row_count": r.row_count,
+            "schema_drift": r.schema_drift,
+            "drift_fields": r.drift_fields,
+            "received_at": r.received_at,
+        }
+        for r in receipts
+    ]
+    return summary
 
 
 class MappingRequest(BaseModel):
@@ -1155,12 +1198,15 @@ def mcp_tool_call(tool_call: MCPToolCall):
 
 
 @app.get("/api/dcl/reconciliation")
-def get_reconciliation(aod_run_id: Optional[str] = None):
+def get_reconciliation(
+    aod_run_id: Optional[str] = None,
+    dispatch_id: Optional[str] = None,
+):
     """Mode-aware reconciliation — Farm uses IngestStore, AAM uses AAM client."""
     try:
         current_mode = get_current_mode()
         if current_mode.data_mode == "Farm":
-            return _farm_reconciliation()
+            return _farm_reconciliation(dispatch_id=dispatch_id)
         return _aam_reconciliation(aod_run_id)
     except HTTPException:
         raise
@@ -1169,8 +1215,8 @@ def get_reconciliation(aod_run_id: Optional[str] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def _farm_reconciliation() -> Dict[str, Any]:
-    """Reconcile Farm push receipts against DCL loaded sources."""
+def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
+    """Reconcile Farm push receipts against DCL loaded sources — per dispatch."""
     import time as _time
     from backend.aam.ingress import NormalizedPipe
     from backend.farm.ingest_bridge import PIPE_SOURCE_MAP, TIER_TRUST
@@ -1205,10 +1251,24 @@ def _farm_reconciliation() -> Dict[str, Any]:
             },
         }
 
-    # Use only the latest push (Farm sends same run_id for all pipes in a push)
-    latest = max(all_receipts, key=lambda r: r.received_at)
-    receipts = [r for r in all_receipts if r.run_id == latest.run_id]
-    logger.info(f"[FarmRecon] Using latest push run_id={latest.run_id} ({len(receipts)} pipes)")
+    # Isolate by dispatch — groups all pipes from one Farm manifest push
+    if dispatch_id:
+        receipts = store.get_receipts_by_dispatch(dispatch_id)
+        logger.info(f"[FarmRecon] Using dispatch_id={dispatch_id} ({len(receipts)} pipes)")
+    else:
+        dispatches = store.get_dispatches()
+        if dispatches:
+            latest_dispatch = dispatches[0]
+            dispatch_id = latest_dispatch["dispatch_id"]
+            receipts = store.get_receipts_by_dispatch(dispatch_id)
+            logger.info(
+                f"[FarmRecon] Auto-selected latest dispatch={dispatch_id} "
+                f"({len(receipts)} pipes, {latest_dispatch['total_rows']:,} rows)"
+            )
+        else:
+            latest = max(all_receipts, key=lambda r: r.received_at)
+            receipts = [r for r in all_receipts if r.run_id == latest.run_id]
+            logger.info(f"[FarmRecon] Fallback: latest run_id={latest.run_id} ({len(receipts)} pipes)")
 
     # Group receipts by canonical source via PIPE_SOURCE_MAP
     source_groups: Dict[str, Dict[str, Any]] = {}
@@ -1286,10 +1346,14 @@ def _farm_reconciliation() -> Dict[str, Any]:
 
     # Push metadata
     latest_receipt = max(receipts, key=lambda r: r.received_at)
+    first_receipt = min(receipts, key=lambda r: r.received_at)
     result["pushMeta"] = {
+        "dispatchId": dispatch_id,
         "pushId": latest_receipt.run_id,
         "pushedAt": latest_receipt.received_at,
+        "firstReceivedAt": first_receipt.received_at,
         "pipeCount": len(receipts),
+        "totalRows": total_records,
         "payloadHash": None,
         "aodRunId": None,
     }
@@ -1300,6 +1364,7 @@ def _farm_reconciliation() -> Dict[str, Any]:
         "reconAt": now,
         "aodRunId": None,
         "dataMode": "Farm",
+        "dispatchId": dispatch_id,
         "dclSourceCount": len(dcl_ids),
         "aamConnectionCount": len(farm_pipes),
     }

@@ -52,6 +52,7 @@ TIER_TRUST = {1: 90, 2: 80, 3: 70}
 
 def build_sources_from_ingest(
     farm_run_id: Optional[str] = None,
+    dispatch_id: Optional[str] = None,
     narration=None,
     dcl_run_id: Optional[str] = None,
 ) -> List[SourceSystem]:
@@ -59,8 +60,9 @@ def build_sources_from_ingest(
     Read the IngestStore and build SourceSystem objects from Farm pipe data.
 
     Args:
-        farm_run_id: If provided, only use receipts matching this Farm run_id.
-                     If None, auto-selects the latest push (by received_at).
+        farm_run_id: Legacy — filter by single run_id.
+        dispatch_id: If provided, use all receipts from this dispatch.
+                     If None, auto-selects the latest dispatch.
         narration: Optional NarrationService for progress messages.
         dcl_run_id: Optional DCL run_id for narration.
 
@@ -78,18 +80,33 @@ def build_sources_from_ingest(
             )
         return []
 
-    # Filter to a single Farm push
-    if farm_run_id:
-        receipts = [r for r in receipts if r.run_id == farm_run_id]
-    else:
-        # Auto-select latest push: find the most recent run_id
-        latest = max(receipts, key=lambda r: r.received_at)
-        latest_run_id = latest.run_id
-        receipts = [r for r in receipts if r.run_id == latest_run_id]
+    # Filter to a single Farm dispatch
+    if dispatch_id:
+        receipts = store.get_receipts_by_dispatch(dispatch_id)
         logger.info(
-            f"[FarmBridge] Auto-selected latest push run_id={latest_run_id} "
+            f"[FarmBridge] Using dispatch_id={dispatch_id} "
             f"({len(receipts)} pipes)"
         )
+    elif farm_run_id:
+        receipts = [r for r in receipts if r.run_id == farm_run_id]
+    else:
+        # Auto-select latest dispatch
+        dispatches = store.get_dispatches()
+        if dispatches:
+            latest_dispatch = dispatches[0]  # sorted by latest_received_at desc
+            latest_did = latest_dispatch["dispatch_id"]
+            receipts = store.get_receipts_by_dispatch(latest_did)
+            logger.info(
+                f"[FarmBridge] Auto-selected latest dispatch={latest_did} "
+                f"({len(receipts)} pipes, {latest_dispatch['total_rows']:,} rows)"
+            )
+        else:
+            latest = max(receipts, key=lambda r: r.received_at)
+            receipts = [r for r in receipts if r.run_id == latest.run_id]
+            logger.info(
+                f"[FarmBridge] Fallback: latest run_id={latest.run_id} "
+                f"({len(receipts)} pipes)"
+            )
 
     if narration and dcl_run_id:
         narration.add_message(

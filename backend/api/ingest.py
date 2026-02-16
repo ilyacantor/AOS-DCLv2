@@ -57,6 +57,7 @@ class IngestResponse(BaseModel):
     status: str                        # "ingested" | "rejected"
     dcl_run_id: str                    # DCL's internal run ID
     run_id: str                        # alias kept for backward compat
+    dispatch_id: str = ""
     pipe_id: str
     rows_accepted: int
     schema_drift: bool = False
@@ -114,6 +115,7 @@ class RunReceipt:
     schema_drift: bool = False
     drift_fields: List[str] = dc_field(default_factory=list)
     runner_id: Optional[str] = None
+    dispatch_id: str = ""    # groups pipes from one Farm manifest dispatch
 
 
 # ---------------------------------------------------------------------------
@@ -227,11 +229,21 @@ class IngestStore:
                 for d in json.loads(drift_raw):
                     self._drift_events.append(SchemaDriftEvent(**d))
 
+            # Backfill dispatch_id for legacy receipts (pre-dispatch era)
+            backfilled = 0
+            for receipt in self._receipts.values():
+                if not receipt.dispatch_id:
+                    receipt.dispatch_id = _derive_dispatch_id(
+                        receipt.run_timestamp, receipt.tenant_id, receipt.snapshot_name
+                    )
+                    backfilled += 1
+
             if loaded_receipts > 0:
                 logger.info(
                     f"[IngestStore] Rehydrated from Redis: "
                     f"{loaded_receipts} receipts, {loaded_rows:,} rows, "
                     f"{len(self._schema_registry)} schemas"
+                    + (f", backfilled {backfilled} dispatch_ids" if backfilled else "")
                 )
 
         except Exception as e:
@@ -307,6 +319,7 @@ class IngestStore:
         pipe_id: str,
         schema_hash: str,
         request: IngestRequest,
+        dispatch_id: str = "",
     ) -> RunReceipt:
         """
         Accept a Runner push.  Returns the RunReceipt.
@@ -331,6 +344,7 @@ class IngestStore:
             {
                 **row,
                 "_run_id": run_id,
+                "_dispatch_id": dispatch_id,
                 "_pipe_id": pipe_id,
                 "_source_system": canonical_id,
                 "_inserted_at": now,
@@ -376,6 +390,7 @@ class IngestStore:
 
             receipt = RunReceipt(
                 run_id=run_id,
+                dispatch_id=dispatch_id,
                 pipe_id=pipe_id,
                 source_system=request.source_system,
                 canonical_source_id=canonical_id,
@@ -467,6 +482,73 @@ class IngestStore:
     def get_schema_registry(self) -> Dict[str, SchemaRecord]:
         with self._lock:
             return dict(self._schema_registry)
+
+    def get_dispatches(self) -> List[Dict[str, Any]]:
+        """Group all receipts by dispatch_id and return summary per dispatch."""
+        with self._lock:
+            groups: Dict[str, List[RunReceipt]] = {}
+            for r in self._receipts.values():
+                groups.setdefault(r.dispatch_id, []).append(r)
+
+            result: List[Dict[str, Any]] = []
+            for dispatch_id, receipts in groups.items():
+                sorted_receipts = sorted(receipts, key=lambda r: r.received_at)
+                sources = sorted(set(r.source_system for r in receipts))
+                run_ids = sorted(set(r.run_id for r in receipts))
+                result.append({
+                    "dispatch_id": dispatch_id,
+                    "pipe_count": len(receipts),
+                    "total_rows": sum(r.row_count for r in receipts),
+                    "unique_sources": sources,
+                    "first_received_at": sorted_receipts[0].received_at,
+                    "latest_received_at": sorted_receipts[-1].received_at,
+                    "drift_count": sum(1 for r in receipts if r.schema_drift),
+                    "run_ids": run_ids,
+                })
+            result.sort(key=lambda d: d["latest_received_at"], reverse=True)
+            return result
+
+    def get_receipts_by_dispatch(self, dispatch_id: str) -> List[RunReceipt]:
+        """Return all receipts for a given dispatch_id."""
+        with self._lock:
+            return [r for r in self._receipts.values() if r.dispatch_id == dispatch_id]
+
+    def get_rows_by_dispatch(self, dispatch_id: str) -> List[Dict[str, Any]]:
+        """Return all rows tagged with the given dispatch_id."""
+        with self._lock:
+            rows: List[Dict[str, Any]] = []
+            for run_rows in self._row_buffer.values():
+                for row in run_rows:
+                    if row.get("_dispatch_id") == dispatch_id:
+                        rows.append(row)
+            return rows
+
+    def get_dispatch_summary(self, dispatch_id: str) -> Optional[Dict[str, Any]]:
+        """Detailed summary for one dispatch, including per-source breakdown."""
+        with self._lock:
+            receipts = [r for r in self._receipts.values() if r.dispatch_id == dispatch_id]
+            if not receipts:
+                return None
+
+            sorted_receipts = sorted(receipts, key=lambda r: r.received_at)
+            sources_breakdown: Dict[str, Dict[str, Any]] = {}
+            for r in receipts:
+                if r.source_system not in sources_breakdown:
+                    sources_breakdown[r.source_system] = {"pipe_count": 0, "row_count": 0}
+                sources_breakdown[r.source_system]["pipe_count"] += 1
+                sources_breakdown[r.source_system]["row_count"] += r.row_count
+
+            return {
+                "dispatch_id": dispatch_id,
+                "pipe_count": len(receipts),
+                "total_rows": sum(r.row_count for r in receipts),
+                "unique_sources": sorted(set(r.source_system for r in receipts)),
+                "first_received_at": sorted_receipts[0].received_at,
+                "latest_received_at": sorted_receipts[-1].received_at,
+                "drift_count": sum(1 for r in receipts if r.schema_drift),
+                "run_ids": sorted(set(r.run_id for r in receipts)),
+                "sources_breakdown": sources_breakdown,
+            }
 
     def get_batches(self) -> List[Dict[str, Any]]:
         _BATCH_GAP_SECONDS = 60
@@ -564,6 +646,26 @@ def get_ingest_store() -> IngestStore:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _derive_dispatch_id(run_timestamp: str, tenant_id: str, snapshot_name: str) -> str:
+    """Deterministic dispatch_id from shared fields across a Farm manifest push.
+
+    All pipes in the same dispatch share the same run_timestamp (to the second),
+    tenant_id, and snapshot_name — so this produces a stable grouping key.
+    """
+    try:
+        from datetime import datetime as _dt
+        parsed = _dt.fromisoformat(run_timestamp.replace("Z", "+00:00"))
+        ts_second = parsed.strftime("%Y-%m-%dT%H:%M:%S")
+        ts_prefix = parsed.strftime("%Y%m%d_%H%M%S")
+    except (ValueError, AttributeError):
+        ts_second = run_timestamp[:19]
+        ts_prefix = ts_second.replace("-", "").replace(":", "").replace("T", "_")
+    short_hash = hashlib.sha256(
+        f"{tenant_id}:{snapshot_name}:{ts_second}".encode()
+    ).hexdigest()[:8]
+    return f"dispatch_{ts_prefix}_{short_hash}"
+
 
 def compute_schema_hash(rows: List[Dict[str, Any]]) -> str:
     """SHA-256 of the sorted union of all field names across rows."""
