@@ -40,27 +40,30 @@ class RunResponse(BaseModel):
 
 @app.get("/api/health")
 def health():
-    """Structured health check — surfaces exact dependency status."""
+    """Structured health check — surfaces exact dependency status per mode."""
     schemas_path = Path("schemas/schemas")
     config_dir = Path(__file__).parent.parent.parent / "config"
 
-    checks = {
-        "database_url": "set" if os.getenv("DATABASE_URL") else "not set (Demo uses YAML/in-memory)",
+    demo_checks = {
         "persona_profiles_yaml": "ok" if (config_dir / "persona_profiles.yaml").exists() else "MISSING",
         "ontology_concepts_yaml": "ok" if (config_dir / "ontology_concepts.yaml").exists() else "MISSING",
-        "demo_schemas_dir": "ok" if schemas_path.exists() else "MISSING — Demo mode will return empty graph",
+        "demo_schemas_dir": "ok" if schemas_path.exists() else "MISSING",
+    }
+    if schemas_path.exists():
+        demo_checks["demo_source_count"] = len([d for d in schemas_path.iterdir() if d.is_dir()])
+
+    farm_checks = {
+        "database_url": "set" if os.getenv("DATABASE_URL") else "MISSING",
     }
 
-    if schemas_path.exists():
-        source_dirs = [d for d in schemas_path.iterdir() if d.is_dir()]
-        checks["demo_source_count"] = len(source_dirs)
-
-    all_ok = all(v not in ("MISSING", "MISSING — Demo mode will return empty graph") for v in checks.values())
+    demo_ok = all(v != "MISSING" for v in demo_checks.values())
+    farm_ok = all(v != "MISSING" for v in farm_checks.values())
 
     return {
-        "status": "healthy" if all_ok else "degraded",
+        "status": "healthy" if demo_ok else "degraded",
         "version": "1.0.0",
-        "checks": checks,
+        "demo": {"ready": demo_ok, "checks": demo_checks},
+        "farm": {"ready": farm_ok, "checks": farm_checks},
     }
 
 
@@ -141,6 +144,7 @@ def run_batch_mapping(request: MappingRequest):
         mappings, stats = semantic_mapper.run_mapping(
             sources=sources,
             mode=request.mapping_mode,
+            app_mode=request.mode,
             clear_existing=request.clear_existing
         )
         

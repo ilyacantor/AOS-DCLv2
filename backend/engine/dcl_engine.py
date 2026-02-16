@@ -46,28 +46,28 @@ class DCLEngine:
         self.narration.add_message(run_id, "Engine", f"Loaded {len(ontology)} ontology concepts")
         
         semantic_mapper = SemanticMapper()
-        
+
         stored_mappings = []
         sources_with_mappings = set()
         sources_needing_mappings = []
-        
+
         for source in sources:
-            source_stored = semantic_mapper.get_stored_mappings(source.id)
+            source_stored = semantic_mapper.get_stored_mappings(source.id, app_mode=mode)
             if source_stored:
                 stored_mappings.extend(source_stored)
                 sources_with_mappings.add(source.id)
             else:
                 sources_needing_mappings.append(source)
-        
+
         if stored_mappings:
             self.narration.add_message(run_id, "Engine", f"Loaded {len(stored_mappings)} stored mappings for {len(sources_with_mappings)} sources")
-        
+
         if sources_needing_mappings:
             self.narration.add_message(
-                run_id, "Engine", 
+                run_id, "Engine",
                 f"Running semantic mapper for {len(sources_needing_mappings)} sources without stored mappings: {[s.id for s in sources_needing_mappings]}"
             )
-            new_mappings, stats = semantic_mapper.run_mapping(sources_needing_mappings, mode="heuristic", clear_existing=False)
+            new_mappings, stats = semantic_mapper.run_mapping(sources_needing_mappings, mode="heuristic", app_mode=mode, clear_existing=False)
             stored_mappings.extend(new_mappings)
             self.narration.add_message(
                 run_id, "Engine",
@@ -140,7 +140,7 @@ class DCLEngine:
                     "Prod mode: LLM validation skipped - OPENAI_API_KEY not configured"
                 )
         
-        graph = self._build_graph(mode, sources, ontology, mappings, personas, run_id)
+        graph = self._build_graph(mode, sources, ontology, mappings, personas)
         
         processing_time = (time.time() - start_time) * 1000
         metrics.processing_ms = processing_time
@@ -179,7 +179,6 @@ class DCLEngine:
         ontology: List[OntologyConcept],
         mappings: List[Mapping],
         personas: List[Persona],
-        run_id: str
     ) -> Dict[str, List]:
         
         nodes: List[GraphNode] = []
@@ -242,7 +241,7 @@ class DCLEngine:
             
             source_mapping_count[source.id] = 0
         
-        relevant_concept_ids = self.persona_view.get_all_relevant_concept_ids(personas)
+        relevant_concept_ids = self.persona_view.get_all_relevant_concept_ids(personas, app_mode=mode)
         
         ontology_mapping_count = {}
         concept_field_mappings = {}
@@ -320,7 +319,7 @@ class DCLEngine:
                     }
                 ))
         
-        persona_concepts = self.persona_view.get_relevant_concepts(personas)
+        persona_concepts = self.persona_view.get_relevant_concepts(personas, app_mode=mode)
         
         for persona in personas:
             bll_id = f"bll_{persona.value.lower()}"

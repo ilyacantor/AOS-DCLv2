@@ -1,21 +1,18 @@
 """
 MappingPersistence — stores and retrieves field-to-concept mappings.
 
-Data sources (selected explicitly, never by fallback):
-  - In-memory store : used when DATABASE_URL is not set (Demo mode)
-  - PostgreSQL DB   : field_concept_mappings + ontology_concepts tables (requires DATABASE_URL)
+Data path is selected by the caller via the `app_mode` parameter:
+  - "Demo" → In-memory store + ontology from config/ontology_concepts.yaml. No DB touched.
+  - "Farm" → PostgreSQL (field_concept_mappings + ontology_concepts). Requires DATABASE_URL.
 
-When DATABASE_URL is set, all operations go to the database.
-When DATABASE_URL is absent, mappings are held in-memory for the current process.
-Ontology concepts are loaded from config/ontology_concepts.yaml when no DB is available.
-
-No silent fallbacks. If a required resource is missing, a structured error is raised.
+No environment sniffing. No fallbacks.
+If the required resource for the requested mode is missing, a structured error is raised.
 """
 
 import os
 import logging
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Literal, Any, Optional
 
 import yaml
 
@@ -25,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
 ONTOLOGY_YAML_PATH = CONFIG_DIR / "ontology_concepts.yaml"
+
+AppMode = Literal["Demo", "Farm"]
 
 
 class MappingPersistenceError(Exception):
@@ -42,46 +41,51 @@ class MappingPersistenceError(Exception):
 class MappingPersistence:
 
     def __init__(self):
-        self.database_url: Optional[str] = os.getenv("DATABASE_URL")
-        # In-memory store: keyed by source_system
+        # In-memory store for Demo mode, keyed by source_system
         self._mem_mappings: Dict[str, List[Mapping]] = {}
-
-        if self.database_url:
-            logger.info("MappingPersistence: DATABASE_URL set — using PostgreSQL")
-        else:
-            logger.info("MappingPersistence: no DATABASE_URL — using in-memory store")
+        # DB URL read once at init; connection is made per-request
+        self._database_url: Optional[str] = os.getenv("DATABASE_URL")
 
     # ------------------------------------------------------------------
-    # save
+    # Public API — every method takes app_mode
     # ------------------------------------------------------------------
 
-    def save_mappings(self, mappings: List[Mapping], clear_existing: bool = False) -> int:
+    def save_mappings(
+        self, mappings: List[Mapping], app_mode: AppMode = "Demo", clear_existing: bool = False
+    ) -> int:
         if not mappings:
             return 0
-        if self.database_url:
-            return self._save_mappings_db(mappings, clear_existing)
-        return self._save_mappings_mem(mappings, clear_existing)
+        if app_mode == "Demo":
+            return self._save_mappings_mem(mappings, clear_existing)
+        self._require_db()
+        return self._save_mappings_db(mappings, clear_existing)
+
+    def load_mappings(self, app_mode: AppMode = "Demo", source_id: str = None) -> List[Mapping]:
+        if app_mode == "Demo":
+            return self._load_mappings_mem(source_id)
+        self._require_db()
+        return self._load_mappings_db(source_id)
+
+    def get_ontology_concepts(self, app_mode: AppMode = "Demo") -> List[Dict[str, Any]]:
+        if app_mode == "Demo":
+            return self._get_ontology_concepts_yaml()
+        self._require_db()
+        return self._get_ontology_concepts_db()
 
     # ------------------------------------------------------------------
-    # load
+    # Precondition checks
     # ------------------------------------------------------------------
 
-    def load_mappings(self, source_id: str = None) -> List[Mapping]:
-        if self.database_url:
-            return self._load_mappings_db(source_id)
-        return self._load_mappings_mem(source_id)
-
-    # ------------------------------------------------------------------
-    # ontology concepts
-    # ------------------------------------------------------------------
-
-    def get_ontology_concepts(self) -> List[Dict[str, Any]]:
-        if self.database_url:
-            return self._get_ontology_concepts_db()
-        return self._get_ontology_concepts_yaml()
+    def _require_db(self) -> None:
+        if not self._database_url:
+            raise MappingPersistenceError(
+                reason="Farm mode requires DATABASE_URL but it is not set",
+                missing_dependency="DATABASE_URL environment variable",
+                resolution="Set DATABASE_URL to a PostgreSQL connection string (e.g. Supabase)",
+            )
 
     # ==================================================================
-    # In-memory implementation
+    # In-memory implementation (Demo)
     # ==================================================================
 
     def _save_mappings_mem(self, mappings: List[Mapping], clear_existing: bool) -> int:
@@ -111,7 +115,7 @@ class MappingPersistence:
     def _get_ontology_concepts_yaml() -> List[Dict[str, Any]]:
         if not ONTOLOGY_YAML_PATH.exists():
             raise MappingPersistenceError(
-                reason="Cannot load ontology concepts: YAML config missing",
+                reason="Demo mode requires ontology YAML config but it is missing",
                 missing_dependency=str(ONTOLOGY_YAML_PATH),
                 resolution="Create config/ontology_concepts.yaml with concept definitions",
             )
@@ -135,13 +139,13 @@ class MappingPersistence:
         ]
 
     # ==================================================================
-    # Database implementation
+    # Database implementation (Farm)
     # ==================================================================
 
     def _save_mappings_db(self, mappings: List[Mapping], clear_existing: bool) -> int:
         import psycopg2
 
-        conn = psycopg2.connect(self.database_url)
+        conn = psycopg2.connect(self._database_url)
         cursor = conn.cursor()
 
         try:
@@ -184,7 +188,7 @@ class MappingPersistence:
     def _load_mappings_db(self, source_id: str = None) -> List[Mapping]:
         import psycopg2
 
-        conn = psycopg2.connect(self.database_url)
+        conn = psycopg2.connect(self._database_url)
         cursor = conn.cursor()
 
         try:
@@ -222,7 +226,7 @@ class MappingPersistence:
     def _get_ontology_concepts_db(self) -> List[Dict[str, Any]]:
         import psycopg2
 
-        conn = psycopg2.connect(self.database_url)
+        conn = psycopg2.connect(self._database_url)
         cursor = conn.cursor()
 
         try:

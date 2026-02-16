@@ -1,19 +1,18 @@
 """
 PersonaView — resolves which ontology concepts are relevant to each persona.
 
-Data sources (selected explicitly, never by fallback):
-  - YAML config  : config/persona_profiles.yaml  (always available, used for Demo)
-  - PostgreSQL DB: persona_profiles + persona_concept_relevance tables (requires DATABASE_URL)
+Data path is selected by the caller via the `app_mode` parameter:
+  - "Demo" → YAML config (config/persona_profiles.yaml). No DB touched.
+  - "Farm" → PostgreSQL (persona_profiles + persona_concept_relevance). Requires DATABASE_URL.
 
-When DATABASE_URL is set, DB is the primary source.
-When DATABASE_URL is absent, YAML is the only source.
-If the required source is unavailable, a structured error is raised — never silently degraded.
+No environment sniffing. No fallbacks.
+If the required resource for the requested mode is missing, a structured error is raised.
 """
 
 import os
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Literal, Optional, Set
 
 import yaml
 
@@ -23,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
 YAML_PATH = CONFIG_DIR / "persona_profiles.yaml"
+
+AppMode = Literal["Demo", "Farm"]
 
 
 class PersonaViewError(Exception):
@@ -40,45 +41,36 @@ class PersonaViewError(Exception):
 class PersonaView:
 
     def __init__(self):
-        self.database_url: Optional[str] = os.getenv("DATABASE_URL")
+        # Eagerly load YAML so Demo never hits I/O at query time.
+        # DB URL is read once and held; connection is made per-request.
         self._yaml_profiles: Dict[str, List[Dict]] = self._load_yaml_profiles()
-
-        if self.database_url:
-            logger.info("PersonaView: DATABASE_URL set — using PostgreSQL")
-        elif self._yaml_profiles:
-            logger.info("PersonaView: no DATABASE_URL — using YAML config")
-        else:
-            raise PersonaViewError(
-                reason="PersonaView cannot initialise: no data source available",
-                missing_dependency="DATABASE_URL env var OR config/persona_profiles.yaml",
-                resolution=(
-                    "Either set DATABASE_URL to a PostgreSQL connection string "
-                    "or ensure config/persona_profiles.yaml exists with persona data"
-                ),
-            )
+        self._database_url: Optional[str] = os.getenv("DATABASE_URL")
 
     # ------------------------------------------------------------------
-    # Public API
+    # Public API — every method takes app_mode
     # ------------------------------------------------------------------
 
     def get_relevant_concepts(
         self,
         personas: List[Persona],
+        app_mode: AppMode = "Demo",
         available_concepts: Optional[Set[str]] = None,
     ) -> Dict[str, List[str]]:
         if not personas:
             return {}
-
-        if self.database_url:
-            return self._get_relevant_concepts_db(personas, available_concepts)
-        return self._get_relevant_concepts_yaml(personas, available_concepts)
+        if app_mode == "Demo":
+            self._require_yaml()
+            return self._get_relevant_concepts_yaml(personas, available_concepts)
+        self._require_db()
+        return self._get_relevant_concepts_db(personas, available_concepts)
 
     def get_all_relevant_concept_ids(
         self,
         personas: List[Persona],
+        app_mode: AppMode = "Demo",
         available_concepts: Optional[Set[str]] = None,
     ) -> Set[str]:
-        persona_concepts = self.get_relevant_concepts(personas, available_concepts)
+        persona_concepts = self.get_relevant_concepts(personas, app_mode, available_concepts)
         all_concepts: Set[str] = set()
         for concepts in persona_concepts.values():
             all_concepts.update(concepts)
@@ -88,13 +80,36 @@ class PersonaView:
         self,
         persona: Persona,
         concept_id: str,
+        app_mode: AppMode = "Demo",
     ) -> float:
-        if self.database_url:
-            return self._get_relevance_score_db(persona, concept_id)
-        return self._get_relevance_score_yaml(persona, concept_id)
+        if app_mode == "Demo":
+            self._require_yaml()
+            return self._get_relevance_score_yaml(persona, concept_id)
+        self._require_db()
+        return self._get_relevance_score_db(persona, concept_id)
 
     # ------------------------------------------------------------------
-    # YAML implementation
+    # Precondition checks
+    # ------------------------------------------------------------------
+
+    def _require_yaml(self) -> None:
+        if not self._yaml_profiles:
+            raise PersonaViewError(
+                reason="Demo mode requires persona YAML config but it is missing or empty",
+                missing_dependency=str(YAML_PATH),
+                resolution="Create config/persona_profiles.yaml with persona definitions",
+            )
+
+    def _require_db(self) -> None:
+        if not self._database_url:
+            raise PersonaViewError(
+                reason="Farm mode requires DATABASE_URL but it is not set",
+                missing_dependency="DATABASE_URL environment variable",
+                resolution="Set DATABASE_URL to a PostgreSQL connection string (e.g. Supabase)",
+            )
+
+    # ------------------------------------------------------------------
+    # YAML implementation (Demo)
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -137,7 +152,7 @@ class PersonaView:
         return 0.0
 
     # ------------------------------------------------------------------
-    # DB implementation
+    # DB implementation (Farm)
     # ------------------------------------------------------------------
 
     def _get_relevant_concepts_db(
@@ -147,7 +162,7 @@ class PersonaView:
     ) -> Dict[str, List[str]]:
         import psycopg2
 
-        conn = psycopg2.connect(self.database_url)
+        conn = psycopg2.connect(self._database_url)
         cursor = conn.cursor()
 
         try:
@@ -173,7 +188,7 @@ class PersonaView:
     def _get_relevance_score_db(self, persona: Persona, concept_id: str) -> float:
         import psycopg2
 
-        conn = psycopg2.connect(self.database_url)
+        conn = psycopg2.connect(self._database_url)
         cursor = conn.cursor()
 
         try:
