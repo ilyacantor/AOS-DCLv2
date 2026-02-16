@@ -311,6 +311,8 @@ class SchemaLoader:
                 f"Received {len(payload.planes)} fabric planes with {payload.total_connections_actual} connections from AAM"
             )
 
+        SchemaLoader._sync_pipe_definition_store(payload, aod_run_id, narration, run_id)
+
         sources = []
 
         for plane in payload.planes:
@@ -417,6 +419,66 @@ class SchemaLoader:
 
         return sources, kpis
     
+    @staticmethod
+    def _sync_pipe_definition_store(payload, aod_run_id=None, narration=None, run_id=None):
+        """Bridge: populate PipeDefinitionStore from the AAM pull path.
+
+        This ensures the ingest guard sees the same pipes that the
+        graph/dashboard pipeline uses — one data flow, one store.
+        """
+        from datetime import datetime, timezone as tz
+        try:
+            from backend.api.pipe_store import PipeDefinition, get_pipe_store
+            pipe_store = get_pipe_store()
+            now = datetime.now(tz.utc).isoformat()
+            definitions = []
+
+            for plane in payload.planes:
+                for pipe in plane.pipes:
+                    if not pipe.pipe_id:
+                        continue
+                    defn = PipeDefinition(
+                        pipe_id=pipe.pipe_id,
+                        candidate_id=getattr(pipe, "candidate_id", ""),
+                        source_name=pipe.display_name,
+                        vendor=pipe.vendor,
+                        category=pipe.category,
+                        governance_status=pipe.governance_status,
+                        fields=pipe.fields,
+                        entity_scope=getattr(pipe, "entity_scope", None),
+                        identity_keys=getattr(pipe, "identity_keys", []),
+                        transport_kind=getattr(pipe, "transport_kind", None),
+                        modality=getattr(pipe, "modality", None),
+                        change_semantics=getattr(pipe, "change_semantics", None),
+                        health=getattr(pipe, "health", "unknown"),
+                        last_sync=getattr(pipe, "last_sync", None),
+                        asset_key=getattr(pipe, "asset_key", ""),
+                        aod_asset_id=getattr(pipe, "aod_asset_id", None),
+                        fabric_plane=pipe.fabric_plane,
+                        received_at=now,
+                    )
+                    definitions.append(defn)
+
+            if definitions:
+                receipt = pipe_store.register_batch(
+                    definitions=definitions,
+                    aod_run_id=aod_run_id,
+                    source="aam-pull",
+                )
+                logger.info(
+                    f"[SchemaLoader] Synced {len(definitions)} pipes into "
+                    f"PipeDefinitionStore (aod_run_id={aod_run_id})"
+                )
+                if narration and run_id:
+                    narration.add_message(
+                        run_id, "SchemaLoader",
+                        f"Synced {len(definitions)} pipe definitions to ingest guard"
+                    )
+            else:
+                logger.warning("[SchemaLoader] No pipes with pipe_id to sync to PipeDefinitionStore")
+        except Exception as e:
+            logger.error(f"[SchemaLoader] PipeDefinitionStore sync failed: {e}")
+
     @staticmethod
     def _get_pool():
         try:
