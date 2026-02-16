@@ -1,23 +1,21 @@
 """
-DCL Ingestion Endpoint — accepts data pushes from AAM Runners.
+DCL Ingestion Endpoint — accepts data pushes from Farm / AAM Runners.
 
 Architecture:
-  AAM dispatches a Job Manifest → Runner extracts + transforms →
-  Runner POSTs to this endpoint → DCL stores metadata + buffers rows.
+  Farm pushes pipe payloads → DCL stores in-memory + writes through to Redis.
+  On backend restart, IngestStore rehydrates from Redis automatically.
 
-Zero-Trust compliance:
-  - Row data is buffered IN-MEMORY ONLY (never written to disk).
-  - Metadata (run receipts, schema hashes, drift events) is the durable
-    record of what was ingested.
-  - The PayloadSecurityGuard is NOT invoked on ingested rows because
-    those rows live in a bounded in-memory buffer, not on disk.
+Persistence:
+  - Redis write-through: receipts, rows, schema registry, drift events.
+  - Redis TTL: 24 hours (synthetic data, auto-expires).
+  - If Redis is unavailable, in-memory only (logs warning at startup).
 """
 
 import hashlib
 import json
 import time
 from collections import OrderedDict
-from dataclasses import dataclass, field as dc_field
+from dataclasses import dataclass, field as dc_field, asdict
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Any, Dict, List, Optional
@@ -28,6 +26,9 @@ from backend.aam.ingress import normalize_source_id
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
+
+_REDIS_PREFIX = "dcl:ingest:"
+_REDIS_TTL = 86400  # 24 hours
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +113,23 @@ class RunReceipt:
 
 
 # ---------------------------------------------------------------------------
-# In-Memory Ingest Store  (Zero-Trust: never persisted to disk)
+# Redis helpers
+# ---------------------------------------------------------------------------
+
+def _get_redis():
+    """Try to connect to Redis. Returns client or None."""
+    try:
+        import redis
+        r = redis.Redis(host="localhost", port=6379, decode_responses=True)
+        r.ping()
+        return r
+    except Exception as e:
+        logger.warning(f"[IngestStore] Redis unavailable: {e}")
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Ingest Store with Redis write-through
 # ---------------------------------------------------------------------------
 
 _MAX_RUNS = 500          # keep last N run receipts
@@ -122,7 +139,11 @@ _MAX_DRIFT_EVENTS = 1000
 
 class IngestStore:
     """
-    In-memory store for ingested data and metadata.
+    In-memory store for ingested data with Redis write-through.
+
+    Primary reads: always from in-memory (fast).
+    Writes: in-memory + Redis (if available).
+    Startup: rehydrates from Redis so data survives backend restarts.
 
     Bounded by _MAX_RUNS and _MAX_BUFFERED_ROWS to prevent OOM.
     Oldest runs are evicted first (FIFO).
@@ -131,14 +152,134 @@ class IngestStore:
     def __init__(self) -> None:
         self._lock = Lock()
 
-        # Metadata (what DCL durably "owns")
+        # Metadata
         self._receipts: OrderedDict[str, RunReceipt] = OrderedDict()
-        self._schema_registry: Dict[str, SchemaRecord] = {}   # pipe_id → last schema
+        self._schema_registry: Dict[str, SchemaRecord] = {}
         self._drift_events: List[SchemaDriftEvent] = []
 
-        # Row buffer (in-memory only, queryable)
+        # Row buffer
         self._row_buffer: OrderedDict[str, List[Dict[str, Any]]] = OrderedDict()
         self._total_rows = 0
+
+        # Redis connection (None if unavailable)
+        self._redis = _get_redis()
+
+        # Rehydrate from Redis on startup
+        if self._redis:
+            self._load_from_redis()
+
+    # ------------------------------------------------------------------
+    # Redis persistence
+    # ------------------------------------------------------------------
+
+    def _load_from_redis(self) -> None:
+        """Rehydrate in-memory state from Redis."""
+        try:
+            r = self._redis
+
+            # Load receipt order
+            order = r.lrange(f"{_REDIS_PREFIX}receipt_order", 0, -1)
+            loaded_receipts = 0
+            loaded_rows = 0
+
+            for run_id in order:
+                raw = r.hget(f"{_REDIS_PREFIX}receipts", run_id)
+                if not raw:
+                    continue
+                d = json.loads(raw)
+                receipt = RunReceipt(**d)
+                self._receipts[run_id] = receipt
+                loaded_receipts += 1
+
+                # Load rows
+                rows_raw = r.get(f"{_REDIS_PREFIX}rows:{run_id}")
+                if rows_raw:
+                    rows = json.loads(rows_raw)
+                    self._row_buffer[run_id] = rows
+                    self._total_rows += len(rows)
+                    loaded_rows += len(rows)
+
+            # Load schema registry
+            schemas = r.hgetall(f"{_REDIS_PREFIX}schemas")
+            for pipe_id, raw in schemas.items():
+                d = json.loads(raw)
+                self._schema_registry[pipe_id] = SchemaRecord(**d)
+
+            # Load drift events
+            drift_raw = r.get(f"{_REDIS_PREFIX}drift_events")
+            if drift_raw:
+                for d in json.loads(drift_raw):
+                    self._drift_events.append(SchemaDriftEvent(**d))
+
+            if loaded_receipts > 0:
+                logger.info(
+                    f"[IngestStore] Rehydrated from Redis: "
+                    f"{loaded_receipts} receipts, {loaded_rows:,} rows, "
+                    f"{len(self._schema_registry)} schemas"
+                )
+
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis rehydration failed: {e}")
+
+    def _persist_receipt(self, run_id: str, receipt: RunReceipt) -> None:
+        """Write a receipt to Redis."""
+        if not self._redis:
+            return
+        try:
+            r = self._redis
+            r.hset(f"{_REDIS_PREFIX}receipts", run_id, json.dumps(asdict(receipt)))
+            r.rpush(f"{_REDIS_PREFIX}receipt_order", run_id)
+            r.expire(f"{_REDIS_PREFIX}receipts", _REDIS_TTL)
+            r.expire(f"{_REDIS_PREFIX}receipt_order", _REDIS_TTL)
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis persist receipt failed: {e}")
+
+    def _persist_rows(self, run_id: str, rows: List[Dict[str, Any]]) -> None:
+        """Write rows to Redis with TTL."""
+        if not self._redis:
+            return
+        try:
+            key = f"{_REDIS_PREFIX}rows:{run_id}"
+            self._redis.set(key, json.dumps(rows, default=str))
+            self._redis.expire(key, _REDIS_TTL)
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis persist rows failed: {e}")
+
+    def _persist_schema(self, pipe_id: str, record: SchemaRecord) -> None:
+        """Write a schema record to Redis."""
+        if not self._redis:
+            return
+        try:
+            self._redis.hset(
+                f"{_REDIS_PREFIX}schemas", pipe_id, json.dumps(asdict(record))
+            )
+            self._redis.expire(f"{_REDIS_PREFIX}schemas", _REDIS_TTL)
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis persist schema failed: {e}")
+
+    def _persist_drift_events(self) -> None:
+        """Write drift events to Redis."""
+        if not self._redis:
+            return
+        try:
+            self._redis.set(
+                f"{_REDIS_PREFIX}drift_events",
+                json.dumps([asdict(e) for e in self._drift_events]),
+            )
+            self._redis.expire(f"{_REDIS_PREFIX}drift_events", _REDIS_TTL)
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis persist drift failed: {e}")
+
+    def _evict_from_redis(self, run_id: str) -> None:
+        """Remove evicted run from Redis."""
+        if not self._redis:
+            return
+        try:
+            self._redis.hdel(f"{_REDIS_PREFIX}receipts", run_id)
+            self._redis.lrem(f"{_REDIS_PREFIX}receipt_order", 1, run_id)
+            self._redis.delete(f"{_REDIS_PREFIX}rows:{run_id}")
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis evict failed: {e}")
 
     # ------------------------------------------------------------------
     # Public API
@@ -191,6 +332,8 @@ class IngestStore:
 
         curr_field_set = set(field_names)
 
+        evicted_ids: List[str] = []
+
         with self._lock:
             drift = False
             drift_fields: List[str] = []
@@ -236,6 +379,7 @@ class IngestStore:
             while len(self._receipts) > _MAX_RUNS:
                 evicted_id, _ = self._receipts.popitem(last=False)
                 self._row_buffer.pop(evicted_id, None)
+                evicted_ids.append(evicted_id)
 
             self._row_buffer[run_id] = tagged
             self._total_rows += actual
@@ -243,6 +387,16 @@ class IngestStore:
             while self._total_rows > _MAX_BUFFERED_ROWS and self._row_buffer:
                 evicted_id, evicted_rows = self._row_buffer.popitem(last=False)
                 self._total_rows -= len(evicted_rows)
+                evicted_ids.append(evicted_id)
+
+        # Write-through to Redis (outside lock)
+        self._persist_receipt(run_id, receipt)
+        self._persist_rows(run_id, tagged)
+        self._persist_schema(pipe_id, schema_record)
+        if drift:
+            self._persist_drift_events()
+        for eid in evicted_ids:
+            self._evict_from_redis(eid)
 
         return receipt
 
@@ -355,6 +509,7 @@ class IngestStore:
                 "first_run_at": first.received_at if first else None,
                 "max_runs": _MAX_RUNS,
                 "max_rows": _MAX_BUFFERED_ROWS,
+                "redis_connected": self._redis is not None,
             }
 
 
