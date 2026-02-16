@@ -288,6 +288,14 @@ class ExportPipesFabricPlane(BaseModel):
     connections: List[ExportPipesConnection] = Field(default_factory=list)
 
 
+class SkippedConnection(BaseModel):
+    """A connection AAM skipped (pending inference, etc.)."""
+    candidate_id: str = ""
+    vendor: str = ""
+    reason: str = ""
+    discovered_at: Optional[str] = None
+
+
 class ExportPipesRequest(BaseModel):
     """The DCLExportResponse schema from AAM."""
     aod_run_id: Optional[str] = None
@@ -295,6 +303,8 @@ class ExportPipesRequest(BaseModel):
     source: str = "aam"
     total_connections: int = 0
     fabric_planes: List[ExportPipesFabricPlane] = Field(default_factory=list)
+    skipped_connections: List[SkippedConnection] = Field(default_factory=list)
+    skipped_count: int = 0
 
 
 class ExportPipesResponse(BaseModel):
@@ -302,6 +312,7 @@ class ExportPipesResponse(BaseModel):
     status: str
     pipes_registered: int
     pipe_ids: List[str]
+    skipped_noted: int
     aod_run_id: Optional[str]
     timestamp: str
 
@@ -372,10 +383,19 @@ def receive_export_pipes(request: ExportPipesRequest):
         f"(aod_run_id={request.aod_run_id})"
     )
 
+    skipped_noted = len(request.skipped_connections) if request.skipped_connections else request.skipped_count
+    if request.skipped_connections:
+        for sc in request.skipped_connections:
+            logger.info(
+                f"[ExportPipes] Skipped connection noted: "
+                f"candidate={sc.candidate_id} vendor={sc.vendor} reason={sc.reason}"
+            )
+
     return ExportPipesResponse(
-        status="registered",
+        status="accepted",
         pipes_registered=len(definitions),
         pipe_ids=receipt.pipe_ids,
+        skipped_noted=skipped_noted,
         aod_run_id=request.aod_run_id,
         timestamp=now,
     )
