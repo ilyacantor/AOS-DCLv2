@@ -161,7 +161,11 @@ function App() {
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to run pipeline');
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => null);
+        const detail = errBody?.detail || `HTTP ${res.status}`;
+        throw new Error(detail);
+      }
       const data = await res.json();
       console.log('[handleRun] Received data:', {
         nodes: data.graph?.nodes?.length,
@@ -184,9 +188,10 @@ function App() {
       setIsRunning(false);
       toast({ title: 'Pipeline Complete', description: `${data.graph.nodes.length} nodes, ${data.graph.links.length} links` });
     } catch (e) {
-      console.error('Failed to run pipeline:', e);
+      const msg = e instanceof Error ? e.message : 'Failed to run pipeline';
+      console.error('Failed to run pipeline:', msg);
       setIsRunning(false);
-      toast({ title: 'Error', description: 'Failed to run pipeline', variant: 'destructive' });
+      toast({ title: 'Pipeline Error', description: msg, variant: 'destructive' });
     }
   };
 
