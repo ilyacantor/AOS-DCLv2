@@ -255,6 +255,18 @@ def ingest_telemetry_gone():
 # =============================================================================
 
 
+@app.get("/api/dcl/ingest")
+def dcl_ingest_ping():
+    """Connectivity check — Farm can GET this to verify the ingest endpoint is reachable."""
+    store = get_ingest_store()
+    stats = store.get_stats()
+    return {
+        "status": "ready",
+        "message": "POST payloads to this URL. GET is for connectivity testing only.",
+        "ingest_stats": stats,
+    }
+
+
 @app.post("/api/dcl/ingest")
 async def dcl_ingest(
     request: Request,
@@ -264,10 +276,29 @@ async def dcl_ingest(
     x_api_key: Optional[str] = Header(None),
 ):
     """
-    Accept a data push from an AAM Runner.
+    Accept a data push from an AAM Runner or Farm.
     Accepts any JSON body and adapts to match IngestRequest schema.
     """
-    raw_body = await request.json()
+    # Log raw request info for debugging connectivity issues
+    client_host = request.client.host if request.client else "unknown"
+    content_type = request.headers.get("content-type", "missing")
+    content_length = request.headers.get("content-length", "missing")
+    logger.info(
+        f"[Ingest] Incoming POST from {client_host} | "
+        f"content-type={content_type} content-length={content_length} | "
+        f"x-run-id={x_run_id} x-pipe-id={x_pipe_id}"
+    )
+
+    try:
+        raw_body = await request.json()
+    except Exception as e:
+        raw_bytes = await request.body()
+        logger.error(
+            f"[Ingest] JSON parse failed from {client_host}: {e} | "
+            f"raw body ({len(raw_bytes)} bytes): {raw_bytes[:500]!r}"
+        )
+        raise HTTPException(status_code=400, detail=f"Invalid JSON body: {e}")
+
     logger.info(f"[Ingest] Received keys: {list(raw_body.keys()) if isinstance(raw_body, dict) else type(raw_body).__name__}")
 
     if isinstance(raw_body, dict):
@@ -434,6 +465,13 @@ def list_schema_drift():
         ],
         "total": len(events),
     }
+
+
+@app.get("/api/dcl/ingest/stats")
+def get_ingest_stats():
+    """Quick summary of what's in the ingest store."""
+    store = get_ingest_store()
+    return store.get_stats()
 
 
 class MappingRequest(BaseModel):
