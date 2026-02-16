@@ -67,4 +67,4 @@ DCL_DATASET_ID = "nlq_test"
 [deployment]
 deploymentTarget = "autoscale"
 run = ["python", "run_backend.py"]
-build = ["bash", "-c", "npm run build"]
+build = ["npm", "run", "build"]
