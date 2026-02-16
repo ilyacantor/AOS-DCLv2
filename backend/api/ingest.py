@@ -55,11 +55,15 @@ class IngestRequest(BaseModel):
 class IngestResponse(BaseModel):
     """Acknowledgement returned to the Runner."""
     status: str                        # "ingested" | "rejected"
-    run_id: str
+    dcl_run_id: str                    # DCL's internal run ID
+    run_id: str                        # alias kept for backward compat
     pipe_id: str
     rows_accepted: int
     schema_drift: bool = False
     drift_fields: List[str] = Field(default_factory=list)
+    matched_schema: bool = False       # confirms structure+content join succeeded
+    schema_fields: List[str] = Field(default_factory=list)  # fields from export blueprint
+    timestamp: str = ""                # ISO-8601 when DCL accepted
     message: Optional[str] = None
 
 

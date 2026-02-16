@@ -57,6 +57,10 @@ from backend.api.ingest import (
     get_ingest_store,
     compute_schema_hash,
 )
+from backend.api.pipe_store import (
+    PipeDefinition,
+    get_pipe_store,
+)
 from backend.api.mcp_server import (
     MCPToolCall,
     MCPToolResult,
@@ -251,6 +255,158 @@ def ingest_telemetry_gone():
 
 
 # =============================================================================
+# DCL Pipe Definition Store — receives structure from AAM /export-pipes
+# =============================================================================
+
+
+class ExportPipesConnection(BaseModel):
+    """A single connection from AAM's export-pipes payload."""
+    pipe_id: str = Field(..., description="THE JOIN KEY — must match Farm's x-pipe-id")
+    candidate_id: str = Field("", description="Original candidate ID (provenance)")
+    source_name: str = ""
+    vendor: str = ""
+    category: str = ""
+    governance_status: Optional[str] = None
+    fields: List[str] = Field(default_factory=list)
+    entity_scope: Optional[str] = None
+    identity_keys: List[str] = Field(default_factory=list)
+    transport_kind: Optional[str] = None
+    modality: Optional[str] = None
+    change_semantics: Optional[str] = None
+    health: str = "unknown"
+    last_sync: Optional[str] = None
+    asset_key: str = ""
+    aod_asset_id: Optional[str] = None
+
+
+class ExportPipesFabricPlane(BaseModel):
+    """A fabric plane containing connections."""
+    plane_type: str
+    vendor: str = ""
+    connection_count: int = 0
+    health: str = "unknown"
+    connections: List[ExportPipesConnection] = Field(default_factory=list)
+
+
+class ExportPipesRequest(BaseModel):
+    """The DCLExportResponse schema from AAM."""
+    aod_run_id: Optional[str] = None
+    timestamp: Optional[str] = None
+    source: str = "aam"
+    total_connections: int = 0
+    fabric_planes: List[ExportPipesFabricPlane] = Field(default_factory=list)
+
+
+class ExportPipesResponse(BaseModel):
+    """Confirmation that pipe definitions were stored."""
+    status: str
+    pipes_registered: int
+    pipe_ids: List[str]
+    aod_run_id: Optional[str]
+    timestamp: str
+
+
+@app.post("/api/dcl/export-pipes", response_model=ExportPipesResponse)
+def receive_export_pipes(request: ExportPipesRequest):
+    """
+    Receive pipe definitions from AAM (Path 1 — Structure Path).
+
+    AAM pushes pipe schemas here so DCL knows what data to expect.
+    These definitions are the join target for Farm's /ingest data.
+    The JOIN key is pipe_id.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    pipe_store = get_pipe_store()
+    definitions = []
+
+    for plane in request.fabric_planes:
+        for conn in plane.connections:
+            if not conn.pipe_id:
+                logger.warning(
+                    f"[ExportPipes] Skipping connection with empty pipe_id "
+                    f"(source_name={conn.source_name})"
+                )
+                continue
+
+            defn = PipeDefinition(
+                pipe_id=conn.pipe_id,
+                candidate_id=conn.candidate_id,
+                source_name=conn.source_name,
+                vendor=conn.vendor,
+                category=conn.category,
+                governance_status=conn.governance_status,
+                fields=conn.fields,
+                entity_scope=conn.entity_scope,
+                identity_keys=conn.identity_keys,
+                transport_kind=conn.transport_kind,
+                modality=conn.modality,
+                change_semantics=conn.change_semantics,
+                health=conn.health,
+                last_sync=conn.last_sync,
+                asset_key=conn.asset_key,
+                aod_asset_id=conn.aod_asset_id,
+                fabric_plane=plane.plane_type,
+                received_at=now,
+            )
+            definitions.append(defn)
+
+    if not definitions:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "NO_PIPE_DEFINITIONS",
+                "message": "No valid pipe definitions found in payload. "
+                           "Each connection must have a non-empty pipe_id.",
+            },
+        )
+
+    receipt = pipe_store.register_batch(
+        definitions=definitions,
+        aod_run_id=request.aod_run_id,
+        source=request.source,
+    )
+
+    logger.info(
+        f"[ExportPipes] Stored {len(definitions)} pipe definitions "
+        f"from {len(request.fabric_planes)} fabric planes "
+        f"(aod_run_id={request.aod_run_id})"
+    )
+
+    return ExportPipesResponse(
+        status="registered",
+        pipes_registered=len(definitions),
+        pipe_ids=receipt.pipe_ids,
+        aod_run_id=request.aod_run_id,
+        timestamp=now,
+    )
+
+
+@app.get("/api/dcl/export-pipes")
+def list_pipe_definitions():
+    """List all registered pipe definitions (for diagnostics)."""
+    pipe_store = get_pipe_store()
+    definitions = pipe_store.get_all_definitions()
+    return {
+        "pipe_count": len(definitions),
+        "pipes": [
+            {
+                "pipe_id": d.pipe_id,
+                "source_name": d.source_name,
+                "vendor": d.vendor,
+                "category": d.category,
+                "fabric_plane": d.fabric_plane,
+                "field_count": len(d.fields),
+                "fields": d.fields,
+                "health": d.health,
+                "received_at": d.received_at,
+            }
+            for d in definitions
+        ],
+        "stats": pipe_store.get_stats(),
+    }
+
+
+# =============================================================================
 # DCL Ingestion — Runner push endpoint
 # =============================================================================
 
@@ -276,9 +432,18 @@ async def dcl_ingest(
     x_api_key: Optional[str] = Header(None),
 ):
     """
-    Accept a data push from an AAM Runner or Farm.
-    Accepts any JSON body and adapts to match IngestRequest schema.
+    Accept a data push from Farm (Path 3 — Content Path).
+
+    Schema-on-write validation: before accepting any payload, checks
+    that a matching pipe definition exists (registered via /export-pipes).
+    If no match, returns HTTP 422 NO_MATCHING_PIPE.
+
+    If no pipe definitions have been registered at all (export-pipes
+    not yet called), the guard is bypassed with a WARNING log so
+    existing Demo/Farm self-directed flows continue working.
     """
+    now = datetime.now(timezone.utc).isoformat()
+
     # Log raw request info for debugging connectivity issues
     client_host = request.client.host if request.client else "unknown"
     content_type = request.headers.get("content-type", "missing")
@@ -342,6 +507,38 @@ async def dcl_ingest(
     run_id = x_run_id or str(uuid.uuid4())
     pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
 
+    # ── Schema-on-write gate: validate pipe_id against export-pipes ──
+    pipe_store = get_pipe_store()
+    pipe_def = pipe_store.lookup(pipe_id)
+    guard_active = pipe_store.count() > 0
+
+    if guard_active and pipe_def is None:
+        # Pipe definitions exist but this pipe_id has no match → REJECT
+        logger.error(
+            f"[Ingest] REJECTED: No matching pipe definition for pipe_id={pipe_id} "
+            f"(run_id={run_id}, source={ingest_req.source_system}). "
+            f"Available pipes: {pipe_store.list_pipe_ids()}"
+        )
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "NO_MATCHING_PIPE",
+                "pipe_id": pipe_id,
+                "message": f"No schema blueprint exists for pipe_id: {pipe_id}.",
+                "hint": "Ensure AAM has run /export-pipes and that the pipe_id "
+                        "matches between Export and Runner manifest.",
+                "available_pipes": pipe_store.list_pipe_ids(),
+                "timestamp": now,
+            },
+        )
+
+    if not guard_active:
+        logger.warning(
+            "[Ingest] Ingest guard BYPASSED — no pipe definitions registered. "
+            "Run AAM /export-pipes to activate schema-on-write validation."
+        )
+
+    # ── Proceed with ingest ──────────────────────────────────────────
     if x_schema_hash:
         schema_hash = x_schema_hash
     else:
@@ -366,18 +563,27 @@ async def dcl_ingest(
         logger.error(f"[Ingest] Failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+    # Build enriched response with schema join confirmation
+    matched_schema = pipe_def is not None
+    schema_fields = pipe_def.fields if pipe_def else []
+
     logger.info(
         f"[Ingest] Accepted {actual_rows} rows from {ingest_req.source_system} "
-        f"pipe={pipe_id} run={run_id} drift={receipt.schema_drift}"
+        f"pipe={pipe_id} run={run_id} drift={receipt.schema_drift} "
+        f"matched_schema={matched_schema}"
     )
 
     return IngestResponse(
         status="ingested",
+        dcl_run_id=run_id,
         run_id=run_id,
         pipe_id=pipe_id,
         rows_accepted=actual_rows,
         schema_drift=receipt.schema_drift,
         drift_fields=receipt.drift_fields,
+        matched_schema=matched_schema,
+        schema_fields=schema_fields,
+        timestamp=now,
     )
 
 
