@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GraphSnapshot, PersonaId } from './types';
 import { MonitorPanel } from './components/MonitorPanel';
 import { NarrationPanel } from './components/NarrationPanel';
@@ -20,7 +20,7 @@ const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO'];
 function App() {
   const [graphData, setGraphData] = useState<GraphSnapshot | null>(null);
   const [runMode, setRunMode] = useState<'Dev' | 'Prod'>('Dev');
-  const [dataMode, setDataMode] = useState<'Demo' | 'Farm' | 'AAM'>('AAM');
+  const [dataMode, setDataMode] = useState<'Demo' | 'Farm' | 'AAM'>('Demo');
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>(['CFO', 'CRO', 'COO', 'CTO']);
   const [runId, setRunId] = useState<string | undefined>(undefined);
   const [isRunning, setIsRunning] = useState(false);
@@ -31,13 +31,7 @@ function App() {
 
   const [ingestStats, setIngestStats] = useState<{ total_runs: number; total_rows_buffered: number; pipes_tracked: number; unique_sources: number } | null>(null);
 
-  const hasLoadedRef = useRef(false);
-  useEffect(() => {
-    if (mainView === 'graph' && !hasLoadedRef.current) {
-      hasLoadedRef.current = true;
-      loadData();
-    }
-  }, [mainView]);
+  // No auto-load — user clicks Run when ready.
 
   // Poll ingest stats when in Farm mode
   useEffect(() => {
@@ -113,35 +107,6 @@ function App() {
         alerts: [],
       };
     });
-  };
-
-  const loadData = async () => {
-    console.log('[App] loadData started');
-    try {
-      const res = await fetch('/api/dcl/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: dataMode, run_mode: runMode, personas: selectedPersonas }),
-      });
-
-      console.log('[App] fetch response:', res.status);
-      if (!res.ok) throw new Error('Failed to load graph');
-      const data = await res.json();
-      console.log('[App] data received, nodes:', data.graph?.nodes?.length, 'links:', data.graph?.links?.length);
-      const graphWithViews = {
-        ...data.graph,
-        meta: {
-          ...(data.graph.meta ?? {}),
-          personaViews: generatePersonaViews(data.graph, []),
-        },
-      };
-      setGraphData(graphWithViews);
-      setRunId(data.run_id);
-      console.log('[App] graphData set');
-    } catch (e) {
-      console.error('[App] Failed to load data:', e);
-      toast({ title: 'Error', description: 'Failed to load initial data', variant: 'destructive' });
-    }
   };
 
   const handleRun = async () => {
