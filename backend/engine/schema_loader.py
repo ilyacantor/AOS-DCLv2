@@ -39,10 +39,12 @@ class SchemaLoader:
             return []
         
         normalizer = get_normalizer()
-        normalizer.load_registry(narration, run_id)
-        
+        # Skip Farm API registry call for Demo mode — it only uses local CSV
+        # files and built-in aliases are sufficient for normalization.
+        normalizer._registry_loaded = True
+
         sources = []
-        
+
         source_dirs = {
             "salesforce": ("salesforce", "CRM"),
             "dynamics": ("dynamics", "CRM"),
@@ -523,7 +525,7 @@ class SchemaLoader:
         params = {"limit": limit}
         
         try:
-            with httpx.Client(timeout=60.0) as client:
+            with httpx.Client(timeout=10.0) as client:
                 response = client.get(f"{base_url}{endpoint}", params=params)
                 response.raise_for_status()
                 data = response.json()

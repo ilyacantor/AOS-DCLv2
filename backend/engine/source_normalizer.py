@@ -10,6 +10,7 @@ Normalizes raw source system identifiers to canonical sources using:
 
 import os
 import re
+import time
 import httpx
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
@@ -173,17 +174,32 @@ class SourceNormalizer:
         "cloud": [r"aws", r"cloud", r"cost_explorer", r"cur"],
     }
 
+    # Circuit breaker: skip Farm API calls for this many seconds after a failure
+    _CB_COOLDOWN = 120  # 2 minutes
+    _cb_last_failure: float = 0.0  # class-level, shared across instances
+
     def __init__(self):
         self._registry_cache: Dict[str, CanonicalSource] = {}
         self._discovered_sources: Dict[str, CanonicalSource] = {}
         self._registry_loaded = False
 
     def load_registry(self, narration=None, run_id: Optional[str] = None) -> int:
+        # Circuit breaker: if Farm API failed recently, skip the network call
+        now = time.time()
+        if SourceNormalizer._cb_last_failure > 0 and (now - SourceNormalizer._cb_last_failure) < SourceNormalizer._CB_COOLDOWN:
+            if narration and run_id:
+                narration.add_message(
+                    run_id, "SourceNormalizer",
+                    "Skipping registry load (Farm API circuit breaker open). Using built-in aliases."
+                )
+            self._registry_loaded = True  # mark loaded so normalize() doesn't retry
+            return 0
+
         farm_url = os.getenv("FARM_API_URL", "https://autonomos.farm")
         registry_url = f"{farm_url}/api/sources/registry"
 
         try:
-            with httpx.Client(timeout=30.0) as client:
+            with httpx.Client(timeout=5.0) as client:
                 response = client.get(registry_url)
                 response.raise_for_status()
                 data = response.json()
@@ -209,6 +225,7 @@ class SourceNormalizer:
                     self._registry_cache[canonical.source_id] = canonical
 
                 self._registry_loaded = True
+                SourceNormalizer._cb_last_failure = 0.0  # reset circuit breaker on success
 
                 if narration and run_id:
                     narration.add_message(
@@ -219,10 +236,12 @@ class SourceNormalizer:
                 return len(self._registry_cache)
 
         except Exception as e:
+            SourceNormalizer._cb_last_failure = now  # trip the circuit breaker
+            self._registry_loaded = True  # don't retry on every normalize() call
             if narration and run_id:
                 narration.add_message(
                     run_id, "SourceNormalizer",
-                    f"Failed to load registry: {e}. Using built-in aliases only."
+                    f"Registry unavailable ({type(e).__name__}). Using built-in aliases."
                 )
             return 0
 
