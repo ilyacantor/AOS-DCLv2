@@ -54,6 +54,7 @@ def health():
 
     farm_checks = {
         "database_url": "set" if os.getenv("DATABASE_URL") else "MISSING",
+        "aam_api_url": "set" if os.getenv("AAM_API_URL") else "MISSING",
     }
 
     demo_ok = all(v != "MISSING" for v in demo_checks.values())
@@ -138,7 +139,7 @@ def run_batch_mapping(request: MappingRequest):
         if request.mode == "Demo":
             sources = SchemaLoader.load_demo_schemas()
         else:
-            sources = SchemaLoader.load_farm_schemas(engine.narration, str(uuid.uuid4()))
+            sources = SchemaLoader.load_farm_schemas_from_pipes(engine.narration, str(uuid.uuid4()))
         
         semantic_mapper = SemanticMapper()
         mappings, stats = semantic_mapper.run_mapping(

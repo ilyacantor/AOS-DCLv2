@@ -1,11 +1,26 @@
 import os
 import csv
 import json
+import logging
 from typing import List, Dict, Any, Optional
 import pandas as pd
 import httpx
 from backend.domain import SourceSystem, TableSchema, FieldSchema, DiscoveryStatus, ResolutionType
 from backend.engine.source_normalizer import get_normalizer, NormalizationResult
+
+logger = logging.getLogger(__name__)
+
+
+class SchemaLoaderError(Exception):
+    """Structured error with machine-readable context."""
+
+    def __init__(self, reason: str, missing_dependency: str, resolution: str):
+        self.reason = reason
+        self.missing_dependency = missing_dependency
+        self.resolution = resolution
+        super().__init__(
+            f"{reason} | missing: {missing_dependency} | fix: {resolution}"
+        )
 
 
 class SchemaLoader:
@@ -236,6 +251,208 @@ class SchemaLoader:
         return sources
     
     @staticmethod
+    def load_farm_schemas_from_pipes(
+        narration=None, run_id: Optional[str] = None, source_limit: int = 50
+    ) -> List[SourceSystem]:
+        """Load Farm schemas from AAM's /api/dcl/export-pipes endpoint.
+
+        Expected response shape from AAM:
+            {
+              "fabric_planes": [
+                {
+                  "plane_type": "api_gateway",
+                  "vendor": "apigee",
+                  "connections": [
+                    {
+                      "pipe_id": "uuid",
+                      "source_name": "Hubspot",
+                      "vendor": "hubspot inc",
+                      "category": "crm",
+                      "fields": ["account_id", "account_name", "revenue", ...],
+                      "governance_status": "governed",
+                      "health": "unknown",
+                      "last_sync": "2026-02-16T..."
+                    }
+                  ]
+                }
+              ],
+              "total_connections": 739
+            }
+
+        Each connection is turned into a table under a SourceSystem keyed by
+        normalised source_name. The `fields` list (strings) becomes FieldSchema
+        objects with inferred semantic hints.
+        """
+        aam_url = os.getenv("AAM_API_URL")
+        if not aam_url:
+            raise SchemaLoaderError(
+                reason="Farm mode requires AAM_API_URL but it is not set",
+                missing_dependency="AAM_API_URL environment variable",
+                resolution="Set AAM_API_URL to the AAM base URL (e.g. https://aam.autonomos.farm)",
+            )
+
+        export_url = f"{aam_url}/api/dcl/export-pipes"
+        if narration and run_id:
+            narration.add_message(run_id, "SchemaLoader", f"Fetching pipe schemas from {export_url}")
+
+        # -- fetch --
+        try:
+            with httpx.Client(timeout=60.0) as client:
+                response = client.get(export_url)
+                response.raise_for_status()
+                payload = response.json()
+        except httpx.HTTPStatusError as e:
+            raise SchemaLoaderError(
+                reason=f"AAM export-pipes returned HTTP {e.response.status_code}",
+                missing_dependency=export_url,
+                resolution="Check that AAM is running and the /api/dcl/export-pipes endpoint is deployed",
+            )
+        except (httpx.TimeoutException, httpx.ConnectError) as e:
+            raise SchemaLoaderError(
+                reason=f"Cannot reach AAM at {aam_url}: {type(e).__name__}",
+                missing_dependency=export_url,
+                resolution="Check AAM_API_URL and network connectivity",
+            )
+
+        fabric_planes = payload.get("fabric_planes", [])
+        total_connections = payload.get("total_connections", 0)
+        if narration and run_id:
+            narration.add_message(
+                run_id, "SchemaLoader",
+                f"Received {len(fabric_planes)} fabric planes, {total_connections} total connections",
+            )
+
+        # -- normalise & group connections by canonical source --
+        normalizer = get_normalizer()
+        normalizer.load_registry(narration, run_id)
+
+        # canonical_id → { table_name → connection_dict }
+        source_connections: Dict[str, Dict[str, Dict[str, Any]]] = {}
+        source_norm_cache: Dict[str, NormalizationResult] = {}
+        piped_count = 0
+        empty_count = 0
+
+        for plane in fabric_planes:
+            plane_type = plane.get("plane_type", "unknown")
+            for conn in plane.get("connections", []):
+                raw_source = conn.get("source_name", "unknown")
+                pipe_id = conn.get("pipe_id", "unknown")
+                fields = conn.get("fields", [])
+
+                if not fields:
+                    empty_count += 1
+                    continue
+                piped_count += 1
+
+                if raw_source not in source_norm_cache:
+                    source_norm_cache[raw_source] = normalizer.normalize(raw_source, narration, run_id)
+
+                canonical_id = source_norm_cache[raw_source].canonical_id
+
+                # Use pipe_id as the table name (each connection = one table/pipe)
+                table_name = conn.get("table_name") or pipe_id
+                if canonical_id not in source_connections:
+                    source_connections[canonical_id] = {}
+                source_connections[canonical_id][table_name] = conn
+
+        if narration and run_id:
+            narration.add_message(
+                run_id, "SchemaLoader",
+                f"Pipes: {piped_count} with fields, {empty_count} empty (skipped)",
+            )
+
+        # -- build SourceSystem list --
+        sources: List[SourceSystem] = []
+        for canonical_id, tables_map in source_connections.items():
+            raw_sources = [raw for raw, norm in source_norm_cache.items()
+                           if norm.canonical_id == canonical_id]
+            first_raw = raw_sources[0] if raw_sources else canonical_id
+            norm_result = source_norm_cache.get(first_raw)
+            if not norm_result:
+                continue
+
+            canonical = norm_result.canonical_source
+
+            tables: List[TableSchema] = []
+            for table_name, conn in tables_map.items():
+                field_names = conn.get("fields", [])
+                field_schemas = [
+                    FieldSchema(
+                        name=fname,
+                        type="string",  # AAM doesn't send types yet
+                        semantic_hint=SchemaLoader._infer_semantic_hint_from_name(fname),
+                        nullable=True,
+                    )
+                    for fname in field_names
+                ]
+                tables.append(TableSchema(
+                    id=f"{canonical_id}.{table_name}",
+                    system_id=canonical_id,
+                    name=table_name,
+                    fields=field_schemas,
+                    record_count=None,
+                    stats={
+                        "fields": len(field_schemas),
+                        "pipe_id": conn.get("pipe_id"),
+                        "governance_status": conn.get("governance_status"),
+                        "health": conn.get("health"),
+                    },
+                ))
+
+            all_raw_ids = ", ".join(sorted(set(raw_sources))) if len(raw_sources) > 1 else first_raw
+            source = SourceSystem(
+                id=canonical_id,
+                name=canonical.name,
+                type=canonical.category.upper() if canonical.category else "Unknown",
+                tags=["farm", "pipes", canonical.category or "unknown"] + raw_sources,
+                tables=tables,
+                canonical_id=canonical_id,
+                raw_id=all_raw_ids,
+                discovery_status=DiscoveryStatus(canonical.discovery_status.value),
+                resolution_type=ResolutionType(norm_result.resolution_type.value),
+                trust_score=canonical.trust_score,
+                data_quality_score=canonical.data_quality_score,
+                vendor=canonical.vendor,
+                category=canonical.category,
+                entities=canonical.entities,
+            )
+            sources.append(source)
+
+            if narration and run_id:
+                total_fields = sum(len(t.fields) for t in tables)
+                status_icon = "✓" if canonical.discovery_status.value == "canonical" else "?"
+                narration.add_message(
+                    run_id, "SchemaLoader",
+                    f"{status_icon} {canonical.name}: {len(tables)} pipes, {total_fields} fields",
+                )
+
+        # Sort: canonical + high-trust first
+        sources.sort(key=lambda s: (
+            0 if s.discovery_status == DiscoveryStatus.CANONICAL else 1,
+            -s.trust_score,
+            s.name,
+        ))
+
+        total_available = len(sources)
+        if source_limit and source_limit < total_available:
+            sources = sources[:source_limit]
+            if narration and run_id:
+                narration.add_message(
+                    run_id, "SchemaLoader",
+                    f"Limited to {source_limit} sources (from {total_available} available)",
+                )
+
+        norm_stats = normalizer.get_stats()
+        if narration and run_id:
+            narration.add_message(
+                run_id, "SchemaLoader",
+                f"Pipe import complete: {norm_stats['registry_sources']} canonical, "
+                f"{norm_stats['discovered_sources']} discovered, {len(sources)} returned",
+            )
+
+        return sources
+
+    @staticmethod
     def _fetch_browser_endpoint(
         base_url: str, 
         config: Dict[str, Any], 
@@ -366,7 +583,7 @@ class SchemaLoader:
             return "email"
         if any(k in name_lower for k in ['amount', 'cost', 'price', 'revenue', 'spend']):
             return "amount"
-        if any(k in name_lower for k in ['date', 'time', 'timestamp', 'created', 'updated', 'at']):
+        if any(k in name_lower for k in ['date', 'time', 'timestamp', 'created', 'updated', '_at']):
             return "timestamp"
         if any(k in name_lower for k in ['status', 'state', 'stage', 'tier']):
             return "status"

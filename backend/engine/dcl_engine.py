@@ -39,8 +39,8 @@ class DCLEngine:
             sources = SchemaLoader.load_demo_schemas(self.narration, run_id)
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Demo sources")
         else:
-            sources = SchemaLoader.load_farm_schemas(self.narration, run_id, source_limit=source_limit)
-            self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Farm sources (source_limit={source_limit})")
+            sources = SchemaLoader.load_farm_schemas_from_pipes(self.narration, run_id, source_limit=source_limit)
+            self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Farm sources via export-pipes (source_limit={source_limit})")
         
         ontology = get_ontology()
         self.narration.add_message(run_id, "Engine", f"Loaded {len(ontology)} ontology concepts")
