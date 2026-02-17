@@ -215,27 +215,6 @@ function App() {
             ))}
           </nav>
 
-          {/* AAM Payload KPIs */}
-          {!isRunning && graphData?.meta.runMetrics?.dataStatus && (
-            <div className="flex items-center gap-1.5 px-2">
-              <span className={`inline-block w-2 h-2 rounded-full ${
-                graphData.meta.runMetrics.dataStatus === 'ok' ? 'bg-emerald-400' :
-                graphData.meta.runMetrics.dataStatus === 'partial' ? 'bg-amber-400' :
-                'bg-red-400'
-              }`} />
-              {graphData.meta.runMetrics.payloadKpis && (
-                <span className="text-xs text-muted-foreground font-mono">
-                  {graphData.meta.runMetrics.payloadKpis.fabrics}F·{graphData.meta.runMetrics.payloadKpis.pipes}P·{graphData.meta.runMetrics.payloadKpis.sources}S
-                </span>
-              )}
-              {graphData.meta.runMetrics.payloadKpis && graphData.meta.runMetrics.payloadKpis.unpipedCount > 0 && (
-                <span className="text-xs text-amber-400 font-mono">
-                  {graphData.meta.runMetrics.payloadKpis.unpipedCount}!
-                </span>
-              )}
-            </div>
-          )}
-
           {/* Spacer */}
           <div className="flex-1" />
 
