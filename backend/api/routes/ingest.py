@@ -109,6 +109,36 @@ def _validate_pipe_guard(pipe_id: str, run_id: str, source_system: str, now: str
     return pipe_def, guard_active
 
 
+def _resolve_export_identity(pipe_store) -> tuple:
+    """Look up the latest AAM export receipt to get canonical snapshot_name and run_id.
+
+    Returns (snapshot_name, aod_run_id, dispatch_id) from the latest export.
+    All 3 phases (structure, dispatch, content) must share these identifiers
+    so they group correctly in the Ingest tab.
+
+    If no export receipts exist, returns empty strings and logs ERROR —
+    this means Farm is pushing data before AAM sent /export-pipes, which
+    is a sequencing violation.
+    """
+    receipts = pipe_store.get_export_receipts()
+    if not receipts:
+        logger.error(
+            "[Activity] No AAM export receipts found. Farm is pushing content "
+            "before AAM sent /export-pipes — the 3-phase sequence is broken."
+        )
+        return "", "", ""
+
+    latest = receipts[-1]
+    aod_run_id = latest.aod_run_id or ""
+    if not aod_run_id:
+        logger.error(
+            "[Activity] Latest export receipt has no aod_run_id. "
+            "AAM payload is missing this identifier."
+        )
+    dispatch_id = f"aam_{aod_run_id[:20]}" if aod_run_id else ""
+    return aod_run_id, aod_run_id, dispatch_id
+
+
 def _record_ingest_activity(
     store,
     dispatch_id: str,
@@ -128,50 +158,69 @@ def _record_ingest_activity(
 
     Path 3 — "content": one entry per dispatch, incremented on each
     successive pipe push so the Ingest tab shows accumulated totals.
+
+    Both entries use the snapshot_name and run_id from the AAM export
+    receipt, NOT from the Farm payload, so all 3 phases share the
+    same identity (e.g. "SysSystems-2T59").
     """
     pipe_store = get_pipe_store()
 
+    # Resolve canonical identity from the AAM export receipt
+    export_snap, export_run_id, export_dispatch_id = _resolve_export_identity(pipe_store)
+    # Use export identity when available; fall back to Farm payload only
+    # if no export exists (broken sequence, already logged as ERROR)
+    snap = export_snap or snapshot_name
+    rid = export_run_id or run_id
+    did = export_dispatch_id or dispatch_id
+
     # --- Path 2: Dispatch activity (first push for this dispatch) ---
-    if dispatch_id and not store.has_dispatch_activity(dispatch_id):
+    if did and not store.has_dispatch_activity(did):
         total_expected = pipe_store.count()
         store.record_activity(ActivityEntry(
             phase="dispatch",
             source="AAM/Farm",
-            snapshot_name=snapshot_name,
-            run_id=run_id,
+            snapshot_name=snap,
+            run_id=rid,
             timestamp=now,
             pipes=total_expected,
-            dispatch_id=dispatch_id,
+            dispatch_id=did,
+            aod_run_id=export_run_id,
         ))
 
         # --- Path 3: Create initial content entry for this dispatch ---
         store.record_activity(ActivityEntry(
             phase="content",
             source="Farm",
-            snapshot_name=snapshot_name,
-            run_id=run_id,
+            snapshot_name=snap,
+            run_id=rid,
             timestamp=now,
             pipes=1,
             mapped_pipes=1 if matched_schema else 0,
             unmapped_pipes=0 if matched_schema else 1,
             rows=rows,
             records=rows,
-            dispatch_id=dispatch_id,
+            dispatch_id=did,
+            aod_run_id=export_run_id,
         ))
-    elif dispatch_id:
+    elif did:
         # Subsequent push — update the existing content entry
-        store.update_content_activity(dispatch_id, rows, pipe_id)
+        store.update_content_activity(did, rows, pipe_id)
         # Also update mapped/unmapped on the content entry
         with store._lock:
             for entry in reversed(store._activity_log):
-                if entry.phase == "content" and entry.dispatch_id == dispatch_id:
+                if entry.phase == "content" and entry.dispatch_id == did:
                     if matched_schema:
                         entry.mapped_pipes += 1
                     else:
                         entry.unmapped_pipes += 1
                     break
     else:
-        # No dispatch_id — standalone push, record as content directly
+        # No dispatch_id and no export receipt — standalone push
+        logger.error(
+            f"[Activity] Content push from {source_system} pipe={pipe_id} "
+            f"has no dispatch_id and no AAM export receipt. "
+            f"Cannot link to a 3-phase cycle."
+        )
         store.record_activity(ActivityEntry(
             phase="content",
             source="Farm",
