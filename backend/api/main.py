@@ -214,14 +214,15 @@ def run_dcl(request: RunRequest):
                 source_ids = snapshot.meta.get("source_canonical_ids", [])
                 fabric_planes = snapshot.meta.get("source_fabric_planes", [])
                 aam_kpis = metrics.payload_kpis if metrics.payload_kpis else {}
-                aam_count = store.record_aam_pull(
+                aam_count, aam_snap = store.record_aam_pull(
                     run_id=run_id,
                     source_names=source_names,
                     source_ids=source_ids,
                     kpis=aam_kpis,
                     fabric_planes=fabric_planes,
                 )
-                logger.info(f"[AAM] Recorded {aam_count} AAM pull receipts for Ingest panel")
+                app.state.aam_snapshot_name = aam_snap
+                logger.info(f"[AAM] Recorded {aam_count} AAM pull receipts as '{aam_snap}'")
             except Exception as e:
                 logger.warning(f"[AAM] Failed to record AAM pull in IngestStore: {e}")
 
@@ -1445,6 +1446,15 @@ def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
     result["pushMeta"] = push_meta
 
     current_mode = get_current_mode()
+    snapshot_name = getattr(app.state, "aam_snapshot_name", None)
+    if not snapshot_name:
+        fabric_plane_names = [f"{p.plane_type}:{p.vendor}" for p in payload.planes]
+        if fabric_plane_names:
+            vendors = [pair.split(":", 1)[1].title() if ":" in pair else pair.title() for pair in sorted(fabric_plane_names)]
+            snapshot_name = "-".join(vendors)
+        else:
+            snapshot_name = os.environ.get("AAM_SNAPSHOT_NAME", "AAM-Export")
+
     result["reconMeta"] = {
         "dclRunId": current_mode.last_run_id,
         "dclRunAt": current_mode.last_updated,
@@ -1453,6 +1463,7 @@ def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
         "dataMode": current_mode.data_mode,
         "dclSourceCount": len(dcl_canonical_ids),
         "aamConnectionCount": payload.total_connections_actual,
+        "snapshotName": snapshot_name,
     }
 
     aam_names = sorted(p.display_name for p in payload.pipes)
@@ -1513,12 +1524,14 @@ def get_sor_reconciliation():
 
         import time as _time
         sor_current_mode = get_current_mode()
+        sor_snapshot_name = getattr(app.state, "aam_snapshot_name", os.environ.get("AAM_SNAPSHOT_NAME", "AAM"))
         result["reconMeta"] = {
             "dclRunId": sor_current_mode.last_run_id,
             "dclRunAt": sor_current_mode.last_updated,
             "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "dataMode": sor_current_mode.data_mode,
             "loadedSourceCount": len(loaded_sources),
+            "snapshotName": sor_snapshot_name,
         }
 
         return result

@@ -579,19 +579,27 @@ class IngestStore:
                 "pipes": pipes_detail,
             }
 
-    def record_aam_pull(self, run_id: str, source_names: list, source_ids: list, kpis: dict, fabric_planes: list = None) -> int:
+    def record_aam_pull(self, run_id: str, source_names: list, source_ids: list, kpis: dict, fabric_planes: list = None) -> tuple:
         """Record AAM pull event as a single summary receipt for Ingest panel.
 
         Creates ONE summary RunReceipt per AAM run with rich metadata.
-        Snapshot name comes from AAM_SNAPSHOT_NAME env var.
+        Snapshot name is derived dynamically from AAM fabric plane vendors.
+        Falls back to AAM_SNAPSHOT_NAME env var if no vendor data available.
         Fabric planes and unique SOR names are stored in schema_hash as JSON.
+
+        Returns (count, snapshot_name) tuple.
         """
         import os
 
         now = datetime.now(timezone.utc).isoformat()
         dispatch_id = f"aam_{run_id[:20]}"
 
-        snapshot_name = os.environ.get("AAM_SNAPSHOT_NAME", "AAM-Export")
+        fabric_vendor_pairs = kpis.get("fabricPlaneVendors", [])
+        if fabric_vendor_pairs:
+            vendors = [pair.split(":", 1)[1].title() if ":" in pair else pair.title() for pair in sorted(fabric_vendor_pairs)]
+            snapshot_name = "-".join(vendors)
+        else:
+            snapshot_name = os.environ.get("AAM_SNAPSHOT_NAME", "AAM-Export")
         pipe_count = kpis.get("pipes", len(source_names))
         unique_source_names = sorted(set(source_names))
         raw_fabrics = fabric_planes or []
@@ -604,6 +612,7 @@ class IngestStore:
             "fabrics": fabric_categories,
             "fabric_details": raw_fabrics,
             "loaded": kpis.get("loadedSources", len(source_names)),
+            "snapshot_name": snapshot_name,
         })
 
         receipt = RunReceipt(
@@ -640,9 +649,9 @@ class IngestStore:
 
         logger.info(
             f"[IngestStore] Recorded AAM pull: {pipe_count} pipes, "
-            f"{len(unique_source_names)} sources from run {run_id}"
+            f"{len(unique_source_names)} sources from run {run_id} as '{snapshot_name}'"
         )
-        return 1
+        return 1, snapshot_name
 
     def get_batches(self) -> List[Dict[str, Any]]:
         _BATCH_GAP_SECONDS = 60

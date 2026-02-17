@@ -51,6 +51,7 @@ interface ReconciliationData {
     dataMode: string | null;
     dclSourceCount: number;
     aamConnectionCount: number;
+    snapshotName?: string;
   };
   trace?: {
     aamPipeNames: string[];
@@ -124,6 +125,7 @@ interface SorReconciliationData {
     reconAt: string;
     dataMode: string | null;
     loadedSourceCount: number;
+    snapshotName?: string;
   };
 }
 
@@ -295,6 +297,11 @@ export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProp
             {data.reconMeta?.dataMode && (
               <span className="text-xs font-medium text-muted-foreground bg-secondary/30 px-2 py-0.5 rounded">
                 {data.reconMeta.dataMode}
+              </span>
+            )}
+            {data.reconMeta?.snapshotName && (
+              <span className="text-xs font-medium text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                {data.reconMeta.snapshotName}
               </span>
             )}
             <span className="text-xs text-muted-foreground">
@@ -533,6 +540,11 @@ export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProp
             {sorData.reconMeta?.dataMode && (
               <span className="text-xs font-medium text-muted-foreground bg-secondary/30 px-2 py-0.5 rounded">
                 {sorData.reconMeta.dataMode}
+              </span>
+            )}
+            {sorData.reconMeta?.snapshotName && (
+              <span className="text-xs font-medium text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                {sorData.reconMeta.snapshotName}
               </span>
             )}
             <span className="text-xs text-muted-foreground">

@@ -412,6 +412,7 @@ class SchemaLoader:
             "totalAamConnections": payload.total_connections_reported,
             "limited": source_limit < total_available if source_limit else False,
             "loadedSources": len(sources),
+            "fabricPlaneVendors": [f"{p.plane_type}:{p.vendor}" for p in payload.planes],
         }
 
         SchemaLoader._aam_cache = (copy.deepcopy(sources), dict(kpis))
