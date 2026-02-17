@@ -207,6 +207,7 @@ class IngestStore:
         # Activity log — discrete events for the 3-phase flow
         self._activity_log: List[ActivityEntry] = []
         self._seen_dispatch_ids: set = set()  # track which dispatch_ids we've recorded
+        self._content_sources: Dict[str, set] = {}  # dispatch_id → unique source_systems
 
         # Row buffer
         self._row_buffer: OrderedDict[str, List[Dict[str, Any]]] = OrderedDict()
@@ -830,6 +831,14 @@ class IngestStore:
         """Check if we've already recorded a dispatch-phase entry for this id."""
         with self._lock:
             return dispatch_id in self._seen_dispatch_ids
+
+    def has_phase(self, dispatch_id: str, phase: str) -> bool:
+        """Check if a specific phase entry already exists for this dispatch."""
+        with self._lock:
+            for entry in self._activity_log:
+                if entry.dispatch_id == dispatch_id and entry.phase == phase:
+                    return True
+            return False
 
     def get_activity_log(self, snapshot_name: Optional[str] = None) -> List[Dict[str, Any]]:
         """Return activity entries, newest first. Optional snapshot filter."""

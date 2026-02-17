@@ -159,42 +159,46 @@ def _record_ingest_activity(
     Path 3 — "content": one entry per dispatch, incremented on each
     successive pipe push so the Ingest tab shows accumulated totals.
 
-    Both entries use the snapshot_name and run_id from the AAM export
-    receipt, NOT from the Farm payload, so all 3 phases share the
-    same identity (e.g. "SysSystems-2T59").
+    snapshot_name comes from the AAM export receipt (same as structure
+    phase) so all 3 phases group together. run_id on the content entry
+    is Farm's native run_id so the Ingest tab shows the real value.
     """
     pipe_store = get_pipe_store()
 
     # Resolve canonical identity from the AAM export receipt
     export_snap, export_run_id, export_dispatch_id = _resolve_export_identity(pipe_store)
-    # Use export identity when available; fall back to Farm payload only
-    # if no export exists (broken sequence, already logged as ERROR)
+    # Use export identity for snapshot_name (grouping key) and dispatch_id;
+    # keep Farm's native run_id on the content entry.
     snap = export_snap or snapshot_name
-    rid = export_run_id or run_id
     did = export_dispatch_id or dispatch_id
 
     # --- Path 2: Dispatch activity (first push for this dispatch) ---
-    if did and not store.has_dispatch_activity(did):
+    if did and not store.has_phase(did, "dispatch"):
         total_expected = pipe_store.count()
         store.record_activity(ActivityEntry(
             phase="dispatch",
             source="AAM/Farm",
             snapshot_name=snap,
-            run_id=rid,
+            run_id=export_run_id or run_id,
             timestamp=now,
             pipes=total_expected,
             dispatch_id=did,
             aod_run_id=export_run_id,
         ))
 
-        # --- Path 3: Create initial content entry for this dispatch ---
+    # --- Path 3: Content activity ---
+    # Use has_phase("content") so a prior structure entry with the same
+    # dispatch_id doesn't shadow content creation.
+    if did and not store.has_phase(did, "content"):
+        # First pipe for this dispatch — create the content entry
         store.record_activity(ActivityEntry(
             phase="content",
             source="Farm",
             snapshot_name=snap,
-            run_id=rid,
+            run_id=run_id,
             timestamp=now,
             pipes=1,
+            sors=1,
             mapped_pipes=1 if matched_schema else 0,
             unmapped_pipes=0 if matched_schema else 1,
             rows=rows,
@@ -202,18 +206,24 @@ def _record_ingest_activity(
             dispatch_id=did,
             aod_run_id=export_run_id,
         ))
+        # Track unique source systems for SOR count
+        store._content_sources.setdefault(did, set()).add(source_system)
     elif did:
         # Subsequent push — update the existing content entry
         store.update_content_activity(did, rows, pipe_id)
-        # Also update mapped/unmapped on the content entry
+        # Track source for SOR count, then update SOR + mapped/unmapped
+        sources = store._content_sources.setdefault(did, set())
+        sources.add(source_system)
         with store._lock:
             for entry in reversed(store._activity_log):
                 if entry.phase == "content" and entry.dispatch_id == did:
+                    entry.sors = len(sources)
                     if matched_schema:
                         entry.mapped_pipes += 1
                     else:
                         entry.unmapped_pipes += 1
                     break
+        store._persist_activity_log()
     else:
         # No dispatch_id and no export receipt — standalone push
         logger.error(
@@ -228,6 +238,7 @@ def _record_ingest_activity(
             run_id=run_id,
             timestamp=now,
             pipes=1,
+            sors=1,
             mapped_pipes=1 if matched_schema else 0,
             unmapped_pipes=0 if matched_schema else 1,
             rows=rows,
