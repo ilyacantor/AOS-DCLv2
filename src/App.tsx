@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { GraphSnapshot, PersonaId } from './types';
 import { MonitorPanel } from './components/MonitorPanel';
 import { NarrationPanel } from './components/NarrationPanel';
@@ -28,24 +28,6 @@ function App() {
   const [mainView, setMainView] = useState<MainView>('graph');
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const { toast } = useToast();
-
-  const [ingestStats, setIngestStats] = useState<{ total_runs: number; total_rows_buffered: number; pipes_tracked: number; unique_sources: number } | null>(null);
-
-  // No auto-load — user clicks Run when ready.
-
-  // Poll ingest stats when in Farm mode
-  useEffect(() => {
-    if (dataMode !== 'Farm') { setIngestStats(null); return; }
-    const poll = () => {
-      fetch('/api/dcl/ingest/stats')
-        .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data) setIngestStats(data); })
-        .catch(() => {});
-    };
-    poll();
-    const id = setInterval(poll, 5000);
-    return () => clearInterval(id);
-  }, [dataMode]);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -108,6 +90,32 @@ function App() {
       };
     });
   };
+
+  const autoLoadedRef = useRef(false);
+  useEffect(() => {
+    if (autoLoadedRef.current) return;
+    autoLoadedRef.current = true;
+    fetch('/api/dcl/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'Demo', run_mode: 'Dev', personas: ALL_PERSONAS }),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data?.graph) return;
+        const gv = {
+          ...data.graph,
+          meta: {
+            ...(data.graph.meta ?? {}),
+            personaViews: generatePersonaViews(data.graph, ALL_PERSONAS),
+            runMetrics: data.run_metrics,
+          },
+        };
+        setGraphData(prev => prev || gv);
+        setRunId(prev => prev || data.run_id);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleRun = async () => {
     setIsRunning(true);
@@ -225,18 +233,6 @@ function App() {
                   {graphData.meta.runMetrics.payloadKpis.unpipedCount}!
                 </span>
               )}
-            </div>
-          )}
-
-          {/* Farm Ingest Status */}
-          {dataMode === 'Farm' && ingestStats && (
-            <div className="flex items-center gap-1.5 px-2">
-              <span className={`inline-block w-2 h-2 rounded-full ${
-                ingestStats.total_runs > 0 ? 'bg-emerald-400' : 'bg-zinc-500'
-              }`} />
-              <span className="text-xs text-muted-foreground font-mono">
-                {ingestStats.pipes_tracked}pipes·{ingestStats.unique_sources}src·{ingestStats.total_rows_buffered.toLocaleString()}rows
-              </span>
             </div>
           )}
 
