@@ -73,7 +73,9 @@ export function IngestionPanel() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setBatches(json.batches);
-    } catch {}
+    } catch (err) {
+      console.error('[IngestionPanel] Failed to fetch batches:', err);
+    }
   };
 
   const fetchAll = useCallback(() => {

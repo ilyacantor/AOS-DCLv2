@@ -3,6 +3,10 @@ import os
 from backend.domain import SourceSystem, OntologyConcept, Mapping, RunMetrics
 from backend.engine.narration_service import NarrationService
 from backend.engine.rag_service import RAGService
+from backend.core.constants import (
+    CONFIDENCE_CONCEPT_MATCH, CONFIDENCE_EXAMPLE_EXACT,
+    CONFIDENCE_EXAMPLE_PARTIAL, CONFIDENCE_DEFAULT,
+)
 
 
 class MappingService:
@@ -95,12 +99,12 @@ class MappingService:
         field_lower = field_name.lower()
         
         if concept.id in field_lower:
-            return 0.95
-        
+            return CONFIDENCE_CONCEPT_MATCH
+
         for example in concept.example_fields:
             if example.lower() == field_lower:
-                return 0.90
+                return CONFIDENCE_EXAMPLE_EXACT
             if example.lower() in field_lower or field_lower in example.lower():
-                return 0.75
-        
-        return 0.60
+                return CONFIDENCE_EXAMPLE_PARTIAL
+
+        return CONFIDENCE_DEFAULT

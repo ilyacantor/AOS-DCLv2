@@ -6,12 +6,11 @@ Handles:
   GET  /api/dcl/export-pipes   — list registered pipe definitions
 """
 
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
+from backend.core.constants import utc_now
 from backend.api.pipe_store import PipeDefinition, get_pipe_store
 from backend.utils.log_utils import get_logger
 
@@ -95,7 +94,7 @@ def receive_export_pipes(request: ExportPipesRequest):
     These definitions are the join target for Farm's /ingest data.
     The JOIN key is pipe_id.
     """
-    now = datetime.now(timezone.utc).isoformat()
+    now = utc_now()
     pipe_store = get_pipe_store()
     definitions = []
 

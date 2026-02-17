@@ -73,7 +73,7 @@ export function NarrationPanel({ runId }: NarrationPanelProps) {
     };
 
     fetchMessages();
-    const interval = setInterval(fetchMessages, 500);
+    const interval = setInterval(fetchMessages, 2000);
 
     return () => clearInterval(interval);
   }, [runId]);

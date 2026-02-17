@@ -7,7 +7,6 @@ Handles:
   POST /api/reconcile               — stateless AAM reconciliation
 """
 
-import time as _time
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -16,6 +15,7 @@ from typing import List, Optional, Dict, Any
 
 from backend.api.ingest import get_ingest_store
 from backend.core.mode_state import get_current_mode
+from backend.core.constants import utc_now
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -98,7 +98,7 @@ def get_sor_reconciliation():
         result["reconMeta"] = {
             "dclRunId": sor_current_mode.last_run_id,
             "dclRunAt": sor_current_mode.last_updated,
-            "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "reconAt": utc_now(),
             "dataMode": sor_current_mode.data_mode,
             "loadedSourceCount": len(loaded_sources),
             "snapshotName": sor_snapshot_name,
@@ -148,8 +148,8 @@ def reconcile_aam(request: ReconcileRequest):
             if pushes and pushes[0].aod_run_id:
                 effective_run_id = pushes[0].aod_run_id
                 logger.info(f"[Reconcile] Auto-discovered aod_run_id={effective_run_id} from latest push")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[Reconcile] Push history unavailable: {e}")
 
     # ── 1. Build "expected" set from AAM ────────────────────────────────
     expected_sources: Dict[str, Dict[str, Any]] = {}
@@ -293,7 +293,7 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
     store = get_ingest_store()
     all_receipts = store.get_all_receipts()
     current_mode = get_current_mode()
-    now = _time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    now = utc_now()
 
     if not all_receipts:
         return {
@@ -497,7 +497,7 @@ def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
     if not push_meta:
         push_meta = {
             "pushId": "export-pipes",
-            "pushedAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "pushedAt": utc_now(),
             "pipeCount": payload.total_connections_actual,
             "payloadHash": payload.payload_hash,
             "aodRunId": aod_run_id,
@@ -516,7 +516,7 @@ def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
     result["reconMeta"] = {
         "dclRunId": current_mode.last_run_id,
         "dclRunAt": current_mode.last_updated,
-        "reconAt": _time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "reconAt": utc_now(),
         "aodRunId": aod_run_id,
         "dataMode": current_mode.data_mode,
         "dclSourceCount": len(dcl_canonical_ids),

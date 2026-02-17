@@ -102,7 +102,7 @@ class SchemaLoader:
                     tables.append(table)
                 
                 except Exception as e:
-                    logger.warning(f"Failed to load CSV schema {csv_path}: {e}")
+                    logger.error(f"Failed to load CSV schema {csv_path}: {e}", exc_info=True)
                     continue
             
             if tables:
@@ -139,7 +139,8 @@ class SchemaLoader:
 
     @staticmethod
     def load_farm_schemas(narration=None, run_id: Optional[str] = None, source_limit: int = 1000) -> List[SourceSystem]:
-        farm_url = os.getenv("FARM_API_URL", "https://autonomos.farm")
+        from backend.core.constants import FARM_API_URL
+        farm_url = FARM_API_URL
         
         if narration and run_id:
             narration.add_message(run_id, "SchemaLoader", f"Fetching Farm data from {farm_url}/api/browser/*")

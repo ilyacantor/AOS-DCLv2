@@ -47,7 +47,7 @@ from backend.core.security_constraints import (
     assert_metadata_only_mode,
 )
 from backend.core.mode_state import set_current_mode
-from backend.core.constants import CORS_ORIGINS
+from backend.core.constants import CORS_ORIGINS, API_VERSION, utc_now
 
 # Route modules
 from backend.api.routes.ingest import router as ingest_router
@@ -78,7 +78,10 @@ async def enforce_security_constraints():
         assert_metadata_only_mode()
         logger.info("[SECURITY] Metadata-only mode: ENABLED")
     except Exception as e:
-        logger.warning(f"[SECURITY] Metadata-only assertion failed: {e}")
+        if os.getenv("DCL_ENV", "dev").lower() == "production":
+            logger.error(f"[SECURITY] Metadata-only assertion FAILED in production: {e}")
+            raise
+        logger.warning(f"[SECURITY] Metadata-only assertion failed (non-prod, continuing): {e}")
 
     violations = validate_no_disk_payload_writes()
     if violations:
@@ -133,7 +136,7 @@ def _invalidate_aam_caches():
         MappingPersistence.clear_all_caches()
         logger.info("[AAM] Cleared mapping persistence caches")
     except Exception as e:
-        logger.warning(f"[AAM] Failed to clear mapping caches: {e}")
+        logger.error(f"[AAM] Failed to clear mapping caches: {e}", exc_info=True)
 
     try:
         import backend.aam.client as aam_mod
@@ -161,7 +164,7 @@ def _invalidate_aam_caches():
 def health():
     return {
         "status": "DCL Engine API is running",
-        "version": "2.0.0",
+        "version": API_VERSION,
         "mode": "metadata-only",
         "note": "NLQ/BLL moved to AOS-NLQ",
     }
@@ -431,7 +434,7 @@ async def serve_root():
     index_file = DIST_DIR / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
-    return {"status": "DCL Engine API is running", "version": "2.0.0", "note": "Frontend not built"}
+    return {"status": "DCL Engine API is running", "version": API_VERSION, "note": "Frontend not built"}
 
 
 @app.get("/{full_path:path}")

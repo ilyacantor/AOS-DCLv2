@@ -114,7 +114,7 @@ function App() {
         setGraphData(prev => prev || gv);
         setRunId(prev => prev || data.run_id);
       })
-      .catch(() => {});
+      .catch((err) => console.warn('[App] Auto-load failed:', err));
   }, []);
 
   const handleRun = async () => {

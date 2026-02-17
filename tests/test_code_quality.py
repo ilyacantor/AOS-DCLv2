@@ -159,15 +159,15 @@ class TestCacheInvalidationLogging(unittest.TestCase):
                 from backend.api.main import _invalidate_aam_caches
                 _invalidate_aam_caches()
 
-                # Verify warning was logged (not silently swallowed)
-                warning_calls = [
-                    call for call in mock_logger.warning.call_args_list
+                # Verify error was logged (not silently swallowed)
+                error_calls = [
+                    call for call in mock_logger.error.call_args_list
                     if "mapping caches" in str(call).lower() or "aam" in str(call).lower()
                 ]
                 self.assertTrue(
-                    len(warning_calls) > 0,
+                    len(error_calls) > 0,
                     "BUG REGRESSION: Cache invalidation failure is silently swallowed. "
-                    "Should log a warning."
+                    "Should log an error."
                 )
 
 

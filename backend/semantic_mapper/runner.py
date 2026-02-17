@@ -68,8 +68,9 @@ class SemanticMapper:
                 stats['mappings_created'] = len(mappings)
                 logger.info(f"DB unavailable - {len(mappings)} mappings created in-memory only")
         except Exception as e:
-            logger.warning(f"Failed to save mappings to DB: {e}. Mappings available in-memory.")
+            logger.error(f"Failed to save mappings to DB: {e}. Mappings available in-memory only.", exc_info=True)
             stats['mappings_created'] = len(mappings)
+            stats['db_save_failed'] = True
         
         return mappings, stats
     

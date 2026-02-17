@@ -185,10 +185,12 @@ class RAGService:
             return vectors
             
         except Exception as e:
+            from backend.utils.log_utils import get_logger as _gl
+            _gl(__name__).error(f"OpenAI embedding failed, falling back to mock embeddings: {e}", exc_info=True)
             self.narration.add_message(
                 self.run_id,
                 "RAG",
-                f"OpenAI embedding error: {str(e)} - using mock embeddings"
+                f"OpenAI embedding error: {str(e)} - FALLING BACK to mock embeddings (results degraded)"
             )
             return self._create_mock_embeddings(mappings)
     

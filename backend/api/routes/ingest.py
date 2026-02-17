@@ -15,11 +15,11 @@ Handles:
 
 import os
 import uuid
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Header, Request
 from typing import Optional
 
+from backend.core.constants import utc_now
 from backend.api.ingest import (
     IngestRequest,
     IngestResponse,
@@ -33,6 +33,79 @@ from backend.utils.log_utils import get_logger
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/dcl/ingest", tags=["Ingestion"])
+
+
+# ---------------------------------------------------------------------------
+# Helpers extracted from the ingest god-function
+# ---------------------------------------------------------------------------
+
+def _normalize_ingest_body(raw_body: dict) -> dict:
+    """Remap camelCase / alternate field names to the canonical snake_case schema."""
+    body = dict(raw_body)
+    if "source_system" not in body and "source" in body:
+        body["source_system"] = body.pop("source")
+    if "tenant_id" not in body:
+        body.setdefault("tenant_id", body.get("tenantId", body.get("tenant", "default")))
+    if "snapshot_name" not in body:
+        alt = body.get("snapshotName") or body.get("snapshot")
+        if not alt:
+            raise HTTPException(
+                status_code=422,
+                detail="Missing required field: snapshot_name. Every ingest push must include a snapshot_name (or snapshotName)."
+            )
+        body["snapshot_name"] = alt
+    if "run_timestamp" not in body:
+        body.setdefault("run_timestamp", body.get("runTimestamp", body.get("timestamp", utc_now())))
+    if "schema_version" not in body:
+        body.setdefault("schema_version", body.get("schemaVersion", body.get("schema_ver", "1.0")))
+    if "rows" not in body:
+        if "data" in body:
+            body["rows"] = body.pop("data")
+        elif "records" in body:
+            body["rows"] = body.pop("records")
+        elif "payload" in body:
+            body["rows"] = body.pop("payload")
+        else:
+            body["rows"] = []
+    if "row_count" not in body:
+        body["row_count"] = body.get("rowCount", len(body.get("rows", [])))
+    if "runner_id" not in body and "runnerId" in body:
+        body["runner_id"] = body.pop("runnerId")
+    return body
+
+
+def _validate_pipe_guard(pipe_id: str, run_id: str, source_system: str, now: str):
+    """Schema-on-write gate. Returns (pipe_def, guard_active) or raises 422."""
+    pipe_store = get_pipe_store()
+    pipe_def = pipe_store.lookup(pipe_id)
+    guard_active = pipe_store.count() > 0
+
+    if guard_active and pipe_def is None:
+        logger.error(
+            f"[Ingest] REJECTED: No matching pipe definition for pipe_id={pipe_id} "
+            f"(run_id={run_id}, source={source_system}). "
+            f"Available pipes: {pipe_store.list_pipe_ids()}"
+        )
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "NO_MATCHING_PIPE",
+                "pipe_id": pipe_id,
+                "message": f"No schema blueprint exists for pipe_id: {pipe_id}.",
+                "hint": "Ensure AAM has run /export-pipes and that the pipe_id "
+                        "matches between Export and Runner manifest.",
+                "available_pipes": pipe_store.list_pipe_ids(),
+                "timestamp": now,
+            },
+        )
+
+    if not guard_active:
+        logger.warning(
+            "[Ingest] Ingest guard BYPASSED — no pipe definitions registered. "
+            "Run AAM /export-pipes to activate schema-on-write validation."
+        )
+
+    return pipe_def, guard_active
 
 
 # ---------------------------------------------------------------------------
@@ -75,7 +148,7 @@ async def dcl_ingest(
     not yet called), the guard is bypassed with a WARNING log so
     existing Demo/Farm self-directed flows continue working.
     """
-    now = datetime.now(timezone.utc).isoformat()
+    now = utc_now()
 
     # Log raw request info for debugging connectivity issues
     client_host = request.client.host if request.client else "unknown"
@@ -100,36 +173,7 @@ async def dcl_ingest(
     logger.info(f"[Ingest] Received keys: {list(raw_body.keys()) if isinstance(raw_body, dict) else type(raw_body).__name__}")
 
     if isinstance(raw_body, dict):
-        body = dict(raw_body)
-        if "source_system" not in body and "source" in body:
-            body["source_system"] = body.pop("source")
-        if "tenant_id" not in body:
-            body.setdefault("tenant_id", body.get("tenantId", body.get("tenant", "default")))
-        if "snapshot_name" not in body:
-            alt = body.get("snapshotName") or body.get("snapshot")
-            if not alt:
-                raise HTTPException(
-                    status_code=422,
-                    detail="Missing required field: snapshot_name. Every ingest push must include a snapshot_name (or snapshotName)."
-                )
-            body["snapshot_name"] = alt
-        if "run_timestamp" not in body:
-            body.setdefault("run_timestamp", body.get("runTimestamp", body.get("timestamp", datetime.now(timezone.utc).isoformat())))
-        if "schema_version" not in body:
-            body.setdefault("schema_version", body.get("schemaVersion", body.get("schema_ver", "1.0")))
-        if "rows" not in body:
-            if "data" in body:
-                body["rows"] = body.pop("data")
-            elif "records" in body:
-                body["rows"] = body.pop("records")
-            elif "payload" in body:
-                body["rows"] = body.pop("payload")
-            else:
-                body["rows"] = []
-        if "row_count" not in body:
-            body["row_count"] = body.get("rowCount", len(body.get("rows", [])))
-        if "runner_id" not in body and "runnerId" in body:
-            body["runner_id"] = body.pop("runnerId")
+        body = _normalize_ingest_body(raw_body)
     else:
         body = raw_body
 
@@ -153,35 +197,8 @@ async def dcl_ingest(
             ingest_req.run_timestamp, ingest_req.tenant_id, ingest_req.snapshot_name
         )
 
-    # ── Schema-on-write gate: validate pipe_id against export-pipes ──
-    pipe_store = get_pipe_store()
-    pipe_def = pipe_store.lookup(pipe_id)
-    guard_active = pipe_store.count() > 0
-
-    if guard_active and pipe_def is None:
-        logger.error(
-            f"[Ingest] REJECTED: No matching pipe definition for pipe_id={pipe_id} "
-            f"(run_id={run_id}, source={ingest_req.source_system}). "
-            f"Available pipes: {pipe_store.list_pipe_ids()}"
-        )
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "error": "NO_MATCHING_PIPE",
-                "pipe_id": pipe_id,
-                "message": f"No schema blueprint exists for pipe_id: {pipe_id}.",
-                "hint": "Ensure AAM has run /export-pipes and that the pipe_id "
-                        "matches between Export and Runner manifest.",
-                "available_pipes": pipe_store.list_pipe_ids(),
-                "timestamp": now,
-            },
-        )
-
-    if not guard_active:
-        logger.warning(
-            "[Ingest] Ingest guard BYPASSED — no pipe definitions registered. "
-            "Run AAM /export-pipes to activate schema-on-write validation."
-        )
+    # ── Schema-on-write gate ──
+    pipe_def, _guard_active = _validate_pipe_guard(pipe_id, run_id, ingest_req.source_system, now)
 
     # ── Proceed with ingest ──────────────────────────────────────────
     if x_schema_hash:

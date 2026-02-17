@@ -195,7 +195,8 @@ class SourceNormalizer:
             self._registry_loaded = True  # mark loaded so normalize() doesn't retry
             return 0
 
-        farm_url = os.getenv("FARM_API_URL", "https://autonomos.farm")
+        from backend.core.constants import FARM_API_URL
+        farm_url = FARM_API_URL
         registry_url = f"{farm_url}/api/sources/registry"
 
         try:
@@ -418,6 +419,12 @@ class SourceNormalizer:
         return "unknown"
 
     def _create_fallback_canonical(self, canonical_id: str, raw_source: str) -> CanonicalSource:
+        from backend.utils.log_utils import get_logger as _gl
+        from backend.core.constants import TRUST_SCORE_FALLBACK
+        _gl(__name__).warning(
+            f"[SourceNormalizer] Creating fallback canonical for '{canonical_id}' "
+            f"(raw='{raw_source}') — registry entry missing"
+        )
         parts = canonical_id.split("_")
         vendor = parts[0].title() if parts else "Unknown"
         category = parts[-1] if len(parts) > 1 else "unknown"
@@ -431,8 +438,8 @@ class SourceNormalizer:
             vendor=vendor,
             connection_type="api",
             entities=[],
-            trust_score=60,
-            data_quality_score=60,
+            trust_score=TRUST_SCORE_FALLBACK,
+            data_quality_score=TRUST_SCORE_FALLBACK,
             is_primary=False,
             metadata={"fallback": True, "raw_identifier": raw_source},
             discovery_status=DiscoveryStatus.CANONICAL,
