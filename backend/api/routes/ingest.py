@@ -21,6 +21,7 @@ from typing import Optional
 
 from backend.core.constants import utc_now
 from backend.api.ingest import (
+    ActivityEntry,
     IngestRequest,
     IngestResponse,
     get_ingest_store,
@@ -106,6 +107,84 @@ def _validate_pipe_guard(pipe_id: str, run_id: str, source_system: str, now: str
         )
 
     return pipe_def, guard_active
+
+
+def _record_ingest_activity(
+    store,
+    dispatch_id: str,
+    snapshot_name: str,
+    run_id: str,
+    pipe_id: str,
+    source_system: str,
+    rows: int,
+    matched_schema: bool,
+    now: str,
+) -> None:
+    """Record Path 2 (dispatch) and Path 3 (content) activity entries.
+
+    Path 2 — "dispatch": recorded ONCE when the first pipe for a new
+    dispatch_id arrives. This signals that the AAM/Farm manifest has
+    been activated and data is flowing.
+
+    Path 3 — "content": one entry per dispatch, incremented on each
+    successive pipe push so the Ingest tab shows accumulated totals.
+    """
+    pipe_store = get_pipe_store()
+
+    # --- Path 2: Dispatch activity (first push for this dispatch) ---
+    if dispatch_id and not store.has_dispatch_activity(dispatch_id):
+        total_expected = pipe_store.count()
+        store.record_activity(ActivityEntry(
+            phase="dispatch",
+            source="AAM/Farm",
+            snapshot_name=snapshot_name,
+            run_id=run_id,
+            timestamp=now,
+            pipes=total_expected,
+            dispatch_id=dispatch_id,
+        ))
+
+        # --- Path 3: Create initial content entry for this dispatch ---
+        store.record_activity(ActivityEntry(
+            phase="content",
+            source="Farm",
+            snapshot_name=snapshot_name,
+            run_id=run_id,
+            timestamp=now,
+            pipes=1,
+            mapped_pipes=1 if matched_schema else 0,
+            unmapped_pipes=0 if matched_schema else 1,
+            rows=rows,
+            records=rows,
+            dispatch_id=dispatch_id,
+        ))
+    elif dispatch_id:
+        # Subsequent push — update the existing content entry
+        store.update_content_activity(dispatch_id, rows, pipe_id)
+        # Also update mapped/unmapped on the content entry
+        with store._lock:
+            for entry in reversed(store._activity_log):
+                if entry.phase == "content" and entry.dispatch_id == dispatch_id:
+                    if matched_schema:
+                        entry.mapped_pipes += 1
+                    else:
+                        entry.unmapped_pipes += 1
+                    break
+    else:
+        # No dispatch_id — standalone push, record as content directly
+        store.record_activity(ActivityEntry(
+            phase="content",
+            source="Farm",
+            snapshot_name=snapshot_name,
+            run_id=run_id,
+            timestamp=now,
+            pipes=1,
+            mapped_pipes=1 if matched_schema else 0,
+            unmapped_pipes=0 if matched_schema else 1,
+            rows=rows,
+            records=rows,
+            dispatch_id="",
+        ))
 
 
 # ---------------------------------------------------------------------------
@@ -230,6 +309,22 @@ async def dcl_ingest(
     matched_schema = pipe_def is not None
     schema_fields = pipe_def.fields if pipe_def else []
 
+    # --- Record Path 2 + Path 3 activity ---
+    try:
+        _record_ingest_activity(
+            store=store,
+            dispatch_id=dispatch_id,
+            snapshot_name=ingest_req.snapshot_name,
+            run_id=run_id,
+            pipe_id=pipe_id,
+            source_system=ingest_req.source_system,
+            rows=actual_rows,
+            matched_schema=matched_schema,
+            now=now,
+        )
+    except Exception as e:
+        logger.warning(f"[Ingest] Failed to record activity: {e}")
+
     logger.info(
         f"[Ingest] Accepted {actual_rows} rows from {ingest_req.source_system} "
         f"pipe={pipe_id} run={run_id} drift={receipt.schema_drift} "
@@ -345,6 +440,33 @@ def get_ingest_stats():
     """Quick summary of what's in the ingest store."""
     store = get_ingest_store()
     return store.get_stats()
+
+
+@router.get("/activity")
+def list_activity(snapshot_name: Optional[str] = None):
+    """Return the 3-phase activity log — discrete events for Structure, Dispatch, Content.
+
+    Each entry represents one phase of the data flow:
+      - structure: AAM pushed pipe schemas via /export-pipes
+      - dispatch:  AAM/Farm manifest activated a dispatch
+      - content:   Farm pushed actual row data via /ingest
+
+    Optional ?snapshot_name= filter.
+    """
+    store = get_ingest_store()
+    entries = store.get_activity_log(snapshot_name=snapshot_name)
+
+    # Group by snapshot_name for easy frontend rendering
+    grouped: dict = {}
+    for e in entries:
+        snap = e["snapshot_name"]
+        grouped.setdefault(snap, []).append(e)
+
+    return {
+        "activity": entries,
+        "by_snapshot": grouped,
+        "total": len(entries),
+    }
 
 
 @router.get("/dispatches")

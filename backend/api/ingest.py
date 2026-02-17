@@ -18,7 +18,7 @@ from collections import OrderedDict
 from dataclasses import dataclass, field as dc_field, asdict
 from datetime import datetime, timezone
 from threading import Lock
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -95,6 +95,42 @@ class SchemaDriftEvent:
 
 
 # ---------------------------------------------------------------------------
+# Activity Log — discrete record for each of the 3 data-flow phases
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ActivityEntry:
+    """One discrete event in the 3-phase data flow hitting DCL.
+
+    phase:
+        "structure"  — Path 1: AAM pushes pipe schemas via /export-pipes
+        "dispatch"   — Path 2: AAM/Farm manifest activates a dispatch
+        "content"    — Path 3: Farm pushes actual row data via /ingest
+    """
+    phase: str                      # "structure" | "dispatch" | "content"
+    source: str                     # "AAM" | "AAM/Farm" | "Farm"
+    snapshot_name: str              # e.g. "NetLabs-RWC4"
+    run_id: str                     # originating run_id
+    timestamp: str                  # ISO-8601 when DCL recorded this
+
+    # Counts (populated when available)
+    pipes: int = 0                  # total pipe count
+    sors: int = 0                   # unique Systems of Record
+    fabrics: int = 0                # unique fabric planes
+    mapped_pipes: int = 0           # pipes with matching export-pipes schema
+    unmapped_pipes: int = 0         # pipes WITHOUT a matching schema
+    rows: int = 0                   # total data rows
+    records: int = 0                # alias / distinct record count
+
+    # Linking
+    dispatch_id: str = ""           # groups all 3 phases of one cycle
+    aod_run_id: str = ""            # AAM's run identifier
+
+
+_MAX_ACTIVITY = 500  # keep last N entries
+
+
+# ---------------------------------------------------------------------------
 # Run Receipt (metadata that DCL "owns")
 # ---------------------------------------------------------------------------
 
@@ -168,6 +204,10 @@ class IngestStore:
         self._schema_registry: Dict[str, SchemaRecord] = {}
         self._drift_events: List[SchemaDriftEvent] = []
 
+        # Activity log — discrete events for the 3-phase flow
+        self._activity_log: List[ActivityEntry] = []
+        self._seen_dispatch_ids: set = set()  # track which dispatch_ids we've recorded
+
         # Row buffer
         self._row_buffer: OrderedDict[str, List[Dict[str, Any]]] = OrderedDict()
         self._total_rows = 0
@@ -228,6 +268,14 @@ class IngestStore:
             if drift_raw:
                 for d in json.loads(drift_raw):
                     self._drift_events.append(SchemaDriftEvent(**d))
+
+            # Load activity log
+            activity_raw = r.get(f"{_REDIS_PREFIX}activity_log")
+            if activity_raw:
+                for d in json.loads(activity_raw):
+                    self._activity_log.append(ActivityEntry(**d))
+                    if d.get("dispatch_id"):
+                        self._seen_dispatch_ids.add(d["dispatch_id"])
 
             # Backfill dispatch_id for legacy receipts (pre-dispatch era)
             backfilled = 0
@@ -297,6 +345,19 @@ class IngestStore:
             self._redis.expire(f"{_REDIS_PREFIX}drift_events", _REDIS_TTL)
         except Exception as e:
             logger.warning(f"[IngestStore] Redis persist drift failed: {e}")
+
+    def _persist_activity_log(self) -> None:
+        """Write activity log to Redis."""
+        if not self._redis:
+            return
+        try:
+            self._redis.set(
+                f"{_REDIS_PREFIX}activity_log",
+                json.dumps([asdict(e) for e in self._activity_log]),
+            )
+            self._redis.expire(f"{_REDIS_PREFIX}activity_log", _REDIS_TTL)
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis persist activity log failed: {e}")
 
     def _evict_from_redis(self, storage_key: str) -> None:
         """Remove evicted entry from Redis."""
@@ -744,7 +805,55 @@ class IngestStore:
                 "max_runs": _MAX_RUNS,
                 "max_rows": _MAX_BUFFERED_ROWS,
                 "redis_connected": self._redis is not None,
+                "activity_entries": len(self._activity_log),
             }
+
+    # ------------------------------------------------------------------
+    # Activity Log — discrete 3-phase event tracking
+    # ------------------------------------------------------------------
+
+    def record_activity(self, entry: "ActivityEntry") -> None:
+        """Append a discrete activity event and persist to Redis."""
+        with self._lock:
+            self._activity_log.append(entry)
+            if entry.dispatch_id:
+                self._seen_dispatch_ids.add(entry.dispatch_id)
+            if len(self._activity_log) > _MAX_ACTIVITY:
+                self._activity_log = self._activity_log[-_MAX_ACTIVITY:]
+        self._persist_activity_log()
+        logger.info(
+            f"[Activity] {entry.phase}|{entry.source}|{entry.snapshot_name} "
+            f"pipes={entry.pipes} rows={entry.rows}"
+        )
+
+    def has_dispatch_activity(self, dispatch_id: str) -> bool:
+        """Check if we've already recorded a dispatch-phase entry for this id."""
+        with self._lock:
+            return dispatch_id in self._seen_dispatch_ids
+
+    def get_activity_log(self, snapshot_name: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Return activity entries, newest first. Optional snapshot filter."""
+        with self._lock:
+            entries = list(self._activity_log)
+        if snapshot_name:
+            entries = [e for e in entries if e.snapshot_name == snapshot_name]
+        entries.sort(key=lambda e: e.timestamp, reverse=True)
+        return [asdict(e) for e in entries]
+
+    def update_content_activity(self, dispatch_id: str, rows_delta: int, pipe_id: str) -> None:
+        """Increment row/pipe counts on an existing content activity entry.
+
+        Called on each successive pipe push within the same dispatch so the
+        content-phase entry accumulates totals.
+        """
+        with self._lock:
+            for entry in reversed(self._activity_log):
+                if entry.phase == "content" and entry.dispatch_id == dispatch_id:
+                    entry.rows += rows_delta
+                    entry.records += rows_delta
+                    entry.pipes += 1
+                    return
+        # No existing content entry — caller should create one first
 
 
 # ---------------------------------------------------------------------------
