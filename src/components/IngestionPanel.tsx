@@ -199,9 +199,9 @@ export function IngestionPanel() {
                           </td>
                           <td className={`px-3 py-2 font-semibold ${srcColor}`}>{src}</td>
                           <td className="px-3 py-2 text-muted-foreground">{fmtDate(b.latest_received_at)}</td>
-                          <td className="px-3 py-2 text-right font-mono text-foreground">{b.run_count}</td>
-                          <td className="px-3 py-2 text-right font-mono text-foreground">{fmtRows(b.total_rows)}</td>
-                          <td className="px-3 py-2 text-right font-mono text-foreground">{b.unique_sources}</td>
+                          <td className="px-3 py-2 text-right font-mono text-foreground">{src === 'AAM' ? <span className="text-blue-400/70">1</span> : b.run_count}</td>
+                          <td className="px-3 py-2 text-right font-mono text-foreground">{src === 'AAM' ? <span className="text-blue-400/70">{b.total_rows} <span className="text-[10px] italic">pipes</span></span> : fmtRows(b.total_rows)}</td>
+                          <td className="px-3 py-2 text-right font-mono text-foreground">{src === 'AAM' ? <span className="text-blue-400/70">{b.source_list.length > 0 ? b.source_list[0].replace(/ across.*/, '') : '-'}</span> : b.unique_sources}</td>
                           <td className="px-3 py-2 text-center">
                             {b.drift_count > 0
                               ? <span className="text-amber-400 font-semibold">{b.drift_count}</span>

@@ -207,6 +207,22 @@ def run_dcl(request: RunRequest):
         app.state.loaded_sources = snapshot.meta.get("source_names", [])
         app.state.loaded_source_ids = snapshot.meta.get("source_canonical_ids", [])
 
+        if request.mode == "AAM":
+            try:
+                store = get_ingest_store()
+                source_names = snapshot.meta.get("source_names", [])
+                source_ids = snapshot.meta.get("source_canonical_ids", [])
+                aam_kpis = metrics.payload_kpis if metrics.payload_kpis else {}
+                aam_count = store.record_aam_pull(
+                    run_id=run_id,
+                    source_names=source_names,
+                    source_ids=source_ids,
+                    kpis=aam_kpis,
+                )
+                logger.info(f"[AAM] Recorded {aam_count} AAM pull receipts for Ingest panel")
+            except Exception as e:
+                logger.warning(f"[AAM] Failed to record AAM pull in IngestStore: {e}")
+
         return RunResponse(
             graph=snapshot,
             run_metrics=metrics,
