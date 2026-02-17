@@ -106,7 +106,7 @@ def test_export_then_ingest_matching_pipe(client):
     resp = client.post("/api/dcl/export-pipes", json=EXPORT_PAYLOAD)
     assert resp.status_code == 200
     export_data = resp.json()
-    assert export_data["status"] == "registered"
+    assert export_data["status"] == "accepted"
     assert export_data["pipes_registered"] == 2
     assert "sf-crm-001" in export_data["pipe_ids"]
     assert "ns-erp-001" in export_data["pipe_ids"]
