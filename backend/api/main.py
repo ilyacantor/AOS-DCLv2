@@ -35,7 +35,8 @@ from backend.api.query import (
     QueryError,
     handle_query,
 )
-from backend.api.ingest import get_ingest_store
+from backend.api.ingest import get_ingest_store, ActivityEntry
+from backend.api.pipe_store import get_pipe_store
 from backend.api.mcp_server import (
     MCPToolCall,
     get_server_info,
@@ -232,6 +233,9 @@ def run_dcl(request: RunRequest):
             except Exception as e:
                 logger.warning(f"[AAM] Failed to record AAM pull in IngestStore: {e}")
 
+        if request.mode == "Farm":
+            _ensure_farm_content_activity()
+
         return RunResponse(
             graph=snapshot,
             run_metrics=metrics,
@@ -240,6 +244,73 @@ def run_dcl(request: RunRequest):
     except Exception as e:
         logger.error(f"DCL run failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _ensure_farm_content_activity() -> None:
+    """Ensure a content-phase activity entry exists for the current Farm dispatch.
+
+    When Farm pushes data to POST /api/dcl/ingest, the ingest handler records
+    the content activity.  But data pushed *before* the activity-recording code
+    was deployed has receipts in IngestStore with no matching activity entry.
+
+    This function reads the actual receipt data and backfills if needed.
+    All values come from the receipts themselves — no fabrication.
+    """
+    from backend.core.constants import utc_now
+
+    store = get_ingest_store()
+    pipe_store = get_pipe_store()
+
+    # Use the same dispatch selection as build_sources_from_ingest:
+    # latest dispatch, or fall back to all non-AAM receipts.
+    dispatches = store.get_dispatches()
+    if not dispatches:
+        return
+
+    latest = dispatches[0]  # sorted by latest_received_at desc
+    did = latest["dispatch_id"]
+
+    # Already have a content entry for this dispatch? Nothing to do.
+    if store.has_phase(did, "content"):
+        return
+
+    receipts = store.get_receipts_by_dispatch(did)
+    if not receipts:
+        return
+
+    # All values from real receipt data
+    snapshot_name = receipts[0].snapshot_name
+    farm_run_id = receipts[0].run_id
+    total_rows = sum(r.row_count for r in receipts)
+    total_pipes = len(receipts)
+    unique_sors = set(r.canonical_source_id for r in receipts)
+    mapped = sum(1 for r in receipts if pipe_store.lookup(r.pipe_id) is not None)
+    unmapped = total_pipes - mapped
+
+    # Link to the export receipt if available
+    export_receipts = pipe_store.get_export_receipts()
+    aod_run_id = export_receipts[-1].aod_run_id if export_receipts else ""
+
+    store.record_activity(ActivityEntry(
+        phase="content",
+        source="Farm",
+        snapshot_name=snapshot_name,
+        run_id=farm_run_id,
+        timestamp=utc_now(),
+        pipes=total_pipes,
+        sors=len(unique_sors),
+        rows=total_rows,
+        records=total_rows,
+        mapped_pipes=mapped,
+        unmapped_pipes=unmapped,
+        dispatch_id=did,
+        aod_run_id=aod_run_id,
+    ))
+    logger.info(
+        f"[Farm] Backfilled content activity from receipts: "
+        f"snapshot={snapshot_name} run_id={farm_run_id} "
+        f"{total_pipes} pipes, {total_rows:,} rows, {len(unique_sors)} SORs"
+    )
 
 
 @app.get("/api/dcl/narration/{run_id}")
