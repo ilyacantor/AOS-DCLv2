@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 
 interface IngestStats {
   total_runs: number;
@@ -36,21 +36,18 @@ interface IngestBatch {
 }
 
 const POLL_INTERVAL_MS = 5000;
-const BATCH_DISPLAY_LIMIT = 5;
 
 export function IngestionPanel() {
   const [stats, setStats] = useState<IngestStats | null>(null);
   const [batches, setBatches] = useState<IngestBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedBatchIds, setExpandedBatchIds] = useState<Set<string>>(new Set());
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchRuns = async () => {
     try {
       const res = await fetch('/api/dcl/ingest/runs');
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json: IngestRunsResponse = await res.json();
       setStats(json.stats);
       setError(null);
@@ -76,41 +73,27 @@ export function IngestionPanel() {
     fetchBatches();
   }, []);
 
-  const toggleBatchExpand = useCallback((batchId: string) => {
-    setExpandedBatchIds(prev => {
-      const next = new Set(prev);
-      if (next.has(batchId)) {
-        next.delete(batchId);
-      } else {
-        next.add(batchId);
-      }
-      return next;
-    });
-  }, []);
-
   useEffect(() => {
     fetchAll();
     const interval = setInterval(fetchAll, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [fetchAll]);
 
-  const formatTimestamp = (ts: string) => {
+  const fmtDate = (ts: string) => {
     try {
       return new Date(ts).toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true,
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true,
       });
-    } catch {
-      return ts;
-    }
+    } catch { return ts; }
   };
 
-  const visibleBatches = batches.slice(0, BATCH_DISPLAY_LIMIT);
-  const driftBatches = visibleBatches.filter(b => b.drift_count > 0);
+  const fmtRows = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+
+  const inferSource = (b: IngestBatch) => {
+    if (b.snapshot_name.startsWith('cloudedge-')) return 'Farm';
+    if (b.snapshot_name.startsWith('aam') || b.tenant_id.includes('aam')) return 'AAM';
+    return 'Push';
+  };
 
   if (loading) {
     return (
@@ -130,7 +113,7 @@ export function IngestionPanel() {
 
   return (
     <div className="h-full flex flex-col min-h-0">
-      <div className="shrink-0 px-6 py-3 border-b border-border bg-card/50 space-y-2">
+      <div className="shrink-0 px-6 py-3 border-b border-border bg-card/50">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">Ingest Buffer</h2>
           <div className="flex items-center gap-2">
@@ -147,197 +130,126 @@ export function IngestionPanel() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
         {error && (
-          <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-center">
+          <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-center">
             <span className="text-sm text-red-400">{error}</span>
-            <button
-              onClick={fetchAll}
-              className="ml-3 px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"
-            >
+            <button onClick={fetchAll} className="ml-3 px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90">
               Retry
             </button>
           </div>
         )}
 
         {stats && stats.total_runs > 0 && (
-          <div className="rounded-lg border border-border bg-card/30 p-4 space-y-2">
-            <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
-              Run Summary
-            </h3>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-lg font-bold text-foreground">{batches.length}</div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Batches</div>
-              </div>
-              <div>
-                <div className="text-lg font-bold text-foreground">{stats.total_runs}</div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Runs</div>
-              </div>
-              <div>
-                <div className="text-lg font-bold text-foreground">{stats.total_rows_buffered.toLocaleString()}</div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Rows</div>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-muted-foreground pt-1 border-t border-border/50">
-              <span>
-                <span className="text-foreground font-semibold">{stats.unique_sources}</span> sources
-              </span>
-              <span className="text-border">|</span>
-              <span>
-                tenant: <span className="text-foreground font-semibold">{stats.tenant_names.join(', ')}</span>
-              </span>
-              {stats.first_run_at && stats.latest_run_at && (
-                <>
-                  <span className="text-border">|</span>
-                  <span>
-                    {formatTimestamp(stats.first_run_at)} → {formatTimestamp(stats.latest_run_at)}
-                  </span>
-                </>
+          <div className="rounded-lg border border-border bg-card/30 px-4 py-2.5">
+            <div className="flex items-center gap-6 text-xs font-mono">
+              <span><span className="text-foreground font-semibold">{batches.length}</span> <span className="text-muted-foreground">batches</span></span>
+              <span><span className="text-foreground font-semibold">{stats.total_runs}</span> <span className="text-muted-foreground">runs</span></span>
+              <span><span className="text-foreground font-semibold">{fmtRows(stats.total_rows_buffered)}</span> <span className="text-muted-foreground">rows</span></span>
+              <span><span className="text-foreground font-semibold">{stats.unique_sources}</span> <span className="text-muted-foreground">sources</span></span>
+              {stats.total_drift_events > 0 && (
+                <span><span className="text-amber-400 font-semibold">{stats.total_drift_events}</span> <span className="text-muted-foreground">drift</span></span>
               )}
             </div>
           </div>
         )}
 
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
-              Batches ({visibleBatches.length})
-            </h3>
-            {batches.length > BATCH_DISPLAY_LIMIT && (
-              <span className="text-[10px] text-muted-foreground">
-                Showing {BATCH_DISPLAY_LIMIT} of {batches.length} batches
-              </span>
-            )}
-          </div>
-          {visibleBatches.length === 0 ? (
+          {batches.length === 0 ? (
             <div className="rounded-lg border border-border bg-card/30 p-6 text-center">
-              <div className="text-muted-foreground text-sm">No batches yet</div>
-              <div className="text-muted-foreground text-xs mt-1">
-                Waiting for AAM Runners to push data...
-              </div>
+              <div className="text-muted-foreground text-sm">No ingestions yet</div>
+              <div className="text-muted-foreground text-xs mt-1">Waiting for Farm or AAM to push data...</div>
             </div>
           ) : (
-            <div className="space-y-2">
-              {visibleBatches.map((batch) => {
-                const isExpanded = expandedBatchIds.has(batch.batch_id);
-                return (
-                  <div
-                    key={batch.batch_id}
-                    className="rounded-lg border border-border bg-card/30 overflow-hidden"
-                  >
-                    <div className="px-4 py-3 space-y-2">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-semibold text-foreground">{batch.snapshot_name}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20 text-muted-foreground">
-                            {batch.tenant_id}
-                          </span>
-                        </div>
-                      </div>
+            <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
+                    <th className="text-left px-3 py-2 font-medium">Snapshot</th>
+                    <th className="text-left px-3 py-2 font-medium">Source</th>
+                    <th className="text-left px-3 py-2 font-medium">When</th>
+                    <th className="text-right px-3 py-2 font-medium">Runs</th>
+                    <th className="text-right px-3 py-2 font-medium">Rows</th>
+                    <th className="text-right px-3 py-2 font-medium">Pipes</th>
+                    <th className="text-center px-3 py-2 font-medium">Drift</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {batches.map((b) => {
+                    const isExpanded = expandedId === b.batch_id;
+                    const src = inferSource(b);
+                    const srcColor = src === 'Farm' ? 'text-emerald-400' : src === 'AAM' ? 'text-blue-400' : 'text-muted-foreground';
 
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono">
-                        <span>
-                          <span className="text-emerald-400 font-semibold">{batch.run_count}</span>
-                          <span className="text-muted-foreground ml-1">runs</span>
-                        </span>
-                        <span className="text-border">|</span>
-                        <span>
-                          <span className="text-emerald-400 font-semibold">{batch.total_rows.toLocaleString()}</span>
-                          <span className="text-muted-foreground ml-1">rows</span>
-                        </span>
-                        <span className="text-border">|</span>
-                        <span>
-                          <span className="text-emerald-400 font-semibold">{batch.unique_sources}</span>
-                          <span className="text-muted-foreground ml-1">sources</span>
-                        </span>
-                        <span className="text-border">|</span>
-                        <span>
-                          <span className={`font-semibold ${batch.drift_count > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                            {batch.drift_count}
-                          </span>
-                          <span className="text-muted-foreground ml-1">drift</span>
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                        <span>
-                          {formatTimestamp(batch.first_received_at)}
-                          {batch.first_received_at !== batch.latest_received_at && (
-                            <> → {formatTimestamp(batch.latest_received_at)}</>
-                          )}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-mono text-muted-foreground">
-                        <span>first: {batch.first_run_id.slice(0, 12)}...</span>
-                        {batch.first_run_id !== batch.latest_run_id && (
-                          <span>latest: {batch.latest_run_id.slice(0, 12)}...</span>
-                        )}
-                      </div>
-
-                      {batch.source_list.length > 0 && (
-                        <div>
-                          <button
-                            onClick={() => toggleBatchExpand(batch.batch_id)}
-                            className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors"
-                          >
-                            <svg
-                              className={`w-2.5 h-2.5 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
-                              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
-                            {batch.source_list.length} source{batch.source_list.length !== 1 ? 's' : ''}
-                          </button>
-                          {isExpanded && (
-                            <div className="flex flex-wrap gap-1 mt-1.5">
-                              {batch.source_list.map(s => (
-                                <span
-                                  key={s}
-                                  className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-card/50 border border-border text-muted-foreground"
-                                >
-                                  {s}
-                                </span>
-                              ))}
+                    return (
+                      <Fragment key={b.batch_id}>
+                        <tr
+                          onClick={() => setExpandedId(isExpanded ? null : b.batch_id)}
+                          className="border-b border-border/50 hover:bg-card/50 cursor-pointer transition-colors"
+                        >
+                          <td className="px-3 py-2 font-mono font-medium text-foreground">
+                            <div className="flex items-center gap-1.5">
+                              <svg
+                                className={`w-2.5 h-2.5 shrink-0 transition-transform duration-150 text-muted-foreground ${isExpanded ? 'rotate-90' : ''}`}
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                              </svg>
+                              {b.snapshot_name}
                             </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                          </td>
+                          <td className={`px-3 py-2 font-semibold ${srcColor}`}>{src}</td>
+                          <td className="px-3 py-2 text-muted-foreground">{fmtDate(b.latest_received_at)}</td>
+                          <td className="px-3 py-2 text-right font-mono text-foreground">{b.run_count}</td>
+                          <td className="px-3 py-2 text-right font-mono text-foreground">{fmtRows(b.total_rows)}</td>
+                          <td className="px-3 py-2 text-right font-mono text-foreground">{b.unique_sources}</td>
+                          <td className="px-3 py-2 text-center">
+                            {b.drift_count > 0
+                              ? <span className="text-amber-400 font-semibold">{b.drift_count}</span>
+                              : <span className="text-muted-foreground/40">-</span>
+                            }
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={7} className="bg-card/20 px-4 py-3 border-b border-border/50">
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-muted-foreground">
+                                  <span>tenant: <span className="text-foreground">{b.tenant_id}</span></span>
+                                  <span className="text-border">|</span>
+                                  <span>batch: <span className="text-foreground">{b.batch_id.slice(0, 12)}</span></span>
+                                  <span className="text-border">|</span>
+                                  <span>first run: <span className="text-foreground">{b.first_run_id.slice(0, 12)}</span></span>
+                                  {b.first_run_id !== b.latest_run_id && (
+                                    <>
+                                      <span className="text-border">|</span>
+                                      <span>latest run: <span className="text-foreground">{b.latest_run_id.slice(0, 12)}</span></span>
+                                    </>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-x-4 text-[11px] text-muted-foreground">
+                                  <span>{fmtDate(b.first_received_at)}{b.first_received_at !== b.latest_received_at && ` \u2192 ${fmtDate(b.latest_received_at)}`}</span>
+                                </div>
+                                {b.source_list.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 pt-1">
+                                    {b.source_list.map(s => (
+                                      <span key={s} className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-card/50 border border-border text-muted-foreground">
+                                        {s}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
-
-        {driftBatches.length > 0 && (
-          <div>
-            <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3">
-              Schema Drift Detected
-            </h3>
-            <div className="space-y-2">
-              {driftBatches.map(b => (
-                <div key={b.batch_id} className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-amber-400">~</span>
-                    <span className="text-xs font-medium">{b.snapshot_name}</span>
-                    <span className="text-[10px] font-mono text-muted-foreground">{b.batch_id.slice(0, 8)}</span>
-                    <span className="text-[10px] text-amber-400 font-semibold ml-auto">{b.drift_count} drift event{b.drift_count !== 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {b.source_list.map(s => (
-                      <span key={s} className="px-1.5 py-0.5 text-[10px] rounded bg-card/50 border border-border text-muted-foreground">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
