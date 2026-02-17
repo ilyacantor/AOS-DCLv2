@@ -711,10 +711,14 @@ def get_ingest_stats():
 
 
 @app.get("/api/dcl/ingest/dispatches")
-def list_dispatches():
-    """List all Farm dispatches — each dispatch groups pipes from one manifest push."""
+def list_dispatches(snapshot_name: Optional[str] = None):
+    """List all Farm dispatches — each dispatch groups pipes from one manifest push.
+
+    Optional ?snapshot_name= filter to show only dispatches from a specific
+    Farm generation (e.g. 'cloudedge-a1b2').
+    """
     store = get_ingest_store()
-    return {"dispatches": store.get_dispatches()}
+    return {"dispatches": store.get_dispatches(snapshot_name=snapshot_name)}
 
 
 @app.get("/api/dcl/ingest/dispatches/{dispatch_id}")
@@ -724,19 +728,6 @@ def get_dispatch_detail(dispatch_id: str):
     summary = store.get_dispatch_summary(dispatch_id)
     if not summary:
         raise HTTPException(status_code=404, detail=f"Dispatch {dispatch_id} not found")
-    receipts = store.get_receipts_by_dispatch(dispatch_id)
-    summary["pipes"] = [
-        {
-            "run_id": r.run_id,
-            "pipe_id": r.pipe_id,
-            "source_system": r.source_system,
-            "row_count": r.row_count,
-            "schema_drift": r.schema_drift,
-            "drift_fields": r.drift_fields,
-            "received_at": r.received_at,
-        }
-        for r in receipts
-    ]
     return summary
 
 

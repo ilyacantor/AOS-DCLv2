@@ -483,11 +483,17 @@ class IngestStore:
         with self._lock:
             return dict(self._schema_registry)
 
-    def get_dispatches(self) -> List[Dict[str, Any]]:
-        """Group all receipts by dispatch_id and return summary per dispatch."""
+    def get_dispatches(self, snapshot_name: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Group all receipts by dispatch_id and return summary per dispatch.
+
+        If snapshot_name is provided, only return dispatches matching that
+        Farm generation (e.g. 'cloudedge-a1b2').
+        """
         with self._lock:
             groups: Dict[str, List[RunReceipt]] = {}
             for r in self._receipts.values():
+                if snapshot_name and r.snapshot_name != snapshot_name:
+                    continue
                 groups.setdefault(r.dispatch_id, []).append(r)
 
             result: List[Dict[str, Any]] = []
@@ -495,11 +501,17 @@ class IngestStore:
                 sorted_receipts = sorted(receipts, key=lambda r: r.received_at)
                 sources = sorted(set(r.source_system for r in receipts))
                 run_ids = sorted(set(r.run_id for r in receipts))
+                snapshots = sorted(set(r.snapshot_name for r in receipts))
+                tenants = sorted(set(r.tenant_id for r in receipts))
+                pipe_ids = sorted(set(r.pipe_id for r in receipts))
                 result.append({
                     "dispatch_id": dispatch_id,
+                    "snapshot_name": snapshots[0] if len(snapshots) == 1 else snapshots,
+                    "tenant_id": tenants[0] if len(tenants) == 1 else tenants,
                     "pipe_count": len(receipts),
                     "total_rows": sum(r.row_count for r in receipts),
                     "unique_sources": sources,
+                    "pipe_ids": pipe_ids,
                     "first_received_at": sorted_receipts[0].received_at,
                     "latest_received_at": sorted_receipts[-1].received_at,
                     "drift_count": sum(1 for r in receipts if r.schema_drift),
@@ -532,22 +544,39 @@ class IngestStore:
 
             sorted_receipts = sorted(receipts, key=lambda r: r.received_at)
             sources_breakdown: Dict[str, Dict[str, Any]] = {}
+            pipes_detail: List[Dict[str, Any]] = []
             for r in receipts:
                 if r.source_system not in sources_breakdown:
-                    sources_breakdown[r.source_system] = {"pipe_count": 0, "row_count": 0}
+                    sources_breakdown[r.source_system] = {"pipe_count": 0, "row_count": 0, "pipe_ids": []}
                 sources_breakdown[r.source_system]["pipe_count"] += 1
                 sources_breakdown[r.source_system]["row_count"] += r.row_count
+                sources_breakdown[r.source_system]["pipe_ids"].append(r.pipe_id)
+                pipes_detail.append({
+                    "pipe_id": r.pipe_id,
+                    "source_system": r.source_system,
+                    "row_count": r.row_count,
+                    "schema_drift": r.schema_drift,
+                    "received_at": r.received_at,
+                    "run_id": r.run_id,
+                })
+
+            snapshots = sorted(set(r.snapshot_name for r in receipts))
+            tenants = sorted(set(r.tenant_id for r in receipts))
 
             return {
                 "dispatch_id": dispatch_id,
+                "snapshot_name": snapshots[0] if len(snapshots) == 1 else snapshots,
+                "tenant_id": tenants[0] if len(tenants) == 1 else tenants,
                 "pipe_count": len(receipts),
                 "total_rows": sum(r.row_count for r in receipts),
                 "unique_sources": sorted(set(r.source_system for r in receipts)),
+                "pipe_ids": sorted(set(r.pipe_id for r in receipts)),
                 "first_received_at": sorted_receipts[0].received_at,
                 "latest_received_at": sorted_receipts[-1].received_at,
                 "drift_count": sum(1 for r in receipts if r.schema_drift),
                 "run_ids": sorted(set(r.run_id for r in receipts)),
                 "sources_breakdown": sources_breakdown,
+                "pipes": pipes_detail,
             }
 
     def get_batches(self) -> List[Dict[str, Any]]:
