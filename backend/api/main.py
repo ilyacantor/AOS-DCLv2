@@ -212,12 +212,14 @@ def run_dcl(request: RunRequest):
                 store = get_ingest_store()
                 source_names = snapshot.meta.get("source_names", [])
                 source_ids = snapshot.meta.get("source_canonical_ids", [])
+                fabric_planes = snapshot.meta.get("source_fabric_planes", [])
                 aam_kpis = metrics.payload_kpis if metrics.payload_kpis else {}
                 aam_count = store.record_aam_pull(
                     run_id=run_id,
                     source_names=source_names,
                     source_ids=source_ids,
                     kpis=aam_kpis,
+                    fabric_planes=fabric_planes,
                 )
                 logger.info(f"[AAM] Recorded {aam_count} AAM pull receipts for Ingest panel")
             except Exception as e:

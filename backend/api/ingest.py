@@ -579,48 +579,48 @@ class IngestStore:
                 "pipes": pipes_detail,
             }
 
-    def record_aam_pull(self, run_id: str, source_names: list, source_ids: list, kpis: dict) -> int:
+    def record_aam_pull(self, run_id: str, source_names: list, source_ids: list, kpis: dict, fabric_planes: list = None) -> int:
         """Record AAM pull event as a single summary receipt for Ingest panel.
 
-        Creates ONE summary RunReceipt per AAM run (not per-source) to avoid
-        flooding the 500-receipt store when AAM has 300-700 connections.
-        The source list is stored in the receipt's source_system field as a
-        comma-separated summary for the expanded view.
-
-        Args:
-            run_id: DCL run ID
-            source_names: List of source display names from AAM
-            source_ids: List of canonical source IDs from AAM
-            kpis: AAM KPI dict with fabrics, pipes, sources counts
-
-        Returns:
-            1 if receipt created, 0 on failure
+        Creates ONE summary RunReceipt per AAM run with rich metadata.
+        Snapshot name comes from AAM_SNAPSHOT_NAME env var.
+        Fabric planes and unique SOR names are stored in schema_hash as JSON.
         """
+        import os
+
         now = datetime.now(timezone.utc).isoformat()
         dispatch_id = f"aam_{run_id[:20]}"
 
-        unique_sources = sorted(set(source_names))
+        snapshot_name = os.environ.get("AAM_SNAPSHOT_NAME", "AAM-Export")
         pipe_count = kpis.get("pipes", len(source_names))
-        fabric_count = kpis.get("fabrics", 0)
+        unique_source_names = sorted(set(source_names))
+        raw_fabrics = fabric_planes or []
+        fabric_categories = sorted(set(f.split(":")[0] for f in raw_fabrics if ":" in f)) if raw_fabrics else []
 
-        source_summary = f"{len(unique_sources)} sources across {fabric_count} fabrics"
+        aam_meta = json.dumps({
+            "pipes": pipe_count,
+            "sources": len(unique_source_names),
+            "source_names": unique_source_names,
+            "fabrics": fabric_categories,
+            "fabric_details": raw_fabrics,
+            "loaded": kpis.get("loadedSources", len(source_names)),
+        })
 
         receipt = RunReceipt(
             run_id=run_id,
             pipe_id=f"aam-pull-{run_id[:8]}",
-            source_system=source_summary,
+            source_system="AAM",
             canonical_source_id="aam",
             tenant_id="aam",
-            snapshot_name="aam-export",
+            snapshot_name=snapshot_name,
             run_timestamp=now,
             received_at=now,
             schema_version="aam-live",
-            schema_hash="",
+            schema_hash=aam_meta,
             row_count=pipe_count,
             schema_drift=False,
             drift_fields=[],
             dispatch_id=dispatch_id,
-            runner_id=None,
         )
 
         key = _make_key(run_id, f"aam-pull-{run_id[:8]}")
@@ -640,7 +640,7 @@ class IngestStore:
 
         logger.info(
             f"[IngestStore] Recorded AAM pull: {pipe_count} pipes, "
-            f"{len(unique_sources)} sources from run {run_id}"
+            f"{len(unique_source_names)} sources from run {run_id}"
         )
         return 1
 
@@ -684,7 +684,7 @@ class IngestStore:
         seq: int,
     ) -> Dict[str, Any]:
         sources = sorted(set(r.source_system for r in receipts))
-        return {
+        base = {
             "batch_id": f"{snap_name}#{seq}",
             "snapshot_name": snap_name,
             "tenant_id": receipts[0].tenant_id,
@@ -698,6 +698,22 @@ class IngestStore:
             "latest_received_at": receipts[-1].received_at,
             "drift_count": sum(1 for r in receipts if r.schema_drift),
         }
+
+        aam_receipts = [r for r in receipts if r.tenant_id == "aam"]
+        if aam_receipts:
+            for r in aam_receipts:
+                try:
+                    meta = json.loads(r.schema_hash)
+                    base["aam_meta"] = meta
+                    base["unique_sources"] = meta.get("pipes", base["unique_sources"])
+                    base["total_rows"] = 0
+                    if meta.get("fabrics"):
+                        base["source_list"] = meta["fabrics"]
+                    break
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+        return base
 
     def get_stats(self) -> Dict[str, Any]:
         with self._lock:

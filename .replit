@@ -45,6 +45,7 @@ FARM_API_URL = "https://63971109-a901-48bc-a71f-89583b2e11d4-00-1do0vncksilxt.ja
 RUN_MODE = "dev"
 ENABLE_CHAOS = "true"
 DCL_DATASET_ID = "nlq_test"
+AAM_SNAPSHOT_NAME = "HelixSystems-NAJP"
 
 [deployment]
 deploymentTarget = "autoscale"

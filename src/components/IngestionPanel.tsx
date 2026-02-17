@@ -33,6 +33,14 @@ interface IngestBatch {
   first_received_at: string;
   latest_received_at: string;
   drift_count: number;
+  aam_meta?: {
+    pipes: number;
+    sources: number;
+    source_names: string[];
+    fabrics: string[];
+    fabric_details: string[];
+    loaded: number;
+  };
 }
 
 const POLL_INTERVAL_MS = 5000;
@@ -91,7 +99,7 @@ export function IngestionPanel() {
 
   const inferSource = (b: IngestBatch) => {
     if (b.snapshot_name.startsWith('cloudedge-')) return 'Farm';
-    if (b.snapshot_name.startsWith('aam') || b.tenant_id.includes('aam')) return 'AAM';
+    if (b.aam_meta || b.tenant_id === 'aam') return 'AAM';
     return 'Push';
   };
 
@@ -200,8 +208,8 @@ export function IngestionPanel() {
                           <td className={`px-3 py-2 font-semibold ${srcColor}`}>{src}</td>
                           <td className="px-3 py-2 text-muted-foreground">{fmtDate(b.latest_received_at)}</td>
                           <td className="px-3 py-2 text-right font-mono text-foreground">{src === 'AAM' ? <span className="text-blue-400/70">1</span> : b.run_count}</td>
-                          <td className="px-3 py-2 text-right font-mono text-foreground">{src === 'AAM' ? <span className="text-blue-400/70">{b.total_rows} <span className="text-[10px] italic">pipes</span></span> : fmtRows(b.total_rows)}</td>
-                          <td className="px-3 py-2 text-right font-mono text-foreground">{src === 'AAM' ? <span className="text-blue-400/70">{b.source_list.length > 0 ? b.source_list[0].replace(/ across.*/, '') : '-'}</span> : b.unique_sources}</td>
+                          <td className="px-3 py-2 text-right font-mono text-foreground">{src === 'AAM' ? <span className="text-blue-400/70 italic text-[10px]">schema only</span> : fmtRows(b.total_rows)}</td>
+                          <td className="px-3 py-2 text-right font-mono text-foreground">{b.unique_sources}</td>
                           <td className="px-3 py-2 text-center">
                             {b.drift_count > 0
                               ? <span className="text-amber-400 font-semibold">{b.drift_count}</span>
@@ -212,33 +220,72 @@ export function IngestionPanel() {
                         {isExpanded && (
                           <tr>
                             <td colSpan={7} className="bg-card/20 px-4 py-3 border-b border-border/50">
-                              <div className="space-y-2">
-                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-muted-foreground">
-                                  <span>tenant: <span className="text-foreground">{b.tenant_id}</span></span>
-                                  <span className="text-border">|</span>
-                                  <span>batch: <span className="text-foreground">{b.batch_id.slice(0, 12)}</span></span>
-                                  <span className="text-border">|</span>
-                                  <span>first run: <span className="text-foreground">{b.first_run_id.slice(0, 12)}</span></span>
-                                  {b.first_run_id !== b.latest_run_id && (
-                                    <>
-                                      <span className="text-border">|</span>
-                                      <span>latest run: <span className="text-foreground">{b.latest_run_id.slice(0, 12)}</span></span>
-                                    </>
+                              {b.aam_meta ? (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-4 text-[11px] font-mono text-muted-foreground">
+                                    <span><span className="text-foreground font-semibold">{b.aam_meta.pipes}</span> pipes</span>
+                                    <span className="text-border">|</span>
+                                    <span><span className="text-foreground font-semibold">{b.aam_meta.sources}</span> SORs</span>
+                                    <span className="text-border">|</span>
+                                    <span><span className="text-foreground font-semibold">{b.aam_meta.fabrics.length}</span> fabrics</span>
+                                  </div>
+                                  {b.aam_meta.fabrics.length > 0 && (
+                                    <div>
+                                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground/60 mb-1">Fabrics</div>
+                                      <div className="flex flex-wrap gap-1">
+                                        {b.aam_meta.fabrics.map(f => (
+                                          <span key={f} className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                                            {f}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {b.aam_meta.source_names && b.aam_meta.source_names.length > 0 && (
+                                    <div>
+                                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground/60 mb-1">SORs</div>
+                                      <div className="flex flex-wrap gap-1">
+                                        {b.aam_meta.source_names.slice(0, 40).map(s => (
+                                          <span key={s} className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-card/50 border border-border text-muted-foreground">
+                                            {s}
+                                          </span>
+                                        ))}
+                                        {b.aam_meta.source_names.length > 40 && (
+                                          <span className="px-1.5 py-0.5 text-[10px] text-muted-foreground/60">+{b.aam_meta.source_names.length - 40} more</span>
+                                        )}
+                                      </div>
+                                    </div>
                                   )}
                                 </div>
-                                <div className="flex flex-wrap items-center gap-x-4 text-[11px] text-muted-foreground">
-                                  <span>{fmtDate(b.first_received_at)}{b.first_received_at !== b.latest_received_at && ` \u2192 ${fmtDate(b.latest_received_at)}`}</span>
-                                </div>
-                                {b.source_list.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 pt-1">
-                                    {b.source_list.map(s => (
-                                      <span key={s} className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-card/50 border border-border text-muted-foreground">
-                                        {s}
-                                      </span>
-                                    ))}
+                              ) : (
+                                <div className="space-y-2">
+                                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-muted-foreground">
+                                    <span>tenant: <span className="text-foreground">{b.tenant_id}</span></span>
+                                    <span className="text-border">|</span>
+                                    <span>batch: <span className="text-foreground">{b.batch_id.slice(0, 12)}</span></span>
+                                    <span className="text-border">|</span>
+                                    <span>first run: <span className="text-foreground">{b.first_run_id.slice(0, 12)}</span></span>
+                                    {b.first_run_id !== b.latest_run_id && (
+                                      <>
+                                        <span className="text-border">|</span>
+                                        <span>latest run: <span className="text-foreground">{b.latest_run_id.slice(0, 12)}</span></span>
+                                      </>
+                                    )}
                                   </div>
-                                )}
-                              </div>
+                                  <div className="flex flex-wrap items-center gap-x-4 text-[11px] text-muted-foreground">
+                                    <span>{fmtDate(b.first_received_at)}{b.first_received_at !== b.latest_received_at && ` \u2192 ${fmtDate(b.latest_received_at)}`}</span>
+                                  </div>
+                                  {b.source_list.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 pt-1">
+                                      {b.source_list.map(s => (
+                                        <span key={s} className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-card/50 border border-border text-muted-foreground">
+                                          {s}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </td>
                           </tr>
                         )}

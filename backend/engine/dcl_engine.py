@@ -233,6 +233,11 @@ class DCLEngine:
                 },
                 "source_canonical_ids": [s.id for s in sources],
                 "source_names": [s.name for s in sources],
+                "source_fabric_planes": sorted(set(
+                    f"{s.fabric_plane}:{s.vendor}"
+                    for s in sources
+                    if getattr(s, 'fabric_plane', None)
+                )),
             }
         )
         
