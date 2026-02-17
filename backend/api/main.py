@@ -35,7 +35,8 @@ from backend.api.query import (
     QueryError,
     handle_query,
 )
-from backend.api.ingest import get_ingest_store
+from backend.api.ingest import get_ingest_store, ActivityEntry
+from backend.api.pipe_store import get_pipe_store
 from backend.api.mcp_server import (
     MCPToolCall,
     get_server_info,
@@ -185,6 +186,84 @@ class RunResponse(BaseModel):
     run_id: str
 
 
+def _record_farm_content_activity(run_id: str, snapshot: GraphSnapshot) -> None:
+    """Record a content-phase activity entry when Farm data is consumed.
+
+    Farm pushes data to POST /api/dcl/ingest which creates RunReceipts.
+    When run_dcl(mode=Farm) reads those receipts, we record a content
+    activity entry here so the Ingest tab shows the Farm content phase.
+
+    The snapshot_name and run_id are resolved from the AAM export receipt
+    (via PipeDefinitionStore) to match the structure phase identity.
+    """
+    from backend.core.constants import utc_now
+
+    store = get_ingest_store()
+    pipe_store = get_pipe_store()
+
+    # Resolve identity from AAM export receipt
+    export_receipts = pipe_store.get_export_receipts()
+    if export_receipts:
+        latest_export = export_receipts[-1]
+        aod_run_id = latest_export.aod_run_id or ""
+        dispatch_id = f"aam_{aod_run_id[:20]}" if aod_run_id else ""
+    else:
+        aod_run_id = ""
+        dispatch_id = ""
+        logger.error(
+            "[Farm] No AAM export receipts — cannot link Farm content "
+            "to structure phase. Recording with Farm-local identity."
+        )
+
+    snap_name = aod_run_id or f"farm-{run_id[:8]}"
+
+    # Gather stats from the IngestStore receipts
+    receipts = store.get_all_receipts()
+    # Filter to Farm receipts (not AAM)
+    farm_receipts = [r for r in receipts if r.tenant_id != "aam"]
+    total_rows = sum(r.row_count for r in farm_receipts)
+    total_pipes = len(farm_receipts)
+    unique_sources = set(r.source_system for r in farm_receipts)
+
+    # Check how many pipes have matching export-pipes definitions
+    mapped = sum(1 for r in farm_receipts if pipe_store.lookup(r.pipe_id) is not None)
+    unmapped = total_pipes - mapped
+
+    # Only record if we haven't already recorded content for this dispatch
+    already_has_content = False
+    if dispatch_id:
+        for entry in store.get_activity_log():
+            if entry["phase"] == "content" and entry["dispatch_id"] == dispatch_id:
+                already_has_content = True
+                break
+
+    if not already_has_content:
+        store.record_activity(ActivityEntry(
+            phase="content",
+            source="Farm",
+            snapshot_name=snap_name,
+            run_id=aod_run_id or run_id,
+            timestamp=utc_now(),
+            pipes=total_pipes,
+            sors=len(unique_sources),
+            rows=total_rows,
+            records=total_rows,
+            mapped_pipes=mapped,
+            unmapped_pipes=unmapped,
+            dispatch_id=dispatch_id,
+            aod_run_id=aod_run_id,
+        ))
+        logger.info(
+            f"[Farm] Recorded content activity: {total_pipes} pipes, "
+            f"{total_rows:,} rows, {len(unique_sources)} SORs, "
+            f"mapped={mapped} unmapped={unmapped}"
+        )
+    else:
+        logger.info(
+            f"[Farm] Content activity already exists for dispatch={dispatch_id}, skipping"
+        )
+
+
 @app.post("/api/dcl/run", response_model=RunResponse)
 def run_dcl(request: RunRequest):
     run_id = str(uuid.uuid4())
@@ -231,6 +310,9 @@ def run_dcl(request: RunRequest):
                 logger.info(f"[AAM] Recorded {aam_count} AAM pull receipts as '{aam_snap}'")
             except Exception as e:
                 logger.warning(f"[AAM] Failed to record AAM pull in IngestStore: {e}")
+
+        if request.mode == "Farm":
+            _record_farm_content_activity(run_id, snapshot)
 
         return RunResponse(
             graph=snapshot,
