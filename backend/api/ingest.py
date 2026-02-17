@@ -583,18 +583,22 @@ class IngestStore:
         """Record AAM pull event as a single summary receipt for Ingest panel.
 
         Creates ONE summary RunReceipt per AAM run with rich metadata.
-        Snapshot name is derived dynamically from AAM fabric plane vendors.
-        Falls back to AAM_SNAPSHOT_NAME env var if no vendor data available.
+        Snapshot name MUST be provided by AAM payload (kpis['snapshotName']).
+        No silent fallbacks — raises ValueError if missing.
         Fabric planes and unique SOR names are stored in schema_hash as JSON.
 
         Returns (count, snapshot_name) tuple.
         """
-        import os
-
         now = datetime.now(timezone.utc).isoformat()
         dispatch_id = f"aam_{run_id[:20]}"
 
-        snapshot_name = kpis.get("snapshotName") or os.environ.get("AAM_SNAPSHOT_NAME", "AAM-Export")
+        snapshot_name = kpis.get("snapshotName")
+        if not snapshot_name:
+            raise ValueError(
+                "AAM payload missing snapshot_name. "
+                "The AAM export-pipes response must include a 'snapshot_name' field. "
+                f"Available kpi keys: {sorted(kpis.keys())}"
+            )
         pipe_count = kpis.get("pipes", len(source_names))
         unique_source_names = sorted(set(source_names))
         raw_fabrics = fabric_planes or []

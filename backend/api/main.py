@@ -514,7 +514,13 @@ async def dcl_ingest(
         if "tenant_id" not in body:
             body.setdefault("tenant_id", body.get("tenantId", body.get("tenant", "default")))
         if "snapshot_name" not in body:
-            body.setdefault("snapshot_name", body.get("snapshotName", body.get("snapshot", "default")))
+            alt = body.get("snapshotName") or body.get("snapshot")
+            if not alt:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Missing required field: snapshot_name. Every ingest push must include a snapshot_name (or snapshotName)."
+                )
+            body["snapshot_name"] = alt
         if "run_timestamp" not in body:
             body.setdefault("run_timestamp", body.get("runTimestamp", body.get("timestamp", datetime.now(timezone.utc).isoformat())))
         if "schema_version" not in body:
@@ -1446,7 +1452,12 @@ def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
     result["pushMeta"] = push_meta
 
     current_mode = get_current_mode()
-    snapshot_name = payload.snapshot_name or getattr(app.state, "aam_snapshot_name", None) or os.environ.get("AAM_SNAPSHOT_NAME", "AAM-Export")
+    snapshot_name = payload.snapshot_name or getattr(app.state, "aam_snapshot_name", None)
+    if not snapshot_name:
+        raise HTTPException(
+            status_code=500,
+            detail="No snapshot_name available. AAM payload must include snapshot_name, or run DCL in AAM mode first."
+        )
 
     result["reconMeta"] = {
         "dclRunId": current_mode.last_run_id,
@@ -1517,7 +1528,12 @@ def get_sor_reconciliation():
 
         import time as _time
         sor_current_mode = get_current_mode()
-        sor_snapshot_name = getattr(app.state, "aam_snapshot_name", os.environ.get("AAM_SNAPSHOT_NAME", "AAM"))
+        sor_snapshot_name = getattr(app.state, "aam_snapshot_name", None)
+        if not sor_snapshot_name:
+            raise HTTPException(
+                status_code=500,
+                detail="No snapshot_name available. Run DCL in AAM mode first so a snapshot name is established."
+            )
         result["reconMeta"] = {
             "dclRunId": sor_current_mode.last_run_id,
             "dclRunAt": sor_current_mode.last_updated,
