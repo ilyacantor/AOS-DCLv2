@@ -153,31 +153,29 @@ def receive_export_pipes(request: ExportPipesRequest):
     )
 
     # --- Record Path 1 activity (Structure) ---
-    unique_sources = sorted(set(d.source_name for d in definitions if d.source_name))
+    unique_sors = sorted(set(d.vendor for d in definitions if d.vendor))
     unique_fabrics = sorted(set(d.fabric_plane for d in definitions if d.fabric_plane))
-    # Derive a snapshot_name from the first pipe_id pattern or aod_run_id
-    snap_name = ""
-    if definitions:
-        # pipe_ids often encode the snapshot, e.g. "pipe_salesforce_NetLabs-RWC4"
-        # Use aod_run_id as the primary identifier
-        snap_name = request.aod_run_id or f"export-{now[:10]}"
 
-    try:
-        ingest_store = get_ingest_store()
-        ingest_store.record_activity(ActivityEntry(
-            phase="structure",
-            source="AAM",
-            snapshot_name=snap_name,
-            run_id=request.aod_run_id or "",
-            timestamp=now,
-            pipes=len(definitions),
-            sors=len(unique_sources),
-            fabrics=len(unique_fabrics),
-            dispatch_id=f"aam_{request.aod_run_id[:20]}" if request.aod_run_id else "",
-            aod_run_id=request.aod_run_id or "",
-        ))
-    except Exception as e:
-        logger.warning(f"[ExportPipes] Failed to record activity: {e}")
+    if not request.aod_run_id:
+        logger.error(
+            "[ExportPipes] aod_run_id is missing from AAM export-pipes payload. "
+            "Activity log entry will use empty identifiers — this indicates "
+            "an AAM integration issue."
+        )
+
+    ingest_store = get_ingest_store()
+    ingest_store.record_activity(ActivityEntry(
+        phase="structure",
+        source="AAM",
+        snapshot_name=request.aod_run_id or "",
+        run_id=request.aod_run_id or "",
+        timestamp=now,
+        pipes=len(definitions),
+        sors=len(unique_sors),
+        fabrics=len(unique_fabrics),
+        dispatch_id=f"aam_{request.aod_run_id[:20]}" if request.aod_run_id else "",
+        aod_run_id=request.aod_run_id or "",
+    ))
 
     skipped_noted = len(request.skipped_connections) if request.skipped_connections else request.skipped_count
     if request.skipped_connections:

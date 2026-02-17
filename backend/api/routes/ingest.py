@@ -310,20 +310,17 @@ async def dcl_ingest(
     schema_fields = pipe_def.fields if pipe_def else []
 
     # --- Record Path 2 + Path 3 activity ---
-    try:
-        _record_ingest_activity(
-            store=store,
-            dispatch_id=dispatch_id,
-            snapshot_name=ingest_req.snapshot_name,
-            run_id=run_id,
-            pipe_id=pipe_id,
-            source_system=ingest_req.source_system,
-            rows=actual_rows,
-            matched_schema=matched_schema,
-            now=now,
-        )
-    except Exception as e:
-        logger.warning(f"[Ingest] Failed to record activity: {e}")
+    _record_ingest_activity(
+        store=store,
+        dispatch_id=dispatch_id,
+        snapshot_name=ingest_req.snapshot_name,
+        run_id=run_id,
+        pipe_id=pipe_id,
+        source_system=ingest_req.source_system,
+        rows=actual_rows,
+        matched_schema=matched_schema,
+        now=now,
+    )
 
     logger.info(
         f"[Ingest] Accepted {actual_rows} rows from {ingest_req.source_system} "
