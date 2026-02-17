@@ -413,6 +413,7 @@ class SchemaLoader:
             "limited": source_limit < total_available if source_limit else False,
             "loadedSources": len(sources),
             "fabricPlaneVendors": [f"{p.plane_type}:{p.vendor}" for p in payload.planes],
+            "snapshotName": payload.snapshot_name,
         }
 
         SchemaLoader._aam_cache = (copy.deepcopy(sources), dict(kpis))

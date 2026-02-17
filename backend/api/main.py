@@ -1446,14 +1446,7 @@ def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
     result["pushMeta"] = push_meta
 
     current_mode = get_current_mode()
-    snapshot_name = getattr(app.state, "aam_snapshot_name", None)
-    if not snapshot_name:
-        fabric_plane_names = [f"{p.plane_type}:{p.vendor}" for p in payload.planes]
-        if fabric_plane_names:
-            vendors = [pair.split(":", 1)[1].title() if ":" in pair else pair.title() for pair in sorted(fabric_plane_names)]
-            snapshot_name = "-".join(vendors)
-        else:
-            snapshot_name = os.environ.get("AAM_SNAPSHOT_NAME", "AAM-Export")
+    snapshot_name = payload.snapshot_name or getattr(app.state, "aam_snapshot_name", None) or os.environ.get("AAM_SNAPSHOT_NAME", "AAM-Export")
 
     result["reconMeta"] = {
         "dclRunId": current_mode.last_run_id,

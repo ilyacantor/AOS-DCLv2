@@ -75,6 +75,7 @@ class AAMPipesExportWire(BaseModel):
 
     fabric_planes: List[AAMFabricPlaneWire] = Field(default_factory=list)
     total_connections: int = Field(default=0)
+    snapshot_name: Optional[str] = Field(default=None)
 
 
 class AAMPushWire(BaseModel):
@@ -125,6 +126,7 @@ class IngestedPayload(BaseModel):
     total_connections_reported: int
     total_connections_actual: int
     payload_hash: str
+    snapshot_name: Optional[str] = None
 
     def get_canonical_ids(self) -> set:
         """Return the set of all canonical source IDs in this payload."""
@@ -224,6 +226,7 @@ class AAMIngressAdapter:
             total_connections_reported=wire.total_connections,
             total_connections_actual=len(all_pipes),
             payload_hash=payload_hash,
+            snapshot_name=wire.snapshot_name,
         )
 
     def ingest_push_history(self, raw: Any) -> List[NormalizedPush]:

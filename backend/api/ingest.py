@@ -594,12 +594,7 @@ class IngestStore:
         now = datetime.now(timezone.utc).isoformat()
         dispatch_id = f"aam_{run_id[:20]}"
 
-        fabric_vendor_pairs = kpis.get("fabricPlaneVendors", [])
-        if fabric_vendor_pairs:
-            vendors = [pair.split(":", 1)[1].title() if ":" in pair else pair.title() for pair in sorted(fabric_vendor_pairs)]
-            snapshot_name = "-".join(vendors)
-        else:
-            snapshot_name = os.environ.get("AAM_SNAPSHOT_NAME", "AAM-Export")
+        snapshot_name = kpis.get("snapshotName") or os.environ.get("AAM_SNAPSHOT_NAME", "AAM-Export")
         pipe_count = kpis.get("pipes", len(source_names))
         unique_source_names = sorted(set(source_names))
         raw_fabrics = fabric_planes or []
