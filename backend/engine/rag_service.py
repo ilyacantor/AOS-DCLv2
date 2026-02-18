@@ -20,6 +20,14 @@ class RAGService:
         self.openai_enabled = bool(os.getenv("OPENAI_API_KEY"))
         
     def store_mapping_lessons(self, mappings: List[Mapping]) -> int:
+        if self.run_mode != "Prod":
+            self.narration.add_message(
+                self.run_id,
+                "RAG",
+                "Dev mode — Pinecone skipped (Prod only)"
+            )
+            return 0
+
         if not self.pinecone_enabled:
             self.narration.add_message(
                 self.run_id, 
