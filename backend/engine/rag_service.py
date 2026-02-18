@@ -24,7 +24,7 @@ class RAGService:
             self.narration.add_message(
                 self.run_id,
                 "RAG",
-                "Dev mode — Pinecone skipped (Prod only)"
+                "Dev mode — RAG writes skipped (read-only in Dev)"
             )
             return 0
 
