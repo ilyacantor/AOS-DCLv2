@@ -1,0 +1,85 @@
+# Sample enterprise contour: mid-market SaaS company
+# 3 divisions, 2 regions, 12 cost centers, 8 departments
+#
+# Used for dev/testing until the onboarding agent produces real contour maps.
+
+hierarchy:
+  division:
+    - id: div-cloud
+      name: Cloud
+      children:
+        - id: div-cloud-east
+          name: Cloud East
+        - id: div-cloud-west
+          name: Cloud West
+    - id: div-services
+      name: Professional Services
+    - id: div-platform
+      name: Platform
+
+  cost_center:
+    - id: cc-4000
+      name: Engineering
+      children:
+        - {id: cc-4100, name: Cloud Engineering}
+        - {id: cc-4200, name: Platform Engineering}
+    - id: cc-5000
+      name: Sales
+      children:
+        - {id: cc-5100, name: Enterprise Sales}
+        - {id: cc-5200, name: Mid-Market Sales}
+    - id: cc-6000
+      name: G&A
+      children:
+        - {id: cc-6100, name: Finance}
+        - {id: cc-6200, name: HR}
+        - {id: cc-6300, name: Legal}
+
+  region:
+    - id: reg-na
+      name: North America
+      children:
+        - {id: reg-us, name: United States}
+        - {id: reg-ca, name: Canada}
+    - id: reg-emea
+      name: EMEA
+      children:
+        - {id: reg-uk, name: United Kingdom}
+        - {id: reg-de, name: Germany}
+
+  department:
+    - id: dept-eng
+      name: Engineering
+      children:
+        - {id: dept-frontend, name: Frontend}
+        - {id: dept-backend, name: Backend}
+        - {id: dept-infra, name: Infrastructure}
+    - id: dept-sales
+      name: Sales
+      children:
+        - {id: dept-ae, name: Account Executives}
+        - {id: dept-sdr, name: SDRs}
+    - id: dept-ga
+      name: G&A
+      children:
+        - {id: dept-fin, name: Finance}
+        - {id: dept-hr, name: Human Resources}
+
+sor_authority:
+  cost_center: {system: netsuite, confidence: 0.90}
+  department: {system: workday, confidence: 0.95}
+  division: {system: workday, confidence: 0.90}
+  region: {system: salesforce, confidence: 0.85}
+  legal_entity: {system: netsuite, confidence: 0.95}
+  profit_center: {system: netsuite, confidence: 0.85}
+  segment: {system: salesforce, confidence: 0.80}
+  customer_segment: {system: salesforce, confidence: 0.80}
+
+management_overlay:
+  # Board sees 3 segments, but Workday has 5 BUs
+  - board_segment: Cloud
+    maps_to: [Cloud East, Cloud West]
+  - board_segment: Services
+    maps_to: [Professional Services]
+  - board_segment: Platform
+    maps_to: [Platform]
