@@ -1349,6 +1349,108 @@ concepts:
       CRO: 0.6
 
   # ─── Product & Engineering ───────────────────────────────
+  - id: product
+    concept_id: PRD-001
+    name: Product
+    description: Software product or SKU
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - product_id
+      - product
+      - sku
+      - offering
+      - platform
+      - service_line
+      - name
+      - version
+    aliases:
+      - sku
+      - offering
+      - platform
+      - service_line
+    expected_type: string
+    typical_source_systems: [shopify, salesforce, internal]
+    persona_relevance:
+      CTO: 0.8
+      CRO: 0.6
+
+  - id: feature
+    concept_id: PRD-002
+    name: Feature
+    description: Product capability or function
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - feature_id
+      - feature
+      - capability
+      - module
+      - feature_flag
+      - name
+      - status
+      - adoption_rate
+    aliases:
+      - capability
+      - module
+      - feature_flag
+    expected_type: string
+    typical_source_systems: [launchdarkly, productboard, jira]
+    persona_relevance:
+      CTO: 0.9
+      CRO: 0.4
+
+  - id: release
+    concept_id: PRD-003
+    name: Release
+    description: Software version deployment
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - release_id
+      - release
+      - deploy
+      - version
+      - build
+      - date
+      - type
+      - changelog
+    aliases:
+      - deploy
+      - version
+      - build
+      - shipment
+    expected_type: string
+    typical_source_systems: [github, jira, jenkins]
+    persona_relevance:
+      CTO: 0.9
+
+  - id: bug
+    concept_id: PRD-004
+    name: Bug
+    description: Software defect
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - bug_id
+      - bug
+      - defect
+      - error
+      - regression
+      - severity
+      - status
+      - reporter
+      - assignee
+      - component
+    aliases:
+      - defect
+      - error
+      - regression
+    expected_type: string
+    typical_source_systems: [jira, linear, github_issues]
+    persona_relevance:
+      CTO: 0.9
+
   - id: engineering_work
     concept_id: PRD-005
     name: Sprint
@@ -1364,19 +1466,68 @@ concepts:
       - issue_type
       - priority
       - velocity
+      - goal
     aliases:
       - issue
       - story
-      - task
-      - bug
       - sprint
       - iteration
       - dev_sprint
+      - cycle
     expected_type: string
     typical_source_systems: [jira, linear, shortcut]
     persona_relevance:
       CTO: 1.0
       COO: 0.4
+
+  - id: repository
+    concept_id: PRD-006
+    name: Repository
+    description: Code repository or project
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - repo_id
+      - repo
+      - repository
+      - codebase
+      - project_repo
+      - name
+      - language
+      - owner
+      - last_commit
+    aliases:
+      - codebase
+      - project_repo
+    expected_type: string
+    typical_source_systems: [github, gitlab, bitbucket]
+    persona_relevance:
+      CTO: 0.7
+
+  - id: pull_request
+    concept_id: PRD-007
+    name: Pull Request
+    description: Code change review unit
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - pr_id
+      - pr
+      - pull_request
+      - merge_request
+      - cr
+      - code_review
+      - title
+      - author
+      - review_time
+    aliases:
+      - merge_request
+      - cr
+      - code_review
+    expected_type: string
+    typical_source_systems: [github, gitlab, bitbucket]
+    persona_relevance:
+      CTO: 0.8
 
   - id: usage
     concept_id: PRD-008
@@ -1405,7 +1556,240 @@ concepts:
       CRO: 0.5
       COO: 0.6
 
+  - id: roadmap_item
+    concept_id: PRD-009
+    name: Roadmap Item
+    description: Planned product initiative
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - item_id
+      - roadmap
+      - initiative
+      - epic
+      - theme
+      - planned_feature
+      - title
+      - priority
+      - target_quarter
+    aliases:
+      - initiative
+      - epic
+      - theme
+      - planned_feature
+    expected_type: string
+    typical_source_systems: [productboard, aha, jira]
+    persona_relevance:
+      CTO: 0.8
+      CRO: 0.4
+
+  - id: entitlement
+    concept_id: PRD-010
+    name: Entitlement
+    description: Customer access or license right
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - entitlement_id
+      - entitlement
+      - license
+      - access_right
+      - plan_feature
+      - customer_id
+      - tier
+      - expiry
+    aliases:
+      - license
+      - access_right
+      - plan_feature
+    expected_type: string
+    typical_source_systems: [salesforce, zuora, internal]
+    persona_relevance:
+      CTO: 0.6
+      CRO: 0.5
+
   # ─── IT & Infrastructure ─────────────────────────────────
+  - id: it_asset
+    concept_id: IT-001
+    name: IT Asset
+    description: Hardware or software resource
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - asset_id
+      - asset
+      - device
+      - endpoint
+      - hardware
+      - ci
+      - type
+      - serial
+      - owner
+      - location
+    aliases:
+      - device
+      - endpoint
+      - hardware
+      - ci
+    expected_type: string
+    typical_source_systems: [servicenow, intune, jamf]
+    persona_relevance:
+      CTO: 0.8
+      COO: 0.4
+
+  - id: configuration_item
+    concept_id: IT-002
+    name: Configuration Item
+    description: Managed infrastructure component
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - ci_id
+      - ci
+      - config_item
+      - cmdb_item
+      - infra_component
+      - type
+      - environment
+      - dependencies
+    aliases:
+      - config_item
+      - cmdb_item
+      - infra_component
+    expected_type: string
+    typical_source_systems: [servicenow_cmdb, device42]
+    persona_relevance:
+      CTO: 0.8
+
+  - id: it_service
+    concept_id: IT-003
+    name: Service
+    description: IT service offered to the organization
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - service_id
+      - service
+      - it_service
+      - application
+      - system
+      - name
+      - tier
+      - owner
+      - sla
+    aliases:
+      - it_service
+      - application
+      - system
+    expected_type: string
+    typical_source_systems: [servicenow, backstage]
+    persona_relevance:
+      CTO: 0.7
+      COO: 0.4
+
+  - id: change_request
+    concept_id: IT-004
+    name: Change Request
+    description: Proposed infrastructure or system change
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - cr_id
+      - change_request
+      - cr
+      - rfc
+      - change_ticket
+      - type
+      - risk
+      - status
+      - approver
+      - schedule
+    aliases:
+      - rfc
+      - change_ticket
+    expected_type: string
+    typical_source_systems: [servicenow, jira]
+    persona_relevance:
+      CTO: 0.7
+      COO: 0.4
+
+  - id: deployment
+    concept_id: IT-005
+    name: Deployment
+    description: Infrastructure or application deployment
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - deploy_id
+      - deployment
+      - deploy
+      - rollout
+      - release_deploy
+      - environment
+      - version
+      - date
+    aliases:
+      - rollout
+      - release_deploy
+    expected_type: string
+    typical_source_systems: [argocd, jenkins, aws_codedeploy]
+    persona_relevance:
+      CTO: 0.8
+
+  - id: user_account
+    concept_id: IT-006
+    name: User Account
+    description: Identity and access record
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - user_id
+      - user
+      - identity
+      - iam_user
+      - ad_account
+      - sso_user
+      - email
+      - role
+      - last_login
+      - mfa_status
+    aliases:
+      - identity
+      - iam_user
+      - ad_account
+      - sso_user
+    expected_type: string
+    typical_source_systems: [okta, azure_ad, onelogin]
+    persona_relevance:
+      CTO: 0.7
+      CHRO: 0.3
+
+  - id: permission
+    concept_id: IT-007
+    name: Permission
+    description: Access control entry
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - perm_id
+      - permission
+      - role
+      - access
+      - rbac_entry
+      - policy
+      - user_id
+      - resource
+      - level
+      - granted_date
+    aliases:
+      - role
+      - access
+      - rbac_entry
+    expected_type: string
+    typical_source_systems: [okta, aws_iam, azure_ad]
+    persona_relevance:
+      CTO: 0.7
+
   - id: aws_resource
     concept_id: IT-008
     name: Cloud Resource
@@ -1421,6 +1805,8 @@ concepts:
       - lambda
       - s3_bucket
       - vm
+      - region
+      - tags
     aliases:
       - cloud_resource
       - infrastructure
@@ -1431,6 +1817,57 @@ concepts:
     persona_relevance:
       CTO: 1.0
       CFO: 0.4
+
+  - id: alert
+    concept_id: IT-009
+    name: Alert
+    description: Infrastructure or application alert
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - alert_id
+      - alert
+      - alarm
+      - notification
+      - monitor_alert
+      - source
+      - severity
+      - status
+      - triggered_at
+    aliases:
+      - alarm
+      - notification
+      - monitor_alert
+    expected_type: string
+    typical_source_systems: [datadog, pagerduty, splunk]
+    persona_relevance:
+      CTO: 0.8
+
+  - id: integration
+    concept_id: IT-010
+    name: Integration
+    description: System-to-system connection
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - integration_id
+      - integration
+      - connector
+      - api_connection
+      - sync
+      - source
+      - target
+      - status
+      - last_sync
+    aliases:
+      - connector
+      - api_connection
+      - sync
+    expected_type: string
+    typical_source_systems: [workato, mulesoft, fivetran]
+    persona_relevance:
+      CTO: 0.7
+      COO: 0.4
 
   # ─── Operations ──────────────────────────────────────────
   - id: vendor
