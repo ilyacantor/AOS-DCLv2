@@ -65,6 +65,12 @@ FARM_BROWSER_TIMEOUT = float(os.getenv("DCL_FARM_BROWSER_TIMEOUT", "5.0"))
 # --- Embedding Model ---
 OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
+# --- AAM Integration ---
+AAM_API_URL = os.getenv("AAM_API_URL", "http://localhost:8001")
+AAM_API_TIMEOUT = float(os.getenv("AAM_API_TIMEOUT", "10"))
+AAM_EDGE_CACHE_TTL = int(os.getenv("AAM_EDGE_CACHE_TTL", "300"))  # 5 min
+AAM_EDGE_CONFIDENCE_MIN = float(os.getenv("AAM_EDGE_CONFIDENCE_MIN", "0.8"))
+
 # --- CORS ---
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
 
