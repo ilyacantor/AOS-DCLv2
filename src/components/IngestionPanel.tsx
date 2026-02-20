@@ -165,17 +165,17 @@ export function IngestionPanel() {
               Auto-refresh {POLL_INTERVAL_MS / 1000}s
             </span>
             <button
-              onClick={handleReset}
-              disabled={resetting}
-              className="px-3 py-1 text-xs rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 disabled:opacity-50"
-            >
-              {resetting ? 'Resetting...' : 'Reset'}
-            </button>
-            <button
               onClick={fetchAll}
               className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Refresh
+            </button>
+            <button
+              onClick={handleReset}
+              disabled={resetting}
+              className="px-3 py-1 text-xs font-medium rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {resetting ? 'Resetting...' : 'Reset All'}
             </button>
           </div>
         </div>
