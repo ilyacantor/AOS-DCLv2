@@ -1,6 +1,7 @@
 # DCL Ontology Concepts — Single Source of Truth
 # This file defines ALL business concepts the normalizer recognizes.
 # backend/engine/ontology.py loads and validates this at startup.
+# Reference: docs/DCL_Enterprise_Ontology_v1.xlsx
 
 domains:
   - finance
@@ -15,12 +16,310 @@ domains:
 
 concepts:
 
-  # ── Finance & Accounting ──────────────────────────────────────
+  # ════════════════════════════════════════════════════════════════
+  # FINANCE & ACCOUNTING (15 concepts: FIN-001 through FIN-015)
+  # ════════════════════════════════════════════════════════════════
+
+  - id: gl_account
+    concept_id: FIN-001
+    name: General Ledger Account
+    description: Chart of accounts entry for financial tracking
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - gl_account
+      - gl_account_id
+      - gl_code
+      - general_ledger
+      - ledger_account
+      - chart_of_accounts
+      - coa_code
+      - coa_entry
+      - account_code
+      - account_number
+      - account_name
+      - account_type
+      - parent_account
+    aliases:
+      - general_ledger
+      - ledger_account
+      - chart_of_accounts
+      - coa
+      - gl_code
+      - account_code
+      - gl_number
+      - ledger_code
+      - coa_entry
+    expected_type: string
+    typical_source_systems:
+      - erp
+      - accounting
+    persona_relevance:
+      CFO: 1.0
+
+  - id: journal_entry
+    concept_id: FIN-002
+    name: Journal Entry
+    description: Double-entry accounting transaction record
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - entry_id
+      - je_id
+      - journal_id
+      - journal_number
+      - journal_line_id
+      - posting_id
+      - debit_amount
+      - credit_amount
+      - posting_date
+      - memo
+      - journal_memo
+    aliases:
+      - je
+      - journal_line
+      - accounting_entry
+      - gl_transaction
+      - journal_voucher
+      - ledger_entry
+      - accounting_transaction
+    expected_type: string
+    typical_source_systems:
+      - erp
+      - accounting
+    persona_relevance:
+      CFO: 0.9
+
+  - id: cost_center
+    concept_id: FIN-003
+    name: Cost Center
+    description: Organizational unit for cost allocation
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - cost_center_id
+      - cost_center_code
+      - cc_id
+      - center_id
+      - center_name
+      - department_code
+      - profit_center_id
+      - budget_amount
+    aliases:
+      - cc
+      - department_code
+      - profit_center
+      - responsibility_center
+      - cost_allocation_unit
+    expected_type: string
+    typical_source_systems:
+      - erp
+      - accounting
+      - hr
+    persona_relevance:
+      CFO: 0.9
+      COO: 0.6
+
+  - id: budget
+    concept_id: FIN-004
+    name: Budget
+    description: Planned financial allocation for a period
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - budget_id
+      - budget_line_id
+      - budget_amount
+      - budgeted_amount
+      - budget_code
+      - planned_spend
+      - budget_category
+      - budget_status
+      - budget_period
+    aliases:
+      - budget_line
+      - planned_spend
+      - fiscal_plan
+      - budget_allocation
+      - appropriation
+      - financial_plan
+    expected_type: float
+    typical_source_systems:
+      - erp
+      - planning
+      - accounting
+    persona_relevance:
+      CFO: 1.0
+      COO: 0.5
+
+  - id: forecast
+    concept_id: FIN-005
+    name: Forecast
+    description: Projected financial outcome
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - forecast_id
+      - forecast_amount
+      - projected_revenue
+      - outlook_value
+      - forecast_period
+      - estimated_revenue
+      - forecast_confidence
+      - forecast_metric
+    aliases:
+      - projection
+      - outlook
+      - estimated_revenue
+      - financial_forecast
+      - revenue_forecast
+      - prediction
+    expected_type: float
+    typical_source_systems:
+      - planning
+      - crm
+      - erp
+    persona_relevance:
+      CFO: 1.0
+      CRO: 0.7
+
+  - id: invoice
+    concept_id: FIN-006
+    name: Invoice
+    description: Billing document for goods or services
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - invoice_id
+      - invoiceId
+      - invoice_number
+      - invoiceNumber
+      - invoice_no
+      - invoiceNo
+      - bill_id
+      - billId
+      - receipt_id
+      - invoice_amount
+      - invoice_date
+      - invoice_status
+    aliases:
+      - bill
+      - receipt
+      - billing_document
+      - billing_record
+      - ap_invoice
+      - ar_invoice
+      - vendor_invoice
+      - purchase_invoice
+      - credit_note
+      - debit_note
+      - inv
+    expected_type: string
+    typical_source_systems:
+      - erp
+      - billing
+      - accounting
+      - procurement
+    persona_relevance:
+      CFO: 0.8
+      COO: 0.5
+
+  - id: payment
+    concept_id: FIN-007
+    name: Payment
+    description: Financial transaction settling an obligation
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - payment_id
+      - payment_amount
+      - payment_date
+      - payment_method
+      - remittance_id
+      - transaction_id
+      - pmt_id
+      - settlement_id
+      - payment_reference
+    aliases:
+      - remittance
+      - pmt
+      - disbursement
+      - settlement
+      - payment_transaction
+      - wire
+      - ach
+    expected_type: string
+    typical_source_systems:
+      - erp
+      - billing
+      - banking
+      - payment_processor
+    persona_relevance:
+      CFO: 0.8
+
+  - id: accounts_receivable
+    concept_id: FIN-008
+    name: Accounts Receivable
+    description: Money owed to the organization
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - ar_id
+      - receivable_id
+      - outstanding_balance
+      - amount_due
+      - ar_amount
+      - ar_aging
+      - days_outstanding
+      - aging_bucket
+    aliases:
+      - ar
+      - receivable
+      - outstanding_balance
+      - amt_due
+      - money_owed_to
+      - trade_receivable
+    expected_type: float
+    typical_source_systems:
+      - erp
+      - accounting
+    persona_relevance:
+      CFO: 1.0
+
+  - id: accounts_payable
+    concept_id: FIN-009
+    name: Accounts Payable
+    description: Money owed by the organization
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - ap_id
+      - payable_id
+      - vendor_balance
+      - amount_owed
+      - ap_amount
+      - ap_aging
+      - payment_terms
+    aliases:
+      - ap
+      - payable
+      - vendor_balance
+      - amt_owed
+      - money_owed_by
+      - trade_payable
+    expected_type: float
+    typical_source_systems:
+      - erp
+      - accounting
+      - procurement
+    persona_relevance:
+      CFO: 1.0
+      COO: 0.5
 
   - id: revenue
-    concept_id: FIN-001
+    concept_id: FIN-010
     name: Revenue
-    description: Revenue or monetary amount from business operations
+    description: Income recognized from business activities
     domain: finance
     cluster: Finance
     example_fields:
@@ -42,6 +341,8 @@ concepts:
       - unitPrice
       - unit_price
       - subtotal
+      - recognized_rev
+      - sales_revenue
     aliases:
       - income
       - sales
@@ -53,6 +354,8 @@ concepts:
       - top_line
       - turnover
       - proceeds
+      - recognized_rev
+      - rev
     expected_type: float
     typical_source_systems:
       - erp
@@ -65,9 +368,9 @@ concepts:
       COO: 0.5
 
   - id: cost
-    concept_id: FIN-002
-    name: Cost
-    description: Cost or expense amount
+    concept_id: FIN-011
+    name: Expense
+    description: Cost incurred in business operations
     domain: finance
     cluster: Finance
     example_fields:
@@ -80,6 +383,8 @@ concepts:
       - tax_amount
       - discount
       - shipping
+      - expense_amount
+      - opex
     aliases:
       - expense
       - spending
@@ -90,87 +395,120 @@ concepts:
       - opex
       - capex
       - disbursement
+      - cost_amount
     expected_type: float
     typical_source_systems:
       - erp
       - accounting
       - procurement
+      - expense_management
     persona_relevance:
       CFO: 1.0
       COO: 0.7
       CTO: 0.8
 
-  - id: gl_account
-    concept_id: FIN-003
-    name: GL Account
-    description: General ledger account used in financial accounting and chart of accounts
+  - id: financial_period
+    concept_id: FIN-012
+    name: Financial Period
+    description: Fiscal time boundary for reporting
     domain: finance
     cluster: Finance
     example_fields:
-      - gl_account
-      - gl_account_id
-      - gl_code
-      - general_ledger
-      - ledger_account
-      - chart_of_accounts
-      - coa_code
-      - account_code
+      - period_id
+      - fiscal_period
+      - fiscal_quarter
+      - fiscal_year
+      - reporting_period
+      - accounting_period
+      - period_name
+      - period_start
+      - period_end
+      - period_status
     aliases:
-      - general_ledger
-      - ledger_account
-      - chart_of_accounts
-      - coa
-      - gl_code
-      - account_code
-      - gl_number
-      - ledger_code
+      - fiscal_period
+      - quarter
+      - fy
+      - reporting_period
+      - accounting_period
+      - fiscal_quarter
+      - fiscal_year
     expected_type: string
     typical_source_systems:
       - erp
       - accounting
-    persona_relevance:
-      CFO: 1.0
-
-  - id: invoice
-    concept_id: FIN-004
-    name: Invoice
-    description: Invoice or billing document
-    domain: finance
-    cluster: Finance
-    example_fields:
-      - invoice_id
-      - invoiceId
-      - invoice_number
-      - invoiceNumber
-      - invoice_no
-      - invoiceNo
-      - bill_id
-      - billId
-      - receipt_id
-    aliases:
-      - bill
-      - receipt
-      - billing_document
-      - ap_invoice
-      - ar_invoice
-      - vendor_invoice
-      - purchase_invoice
-      - credit_note
-      - debit_note
-    expected_type: string
-    typical_source_systems:
-      - erp
-      - billing
-      - accounting
-      - procurement
+      - planning
     persona_relevance:
       CFO: 0.8
-      COO: 0.5
+
+  - id: tax
+    concept_id: FIN-013
+    name: Tax
+    description: Tax obligation or credit
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - tax_id
+      - tax_amount
+      - tax_rate
+      - tax_type
+      - tax_code
+      - vat_amount
+      - sales_tax
+      - withholding_tax
+      - tax_jurisdiction
+    aliases:
+      - vat
+      - sales_tax
+      - withholding
+      - tax_obligation
+      - tax_credit
+      - gst
+      - excise
+      - tax_line
+    expected_type: float
+    typical_source_systems:
+      - erp
+      - accounting
+      - tax_platform
+    persona_relevance:
+      CFO: 0.9
+
+  - id: fixed_asset
+    concept_id: FIN-014
+    name: Fixed Asset
+    description: Capitalized long-term business asset
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - asset_id
+      - asset_name
+      - asset_cost
+      - depreciation_amount
+      - depreciation_method
+      - net_book_value
+      - useful_life
+      - acquisition_date
+      - asset_class
+      - nbv
+    aliases:
+      - fa
+      - capital_asset
+      - property
+      - plant_equipment
+      - ppe
+      - capitalized_asset
+      - depreciable_asset
+    expected_type: string
+    typical_source_systems:
+      - erp
+      - accounting
+    persona_relevance:
+      CFO: 0.7
 
   - id: currency
-    concept_id: FIN-005
+    concept_id: FIN-015
     name: Currency
-    description: Currency code or monetary unit
+    description: Monetary denomination for transactions
     domain: finance
     cluster: Finance
     example_fields:
@@ -178,10 +516,14 @@ concepts:
       - currency_code
       - currencyCode
       - currency_id
+      - ccy
+      - exchange_rate
+      - fx_rate
     aliases:
-      - currency_code
-      - monetary_unit
+      - ccy
       - fx
+      - exchange_currency
+      - monetary_unit
       - foreign_exchange
       - denomination
       - iso_currency
@@ -194,12 +536,14 @@ concepts:
     persona_relevance:
       CFO: 0.7
 
-  # ── Sales & Revenue ───────────────────────────────────────────
+  # ════════════════════════════════════════════════════════════════
+  # SALES & REVENUE (14 concepts: SAL-001 through SAL-014)
+  # ════════════════════════════════════════════════════════════════
 
   - id: account
     concept_id: SAL-001
     name: Account
-    description: Business account or customer entity
+    description: Business entity or customer organization
     domain: sales
     cluster: Growth
     example_fields:
@@ -225,6 +569,7 @@ concepts:
       - customer_account
       - client_account
       - firm
+      - org
     expected_type: string
     typical_source_systems:
       - crm
@@ -239,7 +584,7 @@ concepts:
   - id: opportunity
     concept_id: SAL-002
     name: Opportunity
-    description: Sales opportunity or deal
+    description: Potential revenue deal in pipeline
     domain: sales
     cluster: Growth
     example_fields:
@@ -249,14 +594,17 @@ concepts:
       - dealId
       - opportunity_name
       - opportunityName
+      - opp_id
       - pipeline
       - stage
+      - close_date
+      - probability
     aliases:
       - deal
-      - pipeline
+      - opp
       - sales_opp
       - prospect
-      - lead_opportunity
+      - prospect_deal
       - sales_deal
       - qualified_lead
     expected_type: string
@@ -266,12 +614,379 @@ concepts:
       CRO: 1.0
       CFO: 0.5
 
-  # ── IT & Infrastructure ──────────────────────────────────────
+  - id: pipeline_stage
+    concept_id: SAL-003
+    name: Pipeline Stage
+    description: Phase in the sales process
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - stage_id
+      - stage_name
+      - deal_stage
+      - sales_stage
+      - opp_stage
+      - stage_order
+      - stage_probability
+      - stage_duration
+      - duration_avg
+    aliases:
+      - stage
+      - deal_stage
+      - sales_stage
+      - opp_stage
+      - funnel_stage
+      - pipeline_phase
+    expected_type: string
+    typical_source_systems:
+      - crm
+    persona_relevance:
+      CRO: 1.0
+      CFO: 0.4
+
+  - id: quote
+    concept_id: SAL-004
+    name: Quote
+    description: Formal pricing proposal
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - quote_id
+      - quote_number
+      - quote_amount
+      - quote_discount
+      - quote_expiry
+      - proposal_id
+      - estimate_id
+      - cpq_quote_id
+      - expiry_date
+      - quote_status
+    aliases:
+      - proposal
+      - estimate
+      - quotation
+      - cpq_quote
+      - price_quote
+      - bid
+      - pricing_proposal
+    expected_type: string
+    typical_source_systems:
+      - crm
+      - cpq
+    persona_relevance:
+      CRO: 0.9
+      CFO: 0.5
+
+  - id: contract
+    concept_id: SAL-005
+    name: Contract
+    description: Binding agreement with a customer
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - contract_id
+      - contract_value
+      - contract_start
+      - contract_end
+      - agreement_id
+      - msa_id
+      - sow_id
+      - order_form_id
+      - contract_type
+    aliases:
+      - agreement
+      - msa
+      - order_form
+      - sow
+      - service_agreement
+      - master_agreement
+    expected_type: string
+    typical_source_systems:
+      - crm
+      - clm
+      - legal
+    persona_relevance:
+      CRO: 0.8
+      CFO: 0.7
+
+  - id: order
+    concept_id: SAL-006
+    name: Order
+    description: Confirmed purchase request
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - order_id
+      - order_number
+      - order_amount
+      - order_date
+      - order_status
+      - sales_order_id
+      - so_number
+      - line_items
+    aliases:
+      - sales_order
+      - so
+      - purchase
+      - customer_order
+      - booking
+    expected_type: string
+    typical_source_systems:
+      - crm
+      - erp
+      - ecommerce
+    persona_relevance:
+      CRO: 0.8
+      CFO: 0.6
+      COO: 0.5
+
+  - id: subscription
+    concept_id: SAL-007
+    name: Subscription
+    description: Recurring revenue arrangement
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - subscription_id
+      - sub_id
+      - plan_name
+      - mrr
+      - arr
+      - start_date
+      - renewal_date
+      - subscription_status
+      - recurring_amount
+    aliases:
+      - sub
+      - recurring_plan
+      - license
+      - recurring_revenue
+      - saas_subscription
+      - plan
+    expected_type: string
+    typical_source_systems:
+      - billing
+      - crm
+      - subscription_platform
+    persona_relevance:
+      CRO: 1.0
+      CFO: 0.9
+
+  - id: renewal
+    concept_id: SAL-008
+    name: Renewal
+    description: Subscription or contract renewal event
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - renewal_id
+      - renewal_date
+      - renewal_amount
+      - renewal_likelihood
+      - renewal_opp_id
+      - renewal_status
+      - contract_renewal_id
+    aliases:
+      - renewal_opp
+      - contract_renewal
+      - renewal_event
+      - subscription_renewal
+    expected_type: string
+    typical_source_systems:
+      - crm
+      - customer_success
+      - billing
+    persona_relevance:
+      CRO: 1.0
+      CFO: 0.6
+
+  - id: territory
+    concept_id: SAL-009
+    name: Territory
+    description: Sales geographic or account grouping
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - territory_id
+      - territory_name
+      - sales_region
+      - geo
+      - region_code
+      - territory_quota
+      - account_count
+      - rep
+    aliases:
+      - region
+      - sales_region
+      - geo
+      - sales_territory
+      - geographic_territory
+      - market
+    expected_type: string
+    typical_source_systems:
+      - crm
+      - planning
+    persona_relevance:
+      CRO: 0.9
+      COO: 0.4
+
+  - id: quota
+    concept_id: SAL-010
+    name: Quota
+    description: Sales target for a rep or team
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - quota_id
+      - quota_amount
+      - quota_period
+      - attainment_pct
+      - quota_target
+      - sales_goal
+      - assigned_quota
+    aliases:
+      - target
+      - sales_goal
+      - attainment_target
+      - sales_target
+      - revenue_target
+    expected_type: float
+    typical_source_systems:
+      - crm
+      - planning
+      - compensation
+    persona_relevance:
+      CRO: 1.0
+      CFO: 0.5
+
+  - id: commission
+    concept_id: SAL-011
+    name: Commission
+    description: Variable compensation for sales performance
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - commission_id
+      - commission_amount
+      - commission_rate
+      - payout_date
+      - deal_commission
+      - spiff_amount
+      - incentive_amount
+    aliases:
+      - spiff
+      - variable_comp
+      - incentive
+      - sales_compensation
+      - incentive_comp
+      - bonus_payout
+    expected_type: float
+    typical_source_systems:
+      - compensation
+      - crm
+      - hr
+    persona_relevance:
+      CRO: 0.8
+      CFO: 0.7
+      CHRO: 0.5
+
+  - id: contact
+    concept_id: SAL-012
+    name: Contact
+    description: Individual person at a customer account
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - contact_id
+      - contact_name
+      - contact_email
+      - contact_title
+      - contact_phone
+      - stakeholder_id
+      - buyer_id
+      - champion_id
+      - role
+    aliases:
+      - stakeholder
+      - buyer
+      - champion
+      - decision_maker
+      - key_contact
+      - business_contact
+    expected_type: string
+    typical_source_systems:
+      - crm
+      - marketing_automation
+    persona_relevance:
+      CRO: 0.8
+
+  - id: sales_activity
+    concept_id: SAL-013
+    name: Activity
+    description: Sales interaction or touchpoint
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - activity_id
+      - activity_type
+      - activity_date
+      - call_id
+      - meeting_id
+      - email_id
+      - task_id
+      - touchpoint_id
+      - outcome
+    aliases:
+      - task
+      - call
+      - meeting
+      - email_touch
+      - touchpoint
+      - sales_interaction
+      - engagement_activity
+    expected_type: string
+    typical_source_systems:
+      - crm
+      - sales_engagement
+    persona_relevance:
+      CRO: 0.7
+
+  - id: win_loss
+    concept_id: SAL-014
+    name: Win/Loss
+    description: Deal outcome classification
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - deal_id
+      - result
+      - closed_reason
+      - win_loss_reason
+      - competitor
+      - loss_reason
+      - win_reason
+      - outcome
+    aliases:
+      - deal_result
+      - closed_reason
+      - outcome
+      - deal_outcome
+      - competitive_result
+    expected_type: string
+    typical_source_systems:
+      - crm
+    persona_relevance:
+      CRO: 1.0
+      CFO: 0.4
+
+  # ════════════════════════════════════════════════════════════════
+  # IT & INFRASTRUCTURE (Phase 3 — existing concepts only)
+  # ════════════════════════════════════════════════════════════════
 
   - id: aws_resource
-    concept_id: IT-001
-    name: AWS Resource
-    description: AWS cloud resource identifier
+    concept_id: IT-008
+    name: Cloud Resource
+    description: Cloud infrastructure component
     domain: it_infra
     cluster: Infra
     example_fields:
@@ -291,9 +1006,12 @@ concepts:
       - lambda_function
       - cloud_asset
       - compute_resource
+      - vm
     expected_type: string
     typical_source_systems:
       - aws
+      - azure
+      - gcp
       - cloud_provider
       - infrastructure_monitoring
     persona_relevance:
@@ -301,9 +1019,9 @@ concepts:
       COO: 0.4
 
   - id: usage
-    concept_id: IT-002
+    concept_id: PRD-008
     name: Usage Metrics
-    description: Usage or consumption metrics
+    description: Product or infrastructure usage telemetry
     domain: it_infra
     cluster: Ops
     example_fields:
@@ -311,6 +1029,8 @@ concepts:
       - consumption
       - utilization
       - quantity
+      - dau
+      - mau
     aliases:
       - consumption
       - activity
@@ -319,21 +1039,25 @@ concepts:
       - volume
       - resource_usage
       - system_usage
+      - telemetry
     expected_type: float
     typical_source_systems:
       - cloud_provider
       - infrastructure_monitoring
       - billing
+      - product_analytics
     persona_relevance:
       CTO: 0.9
       COO: 0.6
 
-  # ── Customer Success ─────────────────────────────────────────
+  # ════════════════════════════════════════════════════════════════
+  # CUSTOMER SUCCESS (Phase 2 — existing concepts only)
+  # ════════════════════════════════════════════════════════════════
 
   - id: health
-    concept_id: CS-001
+    concept_id: CS-004
     name: Health Score
-    description: Account health or status metric
+    description: Customer health or risk indicator
     domain: customer_success
     cluster: Ops
     example_fields:
@@ -342,6 +1066,8 @@ concepts:
       - status
       - health
       - state
+      - risk_score
+      - customer_health
     aliases:
       - wellness
       - status_score
@@ -349,6 +1075,8 @@ concepts:
       - customer_health
       - account_health
       - satisfaction_score
+      - risk_score
+      - chs
     expected_type: float
     typical_source_systems:
       - crm
@@ -358,7 +1086,9 @@ concepts:
       CRO: 0.6
       COO: 1.0
 
-  # ── Operations (cross-cutting) ───────────────────────────────
+  # ════════════════════════════════════════════════════════════════
+  # OPERATIONS (cross-cutting — existing concepts only)
+  # ════════════════════════════════════════════════════════════════
 
   - id: date
     concept_id: OPS-001
