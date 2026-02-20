@@ -142,16 +142,7 @@ export function IngestionPanel() {
     return (
       <div className="h-full flex flex-col min-h-0">
         <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b border-border bg-card/50">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold">Ingest Activity</h2>
-            <button
-              onClick={handleReset}
-              disabled={resetting}
-              className="px-3 py-1 text-xs font-medium rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-            >
-              {resetting ? 'Resetting...' : 'Reset All'}
-            </button>
-          </div>
+          <h2 className="text-sm font-semibold">Ingest Activity</h2>
         </div>
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
           <div className="flex flex-col items-center gap-3">
@@ -168,20 +159,18 @@ export function IngestionPanel() {
       {/* Header */}
       <div className="shrink-0 px-6 py-3 border-b border-border bg-card/50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold">Ingest Activity</h2>
-            <button
-              onClick={handleReset}
-              disabled={resetting}
-              className="px-3 py-1 text-xs font-medium rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-            >
-              {resetting ? 'Resetting...' : 'Reset All'}
-            </button>
-          </div>
+          <h2 className="text-sm font-semibold">Ingest Activity</h2>
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-muted-foreground">
               Auto-refresh {POLL_INTERVAL_MS / 1000}s
             </span>
+            <button
+              onClick={handleReset}
+              disabled={resetting}
+              className="px-3 py-1 text-xs rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 disabled:opacity-50"
+            >
+              {resetting ? 'Resetting...' : 'Reset'}
+            </button>
             <button
               onClick={fetchAll}
               className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"

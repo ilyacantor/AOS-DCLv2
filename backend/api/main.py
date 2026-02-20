@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from typing import List, Literal, Optional, Dict, Any
 
@@ -108,19 +108,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request as StarletteRequest
-
-class NoCacheMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: StarletteRequest, call_next):
-        response = await call_next(request)
-        if request.url.path.startswith("/assets/"):
-            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-            response.headers["Pragma"] = "no-cache"
-        return response
-
-app.add_middleware(NoCacheMiddleware)
 
 engine = DCLEngine()
 app.state.loaded_sources = []
@@ -548,25 +535,14 @@ if DIST_DIR.exists() and (DIST_DIR / "assets").exists():
     app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
 
 
-def _serve_index():
-    index_file = DIST_DIR / "index.html"
-    if index_file.exists():
-        content = index_file.read_text()
-        return HTMLResponse(
-            content=content,
-            headers={
-                "Cache-Control": "no-cache, no-store, must-revalidate",
-                "Pragma": "no-cache",
-                "Expires": "0",
-            },
-        )
-    return None
-
 @app.get("/")
 async def serve_root():
-    resp = _serve_index()
-    if resp:
-        return resp
+    index_file = DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(
+            index_file,
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"},
+        )
     return {"status": "DCL Engine API is running", "version": API_VERSION, "note": "Frontend not built"}
 
 
@@ -577,9 +553,12 @@ async def serve_spa(full_path: str):
     blocked = ("data/", "data\\", "fact_base", ".json", ".yaml", ".yml", ".csv", ".env")
     if any(full_path.lower().startswith(b) or full_path.lower().endswith(b) for b in blocked):
         raise HTTPException(status_code=403, detail="Direct file access is blocked. Use the query API.")
-    resp = _serve_index()
-    if resp:
-        return resp
+    index_file = DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(
+            index_file,
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"},
+        )
     raise HTTPException(status_code=404, detail="Frontend not built")
 
 
