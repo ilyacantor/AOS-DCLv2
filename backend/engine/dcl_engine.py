@@ -12,6 +12,7 @@ from backend.engine.mapping_service import MappingService
 from backend.engine.rag_service import RAGService
 from backend.engine.narration_service import NarrationService
 from backend.engine.persona_view import PersonaView
+from backend.engine.edge_index import EdgeIndex
 from backend.semantic_mapper import SemanticMapper
 from backend.eval.mapping_evaluator import MappingEvaluator
 from backend.utils.log_utils import get_logger
@@ -85,7 +86,32 @@ class DCLEngine:
         
         ontology = get_ontology()
         self.narration.add_message(run_id, "Engine", f"Loaded {len(ontology)} ontology concepts")
-        
+
+        # --- Tier 0: Fetch AAM semantic edges ---
+        edge_index = EdgeIndex([])
+        try:
+            from backend.aam.client import get_aam_client
+            aam_client = get_aam_client()
+            edges = aam_client.get_semantic_edges()
+            if edges:
+                edge_index = EdgeIndex(edges)
+                metrics.aam_edge_total = len(edges)
+                metrics.aam_cache_hit = aam_client._edge_cache is not None and aam_client._edge_cache is edges
+                self.narration.add_message(
+                    run_id, "AAM",
+                    f"Loaded {len(edges)} semantic edges from AAM ({edge_index.coverage['total_edges']} indexed)"
+                )
+            else:
+                self.narration.add_message(run_id, "AAM", "No semantic edges available from AAM")
+        except ValueError:
+            # AAM_URL not configured — expected in standalone DCL deployments
+            self.narration.add_message(run_id, "AAM", "AAM not configured (AAM_URL not set) — Tier 0 skipped")
+            metrics.aam_unavailable = True
+        except Exception as e:
+            logger.warning(f"AAM edge fetch failed: {e}")
+            self.narration.add_message(run_id, "AAM", f"AAM unavailable: {e} — Tier 0 skipped")
+            metrics.aam_unavailable = True
+
         semantic_mapper = SemanticMapper()
         
         try:
@@ -116,11 +142,16 @@ class DCLEngine:
                 run_id, "Engine", 
                 f"Running semantic mapper for {len(sources_needing_mappings)} sources without stored mappings: {[s.id for s in sources_needing_mappings]}"
             )
-            new_mappings, stats = semantic_mapper.run_mapping(sources_needing_mappings, mode="heuristic", clear_existing=False)
+            new_mappings, stats = semantic_mapper.run_mapping(
+                sources_needing_mappings, mode="heuristic", clear_existing=False, edge_index=edge_index
+            )
             stored_mappings.extend(new_mappings)
+            metrics.aam_edge_hits = stats.get('aam_edge_hits', 0)
+            metrics.aam_edge_misses = stats.get('aam_edge_misses', 0)
+            tier0_msg = f" (Tier 0: {metrics.aam_edge_hits} AAM edge hits)" if metrics.aam_edge_hits > 0 else ""
             self.narration.add_message(
                 run_id, "Engine",
-                f"Created and persisted {stats['mappings_created']} new mappings using heuristics"
+                f"Created and persisted {stats['mappings_created']} new mappings{tier0_msg}"
             )
         
         mappings = stored_mappings

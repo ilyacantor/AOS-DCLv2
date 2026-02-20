@@ -1,6 +1,7 @@
 from typing import List, Literal, Optional
 from backend.domain import SourceSystem, Mapping
 from backend.engine.ontology import get_ontology
+from backend.engine.edge_index import EdgeIndex
 from backend.utils.log_utils import get_logger
 from .heuristic_mapper import HeuristicMapper
 from .persist_mappings import MappingPersistence
@@ -27,7 +28,8 @@ class SemanticMapper:
         self,
         sources: List[SourceSystem],
         mode: Literal["heuristic", "full"] = "heuristic",
-        clear_existing: bool = False
+        clear_existing: bool = False,
+        edge_index: Optional[EdgeIndex] = None,
     ) -> tuple[List[Mapping], dict]:
         
         ontology_concepts = []
@@ -65,9 +67,11 @@ class SemanticMapper:
             'db_available': self.persistence is not None
         }
         
-        heuristic_mapper = HeuristicMapper(ontology_concepts)
+        heuristic_mapper = HeuristicMapper(ontology_concepts, edge_index=edge_index)
         mappings = heuristic_mapper.create_mappings(sources)
         stats['heuristic_mappings'] = len(mappings)
+        stats['aam_edge_hits'] = heuristic_mapper.aam_edge_hits
+        stats['aam_edge_misses'] = heuristic_mapper.aam_edge_misses
         
         if mode == "full":
             pass

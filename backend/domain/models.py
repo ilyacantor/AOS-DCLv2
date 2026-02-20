@@ -153,6 +153,11 @@ class RunMetrics(CamelCaseModel):
     payload_kpis: Optional[Dict[str, Any]] = None
     db_fallback: bool = False
     llm_fallback: bool = False
+    aam_edge_hits: int = 0
+    aam_edge_misses: int = 0
+    aam_edge_total: int = 0
+    aam_cache_hit: bool = False
+    aam_unavailable: bool = False
 
 
 class GraphSnapshot(CamelCaseModel):
