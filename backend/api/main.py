@@ -99,6 +99,18 @@ async def enforce_security_constraints():
     logger.info("=== DCL Engine Ready (Metadata-Only Mode) ===")
 
 
+@app.on_event("startup")
+async def build_semantic_graph():
+    """Build the semantic graph at startup (best-effort)."""
+    try:
+        from backend.engine.graph_store import rebuild_graph
+        rebuild_graph()
+        logger.info("[Startup] Semantic graph built")
+    except Exception as e:
+        # Non-fatal — graph will be built on first DCL run
+        logger.warning(f"[Startup] Semantic graph build deferred: {e}")
+
+
 if CORS_ORIGINS == ["*"]:
     logger.warning("[SECURITY] CORS allows all origins. Set CORS_ORIGINS env var for production.")
 
@@ -239,6 +251,13 @@ def run_dcl(request: RunRequest):
 
         if request.mode == "Farm":
             _ensure_farm_content_activity()
+
+        # Rebuild semantic graph after new classification data
+        try:
+            from backend.engine.graph_store import rebuild_graph
+            rebuild_graph()
+        except Exception as e:
+            logger.warning(f"[GraphStore] Post-run graph rebuild failed: {e}")
 
         return RunResponse(
             graph=snapshot,
