@@ -1,145 +1,207 @@
-# Tech Debt Reduction Plan — DCL Engine
+# DCL Engine Code Quality Audit v2 — Plan
 
-## Audit Summary
+## Context
 
-**Codebase scanned**: 48 endpoints, ~8,000 LoC backend, ~3,500 LoC frontend
-**Issues found**: 12 critical, 18 high, 50+ medium
-**Root cause**: Multiple contributors, no enforced structure, everything lands in `main.py`
+This is the second audit pass. The prior audit (v1) already completed:
+- Broke up `main.py` monolith into route modules (done)
+- Centralized constants into `backend/core/constants.py` (done)
+- Fixed connection pool retry bug (done)
+- Fixed RAG truthful counts (done)
+- Fixed cache invalidation logging (done)
+- Fixed source tracking display-mode independence (done)
+- Fixed `utc_now()` helper (done, exists in constants.py)
+- Existing regression tests: `tests/test_code_quality.py` (11 passing tests)
 
----
-
-## Change 1: Break up the `main.py` monolith (1,650 lines, 48 endpoints)
-
-**Problem**: `main.py` is a single 1,650-line file containing every endpoint, all request/response models, inline business logic, and three reconciliation god-functions. Nobody can find anything, merge conflicts are guaranteed, and a typo anywhere breaks everything.
-
-**What to extract**:
-
-| New file | What moves there | Lines saved from main.py |
-|----------|------------------|--------------------------|
-| `backend/api/routes/ingest.py` | All `/api/dcl/ingest/*` endpoints (GET ping, POST ingest, runs, batches, drift, stats) + the 27-line field normalizer | ~250 |
-| `backend/api/routes/reconciliation.py` | `/api/dcl/reconciliation`, `/api/dcl/reconciliation/sor`, `/api/reconcile` + the three god-functions (`_farm_reconciliation`, `_aam_reconciliation`, `get_sor_reconciliation`) | ~450 |
-| `backend/api/routes/topology.py` | `/api/topology/*` endpoints | ~50 |
-| `backend/api/routes/entities.py` | `/api/dcl/entities/*` + `/api/dcl/conflicts/*` endpoints | ~120 |
-| `backend/api/routes/temporal.py` | `/api/dcl/temporal/*` + `/api/dcl/provenance/*` + `/api/dcl/persona-definitions/*` | ~100 |
-| `backend/api/routes/deprecated.py` | All 410 GONE stubs (ingest/provision, ingest/config, ingest/telemetry, nlq/*, bll/*, execute) | ~50 |
-
-**How**: Use FastAPI `APIRouter`. Main.py becomes a ~200-line app factory that mounts routers. Each router file owns its request/response models.
+This audit focuses on **remaining issues** that v1 did not address.
 
 ---
 
-## Change 2: Kill the god-functions
+## PART 1: AUDIT FINDINGS — REMAINING ISSUES
 
-Three functions are each 100-200 lines doing 5+ things:
+### A. Hardcoded Values (Bad-Form)
 
-**`dcl_ingest()` (162 lines, main.py:426-587)**:
-- Extract `_normalize_ingest_body(raw_body: dict) -> dict` — the 27-line camelCase→snake_case field remapper
-- Extract `_validate_pipe_guard(pipe_id: str) -> Optional[PipeDefinition]` — the schema-on-write gate
-- Keep orchestration in the endpoint handler (~40 lines)
+| # | File:Line | What | Why Bad | Impact |
+|---|-----------|------|---------|--------|
+| H1 | `dcl_engine.py:199` | `metrics.rag_reads = 3` | Fabricated number. No actual RAG reads happen here. | Dashboard lies about RAG activity |
+| H2 | `dcl_engine.py:202` | `metrics.rag_reads = 0` | Inconsistent with H1. Neither is measured. | Unreliable telemetry |
+| H3 | `source_normalizer.py:65-124` | 50+ vendor aliases in `ALIAS_MAP` class dict | Every new vendor = code deploy. Not configurable. | Vendor onboarding bottleneck |
+| H4 | `source_normalizer.py:126-158` | 30+ regex rules in `PATTERN_RULES` | Cannot extend matching without code change | Blocks runtime extensibility |
+| H5 | `source_normalizer.py:160-175` | `CATEGORY_PATTERNS` dict | New categories require code change | Blocks AOD category expansion (per RACI) |
+| H6 | `source_normalizer.py:178` | `_CB_COOLDOWN = 120` | Not env-configurable | Production tuning needs code deploy |
+| H7 | `rag_service.py:210` | `range(1536)` in mock embeddings | `PINECONE_DIMENSION` exists but not used here | Dimension mismatch if config changes |
+| H8 | `rag_service.py:168` | `model="text-embedding-3-small"` | Not configurable via env or constants | Model change needs code deploy |
+| H9 | `persist_mappings.py:29-31` | `POOL_MIN_CONN=1, POOL_MAX_CONN=5, CONNECT_TIMEOUT=5` | Not env-configurable | Cannot tune DB pool per environment |
+| H10 | `main.py:567` | `port=5000` in `__main__` block | Conflicts with frontend Vite dev on 5000 | Port collision in dev |
+| H11 | `App.tsx:18` | `ALL_PERSONAS = ['CFO','CRO','COO','CTO']` | RACI+data flow doc define 5 personas (CHRO) | CHRO unreachable in UI |
+| H12 | `App.tsx:53-65` | `personaOntologies` duplicates backend mapping | Backend has canonical mapping in `persona_profiles.yaml` | Frontend/backend drift |
+| H13 | `dcl_engine.py:227` | `time.strftime("%Y-%m-%dT%H:%M:%SZ")` | Uses local time. `utc_now()` exists but unused here | Timezone-dependent meta.generated_at |
+| H14 | `source_normalizer.py:203` | `timeout=5.0` hardcoded | Not env-configurable | Cannot adjust for slow networks |
 
-**`_farm_reconciliation()` (145 lines)** and **`_aam_reconciliation()` (75 lines)**:
-- Extract `_build_normalized_pipes(receipts) -> List[NormalizedPipe]` — shared pipe construction
-- Extract `_build_reconciliation_metadata(result, pipes) -> dict` — shared response assembly
-- Both call `reconcile()` with slightly different pipe prep — unify the prep
+### B. Silent Fallbacks (Bad-Form)
 
-**`reconcile_aam()` (129 lines, main.py:1451-1579)**:
-- Extract `_discover_expected_sources()` and `_build_verdict()` — the 7-way decision tree is unreadable inline
+| # | File:Line | What | Why Bad | Impact |
+|---|-----------|------|---------|--------|
+| F1 | `dcl_engine.py:90-95` | DB `get_all_mappings_grouped` failure → silent `{}` | Engine silently regenerates all mappings. User never knows DB is down. | Quality degradation, doubled latency |
+| F2 | `dcl_engine.py:182-184` | LLM validation failure → silent heuristic fallback | Prod mode silently returns Dev-quality results | Users think they got Prod quality |
+| F3 | `rag_service.py:195-203` | OpenAI embedding error → random mock vectors | Mock embeddings corrupt Pinecone index permanently | RAG lookup returns garbage |
+| F4 | `source_normalizer.py:239-247` | Registry failure → `_registry_loaded=True` | Marks loaded despite having no data. Suppresses retries. | Unknown sources get wrong IDs |
+| F5 | `main.py:235-236` | AAM pull recording failure → caught, warned | Loss of provenance audit trail | Missing data lineage |
+| F6 | `App.tsx:117` | Auto-load `.catch(warn)` | User sees blank graph with no error | Confusing blank-screen UX |
+| F7 | `persist_mappings.py:82-85` | `putconn` failure in finally → warning only | Connection not returned AND not closed | Gradual connection pool exhaustion |
 
----
+### C. Architectural Issues (Remaining)
 
-## Change 3: Fix silent killer fallbacks
-
-These are the ones that will bite you in production — errors that get swallowed, leaving you blind when things go wrong.
-
-| Location | What happens | Fix |
-|----------|-------------|-----|
-| `main.py:90-94` | `assert_metadata_only_mode()` failure caught and logged as WARNING, execution continues | **Re-raise** in production. A security constraint violation is not a warning. |
-| `main.py:126-131` | Mapping cache clear failure swallowed | Log as ERROR with `exc_info=True`, add metric counter |
-| `main.py:1468-1475` | Push history fetch fails with bare `except: pass` — **zero logging** | Add `logger.warning()` at minimum. This is a data-loss blind spot. |
-| `schema_loader.py:104-106` | CSV load exception caught, returns empty list, demo mode silently has no data | Log ERROR, consider raising if zero sources loaded |
-| `source_normalizer.py:300,326` | `_create_fallback_canonical()` silently manufactures a canonical ID when registry unavailable | Log WARNING with context so operators know registry is down |
-| `runner.py:70-72` | Mapping save failure caught, downgrades to in-memory without user notification | Log ERROR, set a flag on the response so UI can show degraded state |
-| `rag_service.py:187-193` | OpenAI embedding error falls back to mock embeddings silently | Log ERROR with the original exception. Mock embeddings in prod = garbage RAG results. |
-| `IngestionPanel.tsx:71` | `catch {}` — literally swallows all errors with no logging | At minimum `console.error(err)`, ideally show toast |
-| `App.tsx:40-43` | `.catch(() => {})` on ingest stats poll | Log the error or decrement a health counter |
-
----
-
-## Change 4: Externalize hardcoded config
-
-**Most dangerous hardcoded values** (things that will break when environments change):
-
-| Value | Location | Extract to |
-|-------|----------|-----------|
-| Farm URL `"https://autonomos.farm"` | `schema_loader.py:142`, `source_normalizer.py:198` (duplicated) | `FARM_API_URL` env var (already in CLAUDE.md but not used consistently) |
-| 60+ alias mappings in `ALIAS_MAP` | `source_normalizer.py:65-124` | `config/source_aliases.yaml` |
-| 30+ regex patterns | `source_normalizer.py:126-158` | `config/source_patterns.yaml` |
-| Confidence thresholds `0.95, 0.90, 0.75, 0.70, 0.65, 0.60` | `heuristic_mapper.py:190-252`, `mapping_service.py:98-106` | `backend/core/constants.py` (file exists, just not used here) |
-| `CORE_ONTOLOGY` Python list | `ontology.py:5-107` | Already have `config/ontology_concepts.yaml` — wire it up instead of duplicating |
-| Default personas `[CFO, CRO, COO, CTO]` | `main.py:190` | Load from `persona_profiles.yaml` |
-| API version `"2.0.0"` | `main.py:174` | `backend/core/constants.py` or `VERSION` file |
-| Trust scores `85`, `70`, `60`, `50` | `ingress.py:202-203`, `main.py:1230,1232` | Named constants in `constants.py` |
+| # | File | Issue | Impact |
+|---|------|-------|--------|
+| A1 | `MonitorPanel.tsx` (698L), `ReconciliationPanel.tsx` (831L) | Monolithic components | Hard to test, review, maintain |
+| A2 | `dcl_engine.py:28-252` | `build_graph_snapshot` = 225-line god-method | Untestable without full integration |
+| A3 | `source_normalizer.py` | Alias/pattern/category data in code, not config | Cannot extend without deploys |
+| A4 | `main.py:113-114` | `app.state.loaded_sources` mutable global | Race conditions under concurrency |
+| A5 | `App.tsx:43-92` | `generatePersonaViews` duplicates backend logic | Violated single source of truth |
 
 ---
 
-## Change 5: Frontend monolith extraction
+## PART 2: FIX PLAN
 
-**ReconciliationPanel.tsx (819 lines)** — worst offender:
-- Extract `AamReconciliationTab.tsx` (lines 266-504, 238 lines)
-- Extract `SorReconciliationTab.tsx` (lines 506-753, 247 lines)
-- Extract `ReconciliationDetailModal.tsx` (lines 159-265)
-- Parent becomes ~100 lines of tab switching
+### Phase 1: Critical Fixes (Stop the Bleeding)
 
-**MonitorPanel.tsx (698 lines)**:
-- Extract `OntologyDetailPanel.tsx` (the modal, lines 159-327)
-- Extract `PersonaConnectionsView.tsx` (the 200-line inline IIFE, lines 383-606)
+**1.1 — Eliminate fabricated RAG metrics (H1, H2)**
+- File: `backend/engine/dcl_engine.py`
+- Change: Remove lines setting `rag_reads` to fabricated values. Only set from actual measured reads.
+- Test: `assert metrics.rag_reads == 0` when no Pinecone reads occur.
 
-**Shared frontend concerns**:
-- Create `src/constants/api.ts` — all API paths in one place (currently hardcoded in 6 components)
-- Create `src/hooks/usePoll.ts` — deduplicate the 5 identical polling-with-cleanup patterns
-- Fix NarrationPanel polling at **500ms** — absurdly aggressive, change to 2000ms
+**1.2 — Stop embedding corruption on failure (F3)**
+- File: `backend/engine/rag_service.py:195-203`
+- Change: On OpenAI failure, return 0 stored (don't fall back to random vectors). Log at ERROR.
+- Test: Mock OpenAI failure → assert 0 vectors upserted, no `_create_mock_embeddings` called in Prod.
+
+**1.3 — Use UTC timestamp in graph meta (H13)**
+- File: `backend/engine/dcl_engine.py:227`
+- Change: Replace `time.strftime(...)` with `utc_now()` from constants.
+- Test: Assert `generated_at` matches UTC format.
+
+**1.4 — Fix connection pool leak (F7)**
+- File: `backend/semantic_mapper/persist_mappings.py:82-85`
+- Change: If `putconn()` raises, call `conn.close()` explicitly.
+- Test: Simulate `putconn` failure → assert `conn.close()` called.
+
+**1.5 — Fix blank-screen on auto-load failure (F6)**
+- File: `src/App.tsx:117`
+- Change: Set error state on catch. Render error message instead of blank.
+- Test: Frontend shows message when backend unreachable.
+
+### Phase 2: Configuration Externalization
+
+**2.1 — Source normalizer data to YAML (H3, H4, H5, A3)**
+- Create: `config/source_aliases.yaml` with alias_map, pattern_rules, category_patterns
+- Change: `SourceNormalizer.__init__` loads YAML at init, hardcoded data becomes fallback
+- Test: Add new alias to YAML → assert resolution works without code change.
+
+**2.2 — Add missing constants (H6, H8, H9, H14)**
+- File: `backend/core/constants.py`
+- Add: `CB_COOLDOWN`, `OPENAI_EMBEDDING_MODEL`, `POOL_MIN_CONN`, `POOL_MAX_CONN`, `DB_CONNECT_TIMEOUT`, `FARM_REGISTRY_TIMEOUT`
+- Wire up consumers to use these constants.
+- Test: `test_code_quality.py` validates all constants exist.
+
+**2.3 — Fix mock embedding dimension (H7)**
+- File: `backend/engine/rag_service.py:210`
+- Change: `range(PINECONE_DIMENSION)` instead of `range(1536)`
+- Test: Assert mock vector length == `PINECONE_DIMENSION`.
+
+**2.4 — Externalize embedding model (H8)**
+- File: `backend/engine/rag_service.py:168`
+- Change: Use `OPENAI_EMBEDDING_MODEL` constant.
+- Test: Inspect source for hardcoded model string.
+
+**2.5 — Fix dev server port (H10)**
+- File: `backend/api/main.py:567`
+- Change: `port=int(os.getenv("BACKEND_PORT", "8000"))` (match CLAUDE.md docs)
+- Test: `__main__` uses 8000 by default.
+
+### Phase 3: Fallback Transparency
+
+**3.1 — DB fallback flag (F1)**
+- Add `db_fallback: bool = False` to `RunMetrics`
+- Set `True` when DB unavailable in `build_graph_snapshot`
+- Test: DB down → `run_metrics.db_fallback == True`
+
+**3.2 — LLM fallback flag (F2)**
+- Add `llm_fallback: bool = False` to `RunMetrics`
+- Set `True` when LLM validation fails in Prod mode
+- Test: LLM failure → `run_metrics.llm_fallback == True`
+
+**3.3 — Persona alignment (H11, H12)**
+- Add `CHRO` to frontend persona list
+- Fetch persona list from backend `/api/dcl/semantic-export` on mount instead of hardcoding
+- Test: Frontend shows all personas from backend.
+
+**3.4 — Global state removal (A4)**
+- Replace `app.state.loaded_sources` with per-request context or response-only data
+- Test: Concurrent runs don't cross-contaminate.
+
+### Phase 4: Self-Running Test Harness
+
+**4.1 — `tests/test_audit_v2.py`** — Pytest file validating all Phase 1-3 fixes:
+- `TestFabricatedMetrics` — no fabricated rag_reads
+- `TestEmbeddingCorruption` — no mock fallback in Prod on failure
+- `TestTimestamps` — UTC in generated_at
+- `TestPoolLeak` — connection closed on putconn failure
+- `TestConstants` — all new constants exist and are used
+- `TestFallbackFlags` — db_fallback and llm_fallback populated correctly
+
+**4.2 — `scripts/audit_v2_loop.sh`** — Run all quality tests:
+```bash
+pytest tests/test_code_quality.py tests/test_audit_v2.py -v --tb=short
+```
+
+**4.3 — Verification grep checks** (in test):
+- `grep -r "rag_reads = 3" backend/` → 0 matches
+- `grep -r "range(1536)" backend/` → 0 matches
+- `grep -r '"text-embedding-3-small"' backend/` → 0 matches
+- `grep -r "time.strftime" backend/engine/dcl_engine.py` → 0 matches
 
 ---
 
-## Change 6: Fix timestamp and response inconsistencies
+## PART 3: WHAT'S GOOD (Preserve)
 
-**Two different datetime formats in use**:
-- `datetime.now(timezone.utc).isoformat()` → `2026-02-16T19:51:18.798000+00:00`
-- `time.strftime("%Y-%m-%dT%H:%M:%SZ")` → `2026-02-16T19:51:18Z`
-
-Different endpoints return different formats. Create one `utc_now() -> str` helper and use it everywhere.
-
-**Error response structure inconsistent**:
-- Some endpoints: `HTTPException(422, detail="string message")`
-- Others: `HTTPException(422, detail={"error": "CODE", "message": "..."})`
-
-Standardize on the structured format — clients can't reliably parse errors otherwise.
-
----
-
-## Change 7: Fix the `ontology.py` lie
-
-`CLAUDE.md` says ontology is YAML-driven. Reality: `ontology.py` has a hardcoded Python list of 8 concepts. `config/ontology_concepts.yaml` exists with 13 concepts. They're **not the same list** — the YAML has 5 concepts the Python code doesn't know about.
-
-**Fix**: Make `get_ontology()` load from YAML (with the Python list as fallback-of-last-resort, not primary). The `config_sync.py` module already knows how to read the YAML — just needs to be wired into `ontology.py`.
+| Area | Status | Evidence |
+|------|--------|----------|
+| Constants centralization | Done (v1) | `backend/core/constants.py` — env-var driven, tested |
+| Connection pool retry | Done (v1) | Cooldown prevents hammering, tested in `test_code_quality.py` |
+| RAG truthful counts | Done (v1) | Returns 0 on failure, tested |
+| Cache invalidation logging | Done (v1) | Logs errors, tested |
+| Source tracking independence | Done (v1) | Uses meta.source_names, tested |
+| Route module extraction | Done (v1) | `backend/api/routes/` — 7 clean modules |
+| Security constraints | Good | Zero-trust check at startup |
+| Ingest guard | Good | Schema-on-write with pipe_id validation |
+| Heuristic mapper | Good | Negative patterns prevent false positives |
+| Domain models | Good | Pydantic V2, proper validation |
+| Narration service | Good | Excellent operator observability |
+| RACI compliance | Good | DCL owns its designated capabilities per RACI |
 
 ---
 
-## Execution order
+## PART 4: EXECUTION ORDER
 
-1. **Change 3** (silent fallbacks) — highest risk, lowest effort, zero refactoring
-2. **Change 4** (externalize config) — constants.py already exists, just populate it
-3. **Change 7** (ontology.py) — small, surgical, fixes a data correctness bug
-4. **Change 6** (timestamps + error format) — standardization pass
-5. **Change 2** (god-functions) — extract helpers, keep endpoints as orchestrators
-6. **Change 1** (main.py split) — biggest change, do last when helpers are stable
-7. **Change 5** (frontend) — independent of backend, can parallel with 1-4
+```
+Phase 1 (Critical)  → Phase 2 (Config)     → Phase 3 (Transparency) → Phase 4 (Harness)
+  1.1 rag metrics      2.1 source YAML        3.1 db fallback flag     4.1 test file
+  1.2 embedding fix    2.2 new constants       3.2 llm fallback flag    4.2 loop script
+  1.3 UTC timestamp    2.3 mock dimension      3.3 persona alignment    4.3 grep checks
+  1.4 pool leak fix    2.4 embedding model     3.4 global state
+  1.5 blank screen     2.5 dev port
+```
+
+All changes within DCL. No external repo dependencies.
 
 ---
 
-## Out of scope (noted but not fixing now)
+## PART 5: SUCCESS CRITERIA
 
-- No Dockerfile / CI/CD pipeline (infrastructure, not code quality)
-- CORS wildcard default (already logged as warning, env-var configurable)
-- Thread safety in singletons (acceptable for single-worker uvicorn)
-- Duplicate `pyhumps` in requirements.txt (trivial, fix in passing)
-- `schema_loader.py` N+1 query in `load_stream_sources()` (perf optimization, not debt)
+1. `pytest tests/test_code_quality.py tests/test_audit_v2.py -v` — 100% pass
+2. No fabricated metrics in codebase (verified by grep)
+3. No hardcoded embedding dimensions or model names
+4. All fallbacks set explicit flags on `RunMetrics`
+5. Frontend builds clean: `npm run build` succeeds
+6. All backend modules import without error
+7. Existing test harness (`test_harness.py`) still passes against live backend
