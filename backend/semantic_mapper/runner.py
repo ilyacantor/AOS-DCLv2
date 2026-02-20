@@ -40,7 +40,19 @@ class SemanticMapper:
         if not ontology_concepts:
             local_ontology = get_ontology()
             ontology_concepts = [
-                {'id': c.id, 'name': c.name, 'description': c.description}
+                {
+                    'id': c.id,
+                    'concept_id': c.concept_id,
+                    'name': c.name,
+                    'description': c.description,
+                    'domain': c.domain,
+                    'cluster': c.cluster,
+                    'example_fields': c.example_fields,
+                    'aliases': c.aliases,
+                    'expected_type': c.expected_type,
+                    'typical_source_systems': c.typical_source_systems,
+                    'persona_relevance': c.persona_relevance,
+                }
                 for c in local_ontology
             ]
         

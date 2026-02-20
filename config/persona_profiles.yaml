@@ -14,14 +14,26 @@ personas:
         relevance: 1.0
       - concept_id: cost
         relevance: 1.0
+      - concept_id: gl_account
+        relevance: 1.0
       - concept_id: subscription
         relevance: 0.9
-      - concept_id: account
-        relevance: 0.6
       - concept_id: invoice
         relevance: 0.8
+      - concept_id: currency
+        relevance: 0.7
+      - concept_id: account
+        relevance: 0.6
+      - concept_id: payment_status
+        relevance: 0.6
+      - concept_id: employee
+        relevance: 0.5
       - concept_id: date
         relevance: 0.5
+      - concept_id: opportunity
+        relevance: 0.5
+      - concept_id: aws_resource
+        relevance: 0.4
 
   - persona_key: CRO
     display_name: Chief Revenue Officer
@@ -40,9 +52,15 @@ personas:
         relevance: 1.0
       - concept_id: revenue
         relevance: 0.9
+      - concept_id: subscription
+        relevance: 0.8
       - concept_id: health
-        relevance: 0.6
+        relevance: 0.7
+      - concept_id: ticket
+        relevance: 0.5
       - concept_id: date
+        relevance: 0.5
+      - concept_id: usage
         relevance: 0.5
 
   - persona_key: COO
@@ -58,18 +76,24 @@ personas:
         - HR operations
       primary_cluster: Ops
     concept_relevance:
-      - concept_id: usage
-        relevance: 1.0
-      - concept_id: health
-        relevance: 1.0
-      - concept_id: ticket
-        relevance: 0.9
-      - concept_id: employee
+      - concept_id: vendor
         relevance: 0.8
-      - concept_id: account
+      - concept_id: ticket
+        relevance: 0.8
+      - concept_id: employee
         relevance: 0.7
+      - concept_id: cost
+        relevance: 0.7
+      - concept_id: health
+        relevance: 0.6
+      - concept_id: incident
+        relevance: 0.6
+      - concept_id: usage
+        relevance: 0.6
       - concept_id: date
         relevance: 0.6
+      - concept_id: account
+        relevance: 0.5
 
   - persona_key: CTO
     display_name: Chief Technology Officer
@@ -86,15 +110,34 @@ personas:
     concept_relevance:
       - concept_id: aws_resource
         relevance: 1.0
+      - concept_id: engineering_work
+        relevance: 1.0
       - concept_id: incident
         relevance: 0.9
-      - concept_id: engineering_work
-        relevance: 0.9
       - concept_id: usage
-        relevance: 0.9
-      - concept_id: cost
         relevance: 0.8
-      - concept_id: health
+      - concept_id: cost
         relevance: 0.6
+      - concept_id: health
+        relevance: 0.5
+      - concept_id: date
+        relevance: 0.5
+
+  - persona_key: CHRO
+    display_name: Chief Human Resources Officer
+    description: Focuses on workforce metrics, talent acquisition, compensation, and employee experience
+    metadata:
+      responsibilities:
+        - Workforce planning
+        - Talent acquisition
+        - Compensation and benefits
+        - Employee engagement
+        - Organizational development
+      primary_cluster: People
+    concept_relevance:
+      - concept_id: employee
+        relevance: 1.0
+      - concept_id: cost
+        relevance: 0.5
       - concept_id: date
         relevance: 0.5

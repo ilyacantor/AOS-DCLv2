@@ -68,10 +68,16 @@ class SourceSystem(BaseModel):
 
 class OntologyConcept(BaseModel):
     id: str
+    concept_id: str = ""
     name: str
     description: str
+    domain: str = ""
+    cluster: str = ""
     example_fields: List[str] = Field(default_factory=list)
+    aliases: List[str] = Field(default_factory=list)
     expected_type: Optional[str] = None
+    typical_source_systems: List[str] = Field(default_factory=list)
+    persona_relevance: Dict[str, float] = Field(default_factory=dict)
 
 
 class Mapping(BaseModel):

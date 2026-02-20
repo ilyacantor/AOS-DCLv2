@@ -203,9 +203,8 @@ class HeuristicMapper:
             if self._is_blocked_by_negative_pattern(field_name, concept_id):
                 continue
             
-            metadata = concept.get('metadata', {})
-            example_fields = metadata.get('example_fields', [])
-            synonyms = metadata.get('synonyms', [])
+            example_fields = concept.get('example_fields', [])
+            synonyms = concept.get('aliases', [])
             
             match_confidence = 0.0
             
