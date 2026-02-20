@@ -92,6 +92,23 @@ class HeuristicMapper:
             r'mtta',
             r'severity',
         ],
+        'date': [
+            r'^date$',
+            r'^timestamp$',
+            r'^datetime$',
+            r'created_at',
+            r'updated_at',
+            r'_date$',
+            r'_time$',
+            r'_at$',
+        ],
+        'ad': [
+            r'^ad_id',
+            r'^ad_name',
+            r'^creative_id',
+            r'^placement_id',
+            r'_ad_',
+        ],
     }
     
     FINANCIAL_TABLE_PATTERNS = [
@@ -203,9 +220,8 @@ class HeuristicMapper:
             if self._is_blocked_by_negative_pattern(field_name, concept_id):
                 continue
             
-            metadata = concept.get('metadata', {})
-            example_fields = metadata.get('example_fields', [])
-            synonyms = metadata.get('synonyms', [])
+            example_fields = concept.get('example_fields', [])
+            synonyms = concept.get('aliases', [])
             
             match_confidence = 0.0
             
@@ -213,7 +229,7 @@ class HeuristicMapper:
                 example_lower = example.lower()
                 if example_lower == field_lower:
                     match_confidence = max(match_confidence, CONFIDENCE_EXACT_FIELD)
-                elif example_lower in field_lower or field_lower in example_lower:
+                elif len(field_lower) >= 3 and (example_lower in field_lower or field_lower in example_lower):
                     match_confidence = max(match_confidence, CONFIDENCE_PARTIAL_FIELD)
 
             for synonym in synonyms:
@@ -221,7 +237,7 @@ class HeuristicMapper:
                 if synonym_lower in field_lower or field_lower in synonym_lower:
                     match_confidence = max(match_confidence, CONFIDENCE_SYNONYM)
 
-            if concept_id in field_lower:
+            if len(concept_id) >= 3 and concept_id in field_lower:
                 match_confidence = max(match_confidence, CONFIDENCE_CONCEPT_IN_NAME)
 
             if match_confidence > 0 and table_context == "financial":

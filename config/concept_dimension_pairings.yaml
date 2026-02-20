@@ -1,0 +1,566 @@
+# DCL Concept-Dimension Pairings
+# Defines which organizational dimensions each concept can be sliced by.
+# Presence = valid pairing; absence = not valid.
+#
+# 8 Dimensions:
+#   legal_entity, division, cost_center, department,
+#   geography, profit_center, segment, customer_segment
+
+dimensions:
+  - legal_entity
+  - division
+  - cost_center
+  - department
+  - geography
+  - profit_center
+  - segment
+  - customer_segment
+
+pairings:
+  # ─── Finance ──────────────────────────────────────────────
+  gl_account:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - profit_center
+
+  invoice:
+    - legal_entity
+    - division
+    - cost_center
+    - geography
+    - segment
+    - customer_segment
+
+  revenue:
+    - legal_entity
+    - division
+    - geography
+    - profit_center
+    - segment
+    - customer_segment
+
+  cost:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+    - profit_center
+
+  currency: []
+
+  journal_entry:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - profit_center
+
+  cost_center:
+    - legal_entity
+    - division
+
+  budget:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+    - profit_center
+
+  forecast:
+    - legal_entity
+    - division
+    - geography
+    - segment
+    - profit_center
+
+  payment:
+    - legal_entity
+    - division
+    - cost_center
+    - geography
+    - customer_segment
+
+  payment_status: []
+
+  accounts_receivable:
+    - legal_entity
+    - division
+    - geography
+    - customer_segment
+
+  accounts_payable:
+    - legal_entity
+    - division
+    - cost_center
+    - geography
+
+  financial_period: []
+
+  tax:
+    - legal_entity
+    - geography
+    - segment
+
+  fixed_asset:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+
+  date: []
+
+  # ─── Sales & Revenue ─────────────────────────────────────
+  account:
+    - legal_entity
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  opportunity:
+    - legal_entity
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  subscription:
+    - legal_entity
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  pipeline_stage:
+    - segment
+    - customer_segment
+
+  quote:
+    - legal_entity
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  contract:
+    - legal_entity
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  order:
+    - legal_entity
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  renewal:
+    - legal_entity
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  territory:
+    - division
+    - geography
+
+  quota:
+    - division
+    - geography
+    - segment
+
+  commission:
+    - division
+    - geography
+    - department
+
+  contact:
+    - geography
+    - segment
+    - customer_segment
+
+  sales_activity:
+    - geography
+    - segment
+    - customer_segment
+
+  win_loss:
+    - geography
+    - segment
+    - customer_segment
+
+  # ─── Human Resources ─────────────────────────────────────
+  employee:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+    - profit_center
+
+  position:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+
+  department:
+    - legal_entity
+    - division
+
+  compensation:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+
+  benefit:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+
+  requisition:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+
+  candidate:
+    - division
+    - department
+    - geography
+
+  performance_review:
+    - legal_entity
+    - division
+    - department
+
+  goal:
+    - division
+    - department
+
+  time_off:
+    - legal_entity
+    - division
+    - department
+    - geography
+
+  training:
+    - department
+    - geography
+
+  org_unit:
+    - legal_entity
+    - division
+
+  headcount:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+    - profit_center
+
+  # ─── Customer Success ────────────────────────────────────
+  ticket:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  incident:
+    - division
+    - geography
+    - segment
+
+  health:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  sla:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  nps_score:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  customer_segment:
+    - geography
+    - segment
+
+  lifecycle_stage:
+    - segment
+    - customer_segment
+
+  churn_event:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  engagement:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  feedback:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  escalation:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  # ─── Product & Engineering ───────────────────────────────
+  product:
+    - division
+    - segment
+
+  feature:
+    - division
+    - segment
+
+  release: []
+
+  bug:
+    - division
+
+  engineering_work:
+    - division
+    - department
+
+  repository:
+    - division
+
+  pull_request:
+    - department
+
+  usage:
+    - geography
+    - segment
+    - customer_segment
+
+  roadmap_item:
+    - division
+    - segment
+
+  entitlement:
+    - segment
+    - customer_segment
+
+  # ─── IT & Infrastructure ─────────────────────────────────
+  it_asset:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+
+  configuration_item:
+    - legal_entity
+    - division
+
+  it_service:
+    - legal_entity
+    - division
+    - department
+
+  change_request:
+    - division
+    - department
+
+  deployment:
+    - division
+
+  user_account:
+    - legal_entity
+    - division
+    - department
+    - geography
+
+  permission:
+    - division
+    - department
+
+  aws_resource:
+    - legal_entity
+    - division
+    - geography
+
+  alert:
+    - division
+    - geography
+
+  integration:
+    - division
+
+  # ─── Operations ──────────────────────────────────────────
+  project:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+    - profit_center
+
+  ops_task:
+    - division
+    - department
+
+  vendor:
+    - legal_entity
+    - division
+    - geography
+
+  purchase_order:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+
+  inventory:
+    - legal_entity
+    - division
+    - geography
+
+  workflow:
+    - division
+    - department
+
+  quality_metric:
+    - legal_entity
+    - division
+    - geography
+
+  capacity:
+    - division
+    - department
+
+  facility:
+    - legal_entity
+    - geography
+
+  shipment:
+    - legal_entity
+    - geography
+
+  # ─── Marketing ───────────────────────────────────────────
+  campaign:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  lead:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  channel:
+    - geography
+    - segment
+
+  content:
+    - segment
+
+  conversion:
+    - geography
+    - segment
+    - customer_segment
+
+  attribution:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  audience:
+    - geography
+    - segment
+    - customer_segment
+
+  ad:
+    - geography
+    - segment
+
+  marketing_email:
+    - geography
+    - segment
+    - customer_segment
+
+  marketing_event:
+    - geography
+
+  # ─── Compliance & Risk ───────────────────────────────────
+  audit_trail:
+    - legal_entity
+    - division
+
+  control:
+    - legal_entity
+    - division
+
+  risk:
+    - legal_entity
+    - division
+    - geography
+
+  policy:
+    - legal_entity
+    - division
+
+  violation:
+    - legal_entity
+    - division
+    - geography
+
+  framework:
+    - legal_entity
+
+  evidence:
+    - legal_entity
+
+  data_classification:
+    - legal_entity
+    - division
+
+  consent:
+    - legal_entity
+    - geography
+
+  vendor_risk:
+    - legal_entity
+    - geography
+
+  access_review:
+    - legal_entity
+    - division
+    - department
+
+  retention_policy:
+    - legal_entity

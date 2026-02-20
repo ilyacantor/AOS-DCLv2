@@ -15,16 +15,17 @@ logger = get_logger(__name__)
 
 _YAML_PATH = Path(__file__).parent.parent.parent / "config" / "ontology_concepts.yaml"
 
+VALID_DOMAINS = {
+    "finance", "sales", "hr", "customer_success",
+    "product_eng", "it_infra", "operations", "marketing", "compliance",
+}
+
 # Minimal fallback — only used if YAML file is missing
 _FALLBACK_ONTOLOGY: List[OntologyConcept] = [
     OntologyConcept(id="account", name="Account", description="Business account or customer entity",
                     example_fields=["account_id", "account_name", "company", "customer_id"], expected_type="string"),
-    OntologyConcept(id="opportunity", name="Opportunity", description="Sales opportunity or deal",
-                    example_fields=["opportunity_id", "deal_id", "pipeline", "stage"], expected_type="string"),
     OntologyConcept(id="revenue", name="Revenue", description="Revenue or monetary amount",
                     example_fields=["amount", "revenue", "total", "value", "price"], expected_type="float"),
-    OntologyConcept(id="cost", name="Cost", description="Cost or expense amount",
-                    example_fields=["cost", "spend", "expense", "fee"], expected_type="float"),
     OntologyConcept(id="date", name="Date/Timestamp", description="Date or timestamp field",
                     example_fields=["date", "timestamp", "created_at", "updated_at"], expected_type="datetime"),
 ]
@@ -40,16 +41,52 @@ def _load_from_yaml() -> List[OntologyConcept]:
         data = yaml.safe_load(f)
 
     concepts: List[OntologyConcept] = []
+    seen_ids: set = set()
+    seen_concept_ids: set = set()
+
     for entry in data.get("concepts", []):
-        metadata = entry.get("metadata", {})
+        cid = entry.get("id")
+        if not cid:
+            raise ValueError("Concept entry missing required field: id")
+        if cid in seen_ids:
+            raise ValueError(f"Duplicate concept id: {cid}")
+        seen_ids.add(cid)
+
+        concept_id = entry.get("concept_id", "")
+        if concept_id:
+            if concept_id in seen_concept_ids:
+                raise ValueError(f"Duplicate concept_id: {concept_id}")
+            seen_concept_ids.add(concept_id)
+
+        domain = entry.get("domain", "")
+        if domain and domain not in VALID_DOMAINS:
+            raise ValueError(f"Invalid domain '{domain}' for concept '{cid}'. Valid: {VALID_DOMAINS}")
+
+        name = entry.get("name")
+        if not name:
+            raise ValueError(f"Concept '{cid}' missing required field: name")
+
+        description = entry.get("description", "")
+        if not description:
+            raise ValueError(f"Concept '{cid}' missing required field: description")
+
         concept = OntologyConcept(
-            id=entry["id"],
-            name=entry["name"],
-            description=entry.get("description", ""),
-            example_fields=metadata.get("example_fields", []),
-            expected_type=metadata.get("expected_type", "string"),
+            id=cid,
+            concept_id=concept_id,
+            name=name,
+            description=description,
+            domain=domain,
+            cluster=entry.get("cluster", ""),
+            example_fields=entry.get("example_fields", []),
+            aliases=entry.get("aliases", []),
+            expected_type=entry.get("expected_type", "string"),
+            typical_source_systems=entry.get("typical_source_systems", []),
+            persona_relevance=entry.get("persona_relevance", {}),
         )
         concepts.append(concept)
+
+    if not concepts:
+        raise ValueError(f"No concepts found in {_YAML_PATH}")
 
     return concepts
 
@@ -78,3 +115,10 @@ def get_ontology_by_id(ontology_id: str) -> OntologyConcept:
         if concept.id == ontology_id:
             return concept
     raise ValueError(f"Ontology concept not found: {ontology_id}")
+
+
+def reload_ontology() -> List[OntologyConcept]:
+    """Force re-read from YAML. Useful after config changes."""
+    global _cached_ontology
+    _cached_ontology = None
+    return get_ontology()
