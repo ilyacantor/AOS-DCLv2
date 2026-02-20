@@ -1,0 +1,595 @@
+# Concept-Dimension Pairing Matrix
+# Defines which organizational dimensions each concept can be sliced by.
+# Presence in a concept's list = valid pairing. Absence = not valid.
+# Reference: docs/DCL_Enterprise_Ontology_v1.xlsx
+#
+# Target: ~250-350 valid pairings out of 106 x 8 = 848 theoretical.
+# Ambiguous pairings flagged with inline comments.
+
+dimensions:
+  - id: legal_entity
+    name: Legal Entity
+    description: Corporate legal structure (subsidiary, holding company)
+  - id: division
+    name: Division / Business Unit
+    description: Business unit or divisional grouping
+  - id: cost_center
+    name: Cost Center
+    description: Cost allocation unit for expense tracking
+  - id: department
+    name: Department
+    description: Organizational department (Engineering, Sales, etc.)
+  - id: geography
+    name: Geography
+    description: Physical region, country, or office location
+  - id: profit_center
+    name: Profit Center
+    description: Revenue/profit attribution unit
+  - id: segment
+    name: Segment
+    description: Business segment (product line, market vertical)
+  - id: customer_segment
+    name: Customer Segment
+    description: Customer grouping (enterprise, mid-market, SMB, etc.)
+
+pairings:
+
+  # ── FINANCE & ACCOUNTING ─────────────────────────────────────
+
+  gl_account:
+    - legal_entity
+    - division
+    - cost_center
+    - profit_center
+    - segment
+
+  journal_entry:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+    - profit_center
+    - segment
+
+  cost_center:  # concept IS a dimension; these are its parent groupings
+    - legal_entity
+    - division
+    - department
+    - geography
+
+  budget:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+    - profit_center
+    - segment
+
+  forecast:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+    - profit_center
+    - segment
+
+  invoice:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+    - profit_center
+    - segment
+    - customer_segment
+
+  payment:
+    - legal_entity
+    - division
+    - cost_center
+    - geography
+    - profit_center
+    - customer_segment
+
+  accounts_receivable:
+    - legal_entity
+    - division
+    - geography
+    - profit_center
+    - segment
+    - customer_segment
+
+  accounts_payable:
+    - legal_entity
+    - division
+    - cost_center
+    - geography
+    - profit_center
+
+  revenue:
+    - legal_entity
+    - division
+    - geography
+    - profit_center
+    - segment
+    - customer_segment
+
+  cost:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+    - profit_center
+    - segment
+
+  financial_period:
+    - legal_entity  # different fiscal calendars per entity
+
+  tax:
+    - legal_entity
+    - geography
+
+  fixed_asset:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+
+  currency:
+    - legal_entity
+    - geography
+
+  # ── SALES & REVENUE ──────────────────────────────────────────
+
+  account:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  opportunity:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  pipeline_stage:
+    - division
+    - geography
+    - segment
+
+  quote:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  contract:
+    - legal_entity
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  order:
+    - legal_entity
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  subscription:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  renewal:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  territory:
+    - division
+    - geography
+
+  quota:
+    - division
+    - department
+    - geography
+
+  commission:
+    - division
+    - department
+    - geography
+
+  contact:
+    - division
+    - geography
+    - customer_segment
+
+  sales_activity:
+    - division
+    - department
+    - geography
+
+  win_loss:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  # ── HUMAN RESOURCES ──────────────────────────────────────────
+
+  employee:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+
+  position:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+
+  department:  # concept IS a dimension; these are its parent groupings
+    - legal_entity
+    - division
+    - geography
+
+  compensation:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+
+  benefit:
+    - legal_entity
+    - division
+    - department
+    - geography
+
+  requisition:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+
+  candidate:
+    - division
+    - department
+    - geography
+
+  performance_review:
+    - legal_entity
+    - division
+    - department
+    - geography
+
+  goal:
+    - division
+    - department
+
+  time_off:
+    - legal_entity
+    - division
+    - department
+    - geography
+
+  training:
+    - legal_entity
+    - division
+    - department
+    - geography
+
+  org_unit:
+    - legal_entity
+    - division
+    - geography
+
+  headcount:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+    - profit_center
+
+  # ── PRODUCT & ENGINEERING ────────────────────────────────────
+
+  product:
+    - division
+    - segment
+
+  feature:
+    - segment  # ambiguous: features span orgs but can map to product segments
+
+  release:
+    - geography  # ambiguous: multi-region rollouts only
+
+  bug:
+    - department  # engineering team ownership
+
+  sprint:
+    - department  # team-level iteration
+
+  repository:
+    - department  # team ownership
+
+  pull_request:
+    - department  # author's team
+
+  usage:
+    - geography
+    - segment
+    - customer_segment
+
+  roadmap_item:
+    - division
+    - segment
+
+  entitlement:
+    - segment
+    - customer_segment
+
+  # ── IT & INFRASTRUCTURE ──────────────────────────────────────
+
+  it_asset:
+    - legal_entity
+    - division
+    - department
+    - geography
+
+  configuration_item:
+    - geography
+    - department  # ambiguous: depends on CMDB maturity
+
+  it_service:
+    - legal_entity
+    - division
+    - geography
+
+  change_request:
+    - geography
+    - department
+
+  deployment:
+    - geography
+
+  user_account:
+    - legal_entity
+    - division
+    - department
+    - geography
+
+  permission:
+    - legal_entity
+    - department
+
+  aws_resource:
+    - geography
+    - cost_center  # cloud cost allocation tags
+
+  alert:
+    - geography
+
+  integration:
+    - legal_entity
+    - geography
+
+  # ── CUSTOMER SUCCESS ─────────────────────────────────────────
+
+  ticket:
+    - geography
+    - department  # support team routing
+    - customer_segment
+
+  incident:
+    - geography
+    - department  # owning team
+
+  sla:
+    - geography
+    - customer_segment
+
+  health:
+    - geography
+    - segment
+    - customer_segment
+
+  nps_score:
+    - geography
+    - segment
+    - customer_segment
+
+  customer_segment:  # concept IS a dimension; these are its parent groupings
+    - geography
+    - segment
+
+  lifecycle_stage:
+    - segment
+    - customer_segment
+
+  churn_event:
+    - geography
+    - segment
+    - customer_segment
+
+  engagement:
+    - segment
+    - customer_segment
+
+  feedback:
+    - geography
+    - segment
+    - customer_segment
+
+  escalation:
+    - geography
+    - department  # escalation owner
+    - customer_segment
+
+  # ── OPERATIONS & SUPPLY CHAIN ────────────────────────────────
+
+  date: []  # cross-cutting temporal utility; not dimensionally sliced
+
+  project:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+
+  task:
+    - division
+    - department
+    - geography
+
+  vendor:
+    - legal_entity
+    - division
+    - cost_center
+    - geography
+
+  purchase_order:
+    - legal_entity
+    - division
+    - cost_center
+    - department
+    - geography
+
+  inventory:
+    - legal_entity
+    - division
+    - geography
+
+  workflow:
+    - division
+    - department
+
+  quality_metric:
+    - division
+    - department
+    - geography
+
+  capacity:
+    - division
+    - department
+    - geography
+
+  facility:
+    - legal_entity
+    - geography
+
+  shipment:
+    - legal_entity
+    - geography
+
+  # ── MARKETING ────────────────────────────────────────────────
+
+  campaign:
+    - division
+    - geography
+    - segment
+    - customer_segment
+
+  lead:
+    - geography
+    - segment
+    - customer_segment
+
+  channel:
+    - geography
+    - segment
+
+  content:
+    - segment
+    - customer_segment
+
+  conversion:
+    - geography
+    - segment
+    - customer_segment
+
+  attribution:
+    - geography
+    - segment
+    - customer_segment
+
+  audience:
+    - geography
+    - segment
+    - customer_segment
+
+  ad:
+    - geography
+    - segment
+    - customer_segment
+
+  marketing_email:
+    - geography
+    - segment
+    - customer_segment
+
+  marketing_event:
+    - geography
+    - segment
+
+  # ── COMPLIANCE & RISK ────────────────────────────────────────
+
+  audit_trail:
+    - legal_entity
+    - geography
+
+  control:
+    - legal_entity
+    - geography
+
+  risk:
+    - legal_entity
+    - division
+    - geography
+
+  policy:
+    - legal_entity
+    - geography
+
+  violation:
+    - legal_entity
+    - geography
+
+  framework:
+    - legal_entity
+
+  evidence:
+    - legal_entity
+
+  data_classification:
+    - legal_entity
+
+  consent:
+    - legal_entity
+    - geography
+    - customer_segment
+
+  vendor_risk:
+    - legal_entity
+    - geography
+
+  access_review:
+    - legal_entity
+    - department
+
+  retention_policy:
+    - legal_entity
