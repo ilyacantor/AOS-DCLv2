@@ -539,7 +539,10 @@ if DIST_DIR.exists() and (DIST_DIR / "assets").exists():
 async def serve_root():
     index_file = DIST_DIR / "index.html"
     if index_file.exists():
-        return FileResponse(index_file)
+        return FileResponse(
+            index_file,
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"},
+        )
     return {"status": "DCL Engine API is running", "version": API_VERSION, "note": "Frontend not built"}
 
 
@@ -552,7 +555,10 @@ async def serve_spa(full_path: str):
         raise HTTPException(status_code=403, detail="Direct file access is blocked. Use the query API.")
     index_file = DIST_DIR / "index.html"
     if index_file.exists():
-        return FileResponse(index_file)
+        return FileResponse(
+            index_file,
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"},
+        )
     raise HTTPException(status_code=404, detail="Frontend not built")
 
 
