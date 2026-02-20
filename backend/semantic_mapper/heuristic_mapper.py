@@ -1,9 +1,11 @@
 from typing import List, Optional, Dict, Any, Tuple
-from backend.domain import SourceSystem, Mapping
+from backend.domain import SourceSystem, Mapping, SemanticEdge
+from backend.engine.edge_index import EdgeIndex
 from backend.core.constants import (
     CONFIDENCE_POSITIVE_PATTERN, CONFIDENCE_EXACT_FIELD, CONFIDENCE_PARTIAL_FIELD,
     CONFIDENCE_SYNONYM, CONFIDENCE_CONCEPT_IN_NAME, CONFIDENCE_CONTEXT_BOOST,
     CONFIDENCE_CONTEXT_CAP, CONFIDENCE_SEMANTIC_AMOUNT, CONFIDENCE_SEMANTIC_ID,
+    AAM_EDGE_CONFIDENCE_MIN,
 )
 import re
 
@@ -126,18 +128,32 @@ class HeuristicMapper:
         r'rev.schedule',
     ]
     
-    def __init__(self, ontology_concepts: List[Dict[str, Any]]):
+    def __init__(self, ontology_concepts: List[Dict[str, Any]], edge_index: Optional[EdgeIndex] = None):
         self.concepts = ontology_concepts
         self._concept_by_id = {c['id']: c for c in ontology_concepts}
-    
+        self._edge_index = edge_index or EdgeIndex([])
+        self.aam_edge_hits = 0
+        self.aam_edge_misses = 0
+
     def create_mappings(self, sources: List[SourceSystem]) -> List[Mapping]:
         mappings = []
-        
+
         for source in sources:
             for table in source.tables:
                 table_context = self._get_table_context(table.name)
-                
+
                 for field in table.fields:
+                    # --- Tier 0: AAM edge lookup ---
+                    edge_mapping = self._try_aam_edge(
+                        source.id, table.name, field.name
+                    )
+                    if edge_mapping:
+                        self.aam_edge_hits += 1
+                        mappings.append(edge_mapping)
+                        continue
+                    self.aam_edge_misses += 1
+
+                    # --- Tier 1: Heuristic classification ---
                     matched_concept, confidence = self._match_field_to_concept(
                         field.name,
                         field.semantic_hint or "",
@@ -145,7 +161,7 @@ class HeuristicMapper:
                         table.name,
                         table_context
                     )
-                    
+
                     if matched_concept:
                         mapping = Mapping(
                             id=f"{source.id}_{table.name}_{field.name}_{matched_concept['id']}",
@@ -158,8 +174,74 @@ class HeuristicMapper:
                             status="ok"
                         )
                         mappings.append(mapping)
-        
+
         return mappings
+
+    def _try_aam_edge(
+        self, system_id: str, table_name: str, field_name: str
+    ) -> Optional[Mapping]:
+        """Tier 0: check EdgeIndex for an AAM semantic edge."""
+        if self._edge_index.empty:
+            return None
+
+        edge = self._edge_index.lookup(system_id, table_name, field_name)
+        if edge is None or edge.confidence < AAM_EDGE_CONFIDENCE_MIN:
+            return None
+
+        concept_id = self._edge_to_concept(edge)
+        return Mapping(
+            id=f"{system_id}_{table_name}_{field_name}_{concept_id}",
+            source_field=field_name,
+            source_table=table_name,
+            source_system=system_id,
+            ontology_concept=concept_id,
+            confidence=edge.confidence,
+            method="aam_edge",
+            status="ok",
+            provenance=f"AAM {edge.fabric_plane}: {edge.extraction_source}",
+            cross_system_mapping={
+                "maps_to_system": edge.target_system,
+                "maps_to_object": edge.target_object,
+                "maps_to_field": edge.target_field,
+                "edge_type": edge.edge_type,
+                "transformation": edge.transformation,
+            },
+        )
+
+    def _edge_to_concept(self, edge: SemanticEdge) -> str:
+        """
+        Resolve an AAM edge to an ontology concept ID.
+
+        Uses lightweight lookups only (aliases, example_fields, concept IDs).
+        Falls back to 'unclassified_but_mapped' if no concept matches cheaply.
+        """
+        # Check both field names from the edge against ontology
+        candidates = [
+            edge.source_field.lower(),
+            edge.target_field.lower(),
+            edge.source_object.lower(),
+            edge.target_object.lower(),
+        ]
+
+        # Strategy 1: direct concept ID match
+        for name in candidates:
+            if name in self._concept_by_id:
+                return name
+
+        # Strategy 2: check aliases and example_fields
+        for concept in self.concepts:
+            concept_id = concept["id"]
+            aliases = [a.lower() for a in concept.get("aliases", [])]
+            examples = [e.lower() for e in concept.get("example_fields", [])]
+
+            for name in candidates:
+                if name in aliases or name in examples:
+                    return concept_id
+                # Substring: concept ID in field name or field name in concept ID
+                if len(concept_id) >= 3 and concept_id in name:
+                    return concept_id
+
+        return "unclassified_but_mapped"
     
     def _get_table_context(self, table_name: str) -> str:
         table_lower = table_name.lower()
