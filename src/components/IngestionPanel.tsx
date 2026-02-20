@@ -61,6 +61,7 @@ export function IngestionPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedSnap, setExpandedSnap] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   const fetchStats = async () => {
     try {
@@ -85,6 +86,19 @@ export function IngestionPanel() {
       setActivity(json.activity ?? []);
     } catch (err) {
       console.error('[IngestionPanel] Failed to fetch activity:', err);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!window.confirm('Clear all ingest data and pipe definitions? This cannot be undone.')) return;
+    setResetting(true);
+    try {
+      await fetch('/api/dcl/ingest/reset', { method: 'POST' });
+      fetchAll();
+    } catch (e) {
+      console.error('[IngestionPanel] Reset failed:', e);
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -150,6 +164,13 @@ export function IngestionPanel() {
             <span className="text-[10px] text-muted-foreground">
               Auto-refresh {POLL_INTERVAL_MS / 1000}s
             </span>
+            <button
+              onClick={handleReset}
+              disabled={resetting}
+              className="px-3 py-1 text-xs rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 disabled:opacity-50"
+            >
+              {resetting ? 'Resetting...' : 'Reset'}
+            </button>
             <button
               onClick={fetchAll}
               className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"

@@ -315,6 +315,15 @@ def _ensure_farm_content_activity() -> None:
     )
 
 
+@app.post("/api/dcl/ingest/reset")
+def reset_ingest():
+    """Clear all ingest data and pipe definitions."""
+    get_ingest_store().reset()
+    get_pipe_store().reset()
+    logger.info("[Reset] All ingest data and pipe definitions cleared via API")
+    return {"status": "reset", "message": "All ingest data and pipe definitions cleared"}
+
+
 @app.get("/api/dcl/narration/{run_id}")
 def get_narration(run_id: str):
     messages = engine.narration.get_messages(run_id)

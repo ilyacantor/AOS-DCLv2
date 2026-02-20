@@ -13,6 +13,8 @@ Persistence:
 
 import hashlib
 import json
+import os
+import tempfile
 import time
 from collections import OrderedDict
 from dataclasses import dataclass, field as dc_field, asdict
@@ -29,6 +31,10 @@ logger = get_logger(__name__)
 
 _REDIS_PREFIX = "dcl:ingest:"
 _REDIS_TTL = 86400  # 24 hours
+
+_CACHE_DIR = os.path.join("backend", "cache")
+_CACHE_FILE = os.path.join(_CACHE_DIR, "ingest_cache.json")
+os.makedirs(_CACHE_DIR, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +229,104 @@ class IngestStore:
         # Rehydrate from Redis on startup
         if self._redis:
             self._load_from_redis()
+
+        self._load_from_disk()
+
+    # ------------------------------------------------------------------
+    # Disk persistence (JSON file fallback)
+    # ------------------------------------------------------------------
+
+    def _save_to_disk(self) -> None:
+        try:
+            def _sets_to_lists(d):
+                return {k: sorted(v) if isinstance(v, set) else v for k, v in d.items()}
+
+            data = {
+                "receipts": {k: asdict(v) for k, v in self._receipts.items()},
+                "schema_registry": {k: asdict(v) for k, v in self._schema_registry.items()},
+                "drift_events": [asdict(e) for e in self._drift_events],
+                "activity_log": [asdict(e) for e in self._activity_log],
+                "row_buffer": dict(self._row_buffer),
+                "total_rows": self._total_rows,
+                "seen_dispatch_ids": sorted(self._seen_dispatch_ids),
+                "content_sources": {k: sorted(v) for k, v in self._content_sources.items()},
+                "content_pipes": {k: sorted(v) for k, v in self._content_pipes.items()},
+                "content_mapped": {k: sorted(v) for k, v in self._content_mapped.items()},
+                "content_unmapped": {k: sorted(v) for k, v in self._content_unmapped.items()},
+                "content_fabrics": {k: sorted(v) for k, v in self._content_fabrics.items()},
+            }
+            fd, tmp_path = tempfile.mkstemp(dir=_CACHE_DIR, suffix=".tmp")
+            try:
+                with os.fdopen(fd, "w") as f:
+                    json.dump(data, f, default=str)
+                os.replace(tmp_path, _CACHE_FILE)
+            except Exception:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+                raise
+        except Exception as e:
+            logger.warning(f"[IngestStore] Failed to save to disk: {e}")
+
+    def _load_from_disk(self) -> None:
+        if not os.path.exists(_CACHE_FILE):
+            return
+        try:
+            with open(_CACHE_FILE, "r") as f:
+                data = json.load(f)
+
+            if self._receipts:
+                return
+
+            for k, v in data.get("receipts", {}).items():
+                self._receipts[k] = RunReceipt(**v)
+
+            for k, v in data.get("schema_registry", {}).items():
+                self._schema_registry[k] = SchemaRecord(**v)
+
+            self._drift_events = [SchemaDriftEvent(**d) for d in data.get("drift_events", [])]
+            self._activity_log = [ActivityEntry(**d) for d in data.get("activity_log", [])]
+
+            for k, v in data.get("row_buffer", {}).items():
+                self._row_buffer[k] = v
+            self._total_rows = data.get("total_rows", sum(len(v) for v in self._row_buffer.values()))
+
+            self._seen_dispatch_ids = set(data.get("seen_dispatch_ids", []))
+            self._content_sources = {k: set(v) for k, v in data.get("content_sources", {}).items()}
+            self._content_pipes = {k: set(v) for k, v in data.get("content_pipes", {}).items()}
+            self._content_mapped = {k: set(v) for k, v in data.get("content_mapped", {}).items()}
+            self._content_unmapped = {k: set(v) for k, v in data.get("content_unmapped", {}).items()}
+            self._content_fabrics = {k: set(v) for k, v in data.get("content_fabrics", {}).items()}
+
+            logger.info(
+                f"[IngestStore] Restored from disk: "
+                f"{len(self._receipts)} receipts, {self._total_rows:,} rows, "
+                f"{len(self._schema_registry)} schemas, {len(self._activity_log)} activity entries"
+            )
+        except Exception as e:
+            logger.warning(f"[IngestStore] Failed to load from disk: {e}")
+
+    def reset(self) -> None:
+        with self._lock:
+            self._receipts.clear()
+            self._row_buffer.clear()
+            self._schema_registry.clear()
+            self._drift_events.clear()
+            self._activity_log.clear()
+            self._seen_dispatch_ids.clear()
+            self._content_sources.clear()
+            self._content_pipes.clear()
+            self._content_mapped.clear()
+            self._content_unmapped.clear()
+            self._content_fabrics.clear()
+            self._total_rows = 0
+        try:
+            if os.path.exists(_CACHE_FILE):
+                os.remove(_CACHE_FILE)
+        except Exception as e:
+            logger.warning(f"[IngestStore] Failed to delete cache file: {e}")
+        logger.info("[IngestStore] All state reset")
 
     # ------------------------------------------------------------------
     # Redis persistence
@@ -496,6 +600,7 @@ class IngestStore:
         for eid in evicted_ids:
             self._evict_from_redis(eid)
 
+        self._save_to_disk()
         return receipt
 
     # --- Query helpers ---
@@ -712,6 +817,7 @@ class IngestStore:
         for eid in evicted_ids:
             self._evict_from_redis(eid)
 
+        self._save_to_disk()
         logger.info(
             f"[IngestStore] Recorded AAM pull: {pipe_count} pipes, "
             f"{len(unique_source_names)} sources from run {run_id} as '{snapshot_name}'"
@@ -827,6 +933,7 @@ class IngestStore:
             if len(self._activity_log) > _MAX_ACTIVITY:
                 self._activity_log = self._activity_log[-_MAX_ACTIVITY:]
         self._persist_activity_log()
+        self._save_to_disk()
         logger.info(
             f"[Activity] {entry.phase}|{entry.source}|{entry.snapshot_name} "
             f"pipes={entry.pipes} rows={entry.rows}"
@@ -870,6 +977,7 @@ class IngestStore:
                     entry.rows += rows_delta
                     entry.records += rows_delta
                     entry.pipes = len(pipes_set)
+                    self._save_to_disk()
                     return
         # No existing content entry — caller should create one first
 

@@ -17,6 +17,8 @@ Persistence:
 """
 
 import json
+import os
+import tempfile
 import time
 from dataclasses import dataclass, field as dc_field, asdict
 from datetime import datetime, timezone
@@ -29,6 +31,10 @@ logger = get_logger(__name__)
 
 _REDIS_PREFIX = "dcl:pipes:"
 _REDIS_TTL = 86400  # 24 hours
+
+_CACHE_DIR = os.path.join("backend", "cache")
+_CACHE_FILE = os.path.join(_CACHE_DIR, "pipe_cache.json")
+os.makedirs(_CACHE_DIR, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +125,66 @@ class PipeDefinitionStore:
 
         if self._redis:
             self._load_from_redis()
+
+        self._load_from_disk()
+
+    # ------------------------------------------------------------------
+    # Disk persistence (JSON file fallback)
+    # ------------------------------------------------------------------
+
+    def _save_to_disk(self) -> None:
+        try:
+            data = {
+                "definitions": {k: asdict(v) for k, v in self._definitions.items()},
+                "export_receipts": [asdict(r) for r in self._export_receipts],
+            }
+            fd, tmp_path = tempfile.mkstemp(dir=_CACHE_DIR, suffix=".tmp")
+            try:
+                with os.fdopen(fd, "w") as f:
+                    json.dump(data, f, default=str)
+                os.replace(tmp_path, _CACHE_FILE)
+            except Exception:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+                raise
+        except Exception as e:
+            logger.warning(f"[PipeStore] Failed to save to disk: {e}")
+
+    def _load_from_disk(self) -> None:
+        if not os.path.exists(_CACHE_FILE):
+            return
+        try:
+            with open(_CACHE_FILE, "r") as f:
+                data = json.load(f)
+
+            if self._definitions:
+                return
+
+            for k, v in data.get("definitions", {}).items():
+                self._definitions[k] = PipeDefinition(**v)
+
+            self._export_receipts = [ExportReceipt(**d) for d in data.get("export_receipts", [])]
+
+            logger.info(
+                f"[PipeStore] Restored from disk: "
+                f"{len(self._definitions)} definitions, "
+                f"{len(self._export_receipts)} export receipts"
+            )
+        except Exception as e:
+            logger.warning(f"[PipeStore] Failed to load from disk: {e}")
+
+    def reset(self) -> None:
+        with self._lock:
+            self._definitions.clear()
+            self._export_receipts.clear()
+        try:
+            if os.path.exists(_CACHE_FILE):
+                os.remove(_CACHE_FILE)
+        except Exception as e:
+            logger.warning(f"[PipeStore] Failed to delete cache file: {e}")
+        logger.info("[PipeStore] All state reset")
 
     # ------------------------------------------------------------------
     # Redis persistence
@@ -219,6 +285,7 @@ class PipeDefinitionStore:
             self._persist_definition(defn.pipe_id, defn)
         self._persist_export_receipts()
 
+        self._save_to_disk()
         logger.info(
             f"[PipeStore] Registered {len(definitions)} pipe definitions "
             f"(aod_run_id={aod_run_id})"
