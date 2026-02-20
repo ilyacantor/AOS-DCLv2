@@ -60,6 +60,7 @@ DB_CONNECT_TIMEOUT = int(os.getenv("DCL_DB_CONNECT_TIMEOUT", "5"))
 # --- Source Normalizer ---
 CB_COOLDOWN = float(os.getenv("DCL_CB_COOLDOWN", "120.0"))
 FARM_REGISTRY_TIMEOUT = float(os.getenv("DCL_FARM_REGISTRY_TIMEOUT", "5.0"))
+FARM_BROWSER_TIMEOUT = float(os.getenv("DCL_FARM_BROWSER_TIMEOUT", "5.0"))
 
 # --- Embedding Model ---
 OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")

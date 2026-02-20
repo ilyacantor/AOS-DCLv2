@@ -147,10 +147,23 @@ class SchemaLoader:
         
         normalizer = get_normalizer()
         registry_count = normalizer.load_registry(narration, run_id)
-        
+
         if narration and run_id:
             narration.add_message(run_id, "SchemaLoader", f"Registry loaded: {registry_count} canonical sources")
-        
+
+        # If the Farm API circuit breaker is open, don't attempt browser calls —
+        # they will all timeout too, causing a ~50s hang.
+        from backend.engine.source_normalizer import SourceNormalizer
+        import time as _time
+        if SourceNormalizer._cb_last_failure > 0 and (_time.time() - SourceNormalizer._cb_last_failure) < normalizer._cb_cooldown:
+            if narration and run_id:
+                narration.add_message(
+                    run_id, "SchemaLoader",
+                    "Farm API unreachable (circuit breaker open) — skipping browser fetch. "
+                    "Returning empty sources. Try again in ~2 min or switch to Demo mode."
+                )
+            return []
+
         browser_endpoints = [
             {"endpoint": "/api/browser/customers", "table_name": "customers", "entity_type": "Customer"},
             {"endpoint": "/api/browser/invoices", "table_name": "invoices", "entity_type": "Invoice"},
@@ -590,7 +603,8 @@ class SchemaLoader:
         params = {"limit": limit}
         
         try:
-            with httpx.Client(timeout=10.0) as client:
+            from backend.core.constants import FARM_BROWSER_TIMEOUT
+            with httpx.Client(timeout=FARM_BROWSER_TIMEOUT) as client:
                 response = client.get(f"{base_url}{endpoint}", params=params)
                 response.raise_for_status()
                 data = response.json()
