@@ -1,0 +1,57 @@
+Let me do a thorough audit of all hardcoded source systems, providers, and similar data across the codebase.
+
+Now let me check the remaining hardcoded areas — the source registry, demo schemas, persona defaults, and bindings:
+
+Now let me check the schema loader for hardcoded source paths and the ontology:
+
+Now I have the complete picture. Here's the full audit:
+
+Hardcoding Audit — All Instances Found
+I found 7 areas with hardcoded source systems, providers, or vendor-specific data. Here's each one with what it does and the risk:
+
+1. backend/core/fabric_plane.py — Fabric Providers Enum (lines 38-48)
+What's hardcoded: 9 specific providers (Workato, MuleSoft, Kong, Apigee, Kafka, EventBridge, Snowflake, BigQuery, Redshift)
+Plus: PLANE_TO_PROVIDERS map (line 296-300) that decides which providers belong to each fabric plane — this is exactly what created the "5 instead of 4" problem.
+And: get_pointer_class() (line 304-316) that maps each provider to a pointer class.
+Risk: Any new provider requires a code change. Can't adapt to what AAM actually sends.
+
+2. backend/engine/source_normalizer.py — Alias Map (lines 64-111)
+What's hardcoded: ~47 aliases mapping shorthand names to canonical IDs (e.g., "sfdc" → "salesforce_crm", "sap" → "sap_erp")
+Mitigating factor: The normalizer tries to load from Farm's registry API first (/api/sources/registry). These aliases are the fallback when that call fails. So this is more of a "safety net" than the primary path.
+Risk: Low for Farm/AAM modes (registry is the primary source). But the aliases assume specific canonical IDs that may not match what the registry returns.
+
+3. backend/engine/source_normalizer.py — Pattern Rules (lines 113-135)
+What's hardcoded: ~20 regex patterns for prefix matching (e.g., ^sf[-_]? → "salesforce_crm")
+Same mitigating factor: Only used as fallback after registry lookup fails.
+Risk: Same as #2 — low in practice, but brittle if canonical IDs change.
+
+4. backend/engine/schema_loader.py — Demo Source Directories (lines 41-51)
+What's hardcoded: 9 directory-to-source mappings (salesforce, dynamics, hubspot, sap, netsuite, snowflake, legacy_sql, mongodb, supabase)
+Risk: This is Demo mode only — it maps the CSV folder names to source system types. Arguably appropriate for demo data since demo is by definition static/curated. But if you add a new demo source folder, you'd need a code change here.
+
+5. backend/engine/ontology.py — Core Ontology (lines 5-107)
+What's hardcoded: 10 ontology concepts (Account, Opportunity, Revenue, Cost, Invoice, Currency, AWS Resource, Health Score, Usage Metrics, Date/Timestamp) with their example fields.
+Risk: This is the heuristic mapping vocabulary. New business concepts require code changes. The Temporal Versioning feature from the new build plan would address this directly.
+
+6. backend/api/semantic_export.py — Published Metrics, Entities, Bindings, Persona Concepts
+What's hardcoded:
+
+PUBLISHED_METRICS: 37 metric definitions (lines 98-700+)
+PUBLISHED_ENTITIES: 29 entity definitions (lines 528-700+)
+DEMO_BINDINGS: 13 source system bindings (lines 763-855)
+DEFAULT_PERSONA_CONCEPTS: 5 persona-to-metric mappings (lines 754-760)
+Risk: This is the semantic catalog — the entire NLQ contract is defined in Python code. Adding a new metric, entity, or binding requires a code deploy. This is the biggest hardcoding concern because it's the most frequently changing data.
+
+7. backend/engine/persona_view.py — Default Persona Concepts (lines 9-15)
+What's hardcoded: 5 persona-to-concept mappings (CFO, CRO, COO, CTO, CHRO) used as fallback when the database isn't available.
+Mitigating factor: It tries to load from the database first (persona_concept_relevance table). These defaults are only used when the DB connection fails.
+Risk: Low — genuine fallback. But note these concept names (e.g., "Revenue", "Pipeline") don't match the metric IDs used in semantic_export (e.g., "arr", "pipeline") — they're for the Sankey graph layer, not the query layer.
+
+Summary by Severity
+Severity	File	What	Should Be
+High	semantic_export.py	37 metrics, 29 entities, 13 bindings, persona mappings	Config file (YAML/JSON) or database table
+High	fabric_plane.py	Provider enum + plane-to-provider mapping	Derived from AAM API response
+Medium	ontology.py	10 ontology concepts	Config file or database (ties into Temporal Versioning plan)
+Low	source_normalizer.py	Aliases + patterns	Already has Farm registry as primary; these are valid fallbacks
+Low	schema_loader.py	Demo directory map	Acceptable for static demo data
+Low	persona_view.py

@@ -1,0 +1,782 @@
+metrics:
+  - id: arr
+    name: Annual Recurring Revenue
+    description: Total annual value of recurring subscription revenue
+    aliases:
+      - ARR
+      - annual recurring revenue
+      - recurring revenue
+      - annual revenue
+    pack: cfo
+    allowed_dims:
+      - customer
+      - service_line
+      - region
+      - segment
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: point_in_time_sum
+    default_grain: month
+
+  - id: mrr
+    name: Monthly Recurring Revenue
+    description: Total monthly value of recurring subscription revenue
+    aliases:
+      - MRR
+      - monthly recurring revenue
+      - monthly revenue
+    pack: cfo
+    allowed_dims:
+      - customer
+      - service_line
+      - region
+      - segment
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: month
+
+  - id: revenue
+    name: Total Revenue
+    description: Total recognized revenue across all sources
+    aliases:
+      - total revenue
+      - sales
+      - income
+      - top line
+    pack: cfo
+    allowed_dims:
+      - customer
+      - service_line
+      - region
+      - product
+      - segment
+    allowed_grains:
+      - day
+      - week
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: month
+    rankable_dimensions:
+      - region
+      - segment
+      - product
+
+  - id: services_revenue
+    name: Services Revenue
+    description: Revenue from professional services
+    aliases:
+      - professional services
+      - PS revenue
+      - consulting revenue
+    pack: cfo
+    allowed_dims:
+      - customer
+      - service_line
+      - region
+      - project
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: month
+
+  - id: ar
+    name: Accounts Receivable
+    description: Outstanding customer balances owed
+    aliases:
+      - AR
+      - accounts receivable
+      - receivables
+      - outstanding invoices
+      - A/R
+    pack: cfo
+    allowed_dims:
+      - customer
+      - invoice
+      - aging_bucket
+    allowed_grains:
+      - day
+      - week
+      - month
+    measure_op: point_in_time_sum
+    default_grain: month
+
+  - id: dso
+    name: Days Sales Outstanding
+    description: Average days to collect payment from customers
+    aliases:
+      - DSO
+      - days sales outstanding
+      - collection days
+      - AR days
+    pack: cfo
+    allowed_dims:
+      - customer
+      - segment
+      - region
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: avg_days_between
+    default_grain: month
+    best_direction: low
+    rankable_dimensions:
+      - segment
+      - region
+
+  - id: burn_rate
+    name: Burn Rate
+    description: Monthly cash consumption rate
+    aliases:
+      - burn
+      - cash burn
+      - monthly burn
+      - spending rate
+    pack: cfo
+    allowed_dims:
+      - cost_center
+      - category
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: month
+    best_direction: low
+    rankable_dimensions:
+      - cost_center
+      - category
+
+  - id: gross_margin
+    name: Gross Margin
+    description: Revenue minus cost of goods sold as percentage
+    aliases:
+      - margin
+      - GM
+      - gross profit margin
+    pack: cfo
+    allowed_dims:
+      - product
+      - service_line
+      - segment
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+
+  - id: ar_aging
+    name: Accounts Receivable Aging
+    description: Accounts receivable broken down by aging buckets
+    aliases:
+      - AR aging
+      - receivables aging
+      - aged receivables
+    pack: cfo
+    allowed_dims:
+      - aging_bucket
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: month
+
+  - id: pipeline
+    name: Sales Pipeline
+    description: Total value of open opportunities
+    aliases:
+      - sales pipeline
+      - open pipeline
+      - pipeline value
+      - opportunities
+    pack: cro
+    allowed_dims:
+      - rep
+      - stage
+      - region
+      - segment
+    allowed_grains:
+      - week
+      - month
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: month
+    rankable_dimensions:
+      - rep
+      - stage
+      - region
+      - segment
+
+  - id: win_rate
+    name: Win Rate
+    description: Percentage of opportunities won
+    aliases:
+      - close rate
+      - conversion rate
+      - deal win rate
+    pack: cro
+    allowed_dims:
+      - rep
+      - segment
+      - region
+      - product
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: ratio
+    default_grain: quarter
+    rankable_dimensions:
+      - rep
+      - segment
+      - region
+
+  - id: quota_attainment
+    name: Quota Attainment
+    description: Percentage of sales quota achieved by rep
+    aliases:
+      - attainment
+      - quota achievement
+      - target attainment
+      - sales attainment
+    pack: cro
+    allowed_dims:
+      - rep
+      - segment
+      - region
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: ratio
+    default_grain: quarter
+    rankable_dimensions:
+      - rep
+      - region
+
+  - id: churn_rate
+    name: Churn Rate
+    description: Percentage of customers or revenue lost
+    aliases:
+      - churn
+      - customer churn
+      - revenue churn
+    pack: cro
+    allowed_dims:
+      - segment
+      - region
+      - cohort
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: ratio
+    default_grain: month
+    best_direction: low
+    rankable_dimensions:
+      - segment
+      - region
+      - cohort
+
+  - id: nrr
+    name: Net Revenue Retention
+    description: Revenue retained plus expansion from existing customers
+    aliases:
+      - NRR
+      - net retention
+      - dollar retention
+      - NDR
+    pack: cro
+    allowed_dims:
+      - segment
+      - region
+      - cohort
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: month
+
+  - id: pipeline_value
+    name: Total Pipeline Value
+    description: Total value of all open opportunities in the sales pipeline
+    aliases:
+      - pipeline
+      - total pipeline
+      - sales pipeline
+    pack: cro
+    allowed_dims:
+      - rep
+      - stage
+      - region
+      - segment
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: month
+
+  - id: churn_risk
+    name: Churn Risk Score
+    description: Score indicating likelihood of customer churn
+    aliases:
+      - churn risk score
+      - risk score
+    pack: cro
+    allowed_dims:
+      - segment
+      - customer
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: avg
+    default_grain: month
+    best_direction: low
+    rankable_dimensions:
+      - segment
+      - customer
+
+  - id: nrr_by_cohort
+    name: NRR by Cohort
+    description: Net Revenue Retention analyzed by customer cohort
+    aliases:
+      - cohort NRR
+      - retention by cohort
+    pack: cro
+    allowed_dims:
+      - cohort
+      - product
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: avg
+    default_grain: quarter
+
+  - id: throughput
+    name: Work Throughput
+    description: Work items completed per time period
+    aliases:
+      - work throughput
+      - items completed
+      - tickets resolved
+    pack: coo
+    allowed_dims:
+      - team
+      - work_type
+      - priority
+    allowed_grains:
+      - week
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: week
+
+  - id: cycle_time
+    name: Cycle Time
+    description: Average time to complete work items
+    aliases:
+      - lead time
+      - delivery time
+      - time to complete
+    pack: coo
+    allowed_dims:
+      - team
+      - project_type
+      - priority
+    allowed_grains:
+      - week
+      - month
+      - quarter
+    measure_op: avg
+    default_grain: week
+    best_direction: low
+    rankable_dimensions:
+      - team
+      - project_type
+
+  - id: sla_compliance
+    name: SLA Compliance Rate
+    description: Percentage of SLAs met
+    aliases:
+      - SLA attainment
+      - SLA rate
+      - service level compliance
+    pack: coo
+    allowed_dims:
+      - team
+      - tier
+      - work_type
+    allowed_grains:
+      - week
+      - month
+      - quarter
+    measure_op: avg
+    default_grain: month
+
+  - id: deploy_frequency
+    name: Deployment Frequency
+    description: Number of deployments per time period
+    aliases:
+      - deployment rate
+      - deploys per week
+      - release frequency
+    pack: cto
+    allowed_dims:
+      - service
+      - team
+      - environment
+    allowed_grains:
+      - week
+      - month
+    measure_op: sum
+    default_grain: week
+
+  - id: mttr
+    name: Mean Time to Recovery
+    description: Average time to recover from incidents
+    aliases:
+      - MTTR
+      - recovery time
+      - incident recovery
+    pack: cto
+    allowed_dims:
+      - team
+      - service
+      - severity
+    allowed_grains:
+      - week
+      - month
+      - quarter
+    measure_op: avg
+    default_grain: month
+    best_direction: low
+    rankable_dimensions:
+      - team
+      - service
+      - severity
+
+  - id: uptime
+    name: Service Uptime
+    description: Percentage of time services are available
+    aliases:
+      - availability
+      - uptime percentage
+      - service availability
+    pack: cto
+    allowed_dims:
+      - service
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: avg
+    default_grain: month
+
+  - id: slo_attainment
+    name: SLO Attainment
+    description: Percentage of Service Level Objectives met
+    aliases:
+      - SLO compliance
+      - service level objective
+      - SLO rate
+    pack: cto
+    allowed_dims:
+      - service
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: avg
+    default_grain: month
+    rankable_dimensions:
+      - service
+
+  - id: cloud_cost
+    name: Cloud Spend
+    description: Total cloud infrastructure costs
+    aliases:
+      - cloud spend
+      - infrastructure cost
+      - AWS cost
+      - cloud expenses
+    pack: cto
+    allowed_dims:
+      - resource_type
+      - team
+      - environment
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: month
+    best_direction: low
+    rankable_dimensions:
+      - resource_type
+      - team
+      - environment
+
+  - id: headcount
+    name: Headcount
+    description: Total employee count
+    aliases:
+      - employees
+      - employee count
+      - HC
+      - FTE
+    pack: chro
+    allowed_dims:
+      - department
+      - team
+      - location
+      - level
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: count
+    default_grain: quarter
+    rankable_dimensions:
+      - department
+      - team
+
+  - id: attrition_rate
+    name: Attrition Rate
+    description: Percentage of employees leaving
+    aliases:
+      - attrition
+      - turnover
+      - turnover rate
+    pack: chro
+    allowed_dims:
+      - department
+      - team
+      - tenure_band
+      - location
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+    best_direction: low
+    rankable_dimensions:
+      - department
+      - team
+
+  - id: time_to_fill
+    name: Time to Fill
+    description: Average days to fill open roles
+    aliases:
+      - TTF
+      - hiring velocity
+      - requisition time
+    pack: chro
+    allowed_dims:
+      - department
+      - role
+      - location
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: avg_days_between
+    default_grain: quarter
+    best_direction: low
+    rankable_dimensions:
+      - department
+
+  - id: engagement_score
+    name: Engagement Score
+    description: Employee engagement percentage
+    aliases:
+      - engagement
+      - employee engagement
+    pack: chro
+    allowed_dims:
+      - department
+      - team
+      - tenure_band
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+
+  - id: compensation_ratio
+    name: Compensation Ratio
+    description: Ratio to market compensation
+    aliases:
+      - comp ratio
+      - pay ratio
+      - market ratio
+    pack: chro
+    allowed_dims:
+      - department
+      - level
+      - location
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+
+  - id: training_hours
+    name: Training Hours
+    description: Training hours per employee
+    aliases:
+      - L&D hours
+      - learning hours
+      - training
+    pack: chro
+    allowed_dims:
+      - department
+      - team
+      - training_type
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: avg
+    default_grain: quarter
+
+  - id: promotion_rate
+    name: Promotion Rate
+    description: Percentage of promotions
+    aliases:
+      - promotions
+      - advancement rate
+    pack: chro
+    allowed_dims:
+      - department
+      - level
+      - tenure_band
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+
+  - id: diversity_index
+    name: Diversity Index
+    description: Diversity percentage
+    aliases:
+      - diversity
+      - D&I
+      - DEI
+    pack: chro
+    allowed_dims:
+      - department
+      - level
+      - location
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+
+  - id: offer_acceptance_rate
+    name: Offer Acceptance Rate
+    description: Percentage of job offers accepted by candidates
+    aliases:
+      - offer rate
+      - acceptance rate
+      - recruiting funnel completion
+      - offer conversion
+    pack: chro
+    allowed_dims:
+      - department
+      - role
+      - location
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+
+  - id: internal_mobility_rate
+    name: Internal Mobility Rate
+    description: Percentage of roles filled by internal candidates
+    aliases:
+      - internal mobility
+      - career development
+      - internal transfers
+      - retention mobility
+    pack: chro
+    allowed_dims:
+      - department
+      - level
+      - tenure_band
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+
+  - id: span_of_control
+    name: Span of Control
+    description: Average number of direct reports per manager
+    aliases:
+      - org structure health
+      - manager ratio
+      - direct reports
+      - management span
+    pack: chro
+    allowed_dims:
+      - department
+      - level
+      - location
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: avg
+    default_grain: quarter
+
+  - id: enps
+    name: Employee Net Promoter Score
+    description: Employee willingness to recommend the company as a workplace
+    aliases:
+      - eNPS
+      - nps
+      - employee NPS
+      - employee net promoter
+      - workplace recommendation score
+    pack: chro
+    allowed_dims:
+      - department
+      - team
+      - tenure_band
+      - location
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: avg
+    default_grain: quarter
+
+  - id: customers
+    name: Customers
+    description: Total customer count (definition varies by persona)
+    aliases:
+      - customer count
+      - number of customers
+      - active customers
+      - client count
+    pack: cro
+    allowed_dims:
+      - segment
+      - region
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: count
+    default_grain: quarter

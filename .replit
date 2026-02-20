@@ -4,7 +4,7 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["glibcLocales", "libxcrypt", "libyaml", "unzip"]
+packages = ["glibcLocales", "libxcrypt", "libyaml", "redis", "unzip"]
 
 [workflows]
 runButton = "Project"
@@ -16,34 +16,19 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Frontend Dev Server"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Backend API"
-
-[[workflows.workflow]]
-name = "Frontend Dev Server"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
-waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[workflows.workflow]]
 name = "Backend API"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python run_backend.py"
-
-[workflows.workflow.metadata]
-outputType = "console"
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000
@@ -56,10 +41,12 @@ externalPort = 8000
 [userenv]
 
 [userenv.shared]
-FARM_API_URL = "https://autonomos.farm"
+FARM_API_URL = "https://63971109-a901-48bc-a71f-89583b2e11d4-00-1do0vncksilxt.janeway.replit.dev"
+RUN_MODE = "dev"
+ENABLE_CHAOS = "true"
+DCL_DATASET_ID = "nlq_test"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["python", "-m", "uvicorn", "backend.api.main:app", "--host", "0.0.0.0", "--port", "5000"]
-build = ["bash", "-c", "pip install -r requirements.txt && npm ci && npm run build"]
-
+run = ["python", "run_backend.py"]
+build = ["npm", "run", "build"]

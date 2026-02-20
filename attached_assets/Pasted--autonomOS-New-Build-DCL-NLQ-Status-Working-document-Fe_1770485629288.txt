@@ -1,0 +1,34 @@
+# autonomOS — New Build: DCL + NLQ
+
+**Status:** Working document — February 7, 2026
+
+---
+
+## DCL — New Capabilities
+
+| Feature | Plain English | Tech Description | Module | Expected Outcome |
+|---|---|---|---|---|
+| Persona-Contextual Definitions | "How many customers?" returns 2,400 for the CFO and 8,100 for the CRO. Same question, different correct answer depending on who asks | Extend `persona_concept_relevance` to include persona-specific metric definitions. Query endpoint accepts persona parameter and returns contextually correct value | DCL | Ends the "which number is right?" argument. Both are right — depends on who's asking |
+| Entity Resolution | Figures out that "Acme Corp" in Salesforce and "ACME CORPORATION" in SAP are the same company | Pass 1: deterministic matching on shared keys (email, domain, tax ID). Pass 2: LLM-assisted fuzzy matching with confidence scores. Human confirmation required. Every merge reversible | DCL | Unified view of any entity across all systems. Replaces $5-15M MDM projects with a feature |
+| Golden Records | Assembles the best version of an entity by pulling the most trustworthy field from each system | Uses AOD's SOR tagging to select authoritative source per field. Composite record with provenance showing which system contributed what | DCL | One clean record per entity. No more guessing which system has the right data |
+| Conflict Detection | Catches when two systems say different things about the same entity and explains why | Compares field values across resolved entities. Classifies root cause: timing, currency, recognition method, scope, stale data. Severity scoring | DCL | "CRM says $4.2M, ERP says $3.8M. Timing difference. Trust the ERP." |
+| Truth Scoring | When systems conflict, recommends which number to trust and why | Ranks competing values using SOR tagging, data freshness, and quality scores. Produces trust recommendation with reasoning | DCL | No more manual reconciliation. The system tells you which number is right and shows its work |
+| Temporal Versioning | Tracks when definitions change so you know if a year-over-year comparison is actually comparing the same thing | Append-only changelog on `ontology_concepts`. Records who, what, when, why. Comparable-period validation flags comparisons that cross definition changes | DCL | Warns you before you put a bad comparison in the board deck |
+| MCP Server | Any external LLM or AI agent can query everything DCL knows through a standard interface | MCP protocol server exposing tools: concept lookup, entity resolution, conflict check, persona view, provenance trace. Thin wrapper on existing endpoints | DCL | Any AI agent can understand the enterprise by calling DCL. No custom integration needed |
+| Enriched Query Response | Queries return not just the answer but where it came from, how it was resolved, and whether systems agree | Extend `/api/dcl/query` response payload with `entity` (resolution details, candidates, confidence), `provenance` (sources, SOR), and `conflicts` (disagreements, root cause, trust recommendation) | DCL | NLQ surfaces richer answers without any changes to query flow |
+| Entity Browse | Look up any entity and see how it appears across all connected systems | `GET /api/dcl/entities/{term}` — returns all candidate matches with source system, field values, match confidence | DCL | Admin tool: "Show me every version of Acme across our systems" |
+| Conflict Dashboard | Admin view of all active conflicts ranked by severity | `GET /api/dcl/conflicts` — conflict list with entity, metric, systems, root cause, severity, resolution status | DCL | CFO opens one screen, sees every place systems disagree. Prioritized. Actionable |
+| Manual Conflict Resolution | Human reviews and resolves flagged conflicts | `POST /api/dcl/conflicts/{id}/resolve` with decision and rationale. Audit trail records who decided what and when | DCL | Human stays in the loop. System proposes, human confirms. Full audit trail |
+| Provenance Trace | Trace any metric back to its origin — where did this number actually come from? | `GET /api/dcl/provenance/{metric}` — complete lineage: source system, table, field, transformation, freshness, quality score | DCL | Any number in any report traced to its origin in two clicks |
+
+---
+
+## NLQ — Changes to Support New DCL
+
+| Feature | Plain English | Tech Description | Module | Expected Outcome |
+|---|---|---|---|---|
+| Entity Extraction | When someone asks about a specific company or person, the system recognizes it and passes it to DCL | Update Claude parsing prompt to extract entity names alongside metrics and dimensions. New `entity` field in ParsedQuery | NLQ | "What's Acme's revenue?" correctly identifies "Acme" as an entity to resolve |
+| Entity Filter Passthrough | Passes recognized entities to DCL's existing query endpoint as a filter parameter | Executor adds `entity` parameter to `/api/dcl/query` call. No new endpoint needed | NLQ | DCL handles cross-system resolution. NLQ just asks the question |
+| Provenance in Responses | Answers include where the data came from and how confident the resolution is | Response formatter reads new `entity` and `provenance` fields from DCL response. Surfaces through personality layer | NLQ | "Acme Corp revenue from Salesforce: $45M. Matched across 3 systems, no conflicts" |
+| Conflict Surfacing | When DCL detects a conflict, NLQ explains it in plain English | Personality layer gets conflict formatting templates. Severity-aware: critical conflicts get prominent treatment | NLQ | "Heads up: CRM and ERP disagree on Acme's revenue by $400K. Timing difference. ERP is the system of record" |
+| Temporal Warnings | Warns when a comparison crosses a definition change | Checks DCL temporal metadata on comparison queries. If definition changed between periods, inserts warning | NLQ | "Note: 'Revenue' was redefined in March 2025. Your Q1-to-Q1 comparison is comparing different metrics" |

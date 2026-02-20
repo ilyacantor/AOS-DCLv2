@@ -1,0 +1,5 @@
+OpportunityId,AccountId,OpportunityName,Amount,CloseDate,Stage
+DYN-O001,DYN-A001,Q1 Enterprise Deal,450000,2024-03-31,Negotiation
+DYN-O002,DYN-A002,Annual Subscription,125000,2024-04-15,Proposal
+DYN-O003,DYN-A003,Retail Platform,890000,2024-05-01,Discovery
+DYN-O004,DYN-A004,Healthcare Integration,320000,2024-04-30,Closed Won

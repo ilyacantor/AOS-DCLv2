@@ -1,0 +1,6 @@
+id,account_id,health_score,risk_level,details,last_updated
+h001,ACC-001,92,low,Strong engagement and payment history,2024-10-10
+h002,ACC-002,45,high,Declining usage and overdue invoices,2024-10-11
+h003,ACC-003,78,medium,Good usage but pricing concerns,2024-10-12
+h004,ACC-004,88,low,Excellent adoption across teams,2024-10-13
+h005,ACC-005,35,critical,Churn risk - no logins in 30 days,2024-10-09

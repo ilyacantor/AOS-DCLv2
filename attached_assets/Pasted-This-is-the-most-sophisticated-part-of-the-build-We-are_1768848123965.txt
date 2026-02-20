@@ -1,0 +1,103 @@
+This is the most sophisticated part of the build. We are now engineering the **"Self-Healing"** capability.
+
+We are implementing the **"Sidecar Logic"** that detects when the MuleSoft pipe drops data (Drift) and automatically calls the Source (Farm) to fix it.
+
+Here is the **Master Directive for Phase 3**.
+
+---
+
+# 🤖 Master Directive: Phase 3 - The Active Repair Agent
+
+**Global Context**
+
+> **The Scenario:** The Farm's "Toxic Stream" (MuleSoft) is sending invoices, but due to "Drift," some are missing critical fields (e.g., `vendor_id`).
+> **The Fix:** The **Ingest Sidecar** will detect this gap. Instead of dropping the record, it will call a new **"Source of Truth" API** on the Farm (simulating Salesforce) to fetch the missing data and patch the record before sending it to Redis.
+
+---
+
+## 🚜 SECTION A: FARM AGENT INSTRUCTIONS
+
+**Target Repo:** `aos-farm`
+**Objective:** Create the "Source of Truth" API (The Repair Shop).
+
+**1. Create the Repair Endpoint**
+
+* **File:** `src/api/routes.py`
+* **Endpoint:** `GET /api/source/salesforce/invoice/{invoice_id}`
+* **Behavior:**
+* This represents the *pristine* Salesforce database.
+* It must always return the **Full, Perfect Record** for a given ID, regardless of what the stream is outputting.
+* **Data:** Ensure it includes fields that might be missing in the toxic stream (e.g., `vendor_id`, `billing_address`).
+
+
+
+**2. Update the Stream Generator**
+
+* **File:** `src/api/stream.py`
+* **Logic:** Ensure the `chaos=true` mode occasionally produces **"Drifted Records"** (valid JSON, but missing keys like `vendor_id`)—not just malformed JSON.
+* **Why:** The Sidecar needs "Drifted" records to practice repairing. It handles Malformed by dropping, but handles Drift by fixing.
+
+---
+
+## 🧠 SECTION B: DCL AGENT INSTRUCTIONS
+
+**Target Repo:** `aos-dcl`
+**Objective:** Upgrade the Sidecar to "Detect & Repair."
+
+**1. Define the "Expected Schema"**
+
+* **File:** `src/ingest/ingest_agent.py` (or a config file).
+* **Action:** Hardcode (for now) the expected fields for an Invoice: `["invoice_id", "total_amount", "vendor_id", "status"]`.
+
+**2. Implement Drift Detection**
+
+* **Class:** `IngestSidecar`
+* **Method:** `detect_drift(record)`
+* **Logic:**
+* Check if all expected keys exist in `record`.
+* If `vendor_id` is missing, return `True` (Drift Detected).
+
+
+
+**3. Implement the "Gap Fill" Fetch**
+
+* **Method:** `repair_record(record)`
+* **Logic:**
+* Extract `invoice_id`.
+* Call the Farm's new Repair Endpoint: `GET /api/source/salesforce/invoice/{id}`.
+* **Merge:** Take the `vendor_id` from the repair response and inject it into the broken record.
+* **Tag:** Update the `AOS_Envelope` metadata: `"is_repaired": true`.
+
+
+
+**4. Update the Main Loop**
+
+* **Logic Change:**
+```python
+if self.detect_drift(record):
+    print(f"[{self.source_id}] Drift Detected! Initiating Repair...")
+    record = self.repair_record(record) # The Sidecar Fix
+self.wrap_and_push(record)
+
+```
+
+
+
+---
+
+## 🧪 EXECUTION CHECKLIST
+
+1. **Restart Farm:** Ensure the new Repair Endpoint is live.
+2. **Restart Sidecar:** Load the new Repair Logic.
+3. **Trigger Chaos:** Watch the logs.
+* **Expect:** Sidecar log: *"Drift Detected for INV-102. Fetching repair..."*
+* **Expect:** Sidecar log: *"Record Repaired."*
+
+
+4. **Verify Redis:** Inspect the stream.
+* **Expect:** The record in Redis should have the missing field (`vendor_id`) present.
+* **Expect:** The metadata should say `"is_repaired": true`.
+
+
+
+**Why this matters:** This proves **AAM (Active Ingest)**. You aren't just *moving* data; you are *improving* it in transit.

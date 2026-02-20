@@ -5,10 +5,8 @@ import { Play, Activity, Database, Cpu, Clock, LayoutGrid, GitBranch, Menu, X } 
 interface ControlsBarProps {
   runMode: 'Dev' | 'Prod';
   setRunMode: (m: 'Dev' | 'Prod') => void;
-  dataMode: 'Demo' | 'Farm';
-  setDataMode: (m: 'Demo' | 'Farm') => void;
-  sourceLimit: number;
-  setSourceLimit: (n: number) => void;
+  dataMode: 'Demo' | 'Farm' | 'AAM';
+  setDataMode: (m: 'Demo' | 'Farm' | 'AAM') => void;
   selectedPersonas: PersonaId[];
   togglePersona: (p: PersonaId) => void;
   onRun: () => void;
@@ -19,15 +17,11 @@ interface ControlsBarProps {
   setMainView: (v: 'graph' | 'dashboard') => void;
 }
 
-const SOURCE_LIMITS = [5, 10, 20, 50, 100];
-
 export function ControlsBar({
   runMode,
   setRunMode,
   dataMode,
   setDataMode,
-  sourceLimit,
-  setSourceLimit,
   selectedPersonas,
   togglePersona,
   onRun,
@@ -64,18 +58,18 @@ export function ControlsBar({
       <div className="flex items-center gap-2 sm:gap-3 text-xs text-muted-foreground flex-wrap">
         <div className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded">
           <Cpu className="w-3 h-3" />
-          <span>LLM: <span className="text-foreground font-mono">{metrics?.llm_calls || 0}</span></span>
+          <span>LLM: <span className="text-foreground font-mono">{metrics?.llmCalls || 0}</span></span>
         </div>
         <div className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded">
           <Database className="w-3 h-3" />
-          <span>RAG: <span className="text-foreground font-mono">{metrics?.rag_reads || 0}</span></span>
+          <span>RAG: <span className="text-foreground font-mono">{metrics?.ragReads || 0}</span></span>
         </div>
         <div className="flex items-center gap-1.5 bg-secondary/30 px-2 py-1 rounded">
           <Clock className="w-3 h-3" />
           <span className="text-foreground font-mono">
-            {isRunning 
-              ? `${(elapsedTime / 1000).toFixed(2)}s` 
-              : `${((metrics?.processing_ms || 0) / 1000).toFixed(2)}s`}
+            {isRunning
+              ? `${(elapsedTime / 1000).toFixed(1)}s`
+              : `${((metrics?.processingMs || 0) / 1000).toFixed(1)}s`}
           </span>
         </div>
       </div>
@@ -89,24 +83,11 @@ export function ControlsBar({
         <ToggleButton active={runMode === 'Prod'} onClick={() => setRunMode('Prod')}>Prod</ToggleButton>
       </ToggleGroup>
 
-      <div className="flex items-center gap-2">
-        <ToggleGroup label="Data">
-          <ToggleButton active={dataMode === 'Demo'} onClick={() => setDataMode('Demo')}>Demo</ToggleButton>
-          <ToggleButton active={dataMode === 'Farm'} onClick={() => setDataMode('Farm')}>Farm</ToggleButton>
-        </ToggleGroup>
-        {dataMode === 'Farm' && (
-          <select
-            value={sourceLimit}
-            onChange={(e) => setSourceLimit(Number(e.target.value))}
-            className="h-7 px-2 text-xs rounded-md border bg-background text-foreground cursor-pointer"
-            title="Number of sources"
-          >
-            {SOURCE_LIMITS.map(n => (
-              <option key={n} value={n}>{n} src</option>
-            ))}
-          </select>
-        )}
-      </div>
+      <ToggleGroup label="Data">
+        <ToggleButton active={dataMode === 'Demo'} onClick={() => setDataMode('Demo')}>Demo</ToggleButton>
+        <ToggleButton active={dataMode === 'Farm'} onClick={() => setDataMode('Farm')}>Farm</ToggleButton>
+        <ToggleButton active={dataMode === 'AAM'} onClick={() => setDataMode('AAM')}>AAM</ToggleButton>
+      </ToggleGroup>
 
       <ToggleGroup label="Display">
         <ToggleButton active={mainView === 'graph'} onClick={() => setMainView('graph')}>

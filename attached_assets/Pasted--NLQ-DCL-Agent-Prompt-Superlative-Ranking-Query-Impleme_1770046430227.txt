@@ -1,0 +1,1020 @@
+# NLQ + DCL Agent Prompt: Superlative & Ranking Query Implementation
+
+> **Task: Implement Superlative Query Support — "Largest", "Highest", "Best", "Top", "Worst", etc.**
+>
+> This is a **TWO-LAYER implementation** requiring changes to both NLQ and DCL.
+
+---
+
+## Part 1: The Problem
+
+Users ask ranking questions that require:
+1. **Identifying the superlative intent** (NLQ's job)
+2. **Sorting/ranking dimensional data** (DCL's job)
+3. **Returning the correct item(s)** (both layers)
+
+**Examples:**
+- "Who is our top rep?" → Sarah Williams (115.0% quota attainment)
+- "What's our largest deal?" → Titan Corp ($5.5M)
+- "Which region has the most revenue?" → AMER ($25M)
+- "What's our worst performing service?" → Data Pipeline (96.2% SLO)
+
+---
+
+## Part 2: NLQ Responsibilities
+
+### 2.1 Detect Superlative Intent
+
+NLQ must recognize these patterns and extract:
+- **superlative_type**: `max`, `min`, `top_n`, `bottom_n`
+- **metric**: what to rank by
+- **dimension**: what entities to rank
+- **limit**: how many results (default 1 for superlatives, N for "top N")
+
+**Superlative Keywords → Type Mapping:**
+
+| Keywords | Type | Direction | Default Limit |
+|----------|------|-----------|---------------|
+| largest, biggest, highest, most, best*, top, #1, leading | `max` | DESC | 1 |
+| smallest, lowest, least, worst*, bottom, weakest, lagging | `min` | ASC | 1 |
+| top 5, top 10, top N | `top_n` | DESC | N |
+| bottom 5, bottom 10, bottom N | `bottom_n` | ASC | N |
+
+**\*Note on "best" and "worst":** These are **metric-dependent**:
+
+| Metric | "Best" Means | "Worst" Means |
+|--------|--------------|---------------|
+| revenue, pipeline, win_rate, nrr, engagement, uptime, quota_attainment | highest | lowest |
+| churn, attrition, cycle_time, mttr, incidents | lowest | highest |
+
+### 2.2 Query Structure Output
+
+NLQ should output structured intent to DCL:
+
+```python
+@dataclass
+class RankingIntent:
+    metric: str              # e.g., "quota_attainment", "win_rate", "pipeline"
+    dimension: str           # e.g., "rep", "region", "service", "department"
+    ranking_type: str        # "max", "min", "top_n", "bottom_n"
+    limit: int = 1           # How many results
+    time_range: dict = None  # Optional: {"period": "2026-Q4"} or {"year": 2026}
+```
+
+### 2.3 Pattern Recognition Examples
+
+```python
+SUPERLATIVE_PATTERNS = {
+    # Max patterns
+    r"(?:who|which|what)(?:'s| is) (?:the |our )?(?:top|best|highest|#1|leading) (.+)": "max",
+    r"(?:who|which|what) has the (?:most|highest|largest|biggest) (.+)": "max",
+    r"largest (.+)": "max",
+    r"biggest (.+)": "max",
+    r"highest (.+)": "max",
+    
+    # Min patterns
+    r"(?:who|which|what)(?:'s| is) (?:the |our )?(?:worst|lowest|bottom|weakest) (.+)": "min",
+    r"(?:who|which|what) has the (?:least|lowest|smallest|fewest) (.+)": "min",
+    r"lowest (.+)": "min",
+    r"smallest (.+)": "min",
+    
+    # Top N patterns
+    r"top (\d+) (.+)": "top_n",
+    r"(\d+) (?:best|top|highest) (.+)": "top_n",
+    
+    # Bottom N patterns
+    r"bottom (\d+) (.+)": "bottom_n",
+    r"(\d+) (?:worst|lowest) (.+)": "bottom_n",
+}
+```
+
+---
+
+## Part 3: DCL Responsibilities
+
+### 3.1 New Query Parameters
+
+DCL must accept ranking parameters:
+
+```python
+@dataclass
+class DCLQueryRequest:
+    metric: str
+    dimensions: List[str] = None
+    time_range: dict = None
+    
+    # NEW: Ranking support
+    order_by: str = None           # "asc" or "desc"
+    limit: int = None              # Number of results to return
+    ranking_metric: str = None     # If different from display metric
+```
+
+### 3.2 Ranking Execution
+
+DCL must:
+1. Fetch dimensional breakdown data
+2. Sort by the specified metric
+3. Return only the requested number of results
+4. Include rank position in response
+
+**Example Response:**
+
+```json
+{
+  "query": "top 3 reps by quota attainment",
+  "data": [
+    {"rank": 1, "rep": "Sarah Williams", "quota_attainment": 115.0},
+    {"rank": 2, "rep": "Michael Brown", "quota_attainment": 114.1},
+    {"rank": 3, "rep": "Emily Davis", "quota_attainment": 113.2}
+  ],
+  "metadata": {
+    "period": "2026-Q4",
+    "total_count": 36,
+    "ranking_type": "top_n",
+    "order": "desc"
+  }
+}
+```
+
+### 3.3 Semantic Catalog Updates
+
+Add ranking metadata to metrics in DCL catalog:
+
+```yaml
+metrics:
+  quota_attainment:
+    name: Quota Attainment
+    unit: percent
+    best_direction: high  # For "best"/"worst" interpretation
+    rankable_dimensions: [rep, region, territory]
+    data_source: quota_by_rep
+    data_field: attainment_pct
+    
+  win_rate:
+    name: Win Rate
+    unit: percent
+    best_direction: high
+    rankable_dimensions: [rep, region, segment]
+    data_source: win_rate_by_rep
+    
+  pipeline:
+    name: Pipeline Value
+    unit: USD_millions
+    best_direction: high
+    rankable_dimensions: [rep, region, stage, segment]
+    data_source: pipeline_by_rep
+    data_field: pipeline
+    
+  slo_attainment:
+    name: SLO Attainment
+    unit: percent
+    best_direction: high
+    rankable_dimensions: [service, team]
+    data_source: slo_attainment_by_service
+```
+
+---
+
+## Part 4: Ground Truth Test Data
+
+**Source:** `fact_base.json` (v4 — differentiated rankings)
+
+### 4.1 Sales Rep Rankings (2026-Q4)
+
+#### Quota Attainment (`quota_by_rep.attainment_pct`)
+
+| Rank | Rep | Attainment % |
+|------|-----|--------------|
+| 1 | Sarah Williams | 115.0 |
+| 2 | Michael Brown | 114.1 |
+| 3 | Emily Davis | 113.2 |
+| 4 | Anna Schmidt | 112.3 |
+| 5 | Wei Zhang | 111.3 |
+| 6 | John Mitchell | 110.4 |
+| 7 | Marcus Johnson | 109.5 |
+| 8 | David Rodriguez | 108.6 |
+| 9 | Jennifer Taylor | 107.7 |
+| 10 | Yuki Tanaka | 106.8 |
+| 11 | Rachel Martinez | 105.9 |
+| 12 | Pierre Dubois | 104.9 |
+| 13 | Erik Lindqvist | 104.0 |
+| 14 | Kevin Patel | 103.1 |
+| 15 | Olivia Thompson | 102.2 |
+| 16 | Daniel Garcia | 101.3 |
+| 17 | Clara Müller | 100.4 |
+| 18 | Luca Bianchi | 99.5 |
+| 19 | Kenji Nakamura | 98.5 |
+| 20 | Min-ji Park | 97.6 |
+| 21 | Jessica Wong | 96.7 |
+| 22 | Brandon Scott | 95.8 |
+| 23 | Ashley Moore | 94.9 |
+| 24 | Henrik Nielsen | 94.0 |
+| 25 | Elena Petrova | 93.1 |
+| 26 | Rahul Patel | 92.1 |
+| 27 | Emma Watson | 91.2 |
+| 28 | Lisa Chen | 90.3 |
+| 29 | Amanda Foster | 89.4 |
+| 30 | Priya Sharma | 88.5 |
+| 31 | Chris Lee | 87.6 |
+| 32 | Marco Rossi | 86.7 |
+| 33 | Sophie Martin | 85.7 |
+| 34 | James O'Brien | 84.8 |
+| 35 | Robert Kim | 83.9 |
+| 36 | Thomas Anderson | 83.0 |
+
+#### Win Rate (`win_rate_by_rep`)
+
+| Rank | Rep | Win Rate % |
+|------|-----|------------|
+| 1 | Sarah Williams | 52.0 |
+| 2 | Michael Brown | 51.3 |
+| 3 | Emily Davis | 50.6 |
+| 4 | Anna Schmidt | 49.9 |
+| 5 | Wei Zhang | 49.1 |
+| ... | ... | ... |
+| 25 | Marco Rossi | 34.9 |
+| 26 | Sophie Martin | 34.1 |
+| 27 | James O'Brien | 33.4 |
+| 28 | Robert Kim | 32.7 |
+| 29 | Thomas Anderson | 32.0 |
+
+#### Pipeline (`pipeline_by_rep.pipeline`)
+
+| Rank | Rep | Pipeline ($M) |
+|------|-----|---------------|
+| 1 | Sarah Williams | 11.57 |
+| 2 | Michael Brown | 11.38 |
+| 3 | Emily Davis | 11.19 |
+| 4 | Anna Schmidt | 11.0 |
+| 5 | Wei Zhang | 10.8 |
+| ... | ... | ... |
+| 25 | Daniel Garcia | 2.35 |
+| 26 | Clara Müller | 2.30 |
+| 27 | Luca Bianchi | 2.25 |
+| 28 | Kenji Nakamura | 2.19 |
+| 29 | Min-ji Park | 2.14 |
+
+### 4.2 Service Rankings (2026-Q4)
+
+**SLO Attainment by Service:**
+
+| Rank | Service | SLO % |
+|------|---------|-------|
+| 1 | Auth Service | 99.9 |
+| 1 | Payment Service | 99.9 |
+| 3 | Web App | 99.2 |
+| 4 | API Gateway | 98.7 |
+| 5 | Mobile Backend | 98.2 |
+| 6 | Notification Service | 97.7 |
+| 7 | Data Pipeline | 96.2 |
+
+**Note:** Auth Service and Payment Service are tied at 99.9%. Tests should accept either as "best". Data Pipeline is clearly "worst".
+
+### 4.3 Regional Rankings (2026-Q4)
+
+**Revenue by Region:**
+
+| Rank | Region | Revenue ($M) |
+|------|--------|-------------|
+| 1 | AMER | 25.0 |
+| 2 | EMEA | 15.0 |
+| 3 | APAC | 10.0 |
+
+**Pipeline by Region:**
+
+| Rank | Region | Pipeline ($M) |
+|------|--------|---------------|
+| 1 | AMER | 71.88 |
+| 2 | EMEA | 43.12 |
+| 3 | APAC | 28.75 |
+
+### 4.4 Segment Rankings (2026-Q4)
+
+**Revenue by Segment:**
+
+| Rank | Segment | Revenue ($M) |
+|------|---------|-------------|
+| 1 | Enterprise | 27.5 |
+| 2 | Mid-Market | 15.0 |
+| 3 | SMB | 7.5 |
+
+### 4.5 Department Rankings (2026-Q4)
+
+**Headcount by Department:**
+
+| Rank | Department | Headcount |
+|------|------------|-----------|
+| 1 | Engineering | 145 |
+| 2 | Sales | 80 |
+| 3 | Customer Success | 60 |
+| 4 | Marketing | 43 |
+| 5 | Product | 34 |
+| 6 | G&A | 24 |
+| 7 | People | 22 |
+| 7 | Finance | 22 |
+
+### 4.6 Deal Rankings (2026)
+
+**Top Deals:**
+
+| Rank | Company | Value ($M) | Rep | Quarter |
+|------|---------|-----------|-----|---------|
+| 1 | Titan Corp | 5.5 | Michael Brown | Q2 |
+| 2 | OmniTech | 4.8 | Sarah Williams | Q1 |
+| 3 | Stellar Systems | 4.2 | Anna Schmidt | Q3 |
+| 4 | Phoenix Group | 3.9 | Wei Zhang | Q4 |
+| 5 | Atlas Global | 3.5 | Emily Davis | Q2 |
+
+### 4.7 Pipeline Stage Rankings (2026-Q4)
+
+| Rank | Stage | Pipeline ($M) |
+|------|-------|---------------|
+| 1 | Qualified | 43.12 |
+| 2 | Proposal | 35.94 |
+| 3 | Lead | 28.75 |
+| 4 | Negotiation | 21.56 |
+| 5 | Closed-Won | 14.38 |
+
+---
+
+## Part 5: Test Suite
+
+Create `tests/eval/test_superlatives.py`:
+
+```python
+"""
+Superlative Query Tests
+Tests ranking queries: largest, highest, best, top, worst, lowest, bottom
+
+Ground Truth Source: fact_base.json (v4 - differentiated)
+"""
+
+import pytest
+from src.nlq.core.query_processor import process_query
+
+# =============================================================================
+# GROUND TRUTH (from fact_base.json 2026-Q4)
+# =============================================================================
+
+GROUND_TRUTH = {
+    # Rep rankings - quota attainment (quota_by_rep.attainment_pct)
+    "top_rep_quota": "Sarah Williams",
+    "top_rep_quota_value": 115.0,
+    "second_rep_quota": "Michael Brown",
+    "second_rep_quota_value": 114.1,
+    "worst_rep_quota": "Thomas Anderson",
+    "worst_rep_quota_value": 83.0,
+    
+    # Rep rankings - win rate (win_rate_by_rep)
+    "top_rep_win_rate": "Sarah Williams",
+    "top_rep_win_rate_value": 52.0,
+    "worst_rep_win_rate": "Thomas Anderson",
+    "worst_rep_win_rate_value": 32.0,
+    
+    # Rep rankings - pipeline (pipeline_by_rep.pipeline)
+    "top_rep_pipeline": "Sarah Williams",
+    "top_rep_pipeline_value": 11.57,
+    "worst_rep_pipeline": "Min-ji Park",
+    "worst_rep_pipeline_value": 2.14,
+    
+    # Regional rankings
+    "largest_region_revenue": "AMER",
+    "largest_region_revenue_value": 25.0,
+    "smallest_region_revenue": "APAC",
+    "smallest_region_revenue_value": 10.0,
+    "largest_region_pipeline": "AMER",
+    "largest_region_pipeline_value": 71.88,
+    
+    # Segment rankings
+    "largest_segment": "Enterprise",
+    "largest_segment_revenue": 27.5,
+    "smallest_segment": "SMB",
+    "smallest_segment_revenue": 7.5,
+    
+    # Department rankings
+    "largest_department": "Engineering",
+    "largest_department_headcount": 145,
+    "smallest_departments": ["People", "Finance"],  # Tied at 22
+    "smallest_department_headcount": 22,
+    
+    # Service rankings (SLO)
+    "best_services_slo": ["Payment Service", "Auth Service"],  # Tied at 99.9%
+    "best_service_slo_pct": 99.9,
+    "worst_service_slo": "Data Pipeline",
+    "worst_service_slo_pct": 96.2,
+    
+    # Deal rankings (2026 full year)
+    "largest_deal_company": "Titan Corp",
+    "largest_deal_value": 5.5,
+    "largest_deal_rep": "Michael Brown",
+    
+    # Pipeline stage rankings
+    "largest_pipeline_stage": "Qualified",
+    "largest_pipeline_stage_value": 43.12,
+    "smallest_pipeline_stage": "Closed-Won",
+    "smallest_pipeline_stage_value": 14.38,
+    
+    # Top 5 reps by quota attainment
+    "top_5_reps_quota": [
+        "Sarah Williams",
+        "Michael Brown", 
+        "Emily Davis",
+        "Anna Schmidt",
+        "Wei Zhang"
+    ],
+    
+    # Bottom 5 reps by quota attainment
+    "bottom_5_reps_quota": [
+        "Thomas Anderson",
+        "Robert Kim",
+        "James O'Brien",
+        "Sophie Martin",
+        "Marco Rossi"
+    ],
+}
+
+
+def extract_top_result(result):
+    """Extract the #1 ranked item from result"""
+    if result.get("data"):
+        data = result["data"]
+        if isinstance(data, list) and len(data) > 0:
+            return data[0]
+        elif isinstance(data, dict):
+            return data
+    return None
+
+
+def extract_name(result, key="name"):
+    """Extract the name/label of the top item"""
+    top = extract_top_result(result)
+    if top:
+        return top.get(key) or top.get("rep") or top.get("region") or top.get("service") or top.get("segment") or top.get("department") or top.get("stage") or top.get("company")
+    return None
+
+
+def extract_value(result):
+    """Extract the value of the top item"""
+    top = extract_top_result(result)
+    if top:
+        return top.get("value") or top.get("quota_attainment") or top.get("attainment_pct") or top.get("win_rate") or top.get("pipeline") or top.get("slo_attainment") or top.get("revenue") or top.get("headcount")
+    return None
+
+
+def extract_list(result, key="name"):
+    """Extract list of names from ranked results"""
+    data = result.get("data", [])
+    if isinstance(data, list):
+        return [item.get(key) or item.get("rep") or item.get("name") for item in data]
+    return []
+
+
+# =============================================================================
+# SECTION 1: TOP REP QUERIES (Clear #1: Sarah Williams)
+# =============================================================================
+
+class TestTopRepQueries:
+    """Test 'top rep' queries - Sarah Williams should always be #1"""
+    
+    def test_who_is_top_rep(self):
+        result = process_query("Who is our top rep?")
+        assert extract_name(result) == GROUND_TRUTH["top_rep_quota"]
+    
+    def test_who_is_best_rep(self):
+        result = process_query("Who is our best rep?")
+        assert extract_name(result) == GROUND_TRUTH["top_rep_quota"]
+    
+    def test_best_sales_rep(self):
+        result = process_query("Who is our best sales rep?")
+        assert extract_name(result) == GROUND_TRUTH["top_rep_quota"]
+    
+    def test_highest_quota_attainment(self):
+        result = process_query("Who has the highest quota attainment?")
+        assert extract_name(result) == GROUND_TRUTH["top_rep_quota"]
+        assert extract_value(result) == GROUND_TRUTH["top_rep_quota_value"]
+    
+    def test_number_1_rep(self):
+        result = process_query("Who is our #1 rep?")
+        assert extract_name(result) == GROUND_TRUTH["top_rep_quota"]
+    
+    def test_leading_performer(self):
+        result = process_query("Who is our leading performer?")
+        assert extract_name(result) == GROUND_TRUTH["top_rep_quota"]
+    
+    def test_top_rep_by_win_rate(self):
+        result = process_query("Who has the highest win rate?")
+        assert extract_name(result) == GROUND_TRUTH["top_rep_win_rate"]
+        assert extract_value(result) == GROUND_TRUTH["top_rep_win_rate_value"]
+    
+    def test_top_rep_by_pipeline(self):
+        result = process_query("Who has the most pipeline?")
+        assert extract_name(result) == GROUND_TRUTH["top_rep_pipeline"]
+        assert extract_value(result) == GROUND_TRUTH["top_rep_pipeline_value"]
+
+
+# =============================================================================
+# SECTION 2: WORST REP QUERIES (Clear Last: Thomas Anderson)
+# =============================================================================
+
+class TestWorstRepQueries:
+    """Test 'worst rep' queries - Thomas Anderson should always be last"""
+    
+    def test_worst_rep(self):
+        result = process_query("Who is our worst rep?")
+        assert extract_name(result) == GROUND_TRUTH["worst_rep_quota"]
+    
+    def test_lowest_quota_attainment(self):
+        result = process_query("Who has the lowest quota attainment?")
+        assert extract_name(result) == GROUND_TRUTH["worst_rep_quota"]
+        assert extract_value(result) == GROUND_TRUTH["worst_rep_quota_value"]
+    
+    def test_bottom_performer(self):
+        result = process_query("Who is our bottom performer?")
+        assert extract_name(result) == GROUND_TRUTH["worst_rep_quota"]
+    
+    def test_weakest_rep(self):
+        result = process_query("Who is our weakest rep?")
+        assert extract_name(result) == GROUND_TRUTH["worst_rep_quota"]
+    
+    def test_worst_win_rate(self):
+        result = process_query("Who has the worst win rate?")
+        assert extract_name(result) == GROUND_TRUTH["worst_rep_win_rate"]
+        assert extract_value(result) == GROUND_TRUTH["worst_rep_win_rate_value"]
+
+
+# =============================================================================
+# SECTION 3: TOP N QUERIES
+# =============================================================================
+
+class TestTopNQueries:
+    """Test 'top 5', 'top 10' queries"""
+    
+    def test_top_5_reps(self):
+        result = process_query("Who are the top 5 reps?")
+        names = extract_list(result, "rep")
+        assert len(names) == 5
+        assert names == GROUND_TRUTH["top_5_reps_quota"]
+    
+    def test_top_3_reps(self):
+        result = process_query("Who are the top 3 reps?")
+        names = extract_list(result, "rep")
+        assert len(names) == 3
+        assert names[0] == "Sarah Williams"
+        assert names[1] == "Michael Brown"
+        assert names[2] == "Emily Davis"
+    
+    def test_top_3_regions(self):
+        result = process_query("What are the top 3 regions by revenue?")
+        names = extract_list(result, "region")
+        assert names == ["AMER", "EMEA", "APAC"]
+    
+    def test_5_best_reps(self):
+        result = process_query("Who are the 5 best reps?")
+        names = extract_list(result, "rep")
+        assert len(names) == 5
+        assert names[0] == "Sarah Williams"
+
+
+class TestBottomNQueries:
+    """Test 'bottom 5', 'bottom 10' queries"""
+    
+    def test_bottom_5_reps(self):
+        result = process_query("Who are the bottom 5 reps?")
+        names = extract_list(result, "rep")
+        assert len(names) == 5
+        # Bottom 5 should include Thomas Anderson as #1 (worst)
+        assert "Thomas Anderson" in names
+    
+    def test_bottom_3_services(self):
+        result = process_query("What are the bottom 3 services by SLO?")
+        names = extract_list(result, "service")
+        assert len(names) == 3
+        assert "Data Pipeline" in names
+
+
+# =============================================================================
+# SECTION 4: REGIONAL RANKINGS
+# =============================================================================
+
+class TestRegionalRankings:
+    """Test regional superlative queries"""
+    
+    def test_largest_region_revenue(self):
+        result = process_query("Which region has the largest revenue?")
+        assert extract_name(result) == GROUND_TRUTH["largest_region_revenue"]
+        assert extract_value(result) == GROUND_TRUTH["largest_region_revenue_value"]
+    
+    def test_biggest_region(self):
+        result = process_query("What's our biggest region?")
+        assert extract_name(result) == "AMER"
+    
+    def test_most_revenue_region(self):
+        result = process_query("Which region has the most revenue?")
+        assert extract_name(result) == "AMER"
+    
+    def test_smallest_region(self):
+        result = process_query("Which region has the smallest revenue?")
+        assert extract_name(result) == GROUND_TRUTH["smallest_region_revenue"]
+        assert extract_value(result) == GROUND_TRUTH["smallest_region_revenue_value"]
+    
+    def test_least_revenue_region(self):
+        result = process_query("Which region has the least revenue?")
+        assert extract_name(result) == "APAC"
+    
+    def test_most_pipeline_region(self):
+        result = process_query("Which region has the most pipeline?")
+        assert extract_name(result) == GROUND_TRUTH["largest_region_pipeline"]
+
+
+# =============================================================================
+# SECTION 5: SEGMENT RANKINGS
+# =============================================================================
+
+class TestSegmentRankings:
+    """Test segment superlative queries"""
+    
+    def test_largest_segment(self):
+        result = process_query("Which segment is largest?")
+        assert extract_name(result) == GROUND_TRUTH["largest_segment"]
+    
+    def test_biggest_segment_revenue(self):
+        result = process_query("Which segment has the biggest revenue?")
+        assert extract_name(result) == "Enterprise"
+        assert extract_value(result) == GROUND_TRUTH["largest_segment_revenue"]
+    
+    def test_smallest_segment(self):
+        result = process_query("Which segment is smallest?")
+        assert extract_name(result) == GROUND_TRUTH["smallest_segment"]
+
+
+# =============================================================================
+# SECTION 6: DEPARTMENT RANKINGS
+# =============================================================================
+
+class TestDepartmentRankings:
+    """Test department superlative queries"""
+    
+    def test_largest_department(self):
+        result = process_query("What's our largest department?")
+        assert extract_name(result) == GROUND_TRUTH["largest_department"]
+        assert extract_value(result) == GROUND_TRUTH["largest_department_headcount"]
+    
+    def test_most_headcount(self):
+        result = process_query("Which department has the most headcount?")
+        assert extract_name(result) == "Engineering"
+    
+    def test_smallest_department(self):
+        result = process_query("What's our smallest department?")
+        name = extract_name(result)
+        assert name in GROUND_TRUTH["smallest_departments"]
+
+
+# =============================================================================
+# SECTION 7: SERVICE SLO RANKINGS
+# =============================================================================
+
+class TestServiceRankings:
+    """Test service SLO superlative queries"""
+    
+    def test_best_service_slo(self):
+        result = process_query("Which service has the best SLO?")
+        name = extract_name(result)
+        # Accept either - they're tied at 99.9%
+        assert name in GROUND_TRUTH["best_services_slo"]
+    
+    def test_highest_slo_attainment(self):
+        result = process_query("Which service has the highest SLO attainment?")
+        name = extract_name(result)
+        assert name in GROUND_TRUTH["best_services_slo"]
+        assert extract_value(result) == GROUND_TRUTH["best_service_slo_pct"]
+    
+    def test_worst_service_slo(self):
+        result = process_query("Which service has the worst SLO?")
+        assert extract_name(result) == GROUND_TRUTH["worst_service_slo"]
+        assert extract_value(result) == GROUND_TRUTH["worst_service_slo_pct"]
+    
+    def test_lowest_slo_attainment(self):
+        result = process_query("Which service has the lowest SLO attainment?")
+        assert extract_name(result) == "Data Pipeline"
+    
+    def test_worst_performing_service(self):
+        result = process_query("What's our worst performing service?")
+        assert extract_name(result) == "Data Pipeline"
+
+
+# =============================================================================
+# SECTION 8: DEAL RANKINGS
+# =============================================================================
+
+class TestDealRankings:
+    """Test deal superlative queries"""
+    
+    def test_largest_deal(self):
+        result = process_query("What was our largest deal?")
+        assert extract_name(result) == GROUND_TRUTH["largest_deal_company"]
+        assert extract_value(result) == GROUND_TRUTH["largest_deal_value"]
+    
+    def test_biggest_win(self):
+        result = process_query("What was our biggest win?")
+        assert extract_name(result) == "Titan Corp"
+    
+    def test_largest_deal_2026(self):
+        result = process_query("What was the largest deal in 2026?")
+        assert extract_name(result) == "Titan Corp"
+    
+    def test_who_closed_largest_deal(self):
+        result = process_query("Who closed the largest deal?")
+        top = extract_top_result(result)
+        assert top.get("rep") == GROUND_TRUTH["largest_deal_rep"]
+    
+    def test_top_5_deals(self):
+        result = process_query("Show me the top 5 deals")
+        data = result.get("data", [])
+        assert len(data) == 5
+        assert data[0].get("company") == "Titan Corp"
+        assert data[1].get("company") == "OmniTech"
+
+
+# =============================================================================
+# SECTION 9: PIPELINE STAGE RANKINGS
+# =============================================================================
+
+class TestPipelineStageRankings:
+    """Test pipeline stage superlative queries"""
+    
+    def test_largest_pipeline_stage(self):
+        result = process_query("Which pipeline stage has the most value?")
+        assert extract_name(result) == GROUND_TRUTH["largest_pipeline_stage"]
+        assert extract_value(result) == GROUND_TRUTH["largest_pipeline_stage_value"]
+    
+    def test_biggest_stage(self):
+        result = process_query("What's our biggest pipeline stage?")
+        assert extract_name(result) == "Qualified"
+    
+    def test_smallest_pipeline_stage(self):
+        result = process_query("Which stage has the least pipeline?")
+        assert extract_name(result) == GROUND_TRUTH["smallest_pipeline_stage"]
+
+
+# =============================================================================
+# SECTION 10: CASUAL SUPERLATIVE QUERIES
+# =============================================================================
+
+class TestCasualSuperlatives:
+    """Test informal/casual superlative queries"""
+    
+    def test_whos_crushing_it(self):
+        result = process_query("Who's crushing it?")
+        assert extract_name(result) == "Sarah Williams"
+    
+    def test_mvp(self):
+        result = process_query("Who's our MVP?")
+        assert extract_name(result) == "Sarah Williams"
+    
+    def test_star_performer(self):
+        result = process_query("Who's our star performer?")
+        assert extract_name(result) == "Sarah Williams"
+    
+    def test_biggest_problem_service(self):
+        result = process_query("What's our biggest problem service?")
+        assert extract_name(result) == "Data Pipeline"
+    
+    def test_weakest_link(self):
+        result = process_query("What's our weakest service?")
+        assert extract_name(result) == "Data Pipeline"
+
+
+# =============================================================================
+# SECTION 11: BEST/WORST INVERSION (Lower = Better)
+# =============================================================================
+
+class TestBestWorstInversion:
+    """Test metrics where lower values are better"""
+    
+    def test_best_churn_is_lowest(self):
+        """Best churn = lowest churn"""
+        result = process_query("Which segment has the best churn?")
+        # Should return segment with LOWEST churn
+        assert extract_top_result(result) is not None
+    
+    def test_worst_churn_is_highest(self):
+        """Worst churn = highest churn"""
+        result = process_query("Which segment has the worst churn?")
+        # Should return segment with HIGHEST churn
+        assert extract_top_result(result) is not None
+
+
+# =============================================================================
+# SECTION 12: TIME-SCOPED SUPERLATIVES
+# =============================================================================
+
+class TestTimeScopedSuperlatives:
+    """Test superlatives with time constraints"""
+    
+    def test_top_rep_q4(self):
+        result = process_query("Who was the top rep in Q4?")
+        assert extract_name(result) == "Sarah Williams"
+    
+    def test_top_rep_2026(self):
+        result = process_query("Who was the top rep in 2026?")
+        assert extract_name(result) == "Sarah Williams"
+    
+    def test_largest_deal_q2_2026(self):
+        result = process_query("What was the largest deal in Q2 2026?")
+        assert extract_name(result) == "Titan Corp"
+
+
+# =============================================================================
+# SECTION 13: NEGATIVE TESTS
+# =============================================================================
+
+class TestSuperlativeNegatives:
+    """Edge cases and errors"""
+    
+    def test_invalid_dimension_ranking(self):
+        """Can't rank revenue by 'flavor'"""
+        result = process_query("Which flavor has the most revenue?")
+        # Should fail gracefully
+        assert result is not None
+    
+    def test_empty_result_handling(self):
+        """Handle case where no data matches"""
+        result = process_query("Who was the top rep in 2020?")
+        # No 2020 data exists - should not crash
+        assert result is not None
+
+
+# =============================================================================
+# TEST COUNT SUMMARY
+# =============================================================================
+"""
+Section 1: Top Rep Queries           - 8 tests
+Section 2: Worst Rep Queries         - 5 tests
+Section 3: Top N Queries             - 4 tests
+Section 4: Bottom N Queries          - 2 tests
+Section 5: Regional Rankings         - 6 tests
+Section 6: Segment Rankings          - 3 tests
+Section 7: Department Rankings       - 3 tests
+Section 8: Service SLO Rankings      - 5 tests
+Section 9: Deal Rankings             - 5 tests
+Section 10: Pipeline Stage Rankings  - 3 tests
+Section 11: Casual Superlatives      - 5 tests
+Section 12: Best/Worst Inversion     - 2 tests
+Section 13: Time-Scoped              - 3 tests
+Section 14: Negative Tests           - 2 tests
+----------------------------------------
+TOTAL                                - 56 tests
+"""
+```
+
+---
+
+## Part 6: Data Sources Reference
+
+| Query Type | DCL Data Source | Field to Sort By |
+|------------|-----------------|------------------|
+| Rep quota ranking | `quota_by_rep` | `attainment_pct` |
+| Rep win rate ranking | `win_rate_by_rep` | (direct value) |
+| Rep pipeline ranking | `pipeline_by_rep` | `pipeline` |
+| Service SLO ranking | `slo_attainment_by_service` | `slo_attainment` |
+| Regional revenue | `revenue_by_region` | (direct value) |
+| Regional pipeline | `pipeline_by_region` | (direct value) |
+| Segment revenue | `revenue_by_segment` | (direct value) |
+| Department headcount | `headcount_by_department` | (direct value) |
+| Pipeline stages | `pipeline_by_stage` | (direct value) |
+| Deals | `top_deals` | `value` |
+
+---
+
+## Part 7: Implementation Checklist
+
+### NLQ Changes:
+- [ ] Add superlative intent detection to query parser
+- [ ] Extract ranking_type, limit, dimension from query
+- [ ] Handle "best"/"worst" inversion based on metric polarity
+- [ ] Map casual terms ("crushing it", "MVP") to superlative intent
+- [ ] Pass ranking parameters to DCL client
+
+### DCL Changes:
+- [ ] Add `order_by` and `limit` parameters to query endpoint
+- [ ] Add `best_direction` metadata to semantic catalog
+- [ ] Implement sorting on dimensional breakdowns
+- [ ] Return ranked results with position
+- [ ] Read `attainment_pct` from `quota_by_rep` for quota ranking
+
+---
+
+## Part 8: Honor System
+
+**If tests fail:**
+1. Fix NLQ intent parsing or DCL ranking logic
+2. **NEVER** modify ground truth values
+3. **NEVER** make assertions more lenient
+4. Verify against fact_base.json directly
+
+**Ground truth is extracted from fact_base.json. It is correct.**
+
+Key differentiated values to remember:
+- **Top rep:** Sarah Williams (115.0% quota, 52.0% win rate, $11.57M pipeline)
+- **Worst rep (quota):** Thomas Anderson (83.0%)
+- **Worst rep (win rate):** Thomas Anderson (32.0%)
+- **Worst rep (pipeline):** Min-ji Park ($2.14M)
+- **Worst service:** Data Pipeline (96.2% SLO)
+- **Best services (tied):** Payment Service & Auth Service (99.9% SLO)
+- **Largest deal:** Titan Corp ($5.5M by Michael Brown)
+
+---
+
+## Part 9: Expected Output
+
+```
+========================= 56 passed =========================
+```
+
+Add these 56 tests to the existing 175 tests for a total of **231 tests**.
+
+---
+
+## Appendix: Full Ground Truth Reference (2026-Q4)
+
+```json
+{
+  "quota_by_rep": {
+    "Sarah Williams": {"attainment_pct": 115.0},
+    "Michael Brown": {"attainment_pct": 114.1},
+    "Emily Davis": {"attainment_pct": 113.2},
+    "Anna Schmidt": {"attainment_pct": 112.3},
+    "Wei Zhang": {"attainment_pct": 111.3},
+    "John Mitchell": {"attainment_pct": 110.4},
+    "Marcus Johnson": {"attainment_pct": 109.5},
+    "David Rodriguez": {"attainment_pct": 108.6},
+    "Jennifer Taylor": {"attainment_pct": 107.7},
+    "Yuki Tanaka": {"attainment_pct": 106.8},
+    "Rachel Martinez": {"attainment_pct": 105.9},
+    "Pierre Dubois": {"attainment_pct": 104.9},
+    "Erik Lindqvist": {"attainment_pct": 104.0},
+    "Kevin Patel": {"attainment_pct": 103.1},
+    "Olivia Thompson": {"attainment_pct": 102.2},
+    "Daniel Garcia": {"attainment_pct": 101.3},
+    "Clara Müller": {"attainment_pct": 100.4},
+    "Luca Bianchi": {"attainment_pct": 99.5},
+    "Kenji Nakamura": {"attainment_pct": 98.5},
+    "Min-ji Park": {"attainment_pct": 97.6},
+    "Jessica Wong": {"attainment_pct": 96.7},
+    "Brandon Scott": {"attainment_pct": 95.8},
+    "Ashley Moore": {"attainment_pct": 94.9},
+    "Henrik Nielsen": {"attainment_pct": 94.0},
+    "Elena Petrova": {"attainment_pct": 93.1},
+    "Rahul Patel": {"attainment_pct": 92.1},
+    "Emma Watson": {"attainment_pct": 91.2},
+    "Lisa Chen": {"attainment_pct": 90.3},
+    "Amanda Foster": {"attainment_pct": 89.4},
+    "Priya Sharma": {"attainment_pct": 88.5},
+    "Chris Lee": {"attainment_pct": 87.6},
+    "Marco Rossi": {"attainment_pct": 86.7},
+    "Sophie Martin": {"attainment_pct": 85.7},
+    "James O'Brien": {"attainment_pct": 84.8},
+    "Robert Kim": {"attainment_pct": 83.9},
+    "Thomas Anderson": {"attainment_pct": 83.0}
+  },
+  "win_rate_by_rep": {
+    "Sarah Williams": 52.0,
+    "Michael Brown": 51.3,
+    "Emily Davis": 50.6,
+    "...": "...",
+    "Thomas Anderson": 32.0
+  },
+  "pipeline_by_rep": {
+    "Sarah Williams": {"pipeline": 11.57},
+    "Michael Brown": {"pipeline": 11.38},
+    "...": "...",
+    "Min-ji Park": {"pipeline": 2.14}
+  },
+  "slo_attainment_by_service": {
+    "Auth Service": 99.9,
+    "Payment Service": 99.9,
+    "Web App": 99.2,
+    "API Gateway": 98.7,
+    "Mobile Backend": 98.2,
+    "Notification Service": 97.7,
+    "Data Pipeline": 96.2
+  },
+  "revenue_by_region": {
+    "AMER": 25.0,
+    "EMEA": 15.0,
+    "APAC": 10.0
+  },
+  "revenue_by_segment": {
+    "Enterprise": 27.5,
+    "Mid-Market": 15.0,
+    "SMB": 7.5
+  },
+  "top_deals_2026": [
+    {"company": "Titan Corp", "value": 5.5, "rep": "Michael Brown"},
+    {"company": "OmniTech", "value": 4.8, "rep": "Sarah Williams"},
+    {"company": "Stellar Systems", "value": 4.2, "rep": "Anna Schmidt"},
+    {"company": "Phoenix Group", "value": 3.9, "rep": "Wei Zhang"},
+    {"company": "Atlas Global", "value": 3.5, "rep": "Emily Davis"}
+  ]
+}
+```

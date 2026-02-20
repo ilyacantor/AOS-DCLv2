@@ -1,5 +1,10 @@
 from typing import List, Optional, Dict, Any, Tuple
 from backend.domain import SourceSystem, Mapping
+from backend.core.constants import (
+    CONFIDENCE_POSITIVE_PATTERN, CONFIDENCE_EXACT_FIELD, CONFIDENCE_PARTIAL_FIELD,
+    CONFIDENCE_SYNONYM, CONFIDENCE_CONCEPT_IN_NAME, CONFIDENCE_CONTEXT_BOOST,
+    CONFIDENCE_CONTEXT_CAP, CONFIDENCE_SEMANTIC_AMOUNT, CONFIDENCE_SEMANTIC_ID,
+)
 import re
 
 
@@ -45,6 +50,48 @@ class HeuristicMapper:
             r'invoice_id',
             r'invoicenumber',
         ],
+        'subscription': [
+            r'subscription_id',
+            r'subscription_status',
+            r'plan_id',
+            r'plan_name',
+            r'billing_period',
+            r'^mrr$',
+        ],
+        'employee': [
+            r'worker_id',
+            r'employee_id',
+            r'employee_name',
+            r'position_id',
+            r'hire_date',
+            r'termination_date',
+            r'headcount',
+        ],
+        'ticket': [
+            r'ticket_id',
+            r'ticket_number',
+            r'satisfaction_rating',
+            r'csat',
+            r'first_response',
+            r'resolution_time',
+        ],
+        'engineering_work': [
+            r'issue_key',
+            r'issue_id',
+            r'sprint_id',
+            r'sprint_name',
+            r'story_points',
+            r'issue_type',
+        ],
+        'incident': [
+            r'incident_id',
+            r'slo_id',
+            r'slo_name',
+            r'slo_target',
+            r'mttr',
+            r'mtta',
+            r'severity',
+        ],
     }
     
     FINANCIAL_TABLE_PATTERNS = [
@@ -56,6 +103,10 @@ class HeuristicMapper:
         r'cost',
         r'expense',
         r'revenue',
+        r'subscription',
+        r'ar$',   # accounts receivable
+        r'ap$',   # accounts payable
+        r'rev.schedule',
     ]
     
     def __init__(self, ontology_concepts: List[Dict[str, Any]]):
@@ -98,10 +149,18 @@ class HeuristicMapper:
         for pattern in self.FINANCIAL_TABLE_PATTERNS:
             if re.search(pattern, table_lower):
                 return "financial"
-        if re.search(r'customer|contact|lead|account', table_lower):
+        if re.search(r'customer|contact|lead|account|opportunity', table_lower):
             return "crm"
-        if re.search(r'resource|instance|host|service', table_lower):
+        if re.search(r'resource|instance|host|service|aws|cloud', table_lower):
             return "infrastructure"
+        if re.search(r'worker|employee|position|timeoff|wd[-_]', table_lower):
+            return "hr"
+        if re.search(r'ticket|zendesk|organization', table_lower):
+            return "support"
+        if re.search(r'issue|sprint|jira', table_lower):
+            return "engineering"
+        if re.search(r'incident|slo|datadog', table_lower):
+            return "monitoring"
         return "general"
     
     def _is_blocked_by_negative_pattern(self, field_name: str, concept_id: str) -> bool:
@@ -133,7 +192,7 @@ class HeuristicMapper:
         
         positive_match = self._check_positive_patterns(field_name)
         if positive_match and positive_match in self._concept_by_id:
-            return self._concept_by_id[positive_match], 0.95
+            return self._concept_by_id[positive_match], CONFIDENCE_POSITIVE_PATTERN
         
         best_match = None
         best_confidence = 0.0
@@ -153,21 +212,33 @@ class HeuristicMapper:
             for example in example_fields:
                 example_lower = example.lower()
                 if example_lower == field_lower:
-                    match_confidence = max(match_confidence, 0.95)
+                    match_confidence = max(match_confidence, CONFIDENCE_EXACT_FIELD)
                 elif example_lower in field_lower or field_lower in example_lower:
-                    match_confidence = max(match_confidence, 0.75)
-            
+                    match_confidence = max(match_confidence, CONFIDENCE_PARTIAL_FIELD)
+
             for synonym in synonyms:
                 synonym_lower = synonym.lower()
                 if synonym_lower in field_lower or field_lower in synonym_lower:
-                    match_confidence = max(match_confidence, 0.70)
-            
+                    match_confidence = max(match_confidence, CONFIDENCE_SYNONYM)
+
             if concept_id in field_lower:
-                match_confidence = max(match_confidence, 0.80)
-            
+                match_confidence = max(match_confidence, CONFIDENCE_CONCEPT_IN_NAME)
+
             if match_confidence > 0 and table_context == "financial":
-                if concept_id in ['revenue', 'cost', 'invoice', 'currency', 'date']:
-                    match_confidence = min(match_confidence + 0.05, 0.95)
+                if concept_id in ['revenue', 'cost', 'invoice', 'currency', 'date', 'subscription']:
+                    match_confidence = min(match_confidence + CONFIDENCE_CONTEXT_BOOST, CONFIDENCE_CONTEXT_CAP)
+            if match_confidence > 0 and table_context == "hr":
+                if concept_id in ['employee', 'date']:
+                    match_confidence = min(match_confidence + CONFIDENCE_CONTEXT_BOOST, CONFIDENCE_CONTEXT_CAP)
+            if match_confidence > 0 and table_context == "support":
+                if concept_id in ['ticket', 'health', 'account']:
+                    match_confidence = min(match_confidence + CONFIDENCE_CONTEXT_BOOST, CONFIDENCE_CONTEXT_CAP)
+            if match_confidence > 0 and table_context == "engineering":
+                if concept_id in ['engineering_work', 'date']:
+                    match_confidence = min(match_confidence + CONFIDENCE_CONTEXT_BOOST, CONFIDENCE_CONTEXT_CAP)
+            if match_confidence > 0 and table_context == "monitoring":
+                if concept_id in ['incident', 'health', 'aws_resource']:
+                    match_confidence = min(match_confidence + CONFIDENCE_CONTEXT_BOOST, CONFIDENCE_CONTEXT_CAP)
             
             if match_confidence > best_confidence:
                 best_confidence = match_confidence
@@ -178,11 +249,11 @@ class HeuristicMapper:
                 if table_context == "financial":
                     for c in ['revenue', 'cost']:
                         if c in self._concept_by_id:
-                            return self._concept_by_id[c], 0.65
-            
+                            return self._concept_by_id[c], CONFIDENCE_SEMANTIC_AMOUNT
+
             if semantic_hint == "id":
                 if "account" in field_lower and not self._is_blocked_by_negative_pattern(field_name, "account"):
                     if "account" in self._concept_by_id:
-                        return self._concept_by_id["account"], 0.60
+                        return self._concept_by_id["account"], CONFIDENCE_SEMANTIC_ID
         
         return best_match, best_confidence

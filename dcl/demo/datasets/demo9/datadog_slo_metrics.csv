@@ -1,0 +1,11 @@
+service,slo_name,target,actual,error_budget,period,status,last_updated
+api-gateway,API Availability,99.9,99.95,0.05,30d,passing,2026-01-24
+payment-service,Payment SLO,99.95,99.87,0.12,30d,at_risk,2026-01-24
+auth-service,Auth Availability,99.99,99.98,0.01,30d,passing,2026-01-24
+search-service,Search Latency P99,99.5,99.7,0.20,30d,passing,2026-01-24
+notification-service,Notification Delivery,99.0,98.5,0.50,30d,breached,2026-01-24
+user-service,User API Availability,99.9,99.92,0.02,30d,passing,2026-01-24
+order-service,Order Processing SLO,99.95,99.93,0.02,30d,passing,2026-01-24
+inventory-service,Inventory Sync SLO,99.5,99.4,0.10,30d,at_risk,2026-01-24
+billing-service,Billing Accuracy,99.99,99.99,0.00,30d,passing,2026-01-24
+analytics-service,Analytics Freshness,95.0,97.5,2.50,30d,passing,2026-01-24

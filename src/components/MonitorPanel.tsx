@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { GraphSnapshot, PersonaId } from '../types';
 import { Badge } from './Badge';
+import { MONITOR_CONFIDENCE } from '../constants';
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, Info, Database, Zap, CheckCircle2, ChevronDown, ChevronRight, Layers, Server, Table2, FileText, X, ArrowRight } from 'lucide-react';
 
 interface MonitorPanelProps {
@@ -18,6 +19,12 @@ interface SourceHierarchy {
   };
 }
 
+interface RagMessage {
+  source: string;
+  timestamp: string;
+  message: string;
+}
+
 interface DetailSelection {
   type: 'source' | 'table' | 'field';
   ontologyId: string;
@@ -30,7 +37,7 @@ interface DetailSelection {
 
 export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProps) {
   const [activeTab, setActiveTab] = useState('views');
-  const [ragMessages, setRagMessages] = useState<any[]>([]);
+  const [ragMessages, setRagMessages] = useState<RagMessage[]>([]);
   const [ragMetrics, setRagMetrics] = useState({ llm_calls: 0, rag_reads: 0, rag_writes: 0 });
   const [expandedSections, setExpandedSections] = useState<Record<string, { sources: boolean; ontologies: boolean }>>({});
   const [expandedOntologies, setExpandedOntologies] = useState<Record<string, boolean>>({});
@@ -118,8 +125,12 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
     const fetchRagData = async () => {
       try {
         const response = await fetch(`/api/dcl/narration/${runId}`);
+        if (!response.ok) {
+          console.warn(`Narration fetch failed: ${response.status}`);
+          return;
+        }
         const narrationData = await response.json();
-        const ragMsgs = narrationData.messages?.filter((m: any) => m.source === 'RAG' || m.source === 'LLM') || [];
+        const ragMsgs = narrationData.messages?.filter((m: RagMessage) => m.source === 'RAG' || m.source === 'LLM') || [];
         setRagMessages(ragMsgs);
       } catch (error) {
         console.error('Error fetching RAG data:', error);
@@ -134,9 +145,9 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
   useEffect(() => {
     if (data?.meta?.runMetrics) {
       setRagMetrics({
-        llm_calls: data.meta.runMetrics.llm_calls || 0,
-        rag_reads: data.meta.runMetrics.rag_reads || 0,
-        rag_writes: data.meta.runMetrics.rag_writes || 0,
+        llm_calls: data.meta.runMetrics.llmCalls || 0,
+        rag_reads: data.meta.runMetrics.ragReads || 0,
+        rag_writes: data.meta.runMetrics.ragWrites || 0,
       });
     }
   }, [data]);
@@ -252,8 +263,8 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
                           <span className="font-mono">{field.field}</span>
                         </div>
                         <span className={`px-1.5 py-0.5 rounded text-[10px] ${
-                          field.confidence >= 0.8 ? 'bg-green-500/20 text-green-300' :
-                          field.confidence >= 0.5 ? 'bg-yellow-500/20 text-yellow-300' :
+                          field.confidence >= MONITOR_CONFIDENCE.HIGH ? 'bg-green-500/20 text-green-300' :
+                          field.confidence >= MONITOR_CONFIDENCE.MEDIUM ? 'bg-yellow-500/20 text-yellow-300' :
                           'bg-red-500/20 text-red-300'
                         }`}>
                           {Math.round(field.confidence * 100)}% confidence
@@ -283,8 +294,8 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
                       <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                         <div 
                           className={`h-full ${
-                            (selectedDetail.confidence || 0) >= 0.8 ? 'bg-green-500' :
-                            (selectedDetail.confidence || 0) >= 0.5 ? 'bg-yellow-500' :
+                            (selectedDetail.confidence || 0) >= MONITOR_CONFIDENCE.HIGH ? 'bg-green-500' :
+                            (selectedDetail.confidence || 0) >= MONITOR_CONFIDENCE.MEDIUM ? 'bg-yellow-500' :
                             'bg-red-500'
                           }`}
                           style={{ width: `${(selectedDetail.confidence || 0) * 100}%` }}
@@ -519,8 +530,8 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
                                                             <div className="flex items-center gap-1">
                                                               <Badge variant="outline" className="h-3.5 text-[8px] px-1">{fields.length} fields</Badge>
                                                               <span className={`px-1 py-0.5 rounded text-[8px] ${
-                                                                avgConf >= 0.8 ? 'bg-green-500/20 text-green-300' :
-                                                                avgConf >= 0.5 ? 'bg-yellow-500/20 text-yellow-300' :
+                                                                avgConf >= MONITOR_CONFIDENCE.HIGH ? 'bg-green-500/20 text-green-300' :
+                                                                avgConf >= MONITOR_CONFIDENCE.MEDIUM ? 'bg-yellow-500/20 text-yellow-300' :
                                                                 'bg-red-500/20 text-red-300'
                                                               }`}>
                                                                 {Math.round(avgConf * 100)}%

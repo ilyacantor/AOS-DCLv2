@@ -10,6 +10,7 @@ Normalizes raw source system identifiers to canonical sources using:
 
 import os
 import re
+import time
 import httpx
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
@@ -84,9 +85,21 @@ class SourceNormalizer:
         "oracle_fusion": "oracle_erp",
         "stripe": "stripe_billing",
         "chargebee": "chargebee_billing",
+        "cb": "chargebee_billing",
         "zuora": "zuora_billing",
         "recurly": "recurly_billing",
         "paddle": "paddle_billing",
+        "workday": "workday_hcm",
+        "wd": "workday_hcm",
+        "zendesk": "zendesk_support",
+        "zd": "zendesk_support",
+        "jira": "jira_engineering",
+        "atlassian_jira": "jira_engineering",
+        "datadog": "datadog_monitoring",
+        "dd": "datadog_monitoring",
+        "aws_cost": "aws_cost_explorer",
+        "aws_cost_explorer": "aws_cost_explorer",
+        "aws_cur": "aws_cost_explorer",
         "paypal": "paypal_payments",
         "braintree": "braintree_payments",
         "square": "square_payments",
@@ -124,6 +137,16 @@ class SourceNormalizer:
         (r"^sap[-_]?", "sap_erp"),
         (r"^oracle[-_]?", "oracle_erp"),
         (r"^stripe[-_]?", "stripe_billing"),
+        (r"^cb[-_]?", "chargebee_billing"),
+        (r"^chargebee[-_]?", "chargebee_billing"),
+        (r"^wd[-_]?", "workday_hcm"),
+        (r"^workday[-_]?", "workday_hcm"),
+        (r"^zendesk[-_]?", "zendesk_support"),
+        (r"^zd[-_]?", "zendesk_support"),
+        (r"^jira[-_]?", "jira_engineering"),
+        (r"^datadog[-_]?", "datadog_monitoring"),
+        (r"^dd[-_]?", "datadog_monitoring"),
+        (r"^aws[-_]?cost[-_]?", "aws_cost_explorer"),
         (r"^qb[-_]?", "quickbooks_accounting"),
         (r"^quickbooks[-_]?", "quickbooks_accounting"),
         (r"^xero[-_]?", "xero_accounting"),
@@ -144,7 +167,16 @@ class SourceNormalizer:
         "warehouse": [r"warehouse", r"dw", r"analytics", r"bi"],
         "database": [r"db", r"database", r"sql"],
         "custom_db": [r"postgres", r"mysql", r"mongo", r"supabase"],
+        "hr": [r"hcm", r"worker", r"employee", r"position", r"hr", r"workday"],
+        "support": [r"support", r"ticket", r"helpdesk", r"zendesk"],
+        "engineering": [r"jira", r"sprint", r"issue", r"agile"],
+        "monitoring": [r"datadog", r"monitor", r"incident", r"slo", r"observability"],
+        "cloud": [r"aws", r"cloud", r"cost_explorer", r"cur"],
     }
+
+    # Circuit breaker: skip Farm API calls for this many seconds after a failure
+    _CB_COOLDOWN = 120  # 2 minutes
+    _cb_last_failure: float = 0.0  # class-level, shared across instances
 
     def __init__(self):
         self._registry_cache: Dict[str, CanonicalSource] = {}
@@ -152,11 +184,23 @@ class SourceNormalizer:
         self._registry_loaded = False
 
     def load_registry(self, narration=None, run_id: Optional[str] = None) -> int:
-        farm_url = os.getenv("FARM_API_URL", "https://autonomos.farm")
+        # Circuit breaker: if Farm API failed recently, skip the network call
+        now = time.time()
+        if SourceNormalizer._cb_last_failure > 0 and (now - SourceNormalizer._cb_last_failure) < SourceNormalizer._CB_COOLDOWN:
+            if narration and run_id:
+                narration.add_message(
+                    run_id, "SourceNormalizer",
+                    "Skipping registry load (Farm API circuit breaker open). Using built-in aliases."
+                )
+            self._registry_loaded = True  # mark loaded so normalize() doesn't retry
+            return 0
+
+        from backend.core.constants import FARM_API_URL
+        farm_url = FARM_API_URL
         registry_url = f"{farm_url}/api/sources/registry"
 
         try:
-            with httpx.Client(timeout=30.0) as client:
+            with httpx.Client(timeout=5.0) as client:
                 response = client.get(registry_url)
                 response.raise_for_status()
                 data = response.json()
@@ -182,6 +226,7 @@ class SourceNormalizer:
                     self._registry_cache[canonical.source_id] = canonical
 
                 self._registry_loaded = True
+                SourceNormalizer._cb_last_failure = 0.0  # reset circuit breaker on success
 
                 if narration and run_id:
                     narration.add_message(
@@ -192,10 +237,12 @@ class SourceNormalizer:
                 return len(self._registry_cache)
 
         except Exception as e:
+            SourceNormalizer._cb_last_failure = now  # trip the circuit breaker
+            self._registry_loaded = True  # don't retry on every normalize() call
             if narration and run_id:
                 narration.add_message(
                     run_id, "SourceNormalizer",
-                    f"Failed to load registry: {e}. Using built-in aliases only."
+                    f"Registry unavailable ({type(e).__name__}). Using built-in aliases."
                 )
             return 0
 
@@ -372,6 +419,12 @@ class SourceNormalizer:
         return "unknown"
 
     def _create_fallback_canonical(self, canonical_id: str, raw_source: str) -> CanonicalSource:
+        from backend.utils.log_utils import get_logger as _gl
+        from backend.core.constants import TRUST_SCORE_FALLBACK
+        _gl(__name__).warning(
+            f"[SourceNormalizer] Creating fallback canonical for '{canonical_id}' "
+            f"(raw='{raw_source}') — registry entry missing"
+        )
         parts = canonical_id.split("_")
         vendor = parts[0].title() if parts else "Unknown"
         category = parts[-1] if len(parts) > 1 else "unknown"
@@ -385,8 +438,8 @@ class SourceNormalizer:
             vendor=vendor,
             connection_type="api",
             entities=[],
-            trust_score=60,
-            data_quality_score=60,
+            trust_score=TRUST_SCORE_FALLBACK,
+            data_quality_score=TRUST_SCORE_FALLBACK,
             is_primary=False,
             metadata={"fallback": True, "raw_identifier": raw_source},
             discovery_status=DiscoveryStatus.CANONICAL,

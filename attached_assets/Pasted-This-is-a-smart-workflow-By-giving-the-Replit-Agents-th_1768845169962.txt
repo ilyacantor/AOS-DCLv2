@@ -1,0 +1,139 @@
+This is a smart workflow. By giving the Replit Agents the "Partitioned Master Prompt," you ensure that while they execute in isolation, they are fully aware of the **Contract** they are writing against. This prevents the classic distributed system failure where Service A builds a square plug for Service B's round socket.
+
+Here is the **Master Directive for Phase 1 (The Resilient Pipeline)**.
+
+**Instructions for You:**
+
+1. Copy the **entire prompt** below.
+2. Paste it into the **Farm Replit Agent** first. (It will read the Context, ignore DCL tasks, and execute the Farm tasks).
+3. Paste the **same prompt** into the **DCL Replit Agent**. (It will read the Context, see that Farm is building the stream, and execute the Ingest tasks).
+
+---
+
+# 🤖 Master Directive: Phase 1 - The Resilient Ingest (Sidecar)
+
+**Global Context (READ THIS FIRST)**
+
+> **The Architecture:** We are shifting the AOS platform to an **"Overlay Strategy"**.
+> * **AOD** finds the "Pipe" (MuleSoft/Workato).
+> * **DCL** "Taps" the pipe using a new **Ingest Sidecar**.
+> * **Farm** simulates the "Toxic" enterprise data stream.
+> 
+> 
+> **The Pattern:** "The Airlock."
+> We are building a fault-tolerant ingestion pipeline. The **Ingest Sidecar** isolates the core DCL from the "Shitty Stack." It connects to the stream, validates the data, wraps it in a standard envelope, and buffers it into a **Redis Event Bus**.
+> **The Goal of Phase 1:** Prove we can survive a "Toxic" stream. We are NOT building the Mapping Logic yet. We are building the **Plumbing** (Stream  Sidecar  Redis).
+
+---
+
+## 🚜 SECTION A: FARM AGENT INSTRUCTIONS
+
+**Target Repo:** `aos-farm`
+**Objective:** Create the "Toxic Stream" that DCL will consume.
+
+**1. Create a Streaming Endpoint**
+
+* **File:** `src/api/routes.py` (or new `src/api/stream.py`)
+* **Endpoint:** `GET /api/stream/synthetic/mulesoft`
+* **Behavior:**
+* This endpoint must return a **Continuous Stream** of JSON objects (NDJSON or Chunked Transfer).
+* It should simulate a "MuleSoft Invoice Sync" (standard invoice fields).
+* **Parameters:**
+* `?speed=fast` (100 records/sec)
+* `?chaos=true` (Inject toxic data)
+
+
+
+
+
+**2. Implement "Chaos Mode"**
+
+* If `chaos=true`, introduce the following anomalies randomly (approx 10% rate):
+* **Malformed JSON:** Send a half-written object to break parsers.
+* **Latency Spikes:** Randomly sleep for 5 seconds to test DCL timeouts.
+* **Bad Types:** Send `"amount": "THREE"` instead of `"amount": 300` to test DCL validation.
+
+
+
+**3. Output Requirement**
+
+* Ensure the stream does *not* require authentication for this phase (we are testing resilience, not security).
+* Verify it works via `curl -N http://localhost:8000/api/stream/synthetic/mulesoft`.
+
+---
+
+## 🧠 SECTION B: DCL AGENT INSTRUCTIONS
+
+**Target Repo:** `aos-dcl`
+**Objective:** Build the "Sidecar" that survives the Farm's toxic stream.
+
+**1. Infrastructure Setup**
+
+* **Dependencies:** Add `redis`, `httpx`, and `tenacity` to `requirements.txt` / `pyproject.toml`.
+* **Redis:** If a Redis instance is not available in the environment, create a `docker-compose.yml` or configure `replit.nix` to provision a lightweight Redis service.
+
+**2. Build the "Ingest Agent" (Sidecar)**
+
+* **New File:** `src/ingest/ingest_agent.py`
+* **Core Class:** `IngestSidecar`
+* **Requirements:**
+* **Configuration:** Must accept `SOURCE_URL` (The Farm endpoint) via env var.
+* **Circuit Breaker:** Use `tenacity` to implement exponential backoff. If Farm times out 5 times, stop polling for 60 seconds.
+* **Validation (The Airlock):**
+* Read the Farm stream line-by-line.
+* If a line is malformed JSON, **Drop it** and log "Toxic Record Dropped." DO NOT CRASH.
+
+
+* **Enveloping:**
+* Wrap valid records in the `AOS_Envelope` structure:
+```json
+{
+  "meta": { "ingest_ts": 12345, "source": "mulesoft_mock", "trace_id": "uuid..." },
+  "payload": { ...original_data... }
+}
+
+```
+
+
+
+
+* **Buffering:** Push the envelope to Redis Stream key `dcl.ingest.raw`.
+
+
+
+**3. Build the "DCL Engine" Consumer Stub**
+
+* **Update:** `backend/engine/dcl_engine.py` (or create `src/ingest/consumer.py` for testing).
+* **Logic:**
+* Connect to Redis.
+* Read from `dcl.ingest.raw`.
+* Print/Log: *"Processed Record [TraceID]"*.
+* **Goal:** This proves the "Buffer" works. We don't need to do semantic mapping yet.
+
+
+
+---
+
+## 🔍 SECTION C: AOD AGENT INSTRUCTIONS (Context Only)
+
+**Target Repo:** `aos-aod`
+**Objective:** Awareness.
+
+**1. No Code Changes Yet**
+
+* **Note:** AOD, please note that DCL is moving to a **Push/Stream** model.
+* **Future Implication:** In Phase 2, you will need to output a `Targeting_Package.json` that gives DCL the URL to stream from. For now, maintain the existing Asset Catalog structure.
+
+---
+
+## 🧪 EXECUTION CHECKLIST (For the Architect)
+
+Once both agents report "Done," run this integration test in the DCL Replit:
+
+1. Start the **Farm** (in its repo/url).
+2. Start **Redis** (in DCL repo).
+3. Run `python src/ingest/ingest_agent.py`.
+4. **Verify:**
+* Does the Agent stay alive even when Farm sends garbage?
+* Does Redis fill up with `AOS_Envelope` data?
+* Does the Agent log "Circuit Breaker Tripped" if you stop the Farm?

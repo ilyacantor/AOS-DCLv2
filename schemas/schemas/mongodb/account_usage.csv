@@ -1,0 +1,6 @@
+account_id,last_login_days,sessions_30d,avg_session_duration,features_used,active_users
+ACC-001,2,45,18.5,12,8
+ACC-002,28,5,3.2,4,2
+ACC-003,5,32,15.8,9,6
+ACC-004,1,52,22.4,15,12
+ACC-005,35,0,0,0,0

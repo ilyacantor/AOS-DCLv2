@@ -1,0 +1,122 @@
+bindings:
+  - source_system: Salesforce CRM
+    canonical_event: deal_won
+    quality_score: 0.95
+    freshness_score: 0.98
+    dims_coverage:
+      customer: true
+      rep: true
+      region: true
+      segment: true
+
+  - source_system: NetSuite ERP
+    canonical_event: revenue_recognized
+    quality_score: 0.92
+    freshness_score: 0.95
+    dims_coverage:
+      customer: true
+      service_line: true
+      region: false
+
+  - source_system: NetSuite ERP
+    canonical_event: invoice_posted
+    quality_score: 0.90
+    freshness_score: 0.95
+    dims_coverage:
+      customer: true
+      invoice: true
+      aging_bucket: true
+
+  - source_system: Chargebee
+    canonical_event: subscription_started
+    quality_score: 0.88
+    freshness_score: 0.92
+    dims_coverage:
+      customer: true
+      product: true
+      segment: true
+
+  - source_system: Jira
+    canonical_event: work_item_completed
+    quality_score: 0.85
+    freshness_score: 0.90
+    dims_coverage:
+      team: true
+      project: true
+      work_type: true
+      priority: true
+
+  - source_system: GitHub Actions
+    canonical_event: deployment_completed
+    quality_score: 0.90
+    freshness_score: 0.98
+    dims_coverage:
+      service: true
+      team: true
+      environment: true
+
+  - source_system: PagerDuty
+    canonical_event: incident_resolved
+    quality_score: 0.88
+    freshness_score: 0.95
+    dims_coverage:
+      service: true
+      team: true
+      severity: true
+
+  - source_system: AWS Cost Explorer
+    canonical_event: cloud_cost_incurred
+    quality_score: 0.92
+    freshness_score: 0.85
+    dims_coverage:
+      service: true
+      team: true
+      resource_type: true
+      environment: true
+
+  - source_system: Workday
+    canonical_event: employee_hired
+    quality_score: 0.92
+    freshness_score: 0.95
+    dims_coverage:
+      department: true
+      team: true
+      level: true
+      location: true
+
+  - source_system: Workday
+    canonical_event: employee_terminated
+    quality_score: 0.90
+    freshness_score: 0.95
+    dims_coverage:
+      department: true
+      team: true
+      tenure_band: true
+      location: true
+
+  - source_system: Greenhouse
+    canonical_event: requisition_opened
+    quality_score: 0.88
+    freshness_score: 0.92
+    dims_coverage:
+      department: true
+      role: true
+      location: true
+
+  - source_system: Greenhouse
+    canonical_event: requisition_filled
+    quality_score: 0.88
+    freshness_score: 0.92
+    dims_coverage:
+      department: true
+      role: true
+      location: true
+
+  - source_system: Culture Amp
+    canonical_event: survey_completed
+    quality_score: 0.85
+    freshness_score: 0.90
+    dims_coverage:
+      department: true
+      team: true
+      tenure_band: true

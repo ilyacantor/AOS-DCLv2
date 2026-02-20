@@ -1,0 +1,89 @@
+The contract is between AAM's `POST /api/dcl/export-pipes` output and DCL's `POST /api/dcl/export-pipes` intake. Here's the exact payload:
+
+```json
+{
+  "aod_run_id": "aod_run_20260216_001",
+  "timestamp": "2026-02-16T18:30:00Z",
+  "source": "aam",
+  "total_connections": 20,
+  "fabric_planes": [
+    {
+      "plane_type": "ipaas",
+      "vendor": "workato",
+      "connection_count": 3,
+      "health": "healthy",
+      "connections": [
+        {
+          "pipe_id": "sf-crm-001",
+          "candidate_id": "cand_abc123",
+          "source_name": "Salesforce CRM",
+          "vendor": "salesforce",
+          "category": "crm",
+          "governance_status": "governed",
+          "fields": ["id", "email", "revenue", "close_date"],
+          "entity_scope": "account",
+          "identity_keys": ["id", "email"],
+          "transport_kind": "rest_api",
+          "modality": "batch_pull",
+          "change_semantics": "full_replace",
+          "health": "unknown",
+          "last_sync": "2026-02-16T17:00:00Z",
+          "asset_key": "salesforce.crm.accounts",
+          "aod_asset_id": "aod_asset_789"
+        }
+      ]
+    },
+    {
+      "plane_type": "warehouse",
+      "vendor": "snowflake",
+      "connection_count": 2,
+      "health": "healthy",
+      "connections": [
+        {
+          "pipe_id": "ns-erp-001",
+          "candidate_id": "cand_def456",
+          "source_name": "NetSuite ERP",
+          "vendor": "netsuite",
+          "category": "erp",
+          "governance_status": "governed",
+          "fields": ["invoice_id", "amount", "date", "status"],
+          "entity_scope": "invoice",
+          "identity_keys": ["invoice_id"],
+          "transport_kind": "jdbc",
+          "modality": "batch_pull",
+          "change_semantics": "incremental",
+          "health": "unknown",
+          "last_sync": null,
+          "asset_key": "netsuite.erp.invoices",
+          "aod_asset_id": "aod_asset_012"
+        }
+      ]
+    }
+  ],
+  "skipped_connections": [
+    {
+      "candidate_id": "cand_xyz999",
+      "vendor": "jira",
+      "reason": "pending_inference",
+      "discovered_at": "2026-02-16T16:00:00Z"
+    }
+  ],
+  "skipped_count": 1
+}
+```
+
+The critical field is `connections[].pipe_id` — that's `sf-crm-001`, `ns-erp-001`, etc. When Farm later pushes data to DCL with `x-pipe-id: sf-crm-001`, DCL's guard looks up that exact string in the `PipeDefinitionStore`. Match → 200. No match → 422.
+
+DCL should respond to this with something like:
+
+```json
+{
+  "status": "accepted",
+  "pipes_registered": 5,
+  "pipe_ids": ["sf-crm-001", "ns-erp-001", "..."],
+  "skipped_noted": 1,
+  "timestamp": "2026-02-16T18:30:01Z"
+}
+```
+
+Is AAM's actual export output matching this structure, or are there field mismatches you're seeing?

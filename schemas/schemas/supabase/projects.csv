@@ -1,0 +1,9 @@
+project_id,account_name,resource_type,cost,utilization,created_at
+PROJ-001,Acme Corporation,database,450.00,72.5,2024-01-10
+PROJ-002,GlobalTech Solutions,storage,180.25,45.0,2024-02-05
+PROJ-003,Meridian Healthcare,database,890.50,88.3,2024-01-22
+PROJ-004,Pinnacle Financial Group,edge_functions,120.00,31.2,2024-03-15
+PROJ-005,Redwood Manufacturing,database,675.75,65.8,2024-04-01
+PROJ-006,Atlas Energy Partners,realtime,340.00,54.1,2024-02-18
+PROJ-007,Nimbus Cloud Services,storage,210.50,41.7,2024-05-10
+PROJ-008,Sterling Logistics Inc,database,1120.00,91.6,2024-03-28

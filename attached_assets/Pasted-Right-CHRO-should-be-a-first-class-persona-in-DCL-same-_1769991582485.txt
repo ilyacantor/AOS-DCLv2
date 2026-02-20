@@ -1,0 +1,149 @@
+Right. CHRO should be a first-class persona in DCL, same as CFO/CRO/COO/CTO. Not a local hack in NLQ.
+
+---
+
+## Current State
+
+| Persona | In DCL Semantic Layer? | In NLQ? |
+|---------|------------------------|---------|
+| CFO | ✓ | ✓ via DCL |
+| CRO | ✓ | ✓ via DCL |
+| COO | ✓ | ✓ via DCL |
+| CTO | ✓ | ✓ via DCL |
+| CHRO | ✗ Missing | Local shortcut (`people_queries.py`) |
+
+---
+
+## DCL Agent Prompt
+
+> **Task: Add CHRO Persona to Semantic Layer**
+>
+> ### Context
+> DCL has 4 personas (CFO, CRO, COO, CTO). Add CHRO (Chief Human Resources Officer) as the 5th persona with its metrics, entities, and bindings.
+>
+> ### Step 1: Add CHRO Metrics
+>
+> | ID | Name | Unit | Allowed Dimensions |
+> |----|------|------|--------------------|
+> | `headcount` | Headcount | count | department, team, location, level |
+> | `attrition_rate` | Attrition Rate | percent | department, team, tenure_band, location |
+> | `time_to_fill` | Time to Fill | days | department, role, location |
+> | `engagement_score` | Engagement Score | percent | department, team, tenure_band |
+> | `compensation_ratio` | Compensation Ratio (to market) | percent | department, level, location |
+> | `training_hours` | Training Hours | hours | department, team, training_type |
+> | `promotion_rate` | Promotion Rate | percent | department, level, tenure_band |
+> | `diversity_index` | Diversity Index | percent | department, level, location |
+>
+> ### Step 2: Add CHRO Entities (if not already present)
+>
+> | ID | Name | Aliases |
+> |----|------|---------|
+> | `department` | Department | dept, org_unit |
+> | `level` | Level | job_level, grade, band |
+> | `tenure_band` | Tenure Band | tenure, years_of_service |
+> | `location` | Location | office, site, geo |
+> | `role` | Role | job_title, position |
+> | `training_type` | Training Type | course_type, learning_category |
+>
+> ### Step 3: Add to Persona Concepts
+>
+> ```json
+> "persona_concepts": {
+>   "cfo": [...],
+>   "cro": [...],
+>   "coo": [...],
+>   "cto": [...],
+>   "chro": ["headcount", "attrition_rate", "time_to_fill", "engagement_score", "compensation_ratio", "training_hours", "promotion_rate", "diversity_index"]
+> }
+> ```
+>
+> ### Step 4: Add Demo Bindings
+>
+> | Source System | Canonical Event | Dimensions Covered |
+> |---------------|-----------------|-------------------|
+> | Workday | `employee_hired` | department, team, level, location |
+> | Workday | `employee_terminated` | department, team, tenure_band, location |
+> | Greenhouse | `requisition_opened` | department, role, location |
+> | Greenhouse | `requisition_filled` | department, role, location |
+> | Culture Amp | `survey_completed` | department, team, tenure_band |
+>
+> ### Step 5: Add Demo Data
+>
+> Add CHRO data to the query endpoint so these return results:
+> ```
+> POST /api/dcl/query {"metric": "headcount", "dimensions": ["department"]}
+> POST /api/dcl/query {"metric": "attrition_rate", "dimensions": ["team"]}
+> ```
+>
+> ### Success Criteria
+> - `GET /api/dcl/semantic-export` includes CHRO in `persona_concepts`
+> - All 8 CHRO metrics in the metrics list with correct `allowed_dims`
+> - `POST /api/dcl/query` returns data for CHRO metrics
+> - `GET /api/dcl/semantic-export/resolve/metric?q=attrition` resolves correctly
+
+---
+
+## NLQ Agent Prompt
+
+> **Task: Remove People Queries Shortcut, Use DCL**
+>
+> ### Context
+> `people_queries.py` was a shortcut that implemented CHRO queries locally. DCL now has CHRO as a first-class persona. Remove the local implementation and route through DCL like all other personas.
+>
+> ### Step 1: Audit `people_queries.py`
+>
+> - List all metrics/queries it handles
+> - Identify what data it reads (fact_base.json?)
+> - Identify what routes call it
+>
+> ### Step 2: Verify DCL Has Coverage
+>
+> Before deleting, confirm DCL serves these:
+> ```python
+> client = get_semantic_client()
+> 
+> # These should all work
+> client.query(metric="headcount", dimensions=["department"])
+> client.query(metric="attrition_rate", dimensions=["team"])
+> client.query(metric="engagement_score", dimensions=["department"])
+> ```
+>
+> ### Step 3: Reroute Calls
+>
+> Find everywhere `people_queries.py` is imported/called. Replace with DCL client:
+>
+> ```python
+> # BEFORE
+> from src.nlq.people_queries import get_headcount_by_dept
+> result = get_headcount_by_dept()
+>
+> # AFTER
+> result = dcl_client.query(metric="headcount", dimensions=["department"])
+> ```
+>
+> ### Step 4: Delete the Shortcut
+>
+> Once all calls are rerouted:
+> - Delete `people_queries.py`
+> - Remove any CHRO-specific data from local files
+> - Remove imports
+>
+> ### Step 5: Also Audit `routes.py`
+>
+> The 40+ fact_base references — check if any are CHRO-related. Same fix: route through DCL.
+>
+> ### Success Criteria
+> - `people_queries.py` deleted
+> - CHRO queries work via DCL same as CFO/CRO/COO/CTO
+> - No persona has special local handling
+> - All 5 personas treated identically in NLQ code
+
+---
+
+## Sequencing
+
+1. **DCL first** — Add CHRO persona + data
+2. **Verify** — Test DCL endpoints return CHRO data
+3. **NLQ second** — Remove shortcut, route to DCL
+
+Want me to adjust the metrics list for CHRO, or does that look like the right set?

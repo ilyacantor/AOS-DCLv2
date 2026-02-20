@@ -1,0 +1,6 @@
+contact_id,email,company,lifecycle_stage,lead_score,last_activity_date,source
+CON-001,john@acme.com,Acme Corp,Customer,85,2025-02-01,Organic
+CON-002,jane@techstart.io,TechStart Inc,Lead,62,2025-01-28,Referral
+CON-003,bob@globalbank.com,GlobalBank,Customer,92,2025-02-05,Direct
+CON-004,alice@healthcare.com,HealthCare Plus,MQL,55,2025-01-15,Paid
+CON-005,sam@retailmax.com,RetailMax,Customer,78,2025-02-03,Organic

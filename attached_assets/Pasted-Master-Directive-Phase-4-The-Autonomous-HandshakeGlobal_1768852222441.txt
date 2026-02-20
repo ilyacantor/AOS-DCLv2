@@ -1,0 +1,13 @@
+Master Directive: Phase 4 - The Autonomous HandshakeGlobal ContextThe Goal: Remove the hardcoded URL from DCL.The Flow: AOD finds the route $\rightarrow$ POSTs config to DCL $\rightarrow$ DCL updates the Sidecar.Result: You click "Scan" in AOD, and DCL automatically starts ingesting the stream.🔍 SECTION A: AOD AGENT INSTRUCTIONSTarget Repo: aos-aodObjective: Detect the Route and Command DCL.1. Create the MiddlewareScannerFile: src/aod/pipeline/middleware_scanner.pyLogic:Mock Scan: Since we don't have real MuleSoft, return a "Found Config":Python{
+    "platform": "mulesoft",
+    "detected_url": "https://autonomos.farm/api/stream/synthetic/mulesoft", # The Farm Stream
+    "related_asset": "salesforce_crm",
+    "confidence": 0.98
+}
+2. Create the "Handoff" ActionFile: src/aod/api/routes/handoff.pyEndpoint: POST /api/actions/provision-connectorLogic:Call MiddlewareScanner to get the config.The Handshake: Send this payload to DCL (http://localhost:5000 or configured DCL URL):JSON{
+  "connector_id": "mule_auto_01",
+  "source_type": "mulesoft_stream",
+  "target_url": "https://autonomos.farm/api/stream/synthetic/mulesoft?chaos=true",
+  "policy": { "repair_enabled": true }
+}
+Return "Provisioning Command Sent".3. Update UI (Optional but good)Add a button in the AOD Triage view: "Auto-Connect via DCL".🧠 SECTION B: DCL AGENT INSTRUCTIONSTarget Repo: aos-dclObjective: Accept the Command and Reconfigure.1. Create Provisioning EndpointFile: backend/api/main.pyEndpoint: POST /api/ingest/provisionLogic:Receive the Targeting_Package.Update Config: Save the target_url to a global/db config that the Sidecar reads.Restart/Notify Sidecar:If the Sidecar is polling a global current_config variable, just update that variable.Log: [INFO] Received Provisioning Command from AOD. Switching Target to {target_url}.2. Update Sidecar (ingest_agent.py)Logic: Instead of SOURCE_URL constant, read from a Configuration class or global state that the API can update.Effect: When AOD calls the API, the Sidecar should seamlessly switch (or start) consuming from the new URL provided by AOD.🧪 EXECUTION CHECKLIST (The "Magic Trick")Start DCL: Ensure it's running but not yet pointing to the specific Farm Chaos Stream (or reset it).Start AOD.Trigger AOD: Call the new POST /api/actions/provision-connector (via curl or UI).Watch DCL Dashboard:Expect: Log message: "Received Provisioning Command..."Expect: Sidecar picks up the new URL.Expect: "Drift Detected" / "Repaired" logs start appearing (because AOD pointed it to the Chaos stream).Why this is the finale: It proves Autonomy.Human finds nothing. Human configures nothing.AOD finds it. DCL fixes it.

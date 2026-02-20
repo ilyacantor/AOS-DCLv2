@@ -1,0 +1,316 @@
+entities:
+  - id: customer
+    name: Customer
+    description: Business customer or account
+    aliases:
+      - account
+      - company
+      - client
+    pack: cro
+    allowed_values:
+      - Acme Corp
+      - TechStart Inc
+      - GlobalBank
+      - HealthCare Plus
+      - RetailMax
+      - Manufacturing Co
+      - FinServ Group
+      - EduTech Academy
+
+  - id: service_line
+    name: Service Line
+    description: Business service offering category
+    aliases:
+      - service type
+      - professional service
+    pack: cfo
+    allowed_values:
+      - Implementation
+      - Consulting
+      - Training
+      - Support Premium
+
+  - id: region
+    name: Region
+    description: Geographic region
+    aliases:
+      - geography
+      - geo
+      - territory
+      - area
+      - location
+
+  - id: segment
+    name: Segment
+    description: Customer or market segment
+    aliases:
+      - market segment
+      - customer segment
+      - tier
+      - size
+
+  - id: rep
+    name: Sales Representative
+    description: Sales representative
+    aliases:
+      - sales rep
+      - account executive
+      - AE
+      - seller
+    pack: cro
+    allowed_values:
+      - James Wilson
+      - Sarah Chen
+      - Mike Johnson
+      - Lisa Park
+      - David Kim
+      - Emily Brown
+      - Chris Lee
+      - Amanda Garcia
+
+  - id: team
+    name: Team
+    description: Organizational team
+    aliases:
+      - squad
+      - group
+      - department
+      - unit
+
+  - id: product
+    name: Product
+    description: Product or SKU
+    aliases:
+      - SKU
+      - item
+      - offering
+
+  - id: project
+    name: Project
+    description: Work project or initiative
+    aliases:
+      - initiative
+      - program
+      - engagement
+
+  - id: invoice
+    name: Invoice
+    description: Billing invoice
+    aliases:
+      - bill
+      - statement
+
+  - id: stage
+    name: Pipeline Stage
+    description: Pipeline or deal stage
+    aliases:
+      - deal stage
+      - opportunity stage
+      - sales stage
+    pack: cro
+    allowed_values:
+      - Lead
+      - Qualified
+      - Proposal
+      - Negotiation
+      - Closed-Won
+      - Closed-Lost
+
+  - id: cohort
+    name: Customer Cohort
+    description: Time-based customer cohort
+    aliases:
+      - customer cohort
+      - signup cohort
+    pack: cro
+    allowed_values:
+      - 2022-H1
+      - 2022-H2
+      - 2023-H1
+      - 2023-H2
+      - 2024-H1
+      - 2024-H2
+      - 2025-H1
+
+  - id: cost_center
+    name: Cost Center
+    description: Budget allocation unit
+    aliases:
+      - budget
+      - department budget
+
+  - id: aging_bucket
+    name: AR Aging Bucket
+    description: AR aging time range
+    aliases:
+      - aging period
+      - days outstanding bucket
+    pack: cfo
+    allowed_values:
+      - Current
+      - 1-30 days
+      - 31-60 days
+      - 61-90 days
+      - 90+ days
+
+  - id: project_type
+    name: Project Type
+    description: Type of project or initiative
+    aliases:
+      - initiative type
+      - work category
+    pack: coo
+    allowed_values:
+      - Feature
+      - Bug Fix
+      - Infrastructure
+      - Compliance
+      - Maintenance
+
+  - id: work_type
+    name: Work Type
+    description: Category of work item
+    aliases:
+      - task type
+      - item type
+    pack: coo
+    allowed_values:
+      - Development
+      - Design
+      - QA
+      - Documentation
+      - Support
+
+  - id: priority
+    name: Priority Level
+    description: Work item priority level
+    aliases:
+      - urgency
+      - priority level
+    pack: coo
+    allowed_values:
+      - Critical
+      - High
+      - Medium
+      - Low
+
+  - id: service
+    name: Service/Application
+    description: Technical service or microservice
+    aliases:
+      - application
+      - system
+      - microservice
+    pack: cto
+    allowed_values:
+      - API Gateway
+      - Auth Service
+      - Payment Service
+      - Notification Service
+      - Data Pipeline
+      - Web App
+      - Mobile Backend
+
+  - id: resource_type
+    name: Cloud Resource Type
+    description: Cloud resource category
+    aliases:
+      - infrastructure type
+      - cloud resource
+    pack: cto
+    allowed_values:
+      - Compute
+      - Storage
+      - Database
+      - Network
+      - ML/AI
+      - Other
+
+  - id: environment
+    name: Deployment Environment
+    description: Deployment environment
+    aliases:
+      - env
+      - stage
+    pack: cto
+    allowed_values:
+      - Production
+      - Staging
+      - Development
+
+  - id: sla_type
+    name: SLA Type
+    description: Service level agreement category
+    aliases:
+      - SLA category
+
+  - id: slo_type
+    name: SLO Type
+    description: Service level objective category
+    aliases:
+      - objective type
+
+  - id: severity
+    name: Incident Severity
+    description: Incident severity level
+    aliases:
+      - incident level
+      - priority
+    pack: cto
+    allowed_values:
+      - P1
+      - P2
+      - P3
+      - P4
+
+  - id: category
+    name: Category
+    description: Generic category dimension
+    aliases:
+      - type
+      - class
+
+  - id: department
+    name: Department
+    description: Organizational department
+    aliases:
+      - dept
+      - division
+      - org unit
+
+  - id: level
+    name: Level
+    description: Job level or grade
+    aliases:
+      - job_level
+      - grade
+      - band
+
+  - id: tenure_band
+    name: Tenure Band
+    description: Employee tenure range
+    aliases:
+      - tenure
+      - years_of_service
+
+  - id: role
+    name: Role
+    description: Job role or title
+    aliases:
+      - job_title
+      - position
+
+  - id: training_type
+    name: Training Type
+    description: Type of training or learning
+    aliases:
+      - course_type
+      - learning_category
+
+  - id: location
+    name: Location
+    description: Physical work location
+    aliases:
+      - office
+      - site
+      - workplace

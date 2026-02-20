@@ -1,0 +1,4 @@
+Id,AccountId,Name,Amount,CloseDate,StageName
+SF-O001,SF-A001,Enterprise License,380000,2024-04-10,Qualification
+SF-O002,SF-A002,Construction Suite,670000,2024-05-15,Closed Won
+SF-O003,SF-A003,Media Platform,540000,2024-04-25,Negotiation

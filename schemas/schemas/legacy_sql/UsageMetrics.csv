@@ -1,0 +1,17 @@
+MetricID,ResourceID,MetricName,MetricValue,Unit,Timestamp
+M-001,LG-R-001,cpuUtilization,65.4,percent,2024-03-15 10:00:00
+M-002,LG-R-001,memoryUtilization,78.2,percent,2024-03-15 10:00:00
+M-003,LG-R-001,networkOut,45.8,mbps,2024-03-15 10:00:00
+M-004,LG-R-002,cpuUtilization,22.1,percent,2024-03-15 10:15:00
+M-005,LG-R-002,networkOut,128.4,mbps,2024-03-15 10:15:00
+M-006,LG-R-003,cpuUtilization,89.3,percent,2024-03-15 10:30:00
+M-007,LG-R-003,memoryUtilization,92.7,percent,2024-03-15 10:30:00
+M-008,LG-R-003,networkOut,256.9,mbps,2024-03-15 10:30:00
+M-009,LG-R-004,cpuUtilization,15.6,percent,2024-03-15 11:00:00
+M-010,LG-R-004,memoryUtilization,34.2,percent,2024-03-15 11:00:00
+M-011,LG-R-005,networkOut,512.3,mbps,2024-03-15 12:00:00
+M-012,LG-R-006,cpuUtilization,76.5,percent,2024-03-15 13:00:00
+M-013,LG-R-006,memoryUtilization,81.9,percent,2024-03-15 13:00:00
+M-014,LG-R-007,cpuUtilization,42.8,percent,2024-03-15 15:00:00
+M-015,LG-R-007,memoryUtilization,55.3,percent,2024-03-15 15:00:00
+M-016,LG-R-007,networkOut,89.7,mbps,2024-03-15 15:00:00

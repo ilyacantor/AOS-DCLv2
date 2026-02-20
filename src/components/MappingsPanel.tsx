@@ -1,7 +1,13 @@
-import { GraphSnapshot } from '../types';
+import { GraphSnapshot, GraphNode } from '../types';
 
 interface MappingsPanelProps {
   data: GraphSnapshot | null;
+}
+
+interface MappingSummary {
+  targetConcept: string;
+  confidence: number;
+  infoSummary: string;
 }
 
 export function MappingsPanel({ data }: MappingsPanelProps) {
@@ -14,8 +20,8 @@ export function MappingsPanel({ data }: MappingsPanelProps) {
   }
 
   const nodeMap = Object.fromEntries((data?.nodes || []).map(n => [n.id, n]));
-  const sourceToMappings = new Map<string, any[]>();
-  
+  const sourceToMappings = new Map<string, MappingSummary[]>();
+
   // Group mappings by source system
   data.links
     .filter(link => {
@@ -24,18 +30,18 @@ export function MappingsPanel({ data }: MappingsPanelProps) {
       return srcNode?.level === 'L1' && tgtNode?.level === 'L2';
     })
     .forEach(link => {
-      const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
-      const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id;
+      const sourceId = typeof link.source === 'string' ? link.source : (link.source as GraphNode).id;
+      const targetId = typeof link.target === 'string' ? link.target : (link.target as GraphNode).id;
       const targetNode = nodeMap[targetId];
-      
+
       if (!sourceToMappings.has(sourceId)) {
         sourceToMappings.set(sourceId, []);
       }
-      
+
       sourceToMappings.get(sourceId)!.push({
         targetConcept: targetNode?.label || 'Unknown',
         confidence: link.confidence || 0,
-        infoSummary: (link as any).info_summary || `Mapped to ${targetNode?.label || 'Unknown'}`
+        infoSummary: link.infoSummary || `Mapped to ${targetNode?.label || 'Unknown'}`
       });
     });
   

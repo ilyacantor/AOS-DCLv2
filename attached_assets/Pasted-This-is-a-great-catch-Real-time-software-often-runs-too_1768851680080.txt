@@ -1,0 +1,60 @@
+This is a great catch. Real-time software often runs *too fast* for a human demo, making it look scripted.
+
+When a computer detects drift and repairs it in 5 milliseconds, the logs arrive instantly together (`WARN` + `SUCCESS`). To a human, "Instant" feels "Fake."
+
+Real API calls to Salesforce take time. We need to **"Humanize" the Sidecar** by respecting the laws of physics (network latency).
+
+Here is the directive to fix the pacing.
+
+---
+
+# 🤖 Master Directive: Phase 3.6 - Humanizing the Repair
+
+**Global Context**
+
+> **The Feedback:** The logs feel "fake" because the "Drift Detection" and "Repair Success" appear instantly in the same batch.
+> **The Reality:** A real repair involves a network round-trip to Salesforce (approx. 500ms - 2000ms).
+> **The Fix:** Inject **Simulated Latency** into the Sidecar's repair logic. This separates the events in time, making the "Work" visible and the logs distinct.
+
+---
+
+## 🧠 SECTION A: DCL AGENT INSTRUCTIONS
+
+**Target Repo:** `aos-dcl`
+**Objective:** Add realistic network latency to the repair process.
+
+**1. Update `IngestSidecar` (`backend/ingest/run_sidecar.py`)**
+
+* **Import:** `import time` and `import random`
+* **Method:** `repair_record(self, record, missing_fields)`
+* **Logic Upgrade:**
+1. **Log First:** Push the `[WARN] Drift Detected...` log *immediately*.
+2. **Simulate Network:**
+* Add `time.sleep(random.uniform(1.0, 3.0))`.
+* *Comment:* "Simulating round-trip latency to Salesforce Source of Truth API."
+
+
+3. **Perform Repair:** Call the Farm API.
+4. **Log Second:** Push the `[SUCCESS] Auto-Repaired...` log *after* the sleep/fetch returns.
+
+
+
+**2. Effect on UI**
+
+* Since the operation now takes ~2 seconds, and the UI likely polls every ~1-2 seconds, the "Warn" log will likely appear in **Poll N**, and the "Success" log in **Poll N+1**.
+* This visual "Stagger" creates the feeling of **Real-Time Processing**.
+
+---
+
+## 🧪 EXECUTION CHECKLIST
+
+1. **Restart Sidecar.**
+2. **Watch Dashboard.**
+3. **Expectation:**
+* You see **Yellow** ("Drift Detected").
+* ... *Pause of 2 seconds (The Suspense)* ...
+* You see **Green** ("Repaired").
+
+
+
+**Why this works:** It leverages the "Uncanny Valley" of demos. If it's too perfect/fast, we don't trust it. If it waits like a real server, we believe it.

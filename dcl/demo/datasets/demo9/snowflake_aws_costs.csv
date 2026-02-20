@@ -1,0 +1,15 @@
+RESOURCE_ID,SERVICE,MONTHLY_COST,RESOURCE_TYPE,PROJECT,COST_CENTER,MONTH,OWNER
+i-zombie001,EC2,450,Compute,Legacy,CC-300,2026-01,Unknown
+db-zombie002,RDS,280,Database,OldProject,CC-300,2026-01,john.smith@company.com
+vol-zombie003,EBS,45,Storage,Unknown,CC-300,2026-01,Unknown
+eip-zombie004,EC2,12,Network,Unknown,CC-300,2026-01,Unknown
+elb-zombie005,ELB,180,Network,TestEnv,CC-300,2026-01,jane.doe@company.com
+nat-zombie006,VPC,120,Network,DevTest,CC-300,2026-01,Unknown
+ecs-zombie007,ECS,350,Container,Deprecated,CC-300,2026-01,mike.wilson@company.com
+fn-zombie008,Lambda,25,Serverless,Unknown,CC-300,2026-01,Unknown
+i-active001,EC2,800,Compute,Production,CC-300,2026-01,engineering@company.com
+db-active002,RDS,1200,Database,Production,CC-300,2026-01,data@company.com
+i-abc123,EC2,18000,Compute,Platform,CC-300,2026-01,Engineering
+db-xyz789,RDS,8500,Database,Platform,CC-300,2026-01,Data
+bucket-main,S3,3200,Storage,Platform,CC-300,2026-01,Engineering
+fn-api,Lambda,2100,Serverless,Platform,CC-300,2026-01,Engineering

@@ -1,0 +1,11 @@
+RESOURCE_ID,RESOURCE_TYPE,SERVICE,INSTANCE_STATE,MONTHLY_COST,LAUNCH_TIME,OWNER,PROJECT
+i-zombie001,Instance,EC2,stopped,450,2024-01-15,Unknown,Legacy
+db-zombie002,Instance,RDS,stopped,280,2024-03-20,john.smith@company.com,OldProject
+vol-zombie003,Volume,EBS,available,45,2023-12-01,Unknown,Unknown
+eip-zombie004,Address,EC2,available,12,2024-02-10,Unknown,Unknown
+elb-zombie005,LoadBalancer,ELB,idle,180,2024-06-15,jane.doe@company.com,TestEnv
+nat-zombie006,Gateway,VPC,idle,120,2024-04-01,Unknown,DevTest
+ecs-zombie007,Cluster,ECS,inactive,350,2023-09-15,mike.wilson@company.com,Deprecated
+fn-zombie008,Function,Lambda,inactive,25,2024-05-20,Unknown,Unknown
+i-active001,Instance,EC2,running,800,2025-01-15,engineering@company.com,Production
+db-active002,Instance,RDS,running,1200,2025-02-01,data@company.com,Production

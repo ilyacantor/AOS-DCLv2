@@ -1,0 +1,121 @@
+This confirms that the "Background" is working (Sidecar is fixing data), but the "Foreground" (Dashboard) is blind to it. The background processes are logging to the server console, while the Dashboard is listening to the API server's internal memory. They are disconnected.
+
+We need to implement **Phase 3.5: The Visibility Layer**. We will use Redis to pipe those critical "Drift Detected" and "Repair Success" messages directly to your screen.
+
+Here is the directive to wire the logs to the UI.
+
+---
+
+# 🤖 Master Directive: Phase 3.5 - Wiring the Logs
+
+**Global Context**
+
+> **The Problem:** The Sidecar is detecting and repairing drift, but the DCL Dashboard's "Narration" panel is silent.
+> **The Fix:** The background agents must broadcast their logs to a **Redis Channel (`dcl.logs`)**. The API's `NarrationService` must subscribe to this channel and push updates to the UI.
+> **Result:** The CEO sees "Drift Detected" (Yellow) and "Repair Success" (Green) in real-time.
+
+---
+
+## 🧠 SECTION A: DCL AGENT INSTRUCTIONS
+
+**Target Repo:** `aos-dcl`
+**Objective:** Connect background logs to the Frontend UI via Redis.
+
+**1. Create the `RedisLogger` Utility**
+
+* **File:** `backend/utils/redis_logger.py`
+* **Logic:** A simple helper class to push logs to Redis.
+```python
+import redis
+import json
+import time
+
+# Connect to the same Redis as the stream
+r = redis.Redis(host='localhost', port=6379, db=0)
+
+def log_to_ui(message, level="info"):
+    """
+    Pushes a log entry to the 'dcl.logs' list.
+    Levels: 'info' (Blue), 'warning' (Yellow), 'success' (Green), 'error' (Red)
+    """
+    entry = {
+        "timestamp": time.time(),
+        "message": message,
+        "level": level,  # Maps to UI styles
+        "source": "Sidecar"
+    }
+    # Push to the list (capped at 100 recent logs to prevent memory leaks)
+    r.lpush("dcl.logs", json.dumps(entry))
+    r.ltrim("dcl.logs", 0, 99)
+
+```
+
+
+
+**2. Update `IngestSidecar` (The Reporter)**
+
+* **File:** `backend/ingest/run_sidecar.py` (or `ingest_agent.py`)
+* **Import:** `from backend.utils.redis_logger import log_to_ui`
+* **Action:** Replace `print()` with `log_to_ui()` for critical events.
+* **Drift Detection:**
+```python
+log_to_ui(f"⚠️ Drift Detected in Invoice {inv_id}. Missing: {missing_fields}", level="warning")
+
+```
+
+
+* **Repair Success:**
+```python
+log_to_ui(f"✅ Auto-Repaired Invoice {inv_id} via Salesforce Source", level="success")
+
+```
+
+
+* **Toxic Data Drop:**
+```python
+log_to_ui(f"🛑 Toxic Record Dropped (Malformed JSON)", level="error")
+
+```
+
+
+
+
+
+**3. Update `NarrationService` (The UI Feeder)**
+
+* **File:** `backend/engine/narration_service.py`
+* **Current State:** Likely returns an in-memory list.
+* **Upgrade:** Modify the `get_messages()` (or equivalent) method to **Merge** sources.
+* **Logic:**
+1. Fetch internal API messages.
+2. Fetch recent messages from Redis: `r.lrange("dcl.logs", 0, 20)`.
+3. Parse the JSON and format them for the frontend (ensure keys match what React expects, usually `id`, `text`, `type`).
+4. Return the combined list.
+
+
+
+
+
+---
+
+## 🚜 SECTION B: FARM AGENT INSTRUCTIONS
+
+**Status:** **Continue.**
+
+* Keep the **Toxic Stream** (`?chaos=true`) running.
+* Keep the **Repair Endpoint** active.
+
+---
+
+## 🧪 EXECUTION CHECKLIST (For the CEO)
+
+1. **Restart DCL:** This reloads the Narration Service to listen to Redis.
+2. **Restart Sidecar:** This loads the new Logger to talk to Redis.
+3. **Open Dashboard:** Go to **Monitor -> Narration**.
+4. **Wait 10s:**
+* **Expect:** A **Yellow** alert: *"⚠️ Drift Detected..."*
+* **Expect:** A **Green** confirmation: *"✅ Auto-Repaired..."*
+
+
+
+**Next Step:** Once you confirm you can see the repairs, we are ready to package this as the "Resilience Demo."

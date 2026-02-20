@@ -1,0 +1,10 @@
+Id,Name,Industry,AnnualRevenue,NumberOfEmployees
+ACC001,Acme Corp,Technology,45000000,500
+ACC002,TechStart Inc,Software,28000000,150
+ACC003,Global Systems,Consulting,72000000,1200
+ACC004,DataFlow LLC,Data Services,15000000,80
+ACC005,CloudNine Co,Cloud Services,38000000,300
+ACC006,InnovateTech,AI/ML,52000000,400
+ACC007,FutureSoft,Enterprise Software,68000000,800
+ACC008,Enterprise Plus,Financial Services,89000000,2000
+ACC009,StartupXYZ,Fintech,12000000,45
