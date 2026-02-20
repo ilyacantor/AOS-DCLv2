@@ -266,10 +266,11 @@ def _ensure_farm_content_activity() -> None:
     # Use the same dispatch selection as build_sources_from_ingest:
     # latest dispatch, or fall back to all non-AAM receipts.
     dispatches = store.get_dispatches()
-    if not dispatches:
+    farm_dispatches = [d for d in dispatches if not d["dispatch_id"].startswith("aam_")]
+    if not farm_dispatches:
         return
 
-    latest = dispatches[0]  # sorted by latest_received_at desc
+    latest = farm_dispatches[0]  # sorted by latest_received_at desc
     did = latest["dispatch_id"]
 
     # Already have a content entry for this dispatch? Nothing to do.

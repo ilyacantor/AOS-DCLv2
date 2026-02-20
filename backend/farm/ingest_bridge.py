@@ -90,10 +90,15 @@ def build_sources_from_ingest(
     elif farm_run_id:
         receipts = [r for r in receipts if r.run_id == farm_run_id]
     else:
-        # Auto-select latest dispatch
+        # Auto-select latest dispatch (exclude AAM dispatches — those are
+        # metadata-only pulls, not Farm content pushes)
         dispatches = store.get_dispatches()
-        if dispatches:
-            latest_dispatch = dispatches[0]  # sorted by latest_received_at desc
+        farm_dispatches = [
+            d for d in dispatches
+            if not d["dispatch_id"].startswith("aam_")
+        ]
+        if farm_dispatches:
+            latest_dispatch = farm_dispatches[0]  # sorted by latest_received_at desc
             latest_did = latest_dispatch["dispatch_id"]
             receipts = store.get_receipts_by_dispatch(latest_did)
             logger.info(
