@@ -80,6 +80,21 @@ class OntologyConcept(BaseModel):
     persona_relevance: Dict[str, float] = Field(default_factory=dict)
 
 
+class SemanticEdge(BaseModel):
+    """AAM-produced field-to-field mapping from real integration infrastructure."""
+    source_system: str
+    source_object: str
+    source_field: str
+    target_system: str
+    target_object: str
+    target_field: str
+    edge_type: Literal["DIRECT_MAP", "TRANSFORMED", "CONDITIONAL", "INFERRED"]
+    confidence: float = Field(ge=0.0, le=1.0)
+    fabric_plane: str
+    extraction_source: str
+    transformation: Optional[str] = None
+
+
 class Mapping(BaseModel):
     id: str
     source_field: str
@@ -87,9 +102,11 @@ class Mapping(BaseModel):
     source_system: str
     ontology_concept: str
     confidence: float = Field(ge=0.0, le=1.0)
-    method: Literal["heuristic", "rag", "llm", "llm_validated"]
+    method: Literal["heuristic", "rag", "llm", "llm_validated", "aam_edge"]
     status: Literal["ok", "conflict", "warning"] = "ok"
     rationale: Optional[str] = None
+    provenance: Optional[str] = None
+    cross_system_mapping: Optional[Dict[str, Any]] = None
 
 
 class MappingDetail(CamelCaseModel):
@@ -100,7 +117,7 @@ class MappingDetail(CamelCaseModel):
     source_field: str
     source_table: str
     target_concept: str
-    method: Literal["heuristic", "rag", "llm", "llm_validated"]
+    method: Literal["heuristic", "rag", "llm", "llm_validated", "aam_edge"]
     confidence: float
 
 
