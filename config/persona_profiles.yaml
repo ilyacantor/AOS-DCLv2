@@ -82,3 +82,21 @@ personas:
         relevance: 0.6
       - concept_id: date
         relevance: 0.5
+
+  - persona_key: CHRO
+    display_name: Chief Human Resources Officer
+    description: Focuses on workforce metrics, talent management, compensation, and employee engagement
+    metadata:
+      responsibilities:
+        - Workforce planning
+        - Talent acquisition and retention
+        - Compensation and benefits
+        - Employee engagement and culture
+      primary_cluster: People
+    concept_relevance:
+      - concept_id: account
+        relevance: 0.3
+      - concept_id: cost
+        relevance: 0.6
+      - concept_id: date
+        relevance: 0.5

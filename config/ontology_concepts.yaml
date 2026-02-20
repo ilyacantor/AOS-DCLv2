@@ -1,137 +1,406 @@
-concepts:
-  - id: account
-    name: Account
-    description: Business account or customer entity
-    cluster: Growth
-    metadata:
-      example_fields:
-        - account_id
-        - account_name
-        - company
-        - customer_id
-        - client_id
-      expected_type: string
-      synonyms:
-        - customer
-        - client
-        - organization
+# DCL Ontology Concepts — Single Source of Truth
+# This file defines ALL business concepts the normalizer recognizes.
+# backend/engine/ontology.py loads and validates this at startup.
 
-  - id: opportunity
-    name: Opportunity
-    description: Sales opportunity or deal
-    cluster: Growth
-    metadata:
-      example_fields:
-        - opportunity_id
-        - deal_id
-        - opportunity_name
-        - pipeline_id
-      expected_type: string
-      synonyms:
-        - deal
-        - pipeline
-        - sales_opp
+domains:
+  - finance
+  - sales
+  - hr
+  - customer_success
+  - product_eng
+  - it_infra
+  - operations
+  - marketing
+  - compliance
+
+concepts:
+
+  # ── Finance & Accounting ──────────────────────────────────────
 
   - id: revenue
+    concept_id: FIN-001
     name: Revenue
-    description: Revenue or monetary amount
+    description: Revenue or monetary amount from business operations
+    domain: finance
     cluster: Finance
-    metadata:
-      example_fields:
-        - amount
-        - revenue
-        - total
-        - value
-        - price
-        - mrr
-        - arr
-      expected_type: float
-      synonyms:
-        - income
-        - sales
-        - billing
+    example_fields:
+      - amount
+      - revenue
+      - total
+      - value
+      - price
+      - mrr
+      - arr
+      - totalAmount
+      - total_amount
+      - lineTotal
+      - line_total
+      - invoiceAmount
+      - invoice_amount
+      - grossAmount
+      - netAmount
+      - unitPrice
+      - unit_price
+      - subtotal
+    aliases:
+      - income
+      - sales
+      - billing
+      - earnings
+      - gross_revenue
+      - net_revenue
+      - total_revenue
+      - top_line
+      - turnover
+      - proceeds
+    expected_type: float
+    typical_source_systems:
+      - erp
+      - billing
+      - crm
+      - accounting
+    persona_relevance:
+      CFO: 1.0
+      CRO: 0.9
+      COO: 0.5
 
   - id: cost
+    concept_id: FIN-002
     name: Cost
     description: Cost or expense amount
+    domain: finance
     cluster: Finance
-    metadata:
-      example_fields:
-        - cost
-        - spend
-        - expense
-        - price
-        - budget
-      expected_type: float
-      synonyms:
-        - expense
-        - spending
-        - expenditure
+    example_fields:
+      - cost
+      - spend
+      - expense
+      - fee
+      - charge
+      - taxAmount
+      - tax_amount
+      - discount
+      - shipping
+    aliases:
+      - expense
+      - spending
+      - expenditure
+      - charges
+      - fees
+      - overhead
+      - opex
+      - capex
+      - disbursement
+    expected_type: float
+    typical_source_systems:
+      - erp
+      - accounting
+      - procurement
+    persona_relevance:
+      CFO: 1.0
+      COO: 0.7
+      CTO: 0.8
+
+  - id: gl_account
+    concept_id: FIN-003
+    name: GL Account
+    description: General ledger account used in financial accounting and chart of accounts
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - gl_account
+      - gl_account_id
+      - gl_code
+      - general_ledger
+      - ledger_account
+      - chart_of_accounts
+      - coa_code
+      - account_code
+    aliases:
+      - general_ledger
+      - ledger_account
+      - chart_of_accounts
+      - coa
+      - gl_code
+      - account_code
+      - gl_number
+      - ledger_code
+    expected_type: string
+    typical_source_systems:
+      - erp
+      - accounting
+    persona_relevance:
+      CFO: 1.0
+
+  - id: invoice
+    concept_id: FIN-004
+    name: Invoice
+    description: Invoice or billing document
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - invoice_id
+      - invoiceId
+      - invoice_number
+      - invoiceNumber
+      - invoice_no
+      - invoiceNo
+      - bill_id
+      - billId
+      - receipt_id
+    aliases:
+      - bill
+      - receipt
+      - billing_document
+      - ap_invoice
+      - ar_invoice
+      - vendor_invoice
+      - purchase_invoice
+      - credit_note
+      - debit_note
+    expected_type: string
+    typical_source_systems:
+      - erp
+      - billing
+      - accounting
+      - procurement
+    persona_relevance:
+      CFO: 0.8
+      COO: 0.5
+
+  - id: currency
+    concept_id: FIN-005
+    name: Currency
+    description: Currency code or monetary unit
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - currency
+      - currency_code
+      - currencyCode
+      - currency_id
+    aliases:
+      - currency_code
+      - monetary_unit
+      - fx
+      - foreign_exchange
+      - denomination
+      - iso_currency
+    expected_type: string
+    typical_source_systems:
+      - erp
+      - billing
+      - crm
+      - treasury
+    persona_relevance:
+      CFO: 0.7
+
+  # ── Sales & Revenue ───────────────────────────────────────────
+
+  - id: account
+    concept_id: SAL-001
+    name: Account
+    description: Business account or customer entity
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - account_id
+      - accountId
+      - account_name
+      - accountName
+      - company
+      - customer_id
+      - customerId
+      - customer_name
+      - customerName
+      - client_id
+      - clientId
+      - vendor_id
+      - vendorId
+    aliases:
+      - customer
+      - client
+      - organization
+      - company
+      - business_account
+      - customer_account
+      - client_account
+      - firm
+    expected_type: string
+    typical_source_systems:
+      - crm
+      - erp
+      - billing
+      - support
+    persona_relevance:
+      CRO: 1.0
+      CFO: 0.6
+      COO: 0.5
+
+  - id: opportunity
+    concept_id: SAL-002
+    name: Opportunity
+    description: Sales opportunity or deal
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - opportunity_id
+      - opportunityId
+      - deal_id
+      - dealId
+      - opportunity_name
+      - opportunityName
+      - pipeline
+      - stage
+    aliases:
+      - deal
+      - pipeline
+      - sales_opp
+      - prospect
+      - lead_opportunity
+      - sales_deal
+      - qualified_lead
+    expected_type: string
+    typical_source_systems:
+      - crm
+    persona_relevance:
+      CRO: 1.0
+      CFO: 0.5
+
+  # ── IT & Infrastructure ──────────────────────────────────────
 
   - id: aws_resource
+    concept_id: IT-001
     name: AWS Resource
     description: AWS cloud resource identifier
+    domain: it_infra
     cluster: Infra
-    metadata:
-      example_fields:
-        - resource_id
-        - instance_id
-        - resource_type
-        - arn
-        - ec2_id
-      expected_type: string
-      synonyms:
-        - cloud_resource
-        - infrastructure
-        - instance
-
-  - id: health
-    name: Health Score
-    description: Account health or status metric
-    cluster: Ops
-    metadata:
-      example_fields:
-        - health_score
-        - status
-        - health
-        - score
-        - rating
-      expected_type: float
-      synonyms:
-        - wellness
-        - status_score
-        - health_metric
+    example_fields:
+      - resource_id
+      - resourceId
+      - instance_id
+      - instanceId
+      - resource_type
+      - resourceType
+      - arn
+    aliases:
+      - cloud_resource
+      - infrastructure
+      - instance
+      - ec2
+      - s3_bucket
+      - lambda_function
+      - cloud_asset
+      - compute_resource
+    expected_type: string
+    typical_source_systems:
+      - aws
+      - cloud_provider
+      - infrastructure_monitoring
+    persona_relevance:
+      CTO: 1.0
+      COO: 0.4
 
   - id: usage
+    concept_id: IT-002
     name: Usage Metrics
     description: Usage or consumption metrics
+    domain: it_infra
     cluster: Ops
-    metadata:
-      example_fields:
-        - usage
-        - consumption
-        - utilization
-        - activity
-        - volume
-      expected_type: float
-      synonyms:
-        - consumption
-        - activity
-        - throughput
+    example_fields:
+      - usage
+      - consumption
+      - utilization
+      - quantity
+    aliases:
+      - consumption
+      - activity
+      - throughput
+      - utilization
+      - volume
+      - resource_usage
+      - system_usage
+    expected_type: float
+    typical_source_systems:
+      - cloud_provider
+      - infrastructure_monitoring
+      - billing
+    persona_relevance:
+      CTO: 0.9
+      COO: 0.6
+
+  # ── Customer Success ─────────────────────────────────────────
+
+  - id: health
+    concept_id: CS-001
+    name: Health Score
+    description: Account health or status metric
+    domain: customer_success
+    cluster: Ops
+    example_fields:
+      - health_score
+      - healthScore
+      - status
+      - health
+      - state
+    aliases:
+      - wellness
+      - status_score
+      - health_metric
+      - customer_health
+      - account_health
+      - satisfaction_score
+    expected_type: float
+    typical_source_systems:
+      - crm
+      - support
+      - customer_success
+    persona_relevance:
+      CRO: 0.6
+      COO: 1.0
+
+  # ── Operations (cross-cutting) ───────────────────────────────
 
   - id: date
+    concept_id: OPS-001
     name: Date/Timestamp
     description: Date or timestamp field
+    domain: operations
     cluster: Ops
-    metadata:
-      example_fields:
-        - date
-        - timestamp
-        - created_at
-        - updated_at
-        - time
-      expected_type: datetime
-      synonyms:
-        - timestamp
-        - datetime
-        - time
+    example_fields:
+      - date
+      - timestamp
+      - created_at
+      - createdAt
+      - updated_at
+      - updatedAt
+      - due_date
+      - dueDate
+      - paid_date
+      - paidDate
+      - invoice_date
+      - invoiceDate
+      - start_date
+      - startDate
+      - end_date
+      - endDate
+    aliases:
+      - timestamp
+      - datetime
+      - time
+      - temporal
+      - period
+      - date_field
+      - calendar_date
+    expected_type: datetime
+    typical_source_systems:
+      - erp
+      - crm
+      - billing
+      - hr
+      - support
+    persona_relevance:
+      CFO: 0.5
+      CRO: 0.5
+      COO: 0.6
+      CTO: 0.5
+      CHRO: 0.5

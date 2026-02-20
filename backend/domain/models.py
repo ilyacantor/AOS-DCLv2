@@ -9,6 +9,7 @@ class Persona(str, Enum):
     CRO = "CRO"
     COO = "COO"
     CTO = "CTO"
+    CHRO = "CHRO"
 
 
 class DiscoveryStatus(str, Enum):
@@ -62,12 +63,24 @@ class SourceSystem(BaseModel):
     entities: List[str] = Field(default_factory=list)
 
 
+VALID_DOMAINS = [
+    "finance", "sales", "hr", "customer_success",
+    "product_eng", "it_infra", "operations", "marketing", "compliance"
+]
+
+
 class OntologyConcept(BaseModel):
     id: str
+    concept_id: str = ""
     name: str
     description: str
+    domain: str = ""
+    cluster: str = ""
     example_fields: List[str] = Field(default_factory=list)
+    aliases: List[str] = Field(default_factory=list)
     expected_type: Optional[str] = None
+    typical_source_systems: List[str] = Field(default_factory=list)
+    persona_relevance: Dict[str, float] = Field(default_factory=dict)
 
 
 class Mapping(BaseModel):
