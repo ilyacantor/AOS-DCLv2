@@ -757,6 +757,314 @@ concepts:
       COO: 0.7
       CFO: 0.5
 
+  - id: position
+    concept_id: HR-002
+    name: Position
+    description: Defined role within org structure
+    domain: hr
+    cluster: People
+    example_fields:
+      - position_id
+      - position
+      - role
+      - job
+      - job_req
+      - headcount_slot
+      - title
+      - level
+    aliases:
+      - role
+      - job
+      - job_req
+      - headcount_slot
+    expected_type: string
+    typical_source_systems: [workday, greenhouse, lever]
+    persona_relevance:
+      CHRO: 0.9
+      COO: 0.4
+
+  - id: department
+    concept_id: HR-003
+    name: Department
+    description: Organizational grouping of employees
+    domain: hr
+    cluster: People
+    example_fields:
+      - department
+      - dept
+      - dept_id
+      - dept_name
+      - team
+      - division
+      - business_unit
+      - head
+      - parent
+    aliases:
+      - dept
+      - team
+      - division
+      - business_unit
+    expected_type: string
+    typical_source_systems: [workday, bamboohr, any_hris]
+    persona_relevance:
+      CHRO: 0.8
+      COO: 0.6
+      CFO: 0.4
+
+  - id: compensation
+    concept_id: HR-004
+    name: Compensation
+    description: Employee pay structure
+    domain: hr
+    cluster: People
+    example_fields:
+      - comp_id
+      - compensation
+      - salary
+      - pay
+      - total_comp
+      - base_pay
+      - bonus
+      - equity
+      - effective_date
+    aliases:
+      - salary
+      - pay
+      - total_comp
+      - base_pay
+    expected_type: float
+    typical_source_systems: [workday, pave, carta]
+    persona_relevance:
+      CHRO: 1.0
+      CFO: 0.7
+
+  - id: benefit
+    concept_id: HR-005
+    name: Benefit
+    description: Employee benefit enrollment
+    domain: hr
+    cluster: People
+    example_fields:
+      - benefit_id
+      - benefit
+      - benefits_plan
+      - coverage
+      - enrollment
+      - plan_type
+      - provider
+      - coverage_level
+    aliases:
+      - benefits_plan
+      - coverage
+      - enrollment
+    expected_type: string
+    typical_source_systems: [workday, gusto, justworks]
+    persona_relevance:
+      CHRO: 0.9
+
+  - id: requisition
+    concept_id: HR-006
+    name: Requisition
+    description: Open hiring request
+    domain: hr
+    cluster: People
+    example_fields:
+      - req_id
+      - requisition
+      - req
+      - job_opening
+      - hiring_req
+      - title
+      - days_open
+    aliases:
+      - req
+      - job_opening
+      - hiring_req
+    expected_type: string
+    typical_source_systems: [greenhouse, lever, workday]
+    persona_relevance:
+      CHRO: 0.9
+
+  - id: candidate
+    concept_id: HR-007
+    name: Candidate
+    description: Job applicant in hiring pipeline
+    domain: hr
+    cluster: People
+    example_fields:
+      - candidate_id
+      - candidate
+      - applicant
+      - prospect
+      - talent
+      - name
+      - stage
+      - source
+      - applied_date
+    aliases:
+      - applicant
+      - prospect
+      - talent
+    expected_type: string
+    typical_source_systems: [greenhouse, lever, icims]
+    persona_relevance:
+      CHRO: 0.8
+
+  - id: performance_review
+    concept_id: HR-008
+    name: Performance Review
+    description: Employee performance evaluation
+    domain: hr
+    cluster: People
+    example_fields:
+      - review_id
+      - review
+      - perf_review
+      - evaluation
+      - appraisal
+      - rating
+      - period
+      - reviewer
+    aliases:
+      - perf_review
+      - evaluation
+      - appraisal
+    expected_type: string
+    typical_source_systems: [lattice, culture_amp, fifteen_five]
+    persona_relevance:
+      CHRO: 0.9
+
+  - id: goal
+    concept_id: HR-009
+    name: Goal
+    description: Employee or team objective
+    domain: hr
+    cluster: People
+    example_fields:
+      - goal_id
+      - goal
+      - okr
+      - objective
+      - kpi_target
+      - description
+      - owner
+      - due_date
+    aliases:
+      - okr
+      - objective
+      - kpi_target
+    expected_type: string
+    typical_source_systems: [lattice, betterworks, workday]
+    persona_relevance:
+      CHRO: 0.7
+      COO: 0.4
+
+  - id: time_off
+    concept_id: HR-010
+    name: Time Off
+    description: Employee leave or absence
+    domain: hr
+    cluster: People
+    example_fields:
+      - leave_id
+      - time_off
+      - pto
+      - leave
+      - absence
+      - vacation
+      - type
+      - start_date
+      - end_date
+    aliases:
+      - pto
+      - leave
+      - absence
+      - vacation
+    expected_type: string
+    typical_source_systems: [workday, bamboohr, gusto]
+    persona_relevance:
+      CHRO: 0.7
+      COO: 0.3
+
+  - id: training
+    concept_id: HR-011
+    name: Training
+    description: Learning and development activity
+    domain: hr
+    cluster: People
+    example_fields:
+      - training_id
+      - training
+      - course
+      - certification
+      - learning
+      - title
+      - completion_date
+      - type
+    aliases:
+      - course
+      - certification
+      - learning
+    expected_type: string
+    typical_source_systems: [cornerstone, udemy_business, workday]
+    persona_relevance:
+      CHRO: 0.7
+
+  - id: org_unit
+    concept_id: HR-012
+    name: Org Unit
+    description: Hierarchical organizational structure node
+    domain: hr
+    cluster: People
+    example_fields:
+      - unit_id
+      - org_unit
+      - org_node
+      - reporting_unit
+      - org_level
+      - name
+      - type
+      - parent_id
+      - level
+      - leader
+    aliases:
+      - org_node
+      - reporting_unit
+      - org_level
+    expected_type: string
+    typical_source_systems: [workday, sap_successfactors]
+    persona_relevance:
+      CHRO: 0.8
+      COO: 0.5
+
+  - id: headcount
+    concept_id: HR-013
+    name: Headcount
+    description: Authorized staffing level
+    domain: hr
+    cluster: People
+    example_fields:
+      - hc_id
+      - headcount
+      - hc
+      - fte
+      - staffing_plan
+      - capacity
+      - approved
+      - filled
+      - open
+    aliases:
+      - hc
+      - fte
+      - staffing_plan
+      - capacity
+    expected_type: float
+    typical_source_systems: [workday, any_hris]
+    persona_relevance:
+      CHRO: 1.0
+      CFO: 0.6
+      COO: 0.5
+
   # ─── Customer Success ────────────────────────────────────
   - id: ticket
     concept_id: CS-001
@@ -837,6 +1145,208 @@ concepts:
     persona_relevance:
       CRO: 0.7
       COO: 0.6
+
+  - id: sla
+    concept_id: CS-003
+    name: SLA
+    description: Service level agreement or target
+    domain: customer_success
+    cluster: Ops
+    example_fields:
+      - sla_id
+      - sla
+      - service_level
+      - response_target
+      - resolution_target
+      - metric
+      - target_value
+      - actual_value
+      - compliance
+    aliases:
+      - service_level
+      - response_target
+      - resolution_target
+    expected_type: string
+    typical_source_systems: [zendesk, servicenow, freshdesk]
+    persona_relevance:
+      COO: 0.8
+      CTO: 0.5
+
+  - id: nps_score
+    concept_id: CS-005
+    name: NPS Score
+    description: Net promoter or satisfaction measure
+    domain: customer_success
+    cluster: Ops
+    example_fields:
+      - nps
+      - csat
+      - satisfaction
+      - ces
+      - survey_score
+      - survey_id
+      - response_date
+      - segment
+    aliases:
+      - csat
+      - satisfaction
+      - ces
+      - survey_score
+    expected_type: float
+    typical_source_systems: [delighted, qualtrics, gainsight]
+    persona_relevance:
+      CRO: 0.7
+      COO: 0.6
+
+  - id: customer_segment
+    concept_id: CS-006
+    name: Customer Segment
+    description: Grouping of customers by attributes
+    domain: customer_success
+    cluster: Ops
+    example_fields:
+      - segment_id
+      - segment
+      - tier
+      - cohort
+      - customer_group
+      - name
+      - criteria
+      - customer_count
+    aliases:
+      - tier
+      - cohort
+      - customer_group
+    expected_type: string
+    typical_source_systems: [gainsight, salesforce, any_crm]
+    persona_relevance:
+      CRO: 0.8
+      COO: 0.5
+
+  - id: lifecycle_stage
+    concept_id: CS-007
+    name: Lifecycle Stage
+    description: Customer journey phase
+    domain: customer_success
+    cluster: Ops
+    example_fields:
+      - lifecycle
+      - stage
+      - journey_stage
+      - maturity
+      - stage_id
+      - name
+      - order
+      - criteria
+    aliases:
+      - journey_stage
+      - maturity
+    expected_type: string
+    typical_source_systems: [gainsight, totango, hubspot]
+    persona_relevance:
+      CRO: 0.6
+      COO: 0.5
+
+  - id: churn_event
+    concept_id: CS-008
+    name: Churn Event
+    description: Customer departure or downgrade
+    domain: customer_success
+    cluster: Ops
+    example_fields:
+      - churn_id
+      - churn
+      - cancellation
+      - downgrade
+      - lost_customer
+      - date
+      - reason
+      - arr_impact
+    aliases:
+      - cancellation
+      - downgrade
+      - lost_customer
+    expected_type: string
+    typical_source_systems: [zuora, salesforce, gainsight]
+    persona_relevance:
+      CRO: 0.9
+      CFO: 0.6
+
+  - id: engagement
+    concept_id: CS-009
+    name: Engagement
+    description: Customer interaction or product usage signal
+    domain: customer_success
+    cluster: Ops
+    example_fields:
+      - event_id
+      - engagement
+      - usage
+      - adoption
+      - login_activity
+      - type
+      - timestamp
+      - value
+    aliases:
+      - adoption
+      - login_activity
+    expected_type: float
+    typical_source_systems: [pendo, amplitude, gainsight]
+    persona_relevance:
+      CRO: 0.6
+      COO: 0.5
+      CTO: 0.4
+
+  - id: feedback
+    concept_id: CS-010
+    name: Feedback
+    description: Qualitative customer input
+    domain: customer_success
+    cluster: Ops
+    example_fields:
+      - feedback_id
+      - feedback
+      - comment
+      - review
+      - feature_request
+      - text
+      - sentiment
+      - category
+    aliases:
+      - comment
+      - review
+      - feature_request
+    expected_type: string
+    typical_source_systems: [productboard, canny, zendesk]
+    persona_relevance:
+      CRO: 0.5
+      CTO: 0.4
+
+  - id: escalation
+    concept_id: CS-011
+    name: Escalation
+    description: Elevated support or success issue
+    domain: customer_success
+    cluster: Ops
+    example_fields:
+      - esc_id
+      - escalation
+      - esc
+      - executive_escalation
+      - p0
+      - ticket_id
+      - severity
+      - owner
+      - sla_at_risk
+    aliases:
+      - esc
+      - executive_escalation
+      - p0
+    expected_type: string
+    typical_source_systems: [zendesk, gainsight, servicenow]
+    persona_relevance:
+      COO: 0.8
+      CRO: 0.6
 
   # ─── Product & Engineering ───────────────────────────────
   - id: engineering_work
