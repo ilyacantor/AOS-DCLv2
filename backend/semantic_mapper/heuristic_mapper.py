@@ -146,7 +146,7 @@ class HeuristicMapper:
             
             metadata = concept.get('metadata', {})
             example_fields = metadata.get('example_fields', [])
-            synonyms = metadata.get('aliases', metadata.get('synonyms', []))
+            synonyms = metadata.get('synonyms', [])
             
             match_confidence = 0.0
             
