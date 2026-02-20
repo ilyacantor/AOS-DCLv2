@@ -5,9 +5,11 @@ Fetches pipe definitions grouped by fabric plane from AAM.
 """
 
 import os
+import time
 import httpx
 from typing import Dict, Any, Optional, List
-from pydantic import BaseModel
+from backend.domain import SemanticEdge
+from backend.core.constants import AAM_EDGE_CACHE_TTL, AAM_EDGE_CONFIDENCE_MIN
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -26,6 +28,8 @@ class AAMClient:
         self.base_url = raw_url.rstrip("/")
         self.timeout = timeout
         self._client = None
+        self._edge_cache: Optional[List[SemanticEdge]] = None
+        self._edge_cache_ts: float = 0.0
     
     def _get_client(self) -> httpx.Client:
         if self._client is None:
@@ -120,6 +124,48 @@ class AAMClient:
             logger.error(f"[AAMClient] Push detail fetch error: {e}")
             raise
     
+    def get_semantic_edges(
+        self,
+        source_system: Optional[str] = None,
+        target_system: Optional[str] = None,
+        confidence_min: float = AAM_EDGE_CONFIDENCE_MIN,
+    ) -> List[SemanticEdge]:
+        """
+        Fetch semantic edges from AAM's topology endpoint.
+
+        Returns cached results if within AAM_EDGE_CACHE_TTL.
+        On failure: logs warning, returns empty list (graceful degradation).
+        """
+        now = time.monotonic()
+        if (
+            self._edge_cache is not None
+            and (now - self._edge_cache_ts) < AAM_EDGE_CACHE_TTL
+        ):
+            logger.debug("[AAMClient] Returning cached semantic edges")
+            return self._edge_cache
+
+        url = f"{self.base_url}/api/topology/semantic-edges"
+        params: Dict[str, Any] = {"confidence_min": confidence_min}
+        if source_system:
+            params["source_system"] = source_system
+        if target_system:
+            params["target_system"] = target_system
+
+        logger.info("[AAMClient] Fetching semantic edges from AAM")
+
+        try:
+            response = self._get_client().get(url, params=params)
+            response.raise_for_status()
+            raw_edges = response.json()
+            edges = [SemanticEdge(**e) for e in raw_edges]
+            self._edge_cache = edges
+            self._edge_cache_ts = now
+            logger.info(f"[AAMClient] Fetched {len(edges)} semantic edges")
+            return edges
+        except Exception as e:
+            logger.warning(f"[AAMClient] Semantic edges fetch failed: {e}")
+            return []
+
     def health_check(self) -> Dict[str, Any]:
         """Check AAM API health."""
         url = f"{self.base_url}/health"
