@@ -1869,7 +1869,60 @@ concepts:
       CTO: 0.7
       COO: 0.4
 
-  # ─── Operations ──────────────────────────────────────────
+  # ─── Operations & Supply Chain ─────────────────────────────
+  - id: project
+    concept_id: OPS-001
+    name: Project
+    description: Planned initiative with defined scope
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - project_id
+      - project
+      - initiative
+      - program
+      - workstream
+      - name
+      - status
+      - owner
+      - start_date
+      - end_date
+    aliases:
+      - initiative
+      - program
+      - workstream
+    expected_type: string
+    typical_source_systems: [asana, monday_com, smartsheet]
+    persona_relevance:
+      COO: 0.9
+      CTO: 0.5
+
+  - id: ops_task
+    concept_id: OPS-002
+    name: Task
+    description: Individual work item
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - task_id
+      - task
+      - to_do
+      - action_item
+      - work_item
+      - title
+      - assignee
+      - status
+      - due_date
+      - priority
+    aliases:
+      - to_do
+      - action_item
+      - work_item
+    expected_type: string
+    typical_source_systems: [asana, jira, monday_com]
+    persona_relevance:
+      COO: 0.7
+
   - id: vendor
     concept_id: OPS-003
     name: Vendor
@@ -1895,6 +1948,769 @@ concepts:
     persona_relevance:
       COO: 0.8
       CFO: 0.6
+
+  - id: purchase_order
+    concept_id: OPS-004
+    name: Purchase Order
+    description: Formal buying request
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - po_id
+      - po
+      - purchase_order
+      - procurement_order
+      - vendor
+      - amount
+      - status
+      - delivery_date
+    aliases:
+      - po
+      - procurement_order
+    expected_type: string
+    typical_source_systems: [coupa, sap, netsuite]
+    persona_relevance:
+      COO: 0.9
+      CFO: 0.6
+
+  - id: inventory
+    concept_id: OPS-005
+    name: Inventory
+    description: Stock or supply level
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - item_id
+      - inventory
+      - stock
+      - warehouse_qty
+      - on_hand
+      - location
+      - quantity
+      - reorder_point
+      - value
+    aliases:
+      - stock
+      - warehouse_qty
+      - on_hand
+    expected_type: float
+    typical_source_systems: [netsuite, sap, cin7]
+    persona_relevance:
+      COO: 0.9
+      CFO: 0.4
+
+  - id: workflow
+    concept_id: OPS-006
+    name: Workflow
+    description: Automated or manual process flow
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - workflow_id
+      - workflow
+      - process
+      - automation
+      - flow
+      - name
+      - trigger
+      - steps
+      - sla
+    aliases:
+      - process
+      - automation
+      - flow
+    expected_type: string
+    typical_source_systems: [zapier, workato, servicenow]
+    persona_relevance:
+      COO: 0.7
+      CTO: 0.4
+
+  - id: quality_metric
+    concept_id: OPS-007
+    name: Quality Metric
+    description: Operational quality measurement
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - metric_id
+      - quality
+      - defect_rate
+      - yield
+      - sla_metric
+      - name
+      - value
+      - target
+      - period
+    aliases:
+      - defect_rate
+      - yield
+      - sla_metric
+    expected_type: float
+    typical_source_systems: [various_domain_specific]
+    persona_relevance:
+      COO: 0.8
+
+  - id: capacity
+    concept_id: OPS-008
+    name: Capacity
+    description: Resource availability or utilization
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - capacity_id
+      - capacity
+      - utilization
+      - bandwidth
+      - resource_load
+      - resource
+      - available
+      - used
+      - period
+    aliases:
+      - utilization
+      - bandwidth
+      - resource_load
+    expected_type: float
+    typical_source_systems: [resource_planning, psa]
+    persona_relevance:
+      COO: 0.8
+      CTO: 0.4
+
+  - id: facility
+    concept_id: OPS-009
+    name: Facility
+    description: Physical location or site
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - facility_id
+      - facility
+      - office
+      - site
+      - location
+      - warehouse
+      - name
+      - address
+      - type
+    aliases:
+      - office
+      - site
+      - location
+      - warehouse
+    expected_type: string
+    typical_source_systems: [iwms, servicenow, internal]
+    persona_relevance:
+      COO: 0.7
+
+  - id: shipment
+    concept_id: OPS-010
+    name: Shipment
+    description: Physical goods in transit
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - shipment_id
+      - shipment
+      - delivery
+      - freight
+      - package
+      - consignment
+      - origin
+      - destination
+      - status
+      - carrier
+      - eta
+    aliases:
+      - delivery
+      - freight
+      - package
+      - consignment
+    expected_type: string
+    typical_source_systems: [shipbob, fedex, ups, sap_tm]
+    persona_relevance:
+      COO: 0.8
+
+  # ─── Marketing ───────────────────────────────────────────
+  - id: campaign
+    concept_id: MKT-001
+    name: Campaign
+    description: Organized marketing initiative
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - campaign_id
+      - campaign
+      - promo
+      - initiative
+      - blast
+      - push
+      - name
+      - channel
+      - budget
+      - start_date
+    aliases:
+      - promo
+      - blast
+      - push
+    expected_type: string
+    typical_source_systems: [marketo, hubspot, pardot]
+    persona_relevance:
+      CRO: 0.8
+      CFO: 0.4
+
+  - id: lead
+    concept_id: MKT-002
+    name: Lead
+    description: Potential customer or buyer
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - lead_id
+      - lead
+      - prospect
+      - mql
+      - inquiry
+      - inbound
+      - name
+      - source
+      - status
+      - score
+      - owner
+    aliases:
+      - prospect
+      - mql
+      - inquiry
+      - inbound
+    expected_type: string
+    typical_source_systems: [salesforce, hubspot, marketo]
+    persona_relevance:
+      CRO: 0.9
+      CFO: 0.3
+
+  - id: channel
+    concept_id: MKT-003
+    name: Channel
+    description: Marketing distribution medium
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - channel_id
+      - channel
+      - source
+      - medium
+      - utm_source
+      - platform
+      - name
+      - type
+      - conversion_rate
+    aliases:
+      - medium
+      - utm_source
+      - platform
+    expected_type: string
+    typical_source_systems: [google_analytics, any_attribution]
+    persona_relevance:
+      CRO: 0.7
+
+  - id: content
+    concept_id: MKT-004
+    name: Content
+    description: Marketing content asset
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - content_id
+      - content
+      - asset
+      - blog
+      - whitepaper
+      - collateral
+      - title
+      - type
+      - publish_date
+      - views
+    aliases:
+      - asset
+      - blog
+      - whitepaper
+      - collateral
+    expected_type: string
+    typical_source_systems: [cms, wordpress, contentful]
+    persona_relevance:
+      CRO: 0.5
+
+  - id: conversion
+    concept_id: MKT-005
+    name: Conversion
+    description: Goal completion event
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - conversion_id
+      - conversion
+      - signup
+      - demo_request
+      - trial_start
+      - type
+      - source
+      - date
+      - value
+      - attribution
+    aliases:
+      - signup
+      - demo_request
+      - trial_start
+    expected_type: string
+    typical_source_systems: [google_analytics, marketo, hubspot]
+    persona_relevance:
+      CRO: 0.8
+
+  - id: attribution
+    concept_id: MKT-006
+    name: Attribution
+    description: Revenue credit to marketing touch
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - attribution_id
+      - attribution
+      - touch
+      - touchpoint
+      - influenced_rev
+      - model
+      - channel
+      - deal_id
+      - weight
+    aliases:
+      - touch
+      - touchpoint
+      - influenced_rev
+    expected_type: string
+    typical_source_systems: [bizible, hubspot, dreamdata]
+    persona_relevance:
+      CRO: 0.7
+      CFO: 0.4
+
+  - id: audience
+    concept_id: MKT-007
+    name: Audience
+    description: Target group or segment
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - audience_id
+      - audience
+      - segment
+      - list
+      - cohort
+      - persona
+      - name
+      - size
+      - criteria
+    aliases:
+      - segment
+      - list
+      - cohort
+    expected_type: string
+    typical_source_systems: [sixsense, demandbase, hubspot]
+    persona_relevance:
+      CRO: 0.6
+
+  - id: ad
+    concept_id: MKT-008
+    name: Ad
+    description: Paid advertising unit
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - ad_id
+      - ad
+      - creative
+      - placement
+      - sponsored
+      - promoted
+      - campaign_id
+      - platform
+      - spend
+      - impressions
+      - clicks
+    aliases:
+      - creative
+      - placement
+      - sponsored
+      - promoted
+    expected_type: string
+    typical_source_systems: [google_ads, linkedin, meta]
+    persona_relevance:
+      CRO: 0.6
+      CFO: 0.3
+
+  - id: marketing_email
+    concept_id: MKT-009
+    name: Email
+    description: Marketing email communication
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - email_id
+      - email
+      - nurture
+      - drip
+      - newsletter
+      - outreach
+      - subject
+      - sent
+      - opens
+      - clicks
+      - bounces
+    aliases:
+      - nurture
+      - drip
+      - newsletter
+    expected_type: string
+    typical_source_systems: [marketo, hubspot, pardot]
+    persona_relevance:
+      CRO: 0.6
+
+  - id: marketing_event
+    concept_id: MKT-010
+    name: Event
+    description: Marketing event or webinar
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - event_id
+      - event
+      - webinar
+      - conference
+      - meetup
+      - field_event
+      - name
+      - date
+      - type
+      - registrants
+      - attendees
+    aliases:
+      - webinar
+      - conference
+      - meetup
+      - field_event
+    expected_type: string
+    typical_source_systems: [splash, cvent, zoom_events]
+    persona_relevance:
+      CRO: 0.6
+      CFO: 0.3
+
+  # ─── Compliance & Risk ───────────────────────────────────
+  - id: audit_trail
+    concept_id: CMP-001
+    name: Audit Trail
+    description: Record of system or user actions
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - log_id
+      - audit_log
+      - activity_log
+      - changelog
+      - event_log
+      - actor
+      - action
+      - resource
+      - timestamp
+      - ip
+    aliases:
+      - activity_log
+      - changelog
+      - event_log
+    expected_type: string
+    typical_source_systems: [vanta, drata, splunk]
+    persona_relevance:
+      CFO: 0.6
+      CTO: 0.7
+
+  - id: control
+    concept_id: CMP-002
+    name: Control
+    description: Security or compliance control
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - control_id
+      - control
+      - safeguard
+      - countermeasure
+      - policy_control
+      - framework
+      - status
+      - owner
+      - evidence_date
+    aliases:
+      - safeguard
+      - countermeasure
+      - policy_control
+    expected_type: string
+    typical_source_systems: [vanta, drata, hyperproof]
+    persona_relevance:
+      CTO: 0.8
+      CFO: 0.5
+
+  - id: risk
+    concept_id: CMP-003
+    name: Risk
+    description: Identified business or operational risk
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - risk_id
+      - risk
+      - threat
+      - exposure
+      - vulnerability
+      - category
+      - likelihood
+      - impact
+      - status
+      - owner
+    aliases:
+      - threat
+      - exposure
+      - vulnerability
+    expected_type: string
+    typical_source_systems: [logicgate, archer, servicenow_grc]
+    persona_relevance:
+      CFO: 0.7
+      CTO: 0.6
+
+  - id: policy
+    concept_id: CMP-004
+    name: Policy
+    description: Organizational governance rule
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - policy_id
+      - policy
+      - rule
+      - standard
+      - guideline
+      - procedure
+      - title
+      - version
+      - effective_date
+      - owner
+    aliases:
+      - rule
+      - standard
+      - guideline
+      - procedure
+    expected_type: string
+    typical_source_systems: [onetrust, drata, sharepoint]
+    persona_relevance:
+      CFO: 0.5
+      CTO: 0.5
+
+  - id: violation
+    concept_id: CMP-005
+    name: Violation
+    description: Policy or compliance breach
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - violation_id
+      - violation
+      - non_compliance
+      - finding
+      - exception
+      - policy_id
+      - severity
+      - date
+      - remediation
+    aliases:
+      - non_compliance
+      - finding
+      - exception
+    expected_type: string
+    typical_source_systems: [vanta, drata, grc_tools]
+    persona_relevance:
+      CFO: 0.7
+      CTO: 0.6
+
+  - id: framework
+    concept_id: CMP-006
+    name: Framework
+    description: Compliance or regulatory framework
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - framework_id
+      - framework
+      - regulation
+      - standard
+      - certification
+      - name
+      - version
+      - scope
+      - status
+    aliases:
+      - regulation
+      - certification
+    expected_type: string
+    typical_source_systems: [vanta, drata, hyperproof]
+    persona_relevance:
+      CFO: 0.6
+      CTO: 0.6
+
+  - id: evidence
+    concept_id: CMP-007
+    name: Evidence
+    description: Proof of compliance or control
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - evidence_id
+      - evidence
+      - artifact
+      - proof
+      - attestation
+      - screenshot
+      - control_id
+      - type
+      - collected_date
+    aliases:
+      - artifact
+      - proof
+      - attestation
+    expected_type: string
+    typical_source_systems: [vanta, drata, hyperproof]
+    persona_relevance:
+      CTO: 0.6
+
+  - id: data_classification
+    concept_id: CMP-008
+    name: Data Classification
+    description: Sensitivity label for data
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - class_id
+      - classification
+      - sensitivity
+      - data_label
+      - pii_flag
+      - level
+      - description
+      - handling_rules
+    aliases:
+      - sensitivity
+      - data_label
+      - pii_flag
+    expected_type: string
+    typical_source_systems: [onetrust, bigid, varonis]
+    persona_relevance:
+      CTO: 0.7
+      CFO: 0.4
+
+  - id: consent
+    concept_id: CMP-009
+    name: Consent
+    description: User or customer data consent record
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - consent_id
+      - consent
+      - opt_in
+      - preference
+      - gdpr_consent
+      - user_id
+      - type
+      - status
+      - granted_date
+    aliases:
+      - opt_in
+      - preference
+      - gdpr_consent
+    expected_type: string
+    typical_source_systems: [onetrust, trustarc, cookiebot]
+    persona_relevance:
+      CTO: 0.5
+
+  - id: vendor_risk
+    concept_id: CMP-010
+    name: Vendor Risk
+    description: Third-party risk assessment
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - assessment_id
+      - vendor_risk
+      - third_party_risk
+      - tprm
+      - vendor_assessment
+      - vendor_id
+      - score
+      - tier
+      - review_date
+    aliases:
+      - third_party_risk
+      - tprm
+      - vendor_assessment
+    expected_type: string
+    typical_source_systems: [securityscorecard, prevalent, vanta]
+    persona_relevance:
+      COO: 0.6
+      CTO: 0.5
+      CFO: 0.4
+
+  - id: access_review
+    concept_id: CMP-011
+    name: Access Review
+    description: Periodic access certification
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - review_id
+      - access_review
+      - recertification
+      - entitlement_review
+      - user_id
+      - resource
+      - decision
+      - reviewer
+    aliases:
+      - recertification
+      - entitlement_review
+    expected_type: string
+    typical_source_systems: [sailpoint, okta, conductorone]
+    persona_relevance:
+      CTO: 0.6
+
+  - id: retention_policy
+    concept_id: CMP-012
+    name: Retention Policy
+    description: Data retention and disposal rule
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - policy_id
+      - retention
+      - archival
+      - disposal
+      - data_lifecycle
+      - data_type
+      - retention_period
+      - action
+      - status
+    aliases:
+      - archival
+      - disposal
+      - data_lifecycle
+    expected_type: string
+    typical_source_systems: [onetrust, egnyte, m365]
+    persona_relevance:
+      CTO: 0.5
+      CFO: 0.4
 
   # ─── Cross-cutting ───────────────────────────────────────
   - id: date
