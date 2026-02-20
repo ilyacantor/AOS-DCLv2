@@ -7,6 +7,7 @@ from backend.engine.narration_service import NarrationService
 from backend.core.constants import (
     RAG_CONFIDENCE_THRESHOLD, PINECONE_INDEX_NAME,
     PINECONE_DIMENSION, PINECONE_CLOUD, PINECONE_REGION,
+    OPENAI_EMBEDDING_MODEL,
 )
 
 
@@ -165,7 +166,7 @@ class RAGService:
                 
                 response = client.embeddings.create(
                     input=text,
-                    model="text-embedding-3-small"
+                    model=OPENAI_EMBEDDING_MODEL
                 )
                 
                 lesson_id = f"lesson:{mapping.source_field.lower()}:{mapping.ontology_concept}"
@@ -194,20 +195,20 @@ class RAGService:
             
         except Exception as e:
             from backend.utils.log_utils import get_logger as _gl
-            _gl(__name__).error(f"OpenAI embedding failed, falling back to mock embeddings: {e}", exc_info=True)
+            _gl(__name__).error(f"OpenAI embedding failed: {e}", exc_info=True)
             self.narration.add_message(
                 self.run_id,
                 "RAG",
-                f"OpenAI embedding error: {str(e)} - FALLING BACK to mock embeddings (results degraded)"
+                f"OpenAI embedding error: {str(e)} - storage ABORTED (no mock fallback in Prod)"
             )
-            return self._create_mock_embeddings(mappings)
+            return []
     
     def _create_mock_embeddings(self, mappings: List[Mapping]) -> List[tuple]:
         import random
         
         vectors = []
         for mapping in mappings:
-            mock_embedding = [random.random() for _ in range(1536)]
+            mock_embedding = [random.random() for _ in range(PINECONE_DIMENSION)]
             
             lesson_id = f"lesson:{mapping.source_field.lower()}:{mapping.ontology_concept}"
             

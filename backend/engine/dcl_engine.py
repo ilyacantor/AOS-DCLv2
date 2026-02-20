@@ -15,6 +15,7 @@ from backend.engine.persona_view import PersonaView
 from backend.semantic_mapper import SemanticMapper
 from backend.eval.mapping_evaluator import MappingEvaluator
 from backend.utils.log_utils import get_logger
+from backend.core.constants import utc_now
 
 logger = get_logger(__name__)
 
@@ -93,6 +94,7 @@ class DCLEngine:
             logger.warning(f"Failed to load stored mappings from DB: {e}. Will generate fresh mappings.")
             self.narration.add_message(run_id, "Engine", "DB unavailable - generating fresh mappings")
             all_mappings_grouped = {}
+            metrics.db_fallback = True
         
         stored_mappings = []
         sources_with_mappings = set()
@@ -182,6 +184,7 @@ class DCLEngine:
                 except Exception as e:
                     logger.error(f"LLM validation failed for run {run_id}: {e}", exc_info=True)
                     self.narration.add_message(run_id, "LLM", f"LLM validation error: {str(e)}")
+                    metrics.llm_fallback = True
             else:
                 self.narration.add_message(
                     run_id, "LLM", 
@@ -196,10 +199,6 @@ class DCLEngine:
         if run_mode == "Prod" and lessons_stored > 0:
             # OpenAI embeddings count as additional LLM calls
             metrics.llm_calls += lessons_stored
-            metrics.rag_reads = 3  # Attempted RAG lookups during mapping
-        elif lessons_stored > 0:
-            # Dev mode uses mock embeddings (no LLM calls)
-            metrics.rag_reads = 0
         
         metrics.total_mappings = len(mappings)
         
@@ -224,7 +223,7 @@ class DCLEngine:
             meta={
                 "mode": mode,
                 "run_id": run_id,
-                "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "generated_at": utc_now(),
                 "stats": {
                     "sources": len(sources),
                     "ontology_concepts": len(ontology),

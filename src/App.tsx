@@ -15,17 +15,18 @@ import { IngestionPanel } from './components/IngestionPanel';
 
 type MainView = 'graph' | 'dashboard' | 'guide' | 'recon' | 'ingest';
 
-const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO'];
+const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO', 'CHRO'];
 
 function App() {
   const [graphData, setGraphData] = useState<GraphSnapshot | null>(null);
   const [runMode, setRunMode] = useState<'Dev' | 'Prod'>('Dev');
   const [dataMode, setDataMode] = useState<'Demo' | 'Farm' | 'AAM'>('Demo');
-  const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>(['CFO', 'CRO', 'COO', 'CTO']);
+  const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>(['CFO', 'CRO', 'COO', 'CTO', 'CHRO']);
   const [runId, setRunId] = useState<string | undefined>(undefined);
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [mainView, setMainView] = useState<MainView>('graph');
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const { toast } = useToast();
 
@@ -48,6 +49,7 @@ function App() {
       CRO: 'Chief Revenue Officer',
       COO: 'Chief Operating Officer',
       CTO: 'Chief Technology Officer',
+      CHRO: 'Chief Human Resources Officer',
     };
 
     const personaFocusAreas: Record<PersonaId, string[]> = {
@@ -55,6 +57,7 @@ function App() {
       CRO: ['Pipeline', 'Revenue', 'Accounts'],
       COO: ['Operations', 'Health', 'Usage'],
       CTO: ['Infrastructure', 'Resources', 'Cost'],
+      CHRO: ['Headcount', 'Retention', 'Workforce'],
     };
 
     const personaOntologies: Record<PersonaId, string[]> = {
@@ -62,6 +65,7 @@ function App() {
       CRO: ['account', 'opportunity', 'revenue'],
       COO: ['usage', 'health'],
       CTO: ['aws_resource', 'usage', 'cost'],
+      CHRO: ['employee', 'health'],
     };
 
     return personas.map((persona) => {
@@ -114,7 +118,10 @@ function App() {
         setGraphData(prev => prev || gv);
         setRunId(prev => prev || data.run_id);
       })
-      .catch((err) => console.warn('[App] Auto-load failed:', err));
+      .catch((err) => {
+        console.error('[App] Auto-load failed:', err);
+        setLoadError('Could not connect to DCL Engine. Start the backend and click Run.');
+      });
   }, []);
 
   const handleRun = async () => {
@@ -321,6 +328,13 @@ function App() {
               <div className="h-full w-full relative">
                 <div className="absolute inset-0 p-4">
                   <div className="h-full w-full rounded-xl border bg-card/30 overflow-hidden shadow-inner">
+                    {loadError && !graphData && (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center p-6 rounded-lg border border-destructive/30 bg-destructive/5 max-w-md">
+                          <p className="text-sm text-destructive font-medium">{loadError}</p>
+                        </div>
+                      </div>
+                    )}
                     <SankeyGraph
                       data={graphData}
                       selectedPersonas={selectedPersonas}

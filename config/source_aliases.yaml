@@ -1,0 +1,226 @@
+# Source Normalizer Configuration
+# Externalizes alias maps, pattern rules, and category patterns
+# that were previously hardcoded in source_normalizer.py.
+#
+# To add a new vendor: add an entry below. No code deploy required.
+
+alias_map:
+  # CRM
+  salesforce: salesforce_crm
+  sfdc: salesforce_crm
+  sf: salesforce_crm
+  sf_crm: salesforce_crm
+  dynamics: dynamics_crm
+  dynamics365: dynamics_crm
+  d365: dynamics_crm
+  msdyn: dynamics_crm
+  hubspot: hubspot_crm
+  hs: hubspot_crm
+  hs_crm: hubspot_crm
+
+  # ERP
+  netsuite: netsuite_erp
+  ns: netsuite_erp
+  oracle_netsuite: netsuite_erp
+  sap: sap_erp
+  sap_s4: sap_erp
+  s4hana: sap_erp
+  oracle: oracle_erp
+  oracle_cloud: oracle_erp
+  oracle_fusion: oracle_erp
+
+  # Billing
+  stripe: stripe_billing
+  chargebee: chargebee_billing
+  cb: chargebee_billing
+  zuora: zuora_billing
+  recurly: recurly_billing
+  paddle: paddle_billing
+
+  # HCM
+  workday: workday_hcm
+  wd: workday_hcm
+
+  # Support
+  zendesk: zendesk_support
+  zd: zendesk_support
+
+  # Engineering
+  jira: jira_engineering
+  atlassian_jira: jira_engineering
+
+  # Monitoring
+  datadog: datadog_monitoring
+  dd: datadog_monitoring
+
+  # Cloud
+  aws_cost: aws_cost_explorer
+  aws_cost_explorer: aws_cost_explorer
+  aws_cur: aws_cost_explorer
+
+  # Payments
+  paypal: paypal_payments
+  braintree: braintree_payments
+  square: square_payments
+  adyen: adyen_payments
+
+  # Accounting
+  quickbooks: quickbooks_accounting
+  qb: quickbooks_accounting
+  intuit: quickbooks_accounting
+  xero: xero_accounting
+  freshbooks: freshbooks_accounting
+  fb_accounting: freshbooks_accounting
+
+  # Databases
+  postgres: internal_crm_postgres
+  postgresql: internal_crm_postgres
+  mongodb: mongodb_customer_db
+  mongo: mongodb_customer_db
+  supabase: supabase_app_db
+  mysql: mysql_orders_db
+
+  # Data Warehouses
+  snowflake: dw_dim_customer
+  bigquery: bigquery_unified_customers
+  bq: bigquery_unified_customers
+  redshift: redshift_fact_orders
+  databricks: databricks_gold_accounts
+
+pattern_rules:
+  - pattern: "^sf[-_]?"
+    canonical_id: salesforce_crm
+  - pattern: "^sfdc[-_]?"
+    canonical_id: salesforce_crm
+  - pattern: "^salesforce[-_]?"
+    canonical_id: salesforce_crm
+  - pattern: "^dyn[-_]?"
+    canonical_id: dynamics_crm
+  - pattern: "^d365[-_]?"
+    canonical_id: dynamics_crm
+  - pattern: "^dynamics[-_]?"
+    canonical_id: dynamics_crm
+  - pattern: "^hs[-_]?"
+    canonical_id: hubspot_crm
+  - pattern: "^hubspot[-_]?"
+    canonical_id: hubspot_crm
+  - pattern: "^ns[-_]?"
+    canonical_id: netsuite_erp
+  - pattern: "^netsuite[-_]?"
+    canonical_id: netsuite_erp
+  - pattern: "^sap[-_]?"
+    canonical_id: sap_erp
+  - pattern: "^oracle[-_]?"
+    canonical_id: oracle_erp
+  - pattern: "^stripe[-_]?"
+    canonical_id: stripe_billing
+  - pattern: "^cb[-_]?"
+    canonical_id: chargebee_billing
+  - pattern: "^chargebee[-_]?"
+    canonical_id: chargebee_billing
+  - pattern: "^wd[-_]?"
+    canonical_id: workday_hcm
+  - pattern: "^workday[-_]?"
+    canonical_id: workday_hcm
+  - pattern: "^zendesk[-_]?"
+    canonical_id: zendesk_support
+  - pattern: "^zd[-_]?"
+    canonical_id: zendesk_support
+  - pattern: "^jira[-_]?"
+    canonical_id: jira_engineering
+  - pattern: "^datadog[-_]?"
+    canonical_id: datadog_monitoring
+  - pattern: "^dd[-_]?"
+    canonical_id: datadog_monitoring
+  - pattern: "^aws[-_]?cost[-_]?"
+    canonical_id: aws_cost_explorer
+  - pattern: "^qb[-_]?"
+    canonical_id: quickbooks_accounting
+  - pattern: "^quickbooks[-_]?"
+    canonical_id: quickbooks_accounting
+  - pattern: "^xero[-_]?"
+    canonical_id: xero_accounting
+  - pattern: "^pg[-_]?"
+    canonical_id: internal_crm_postgres
+  - pattern: "^postgres[-_]?"
+    canonical_id: internal_crm_postgres
+  - pattern: "^mongo[-_]?"
+    canonical_id: mongodb_customer_db
+  - pattern: "^snow[-_]?"
+    canonical_id: dw_dim_customer
+  - pattern: "^snowflake[-_]?"
+    canonical_id: dw_dim_customer
+
+category_patterns:
+  crm:
+    - crm
+    - customer
+    - sales
+    - lead
+    - contact
+  erp:
+    - erp
+    - enterprise
+    - resource
+    - planning
+  billing:
+    - bill
+    - subscription
+    - recurring
+  payment:
+    - pay
+    - transaction
+    - checkout
+    - payments
+  payments:
+    - pay
+    - transaction
+    - checkout
+    - payment
+  accounting:
+    - account
+    - ledger
+    - finance
+    - book
+  warehouse:
+    - warehouse
+    - dw
+    - analytics
+    - bi
+  database:
+    - db
+    - database
+    - sql
+  custom_db:
+    - postgres
+    - mysql
+    - mongo
+    - supabase
+  hr:
+    - hcm
+    - worker
+    - employee
+    - position
+    - hr
+    - workday
+  support:
+    - support
+    - ticket
+    - helpdesk
+    - zendesk
+  engineering:
+    - jira
+    - sprint
+    - issue
+    - agile
+  monitoring:
+    - datadog
+    - monitor
+    - incident
+    - slo
+    - observability
+  cloud:
+    - aws
+    - cloud
+    - cost_explorer
+    - cur

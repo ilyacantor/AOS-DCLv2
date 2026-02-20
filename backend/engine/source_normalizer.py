@@ -12,6 +12,8 @@ import os
 import re
 import time
 import httpx
+import yaml
+from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
@@ -62,131 +64,42 @@ class NormalizationResult:
 
 
 class SourceNormalizer:
-    ALIAS_MAP = {
-        "salesforce": "salesforce_crm",
-        "sfdc": "salesforce_crm",
-        "sf": "salesforce_crm",
-        "sf_crm": "salesforce_crm",
-        "dynamics": "dynamics_crm",
-        "dynamics365": "dynamics_crm",
-        "d365": "dynamics_crm",
-        "msdyn": "dynamics_crm",
-        "hubspot": "hubspot_crm",
-        "hs": "hubspot_crm",
-        "hs_crm": "hubspot_crm",
-        "netsuite": "netsuite_erp",
-        "ns": "netsuite_erp",
-        "oracle_netsuite": "netsuite_erp",
-        "sap": "sap_erp",
-        "sap_s4": "sap_erp",
-        "s4hana": "sap_erp",
-        "oracle": "oracle_erp",
-        "oracle_cloud": "oracle_erp",
-        "oracle_fusion": "oracle_erp",
-        "stripe": "stripe_billing",
-        "chargebee": "chargebee_billing",
-        "cb": "chargebee_billing",
-        "zuora": "zuora_billing",
-        "recurly": "recurly_billing",
-        "paddle": "paddle_billing",
-        "workday": "workday_hcm",
-        "wd": "workday_hcm",
-        "zendesk": "zendesk_support",
-        "zd": "zendesk_support",
-        "jira": "jira_engineering",
-        "atlassian_jira": "jira_engineering",
-        "datadog": "datadog_monitoring",
-        "dd": "datadog_monitoring",
-        "aws_cost": "aws_cost_explorer",
-        "aws_cost_explorer": "aws_cost_explorer",
-        "aws_cur": "aws_cost_explorer",
-        "paypal": "paypal_payments",
-        "braintree": "braintree_payments",
-        "square": "square_payments",
-        "adyen": "adyen_payments",
-        "quickbooks": "quickbooks_accounting",
-        "qb": "quickbooks_accounting",
-        "intuit": "quickbooks_accounting",
-        "xero": "xero_accounting",
-        "freshbooks": "freshbooks_accounting",
-        "fb_accounting": "freshbooks_accounting",
-        "postgres": "internal_crm_postgres",
-        "postgresql": "internal_crm_postgres",
-        "mongodb": "mongodb_customer_db",
-        "mongo": "mongodb_customer_db",
-        "supabase": "supabase_app_db",
-        "mysql": "mysql_orders_db",
-        "snowflake": "dw_dim_customer",
-        "bigquery": "bigquery_unified_customers",
-        "bq": "bigquery_unified_customers",
-        "redshift": "redshift_fact_orders",
-        "databricks": "databricks_gold_accounts",
-    }
+    # --- Config loaded from config/source_aliases.yaml at init ---
+    # Hardcoded fallbacks only used if YAML is missing or malformed.
+    _YAML_CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "source_aliases.yaml"
 
-    PATTERN_RULES = [
-        (r"^sf[-_]?", "salesforce_crm"),
-        (r"^sfdc[-_]?", "salesforce_crm"),
-        (r"^salesforce[-_]?", "salesforce_crm"),
-        (r"^dyn[-_]?", "dynamics_crm"),
-        (r"^d365[-_]?", "dynamics_crm"),
-        (r"^dynamics[-_]?", "dynamics_crm"),
-        (r"^hs[-_]?", "hubspot_crm"),
-        (r"^hubspot[-_]?", "hubspot_crm"),
-        (r"^ns[-_]?", "netsuite_erp"),
-        (r"^netsuite[-_]?", "netsuite_erp"),
-        (r"^sap[-_]?", "sap_erp"),
-        (r"^oracle[-_]?", "oracle_erp"),
-        (r"^stripe[-_]?", "stripe_billing"),
-        (r"^cb[-_]?", "chargebee_billing"),
-        (r"^chargebee[-_]?", "chargebee_billing"),
-        (r"^wd[-_]?", "workday_hcm"),
-        (r"^workday[-_]?", "workday_hcm"),
-        (r"^zendesk[-_]?", "zendesk_support"),
-        (r"^zd[-_]?", "zendesk_support"),
-        (r"^jira[-_]?", "jira_engineering"),
-        (r"^datadog[-_]?", "datadog_monitoring"),
-        (r"^dd[-_]?", "datadog_monitoring"),
-        (r"^aws[-_]?cost[-_]?", "aws_cost_explorer"),
-        (r"^qb[-_]?", "quickbooks_accounting"),
-        (r"^quickbooks[-_]?", "quickbooks_accounting"),
-        (r"^xero[-_]?", "xero_accounting"),
-        (r"^pg[-_]?", "internal_crm_postgres"),
-        (r"^postgres[-_]?", "internal_crm_postgres"),
-        (r"^mongo[-_]?", "mongodb_customer_db"),
-        (r"^snow[-_]?", "dw_dim_customer"),
-        (r"^snowflake[-_]?", "dw_dim_customer"),
-    ]
-
-    CATEGORY_PATTERNS = {
-        "crm": [r"crm", r"customer", r"sales", r"lead", r"contact"],
-        "erp": [r"erp", r"enterprise", r"resource", r"planning"],
-        "billing": [r"bill", r"subscription", r"recurring"],
-        "payment": [r"pay", r"transaction", r"checkout", r"payments"],
-        "payments": [r"pay", r"transaction", r"checkout", r"payment"],
-        "accounting": [r"account", r"ledger", r"finance", r"book"],
-        "warehouse": [r"warehouse", r"dw", r"analytics", r"bi"],
-        "database": [r"db", r"database", r"sql"],
-        "custom_db": [r"postgres", r"mysql", r"mongo", r"supabase"],
-        "hr": [r"hcm", r"worker", r"employee", r"position", r"hr", r"workday"],
-        "support": [r"support", r"ticket", r"helpdesk", r"zendesk"],
-        "engineering": [r"jira", r"sprint", r"issue", r"agile"],
-        "monitoring": [r"datadog", r"monitor", r"incident", r"slo", r"observability"],
-        "cloud": [r"aws", r"cloud", r"cost_explorer", r"cur"],
-    }
-
-    # Circuit breaker: skip Farm API calls for this many seconds after a failure
-    _CB_COOLDOWN = 120  # 2 minutes
     _cb_last_failure: float = 0.0  # class-level, shared across instances
 
     def __init__(self):
         self._registry_cache: Dict[str, CanonicalSource] = {}
         self._discovered_sources: Dict[str, CanonicalSource] = {}
         self._registry_loaded = False
+        self._load_yaml_config()
+
+    def _load_yaml_config(self) -> None:
+        """Load alias/pattern/category config from YAML. Fall back to minimal defaults."""
+        from backend.core.constants import CB_COOLDOWN
+        self._cb_cooldown = CB_COOLDOWN
+
+        try:
+            with open(self._YAML_CONFIG_PATH, "r") as f:
+                cfg = yaml.safe_load(f) or {}
+            self.ALIAS_MAP: Dict[str, str] = cfg.get("alias_map", {})
+            raw_patterns = cfg.get("pattern_rules", [])
+            self.PATTERN_RULES: List[Tuple[str, str]] = [
+                (r["pattern"], r["canonical_id"]) for r in raw_patterns
+            ]
+            self.CATEGORY_PATTERNS: Dict[str, List[str]] = cfg.get("category_patterns", {})
+        except Exception:
+            # Minimal hardcoded fallback — just enough to not crash
+            self.ALIAS_MAP = {"salesforce": "salesforce_crm", "netsuite": "netsuite_erp"}
+            self.PATTERN_RULES = []
+            self.CATEGORY_PATTERNS = {}
 
     def load_registry(self, narration=None, run_id: Optional[str] = None) -> int:
         # Circuit breaker: if Farm API failed recently, skip the network call
         now = time.time()
-        if SourceNormalizer._cb_last_failure > 0 and (now - SourceNormalizer._cb_last_failure) < SourceNormalizer._CB_COOLDOWN:
+        if SourceNormalizer._cb_last_failure > 0 and (now - SourceNormalizer._cb_last_failure) < self._cb_cooldown:
             if narration and run_id:
                 narration.add_message(
                     run_id, "SourceNormalizer",
@@ -200,7 +113,8 @@ class SourceNormalizer:
         registry_url = f"{farm_url}/api/sources/registry"
 
         try:
-            with httpx.Client(timeout=5.0) as client:
+            from backend.core.constants import FARM_REGISTRY_TIMEOUT
+            with httpx.Client(timeout=FARM_REGISTRY_TIMEOUT) as client:
                 response = client.get(registry_url)
                 response.raise_for_status()
                 data = response.json()

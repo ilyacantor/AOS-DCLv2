@@ -134,6 +134,8 @@ class RunMetrics(CamelCaseModel):
     render_ms: float = 0
     data_status: Optional[str] = None
     payload_kpis: Optional[Dict[str, Any]] = None
+    db_fallback: bool = False
+    llm_fallback: bool = False
 
 
 class GraphSnapshot(CamelCaseModel):

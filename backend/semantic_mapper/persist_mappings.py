@@ -10,6 +10,9 @@ from backend.core.constants import (
     ONTOLOGY_CACHE_TTL as _ONTOLOGY_CACHE_TTL,
     MAPPINGS_CACHE_TTL as _MAPPINGS_CACHE_TTL,
     POOL_RETRY_COOLDOWN as _POOL_RETRY_COOLDOWN,
+    POOL_MIN_CONN as _POOL_MIN_CONN,
+    POOL_MAX_CONN as _POOL_MAX_CONN,
+    DB_CONNECT_TIMEOUT as _DB_CONNECT_TIMEOUT,
 )
 
 logger = get_logger(__name__)
@@ -26,9 +29,9 @@ class MappingPersistence:
     _mappings_cache: Optional[Dict[str, List[Mapping]]] = None
     _mappings_cache_time: float = 0
 
-    POOL_MIN_CONN = 1
-    POOL_MAX_CONN = 5
-    CONNECT_TIMEOUT = 5
+    POOL_MIN_CONN = _POOL_MIN_CONN
+    POOL_MAX_CONN = _POOL_MAX_CONN
+    CONNECT_TIMEOUT = _DB_CONNECT_TIMEOUT
     ONTOLOGY_CACHE_TTL = _ONTOLOGY_CACHE_TTL
     MAPPINGS_CACHE_TTL = _MAPPINGS_CACHE_TTL
     POOL_RETRY_COOLDOWN = _POOL_RETRY_COOLDOWN
@@ -83,6 +86,10 @@ class MappingPersistence:
                     MappingPersistence._pool.putconn(conn)
                 except Exception as e:
                     logger.warning(f"Error returning connection to pool: {e}")
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
     
     def save_mappings(self, mappings: List[Mapping], clear_existing: bool = False) -> int:
         if not mappings:

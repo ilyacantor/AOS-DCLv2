@@ -1,4 +1,4 @@
-export type PersonaId = 'CFO' | 'CRO' | 'COO' | 'CTO';
+export type PersonaId = 'CFO' | 'CRO' | 'COO' | 'CTO' | 'CHRO';
 
 export type Severity = 'info' | 'low' | 'medium' | 'high' | 'critical';
 export type Trend = 'up' | 'down' | 'flat' | 'unknown';
@@ -110,6 +110,8 @@ export interface RunMetrics {
   renderMs: number;
   dataStatus?: string | null;
   payloadKpis?: PayloadKpis | null;
+  dbFallback?: boolean;
+  llmFallback?: boolean;
 }
 
 export interface GraphSnapshot {
