@@ -115,7 +115,7 @@ class QueryError(BaseModel):
     details: Optional[Dict[str, Any]] = None
 
 
-FACT_BASE_PATH = Path(__file__).parent.parent / "core" / "seed" / "fact_base.json"
+FACT_BASE_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "fact_base.json"
 
 _fact_base_cache: Optional[Dict] = None
 _fact_base_loaded_at: Optional[datetime] = None
