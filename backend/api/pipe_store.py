@@ -75,6 +75,7 @@ class ExportReceipt:
     total_connections: int
     pipe_ids: List[str]
     received_at: str
+    snapshot_name: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -191,6 +192,7 @@ class PipeDefinitionStore:
         definitions: List[PipeDefinition],
         aod_run_id: Optional[str] = None,
         source: str = "aam",
+        snapshot_name: Optional[str] = None,
     ) -> ExportReceipt:
         """Register multiple pipe definitions from an export-pipes call."""
         now = datetime.now(timezone.utc).isoformat()
@@ -208,6 +210,7 @@ class PipeDefinitionStore:
                 total_connections=len(definitions),
                 pipe_ids=pipe_ids,
                 received_at=now,
+                snapshot_name=snapshot_name,
             )
             self._export_receipts.append(receipt)
 

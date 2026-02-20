@@ -200,12 +200,13 @@ export function IngestionPanel() {
                 <thead>
                   <tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
                     <th className="text-left px-3 py-2 font-medium">Snapshot</th>
+                    <th className="text-left px-3 py-2 font-medium">AOD Run</th>
                     <th className="text-left px-3 py-2 font-medium">Phase</th>
                     <th className="text-left px-3 py-2 font-medium">Source</th>
-                    <th className="text-left px-3 py-2 font-medium">When</th>
+                    <th className="text-left px-3 py-2 font-medium">Date / Time</th>
                     <th className="text-right px-3 py-2 font-medium">Pipes</th>
-                    <th className="text-right px-3 py-2 font-medium">Rows</th>
                     <th className="text-right px-3 py-2 font-medium">SORs</th>
+                    <th className="text-right px-3 py-2 font-medium">Fabrics</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -225,7 +226,7 @@ export function IngestionPanel() {
                           onClick={() => setExpandedSnap(isExpanded ? null : snapName)}
                           className="border-b border-border/50 bg-card/10 hover:bg-card/30 cursor-pointer transition-colors"
                         >
-                          <td colSpan={7} className="px-3 py-2">
+                          <td colSpan={8} className="px-3 py-2">
                             <div className="flex items-center gap-2">
                               <svg
                                 className={`w-2.5 h-2.5 shrink-0 transition-transform duration-150 text-muted-foreground ${isExpanded ? 'rotate-90' : ''}`}
@@ -250,10 +251,9 @@ export function IngestionPanel() {
                                   );
                                 })}
                               </div>
-                              {/* Run ID */}
-                              {sorted[0]?.run_id && (
+                              {sorted[0]?.aod_run_id && (
                                 <span className="text-muted-foreground/50 text-[10px] font-mono ml-auto">
-                                  {sorted[0].run_id.slice(0, 16)}
+                                  {sorted[0].aod_run_id}
                                 </span>
                               )}
                             </div>
@@ -272,8 +272,11 @@ export function IngestionPanel() {
                           return (
                             <Fragment key={`${snapName}-${entry.phase}-${idx}`}>
                               <tr className="border-b border-border/30 hover:bg-card/20 transition-colors">
-                                <td className="px-3 py-1.5 pl-8 text-muted-foreground/60 text-[10px] font-mono">
-                                  {entry.dispatch_id ? entry.dispatch_id.slice(0, 20) : '-'}
+                                <td className="px-3 py-1.5 pl-8 font-mono text-[10px] text-foreground/70">
+                                  {entry.snapshot_name || '-'}
+                                </td>
+                                <td className="px-3 py-1.5 font-mono text-[10px] text-muted-foreground/60">
+                                  {entry.aod_run_id || '-'}
                                 </td>
                                 <td className="px-3 py-1.5">
                                   <span className={`inline-flex items-center gap-1 font-semibold ${cfg.color}`}>
@@ -305,23 +308,12 @@ export function IngestionPanel() {
                                   )}
                                 </td>
                                 <td className="px-3 py-1.5 text-right font-mono text-foreground">
-                                  {entry.rows > 0 ? fmtRows(entry.rows) : (
-                                    entry.phase === 'structure'
-                                      ? <span className="text-blue-400/50 italic text-[10px]">schema</span>
-                                      : <span className="text-muted-foreground/40">-</span>
+                                  {entry.sors > 0 ? entry.sors : (
+                                    <span className="text-muted-foreground/40">-</span>
                                   )}
                                 </td>
                                 <td className="px-3 py-1.5 text-right font-mono text-foreground">
-                                  {entry.sors > 0 ? (
-                                    <span>
-                                      {entry.sors}
-                                      {entry.fabrics > 0 && (
-                                        <span className="text-[10px] text-muted-foreground ml-1">
-                                          / {entry.fabrics}f
-                                        </span>
-                                      )}
-                                    </span>
-                                  ) : (
+                                  {entry.fabrics > 0 ? entry.fabrics : (
                                     <span className="text-muted-foreground/40">-</span>
                                   )}
                                 </td>

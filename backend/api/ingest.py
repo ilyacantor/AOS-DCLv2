@@ -208,6 +208,10 @@ class IngestStore:
         self._activity_log: List[ActivityEntry] = []
         self._seen_dispatch_ids: set = set()  # track which dispatch_ids we've recorded
         self._content_sources: Dict[str, set] = {}  # dispatch_id → unique source_systems
+        self._content_pipes: Dict[str, set] = {}    # dispatch_id → unique pipe_ids
+        self._content_mapped: Dict[str, set] = {}   # dispatch_id → unique mapped pipe_ids
+        self._content_unmapped: Dict[str, set] = {} # dispatch_id → unique unmapped pipe_ids
+        self._content_fabrics: Dict[str, set] = {}  # dispatch_id → unique fabric planes
 
         # Row buffer
         self._row_buffer: OrderedDict[str, List[Dict[str, Any]]] = OrderedDict()
@@ -798,6 +802,7 @@ class IngestStore:
                 "total_drift_events": len(self._drift_events),
                 "pipes_tracked": len(self._schema_registry),
                 "unique_sources": len(unique_sources),
+                "source_system_names": sorted(unique_sources),
                 "unique_tenants": len(unique_tenants),
                 "tenant_names": sorted(unique_tenants),
                 "latest_run_id": latest.run_id if latest else None,
@@ -850,17 +855,21 @@ class IngestStore:
         return [asdict(e) for e in entries]
 
     def update_content_activity(self, dispatch_id: str, rows_delta: int, pipe_id: str) -> None:
-        """Increment row/pipe counts on an existing content activity entry.
+        """Increment row counts and track unique pipes on an existing content activity entry.
 
         Called on each successive pipe push within the same dispatch so the
-        content-phase entry accumulates totals.
+        content-phase entry accumulates totals. The pipes count reflects
+        unique pipe_ids that have pushed data, not total POST calls.
         """
+        pipes_set = self._content_pipes.setdefault(dispatch_id, set())
+        pipes_set.add(pipe_id)
+
         with self._lock:
             for entry in reversed(self._activity_log):
                 if entry.phase == "content" and entry.dispatch_id == dispatch_id:
                     entry.rows += rows_delta
                     entry.records += rows_delta
-                    entry.pipes += 1
+                    entry.pipes = len(pipes_set)
                     return
         # No existing content entry — caller should create one first
 

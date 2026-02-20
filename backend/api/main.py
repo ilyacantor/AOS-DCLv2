@@ -28,6 +28,8 @@ from backend.api.semantic_export import (
     get_semantic_export,
     resolve_metric,
     resolve_entity,
+    search_metrics,
+    search_entities,
     SemanticExport,
 )
 from backend.api.query import (
@@ -429,12 +431,15 @@ def resolve_metric_alias(q: str):
     """Resolve a metric alias to its canonical definition."""
     metric = resolve_metric(q)
     if not metric:
+        candidates = search_metrics(q, limit=5)
+        suggestions = [{"id": c.id, "name": c.name} for c in candidates]
         raise HTTPException(
             status_code=404,
             detail={
                 "error": "METRIC_NOT_FOUND",
                 "query": q,
-                "suggestion": "Use GET /api/dcl/semantic-export to see all available metrics",
+                "suggestions": suggestions,
+                "suggestion": "Use GET /api/dcl/semantic-export/search?q=... to search the catalog",
             },
         )
     return metric
@@ -445,15 +450,35 @@ def resolve_entity_alias(q: str):
     """Resolve an entity/dimension alias to its canonical definition."""
     entity = resolve_entity(q)
     if not entity:
+        candidates = search_entities(q, limit=5)
+        suggestions = [{"id": c.id, "name": c.name} for c in candidates]
         raise HTTPException(
             status_code=404,
             detail={
                 "error": "ENTITY_NOT_FOUND",
                 "query": q,
-                "suggestion": "Use GET /api/dcl/semantic-export to see all available entities",
+                "suggestions": suggestions,
+                "suggestion": "Use GET /api/dcl/semantic-export/search?q=... to search the catalog",
             },
         )
     return entity
+
+
+@app.get("/api/dcl/semantic-export/search")
+def search_semantic_catalog(q: str, limit: int = 5):
+    """Search both metrics and entities using fuzzy matching.
+
+    Returns ranked candidates from the semantic catalog, giving NLQ
+    a single endpoint to resolve natural language to catalog items.
+    """
+    matched_metrics = search_metrics(q, limit=limit)
+    matched_entities = search_entities(q, limit=limit)
+    return {
+        "query": q,
+        "metrics": [m.model_dump() for m in matched_metrics],
+        "entities": [e.model_dump() for e in matched_entities],
+        "total": len(matched_metrics) + len(matched_entities),
+    }
 
 
 @app.post("/api/dcl/query")
@@ -512,6 +537,9 @@ async def serve_root():
 async def serve_spa(full_path: str):
     if full_path.startswith("api/"):
         raise HTTPException(status_code=404, detail="API route not found")
+    blocked = ("data/", "data\\", "fact_base", ".json", ".yaml", ".yml", ".csv", ".env")
+    if any(full_path.lower().startswith(b) or full_path.lower().endswith(b) for b in blocked):
+        raise HTTPException(status_code=403, detail="Direct file access is blocked. Use the query API.")
     index_file = DIST_DIR / "index.html"
     if index_file.exists():
         return FileResponse(index_file)

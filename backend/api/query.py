@@ -34,6 +34,7 @@ class QueryRequest(BaseModel):
     limit: Optional[int] = None
     persona: Optional[str] = None
     entity: Optional[str] = None
+    data_mode: Optional[str] = None
 
 
 class QueryDataPoint(BaseModel):
@@ -80,6 +81,7 @@ class QueryMetadata(BaseModel):
     quality_score: float
     mode: str
     record_count: int
+    source: str = "fact_base"
     run_id: Optional[str] = None
     tenant_id: str = "default"
     snapshot_name: Optional[str] = None
@@ -113,7 +115,7 @@ class QueryError(BaseModel):
     details: Optional[Dict[str, Any]] = None
 
 
-FACT_BASE_PATH = Path("data/fact_base.json")
+FACT_BASE_PATH = Path(__file__).parent.parent / "core" / "seed" / "fact_base.json"
 
 _fact_base_cache: Optional[Dict] = None
 _fact_base_loaded_at: Optional[datetime] = None
@@ -501,23 +503,29 @@ def execute_query(request: QueryRequest) -> QueryResponse:
     grain = request.grain or metric_def.default_grain or "quarter"
     unit = METRIC_UNIT_MAP.get(request.metric, "unknown")
 
+    use_live = (request.data_mode or "").lower() == "live"
+
     # ------------------------------------------------------------------
-    # Path B (preferred): try the ingest buffer first.
+    # Path B: ingest buffer (only when data_mode == "live")
     # If Runners have pushed rows containing this metric, serve those
     # and tag the response with the Runner's provenance.
     # ------------------------------------------------------------------
-    ingest_receipt = None  # will be set if we serve from ingest
-    ingested_points, ingest_receipt = _query_ingest_store(
-        metric=request.metric,
-        dimensions=request.dimensions,
-        filters=request.filters,
-        time_range=request.time_range,
-    )
-    data_points: List[QueryDataPoint] = ingested_points
+    ingest_receipt = None
+    data_points: List[QueryDataPoint] = []
+
+    if use_live:
+        ingested_points, ingest_receipt = _query_ingest_store(
+            metric=request.metric,
+            dimensions=request.dimensions,
+            filters=request.filters,
+            time_range=request.time_range,
+        )
+        data_points = ingested_points
 
     # ------------------------------------------------------------------
-    # Path A (fallback): fact_base.json
-    # Only used when the ingest buffer has nothing for this metric.
+    # Path A: fact_base.json
+    # Used when data_mode is "demo" (or absent), OR when data_mode is
+    # "live" but the ingest buffer had nothing for this metric.
     # ------------------------------------------------------------------
     if not data_points:
         ingest_receipt = None   # no ingest provenance to carry
@@ -626,9 +634,8 @@ def execute_query(request: QueryRequest) -> QueryResponse:
 
     mode = get_current_mode()
 
-    # Build provenance tracking fields for NLQ.
-    # When data came from the ingest buffer (Path B), use the Runner's
-    # receipt for provenance.  Otherwise fall back to mode state + fact_base.
+    data_source_label = "ingest" if ingest_receipt else "fact_base"
+
     if ingest_receipt:
         run_id = ingest_receipt.run_id
         run_timestamp = ingest_receipt.run_timestamp
@@ -757,6 +764,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
             quality_score=1.0,
             mode="Ingest" if ingest_receipt else mode.data_mode,
             record_count=len(data_points),
+            source=data_source_label,
             run_id=run_id,
             tenant_id=tenant_id,
             snapshot_name=snapshot_name,

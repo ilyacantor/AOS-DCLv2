@@ -6,7 +6,7 @@ Handles:
   GET  /api/dcl/export-pipes   — list registered pipe definitions
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
@@ -66,6 +66,7 @@ class ExportPipesRequest(BaseModel):
     aod_run_id: Optional[str] = None
     timestamp: Optional[str] = None
     source: str = "aam"
+    snapshot_name: Optional[str] = None
     total_connections: int = 0
     fabric_planes: List[ExportPipesFabricPlane] = Field(default_factory=list)
     skipped_connections: List[SkippedConnection] = Field(default_factory=list)
@@ -87,7 +88,7 @@ class ExportPipesResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 @router.post("", response_model=ExportPipesResponse)
-def receive_export_pipes(request: ExportPipesRequest):
+def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
     """
     Receive pipe definitions from AAM (Path 1 — Structure Path).
 
@@ -97,6 +98,20 @@ def receive_export_pipes(request: ExportPipesRequest):
     """
     now = utc_now()
     pipe_store = get_pipe_store()
+
+    resolved_snapshot = request.snapshot_name
+    if resolved_snapshot:
+        http_request.app.state.aam_snapshot_name = resolved_snapshot
+        logger.info(f"[ExportPipes] snapshot_name from payload: '{resolved_snapshot}'")
+    else:
+        resolved_snapshot = getattr(http_request.app.state, "aam_snapshot_name", None)
+        if resolved_snapshot:
+            logger.info(f"[ExportPipes] snapshot_name from app.state: '{resolved_snapshot}'")
+        else:
+            logger.warning(
+                "[ExportPipes] No snapshot_name in payload or app.state — "
+                "activity will show aod_run_id as identifier"
+            )
     definitions = []
 
     for plane in request.fabric_planes:
@@ -144,6 +159,7 @@ def receive_export_pipes(request: ExportPipesRequest):
         definitions=definitions,
         aod_run_id=request.aod_run_id,
         source=request.source,
+        snapshot_name=resolved_snapshot,
     )
 
     logger.info(
@@ -163,11 +179,12 @@ def receive_export_pipes(request: ExportPipesRequest):
             "an AAM integration issue."
         )
 
+    display_name = resolved_snapshot or request.aod_run_id or ""
     ingest_store = get_ingest_store()
     ingest_store.record_activity(ActivityEntry(
         phase="structure",
         source="AAM",
-        snapshot_name=request.aod_run_id or "",
+        snapshot_name=display_name,
         run_id=request.aod_run_id or "",
         timestamp=now,
         pipes=len(definitions),
@@ -193,6 +210,82 @@ def receive_export_pipes(request: ExportPipesRequest):
         aod_run_id=request.aod_run_id,
         timestamp=now,
     )
+
+
+@router.post("/dispatch", tags=["Dispatch"])
+def receive_dispatch_signal(http_request: Request):
+    """
+    Receive dispatch signal from AAM (Path 2 — Dispatch).
+
+    AAM calls this AFTER export-pipes and BEFORE dispatching the Runner.
+    Creates the dispatch activity entry so it appears independently
+    of content arrival.
+    """
+    now = utc_now()
+    pipe_store = get_pipe_store()
+    ingest_store = get_ingest_store()
+
+    receipts = pipe_store.get_export_receipts()
+    if not receipts:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "NO_EXPORT_RECEIPT",
+                "message": "No export-pipes receipt found. "
+                           "AAM must push export-pipes before signaling dispatch.",
+            },
+        )
+
+    latest_receipt = receipts[-1]
+    snapshot_name = latest_receipt.snapshot_name or ""
+    aod_run_id = latest_receipt.aod_run_id or ""
+    dispatch_id = f"aam_{aod_run_id[:20]}" if aod_run_id else ""
+
+    if not dispatch_id:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "NO_AOD_RUN_ID",
+                "message": "Latest export receipt has no aod_run_id. "
+                           "Cannot create dispatch entry without an identifier.",
+            },
+        )
+
+    if ingest_store.has_phase(dispatch_id, "dispatch"):
+        logger.info(
+            f"[Dispatch] Dispatch already recorded for {dispatch_id}, skipping."
+        )
+        return {
+            "status": "already_recorded",
+            "dispatch_id": dispatch_id,
+            "snapshot_name": snapshot_name,
+        }
+
+    total_expected = latest_receipt.total_connections or pipe_store.count()
+
+    ingest_store.record_activity(ActivityEntry(
+        phase="dispatch",
+        source="AAM/Farm",
+        snapshot_name=snapshot_name,
+        run_id=aod_run_id,
+        timestamp=now,
+        pipes=total_expected,
+        dispatch_id=dispatch_id,
+        aod_run_id=aod_run_id,
+    ))
+
+    logger.info(
+        f"[Dispatch] Recorded dispatch activity: snapshot={snapshot_name} "
+        f"dispatch_id={dispatch_id} pipes={total_expected}"
+    )
+
+    return {
+        "status": "accepted",
+        "dispatch_id": dispatch_id,
+        "snapshot_name": snapshot_name,
+        "pipes": total_expected,
+        "aod_run_id": aod_run_id,
+    }
 
 
 @router.get("")

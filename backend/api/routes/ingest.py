@@ -130,13 +130,20 @@ def _resolve_export_identity(pipe_store) -> tuple:
 
     latest = receipts[-1]
     aod_run_id = latest.aod_run_id or ""
+    snapshot_name = latest.snapshot_name or ""
     if not aod_run_id:
         logger.error(
             "[Activity] Latest export receipt has no aod_run_id. "
             "AAM payload is missing this identifier."
         )
+    if not snapshot_name:
+        logger.warning(
+            "[Activity] Latest export receipt has no snapshot_name. "
+            "Falling back to aod_run_id for grouping."
+        )
+        snapshot_name = aod_run_id
     dispatch_id = f"aam_{aod_run_id[:20]}" if aod_run_id else ""
-    return aod_run_id, aod_run_id, dispatch_id
+    return snapshot_name, aod_run_id, dispatch_id
 
 
 def _record_ingest_activity(
@@ -150,11 +157,10 @@ def _record_ingest_activity(
     matched_schema: bool,
     now: str,
 ) -> None:
-    """Record Path 2 (dispatch) and Path 3 (content) activity entries.
+    """Record Path 3 (content) activity entries.
 
-    Path 2 — "dispatch": recorded ONCE when the first pipe for a new
-    dispatch_id arrives. This signals that the AAM/Farm manifest has
-    been activated and data is flowing.
+    Path 2 (dispatch) is now handled by a dedicated /export-pipes/dispatch
+    endpoint that AAM calls before launching the Runner.
 
     Path 3 — "content": one entry per dispatch, incremented on each
     successive pipe push so the Ingest tab shows accumulated totals.
@@ -172,25 +178,24 @@ def _record_ingest_activity(
     snap = export_snap or snapshot_name
     did = export_dispatch_id or dispatch_id
 
-    # --- Path 2: Dispatch activity (first push for this dispatch) ---
-    if did and not store.has_phase(did, "dispatch"):
-        total_expected = pipe_store.count()
-        store.record_activity(ActivityEntry(
-            phase="dispatch",
-            source="AAM/Farm",
-            snapshot_name=snap,
-            run_id=export_run_id or run_id,
-            timestamp=now,
-            pipes=total_expected,
-            dispatch_id=did,
-            aod_run_id=export_run_id,
-        ))
-
     # --- Path 3: Content activity ---
     # Use has_phase("content") so a prior structure entry with the same
     # dispatch_id doesn't shadow content creation.
+    # Resolve fabric plane for this pipe from the pipe definition store
+    pipe_def = pipe_store.lookup(pipe_id)
+    pipe_fabric = pipe_def.fabric_plane if pipe_def and pipe_def.fabric_plane else None
+
     if did and not store.has_phase(did, "content"):
         # First pipe for this dispatch — create the content entry
+        store._content_pipes.setdefault(did, set()).add(pipe_id)
+        if matched_schema:
+            store._content_mapped.setdefault(did, set()).add(pipe_id)
+        else:
+            store._content_unmapped.setdefault(did, set()).add(pipe_id)
+        content_fabrics = set()
+        if pipe_fabric:
+            content_fabrics.add(pipe_fabric)
+        store._content_fabrics[did] = content_fabrics
         store.record_activity(ActivityEntry(
             phase="content",
             source="Farm",
@@ -199,29 +204,39 @@ def _record_ingest_activity(
             timestamp=now,
             pipes=1,
             sors=1,
-            mapped_pipes=1 if matched_schema else 0,
+            fabrics=len(content_fabrics),
+            mapped_pipes=1,
             unmapped_pipes=0 if matched_schema else 1,
             rows=rows,
             records=rows,
             dispatch_id=did,
             aod_run_id=export_run_id,
         ))
-        # Track unique source systems for SOR count
         store._content_sources.setdefault(did, set()).add(source_system)
     elif did:
         # Subsequent push — update the existing content entry
         store.update_content_activity(did, rows, pipe_id)
-        # Track source for SOR count, then update SOR + mapped/unmapped
+        # Track unique mapped/unmapped
+        if matched_schema:
+            store._content_mapped.setdefault(did, set()).add(pipe_id)
+        else:
+            store._content_unmapped.setdefault(did, set()).add(pipe_id)
+        # Track fabric planes
+        fabrics_set = store._content_fabrics.setdefault(did, set())
+        if pipe_fabric:
+            fabrics_set.add(pipe_fabric)
+        # Track sources
         sources = store._content_sources.setdefault(did, set())
         sources.add(source_system)
+        mapped_set = store._content_mapped.get(did, set())
+        unmapped_set = store._content_unmapped.get(did, set())
         with store._lock:
             for entry in reversed(store._activity_log):
                 if entry.phase == "content" and entry.dispatch_id == did:
                     entry.sors = len(sources)
-                    if matched_schema:
-                        entry.mapped_pipes += 1
-                    else:
-                        entry.unmapped_pipes += 1
+                    entry.fabrics = len(fabrics_set)
+                    entry.mapped_pipes = len(mapped_set)
+                    entry.unmapped_pipes = len(unmapped_set)
                     break
         store._persist_activity_log()
     else:

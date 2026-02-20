@@ -11,9 +11,10 @@ NLQ uses this data to:
 """
 
 import logging
+import re
 import yaml
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from pydantic import BaseModel, Field
 from enum import Enum
 
@@ -88,6 +89,16 @@ class ModeInfo(BaseModel):
     last_updated: Optional[str] = None
 
 
+class IngestSummary(BaseModel):
+    """Summary of live ingest buffer state for NLQ."""
+    available: bool = False
+    total_rows: int = 0
+    total_sources: int = 0
+    total_pipes: int = 0
+    source_systems: List[str] = Field(default_factory=list)
+    tenant_names: List[str] = Field(default_factory=list)
+
+
 class SemanticExport(BaseModel):
     """Full semantic export payload for NLQ."""
     version: str = "1.0.0"
@@ -98,6 +109,7 @@ class SemanticExport(BaseModel):
     persona_concepts: Dict[str, List[str]] = Field(default_factory=dict)
     bindings: List[BindingSummary] = Field(default_factory=list)
     metric_entity_matrix: Dict[str, List[str]] = Field(default_factory=dict)
+    ingest_summary: Optional[IngestSummary] = None
 
 
 CONFIG_DIR = Path(__file__).parent.parent / "config" / "definitions"
@@ -197,30 +209,172 @@ def get_bindings_for_mode(data_mode: str) -> List[BindingSummary]:
         return FARM_BINDINGS
 
 
-def resolve_metric(query: str) -> Optional[MetricDefinition]:
-    """Resolve a query string to a canonical metric."""
+_STOP_WORDS = frozenset({
+    "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
+    "have", "has", "had", "do", "does", "did", "will", "would", "shall",
+    "should", "may", "might", "must", "can", "could", "of", "in", "to",
+    "for", "with", "on", "at", "by", "from", "as", "into", "through",
+    "during", "before", "after", "above", "below", "between", "and", "or",
+    "but", "not", "no", "nor", "so", "yet", "both", "each", "every",
+    "all", "any", "few", "more", "most", "other", "some", "such", "only",
+    "own", "same", "than", "too", "very", "just", "about", "per", "which",
+    "what", "how", "who", "where", "when", "why", "that", "this", "these",
+    "those", "it", "its", "my", "our", "your", "his", "her", "their",
+    "me", "us", "him", "them", "i", "we", "you", "he", "she", "they",
+})
+
+
+def _tokenize(text: str) -> List[str]:
+    """Tokenize text into lowercase words, filtering stop words."""
+    words = re.findall(r'[a-z0-9]+', text.lower())
+    return [w for w in words if w not in _STOP_WORDS and len(w) > 1]
+
+
+def _get_searchable_text(item: Union[MetricDefinition, EntityDefinition]) -> str:
+    """Build a combined searchable string from an item's fields."""
+    parts = [item.id, item.name, item.description]
+    parts.extend(item.aliases)
+    return " ".join(parts)
+
+
+def _score_match(query: str, item: Union[MetricDefinition, EntityDefinition]) -> float:
+    """Score how well a query matches an item. Higher is better.
+
+    Scoring tiers:
+      100 — exact id match
+       90 — exact alias match
+       70 — query is a substring of name
+       60 — query is a substring of description or alias
+       0-50 — word-overlap ratio (meaningful tokens)
+    """
     query_lower = query.lower().strip()
-    
+
+    if query_lower == item.id:
+        return 100.0
+    aliases_lower = [a.lower() for a in item.aliases]
+    if query_lower in aliases_lower:
+        return 90.0
+
+    name_lower = item.name.lower()
+    desc_lower = item.description.lower()
+
+    if query_lower in name_lower:
+        return 70.0
+    if query_lower in desc_lower:
+        return 60.0
+    for alias in aliases_lower:
+        if query_lower in alias or alias in query_lower:
+            return 60.0
+
+    query_tokens = set(_tokenize(query))
+    if not query_tokens:
+        return 0.0
+
+    item_tokens = set(_tokenize(_get_searchable_text(item)))
+    if not item_tokens:
+        return 0.0
+
+    overlap = query_tokens & item_tokens
+    if not overlap:
+        return 0.0
+
+    coverage = len(overlap) / len(query_tokens)
+    return coverage * 50.0
+
+
+def resolve_metric(query: str) -> Optional[MetricDefinition]:
+    """Resolve a query string to a canonical metric using fuzzy matching.
+
+    Resolution order:
+    1. Exact match on id or aliases (backward-compatible)
+    2. Substring match on name, description, aliases
+    3. Word-overlap scoring with threshold
+    """
+    best_score = 0.0
+    best_match: Optional[MetricDefinition] = None
+
     for metric in PUBLISHED_METRICS:
-        if query_lower == metric.id:
+        score = _score_match(query, metric)
+        if score >= 90.0:
             return metric
-        if query_lower in [a.lower() for a in metric.aliases]:
-            return metric
-    
+        if score > best_score:
+            best_score = score
+            best_match = metric
+
+    if best_score >= 10.0:
+        return best_match
+
     return None
 
 
 def resolve_entity(query: str) -> Optional[EntityDefinition]:
-    """Resolve a query string to a canonical entity."""
-    query_lower = query.lower().strip()
-    
+    """Resolve a query string to a canonical entity using fuzzy matching.
+
+    Resolution order:
+    1. Exact match on id or aliases (backward-compatible)
+    2. Substring match on name, description, aliases
+    3. Word-overlap scoring with threshold
+    """
+    best_score = 0.0
+    best_match: Optional[EntityDefinition] = None
+
     for entity in PUBLISHED_ENTITIES:
-        if query_lower == entity.id:
+        score = _score_match(query, entity)
+        if score >= 90.0:
             return entity
-        if query_lower in [a.lower() for a in entity.aliases]:
-            return entity
-    
+        if score > best_score:
+            best_score = score
+            best_match = entity
+
+    if best_score >= 10.0:
+        return best_match
+
     return None
+
+
+def search_metrics(query: str, limit: int = 5) -> List[MetricDefinition]:
+    """Return ranked metric candidates matching the query using fuzzy scoring."""
+    scored: List[tuple] = []
+    for metric in PUBLISHED_METRICS:
+        score = _score_match(query, metric)
+        if score > 0.0:
+            scored.append((score, metric))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [item for _, item in scored[:limit]]
+
+
+def search_entities(query: str, limit: int = 5) -> List[EntityDefinition]:
+    """Return ranked entity candidates matching the query using fuzzy scoring."""
+    scored: List[tuple] = []
+    for entity in PUBLISHED_ENTITIES:
+        score = _score_match(query, entity)
+        if score > 0.0:
+            scored.append((score, entity))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [item for _, item in scored[:limit]]
+
+
+def _build_ingest_summary() -> Optional[IngestSummary]:
+    """Build ingest summary from the ingest store. Returns None if no data."""
+    try:
+        from backend.api.ingest import get_ingest_store
+        store = get_ingest_store()
+        stats = store.get_stats()
+        if stats.get("total_rows_buffered", 0) > 0:
+            return IngestSummary(
+                available=True,
+                total_rows=stats["total_rows_buffered"],
+                total_sources=stats["unique_sources"],
+                total_pipes=stats["pipes_tracked"],
+                source_systems=stats.get("source_system_names", []),
+                tenant_names=stats.get("tenant_names", []),
+            )
+        return None
+    except Exception as e:
+        logger.warning(f"[SemanticExport] Failed to build ingest summary: {e}")
+        return None
 
 
 def get_semantic_export(tenant_id: str = "default") -> SemanticExport:
@@ -239,6 +393,8 @@ def get_semantic_export(tenant_id: str = "default") -> SemanticExport:
 
     enriched_metrics = _enrich_metrics_with_version_history(PUBLISHED_METRICS)
 
+    ingest_summary = _build_ingest_summary()
+
     return SemanticExport(
         version="1.0.0",
         tenant_id=tenant_id,
@@ -247,7 +403,8 @@ def get_semantic_export(tenant_id: str = "default") -> SemanticExport:
         entities=PUBLISHED_ENTITIES,
         persona_concepts=DEFAULT_PERSONA_CONCEPTS,
         bindings=bindings,
-        metric_entity_matrix=build_metric_entity_matrix()
+        metric_entity_matrix=build_metric_entity_matrix(),
+        ingest_summary=ingest_summary,
     )
 
 
