@@ -1394,8 +1394,523 @@ concepts:
       COO: 0.5
 
   # ════════════════════════════════════════════════════════════════
-  # IT & INFRASTRUCTURE (Phase 3 — existing concepts only)
+  # PRODUCT & ENGINEERING (10 concepts: PRD-001 through PRD-010)
   # ════════════════════════════════════════════════════════════════
+
+  - id: product
+    concept_id: PRD-001
+    name: Product
+    description: Software product or SKU
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - product_id
+      - productId
+      - product_name
+      - sku
+      - offering_id
+      - platform_id
+      - service_line
+      - version
+      - product_status
+      - product_owner
+    aliases:
+      - sku
+      - offering
+      - platform
+      - service_line
+      - product_line
+      - software_product
+    expected_type: string
+    typical_source_systems:
+      - ecommerce
+      - crm
+      - product_management
+    persona_relevance:
+      CTO: 0.8
+      CRO: 0.6
+
+  - id: feature
+    concept_id: PRD-002
+    name: Feature
+    description: Product capability or function
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - feature_id
+      - featureId
+      - feature_name
+      - capability_id
+      - module_id
+      - feature_flag
+      - feature_status
+      - release
+      - adoption_rate
+    aliases:
+      - capability
+      - module
+      - feature_flag
+      - product_feature
+      - functionality
+    expected_type: string
+    typical_source_systems:
+      - product_management
+      - feature_flag_platform
+      - project_management
+    persona_relevance:
+      CTO: 0.9
+      CRO: 0.4
+
+  - id: release
+    concept_id: PRD-003
+    name: Release
+    description: Software version deployment
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - release_id
+      - releaseId
+      - version
+      - release_date
+      - release_type
+      - changelog
+      - build_id
+      - build_number
+    aliases:
+      - deploy
+      - version
+      - build
+      - shipment
+      - software_release
+      - version_release
+    expected_type: string
+    typical_source_systems:
+      - scm
+      - project_management
+      - ci_cd
+    persona_relevance:
+      CTO: 1.0
+
+  - id: bug
+    concept_id: PRD-004
+    name: Bug
+    description: Software defect
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - bug_id
+      - bugId
+      - defect_id
+      - issue_id
+      - severity
+      - bug_status
+      - reporter
+      - assignee
+      - component
+    aliases:
+      - defect
+      - issue
+      - error
+      - regression
+      - software_bug
+      - fault
+    expected_type: string
+    typical_source_systems:
+      - project_management
+      - issue_tracker
+      - scm
+    persona_relevance:
+      CTO: 1.0
+
+  - id: sprint
+    concept_id: PRD-005
+    name: Sprint
+    description: Development iteration cycle
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - sprint_id
+      - sprintId
+      - sprint_name
+      - start_date
+      - end_date
+      - velocity
+      - sprint_goal
+      - iteration_id
+    aliases:
+      - iteration
+      - cycle
+      - dev_sprint
+      - development_cycle
+      - agile_sprint
+    expected_type: string
+    typical_source_systems:
+      - project_management
+      - issue_tracker
+    persona_relevance:
+      CTO: 0.9
+
+  - id: repository
+    concept_id: PRD-006
+    name: Repository
+    description: Code repository or project
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - repo_id
+      - repoId
+      - repo_name
+      - repository_id
+      - language
+      - repo_owner
+      - last_commit
+    aliases:
+      - repo
+      - codebase
+      - project_repo
+      - code_repository
+      - git_repo
+    expected_type: string
+    typical_source_systems:
+      - scm
+    persona_relevance:
+      CTO: 0.8
+
+  - id: pull_request
+    concept_id: PRD-007
+    name: Pull Request
+    description: Code change review unit
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - pr_id
+      - prId
+      - pull_request_id
+      - pr_title
+      - author
+      - pr_status
+      - review_time
+      - merge_request_id
+    aliases:
+      - pr
+      - merge_request
+      - cr
+      - code_review
+      - change_request
+    expected_type: string
+    typical_source_systems:
+      - scm
+    persona_relevance:
+      CTO: 0.8
+
+  - id: usage
+    concept_id: PRD-008
+    name: Usage Metric
+    description: Product usage telemetry
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - usage
+      - consumption
+      - utilization
+      - quantity
+      - dau
+      - mau
+      - event_id
+      - user_id
+      - action
+      - properties
+    aliases:
+      - telemetry
+      - product_event
+      - consumption
+      - activity
+      - throughput
+      - volume
+      - resource_usage
+      - system_usage
+    expected_type: float
+    typical_source_systems:
+      - product_analytics
+      - cloud_provider
+      - infrastructure_monitoring
+      - billing
+    persona_relevance:
+      CTO: 0.9
+      COO: 0.6
+
+  - id: roadmap_item
+    concept_id: PRD-009
+    name: Roadmap Item
+    description: Planned product initiative
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - item_id
+      - roadmap_id
+      - initiative_id
+      - epic_id
+      - title
+      - priority
+      - target_quarter
+      - roadmap_status
+      - theme
+    aliases:
+      - roadmap
+      - initiative
+      - epic
+      - theme
+      - planned_feature
+      - product_initiative
+    expected_type: string
+    typical_source_systems:
+      - product_management
+      - project_management
+    persona_relevance:
+      CTO: 0.8
+      CRO: 0.3
+
+  - id: entitlement
+    concept_id: PRD-010
+    name: Entitlement
+    description: Customer access or license right
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - entitlement_id
+      - entitlementId
+      - customer_id
+      - feature
+      - tier
+      - expiry
+      - license_id
+      - access_right_id
+    aliases:
+      - license
+      - access_right
+      - plan_feature
+      - customer_entitlement
+      - feature_access
+    expected_type: string
+    typical_source_systems:
+      - crm
+      - billing
+      - subscription_platform
+    persona_relevance:
+      CTO: 0.6
+      CRO: 0.5
+
+  # ════════════════════════════════════════════════════════════════
+  # IT & INFRASTRUCTURE (10 concepts: IT-001 through IT-010)
+  # ════════════════════════════════════════════════════════════════
+
+  - id: it_asset
+    concept_id: IT-001
+    name: IT Asset
+    description: Hardware or software resource
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - asset_id
+      - assetId
+      - device_id
+      - endpoint_id
+      - serial
+      - asset_owner
+      - asset_status
+      - location
+      - asset_type
+    aliases:
+      - device
+      - endpoint
+      - hardware
+      - ci
+      - managed_device
+      - it_equipment
+    expected_type: string
+    typical_source_systems:
+      - itsm
+      - mdm
+      - cmdb
+    persona_relevance:
+      CTO: 0.9
+      COO: 0.5
+
+  - id: configuration_item
+    concept_id: IT-002
+    name: Configuration Item
+    description: Managed infrastructure component
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - ci_id
+      - config_item_id
+      - cmdb_item_id
+      - ci_type
+      - environment
+      - dependencies
+      - ci_status
+    aliases:
+      - ci
+      - config_item
+      - cmdb_item
+      - infra_component
+      - managed_component
+    expected_type: string
+    typical_source_systems:
+      - cmdb
+      - itsm
+    persona_relevance:
+      CTO: 0.8
+
+  - id: it_service
+    concept_id: IT-003
+    name: Service
+    description: IT service offered to the organization
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - service_id
+      - serviceId
+      - service_name
+      - service_tier
+      - service_owner
+      - service_status
+      - sla
+      - application_id
+    aliases:
+      - it_service
+      - application
+      - system
+      - business_service
+      - service_offering
+    expected_type: string
+    typical_source_systems:
+      - itsm
+      - cmdb
+      - service_catalog
+    persona_relevance:
+      CTO: 0.9
+      COO: 0.5
+
+  - id: change_request
+    concept_id: IT-004
+    name: Change Request
+    description: Proposed infrastructure or system change
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - cr_id
+      - change_request_id
+      - rfc_id
+      - change_type
+      - risk
+      - cr_status
+      - approver
+      - schedule
+    aliases:
+      - cr
+      - rfc
+      - change_ticket
+      - request_for_change
+      - infrastructure_change
+    expected_type: string
+    typical_source_systems:
+      - itsm
+      - project_management
+    persona_relevance:
+      CTO: 0.8
+
+  - id: deployment
+    concept_id: IT-005
+    name: Deployment
+    description: Infrastructure or application deployment
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - deploy_id
+      - deployId
+      - deployment_id
+      - environment
+      - deploy_version
+      - deploy_date
+      - deploy_status
+      - rollout_id
+    aliases:
+      - deploy
+      - rollout
+      - release_deploy
+      - infrastructure_deploy
+      - code_deploy
+    expected_type: string
+    typical_source_systems:
+      - ci_cd
+      - cloud_provider
+      - itsm
+    persona_relevance:
+      CTO: 0.9
+
+  - id: user_account
+    concept_id: IT-006
+    name: User Account
+    description: Identity and access record
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - user_id
+      - userId
+      - identity_id
+      - iam_user_id
+      - email
+      - user_role
+      - user_status
+      - last_login
+      - mfa_status
+    aliases:
+      - identity
+      - iam_user
+      - ad_account
+      - sso_user
+      - directory_user
+      - login_account
+    expected_type: string
+    typical_source_systems:
+      - idp
+      - iam
+      - directory
+    persona_relevance:
+      CTO: 0.7
+      COO: 0.3
+
+  - id: permission
+    concept_id: IT-007
+    name: Permission
+    description: Access control entry
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - perm_id
+      - permission_id
+      - user_id
+      - resource
+      - access_level
+      - granted_date
+      - rbac_entry_id
+      - policy_id
+    aliases:
+      - role
+      - access
+      - rbac_entry
+      - policy
+      - access_control
+      - authorization
+    expected_type: string
+    typical_source_systems:
+      - idp
+      - iam
+      - cloud_provider
+    persona_relevance:
+      CTO: 0.7
 
   - id: aws_resource
     concept_id: IT-008
@@ -1411,6 +1926,10 @@ concepts:
       - resource_type
       - resourceType
       - arn
+      - region
+      - resource_cost
+      - tags
+      - resource_status
     aliases:
       - cloud_resource
       - infrastructure
@@ -1432,37 +1951,65 @@ concepts:
       CTO: 1.0
       COO: 0.4
 
-  - id: usage
-    concept_id: PRD-008
-    name: Usage Metrics
-    description: Product or infrastructure usage telemetry
+  - id: alert
+    concept_id: IT-009
+    name: Alert
+    description: Infrastructure or application alert
     domain: it_infra
-    cluster: Ops
+    cluster: Infra
     example_fields:
-      - usage
-      - consumption
-      - utilization
-      - quantity
-      - dau
-      - mau
+      - alert_id
+      - alertId
+      - alert_source
+      - severity
+      - alert_status
+      - triggered_at
+      - alarm_id
+      - notification_id
     aliases:
-      - consumption
-      - activity
-      - throughput
-      - utilization
-      - volume
-      - resource_usage
-      - system_usage
-      - telemetry
-    expected_type: float
+      - alarm
+      - notification
+      - monitor_alert
+      - warning
+      - monitoring_event
+    expected_type: string
     typical_source_systems:
+      - monitoring
+      - incident_management
       - cloud_provider
-      - infrastructure_monitoring
-      - billing
-      - product_analytics
     persona_relevance:
-      CTO: 0.9
-      COO: 0.6
+      CTO: 0.8
+      COO: 0.4
+
+  - id: integration
+    concept_id: IT-010
+    name: Integration
+    description: System-to-system connection
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - integration_id
+      - integrationId
+      - connector_id
+      - source
+      - target
+      - integration_status
+      - last_sync
+      - api_connection_id
+    aliases:
+      - connector
+      - api_connection
+      - sync
+      - data_pipeline
+      - system_link
+    expected_type: string
+    typical_source_systems:
+      - ipaas
+      - etl
+      - api_gateway
+    persona_relevance:
+      CTO: 0.8
+      COO: 0.4
 
   # ════════════════════════════════════════════════════════════════
   # CUSTOMER SUCCESS (11 concepts: CS-001 through CS-011)
