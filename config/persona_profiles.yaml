@@ -1,102 +1,531 @@
+# Persona Profiles — concept relevance scores and example queries
+# concept_relevance sourced from config/ontology_concepts.yaml persona_relevance.
+# Concepts with 0 relevance are omitted.
+
 personas:
+
+  # ════════════════════════════════════════════════════════════════
+  # CFO — Chief Financial Officer
+  # ════════════════════════════════════════════════════════════════
   - persona_key: CFO
     display_name: Chief Financial Officer
-    description: Focuses on financial metrics, revenue, costs, and profitability
+    description: Focuses on financial metrics, revenue, costs, profitability, and fiscal governance
     metadata:
       responsibilities:
         - Financial planning and analysis
-        - Budget management
-        - Revenue tracking
-        - Cost optimization
+        - Budget management and forecasting
+        - Revenue and cost tracking
+        - Tax, treasury, and compliance oversight
       primary_cluster: Finance
+    example_queries:
+      - "What is our AR aging by customer segment?"
+      - "Show budget vs actual spend by cost center for Q4"
+      - "Tax exposure by legal entity and geography"
+      - "Fixed asset depreciation by division this fiscal year"
+      - "Revenue recognized by segment and quarter"
     concept_relevance:
+      # Finance (core domain)
+      - concept_id: gl_account
+        relevance: 1.0
+      - concept_id: budget
+        relevance: 1.0
+      - concept_id: forecast
+        relevance: 1.0
+      - concept_id: accounts_receivable
+        relevance: 1.0
+      - concept_id: accounts_payable
+        relevance: 1.0
       - concept_id: revenue
         relevance: 1.0
       - concept_id: cost
         relevance: 1.0
+      - concept_id: journal_entry
+        relevance: 0.9
+      - concept_id: cost_center
+        relevance: 0.9
+      - concept_id: tax
+        relevance: 0.9
+      - concept_id: invoice
+        relevance: 0.8
+      - concept_id: payment
+        relevance: 0.8
+      - concept_id: financial_period
+        relevance: 0.8
+      - concept_id: fixed_asset
+        relevance: 0.7
+      - concept_id: currency
+        relevance: 0.7
+      # Sales
+      - concept_id: subscription
+        relevance: 0.9
+      - concept_id: contract
+        relevance: 0.7
+      - concept_id: commission
+        relevance: 0.7
       - concept_id: account
         relevance: 0.6
+      - concept_id: order
+        relevance: 0.6
+      - concept_id: renewal
+        relevance: 0.6
+      - concept_id: opportunity
+        relevance: 0.5
+      - concept_id: quote
+        relevance: 0.5
+      - concept_id: quota
+        relevance: 0.5
+      - concept_id: pipeline_stage
+        relevance: 0.4
+      - concept_id: win_loss
+        relevance: 0.4
+      # HR
+      - concept_id: compensation
+        relevance: 0.8
+      - concept_id: headcount
+        relevance: 0.7
+      - concept_id: benefit
+        relevance: 0.6
+      - concept_id: employee
+        relevance: 0.5
+      - concept_id: department
+        relevance: 0.5
+      # Customer Success
+      - concept_id: churn_event
+        relevance: 0.8
+      - concept_id: customer_segment
+        relevance: 0.5
+      # Operations
+      - concept_id: vendor
+        relevance: 0.7
+      - concept_id: purchase_order
+        relevance: 0.7
       - concept_id: date
         relevance: 0.5
+      - concept_id: project
+        relevance: 0.5
+      - concept_id: inventory
+        relevance: 0.5
+      - concept_id: facility
+        relevance: 0.3
+      # Marketing
+      - concept_id: attribution
+        relevance: 0.5
+      - concept_id: campaign
+        relevance: 0.4
+      - concept_id: conversion
+        relevance: 0.4
+      - concept_id: ad
+        relevance: 0.4
+      - concept_id: lead
+        relevance: 0.3
+      # Compliance
+      - concept_id: risk
+        relevance: 0.8
+      - concept_id: violation
+        relevance: 0.7
+      - concept_id: audit_trail
+        relevance: 0.6
+      - concept_id: control
+        relevance: 0.6
+      - concept_id: policy
+        relevance: 0.6
+      - concept_id: framework
+        relevance: 0.6
+      - concept_id: vendor_risk
+        relevance: 0.6
+      - concept_id: data_classification
+        relevance: 0.4
+      - concept_id: consent
+        relevance: 0.4
+      - concept_id: retention_policy
+        relevance: 0.4
 
+  # ════════════════════════════════════════════════════════════════
+  # CRO — Chief Revenue Officer
+  # ════════════════════════════════════════════════════════════════
   - persona_key: CRO
     display_name: Chief Revenue Officer
-    description: Focuses on sales pipeline, customer acquisition, and revenue growth
+    description: Focuses on sales pipeline, customer acquisition, revenue growth, and go-to-market
     metadata:
       responsibilities:
-        - Revenue growth
-        - Sales pipeline management
-        - Customer acquisition
-        - Account expansion
+        - Revenue growth and pipeline management
+        - Customer acquisition and expansion
+        - Sales team performance
+        - Go-to-market strategy
       primary_cluster: Growth
+    example_queries:
+      - "Pipeline by stage and territory for this quarter"
+      - "Subscription renewals at risk in the next 90 days"
+      - "Win/loss rate by competitor and customer segment"
+      - "Lead-to-conversion rate by marketing channel"
+      - "Commission payout vs quota attainment by rep"
     concept_relevance:
+      # Sales (core domain)
       - concept_id: account
         relevance: 1.0
       - concept_id: opportunity
         relevance: 1.0
+      - concept_id: pipeline_stage
+        relevance: 1.0
+      - concept_id: subscription
+        relevance: 1.0
+      - concept_id: renewal
+        relevance: 1.0
+      - concept_id: quota
+        relevance: 1.0
+      - concept_id: win_loss
+        relevance: 1.0
+      - concept_id: quote
+        relevance: 0.9
+      - concept_id: territory
+        relevance: 0.9
+      - concept_id: contract
+        relevance: 0.8
+      - concept_id: order
+        relevance: 0.8
+      - concept_id: commission
+        relevance: 0.8
+      - concept_id: contact
+        relevance: 0.8
+      - concept_id: sales_activity
+        relevance: 0.7
+      # Finance
       - concept_id: revenue
         relevance: 0.9
+      - concept_id: forecast
+        relevance: 0.7
+      # Customer Success
+      - concept_id: churn_event
+        relevance: 1.0
+      - concept_id: customer_segment
+        relevance: 0.8
+      - concept_id: nps_score
+        relevance: 0.7
+      - concept_id: lifecycle_stage
+        relevance: 0.7
       - concept_id: health
         relevance: 0.6
+      - concept_id: engagement
+        relevance: 0.6
+      - concept_id: escalation
+        relevance: 0.6
+      - concept_id: ticket
+        relevance: 0.5
+      - concept_id: feedback
+        relevance: 0.5
+      # Marketing
+      - concept_id: lead
+        relevance: 0.9
+      - concept_id: conversion
+        relevance: 0.9
+      - concept_id: campaign
+        relevance: 0.8
+      - concept_id: attribution
+        relevance: 0.8
+      - concept_id: channel
+        relevance: 0.7
+      - concept_id: audience
+        relevance: 0.7
+      - concept_id: ad
+        relevance: 0.6
+      - concept_id: marketing_email
+        relevance: 0.6
+      - concept_id: marketing_event
+        relevance: 0.6
+      - concept_id: content
+        relevance: 0.5
+      # Product/Eng
+      - concept_id: product
+        relevance: 0.6
+      - concept_id: entitlement
+        relevance: 0.5
+      - concept_id: feature
+        relevance: 0.4
+      - concept_id: roadmap_item
+        relevance: 0.3
+      # Operations
       - concept_id: date
         relevance: 0.5
 
+  # ════════════════════════════════════════════════════════════════
+  # COO — Chief Operating Officer
+  # ════════════════════════════════════════════════════════════════
   - persona_key: COO
     display_name: Chief Operating Officer
-    description: Focuses on operational metrics, usage patterns, and system health
+    description: Focuses on operational efficiency, supply chain, support quality, and cross-functional execution
     metadata:
       responsibilities:
-        - Operational efficiency
-        - Resource utilization
-        - System health monitoring
-        - Process optimization
+        - Operational efficiency and process optimization
+        - Supply chain and vendor management
+        - Support quality and SLA compliance
+        - Cross-functional program execution
       primary_cluster: Ops
+    example_queries:
+      - "Open support tickets by priority and SLA breach status"
+      - "Purchase orders pending approval by vendor and amount"
+      - "Inventory levels by facility and reorder status"
+      - "Project delivery status across divisions"
+      - "Capacity utilization by department this quarter"
     concept_relevance:
-      - concept_id: usage
+      # Operations (core domain)
+      - concept_id: project
         relevance: 1.0
-      - concept_id: health
+      - concept_id: inventory
         relevance: 1.0
-      - concept_id: account
-        relevance: 0.7
+      - concept_id: quality_metric
+        relevance: 1.0
+      - concept_id: shipment
+        relevance: 1.0
+      - concept_id: vendor
+        relevance: 0.9
+      - concept_id: purchase_order
+        relevance: 0.9
+      - concept_id: workflow
+        relevance: 0.9
+      - concept_id: capacity
+        relevance: 0.9
+      - concept_id: task
+        relevance: 0.8
+      - concept_id: facility
+        relevance: 0.8
       - concept_id: date
         relevance: 0.6
+      # Customer Success
+      - concept_id: health
+        relevance: 1.0
+      - concept_id: ticket
+        relevance: 0.9
+      - concept_id: sla
+        relevance: 0.9
+      - concept_id: escalation
+        relevance: 0.9
+      - concept_id: incident
+        relevance: 0.8
+      - concept_id: nps_score
+        relevance: 0.8
+      - concept_id: lifecycle_stage
+        relevance: 0.5
+      - concept_id: engagement
+        relevance: 0.5
+      # Finance
+      - concept_id: cost
+        relevance: 0.7
+      - concept_id: cost_center
+        relevance: 0.6
+      - concept_id: budget
+        relevance: 0.5
+      - concept_id: invoice
+        relevance: 0.5
+      - concept_id: accounts_payable
+        relevance: 0.5
+      - concept_id: revenue
+        relevance: 0.5
+      # Sales
+      - concept_id: account
+        relevance: 0.5
+      - concept_id: order
+        relevance: 0.5
+      - concept_id: territory
+        relevance: 0.4
+      # HR
+      - concept_id: department
+        relevance: 0.7
+      - concept_id: employee
+        relevance: 0.6
+      - concept_id: position
+        relevance: 0.5
+      - concept_id: org_unit
+        relevance: 0.5
+      - concept_id: headcount
+        relevance: 0.5
+      - concept_id: requisition
+        relevance: 0.4
+      - concept_id: goal
+        relevance: 0.4
+      - concept_id: time_off
+        relevance: 0.3
+      # IT
+      - concept_id: it_asset
+        relevance: 0.5
+      - concept_id: it_service
+        relevance: 0.5
+      - concept_id: aws_resource
+        relevance: 0.4
+      - concept_id: alert
+        relevance: 0.4
+      - concept_id: integration
+        relevance: 0.4
+      - concept_id: user_account
+        relevance: 0.3
+      # Product/Eng
+      - concept_id: usage
+        relevance: 0.6
+      # Compliance
+      - concept_id: vendor_risk
+        relevance: 0.5
+      # Marketing
+      - concept_id: marketing_event
+        relevance: 0.3
 
+  # ════════════════════════════════════════════════════════════════
+  # CTO — Chief Technology Officer
+  # ════════════════════════════════════════════════════════════════
   - persona_key: CTO
     display_name: Chief Technology Officer
-    description: Focuses on infrastructure, cloud resources, technical costs, and system usage
+    description: Focuses on engineering velocity, infrastructure reliability, security posture, and technical architecture
     metadata:
       responsibilities:
-        - Infrastructure management
-        - Cloud resource optimization
-        - Technical architecture
-        - System scalability
+        - Engineering velocity and delivery
+        - Infrastructure reliability and cost
+        - Security and compliance posture
+        - Technical architecture and platform
       primary_cluster: Infra
+    example_queries:
+      - "Deployment frequency by service over the last 30 days"
+      - "Bug severity distribution by sprint and component"
+      - "Cloud resource spend by region and resource type"
+      - "Mean pull request review time by repository"
+      - "Open alerts by severity and time to acknowledge"
     concept_relevance:
-      - concept_id: aws_resource
+      # Product/Eng (core domain)
+      - concept_id: release
         relevance: 1.0
+      - concept_id: bug
+        relevance: 1.0
+      - concept_id: feature
+        relevance: 0.9
+      - concept_id: sprint
+        relevance: 0.9
       - concept_id: usage
         relevance: 0.9
+      - concept_id: product
+        relevance: 0.8
+      - concept_id: repository
+        relevance: 0.8
+      - concept_id: pull_request
+        relevance: 0.8
+      - concept_id: roadmap_item
+        relevance: 0.8
+      - concept_id: entitlement
+        relevance: 0.6
+      # IT (core domain)
+      - concept_id: aws_resource
+        relevance: 1.0
+      - concept_id: it_asset
+        relevance: 0.9
+      - concept_id: it_service
+        relevance: 0.9
+      - concept_id: deployment
+        relevance: 0.9
+      - concept_id: configuration_item
+        relevance: 0.8
+      - concept_id: change_request
+        relevance: 0.8
+      - concept_id: alert
+        relevance: 0.8
+      - concept_id: integration
+        relevance: 0.8
+      - concept_id: user_account
+        relevance: 0.7
+      - concept_id: permission
+        relevance: 0.7
+      # Customer Success
+      - concept_id: incident
+        relevance: 0.9
+      - concept_id: sla
+        relevance: 0.6
+      - concept_id: engagement
+        relevance: 0.5
+      - concept_id: feedback
+        relevance: 0.4
+      # Finance
       - concept_id: cost
         relevance: 0.8
-      - concept_id: health
+      # Compliance
+      - concept_id: control
+        relevance: 0.8
+      - concept_id: audit_trail
+        relevance: 0.7
+      - concept_id: risk
+        relevance: 0.7
+      - concept_id: data_classification
+        relevance: 0.7
+      - concept_id: access_review
+        relevance: 0.7
+      - concept_id: violation
         relevance: 0.6
+      - concept_id: framework
+        relevance: 0.6
+      - concept_id: evidence
+        relevance: 0.6
+      - concept_id: vendor_risk
+        relevance: 0.6
+      - concept_id: policy
+        relevance: 0.5
+      - concept_id: consent
+        relevance: 0.5
+      - concept_id: retention_policy
+        relevance: 0.5
+      # Operations
       - concept_id: date
         relevance: 0.5
+      - concept_id: task
+        relevance: 0.5
+      - concept_id: workflow
+        relevance: 0.5
+      - concept_id: capacity
+        relevance: 0.5
 
+  # ════════════════════════════════════════════════════════════════
+  # CHRO — Chief Human Resources Officer
+  # ════════════════════════════════════════════════════════════════
   - persona_key: CHRO
     display_name: Chief Human Resources Officer
     description: Focuses on workforce metrics, talent management, compensation, and employee engagement
     metadata:
       responsibilities:
-        - Workforce planning
+        - Workforce planning and headcount
         - Talent acquisition and retention
-        - Compensation and benefits
-        - Employee engagement and culture
+        - Compensation, benefits, and equity
+        - Employee engagement and development
       primary_cluster: People
+    example_queries:
+      - "Headcount by department and geography vs plan"
+      - "Compensation benchmarks by level and region"
+      - "Open requisitions by department and days-to-fill"
+      - "Attrition rate by tenure band and division"
+      - "Training completion rate by department this quarter"
     concept_relevance:
-      - concept_id: account
-        relevance: 0.3
-      - concept_id: cost
-        relevance: 0.6
+      # HR (core domain)
+      - concept_id: employee
+        relevance: 1.0
+      - concept_id: position
+        relevance: 1.0
+      - concept_id: compensation
+        relevance: 1.0
+      - concept_id: requisition
+        relevance: 1.0
+      - concept_id: performance_review
+        relevance: 1.0
+      - concept_id: headcount
+        relevance: 1.0
+      - concept_id: department
+        relevance: 0.9
+      - concept_id: benefit
+        relevance: 0.9
+      - concept_id: candidate
+        relevance: 0.9
+      - concept_id: goal
+        relevance: 0.8
+      - concept_id: time_off
+        relevance: 0.8
+      - concept_id: org_unit
+        relevance: 0.8
+      - concept_id: training
+        relevance: 0.7
+      # Sales (compensation overlap)
+      - concept_id: commission
+        relevance: 0.5
+      # Operations
       - concept_id: date
         relevance: 0.5
