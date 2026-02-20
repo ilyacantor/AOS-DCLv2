@@ -2363,13 +2363,14 @@ concepts:
       CRO: 0.6
 
   # ════════════════════════════════════════════════════════════════
-  # OPERATIONS (cross-cutting — existing concepts only)
+  # OPERATIONS & SUPPLY CHAIN (10 concepts: OPS-001 through OPS-010)
+  # Plus cross-cutting Date/Timestamp utility concept
   # ════════════════════════════════════════════════════════════════
 
   - id: date
-    concept_id: OPS-001
+    concept_id: OPS-000
     name: Date/Timestamp
-    description: Date or timestamp field
+    description: Date or timestamp field (cross-cutting utility)
     domain: operations
     cluster: Ops
     example_fields:
@@ -2410,3 +2411,963 @@ concepts:
       COO: 0.6
       CTO: 0.5
       CHRO: 0.5
+
+  - id: project
+    concept_id: OPS-001
+    name: Project
+    description: Planned initiative with defined scope
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - project_id
+      - projectId
+      - project_name
+      - initiative_id
+      - program_id
+      - workstream_id
+      - project_status
+      - project_owner
+      - start_date
+      - end_date
+    aliases:
+      - initiative
+      - program
+      - workstream
+      - work_project
+      - planned_initiative
+    expected_type: string
+    typical_source_systems:
+      - project_management
+      - psa
+      - erp
+    persona_relevance:
+      COO: 1.0
+      CFO: 0.5
+
+  - id: task
+    concept_id: OPS-002
+    name: Task
+    description: Individual work item
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - task_id
+      - taskId
+      - task_title
+      - assignee
+      - task_status
+      - due_date
+      - priority
+      - action_item_id
+      - work_item_id
+      - story_id
+    aliases:
+      - to_do
+      - action_item
+      - work_item
+      - story
+      - todo
+      - assignment
+    expected_type: string
+    typical_source_systems:
+      - project_management
+      - issue_tracker
+      - collaboration
+    persona_relevance:
+      COO: 0.8
+      CTO: 0.5
+
+  - id: vendor
+    concept_id: OPS-003
+    name: Vendor
+    description: External supplier or partner
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - vendor_id
+      - vendorId
+      - vendor_name
+      - supplier_id
+      - partner_id
+      - vendor_category
+      - vendor_status
+      - spend_ytd
+    aliases:
+      - supplier
+      - partner
+      - third_party
+      - service_provider
+      - contractor
+    expected_type: string
+    typical_source_systems:
+      - erp
+      - procurement
+      - vendor_management
+    persona_relevance:
+      COO: 0.9
+      CFO: 0.7
+
+  - id: purchase_order
+    concept_id: OPS-004
+    name: Purchase Order
+    description: Formal buying request
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - po_id
+      - purchase_order_id
+      - po_number
+      - po_vendor
+      - po_amount
+      - po_status
+      - delivery_date
+      - procurement_order_id
+    aliases:
+      - po
+      - procurement_order
+      - buying_request
+      - purchase_requisition
+    expected_type: string
+    typical_source_systems:
+      - erp
+      - procurement
+    persona_relevance:
+      COO: 0.9
+      CFO: 0.7
+
+  - id: inventory
+    concept_id: OPS-005
+    name: Inventory
+    description: Stock or supply level
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - item_id
+      - inventory_id
+      - location
+      - quantity
+      - reorder_point
+      - inventory_value
+      - stock_level
+      - on_hand
+      - warehouse_qty
+    aliases:
+      - stock
+      - warehouse_qty
+      - on_hand
+      - supply_level
+      - stock_level
+    expected_type: float
+    typical_source_systems:
+      - erp
+      - wms
+      - inventory_management
+    persona_relevance:
+      COO: 1.0
+      CFO: 0.5
+
+  - id: workflow
+    concept_id: OPS-006
+    name: Workflow
+    description: Automated or manual process flow
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - workflow_id
+      - workflowId
+      - workflow_name
+      - trigger
+      - steps
+      - workflow_status
+      - sla
+      - automation_id
+      - process_id
+    aliases:
+      - process
+      - automation
+      - flow
+      - business_process
+      - process_flow
+    expected_type: string
+    typical_source_systems:
+      - ipaas
+      - bpm
+      - itsm
+    persona_relevance:
+      COO: 0.9
+      CTO: 0.5
+
+  - id: quality_metric
+    concept_id: OPS-007
+    name: Quality Metric
+    description: Operational quality measurement
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - metric_id
+      - metric_name
+      - metric_value
+      - target
+      - metric_period
+      - metric_owner
+      - defect_rate
+      - yield_rate
+    aliases:
+      - quality
+      - defect_rate
+      - yield
+      - sla_metric
+      - quality_score
+      - quality_measure
+    expected_type: float
+    typical_source_systems:
+      - erp
+      - quality_management
+      - project_management
+    persona_relevance:
+      COO: 1.0
+
+  - id: capacity
+    concept_id: OPS-008
+    name: Capacity
+    description: Resource availability or utilization
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - capacity_id
+      - resource
+      - available
+      - used
+      - capacity_period
+      - bandwidth
+      - resource_load
+      - utilization_pct
+    aliases:
+      - utilization
+      - bandwidth
+      - resource_load
+      - resource_capacity
+      - availability
+    expected_type: float
+    typical_source_systems:
+      - resource_planning
+      - psa
+      - project_management
+    persona_relevance:
+      COO: 0.9
+      CTO: 0.5
+
+  - id: facility
+    concept_id: OPS-009
+    name: Facility
+    description: Physical location or site
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - facility_id
+      - facilityId
+      - facility_name
+      - address
+      - facility_type
+      - facility_status
+      - site_headcount
+      - office_id
+    aliases:
+      - office
+      - site
+      - location
+      - warehouse
+      - campus
+      - physical_location
+    expected_type: string
+    typical_source_systems:
+      - iwms
+      - itsm
+      - erp
+    persona_relevance:
+      COO: 0.8
+      CFO: 0.3
+
+  - id: shipment
+    concept_id: OPS-010
+    name: Shipment
+    description: Physical goods in transit
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - shipment_id
+      - shipmentId
+      - origin
+      - destination
+      - shipment_status
+      - carrier
+      - eta
+      - tracking_number
+      - freight_id
+    aliases:
+      - delivery
+      - freight
+      - package
+      - consignment
+      - logistics
+      - transport
+    expected_type: string
+    typical_source_systems:
+      - logistics
+      - erp
+      - shipping
+    persona_relevance:
+      COO: 1.0
+
+  # ════════════════════════════════════════════════════════════════
+  # MARKETING (10 concepts: MKT-001 through MKT-010)
+  # ════════════════════════════════════════════════════════════════
+
+  - id: campaign
+    concept_id: MKT-001
+    name: Campaign
+    description: Organized marketing initiative
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - campaign_id
+      - campaignId
+      - campaign_name
+      - channel
+      - campaign_budget
+      - start_date
+      - campaign_status
+    aliases:
+      - promo
+      - initiative
+      - blast
+      - push
+      - marketing_campaign
+      - promotion
+    expected_type: string
+    typical_source_systems:
+      - marketing_automation
+      - crm
+      - ad_platform
+    persona_relevance:
+      CRO: 0.8
+      CFO: 0.4
+
+  - id: lead
+    concept_id: MKT-002
+    name: Lead
+    description: Potential customer or buyer
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - lead_id
+      - leadId
+      - lead_name
+      - lead_source
+      - lead_status
+      - lead_score
+      - lead_owner
+    aliases:
+      - prospect
+      - mql
+      - inquiry
+      - inbound
+      - marketing_lead
+      - potential_customer
+    expected_type: string
+    typical_source_systems:
+      - crm
+      - marketing_automation
+    persona_relevance:
+      CRO: 0.9
+      CFO: 0.3
+
+  - id: channel
+    concept_id: MKT-003
+    name: Channel
+    description: Marketing distribution medium
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - channel_id
+      - channelId
+      - channel_name
+      - channel_type
+      - channel_cost
+      - conversion_rate
+      - utm_source
+      - medium
+    aliases:
+      - source
+      - medium
+      - utm_source
+      - platform
+      - distribution_channel
+      - marketing_channel
+    expected_type: string
+    typical_source_systems:
+      - analytics
+      - marketing_automation
+      - attribution
+    persona_relevance:
+      CRO: 0.7
+
+  - id: content
+    concept_id: MKT-004
+    name: Content
+    description: Marketing content asset
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - content_id
+      - contentId
+      - content_title
+      - content_type
+      - publish_date
+      - views
+      - asset_id
+    aliases:
+      - asset
+      - blog
+      - whitepaper
+      - collateral
+      - marketing_content
+      - creative_asset
+    expected_type: string
+    typical_source_systems:
+      - cms
+      - marketing_automation
+    persona_relevance:
+      CRO: 0.5
+
+  - id: conversion
+    concept_id: MKT-005
+    name: Conversion
+    description: Goal completion event
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - conversion_id
+      - conversionId
+      - conversion_type
+      - conversion_source
+      - conversion_date
+      - conversion_value
+      - attribution
+    aliases:
+      - signup
+      - demo_request
+      - trial_start
+      - goal_completion
+      - form_fill
+      - conversion_event
+    expected_type: string
+    typical_source_systems:
+      - analytics
+      - marketing_automation
+      - crm
+    persona_relevance:
+      CRO: 0.9
+      CFO: 0.4
+
+  - id: attribution
+    concept_id: MKT-006
+    name: Attribution
+    description: Revenue credit to marketing touch
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - attribution_id
+      - attributionId
+      - model
+      - attribution_channel
+      - deal_id
+      - weight
+      - influenced_rev
+      - touchpoint_id
+    aliases:
+      - touch
+      - touchpoint
+      - influenced_rev
+      - marketing_attribution
+      - revenue_attribution
+      - credit
+    expected_type: string
+    typical_source_systems:
+      - attribution
+      - marketing_automation
+      - crm
+    persona_relevance:
+      CRO: 0.8
+      CFO: 0.5
+
+  - id: audience
+    concept_id: MKT-007
+    name: Audience
+    description: Target group or segment
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - audience_id
+      - audienceId
+      - audience_name
+      - audience_size
+      - criteria
+      - audience_platform
+      - list_id
+    aliases:
+      - segment
+      - list
+      - cohort
+      - persona
+      - target_audience
+      - target_group
+    expected_type: string
+    typical_source_systems:
+      - marketing_automation
+      - ad_platform
+      - abm
+    persona_relevance:
+      CRO: 0.7
+
+  - id: ad
+    concept_id: MKT-008
+    name: Ad
+    description: Paid advertising unit
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - ad_id
+      - adId
+      - campaign_id
+      - ad_platform
+      - ad_spend
+      - impressions
+      - clicks
+      - creative_id
+      - placement_id
+    aliases:
+      - creative
+      - placement
+      - sponsored
+      - promoted
+      - advertisement
+      - paid_ad
+    expected_type: string
+    typical_source_systems:
+      - ad_platform
+      - marketing_automation
+    persona_relevance:
+      CRO: 0.6
+      CFO: 0.4
+
+  - id: marketing_email
+    concept_id: MKT-009
+    name: Email
+    description: Marketing email communication
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - email_id
+      - emailId
+      - subject
+      - list
+      - sent
+      - opens
+      - clicks
+      - bounces
+      - nurture_id
+    aliases:
+      - nurture
+      - drip
+      - newsletter
+      - outreach
+      - email_campaign
+      - email_blast
+    expected_type: string
+    typical_source_systems:
+      - marketing_automation
+      - email_platform
+    persona_relevance:
+      CRO: 0.6
+
+  - id: marketing_event
+    concept_id: MKT-010
+    name: Event
+    description: Marketing event or webinar
+    domain: marketing
+    cluster: Marketing
+    example_fields:
+      - event_id
+      - eventId
+      - event_name
+      - event_date
+      - event_type
+      - registrants
+      - attendees
+      - webinar_id
+    aliases:
+      - webinar
+      - conference
+      - meetup
+      - field_event
+      - virtual_event
+      - trade_show
+    expected_type: string
+    typical_source_systems:
+      - event_management
+      - marketing_automation
+      - webinar_platform
+    persona_relevance:
+      CRO: 0.6
+      COO: 0.3
+
+  # ════════════════════════════════════════════════════════════════
+  # COMPLIANCE & RISK (12 concepts: CMP-001 through CMP-012)
+  # ════════════════════════════════════════════════════════════════
+
+  - id: audit_trail
+    concept_id: CMP-001
+    name: Audit Trail
+    description: Record of system or user actions
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - log_id
+      - audit_log_id
+      - actor
+      - action
+      - resource
+      - log_timestamp
+      - ip
+      - activity_log_id
+    aliases:
+      - audit_log
+      - activity_log
+      - changelog
+      - event_log
+      - system_log
+      - action_log
+    expected_type: string
+    typical_source_systems:
+      - grc
+      - siem
+      - itsm
+    persona_relevance:
+      CTO: 0.7
+      CFO: 0.6
+
+  - id: control
+    concept_id: CMP-002
+    name: Control
+    description: Security or compliance control
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - control_id
+      - controlId
+      - framework
+      - control_status
+      - control_owner
+      - evidence_date
+      - safeguard_id
+    aliases:
+      - safeguard
+      - countermeasure
+      - policy_control
+      - security_control
+      - compliance_control
+    expected_type: string
+    typical_source_systems:
+      - grc
+      - compliance_platform
+    persona_relevance:
+      CTO: 0.8
+      CFO: 0.6
+
+  - id: risk
+    concept_id: CMP-003
+    name: Risk
+    description: Identified business or operational risk
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - risk_id
+      - riskId
+      - risk_category
+      - likelihood
+      - impact
+      - risk_status
+      - risk_owner
+      - threat_id
+    aliases:
+      - threat
+      - exposure
+      - vulnerability
+      - business_risk
+      - operational_risk
+    expected_type: string
+    typical_source_systems:
+      - grc
+      - risk_management
+    persona_relevance:
+      CFO: 0.8
+      CTO: 0.7
+
+  - id: policy
+    concept_id: CMP-004
+    name: Policy
+    description: Organizational governance rule
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - policy_id
+      - policyId
+      - policy_title
+      - policy_version
+      - effective_date
+      - policy_owner
+      - policy_status
+    aliases:
+      - rule
+      - standard
+      - guideline
+      - procedure
+      - governance_policy
+      - corporate_policy
+    expected_type: string
+    typical_source_systems:
+      - grc
+      - document_management
+    persona_relevance:
+      CFO: 0.6
+      CTO: 0.5
+
+  - id: violation
+    concept_id: CMP-005
+    name: Violation
+    description: Policy or compliance breach
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - violation_id
+      - violationId
+      - policy_id
+      - violation_severity
+      - violation_date
+      - remediation
+      - finding_id
+    aliases:
+      - non_compliance
+      - finding
+      - exception
+      - compliance_breach
+      - infraction
+    expected_type: string
+    typical_source_systems:
+      - grc
+      - compliance_platform
+    persona_relevance:
+      CFO: 0.7
+      CTO: 0.6
+
+  - id: framework
+    concept_id: CMP-006
+    name: Framework
+    description: Compliance or regulatory framework
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - framework_id
+      - frameworkId
+      - framework_name
+      - framework_version
+      - scope
+      - framework_status
+      - certification_id
+    aliases:
+      - regulation
+      - standard
+      - certification
+      - regulatory_framework
+      - compliance_framework
+    expected_type: string
+    typical_source_systems:
+      - grc
+      - compliance_platform
+    persona_relevance:
+      CFO: 0.6
+      CTO: 0.6
+
+  - id: evidence
+    concept_id: CMP-007
+    name: Evidence
+    description: Proof of compliance or control
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - evidence_id
+      - evidenceId
+      - control_id
+      - evidence_type
+      - collected_date
+      - evidence_status
+      - artifact_id
+    aliases:
+      - artifact
+      - proof
+      - attestation
+      - screenshot
+      - compliance_evidence
+      - supporting_document
+    expected_type: string
+    typical_source_systems:
+      - grc
+      - compliance_platform
+    persona_relevance:
+      CTO: 0.6
+
+  - id: data_classification
+    concept_id: CMP-008
+    name: Data Classification
+    description: Sensitivity label for data
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - class_id
+      - classification_id
+      - classification_level
+      - description
+      - handling_rules
+      - sensitivity_label
+      - pii_flag
+    aliases:
+      - sensitivity
+      - data_label
+      - pii_flag
+      - classification_level
+      - data_sensitivity
+    expected_type: string
+    typical_source_systems:
+      - data_governance
+      - grc
+      - dlp
+    persona_relevance:
+      CTO: 0.7
+      CFO: 0.4
+
+  - id: consent
+    concept_id: CMP-009
+    name: Consent
+    description: User or customer data consent record
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - consent_id
+      - consentId
+      - user_id
+      - consent_type
+      - consent_status
+      - granted_date
+      - opt_in_id
+    aliases:
+      - opt_in
+      - preference
+      - gdpr_consent
+      - data_consent
+      - privacy_consent
+    expected_type: string
+    typical_source_systems:
+      - consent_management
+      - grc
+      - crm
+    persona_relevance:
+      CTO: 0.5
+      CFO: 0.4
+
+  - id: vendor_risk
+    concept_id: CMP-010
+    name: Vendor Risk
+    description: Third-party risk assessment
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - assessment_id
+      - vendor_risk_id
+      - vendor_id
+      - risk_score
+      - tier
+      - review_date
+      - tprm_id
+    aliases:
+      - third_party_risk
+      - tprm
+      - vendor_assessment
+      - supplier_risk
+      - third_party_assessment
+    expected_type: string
+    typical_source_systems:
+      - grc
+      - vendor_management
+      - risk_management
+    persona_relevance:
+      CFO: 0.6
+      CTO: 0.6
+      COO: 0.5
+
+  - id: access_review
+    concept_id: CMP-011
+    name: Access Review
+    description: Periodic access certification
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - review_id
+      - access_review_id
+      - user_id
+      - resource
+      - decision
+      - reviewer
+      - recertification_id
+    aliases:
+      - recertification
+      - entitlement_review
+      - access_certification
+      - user_access_review
+    expected_type: string
+    typical_source_systems:
+      - iam
+      - grc
+      - idp
+    persona_relevance:
+      CTO: 0.7
+
+  - id: retention_policy
+    concept_id: CMP-012
+    name: Retention Policy
+    description: Data retention and disposal rule
+    domain: compliance
+    cluster: Compliance
+    example_fields:
+      - policy_id
+      - retention_policy_id
+      - data_type
+      - retention_period
+      - retention_action
+      - retention_status
+      - archival_id
+    aliases:
+      - retention
+      - archival
+      - disposal
+      - data_lifecycle
+      - retention_rule
+      - data_retention
+    expected_type: string
+    typical_source_systems:
+      - data_governance
+      - grc
+      - document_management
+    persona_relevance:
+      CTO: 0.5
+      CFO: 0.4
