@@ -9,6 +9,8 @@ response assembly.
 
 from __future__ import annotations
 
+import json
+import time
 from typing import TYPE_CHECKING
 
 from backend.engine.graph_types import (
@@ -31,17 +33,64 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
+_DEFAULT_CACHE_TTL = 300  # 5 minutes
+
+
 class QueryResolver:
     """Resolves NLQ queries against the semantic graph."""
 
-    def __init__(self, graph: SemanticGraph) -> None:
+    def __init__(
+        self, graph: SemanticGraph, cache_ttl: int = _DEFAULT_CACHE_TTL,
+    ) -> None:
         self.graph = graph
+        self._cache_ttl = cache_ttl
+        self._path_cache: dict[str, tuple[float, QueryResolution]] = {}
+
+    # ------------------------------------------------------------------
+    # Cache helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _cache_key(intent: QueryIntent) -> str:
+        """Deterministic key from intent (concepts + dimensions + filters, sorted)."""
+        filters_repr = sorted(
+            (f.dimension, f.operator, json.dumps(f.value, sort_keys=True))
+            for f in intent.filters
+        )
+        return json.dumps({
+            "c": sorted(intent.concepts),
+            "d": sorted(intent.dimensions),
+            "f": filters_repr,
+            "p": intent.persona or "",
+        }, sort_keys=True)
+
+    def invalidate_cache(self) -> None:
+        """Clear the path cache (called on graph rebuild)."""
+        self._path_cache.clear()
+
+    # ------------------------------------------------------------------
+    # Main entry point
+    # ------------------------------------------------------------------
 
     def resolve(self, intent: QueryIntent) -> QueryResolution:
-        """Run the 8-step resolution flow.
+        """Run the 8-step resolution flow with caching.
 
         Steps 1 (intent parsing) is handled by NLQ before calling DCL.
         """
+        key = self._cache_key(intent)
+        cached = self._path_cache.get(key)
+        if cached is not None:
+            ts, result = cached
+            if time.monotonic() - ts < self._cache_ttl:
+                return result
+            del self._path_cache[key]
+
+        result = self._resolve_uncached(intent)
+        self._path_cache[key] = (time.monotonic(), result)
+        return result
+
+    def _resolve_uncached(self, intent: QueryIntent) -> QueryResolution:
+        """Full 8-step resolution without cache."""
         # Step 2: Concept location
         sources = self._locate_concepts(intent.concepts)
         if not sources:
