@@ -133,6 +133,123 @@ concepts:
     persona_relevance:
       CFO: 0.7
 
+  - id: journal_entry
+    concept_id: FIN-002
+    name: Journal Entry
+    description: Double-entry accounting transaction record
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - entry_id
+      - debit_amount
+      - credit_amount
+      - posting_date
+      - memo
+      - journal_line
+    aliases:
+      - je
+      - journal_line
+      - accounting_entry
+      - gl_transaction
+    expected_type: string
+    typical_source_systems: [netsuite, sap, oracle_erp]
+    persona_relevance:
+      CFO: 0.9
+
+  - id: cost_center
+    concept_id: FIN-003
+    name: Cost Center
+    description: Organizational unit for cost allocation
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - cost_center
+      - center_id
+      - center_name
+      - manager
+      - budget_amount
+      - department_code
+    aliases:
+      - cc
+      - department_code
+      - profit_center
+    expected_type: string
+    typical_source_systems: [sap, workday, oracle]
+    persona_relevance:
+      CFO: 0.9
+      COO: 0.6
+
+  - id: budget
+    concept_id: FIN-004
+    name: Budget
+    description: Planned financial allocation for a period
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - budget_id
+      - budget
+      - period
+      - amount
+      - category
+      - budget_line
+      - planned_spend
+    aliases:
+      - budget_line
+      - planned_spend
+      - fiscal_plan
+    expected_type: float
+    typical_source_systems: [adaptive_insights, anaplan, vena]
+    persona_relevance:
+      CFO: 1.0
+      COO: 0.5
+
+  - id: forecast
+    concept_id: FIN-005
+    name: Forecast
+    description: Projected financial outcome
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - forecast_id
+      - forecast
+      - projection
+      - outlook
+      - estimated_revenue
+      - confidence
+    aliases:
+      - projection
+      - outlook
+      - estimated_revenue
+    expected_type: float
+    typical_source_systems: [clari, anaplan, pigment]
+    persona_relevance:
+      CFO: 0.9
+      CRO: 0.7
+
+  - id: payment
+    concept_id: FIN-007
+    name: Payment
+    description: Financial transaction settling an obligation
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - payment_id
+      - payment_amount
+      - payment_date
+      - payment_method
+      - remittance
+      - disbursement
+      - settlement
+    aliases:
+      - remittance
+      - pmt
+      - disbursement
+      - settlement
+    expected_type: string
+    typical_source_systems: [stripe, paypal, bill_com, banks]
+    persona_relevance:
+      CFO: 0.8
+
   - id: payment_status
     concept_id: FIN-PS1
     name: Payment Status
@@ -151,6 +268,126 @@ concepts:
     typical_source_systems: [stripe, netsuite, bill_com]
     persona_relevance:
       CFO: 0.6
+
+  - id: accounts_receivable
+    concept_id: FIN-008
+    name: Accounts Receivable
+    description: Money owed to the organization
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - ar_id
+      - receivable
+      - outstanding_balance
+      - amt_due
+      - aging_bucket
+      - ar
+    aliases:
+      - ar
+      - receivable
+      - outstanding_balance
+      - amt_due
+    expected_type: float
+    typical_source_systems: [netsuite, sap, quickbooks]
+    persona_relevance:
+      CFO: 0.9
+
+  - id: accounts_payable
+    concept_id: FIN-009
+    name: Accounts Payable
+    description: Money owed by the organization
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - ap_id
+      - payable
+      - vendor_balance
+      - amt_owed
+      - payment_terms
+      - ap
+    aliases:
+      - ap
+      - payable
+      - vendor_balance
+      - amt_owed
+    expected_type: float
+    typical_source_systems: [netsuite, sap, coupa]
+    persona_relevance:
+      CFO: 0.9
+      COO: 0.4
+
+  - id: financial_period
+    concept_id: FIN-012
+    name: Financial Period
+    description: Fiscal time boundary for reporting
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - fiscal_period
+      - quarter
+      - fy
+      - reporting_period
+      - period_id
+      - start_date
+      - end_date
+    aliases:
+      - fiscal_period
+      - quarter
+      - reporting_period
+      - fy
+    expected_type: string
+    typical_source_systems: [netsuite, sap, any_erp]
+    persona_relevance:
+      CFO: 0.8
+
+  - id: tax
+    concept_id: FIN-013
+    name: Tax
+    description: Tax obligation or credit
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - tax_id
+      - tax
+      - tax_line
+      - vat
+      - sales_tax
+      - withholding
+      - rate
+      - jurisdiction
+    aliases:
+      - vat
+      - sales_tax
+      - withholding
+      - tax_line
+    expected_type: float
+    typical_source_systems: [avalara, vertex, netsuite]
+    persona_relevance:
+      CFO: 0.8
+
+  - id: fixed_asset
+    concept_id: FIN-014
+    name: Fixed Asset
+    description: Capitalized long-term business asset
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - asset_id
+      - fixed_asset
+      - cost
+      - depreciation_method
+      - useful_life
+      - nbv
+      - capital_asset
+    aliases:
+      - fa
+      - capital_asset
+      - property
+      - fixed_asset
+    expected_type: string
+    typical_source_systems: [sap, oracle, netsuite]
+    persona_relevance:
+      CFO: 0.7
 
   # ─── Sales & Revenue ─────────────────────────────────────
   - id: account
@@ -230,6 +467,268 @@ concepts:
     persona_relevance:
       CFO: 0.9
       CRO: 0.8
+
+  - id: pipeline_stage
+    concept_id: SAL-003
+    name: Pipeline Stage
+    description: Phase in the sales process
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - stage
+      - deal_stage
+      - sales_stage
+      - opp_stage
+      - stage_id
+      - stage_name
+      - probability
+      - duration_avg
+    aliases:
+      - deal_stage
+      - sales_stage
+      - opp_stage
+    expected_type: string
+    typical_source_systems: [salesforce, hubspot]
+    persona_relevance:
+      CRO: 0.9
+
+  - id: quote
+    concept_id: SAL-004
+    name: Quote
+    description: Formal pricing proposal
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - quote_id
+      - quote
+      - proposal
+      - estimate
+      - quotation
+      - discount
+      - expiry_date
+    aliases:
+      - proposal
+      - estimate
+      - quotation
+      - cpq_quote
+    expected_type: string
+    typical_source_systems: [salesforce_cpq, dealhub, pandadoc]
+    persona_relevance:
+      CRO: 0.8
+      CFO: 0.4
+
+  - id: contract
+    concept_id: SAL-005
+    name: Contract
+    description: Binding agreement with a customer
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - contract_id
+      - contract
+      - agreement
+      - msa
+      - order_form
+      - sow
+      - start_date
+      - end_date
+    aliases:
+      - agreement
+      - msa
+      - order_form
+      - sow
+    expected_type: string
+    typical_source_systems: [salesforce, ironclad, docusign_clm]
+    persona_relevance:
+      CRO: 0.8
+      CFO: 0.6
+
+  - id: order
+    concept_id: SAL-006
+    name: Order
+    description: Confirmed purchase request
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - order_id
+      - sales_order
+      - so
+      - purchase
+      - order_amount
+      - line_items
+    aliases:
+      - sales_order
+      - so
+      - purchase
+    expected_type: string
+    typical_source_systems: [salesforce, shopify, netsuite]
+    persona_relevance:
+      CRO: 0.7
+      CFO: 0.5
+
+  - id: renewal
+    concept_id: SAL-008
+    name: Renewal
+    description: Subscription or contract renewal event
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - renewal_id
+      - renewal
+      - renewal_opp
+      - contract_renewal
+      - due_date
+      - likelihood
+    aliases:
+      - renewal_opp
+      - contract_renewal
+    expected_type: string
+    typical_source_systems: [salesforce, gainsight, zuora]
+    persona_relevance:
+      CRO: 0.9
+      CFO: 0.6
+
+  - id: territory
+    concept_id: SAL-009
+    name: Territory
+    description: Sales geographic or account grouping
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - territory_id
+      - territory
+      - region
+      - sales_region
+      - geo
+      - rep
+      - quota
+      - account_count
+    aliases:
+      - region
+      - sales_region
+      - geo
+    expected_type: string
+    typical_source_systems: [salesforce, anaplan]
+    persona_relevance:
+      CRO: 0.8
+
+  - id: quota
+    concept_id: SAL-010
+    name: Quota
+    description: Sales target for a rep or team
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - quota_id
+      - quota
+      - target
+      - sales_goal
+      - attainment_target
+      - attainment_pct
+    aliases:
+      - target
+      - sales_goal
+      - attainment_target
+    expected_type: float
+    typical_source_systems: [salesforce, clari, xactly]
+    persona_relevance:
+      CRO: 1.0
+      CFO: 0.5
+
+  - id: commission
+    concept_id: SAL-011
+    name: Commission
+    description: Variable compensation for sales
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - commission_id
+      - commission
+      - spiff
+      - variable_comp
+      - incentive
+      - payout_date
+    aliases:
+      - spiff
+      - variable_comp
+      - incentive
+    expected_type: float
+    typical_source_systems: [xactly, captivateiq, spiff]
+    persona_relevance:
+      CRO: 0.8
+      CFO: 0.6
+      CHRO: 0.4
+
+  - id: contact
+    concept_id: SAL-012
+    name: Contact
+    description: Individual person at a customer account
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - contact_id
+      - contact
+      - stakeholder
+      - buyer
+      - champion
+      - name
+      - title
+      - email
+    aliases:
+      - stakeholder
+      - buyer
+      - champion
+    expected_type: string
+    typical_source_systems: [salesforce, hubspot, outreach]
+    persona_relevance:
+      CRO: 0.7
+
+  - id: sales_activity
+    concept_id: SAL-013
+    name: Activity
+    description: Sales interaction or touchpoint
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - activity_id
+      - activity
+      - task
+      - call
+      - meeting
+      - email_touch
+      - outcome
+    aliases:
+      - task
+      - call
+      - meeting
+      - email_touch
+    expected_type: string
+    typical_source_systems: [salesforce, outreach, gong]
+    persona_relevance:
+      CRO: 0.6
+
+  - id: win_loss
+    concept_id: SAL-014
+    name: Win/Loss
+    description: Deal outcome classification
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - win_loss
+      - deal_result
+      - closed_reason
+      - outcome
+      - competitor
+      - result
+    aliases:
+      - deal_result
+      - closed_reason
+      - outcome
+    expected_type: string
+    typical_source_systems: [salesforce, clari, gong]
+    persona_relevance:
+      CRO: 0.9
+      CFO: 0.4
 
   # ─── Human Resources ─────────────────────────────────────
   - id: employee
