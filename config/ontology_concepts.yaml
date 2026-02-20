@@ -1259,7 +1259,7 @@ concepts:
       - cancellation
       - downgrade
       - lost_customer
-      - date
+      - churn_date
       - reason
       - arr_impact
     aliases:
@@ -1412,7 +1412,7 @@ concepts:
       - deploy
       - version
       - build
-      - date
+      - release_date
       - type
       - changelog
     aliases:
