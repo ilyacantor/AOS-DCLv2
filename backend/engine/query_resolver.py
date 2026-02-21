@@ -35,6 +35,17 @@ logger = get_logger(__name__)
 
 _DEFAULT_CACHE_TTL = 300  # 5 minutes
 
+# Dimension aliases — common names that map to canonical dimension IDs
+_DIMENSION_ALIASES: dict[str, str] = {
+    "region": "geography",
+    "geo": "geography",
+    "location": "geography",
+    "team": "department",
+    "business_unit": "division",
+    "bu": "division",
+    "entity": "legal_entity",
+}
+
 
 class QueryResolver:
     """Resolves NLQ queries against the semantic graph."""
@@ -89,11 +100,46 @@ class QueryResolver:
         self._path_cache[key] = (time.monotonic(), result)
         return result
 
+    @staticmethod
+    def _canonicalize_dimensions(dimensions: list[str]) -> list[str]:
+        """Map dimension aliases to canonical names."""
+        return [_DIMENSION_ALIASES.get(d, d) for d in dimensions]
+
+    @staticmethod
+    def _canonicalize_filters(filters: list[QueryFilter]) -> list[QueryFilter]:
+        """Map filter dimension aliases to canonical names."""
+        return [
+            QueryFilter(
+                dimension=_DIMENSION_ALIASES.get(f.dimension, f.dimension),
+                operator=f.operator,
+                value=f.value,
+            )
+            for f in filters
+        ]
+
     def _resolve_uncached(self, intent: QueryIntent) -> QueryResolution:
         """Full 8-step resolution without cache."""
+        # Canonicalize dimension aliases (region→geography, etc.)
+        intent = QueryIntent(
+            concepts=intent.concepts,
+            dimensions=self._canonicalize_dimensions(intent.dimensions),
+            filters=self._canonicalize_filters(intent.filters),
+            persona=intent.persona,
+        )
+
         # Step 2: Concept location
         sources = self._locate_concepts(intent.concepts)
         if not sources:
+            # Distinguish unknown concepts from unmapped ones
+            unknown = [
+                c for c in intent.concepts
+                if f"concept:{c}" not in self.graph.nodes
+            ]
+            if unknown:
+                return QueryResolution(
+                    can_answer=False,
+                    reason=f"Concept not recognized: {', '.join(unknown)}",
+                )
             return QueryResolution(
                 can_answer=False,
                 reason=f"No sources found for concepts: {intent.concepts}",
@@ -128,19 +174,44 @@ class QueryResolver:
         )
 
     # ------------------------------------------------------------------
-    # Step 2: Concept location
+    # Step 2: Concept location (with alias fallback)
     # ------------------------------------------------------------------
 
     def _locate_concepts(self, concepts: list[str]) -> list[FieldLocation]:
-        """Find the best source for each concept."""
+        """Find the best source for each concept, with alias fallback."""
         all_sources: list[FieldLocation] = []
         for concept in concepts:
             sources = self.graph.find_concept_sources(concept)
+            if not sources:
+                # Alias fallback: check if this concept is an alias of another
+                primary = self._resolve_concept_alias(concept)
+                if primary and primary != concept:
+                    sources = self.graph.find_concept_sources(primary)
+                    # Re-label sources with the requested concept name
+                    sources = [
+                        FieldLocation(
+                            system=s.system, object_name=s.object_name,
+                            field=s.field, concept=concept,
+                            confidence=s.confidence * 0.95,
+                        )
+                        for s in sources
+                    ]
             if sources:
                 all_sources.extend(sources)
             else:
                 logger.warning(f"[Resolver] No sources for concept: {concept}")
         return all_sources
+
+    def _resolve_concept_alias(self, concept_name: str) -> str | None:
+        """Check ontology for a concept that lists this name as an alias."""
+        try:
+            from backend.engine.ontology import get_ontology
+            for c in get_ontology():
+                if concept_name in [a.lower() for a in (c.aliases or [])]:
+                    return c.id
+        except Exception:
+            pass
+        return None
 
     # ------------------------------------------------------------------
     # Step 3: Dimension validity

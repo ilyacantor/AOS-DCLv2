@@ -23,6 +23,10 @@ import backend.engine  # noqa: E402 — warm the import chain
 from backend.semantic_mapper.persist_mappings import MappingPersistence as _MP  # noqa: E402
 
 
+@unittest.skipIf(
+    __import__("backend.semantic_mapper.persist_mappings", fromlist=["pool"]).pool is None,
+    "psycopg2 not installed"
+)
 class TestConnectionPoolRetry(unittest.TestCase):
     """Fix 1.1: Connection pool must NOT be permanently locked on failure."""
 

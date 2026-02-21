@@ -35,7 +35,7 @@ hierarchy:
         - {id: cc-6200, name: HR}
         - {id: cc-6300, name: Legal}
 
-  region:
+  geography:
     - id: reg-na
       name: North America
       children:
@@ -69,7 +69,7 @@ sor_authority:
   cost_center: {system: netsuite, confidence: 0.90}
   department: {system: workday, confidence: 0.95}
   division: {system: workday, confidence: 0.90}
-  region: {system: salesforce, confidence: 0.85}
+  geography: {system: salesforce, confidence: 0.85}
   legal_entity: {system: netsuite, confidence: 0.95}
   profit_center: {system: netsuite, confidence: 0.85}
   segment: {system: salesforce, confidence: 0.80}

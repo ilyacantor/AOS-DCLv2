@@ -4,7 +4,6 @@ import json
 from typing import List, Dict, Any, Optional, Tuple
 import pandas as pd
 import httpx
-import psycopg2
 from backend.domain import SourceSystem, TableSchema, FieldSchema, DiscoveryStatus, ResolutionType, Mapping
 from backend.engine.source_normalizer import get_normalizer, NormalizationResult
 from backend.utils.log_utils import get_logger

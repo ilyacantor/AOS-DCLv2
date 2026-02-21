@@ -58,17 +58,36 @@ def rebuild_graph() -> None:
     # 2. Contour map (sample in dev, approved map in prod)
     graph.load_from_contour_map()
 
-    # 3. Normalizer mappings (from DB)
+    # 3. Normalizer mappings (from DB, with in-memory fallback)
+    all_mappings = []
     try:
         from backend.semantic_mapper import SemanticMapper
         mapper = SemanticMapper()
         all_grouped = mapper.get_all_mappings_grouped()
         all_mappings = [m for group in all_grouped.values() for m in group]
         if all_mappings:
-            graph.load_from_normalizer(all_mappings)
-            logger.info(f"[GraphStore] Loaded {len(all_mappings)} normalizer mappings")
+            logger.info(f"[GraphStore] Loaded {len(all_mappings)} normalizer mappings from DB")
     except Exception as e:
-        logger.warning(f"[GraphStore] Could not load normalizer mappings: {e}")
+        logger.warning(f"[GraphStore] Could not load normalizer mappings from DB: {e}")
+
+    if not all_mappings:
+        try:
+            from backend.semantic_mapper import SemanticMapper
+            from backend.engine.schema_loader import SchemaLoader
+            mapper = SemanticMapper()
+            sources = SchemaLoader.load_demo_schemas()
+            if sources:
+                all_mappings, stats = mapper.run_mapping(sources, mode="heuristic")
+                logger.info(
+                    f"[GraphStore] Generated {len(all_mappings)} in-memory mappings "
+                    f"from {len(sources)} demo sources (DB unavailable)"
+                )
+        except Exception as e:
+            logger.warning(f"[GraphStore] In-memory mapping fallback failed: {e}")
+
+    if all_mappings:
+        graph.load_from_normalizer(all_mappings)
+        logger.info(f"[GraphStore] Graph loaded {len(all_mappings)} normalizer mappings")
 
     # 4. AAM semantic edges
     try:

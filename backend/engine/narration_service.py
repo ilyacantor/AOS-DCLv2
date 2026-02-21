@@ -5,7 +5,10 @@ import json
 PST = timezone(timedelta(hours=-8))
 import os
 import logging
-import redis
+try:
+    import redis
+except ImportError:
+    redis = None  # type: ignore[assignment]
 
 
 logger = logging.getLogger("NarrationService")
@@ -20,6 +23,8 @@ class NarrationService:
     
     def _get_redis(self):
         """Lazy initialization of Redis client."""
+        if redis is None:
+            return None
         if self._redis_client is None:
             redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
             self._redis_client = redis.from_url(redis_url, decode_responses=True)

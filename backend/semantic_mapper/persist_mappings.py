@@ -1,7 +1,11 @@
 import os
 import time
-import psycopg2
-from psycopg2 import pool
+try:
+    import psycopg2
+    from psycopg2 import pool
+except ImportError:
+    psycopg2 = None  # type: ignore[assignment]
+    pool = None  # type: ignore[assignment]
 from typing import List, Dict, Any, Optional
 from contextlib import contextmanager
 from backend.domain import Mapping

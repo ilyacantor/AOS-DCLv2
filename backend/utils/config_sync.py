@@ -1,7 +1,11 @@
 import os
 import yaml
-import psycopg2
-from psycopg2.extras import Json
+try:
+    import psycopg2
+    from psycopg2.extras import Json
+except ImportError:
+    psycopg2 = None  # type: ignore[assignment]
+    Json = None  # type: ignore[assignment]
 from typing import Dict, List, Any
 
 
