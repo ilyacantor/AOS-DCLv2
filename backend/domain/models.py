@@ -164,3 +164,62 @@ class GraphSnapshot(CamelCaseModel):
     nodes: List[GraphNode]
     links: List[GraphLink]
     meta: Dict[str, Any]
+
+
+# ── Graph Resolution Models (NLQ → DCL resolve pipeline) ──────────────
+
+
+class FilterClause(BaseModel):
+    """A single filter condition from the parsed query intent."""
+    dimension: str
+    value: str
+    operator: str = "eq"
+
+
+class QueryIntent(BaseModel):
+    """Structured intent parsed from a natural-language question."""
+    concepts: List[str] = Field(default_factory=list)
+    dimensions: List[str] = Field(default_factory=list)
+    filters: List[FilterClause] = Field(default_factory=list)
+    grain: Optional[str] = None
+
+
+class ProvenanceStep(BaseModel):
+    """One hop in the provenance chain for a resolved concept."""
+    concept: str
+    source_system: str
+    table: str
+    field: str
+    confidence: float
+    is_sor: bool = False
+
+
+class JoinPath(BaseModel):
+    """A cross-system join path connecting two source systems."""
+    from_system: str
+    to_system: str
+    join_type: str = "aam_edge"
+    confidence: float = 0.5
+
+
+class FilterResolution(BaseModel):
+    """How a filter value was resolved (e.g. hierarchy expansion)."""
+    dimension: str
+    value: str
+    resolved_to: List[str] = Field(default_factory=list)
+    method: str = "exact"
+
+
+class QueryResolution(BaseModel):
+    """Full resolution result from the DCL graph resolver."""
+    can_answer: bool
+    reason: Optional[str] = None
+    concepts_found: List[str] = Field(default_factory=list)
+    dimensions_used: List[str] = Field(default_factory=list)
+    confidence: float = 0.0
+    provenance: List[ProvenanceStep] = Field(default_factory=list)
+    join_paths: List[JoinPath] = Field(default_factory=list)
+    filters_resolved: List[FilterResolution] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+    primary_system: Optional[str] = None
+    management_overlay_used: bool = False

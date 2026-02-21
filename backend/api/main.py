@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from typing import List, Literal, Optional, Dict, Any
 
-from backend.domain import Persona, GraphSnapshot, RunMetrics
+from backend.domain import Persona, GraphSnapshot, RunMetrics, QueryIntent, QueryResolution
 from backend.engine import DCLEngine
 from backend.engine.schema_loader import SchemaLoader
 from backend.semantic_mapper import SemanticMapper
@@ -524,6 +524,23 @@ def execute_dcl_query(request: QueryRequest):
             raise HTTPException(status_code=400, detail=result.model_dump())
 
     return result
+
+
+@app.post("/api/dcl/resolve", response_model=QueryResolution)
+def resolve_query_intent(intent: QueryIntent):
+    """Resolve a structured QueryIntent via semantic graph traversal.
+
+    This is the graph-resolution counterpart to /api/dcl/query.
+    NLQ calls this endpoint with a parsed intent; DCL traverses the
+    semantic graph and returns provenance, confidence, and warnings.
+    """
+    from backend.graph_resolver import resolve
+
+    try:
+        return resolve(intent)
+    except Exception as e:
+        logger.error(f"Graph resolve failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # =============================================================================

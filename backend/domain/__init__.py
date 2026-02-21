@@ -12,7 +12,13 @@ from .models import (
     GraphNode,
     GraphLink,
     GraphSnapshot,
-    RunMetrics
+    RunMetrics,
+    FilterClause,
+    QueryIntent,
+    ProvenanceStep,
+    JoinPath,
+    FilterResolution,
+    QueryResolution,
 )
 
 __all__ = [
@@ -29,5 +35,11 @@ __all__ = [
     "GraphNode",
     "GraphLink",
     "GraphSnapshot",
-    "RunMetrics"
+    "RunMetrics",
+    "FilterClause",
+    "QueryIntent",
+    "ProvenanceStep",
+    "JoinPath",
+    "FilterResolution",
+    "QueryResolution",
 ]
