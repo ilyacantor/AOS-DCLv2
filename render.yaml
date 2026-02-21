@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: dcl-engine
+    runtime: python
+    region: oregon
+    plan: starter
+    branch: dev
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.11"
+      - key: DCL_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dcl-db
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: AAM_API_URL
+        sync: false
+      - key: FARM_API_URL
+        value: "https://autonomos.farm"
+      - key: CORS_ORIGINS
+        sync: false
+
+databases:
+  - name: dcl-db
+    plan: starter
+    region: oregon
+    postgresMajorVersion: "16"
