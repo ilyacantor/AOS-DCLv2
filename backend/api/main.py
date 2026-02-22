@@ -164,11 +164,13 @@ def _invalidate_aam_caches():
     except Exception as e:
         logger.warning(f"[AAM] Failed to reset AAM client: {e}")
 
-    SchemaLoader._demo_cache = None
-    SchemaLoader._stream_cache = None
-    SchemaLoader._cache_time = 0
-    SchemaLoader._aam_cache = None
-    SchemaLoader._aam_cache_time = 0
+    # Clear SchemaLoader caches with lock protection
+    with SchemaLoader._cache_lock:
+        SchemaLoader._demo_cache = None
+        SchemaLoader._stream_cache = None
+        SchemaLoader._cache_time = 0
+        SchemaLoader._aam_cache = None
+        SchemaLoader._aam_cache_time = 0
     logger.info("[AAM] All stale caches invalidated for fresh AAM run")
 
 

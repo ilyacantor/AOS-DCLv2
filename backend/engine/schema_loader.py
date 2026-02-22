@@ -2,6 +2,7 @@ import os
 import csv
 import json
 from typing import List, Dict, Any, Optional, Tuple
+from threading import Lock
 import pandas as pd
 import httpx
 from backend.domain import SourceSystem, TableSchema, FieldSchema, DiscoveryStatus, ResolutionType, Mapping
@@ -13,7 +14,10 @@ logger = get_logger(__name__)
 
 
 class SchemaLoader:
-    
+
+    # Thread-safe cache for multi-worker safety
+    _cache_lock = Lock()
+
     _demo_cache: Optional[List[SourceSystem]] = None
     _stream_cache: Optional[List[SourceSystem]] = None
     _cache_time: float = 0
@@ -27,11 +31,14 @@ class SchemaLoader:
     def load_demo_schemas(narration=None, run_id: Optional[str] = None) -> List[SourceSystem]:
         import time
         now = time.time()
-        if SchemaLoader._demo_cache is not None and (now - SchemaLoader._cache_time) < SchemaLoader._CACHE_TTL:
-            if narration and run_id:
-                narration.add_message(run_id, "SchemaLoader", f"Using cached demo schemas ({len(SchemaLoader._demo_cache)} sources)")
-            # Return a copy to prevent callers from modifying the cache
-            return list(SchemaLoader._demo_cache)
+
+        # Check cache with lock protection
+        with SchemaLoader._cache_lock:
+            if SchemaLoader._demo_cache is not None and (now - SchemaLoader._cache_time) < SchemaLoader._CACHE_TTL:
+                if narration and run_id:
+                    narration.add_message(run_id, "SchemaLoader", f"Using cached demo schemas ({len(SchemaLoader._demo_cache)} sources)")
+                # Return a copy to prevent callers from modifying the cache
+                return list(SchemaLoader._demo_cache)
         
         schemas_path = "schemas/schemas"
         if not os.path.exists(schemas_path):
@@ -128,11 +135,13 @@ class SchemaLoader:
         
         if narration and run_id:
             narration.add_message(run_id, "SchemaLoader", f"Loaded {len(sources)} demo sources with normalization")
-        
+
+        # Update cache with lock protection
         import time
-        SchemaLoader._demo_cache = sources
-        SchemaLoader._cache_time = time.time()
-        
+        with SchemaLoader._cache_lock:
+            SchemaLoader._demo_cache = sources
+            SchemaLoader._cache_time = time.time()
+
         # Return a copy to prevent caller from mutating the cache
         return list(sources)
 
@@ -290,11 +299,14 @@ class SchemaLoader:
         import copy
 
         now = _time.time()
-        if SchemaLoader._aam_cache is not None and (now - SchemaLoader._aam_cache_time) < SchemaLoader._AAM_CACHE_TTL:
-            cached_sources, cached_kpis = SchemaLoader._aam_cache
-            if narration and run_id:
-                narration.add_message(run_id, "SchemaLoader", f"Using cached AAM schemas ({len(cached_sources)} sources)")
-            return copy.deepcopy(cached_sources), dict(cached_kpis)
+
+        # Check cache with lock protection
+        with SchemaLoader._cache_lock:
+            if SchemaLoader._aam_cache is not None and (now - SchemaLoader._aam_cache_time) < SchemaLoader._AAM_CACHE_TTL:
+                cached_sources, cached_kpis = SchemaLoader._aam_cache
+                if narration and run_id:
+                    narration.add_message(run_id, "SchemaLoader", f"Using cached AAM schemas ({len(cached_sources)} sources)")
+                return copy.deepcopy(cached_sources), dict(cached_kpis)
 
         from backend.aam.client import get_aam_client
         from backend.aam.ingress import AAMIngressAdapter
@@ -309,10 +321,12 @@ class SchemaLoader:
             logger.error(f"Failed to fetch from AAM: {e}")
             if narration and run_id:
                 narration.add_message(run_id, "SchemaLoader", f"⚠ AAM fetch failed: {e}")
-            if SchemaLoader._aam_cache is not None:
-                logger.info("AAM fetch failed, falling back to stale cache")
-                cached_sources, cached_kpis = SchemaLoader._aam_cache
-                return copy.deepcopy(cached_sources), dict(cached_kpis)
+            # Fallback to stale cache with lock protection
+            with SchemaLoader._cache_lock:
+                if SchemaLoader._aam_cache is not None:
+                    logger.info("AAM fetch failed, falling back to stale cache")
+                    cached_sources, cached_kpis = SchemaLoader._aam_cache
+                    return copy.deepcopy(cached_sources), dict(cached_kpis)
             return [], {"fabrics": 0, "pipes": 0, "sources": 0, "unpipedCount": 0, "totalAamConnections": 0}
 
         adapter = AAMIngressAdapter()
@@ -429,8 +443,10 @@ class SchemaLoader:
             "snapshotName": payload.snapshot_name,
         }
 
-        SchemaLoader._aam_cache = (copy.deepcopy(sources), dict(kpis))
-        SchemaLoader._aam_cache_time = _time.time()
+        # Update cache with lock protection
+        with SchemaLoader._cache_lock:
+            SchemaLoader._aam_cache = (copy.deepcopy(sources), dict(kpis))
+            SchemaLoader._aam_cache_time = _time.time()
 
         return sources, kpis
     
