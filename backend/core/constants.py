@@ -53,9 +53,9 @@ SCHEMA_CACHE_TTL = float(os.getenv("DCL_SCHEMA_CACHE_TTL", "300.0"))
 
 # --- Connection Pool ---
 POOL_RETRY_COOLDOWN = float(os.getenv("DCL_POOL_RETRY_COOLDOWN", "30.0"))
-POOL_MIN_CONN = int(os.getenv("DCL_POOL_MIN_CONN", "1"))
+POOL_MIN_CONN = int(os.getenv("DCL_POOL_MIN_CONN", "2"))
 POOL_MAX_CONN = int(os.getenv("DCL_POOL_MAX_CONN", "5"))
-DB_CONNECT_TIMEOUT = int(os.getenv("DCL_DB_CONNECT_TIMEOUT", "5"))
+DB_CONNECT_TIMEOUT = int(os.getenv("DCL_DB_CONNECT_TIMEOUT", "30"))
 
 # --- Source Normalizer ---
 CB_COOLDOWN = float(os.getenv("DCL_CB_COOLDOWN", "120.0"))
