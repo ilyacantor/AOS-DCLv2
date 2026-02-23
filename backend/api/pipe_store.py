@@ -9,23 +9,30 @@ Architecture:
   The JOIN key is pipe_id. If content arrives without a matching
   pipe definition, the ingest endpoint rejects it with HTTP 422.
 
-Persistence:
-  - In-memory primary: all reads from memory (fast).
-  - Redis write-through: definitions survive backend restarts.
-  - Redis TTL: 24 hours (matches IngestStore).
-  - If Redis is unavailable, in-memory only (logs warning).
+Persistence (ordered by durability):
+  1. Postgres (source of truth) — survives redeploys, no TTL.
+  2. Redis (write-through cache) — fast rehydration between restarts.
+  3. Disk (fallback) — backup if both PG and Redis are unavailable.
+  4. In-memory (read cache) — all reads served from memory.
 """
 
 import json
 import os
 import tempfile
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass, field as dc_field, asdict
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Any, Dict, List, Optional
 
 from backend.utils.log_utils import get_logger
+from backend.core.constants import (
+    POOL_MIN_CONN as _POOL_MIN_CONN,
+    POOL_MAX_CONN as _POOL_MAX_CONN,
+    DB_CONNECT_TIMEOUT as _DB_CONNECT_TIMEOUT,
+    POOL_RETRY_COOLDOWN as _POOL_RETRY_COOLDOWN,
+)
 
 logger = get_logger(__name__)
 
@@ -92,7 +99,7 @@ def _get_redis():
     """Try to connect to Redis via REDIS_URL env var. Returns client or None."""
     redis_url = os.environ.get("REDIS_URL")
     if not redis_url:
-        logger.warning("[PipeStore] REDIS_URL not set — running in-memory only")
+        logger.warning("[PipeStore] REDIS_URL not set — running without Redis cache")
         return None
     try:
         import redis
@@ -100,8 +107,168 @@ def _get_redis():
         r.ping()
         return r
     except Exception as e:
-        logger.warning(f"[PipeStore] Redis unavailable: {e} — running in-memory only")
+        logger.warning(f"[PipeStore] Redis unavailable: {e} — running without Redis cache")
         return None
+
+
+# ---------------------------------------------------------------------------
+# Postgres helpers — reuses the same pool pattern as MappingPersistence
+# ---------------------------------------------------------------------------
+
+try:
+    import psycopg2
+    from psycopg2 import pool as _pg_pool
+except ImportError:
+    psycopg2 = None  # type: ignore[assignment]
+    _pg_pool = None  # type: ignore[assignment]
+
+_pg_connection_pool: Optional[Any] = None
+_pg_pool_initialized = False
+_pg_pool_last_attempt: float = 0
+
+
+def _get_pg_pool():
+    """Get or create the Postgres connection pool (module-level singleton)."""
+    global _pg_connection_pool, _pg_pool_initialized, _pg_pool_last_attempt
+
+    if psycopg2 is None:
+        return None
+
+    if _pg_pool_initialized and _pg_connection_pool is not None:
+        return _pg_connection_pool
+
+    now = time.time()
+    if (_pg_connection_pool is None
+            and _pg_pool_last_attempt > 0
+            and (now - _pg_pool_last_attempt) < _POOL_RETRY_COOLDOWN):
+        return None
+
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        logger.warning("[PipeStore] DATABASE_URL not set — running without Postgres persistence")
+        return None
+
+    try:
+        _pg_pool_last_attempt = now
+        _pg_connection_pool = _pg_pool.SimpleConnectionPool(
+            minconn=_POOL_MIN_CONN,
+            maxconn=_POOL_MAX_CONN,
+            dsn=database_url,
+            connect_timeout=_DB_CONNECT_TIMEOUT,
+        )
+        _pg_pool_initialized = True
+        logger.info(
+            f"[PipeStore] Postgres pool initialized "
+            f"(min={_POOL_MIN_CONN}, max={_POOL_MAX_CONN})"
+        )
+        return _pg_connection_pool
+    except Exception as e:
+        logger.warning(f"[PipeStore] Postgres pool failed: {e} — running without Postgres persistence")
+        _pg_connection_pool = None
+        return None
+
+
+@contextmanager
+def _pg_conn():
+    """Borrow a connection from the Postgres pool (context manager)."""
+    pg_pool = _get_pg_pool()
+    if pg_pool is None:
+        yield None
+        return
+
+    conn = None
+    try:
+        conn = pg_pool.getconn()
+        if conn.closed:
+            pg_pool.putconn(conn, close=True)
+            conn = pg_pool.getconn()
+        yield conn
+    except Exception as e:
+        logger.warning(f"[PipeStore] Postgres connection error: {e}")
+        yield None
+    finally:
+        if conn is not None and pg_pool is not None:
+            try:
+                pg_pool.putconn(conn)
+            except Exception:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+
+_CREATE_DEFINITIONS_TABLE = """
+CREATE TABLE IF NOT EXISTS pipe_definitions (
+    pipe_id       VARCHAR(256) PRIMARY KEY,
+    candidate_id  VARCHAR(256) DEFAULT '',
+    source_name   VARCHAR(256) DEFAULT '',
+    vendor        VARCHAR(256) DEFAULT '',
+    category      VARCHAR(256) DEFAULT '',
+    governance_status VARCHAR(64),
+    fields        JSONB DEFAULT '[]'::jsonb,
+    entity_scope  VARCHAR(128),
+    identity_keys JSONB DEFAULT '[]'::jsonb,
+    transport_kind VARCHAR(128),
+    modality      VARCHAR(128),
+    change_semantics VARCHAR(128),
+    health        VARCHAR(64) DEFAULT 'unknown',
+    last_sync     VARCHAR(64),
+    asset_key     VARCHAR(256) DEFAULT '',
+    aod_asset_id  VARCHAR(128),
+    fabric_plane  VARCHAR(128) DEFAULT '',
+    received_at   TIMESTAMPTZ DEFAULT NOW()
+);
+"""
+
+_CREATE_RECEIPTS_TABLE = """
+CREATE TABLE IF NOT EXISTS pipe_export_receipts (
+    id                SERIAL PRIMARY KEY,
+    aod_run_id        VARCHAR(128),
+    source            VARCHAR(64) DEFAULT 'aam',
+    total_connections INTEGER DEFAULT 0,
+    pipe_ids          JSONB DEFAULT '[]'::jsonb,
+    received_at       TIMESTAMPTZ DEFAULT NOW(),
+    snapshot_name     VARCHAR(256)
+);
+"""
+
+_UPSERT_DEFINITION = """
+INSERT INTO pipe_definitions (
+    pipe_id, candidate_id, source_name, vendor, category,
+    governance_status, fields, entity_scope, identity_keys,
+    transport_kind, modality, change_semantics, health,
+    last_sync, asset_key, aod_asset_id, fabric_plane, received_at
+) VALUES (
+    %s, %s, %s, %s, %s,
+    %s, %s, %s, %s,
+    %s, %s, %s, %s,
+    %s, %s, %s, %s, %s
+)
+ON CONFLICT (pipe_id) DO UPDATE SET
+    candidate_id     = EXCLUDED.candidate_id,
+    source_name      = EXCLUDED.source_name,
+    vendor           = EXCLUDED.vendor,
+    category         = EXCLUDED.category,
+    governance_status = EXCLUDED.governance_status,
+    fields           = EXCLUDED.fields,
+    entity_scope     = EXCLUDED.entity_scope,
+    identity_keys    = EXCLUDED.identity_keys,
+    transport_kind   = EXCLUDED.transport_kind,
+    modality         = EXCLUDED.modality,
+    change_semantics = EXCLUDED.change_semantics,
+    health           = EXCLUDED.health,
+    last_sync        = EXCLUDED.last_sync,
+    asset_key        = EXCLUDED.asset_key,
+    aod_asset_id     = EXCLUDED.aod_asset_id,
+    fabric_plane     = EXCLUDED.fabric_plane,
+    received_at      = EXCLUDED.received_at;
+"""
+
+_INSERT_RECEIPT = """
+INSERT INTO pipe_export_receipts
+    (aod_run_id, source, total_connections, pipe_ids, received_at, snapshot_name)
+VALUES (%s, %s, %s, %s, %s, %s);
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -110,12 +277,13 @@ def _get_redis():
 
 class PipeDefinitionStore:
     """
-    In-memory store for pipe definitions with Redis write-through.
+    In-memory store for pipe definitions backed by Postgres.
 
-    Mirrors IngestStore's pattern:
-    - Primary reads from memory
-    - Writes go to memory + Redis
-    - Rehydrates from Redis on startup
+    Persistence hierarchy (most durable first):
+    1. Postgres — source of truth, survives Render redeploys.
+    2. Redis — write-through cache, fast rehydration (24h TTL).
+    3. Disk — JSON fallback if both PG and Redis are unavailable.
+    4. In-memory — read cache, always populated on startup.
 
     Provides the lookup used by the ingest guard to validate
     that a pipe_id has a matching schema before accepting data.
@@ -126,11 +294,169 @@ class PipeDefinitionStore:
         self._definitions: Dict[str, PipeDefinition] = {}
         self._export_receipts: List[ExportReceipt] = []
         self._redis = _get_redis()
+        self._pg_available = False
 
-        if self._redis:
+        # Ensure Postgres tables exist, then load from PG first
+        self._ensure_pg_tables()
+        self._load_from_postgres()
+
+        # Fill gaps from Redis if PG didn't provide data
+        if self._redis and not self._definitions:
             self._load_from_redis()
 
-        self._load_from_disk()
+        # Last resort: disk cache
+        if not self._definitions:
+            self._load_from_disk()
+
+        source = (
+            "Postgres" if self._pg_available and self._definitions
+            else "Redis" if self._redis and self._definitions
+            else "disk" if self._definitions
+            else "empty"
+        )
+        logger.info(
+            f"[PipeStore] Initialized with {len(self._definitions)} definitions "
+            f"from {source}"
+        )
+
+    # ------------------------------------------------------------------
+    # Postgres persistence
+    # ------------------------------------------------------------------
+
+    def _ensure_pg_tables(self) -> None:
+        """Create pipe_definitions and pipe_export_receipts tables if they don't exist."""
+        with _pg_conn() as conn:
+            if conn is None:
+                return
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(_CREATE_DEFINITIONS_TABLE)
+                    cur.execute(_CREATE_RECEIPTS_TABLE)
+                conn.commit()
+                self._pg_available = True
+                logger.info("[PipeStore] Postgres tables ensured")
+            except Exception as e:
+                logger.warning(f"[PipeStore] Failed to create PG tables: {e}")
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+
+    def _load_from_postgres(self) -> None:
+        """Load all pipe definitions and export receipts from Postgres."""
+        with _pg_conn() as conn:
+            if conn is None:
+                return
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT pipe_id, candidate_id, source_name, vendor, category, "
+                        "governance_status, fields, entity_scope, identity_keys, "
+                        "transport_kind, modality, change_semantics, health, "
+                        "last_sync, asset_key, aod_asset_id, fabric_plane, received_at "
+                        "FROM pipe_definitions"
+                    )
+                    rows = cur.fetchall()
+                    for row in rows:
+                        defn = PipeDefinition(
+                            pipe_id=row[0],
+                            candidate_id=row[1] or "",
+                            source_name=row[2] or "",
+                            vendor=row[3] or "",
+                            category=row[4] or "",
+                            governance_status=row[5],
+                            fields=row[6] if isinstance(row[6], list) else [],
+                            entity_scope=row[7],
+                            identity_keys=row[8] if isinstance(row[8], list) else [],
+                            transport_kind=row[9],
+                            modality=row[10],
+                            change_semantics=row[11],
+                            health=row[12] or "unknown",
+                            last_sync=row[13],
+                            asset_key=row[14] or "",
+                            aod_asset_id=row[15],
+                            fabric_plane=row[16] or "",
+                            received_at=str(row[17]) if row[17] else "",
+                        )
+                        self._definitions[defn.pipe_id] = defn
+
+                    # Load export receipts
+                    cur.execute(
+                        "SELECT aod_run_id, source, total_connections, pipe_ids, "
+                        "received_at, snapshot_name "
+                        "FROM pipe_export_receipts ORDER BY id"
+                    )
+                    for row in cur.fetchall():
+                        self._export_receipts.append(ExportReceipt(
+                            aod_run_id=row[0],
+                            source=row[1] or "aam",
+                            total_connections=row[2] or 0,
+                            pipe_ids=row[3] if isinstance(row[3], list) else [],
+                            received_at=str(row[4]) if row[4] else "",
+                            snapshot_name=row[5],
+                        ))
+
+                self._pg_available = True
+                if self._definitions:
+                    logger.info(
+                        f"[PipeStore] Loaded from Postgres: "
+                        f"{len(self._definitions)} definitions, "
+                        f"{len(self._export_receipts)} receipts"
+                    )
+            except Exception as e:
+                logger.warning(f"[PipeStore] Postgres load failed: {e}")
+
+    def _persist_batch_to_postgres(
+        self,
+        definitions: List[PipeDefinition],
+        receipt: ExportReceipt,
+    ) -> None:
+        """Upsert definitions and insert receipt into Postgres."""
+        with _pg_conn() as conn:
+            if conn is None:
+                return
+            try:
+                with conn.cursor() as cur:
+                    for defn in definitions:
+                        cur.execute(_UPSERT_DEFINITION, (
+                            defn.pipe_id,
+                            defn.candidate_id,
+                            defn.source_name,
+                            defn.vendor,
+                            defn.category,
+                            defn.governance_status,
+                            json.dumps(defn.fields),
+                            defn.entity_scope,
+                            json.dumps(defn.identity_keys),
+                            defn.transport_kind,
+                            defn.modality,
+                            defn.change_semantics,
+                            defn.health,
+                            defn.last_sync,
+                            defn.asset_key,
+                            defn.aod_asset_id,
+                            defn.fabric_plane,
+                            defn.received_at,
+                        ))
+                    cur.execute(_INSERT_RECEIPT, (
+                        receipt.aod_run_id,
+                        receipt.source,
+                        receipt.total_connections,
+                        json.dumps(receipt.pipe_ids),
+                        receipt.received_at,
+                        receipt.snapshot_name,
+                    ))
+                conn.commit()
+                self._pg_available = True
+                logger.info(
+                    f"[PipeStore] Persisted {len(definitions)} definitions to Postgres"
+                )
+            except Exception as e:
+                logger.warning(f"[PipeStore] Postgres batch persist failed: {e}")
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
 
     # ------------------------------------------------------------------
     # Disk persistence (JSON file fallback)
@@ -284,12 +610,17 @@ class PipeDefinitionStore:
             )
             self._export_receipts.append(receipt)
 
-        # Write-through to Redis (outside lock)
+        # Write-through to Postgres (source of truth)
+        self._persist_batch_to_postgres(definitions, receipt)
+
+        # Write-through to Redis (cache)
         for defn in definitions:
             self._persist_definition(defn.pipe_id, defn)
         self._persist_export_receipts()
 
+        # Disk fallback
         self._save_to_disk()
+
         logger.info(
             f"[PipeStore] Registered {len(definitions)} pipe definitions "
             f"(aod_run_id={aod_run_id})"
@@ -352,6 +683,7 @@ class PipeDefinitionStore:
                     latest_receipt.received_at if latest_receipt else None
                 ),
                 "redis_connected": self._redis is not None,
+                "postgres_connected": self._pg_available,
             }
 
 
