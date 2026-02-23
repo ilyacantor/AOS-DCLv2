@@ -37,6 +37,8 @@ interface ActivityEntry {
   fabrics: number;
   mapped_pipes: number;
   unmapped_pipes: number;
+  sor_pipes: number;
+  other_pipes: number;
   rows: number;
   records: number;
   dispatch_id: string;
@@ -323,6 +325,13 @@ export function IngestionPanel() {
                                         <span className="text-[10px] text-muted-foreground ml-1">
                                           (<span className="text-emerald-400">{entry.mapped_pipes}</span>
                                           /<span className="text-red-400">{entry.unmapped_pipes}</span>)
+                                        </span>
+                                      )}
+                                      {entry.phase === 'content' && (entry.sor_pipes > 0 || entry.other_pipes > 0) && (
+                                        <span className="text-[10px] text-muted-foreground ml-1" title={`${entry.sor_pipes} SOR (governed) / ${entry.other_pipes} other`}>
+                                          <span className="text-blue-400">{entry.sor_pipes} SOR</span>
+                                          {' / '}
+                                          <span className="text-slate-400">{entry.other_pipes} other</span>
                                         </span>
                                       )}
                                     </span>

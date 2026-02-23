@@ -204,6 +204,9 @@ def _record_ingest_activity(
     pipe_fabric = pipe_def.fabric_plane if pipe_def and pipe_def.fabric_plane else None
     is_tooling = _is_tooling_pipe(pipe_def)
 
+    # Classify pipe as SOR (governed) or other based on governance_status
+    is_sor = pipe_def is not None and getattr(pipe_def, "governance_status", None) == "governed"
+
     if did and not store.has_phase(did, "content"):
         # First pipe for this dispatch — create the content entry
         store._content_pipes.setdefault(did, set()).add(pipe_id)
@@ -222,6 +225,13 @@ def _record_ingest_activity(
         if pipe_fabric:
             content_fabrics.add(pipe_fabric)
         store._content_fabrics[did] = content_fabrics
+        # Track SOR vs other
+        if is_sor:
+            store._content_sor_pipes.setdefault(did, set()).add(pipe_id)
+        else:
+            store._content_other_pipes.setdefault(did, set()).add(pipe_id)
+        sor_set = store._content_sor_pipes.get(did, set())
+        other_set = store._content_other_pipes.get(did, set())
         store.record_activity(ActivityEntry(
             phase="content",
             source="Farm",
@@ -234,6 +244,8 @@ def _record_ingest_activity(
             fabrics=len(content_fabrics),
             mapped_pipes=0 if is_tooling else (1 if matched_schema else 0),
             unmapped_pipes=0 if is_tooling or matched_schema else 1,
+            sor_pipes=len(sor_set),
+            other_pipes=len(other_set),
             rows=rows,
             records=rows,
             dispatch_id=did,
@@ -258,12 +270,19 @@ def _record_ingest_activity(
         fabrics_set = store._content_fabrics.setdefault(did, set())
         if pipe_fabric:
             fabrics_set.add(pipe_fabric)
+        # Track SOR vs other
+        if is_sor:
+            store._content_sor_pipes.setdefault(did, set()).add(pipe_id)
+        else:
+            store._content_other_pipes.setdefault(did, set()).add(pipe_id)
         # Track sources
         sources = store._content_sources.setdefault(did, set())
         sources.add(source_system)
         mapped_set = store._content_mapped.get(did, set())
         unmapped_set = store._content_unmapped.get(did, set())
         tooling_set = store._content_tooling.get(did, set())
+        sor_set = store._content_sor_pipes.get(did, set())
+        other_set = store._content_other_pipes.get(did, set())
         with store._lock:
             for entry in reversed(store._activity_log):
                 if entry.phase == "content" and entry.dispatch_id == did:
@@ -272,6 +291,8 @@ def _record_ingest_activity(
                     entry.fabrics = len(fabrics_set)
                     entry.mapped_pipes = len(mapped_set)
                     entry.unmapped_pipes = len(unmapped_set)
+                    entry.sor_pipes = len(sor_set)
+                    entry.other_pipes = len(other_set)
                     break
         store._persist_activity_log()
     else:

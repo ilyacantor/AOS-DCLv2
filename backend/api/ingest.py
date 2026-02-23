@@ -129,6 +129,10 @@ class ActivityEntry:
     rows: int = 0                   # total data rows
     records: int = 0                # alias / distinct record count
 
+    # SOR breakdown
+    sor_pipes: int = 0              # pipes with governance_status == "governed"
+    other_pipes: int = 0            # pipes with non-governed status (shadow/zombie/unknown)
+
     # Linking
     dispatch_id: str = ""           # groups all 3 phases of one cycle
     aod_run_id: str = ""            # AAM's run identifier
@@ -220,6 +224,8 @@ class IngestStore:
         self._content_unmapped: Dict[str, set] = {} # dispatch_id → unique unmapped pipe_ids
         self._content_fabrics: Dict[str, set] = {}  # dispatch_id → unique fabric planes
         self._content_tooling: Dict[str, set] = {}  # dispatch_id → unique tooling pipe_ids
+        self._content_sor_pipes: Dict[str, set] = {}    # dispatch_id → governed pipe_ids
+        self._content_other_pipes: Dict[str, set] = {}  # dispatch_id → non-governed pipe_ids
 
         # Row buffer
         self._row_buffer: OrderedDict[str, List[Dict[str, Any]]] = OrderedDict()
@@ -257,6 +263,8 @@ class IngestStore:
                 "content_unmapped": {k: sorted(v) for k, v in self._content_unmapped.items()},
                 "content_fabrics": {k: sorted(v) for k, v in self._content_fabrics.items()},
                 "content_tooling": {k: sorted(v) for k, v in self._content_tooling.items()},
+                "content_sor_pipes": {k: sorted(v) for k, v in self._content_sor_pipes.items()},
+                "content_other_pipes": {k: sorted(v) for k, v in self._content_other_pipes.items()},
             }
             fd, tmp_path = tempfile.mkstemp(dir=_CACHE_DIR, suffix=".tmp")
             try:
@@ -302,6 +310,8 @@ class IngestStore:
             self._content_unmapped = {k: set(v) for k, v in data.get("content_unmapped", {}).items()}
             self._content_fabrics = {k: set(v) for k, v in data.get("content_fabrics", {}).items()}
             self._content_tooling = {k: set(v) for k, v in data.get("content_tooling", {}).items()}
+            self._content_sor_pipes = {k: set(v) for k, v in data.get("content_sor_pipes", {}).items()}
+            self._content_other_pipes = {k: set(v) for k, v in data.get("content_other_pipes", {}).items()}
 
             logger.info(
                 f"[IngestStore] Restored from disk: "
@@ -325,6 +335,8 @@ class IngestStore:
             self._content_unmapped.clear()
             self._content_fabrics.clear()
             self._content_tooling.clear()
+            self._content_sor_pipes.clear()
+            self._content_other_pipes.clear()
             self._total_rows = 0
         try:
             if os.path.exists(_CACHE_FILE):
