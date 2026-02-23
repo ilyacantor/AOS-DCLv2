@@ -22,6 +22,7 @@ from typing import Optional
 from backend.core.constants import utc_now
 from backend.api.ingest import (
     ActivityEntry,
+    DropEntry,
     IngestRequest,
     IngestResponse,
     get_ingest_store,
@@ -87,6 +88,14 @@ def _validate_pipe_guard(pipe_id: str, run_id: str, source_system: str, now: str
             f"(run_id={run_id}, source={source_system}). "
             f"Available pipes: {pipe_store.list_pipe_ids()}"
         )
+        get_ingest_store().record_drop(DropEntry(
+            pipe_id=pipe_id,
+            reason=f"No schema blueprint exists for pipe_id: {pipe_id}.",
+            error_code="NO_MATCHING_PIPE",
+            source_system=source_system,
+            timestamp=now,
+            run_id=run_id,
+        ))
         raise HTTPException(
             status_code=422,
             detail={
@@ -384,7 +393,21 @@ async def dcl_ingest(
     logger.info(f"[Ingest] Received keys: {list(raw_body.keys()) if isinstance(raw_body, dict) else type(raw_body).__name__}")
 
     if isinstance(raw_body, dict):
-        body = _normalize_ingest_body(raw_body)
+        try:
+            body = _normalize_ingest_body(raw_body)
+        except HTTPException as e:
+            # Missing snapshot_name — record drop before re-raising
+            pipe_id = x_pipe_id or raw_body.get("pipe_id", "unknown")
+            source = raw_body.get("source_system") or raw_body.get("source", "unknown")
+            get_ingest_store().record_drop(DropEntry(
+                pipe_id=pipe_id,
+                reason=e.detail if isinstance(e.detail, str) else str(e.detail),
+                error_code="MISSING_SNAPSHOT",
+                source_system=source,
+                timestamp=now,
+                run_id=x_run_id or "",
+            ))
+            raise
     else:
         body = raw_body
 
@@ -392,10 +415,32 @@ async def dcl_ingest(
         ingest_req = IngestRequest(**body)
     except Exception as e:
         logger.error(f"[Ingest] Validation failed: {e} | keys={list(body.keys()) if isinstance(body, dict) else 'N/A'}")
+        pipe_id = x_pipe_id or (body.get("pipe_id", "unknown") if isinstance(body, dict) else "unknown")
+        source = (body.get("source_system", "unknown") if isinstance(body, dict) else "unknown")
+        snapshot = (body.get("snapshot_name", "") if isinstance(body, dict) else "")
+        get_ingest_store().record_drop(DropEntry(
+            pipe_id=pipe_id,
+            reason=str(e),
+            error_code="VALIDATION_ERROR",
+            source_system=source,
+            timestamp=now,
+            run_id=x_run_id or "",
+            snapshot_name=snapshot,
+        ))
         raise HTTPException(status_code=422, detail=str(e))
 
     expected_key = os.environ.get("DCL_INGEST_KEY")
     if expected_key and x_api_key != expected_key:
+        pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
+        get_ingest_store().record_drop(DropEntry(
+            pipe_id=pipe_id,
+            reason="Invalid or missing x-api-key",
+            error_code="AUTH_FAILED",
+            source_system=ingest_req.source_system,
+            timestamp=now,
+            run_id=x_run_id or "",
+            snapshot_name=ingest_req.snapshot_name,
+        ))
         raise HTTPException(status_code=401, detail="Invalid or missing x-api-key")
 
     run_id = x_run_id or str(uuid.uuid4())
@@ -593,6 +638,27 @@ def list_activity(snapshot_name: Optional[str] = None):
 
     return {
         "activity": entries,
+        "by_snapshot": grouped,
+        "total": len(entries),
+    }
+
+
+@router.get("/drops")
+def list_drops(snapshot_name: Optional[str] = None):
+    """Return the drop log — rejected ingestion attempts.
+
+    Optional ?snapshot_name= filter.
+    """
+    store = get_ingest_store()
+    entries = store.get_drop_log(snapshot_name=snapshot_name)
+
+    grouped: dict = {}
+    for e in entries:
+        snap = e["snapshot_name"] or "(no snapshot)"
+        grouped.setdefault(snap, []).append(e)
+
+    return {
+        "drops": entries,
         "by_snapshot": grouped,
         "total": len(entries),
     }

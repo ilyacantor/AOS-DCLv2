@@ -142,6 +142,26 @@ _MAX_ACTIVITY = 500  # keep last N entries
 
 
 # ---------------------------------------------------------------------------
+# Drop Log — records rejected ingestion attempts
+# ---------------------------------------------------------------------------
+
+@dataclass
+class DropEntry:
+    """One rejected ingestion attempt."""
+    pipe_id: str
+    reason: str
+    error_code: str             # NO_MATCHING_PIPE, MISSING_SNAPSHOT, VALIDATION_ERROR, AUTH_FAILED
+    source_system: str
+    timestamp: str              # ISO-8601
+    run_id: str = ""
+    dispatch_id: str = ""
+    snapshot_name: str = ""
+
+
+_MAX_DROPS = 500  # keep last N drop entries
+
+
+# ---------------------------------------------------------------------------
 # Run Receipt (metadata that DCL "owns")
 # ---------------------------------------------------------------------------
 
@@ -221,6 +241,7 @@ class IngestStore:
 
         # Activity log — discrete events for the 3-phase flow
         self._activity_log: List[ActivityEntry] = []
+        self._drop_log: List[DropEntry] = []
         self._seen_dispatch_ids: set = set()  # track which dispatch_ids we've recorded
         self._content_sources: Dict[str, set] = {}  # dispatch_id → unique source_systems
         self._content_pipes: Dict[str, set] = {}    # dispatch_id → unique pipe_ids
@@ -258,6 +279,7 @@ class IngestStore:
                 "schema_registry": {k: asdict(v) for k, v in self._schema_registry.items()},
                 "drift_events": [asdict(e) for e in self._drift_events],
                 "activity_log": [asdict(e) for e in self._activity_log],
+                "drop_log": [asdict(e) for e in self._drop_log],
                 "row_buffer": dict(self._row_buffer),
                 "total_rows": self._total_rows,
                 "seen_dispatch_ids": sorted(self._seen_dispatch_ids),
@@ -302,6 +324,7 @@ class IngestStore:
 
             self._drift_events = [SchemaDriftEvent(**d) for d in data.get("drift_events", [])]
             self._activity_log = [ActivityEntry(**d) for d in data.get("activity_log", [])]
+            self._drop_log = [DropEntry(**d) for d in data.get("drop_log", [])]
 
             for k, v in data.get("row_buffer", {}).items():
                 self._row_buffer[k] = v
@@ -332,6 +355,7 @@ class IngestStore:
             self._schema_registry.clear()
             self._drift_events.clear()
             self._activity_log.clear()
+            self._drop_log.clear()
             self._seen_dispatch_ids.clear()
             self._content_sources.clear()
             self._content_pipes.clear()
@@ -406,6 +430,12 @@ class IngestStore:
                     self._activity_log.append(ActivityEntry(**d))
                     if d.get("dispatch_id"):
                         self._seen_dispatch_ids.add(d["dispatch_id"])
+
+            # Load drop log
+            drop_raw = r.get(f"{_REDIS_PREFIX}drop_log")
+            if drop_raw:
+                for d in json.loads(drop_raw):
+                    self._drop_log.append(DropEntry(**d))
 
             # Backfill dispatch_id for legacy receipts (pre-dispatch era)
             backfilled = 0
@@ -488,6 +518,19 @@ class IngestStore:
             self._redis.expire(f"{_REDIS_PREFIX}activity_log", _REDIS_TTL)
         except Exception as e:
             logger.warning(f"[IngestStore] Redis persist activity log failed: {e}")
+
+    def _persist_drop_log(self) -> None:
+        """Write drop log to Redis."""
+        if not self._redis:
+            return
+        try:
+            self._redis.set(
+                f"{_REDIS_PREFIX}drop_log",
+                json.dumps([asdict(e) for e in self._drop_log]),
+            )
+            self._redis.expire(f"{_REDIS_PREFIX}drop_log", _REDIS_TTL)
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis persist drop log failed: {e}")
 
     def _evict_from_redis(self, storage_key: str) -> None:
         """Remove evicted entry from Redis."""
@@ -939,7 +982,34 @@ class IngestStore:
                 "max_rows": _MAX_BUFFERED_ROWS,
                 "redis_connected": self._redis is not None,
                 "activity_entries": len(self._activity_log),
+                "total_drops": len(self._drop_log),
             }
+
+    # ------------------------------------------------------------------
+    # Drop Log — rejected ingestion attempts
+    # ------------------------------------------------------------------
+
+    def record_drop(self, entry: "DropEntry") -> None:
+        """Record a rejected ingestion attempt and persist."""
+        with self._lock:
+            self._drop_log.append(entry)
+            if len(self._drop_log) > _MAX_DROPS:
+                self._drop_log = self._drop_log[-_MAX_DROPS:]
+        self._persist_drop_log()
+        self._save_to_disk()
+        logger.warning(
+            f"[Drop] {entry.error_code} pipe={entry.pipe_id} "
+            f"source={entry.source_system}: {entry.reason}"
+        )
+
+    def get_drop_log(self, snapshot_name: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Return drop entries, newest first. Optional snapshot filter."""
+        with self._lock:
+            entries = list(self._drop_log)
+        if snapshot_name:
+            entries = [e for e in entries if e.snapshot_name == snapshot_name]
+        entries.sort(key=lambda e: e.timestamp, reverse=True)
+        return [asdict(e) for e in entries]
 
     # ------------------------------------------------------------------
     # Activity Log — discrete 3-phase event tracking

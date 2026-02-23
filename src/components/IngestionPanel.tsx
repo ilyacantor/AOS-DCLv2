@@ -18,6 +18,18 @@ interface IngestStats {
   max_runs: number;
   max_rows: number;
   activity_entries?: number;
+  total_drops?: number;
+}
+
+interface DropEntry {
+  pipe_id: string;
+  reason: string;
+  error_code: string;
+  source_system: string;
+  timestamp: string;
+  run_id: string;
+  dispatch_id: string;
+  snapshot_name: string;
 }
 
 interface IngestRunsResponse {
@@ -63,6 +75,8 @@ export function IngestionPanel() {
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [drops, setDrops] = useState<DropEntry[]>([]);
+  const [dropsOpen, setDropsOpen] = useState(false);
   const [expandedSnap, setExpandedSnap] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
 
@@ -78,6 +92,17 @@ export function IngestionPanel() {
       setError(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDrops = async () => {
+    try {
+      const res = await fetch('/api/dcl/ingest/drops');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      setDrops(json.drops ?? []);
+    } catch (err) {
+      console.error('[IngestionPanel] Failed to fetch drops:', err);
     }
   };
 
@@ -108,6 +133,7 @@ export function IngestionPanel() {
   const fetchAll = useCallback(() => {
     fetchStats();
     fetchActivity();
+    fetchDrops();
   }, []);
 
   useEffect(() => {
@@ -205,7 +231,65 @@ export function IngestionPanel() {
               {stats.total_drift_events > 0 && (
                 <span><span className="text-amber-400 font-semibold">{stats.total_drift_events}</span> <span className="text-muted-foreground">drift</span></span>
               )}
+              {(stats.total_drops ?? 0) > 0 && (
+                <span><span className="text-red-400 font-semibold">{stats.total_drops}</span> <span className="text-muted-foreground">drops</span></span>
+              )}
             </div>
+          </div>
+        )}
+
+        {/* Drops section */}
+        {drops.length > 0 && (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/5 overflow-hidden">
+            <button
+              onClick={() => setDropsOpen(!dropsOpen)}
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-xs hover:bg-red-500/10 transition-colors"
+            >
+              <svg
+                className={`w-2.5 h-2.5 shrink-0 transition-transform duration-150 text-red-400 ${dropsOpen ? 'rotate-90' : ''}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              <span className="font-semibold text-red-400">Drops</span>
+              <span className="text-red-400/70 font-mono">{drops.length}</span>
+            </button>
+            {dropsOpen && (
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-t border-red-500/20 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    <th className="text-left px-3 py-2 font-medium">Pipe ID</th>
+                    <th className="text-left px-3 py-2 font-medium">Source</th>
+                    <th className="text-left px-3 py-2 font-medium">Error</th>
+                    <th className="text-left px-3 py-2 font-medium">Reason</th>
+                    <th className="text-left px-3 py-2 font-medium">Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {drops.map((drop, idx) => (
+                    <tr key={idx} className="border-t border-red-500/10 hover:bg-red-500/5 transition-colors">
+                      <td className="px-3 py-1.5 font-mono text-foreground/80" title={drop.pipe_id}>
+                        {drop.pipe_id.length > 28 ? drop.pipe_id.slice(0, 28) + '...' : drop.pipe_id}
+                      </td>
+                      <td className="px-3 py-1.5 text-muted-foreground">
+                        {drop.source_system}
+                      </td>
+                      <td className="px-3 py-1.5">
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-500/20 text-red-400 border border-red-500/30">
+                          {drop.error_code}
+                        </span>
+                      </td>
+                      <td className="px-3 py-1.5 text-muted-foreground max-w-[200px] truncate" title={drop.reason}>
+                        {drop.reason}
+                      </td>
+                      <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">
+                        {fmtDate(drop.timestamp)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
 
