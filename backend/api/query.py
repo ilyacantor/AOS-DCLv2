@@ -448,19 +448,24 @@ def _query_ingest_store(
     )
 
     if mat_points:
-        data_points = []
+        # Aggregate across pipes: group by (period, dim_key) and sum values.
+        # Each pipe's materialization already aggregated its own rows;
+        # this step combines the same metric from multiple source pipes.
+        from collections import defaultdict as _dd
+        agg: dict = _dd(float)
         for pt in mat_points:
             dim_vals = pt.get("dimensions", {})
-            # If specific dimensions requested, only include those
             if dimensions:
                 dim_vals = {d: dim_vals[d] for d in dimensions if d in dim_vals}
-            data_points.append(QueryDataPoint(
-                period=pt.get("period", "current"),
-                value=float(pt["value"]),
-                dimensions=dim_vals,
-            ))
+            period = pt.get("period", "current")
+            key = (period, tuple(sorted(dim_vals.items())))
+            agg[key] += float(pt["value"])
 
-        # Find the most recent contributing receipt
+        data_points = [
+            QueryDataPoint(period=k[0], value=round(v, 6), dimensions=dict(k[1]))
+            for k, v in sorted(agg.items())
+        ]
+
         contributing_receipt = max(all_receipts, key=lambda r: r.received_at)
         return data_points, contributing_receipt
 
