@@ -499,6 +499,26 @@ async def dcl_ingest(
         now=now,
     )
 
+    # --- Materialize metric data points ---
+    try:
+        from backend.engine.metric_materializer import get_materializer
+        materializer = get_materializer()
+        mat_points = materializer.materialize(
+            pipe_id=pipe_id,
+            source_system=ingest_req.source_system,
+            rows=ingest_req.rows,
+            dispatch_id=dispatch_id,
+        )
+        if mat_points:
+            mat_key = f"{run_id}:{pipe_id}"
+            store.store_materialized(mat_key, mat_points)
+            logger.info(
+                f"[Ingest] Materialized {len(mat_points)} data points "
+                f"from {pipe_id} ({ingest_req.source_system})"
+            )
+    except Exception as e:
+        logger.warning(f"[Ingest] Materialization failed for {pipe_id}: {e}")
+
     logger.info(
         f"[Ingest] Accepted {actual_rows} rows from {ingest_req.source_system} "
         f"pipe={pipe_id} run={run_id} drift={receipt.schema_drift} "
@@ -683,3 +703,102 @@ def get_dispatch_detail(dispatch_id: str):
     if not summary:
         raise HTTPException(status_code=404, detail=f"Dispatch {dispatch_id} not found")
     return summary
+
+
+# ---------------------------------------------------------------------------
+# Materialization endpoints
+# ---------------------------------------------------------------------------
+
+@router.post("/materialize")
+def backfill_materialize():
+    """Re-run materialization on all existing buffered rows.
+
+    Use this to backfill materialized data points for rows that were
+    ingested before the materializer was deployed. Safe to run multiple
+    times — overwrites previous materialization for each key.
+    """
+    from backend.engine.metric_materializer import get_materializer
+
+    store = get_ingest_store()
+    materializer = get_materializer()
+
+    total_points = 0
+    total_keys = 0
+    metrics_found: set = set()
+
+    all_receipts = store.get_all_receipts()
+    for receipt in all_receipts:
+        key = f"{receipt.run_id}:{receipt.pipe_id}"
+        rows = store.get_rows(receipt.run_id, receipt.pipe_id)
+        if not rows:
+            continue
+
+        points = materializer.materialize(
+            pipe_id=receipt.pipe_id,
+            source_system=receipt.source_system,
+            rows=rows,
+            dispatch_id=receipt.dispatch_id,
+        )
+        if points:
+            store.store_materialized(key, points)
+            total_points += len(points)
+            total_keys += 1
+            for pt in points:
+                metrics_found.add(pt["metric"])
+
+    store._save_to_disk()
+
+    logger.info(
+        f"[Materialize] Backfill complete: {total_points} points "
+        f"from {total_keys} pipe pushes, {len(metrics_found)} metrics"
+    )
+
+    return {
+        "status": "complete",
+        "total_points": total_points,
+        "total_keys": total_keys,
+        "metrics": sorted(metrics_found),
+        "receipts_scanned": len(all_receipts),
+    }
+
+
+@router.get("/materialized/stats")
+def get_materialized_stats():
+    """Show materialized metric counts, period ranges, source systems."""
+    store = get_ingest_store()
+    return store.get_materialized_stats()
+
+
+@router.get("/sample")
+def sample_rows(pipe_id: Optional[str] = None, limit: int = 3):
+    """Sample raw rows from the ingest buffer for debugging.
+
+    Optional ?pipe_id= to filter by pipe. Returns up to `limit` rows
+    from matching receipts.
+    """
+    store = get_ingest_store()
+    all_receipts = store.get_all_receipts()
+
+    samples = []
+    for receipt in reversed(all_receipts):
+        if pipe_id and receipt.pipe_id != pipe_id:
+            continue
+        rows = store.get_rows(receipt.run_id, receipt.pipe_id)
+        if not rows:
+            continue
+        sample_rows = rows[:limit]
+        # Strip internal tags for readability
+        cleaned = [
+            {k: v for k, v in row.items() if not k.startswith("_")}
+            for row in sample_rows
+        ]
+        samples.append({
+            "pipe_id": receipt.pipe_id,
+            "source_system": receipt.source_system,
+            "total_rows": len(rows),
+            "sample": cleaned,
+        })
+        if len(samples) >= 3:
+            break
+
+    return {"samples": samples}

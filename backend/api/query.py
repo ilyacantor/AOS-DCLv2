@@ -418,10 +418,15 @@ def _query_ingest_store(
     time_range: Optional[Dict[str, str]],
 ) -> Tuple[List[QueryDataPoint], Optional["RunReceipt"]]:
     """
-    Search the ingest buffer for rows matching the requested metric.
+    Query the materialized metric data points from the ingest buffer.
 
-    Runner-pushed rows use DCL semantic-catalog field names as keys
-    (e.g. ``{"revenue": 50.0, "region": "AMER", "period": "2026-Q4"}``).
+    The MetricMaterializer transforms raw source-system rows (Salesforce
+    Amount, NetSuite amount, etc.) into canonical metric data points
+    using ontology concepts. This function reads those materialized
+    points.
+
+    Falls back to direct raw-row scanning if no materialized data
+    exists (backward compat for any pre-aggregated rows).
 
     Returns:
         (data_points, receipt) — receipt is the most-recent run that
@@ -434,14 +439,40 @@ def _query_ingest_store(
     if not all_receipts:
         return [], None
 
+    # --- Primary path: materialized data points ---
+    mat_points = store.get_materialized_points(
+        metric=metric,
+        dimensions=dimensions if dimensions else None,
+        filters=filters if filters else None,
+        time_range=time_range,
+    )
+
+    if mat_points:
+        data_points = []
+        for pt in mat_points:
+            dim_vals = pt.get("dimensions", {})
+            # If specific dimensions requested, only include those
+            if dimensions:
+                dim_vals = {d: dim_vals[d] for d in dimensions if d in dim_vals}
+            data_points.append(QueryDataPoint(
+                period=pt.get("period", "current"),
+                value=float(pt["value"]),
+                dimensions=dim_vals,
+            ))
+
+        # Find the most recent contributing receipt
+        contributing_receipt = max(all_receipts, key=lambda r: r.received_at)
+        return data_points, contributing_receipt
+
+    # --- Fallback: scan raw rows (legacy path) ---
+    # Kept for backward compat with any rows that were pushed with
+    # canonical field names (e.g. {"revenue": 50.0, "period": "2026-Q4"})
     data_points: List[QueryDataPoint] = []
     contributing_receipt: Optional[RunReceipt] = None
 
-    # Walk receipts newest-first so the last match wins for provenance
     for receipt in reversed(all_receipts):
         rows = store.get_rows(receipt.run_id, receipt.pipe_id)
         for row in rows:
-            # Row must contain the requested metric as a field
             if metric not in row:
                 continue
 
@@ -451,7 +482,6 @@ def _query_ingest_store(
 
             period = row.get("period", "current")
 
-            # time_range filter
             if time_range:
                 start = time_range.get("start", "")
                 end = time_range.get("end", "")
@@ -460,7 +490,6 @@ def _query_ingest_store(
                 if end and period > end:
                     continue
 
-            # dimension + filter matching
             dim_vals: Dict[str, str] = {}
             skip = False
             for dim in dimensions:
@@ -470,7 +499,6 @@ def _query_ingest_store(
                     break
                 dim_vals[dim] = str(dv)
 
-                # apply filter for this dimension
                 fv = filters.get(dim)
                 if fv:
                     if isinstance(fv, list) and str(dv) not in fv:

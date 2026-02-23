@@ -256,6 +256,10 @@ class IngestStore:
         self._row_buffer: OrderedDict[str, List[Dict[str, Any]]] = OrderedDict()
         self._total_rows = 0
 
+        # Materialized metric data points (ontology-driven aggregation)
+        self._materialized: Dict[str, List[Dict[str, Any]]] = {}  # key: run_id:pipe_id → metric data points
+        self._materialized_total: int = 0
+
         # Redis connection (None if unavailable)
         self._redis = _get_redis()
 
@@ -282,6 +286,8 @@ class IngestStore:
                 "drop_log": [asdict(e) for e in self._drop_log],
                 "row_buffer": dict(self._row_buffer),
                 "total_rows": self._total_rows,
+                "materialized": dict(self._materialized),
+                "materialized_total": self._materialized_total,
                 "seen_dispatch_ids": sorted(self._seen_dispatch_ids),
                 "content_sources": {k: sorted(v) for k, v in self._content_sources.items()},
                 "content_pipes": {k: sorted(v) for k, v in self._content_pipes.items()},
@@ -330,6 +336,13 @@ class IngestStore:
                 self._row_buffer[k] = v
             self._total_rows = data.get("total_rows", sum(len(v) for v in self._row_buffer.values()))
 
+            for k, v in data.get("materialized", {}).items():
+                self._materialized[k] = v
+            self._materialized_total = data.get(
+                "materialized_total",
+                sum(len(v) for v in self._materialized.values()),
+            )
+
             self._seen_dispatch_ids = set(data.get("seen_dispatch_ids", []))
             self._content_sources = {k: set(v) for k, v in data.get("content_sources", {}).items()}
             self._content_pipes = {k: set(v) for k, v in data.get("content_pipes", {}).items()}
@@ -343,6 +356,7 @@ class IngestStore:
             logger.info(
                 f"[IngestStore] Restored from disk: "
                 f"{len(self._receipts)} receipts, {self._total_rows:,} rows, "
+                f"{self._materialized_total:,} materialized points, "
                 f"{len(self._schema_registry)} schemas, {len(self._activity_log)} activity entries"
             )
         except Exception as e:
@@ -352,6 +366,8 @@ class IngestStore:
         with self._lock:
             self._receipts.clear()
             self._row_buffer.clear()
+            self._materialized.clear()
+            self._materialized_total = 0
             self._schema_registry.clear()
             self._drift_events.clear()
             self._activity_log.clear()
@@ -436,6 +452,16 @@ class IngestStore:
             if drop_raw:
                 for d in json.loads(drop_raw):
                     self._drop_log.append(DropEntry(**d))
+
+            # Load materialized data points from Redis
+            materialized_loaded = 0
+            for storage_key in order:
+                mat_raw = r.get(f"{_REDIS_PREFIX}materialized:{storage_key}")
+                if mat_raw:
+                    points = json.loads(mat_raw)
+                    self._materialized[storage_key] = points
+                    materialized_loaded += len(points)
+            self._materialized_total = materialized_loaded
 
             # Backfill dispatch_id for legacy receipts (pre-dispatch era)
             backfilled = 0
@@ -980,10 +1006,129 @@ class IngestStore:
                 "first_run_at": first.received_at if first else None,
                 "max_runs": _MAX_RUNS,
                 "max_rows": _MAX_BUFFERED_ROWS,
+                "materialized_points": self._materialized_total,
+                "materialized_keys": len(self._materialized),
                 "redis_connected": self._redis is not None,
                 "activity_entries": len(self._activity_log),
                 "total_drops": len(self._drop_log),
             }
+
+    # ------------------------------------------------------------------
+    # Materialized metric data points
+    # ------------------------------------------------------------------
+
+    def store_materialized(self, key: str, points: List[Dict[str, Any]]) -> None:
+        """Store materialized metric data points for a pipe push."""
+        if not points:
+            return
+        with self._lock:
+            self._materialized[key] = points
+            self._materialized_total = sum(
+                len(v) for v in self._materialized.values()
+            )
+        self._persist_materialized(key, points)
+        # Disk save is deferred to the caller (ingest flow already saves)
+
+    def get_materialized_points(
+        self,
+        metric: str,
+        dimensions: Optional[List[str]] = None,
+        filters: Optional[Dict] = None,
+        time_range: Optional[Dict[str, str]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Query materialized data points for a given metric.
+
+        Returns points matching the metric, optionally filtered by
+        dimensions and time_range.
+        """
+        results: List[Dict[str, Any]] = []
+        with self._lock:
+            for points in self._materialized.values():
+                for pt in points:
+                    if pt.get("metric") != metric:
+                        continue
+
+                    period = pt.get("period", "current")
+
+                    # Time range filter
+                    if time_range:
+                        start = time_range.get("start", "")
+                        end = time_range.get("end", "")
+                        if start and period < start:
+                            continue
+                        if end and period > end:
+                            continue
+
+                    # Dimension filter
+                    pt_dims = pt.get("dimensions", {})
+                    skip = False
+                    if dimensions:
+                        for dim in dimensions:
+                            if dim not in pt_dims:
+                                skip = True
+                                break
+                            if filters and dim in filters:
+                                fv = filters[dim]
+                                dv = pt_dims[dim]
+                                if isinstance(fv, list) and dv not in fv:
+                                    skip = True
+                                    break
+                                elif isinstance(fv, str) and dv != fv:
+                                    skip = True
+                                    break
+                    if skip:
+                        continue
+
+                    results.append(pt)
+        return results
+
+    def get_materialized_stats(self) -> Dict[str, Any]:
+        """Return summary statistics about materialized data."""
+        with self._lock:
+            if not self._materialized:
+                return {
+                    "total_points": 0,
+                    "total_keys": 0,
+                    "metrics": {},
+                    "source_systems": [],
+                    "period_range": None,
+                }
+
+            metrics: Dict[str, int] = {}
+            sources: set = set()
+            periods: set = set()
+
+            for points in self._materialized.values():
+                for pt in points:
+                    m = pt.get("metric", "unknown")
+                    metrics[m] = metrics.get(m, 0) + 1
+                    if pt.get("source_system"):
+                        sources.add(pt["source_system"])
+                    if pt.get("period"):
+                        periods.add(pt["period"])
+
+            sorted_periods = sorted(periods) if periods else []
+            return {
+                "total_points": self._materialized_total,
+                "total_keys": len(self._materialized),
+                "metrics": dict(sorted(metrics.items())),
+                "source_systems": sorted(sources),
+                "period_range": {
+                    "earliest": sorted_periods[0],
+                    "latest": sorted_periods[-1],
+                } if sorted_periods else None,
+            }
+
+    def _persist_materialized(self, key: str, points: List[Dict[str, Any]]) -> None:
+        """Write materialized points to Redis."""
+        if not self._redis:
+            return
+        try:
+            redis_key = f"{_REDIS_PREFIX}materialized:{key}"
+            self._redis.set(redis_key, json.dumps(points, default=str))
+            self._redis.expire(redis_key, _REDIS_TTL)
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis persist materialized failed: {e}")
 
     # ------------------------------------------------------------------
     # Drop Log — rejected ingestion attempts

@@ -1,0 +1,373 @@
+# Metric Extraction Rules — ontology-driven materialization
+#
+# Each rule defines HOW to derive a published metric from raw ingest rows
+# using ontology concepts (not source field names).
+#
+# Fields:
+#   metric:           Published metric ID (from metrics.yaml)
+#   value_concept:    Ontology concept whose example_fields contain the value field
+#   measure_op:       Aggregation operator (sum, avg, count, ratio, point_in_time_sum)
+#   period_concept:   Ontology concept providing the time period
+#   count_concept:    For count ops — count rows containing this concept's fields
+#   value_field_hint: Prefer a field literally matching this name (before concept search)
+#   filters:          Context filters to apply (concept-based, optional per row)
+#   dimension_map:    Maps ontology concepts to canonical dimension names
+#   unit_scale:       Multiplier applied to raw values (e.g. 0.000001 for dollars→millions)
+#   ratio_numerator/ratio_denominator: For ratio metrics, concepts for num/denom
+
+extractions:
+  # ─── CFO Pack ─────────────────────────────────────────────
+
+  - metric: revenue
+    value_concept: revenue
+    measure_op: sum
+    period_concept: date
+    filters:
+      - concept: win_loss
+        values: [true, "true", "Closed Won", "Won", "Closed-Won"]
+        optional: true
+    dimension_map:
+      territory: region
+      customer_segment: segment
+      product: product
+    unit_scale: 0.000001
+
+  - metric: arr
+    value_concept: revenue
+    measure_op: sum
+    period_concept: date
+    value_field_hint: arr
+    dimension_map:
+      customer_segment: segment
+      territory: region
+    unit_scale: 0.000001
+
+  - metric: mrr
+    value_concept: subscription
+    measure_op: sum
+    period_concept: date
+    value_field_hint: mrr
+    dimension_map:
+      customer_segment: segment
+      territory: region
+    unit_scale: 0.000001
+
+  - metric: services_revenue
+    value_concept: revenue
+    measure_op: sum
+    period_concept: date
+    value_field_hint: services_revenue
+    filters:
+      - concept: product
+        values: ["Implementation", "Consulting", "Training", "Support Premium", "Professional Services"]
+        optional: true
+    dimension_map:
+      territory: region
+    unit_scale: 0.000001
+
+  - metric: ar
+    value_concept: accounts_receivable
+    measure_op: sum
+    period_concept: date
+    dimension_map:
+      customer_segment: segment
+    unit_scale: 0.000001
+
+  - metric: dso
+    value_concept: accounts_receivable
+    measure_op: avg
+    period_concept: date
+    value_field_hint: days_outstanding
+    dimension_map:
+      customer_segment: segment
+      territory: region
+
+  - metric: burn_rate
+    value_concept: cost
+    measure_op: sum
+    period_concept: date
+    dimension_map:
+      cost_center: cost_center
+    unit_scale: 0.000001
+
+  - metric: gross_margin
+    value_concept: revenue
+    measure_op: ratio
+    period_concept: date
+    ratio_hint: gross_margin
+    dimension_map:
+      product: product
+      customer_segment: segment
+
+  - metric: ar_aging
+    value_concept: accounts_receivable
+    measure_op: sum
+    period_concept: date
+    dimension_map:
+      accounts_receivable: aging_bucket
+    unit_scale: 0.000001
+
+  - metric: pipeline_value
+    value_concept: revenue
+    measure_op: sum
+    period_concept: date
+    filters:
+      - concept: pipeline_stage
+        exclude_values: ["Closed Won", "Closed-Won", "Closed Lost", "Closed-Lost"]
+        optional: true
+    dimension_map:
+      territory: region
+      customer_segment: segment
+      pipeline_stage: stage
+    unit_scale: 0.000001
+
+  # ─── CRO Pack ─────────────────────────────────────────────
+
+  - metric: pipeline
+    value_concept: revenue
+    measure_op: sum
+    period_concept: date
+    filters:
+      - concept: pipeline_stage
+        exclude_values: ["Closed Won", "Closed-Won", "Closed Lost", "Closed-Lost"]
+        optional: true
+    dimension_map:
+      territory: region
+      customer_segment: segment
+      pipeline_stage: stage
+    unit_scale: 0.000001
+
+  - metric: win_rate
+    value_concept: win_loss
+    measure_op: ratio
+    period_concept: date
+    ratio_hint: win_rate
+    dimension_map:
+      territory: region
+      customer_segment: segment
+
+  - metric: quota_attainment
+    value_concept: quota
+    measure_op: ratio
+    period_concept: date
+    ratio_hint: attainment_pct
+    dimension_map:
+      territory: region
+
+  - metric: churn_rate
+    value_concept: churn_event
+    measure_op: ratio
+    period_concept: date
+    ratio_hint: churn_rate
+    dimension_map:
+      customer_segment: segment
+      territory: region
+
+  - metric: nrr
+    value_concept: subscription
+    measure_op: ratio
+    period_concept: date
+    ratio_hint: nrr
+    dimension_map:
+      customer_segment: segment
+      territory: region
+
+  - metric: nrr_by_cohort
+    value_concept: subscription
+    measure_op: avg
+    period_concept: date
+    value_field_hint: nrr
+    dimension_map:
+      customer_segment: cohort
+
+  - metric: churn_risk
+    value_concept: health
+    measure_op: avg
+    period_concept: date
+    value_field_hint: risk_score
+    dimension_map:
+      customer_segment: segment
+
+  - metric: customers
+    value_concept: account
+    measure_op: count
+    count_concept: account
+    period_concept: date
+    dimension_map:
+      customer_segment: segment
+      territory: region
+
+  # ─── COO Pack ─────────────────────────────────────────────
+
+  - metric: throughput
+    value_concept: engineering_work
+    measure_op: count
+    count_concept: engineering_work
+    period_concept: date
+    dimension_map:
+      department: team
+
+  - metric: cycle_time
+    value_concept: engineering_work
+    measure_op: avg
+    period_concept: date
+    value_field_hint: cycle_time
+    dimension_map:
+      department: team
+
+  - metric: sla_compliance
+    value_concept: sla
+    measure_op: avg
+    period_concept: date
+    value_field_hint: compliance
+    dimension_map:
+      department: team
+
+  # ─── CTO Pack ─────────────────────────────────────────────
+
+  - metric: deploy_frequency
+    value_concept: deployment
+    measure_op: count
+    count_concept: deployment
+    period_concept: date
+    dimension_map:
+      it_service: service
+
+  - metric: mttr
+    value_concept: incident
+    measure_op: avg
+    period_concept: date
+    value_field_hint: mttr
+    dimension_map:
+      it_service: service
+
+  - metric: uptime
+    value_concept: incident
+    measure_op: avg
+    period_concept: date
+    value_field_hint: uptime
+    dimension_map:
+      it_service: service
+
+  - metric: slo_attainment
+    value_concept: incident
+    measure_op: avg
+    period_concept: date
+    value_field_hint: current_value
+    dimension_map:
+      it_service: service
+
+  - metric: cloud_cost
+    value_concept: cost
+    measure_op: sum
+    period_concept: date
+    value_field_hint: blended_cost
+    filters:
+      - concept: aws_resource
+        optional: true
+    dimension_map:
+      aws_resource: resource_type
+    unit_scale: 0.000001
+
+  # ─── CHRO Pack ────────────────────────────────────────────
+
+  - metric: headcount
+    value_concept: employee
+    measure_op: count
+    count_concept: employee
+    period_concept: date
+    filters:
+      - concept: employee
+        field_hint: worker_status
+        values: ["Active", "active", true, "true"]
+        optional: true
+    dimension_map:
+      department: department
+
+  - metric: attrition_rate
+    value_concept: employee
+    measure_op: ratio
+    period_concept: date
+    ratio_hint: attrition_rate
+    dimension_map:
+      department: department
+
+  - metric: time_to_fill
+    value_concept: requisition
+    measure_op: avg
+    period_concept: date
+    value_field_hint: days_open
+    dimension_map:
+      department: department
+
+  - metric: engagement_score
+    value_concept: performance_review
+    measure_op: avg
+    period_concept: date
+    value_field_hint: engagement_score
+    dimension_map:
+      department: department
+
+  - metric: compensation_ratio
+    value_concept: compensation
+    measure_op: ratio
+    period_concept: date
+    ratio_hint: comp_ratio
+    dimension_map:
+      department: department
+
+  - metric: training_hours
+    value_concept: training
+    measure_op: avg
+    period_concept: date
+    value_field_hint: training_hours
+    dimension_map:
+      department: department
+
+  - metric: promotion_rate
+    value_concept: employee
+    measure_op: ratio
+    period_concept: date
+    ratio_hint: promotion_rate
+    dimension_map:
+      department: department
+
+  - metric: diversity_index
+    value_concept: employee
+    measure_op: ratio
+    period_concept: date
+    ratio_hint: diversity_index
+    dimension_map:
+      department: department
+
+  - metric: offer_acceptance_rate
+    value_concept: candidate
+    measure_op: ratio
+    period_concept: date
+    ratio_hint: acceptance_rate
+    dimension_map:
+      department: department
+
+  - metric: internal_mobility_rate
+    value_concept: employee
+    measure_op: ratio
+    period_concept: date
+    ratio_hint: internal_mobility_rate
+    dimension_map:
+      department: department
+
+  - metric: span_of_control
+    value_concept: employee
+    measure_op: avg
+    period_concept: date
+    value_field_hint: direct_reports
+    dimension_map:
+      department: department
+
+  - metric: enps
+    value_concept: nps_score
+    measure_op: avg
+    period_concept: date
+    value_field_hint: enps
+    dimension_map:
+      department: department
