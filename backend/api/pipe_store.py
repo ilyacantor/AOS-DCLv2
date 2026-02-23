@@ -89,14 +89,18 @@ class ExportReceipt:
 # ---------------------------------------------------------------------------
 
 def _get_redis():
-    """Try to connect to Redis. Returns client or None."""
+    """Try to connect to Redis via REDIS_URL env var. Returns client or None."""
+    redis_url = os.environ.get("REDIS_URL")
+    if not redis_url:
+        logger.warning("[PipeStore] REDIS_URL not set — running in-memory only")
+        return None
     try:
         import redis
-        r = redis.Redis(host="localhost", port=6379, decode_responses=True)
+        r = redis.from_url(redis_url, decode_responses=True)
         r.ping()
         return r
     except Exception as e:
-        logger.warning(f"[PipeStore] Redis unavailable: {e}")
+        logger.warning(f"[PipeStore] Redis unavailable: {e} — running in-memory only")
         return None
 
 

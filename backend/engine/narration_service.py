@@ -22,11 +22,14 @@ class NarrationService:
         self._redis_client = None
     
     def _get_redis(self):
-        """Lazy initialization of Redis client."""
+        """Lazy initialization of Redis client via REDIS_URL env var."""
         if redis is None:
             return None
         if self._redis_client is None:
-            redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+            redis_url = os.environ.get("REDIS_URL")
+            if not redis_url:
+                logger.warning("[NarrationService] REDIS_URL not set — running in-memory only")
+                return None
             self._redis_client = redis.from_url(redis_url, decode_responses=True)
         return self._redis_client
     
