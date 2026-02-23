@@ -454,9 +454,13 @@ def _query_ingest_store(
         from collections import defaultdict as _dd
         agg: dict = _dd(float)
         for pt in mat_points:
-            dim_vals = pt.get("dimensions", {})
             if dimensions:
-                dim_vals = {d: dim_vals[d] for d in dimensions if d in dim_vals}
+                # Only keep the requested dimensions in the grouping key
+                pt_dims = pt.get("dimensions", {})
+                dim_vals = {d: pt_dims[d] for d in dimensions if d in pt_dims}
+            else:
+                # No dimensions requested → aggregate ALL into a single total per period
+                dim_vals = {}
             period = pt.get("period", "current")
             key = (period, tuple(sorted(dim_vals.items())))
             agg[key] += float(pt["value"])
