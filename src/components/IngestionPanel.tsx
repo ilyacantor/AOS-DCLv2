@@ -33,6 +33,7 @@ interface ActivityEntry {
   timestamp: string;
   pipes: number;
   sors: number;
+  tooling_pipes: number;
   fabrics: number;
   mapped_pipes: number;
   unmapped_pipes: number;
@@ -227,6 +228,7 @@ export function IngestionPanel() {
                     <th className="text-left px-3 py-2 font-medium">Date / Time</th>
                     <th className="text-right px-3 py-2 font-medium">Pipes</th>
                     <th className="text-right px-3 py-2 font-medium">SORs</th>
+                    <th className="text-right px-3 py-2 font-medium">Tooling</th>
                     <th className="text-right px-3 py-2 font-medium">Fabrics</th>
                   </tr>
                 </thead>
@@ -247,7 +249,7 @@ export function IngestionPanel() {
                           onClick={() => setExpandedSnap(isExpanded ? null : snapName)}
                           className="border-b border-border/50 bg-card/10 hover:bg-card/30 cursor-pointer transition-colors"
                         >
-                          <td colSpan={8} className="px-3 py-2">
+                          <td colSpan={9} className="px-3 py-2">
                             <div className="flex items-center gap-2">
                               <svg
                                 className={`w-2.5 h-2.5 shrink-0 transition-transform duration-150 text-muted-foreground ${isExpanded ? 'rotate-90' : ''}`}
@@ -330,6 +332,15 @@ export function IngestionPanel() {
                                 </td>
                                 <td className="px-3 py-1.5 text-right font-mono text-foreground">
                                   {entry.sors > 0 ? entry.sors : (
+                                    <span className="text-muted-foreground/40">-</span>
+                                  )}
+                                </td>
+                                <td className="px-3 py-1.5 text-right font-mono">
+                                  {entry.tooling_pipes > 0 ? (
+                                    <span className="text-amber-400" title="Tooling pipes (non-SOR)">
+                                      {entry.tooling_pipes}
+                                    </span>
+                                  ) : (
                                     <span className="text-muted-foreground/40">-</span>
                                   )}
                                 </td>

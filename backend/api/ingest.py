@@ -120,11 +120,12 @@ class ActivityEntry:
     timestamp: str                  # ISO-8601 when DCL recorded this
 
     # Counts (populated when available)
-    pipes: int = 0                  # total pipe count
-    sors: int = 0                   # unique Systems of Record
+    pipes: int = 0                  # total pipe count (SOR + tooling)
+    sors: int = 0                   # unique Systems of Record (category != tooling)
+    tooling_pipes: int = 0          # pipes with category=tooling (tracked separately)
     fabrics: int = 0                # unique fabric planes
-    mapped_pipes: int = 0           # pipes with matching export-pipes schema
-    unmapped_pipes: int = 0         # pipes WITHOUT a matching schema
+    mapped_pipes: int = 0           # SOR pipes with matching export-pipes schema
+    unmapped_pipes: int = 0         # SOR pipes WITHOUT a matching schema
     rows: int = 0                   # total data rows
     records: int = 0                # alias / distinct record count
 
@@ -218,6 +219,7 @@ class IngestStore:
         self._content_mapped: Dict[str, set] = {}   # dispatch_id → unique mapped pipe_ids
         self._content_unmapped: Dict[str, set] = {} # dispatch_id → unique unmapped pipe_ids
         self._content_fabrics: Dict[str, set] = {}  # dispatch_id → unique fabric planes
+        self._content_tooling: Dict[str, set] = {}  # dispatch_id → unique tooling pipe_ids
 
         # Row buffer
         self._row_buffer: OrderedDict[str, List[Dict[str, Any]]] = OrderedDict()
@@ -254,6 +256,7 @@ class IngestStore:
                 "content_mapped": {k: sorted(v) for k, v in self._content_mapped.items()},
                 "content_unmapped": {k: sorted(v) for k, v in self._content_unmapped.items()},
                 "content_fabrics": {k: sorted(v) for k, v in self._content_fabrics.items()},
+                "content_tooling": {k: sorted(v) for k, v in self._content_tooling.items()},
             }
             fd, tmp_path = tempfile.mkstemp(dir=_CACHE_DIR, suffix=".tmp")
             try:
@@ -298,6 +301,7 @@ class IngestStore:
             self._content_mapped = {k: set(v) for k, v in data.get("content_mapped", {}).items()}
             self._content_unmapped = {k: set(v) for k, v in data.get("content_unmapped", {}).items()}
             self._content_fabrics = {k: set(v) for k, v in data.get("content_fabrics", {}).items()}
+            self._content_tooling = {k: set(v) for k, v in data.get("content_tooling", {}).items()}
 
             logger.info(
                 f"[IngestStore] Restored from disk: "
@@ -320,6 +324,7 @@ class IngestStore:
             self._content_mapped.clear()
             self._content_unmapped.clear()
             self._content_fabrics.clear()
+            self._content_tooling.clear()
             self._total_rows = 0
         try:
             if os.path.exists(_CACHE_FILE):

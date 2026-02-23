@@ -146,6 +146,21 @@ def _resolve_export_identity(pipe_store) -> tuple:
     return snapshot_name, aod_run_id, dispatch_id
 
 
+def _is_tooling_pipe(pipe_def) -> bool:
+    """Check if a pipe is a tooling pipe (non-SOR category).
+
+    Tooling pipes are tracked separately and not counted in SOR totals.
+    Any pipe with category='tooling' or other non-SOR categories should
+    be classified as tooling.
+    """
+    if not pipe_def:
+        return False
+    category = (pipe_def.category or "").lower()
+    # Define SOR categories - anything else is tooling
+    SOR_CATEGORIES = {"crm", "erp", "finops", "infra", "aod", ""}
+    return category not in SOR_CATEGORIES
+
+
 def _record_ingest_activity(
     store,
     dispatch_id: str,
@@ -168,6 +183,9 @@ def _record_ingest_activity(
     snapshot_name comes from the AAM export receipt (same as structure
     phase) so all 3 phases group together. run_id on the content entry
     is Farm's native run_id so the Ingest tab shows the real value.
+
+    Tooling pipes (category='tooling' or other non-SOR categories) are
+    tracked separately in the tooling_pipes field and not counted in SOR totals.
     """
     pipe_store = get_pipe_store()
 
@@ -181,17 +199,25 @@ def _record_ingest_activity(
     # --- Path 3: Content activity ---
     # Use has_phase("content") so a prior structure entry with the same
     # dispatch_id doesn't shadow content creation.
-    # Resolve fabric plane for this pipe from the pipe definition store
+    # Resolve fabric plane and category for this pipe from the pipe definition store
     pipe_def = pipe_store.lookup(pipe_id)
     pipe_fabric = pipe_def.fabric_plane if pipe_def and pipe_def.fabric_plane else None
+    is_tooling = _is_tooling_pipe(pipe_def)
 
     if did and not store.has_phase(did, "content"):
         # First pipe for this dispatch — create the content entry
         store._content_pipes.setdefault(did, set()).add(pipe_id)
-        if matched_schema:
-            store._content_mapped.setdefault(did, set()).add(pipe_id)
+
+        # Track tooling pipes separately
+        if is_tooling:
+            store._content_tooling.setdefault(did, set()).add(pipe_id)
         else:
-            store._content_unmapped.setdefault(did, set()).add(pipe_id)
+            # Only track mapped/unmapped for SOR pipes
+            if matched_schema:
+                store._content_mapped.setdefault(did, set()).add(pipe_id)
+            else:
+                store._content_unmapped.setdefault(did, set()).add(pipe_id)
+
         content_fabrics = set()
         if pipe_fabric:
             content_fabrics.add(pipe_fabric)
@@ -203,10 +229,11 @@ def _record_ingest_activity(
             run_id=run_id,
             timestamp=now,
             pipes=1,
-            sors=1,
+            sors=0 if is_tooling else 1,
+            tooling_pipes=1 if is_tooling else 0,
             fabrics=len(content_fabrics),
-            mapped_pipes=1,
-            unmapped_pipes=0 if matched_schema else 1,
+            mapped_pipes=0 if is_tooling else (1 if matched_schema else 0),
+            unmapped_pipes=0 if is_tooling or matched_schema else 1,
             rows=rows,
             records=rows,
             dispatch_id=did,
@@ -216,11 +243,17 @@ def _record_ingest_activity(
     elif did:
         # Subsequent push — update the existing content entry
         store.update_content_activity(did, rows, pipe_id)
-        # Track unique mapped/unmapped
-        if matched_schema:
-            store._content_mapped.setdefault(did, set()).add(pipe_id)
+
+        # Track tooling pipes separately
+        if is_tooling:
+            store._content_tooling.setdefault(did, set()).add(pipe_id)
         else:
-            store._content_unmapped.setdefault(did, set()).add(pipe_id)
+            # Only track mapped/unmapped for SOR pipes
+            if matched_schema:
+                store._content_mapped.setdefault(did, set()).add(pipe_id)
+            else:
+                store._content_unmapped.setdefault(did, set()).add(pipe_id)
+
         # Track fabric planes
         fabrics_set = store._content_fabrics.setdefault(did, set())
         if pipe_fabric:
@@ -230,10 +263,12 @@ def _record_ingest_activity(
         sources.add(source_system)
         mapped_set = store._content_mapped.get(did, set())
         unmapped_set = store._content_unmapped.get(did, set())
+        tooling_set = store._content_tooling.get(did, set())
         with store._lock:
             for entry in reversed(store._activity_log):
                 if entry.phase == "content" and entry.dispatch_id == did:
-                    entry.sors = len(sources)
+                    entry.sors = len(sources) - len(tooling_set)  # Exclude tooling from SOR count
+                    entry.tooling_pipes = len(tooling_set)
                     entry.fabrics = len(fabrics_set)
                     entry.mapped_pipes = len(mapped_set)
                     entry.unmapped_pipes = len(unmapped_set)
@@ -253,9 +288,10 @@ def _record_ingest_activity(
             run_id=run_id,
             timestamp=now,
             pipes=1,
-            sors=1,
-            mapped_pipes=1 if matched_schema else 0,
-            unmapped_pipes=0 if matched_schema else 1,
+            sors=0 if is_tooling else 1,
+            tooling_pipes=1 if is_tooling else 0,
+            mapped_pipes=0 if is_tooling else (1 if matched_schema else 0),
+            unmapped_pipes=0 if is_tooling or matched_schema else 1,
             rows=rows,
             records=rows,
             dispatch_id="",
