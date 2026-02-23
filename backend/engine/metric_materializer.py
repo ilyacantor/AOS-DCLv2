@@ -32,6 +32,32 @@ _EXTRACTIONS_PATH = (
 )
 
 # ---------------------------------------------------------------------------
+# Source-system field name normalization
+# ---------------------------------------------------------------------------
+
+_CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+_SF_CUSTOM_SUFFIX = re.compile(r"__c$", re.IGNORECASE)
+
+
+def _normalize_key(name: str) -> str:
+    """Normalize a source-system field name to snake_case.
+
+    Handles common source-system naming conventions:
+      HireDate      → hire_date     (PascalCase → snake_case)
+      Region__c     → region        (Salesforce custom field suffix)
+      StageName     → stage_name    (PascalCase → snake_case)
+      AccountId     → account_id    (PascalCase → snake_case)
+      Worker_Status → worker_status (already correct)
+      IsWon         → is_won        (camelCase bool prefix)
+    """
+    # Strip Salesforce __c custom field suffix
+    cleaned = _SF_CUSTOM_SUFFIX.sub("", name)
+    # PascalCase/camelCase → snake_case
+    snake = _CAMEL_BOUNDARY.sub("_", cleaned)
+    return snake.lower()
+
+
+# ---------------------------------------------------------------------------
 # Field → Concept reverse index
 # ---------------------------------------------------------------------------
 
@@ -152,30 +178,42 @@ class MetricMaterializer:
                      Use for value/period fields, NOT for dimensions or counts.
 
         Priority:
-          1. field_hint matches a key in the row (case-insensitive)
-          2. Exact match: concept's example_fields against row keys
-          3. Reverse index: row key maps to concept_id exactly
+          1. field_hint matches a key in the row (case-insensitive, then normalized)
+          2. Exact match: concept's example_fields against row keys (lowercase, then normalized)
+          3. Reverse index: row key maps to concept_id (lowercase, then normalized)
           4. (partial only) Substring match with length constraints
         """
         row_keys_lower = {k.lower(): k for k in row.keys() if not k.startswith("_")}
+        # Normalized index: PascalCase→snake_case, strip __c
+        row_keys_normalized = {_normalize_key(k): k for k in row.keys() if not k.startswith("_")}
 
-        # Priority 1: field hint
+        # Priority 1: field hint (exact, then normalized)
         if field_hint:
             hint_lower = field_hint.lower()
             if hint_lower in row_keys_lower:
                 return row_keys_lower[hint_lower]
+            if hint_lower in row_keys_normalized:
+                return row_keys_normalized[hint_lower]
 
-        # Priority 2: concept's example_fields (exact)
+        # Priority 2: concept's example_fields (exact, then normalized)
         concept = self._concept_by_id.get(concept_id)
         if concept:
             for ef in concept.example_fields:
                 ef_lower = ef.lower()
                 if ef_lower in row_keys_lower:
                     return row_keys_lower[ef_lower]
+            # Try again with normalized row keys
+            for ef in concept.example_fields:
+                ef_lower = ef.lower()
+                if ef_lower in row_keys_normalized:
+                    return row_keys_normalized[ef_lower]
 
-        # Priority 3: reverse index (exact)
+        # Priority 3: reverse index (exact, then normalized)
         for key_lower, original_key in row_keys_lower.items():
             if self._field_index.get(key_lower) == concept_id:
+                return original_key
+        for key_norm, original_key in row_keys_normalized.items():
+            if key_norm not in row_keys_lower and self._field_index.get(key_norm) == concept_id:
                 return original_key
 
         # Priority 4: partial/substring match (only if requested)

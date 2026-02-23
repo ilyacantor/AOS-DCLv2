@@ -1043,6 +1043,10 @@ class IngestStore:
         """
         results: List[Dict[str, Any]] = []
         with self._lock:
+            # Lazy reload from Redis if this worker hasn't loaded materialized data yet
+            if not self._materialized and self._redis:
+                self._reload_materialized_from_redis()
+
             for points in self._materialized.values():
                 for pt in points:
                     if pt.get("metric") != metric:
@@ -1085,6 +1089,10 @@ class IngestStore:
     def get_materialized_stats(self) -> Dict[str, Any]:
         """Return summary statistics about materialized data."""
         with self._lock:
+            # Lazy reload from Redis if this worker hasn't loaded materialized data yet
+            if not self._materialized and self._redis:
+                self._reload_materialized_from_redis()
+
             if not self._materialized:
                 return {
                     "total_points": 0,
@@ -1118,6 +1126,35 @@ class IngestStore:
                     "latest": sorted_periods[-1],
                 } if sorted_periods else None,
             }
+
+    def _reload_materialized_from_redis(self) -> bool:
+        """Reload materialized data from Redis into memory.
+
+        Called when the in-memory buffer is empty but Redis may have data
+        (e.g. after another worker ran the backfill). Returns True if
+        data was loaded.
+        """
+        if not self._redis:
+            return False
+        try:
+            r = self._redis
+            order = r.lrange(f"{_REDIS_PREFIX}receipt_order", 0, -1)
+            loaded = 0
+            for storage_key in order:
+                mat_raw = r.get(f"{_REDIS_PREFIX}materialized:{storage_key}")
+                if mat_raw:
+                    points = json.loads(mat_raw)
+                    self._materialized[storage_key] = points
+                    loaded += len(points)
+            if loaded:
+                self._materialized_total = loaded
+                logger.info(
+                    f"[IngestStore] Reloaded {loaded} materialized points from Redis"
+                )
+                return True
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis reload materialized failed: {e}")
+        return False
 
     def _persist_materialized(self, key: str, points: List[Dict[str, Any]]) -> None:
         """Write materialized points to Redis."""

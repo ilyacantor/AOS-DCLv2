@@ -100,6 +100,8 @@ concepts:
       - budget
       - expenditure
       - opex
+      - blended_cost
+      - unblended_cost
     aliases:
       - expense
       - spending
@@ -282,6 +284,9 @@ concepts:
       - amt_due
       - aging_bucket
       - ar
+      - amount_due
+      - days_outstanding
+      - amount_paid
     aliases:
       - ar
       - receivable
@@ -720,6 +725,8 @@ concepts:
       - outcome
       - competitor
       - result
+      - is_won
+      - is_closed
     aliases:
       - deal_result
       - closed_reason
@@ -744,6 +751,12 @@ concepts:
       - position_id
       - department
       - hire_date
+      - worker_status
+      - is_active
+      - legal_name
+      - business_title
+      - management_level
+      - annual_base_pay
     aliases:
       - worker
       - staff
@@ -1108,6 +1121,9 @@ concepts:
       - current_value
       - mttr
       - resolution_time
+      - mttr_minutes
+      - resolved_at
+      - started_at
     aliases:
       - alert
       - outage
@@ -1210,7 +1226,6 @@ concepts:
       - tier
       - cohort
       - customer_group
-      - name
       - criteria
       - customer_count
     aliases:
@@ -1362,7 +1377,7 @@ concepts:
       - offering
       - platform
       - service_line
-      - name
+      - product_name
       - version
     aliases:
       - sku
@@ -2725,6 +2740,12 @@ concepts:
       - created_at
       - updated_at
       - time
+      - close_date
+      - tran_date
+      - posting_period
+      - billing_period
+      - started_at
+      - ended_at
     aliases:
       - timestamp
       - datetime
