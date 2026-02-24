@@ -30,6 +30,7 @@ interface DropEntry {
   run_id: string;
   dispatch_id: string;
   snapshot_name: string;
+  tenant_id: string;
 }
 
 interface IngestRunsResponse {
@@ -259,8 +260,8 @@ export function IngestionPanel() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-t border-red-500/20 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    <th className="text-left px-3 py-2 font-medium">Pipe ID</th>
                     <th className="text-left px-3 py-2 font-medium">Source</th>
+                    <th className="text-left px-3 py-2 font-medium">Tenant</th>
                     <th className="text-left px-3 py-2 font-medium">Error</th>
                     <th className="text-left px-3 py-2 font-medium">Reason</th>
                     <th className="text-left px-3 py-2 font-medium">Time</th>
@@ -268,12 +269,12 @@ export function IngestionPanel() {
                 </thead>
                 <tbody>
                   {drops.map((drop, idx) => (
-                    <tr key={idx} className="border-t border-red-500/10 hover:bg-red-500/5 transition-colors">
-                      <td className="px-3 py-1.5 font-mono text-foreground/80" title={drop.pipe_id}>
-                        {drop.pipe_id.length > 28 ? drop.pipe_id.slice(0, 28) + '...' : drop.pipe_id}
-                      </td>
-                      <td className="px-3 py-1.5 text-muted-foreground">
+                    <tr key={idx} className="border-t border-red-500/10 hover:bg-red-500/5 transition-colors" title={`pipe_id: ${drop.pipe_id}`}>
+                      <td className="px-3 py-1.5 font-semibold text-foreground/80">
                         {drop.source_system}
+                      </td>
+                      <td className="px-3 py-1.5 text-muted-foreground font-mono">
+                        {drop.tenant_id || '-'}
                       </td>
                       <td className="px-3 py-1.5">
                         <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-500/20 text-red-400 border border-red-500/30">

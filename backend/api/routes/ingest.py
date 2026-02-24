@@ -76,7 +76,8 @@ def _normalize_ingest_body(raw_body: dict) -> dict:
     return body
 
 
-def _validate_pipe_guard(pipe_id: str, run_id: str, source_system: str, now: str):
+def _validate_pipe_guard(pipe_id: str, run_id: str, source_system: str, now: str,
+                         tenant_id: str = "", snapshot_name: str = ""):
     """Schema-on-write gate. Returns (pipe_def, guard_active) or raises 422."""
     pipe_store = get_pipe_store()
     pipe_def = pipe_store.lookup(pipe_id)
@@ -95,6 +96,8 @@ def _validate_pipe_guard(pipe_id: str, run_id: str, source_system: str, now: str
             source_system=source_system,
             timestamp=now,
             run_id=run_id,
+            tenant_id=tenant_id,
+            snapshot_name=snapshot_name,
         ))
         raise HTTPException(
             status_code=422,
@@ -399,6 +402,7 @@ async def dcl_ingest(
             # Missing snapshot_name — record drop before re-raising
             pipe_id = x_pipe_id or raw_body.get("pipe_id", "unknown")
             source = raw_body.get("source_system") or raw_body.get("source", "unknown")
+            tenant = raw_body.get("tenant_id") or raw_body.get("tenantId", "")
             get_ingest_store().record_drop(DropEntry(
                 pipe_id=pipe_id,
                 reason=e.detail if isinstance(e.detail, str) else str(e.detail),
@@ -406,6 +410,7 @@ async def dcl_ingest(
                 source_system=source,
                 timestamp=now,
                 run_id=x_run_id or "",
+                tenant_id=tenant,
             ))
             raise
     else:
@@ -418,6 +423,7 @@ async def dcl_ingest(
         pipe_id = x_pipe_id or (body.get("pipe_id", "unknown") if isinstance(body, dict) else "unknown")
         source = (body.get("source_system", "unknown") if isinstance(body, dict) else "unknown")
         snapshot = (body.get("snapshot_name", "") if isinstance(body, dict) else "")
+        tenant = (body.get("tenant_id", "") or body.get("tenantId", "")) if isinstance(body, dict) else ""
         get_ingest_store().record_drop(DropEntry(
             pipe_id=pipe_id,
             reason=str(e),
@@ -426,6 +432,7 @@ async def dcl_ingest(
             timestamp=now,
             run_id=x_run_id or "",
             snapshot_name=snapshot,
+            tenant_id=tenant,
         ))
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -440,6 +447,7 @@ async def dcl_ingest(
             timestamp=now,
             run_id=x_run_id or "",
             snapshot_name=ingest_req.snapshot_name,
+            tenant_id=ingest_req.tenant_id,
         ))
         raise HTTPException(status_code=401, detail="Invalid or missing x-api-key")
 
@@ -454,7 +462,10 @@ async def dcl_ingest(
         )
 
     # ── Schema-on-write gate ──
-    pipe_def, _guard_active = _validate_pipe_guard(pipe_id, run_id, ingest_req.source_system, now)
+    pipe_def, _guard_active = _validate_pipe_guard(
+        pipe_id, run_id, ingest_req.source_system, now,
+        tenant_id=ingest_req.tenant_id, snapshot_name=ingest_req.snapshot_name,
+    )
 
     # ── Proceed with ingest ──────────────────────────────────────────
     if x_schema_hash:

@@ -156,6 +156,7 @@ class DropEntry:
     run_id: str = ""
     dispatch_id: str = ""
     snapshot_name: str = ""
+    tenant_id: str = ""
 
 
 _MAX_DROPS = 500  # keep last N drop entries
