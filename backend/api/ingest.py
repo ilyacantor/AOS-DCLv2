@@ -1088,6 +1088,35 @@ class IngestStore:
         for eid in evicted_ids:
             self._evict_from_redis(eid)
 
+        # --- Record activity entries so the Ingest tab shows AAM data ---
+        # Structure phase: AAM pipe schemas received (via pull)
+        if not self.has_phase(dispatch_id, "structure"):
+            self.record_activity(ActivityEntry(
+                phase="structure",
+                source="AAM",
+                snapshot_name=snapshot_name,
+                run_id=run_id,
+                timestamp=now,
+                pipes=pipe_count,
+                sors=len(unique_source_names),
+                fabrics=len(fabric_categories),
+                dispatch_id=dispatch_id,
+                aod_run_id=run_id,
+            ))
+
+        # Dispatch phase: AAM dispatch acknowledged
+        if not self.has_phase(dispatch_id, "dispatch"):
+            self.record_activity(ActivityEntry(
+                phase="dispatch",
+                source="AAM",
+                snapshot_name=snapshot_name,
+                run_id=run_id,
+                timestamp=now,
+                pipes=pipe_count,
+                dispatch_id=dispatch_id,
+                aod_run_id=run_id,
+            ))
+
         self._save_to_disk()
         logger.info(
             f"[IngestStore] Recorded AAM pull: {pipe_count} pipes, "
