@@ -78,6 +78,7 @@ export function IngestionPanel() {
   const [drops, setDrops] = useState<DropEntry[]>([]);
   const [dropsOpen, setDropsOpen] = useState(false);
   const [expandedSnap, setExpandedSnap] = useState<string | null>(null);
+  const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
 
   const fetchStats = async () => {
@@ -377,12 +378,25 @@ export function IngestionPanel() {
                             : entry.source === 'AAM'
                               ? 'text-blue-400'
                               : 'text-amber-400';
+                          const phaseKey = `${snapName}-${entry.phase}-${idx}`;
+                          const isPhaseExpanded = expandedPhase === phaseKey;
 
                           return (
-                            <Fragment key={`${snapName}-${entry.phase}-${idx}`}>
-                              <tr className="border-b border-border/30 hover:bg-card/20 transition-colors">
+                            <Fragment key={phaseKey}>
+                              <tr
+                                onClick={() => setExpandedPhase(isPhaseExpanded ? null : phaseKey)}
+                                className="border-b border-border/30 hover:bg-card/20 cursor-pointer transition-colors"
+                              >
                                 <td className="px-3 py-1.5 pl-8 font-mono text-[10px] text-foreground/70">
-                                  {entry.snapshot_name || '-'}
+                                  <div className="flex items-center gap-1.5">
+                                    <svg
+                                      className={`w-2 h-2 shrink-0 transition-transform duration-150 text-muted-foreground/50 ${isPhaseExpanded ? 'rotate-90' : ''}`}
+                                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                                    >
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                    {entry.snapshot_name || '-'}
+                                  </div>
                                 </td>
                                 <td className="px-3 py-1.5 font-mono text-[10px] text-muted-foreground/60">
                                   {entry.aod_run_id || '-'}
@@ -443,6 +457,50 @@ export function IngestionPanel() {
                                   )}
                                 </td>
                               </tr>
+
+                              {/* Phase detail sub-row */}
+                              {isPhaseExpanded && (
+                                <tr className="border-b border-border/20 bg-card/5">
+                                  <td colSpan={9} className="px-3 py-2 pl-12">
+                                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-[10px] font-mono">
+                                      <span>
+                                        <span className="text-muted-foreground/60">run_id </span>
+                                        <span className="text-foreground/80">{entry.run_id || '-'}</span>
+                                      </span>
+                                      <span>
+                                        <span className="text-muted-foreground/60">dispatch_id </span>
+                                        <span className="text-foreground/80">{entry.dispatch_id || '-'}</span>
+                                      </span>
+                                      <span>
+                                        <span className="text-muted-foreground/60">rows </span>
+                                        <span className="text-foreground/80">{entry.rows > 0 ? fmtRows(entry.rows) : '-'}</span>
+                                      </span>
+                                      <span>
+                                        <span className="text-muted-foreground/60">records </span>
+                                        <span className="text-foreground/80">{entry.records > 0 ? fmtRows(entry.records) : '-'}</span>
+                                      </span>
+                                      {entry.phase === 'content' && (
+                                        <>
+                                          <span>
+                                            <span className="text-muted-foreground/60">mapped </span>
+                                            <span className="text-emerald-400">{entry.mapped_pipes}</span>
+                                            <span className="text-muted-foreground/40"> / </span>
+                                            <span className="text-muted-foreground/60">unmapped </span>
+                                            <span className="text-red-400">{entry.unmapped_pipes}</span>
+                                          </span>
+                                          <span>
+                                            <span className="text-muted-foreground/60">SOR </span>
+                                            <span className="text-blue-400">{entry.sor_pipes}</span>
+                                            <span className="text-muted-foreground/40"> / </span>
+                                            <span className="text-muted-foreground/60">other </span>
+                                            <span className="text-slate-400">{entry.other_pipes}</span>
+                                          </span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
                             </Fragment>
                           );
                         })}

@@ -210,8 +210,11 @@ def _get_redis():
 # ---------------------------------------------------------------------------
 
 _MAX_RUNS = 500          # keep last N run receipts
-_MAX_BUFFERED_ROWS = 200_000   # total rows across all runs
+_MAX_BUFFERED_ROWS = 50_000    # total rows across all runs (reduced from 200k to limit memory)
 _MAX_DRIFT_EVENTS = 1000
+_MAX_MATERIALIZED_POINTS = 50_000   # evict oldest keys when exceeded
+_MAX_SCHEMA_ENTRIES = 5_000         # evict oldest schemas when exceeded
+_MAX_CONTENT_DISPATCHES = 200       # evict oldest content-tracking dicts
 
 
 def _make_key(run_id: str, pipe_id: str) -> str:
@@ -275,18 +278,18 @@ class IngestStore:
 
     def _save_to_disk(self) -> None:
         try:
-            def _sets_to_lists(d):
-                return {k: sorted(v) if isinstance(v, set) else v for k, v in d.items()}
-
+            # NOTE: row_buffer and materialized are intentionally EXCLUDED from
+            # disk persistence.  They are the two largest structures (up to 50k
+            # rows + metric points) and are already write-through cached in
+            # Redis.  Serialising them on every write caused 2x memory spikes
+            # that pushed the process past 2 GB.
             data = {
                 "receipts": {k: asdict(v) for k, v in self._receipts.items()},
                 "schema_registry": {k: asdict(v) for k, v in self._schema_registry.items()},
                 "drift_events": [asdict(e) for e in self._drift_events],
                 "activity_log": [asdict(e) for e in self._activity_log],
                 "drop_log": [asdict(e) for e in self._drop_log],
-                "row_buffer": dict(self._row_buffer),
                 "total_rows": self._total_rows,
-                "materialized": dict(self._materialized),
                 "materialized_total": self._materialized_total,
                 "seen_dispatch_ids": sorted(self._seen_dispatch_ids),
                 "content_sources": {k: sorted(v) for k, v in self._content_sources.items()},
@@ -332,6 +335,9 @@ class IngestStore:
             self._activity_log = [ActivityEntry(**d) for d in data.get("activity_log", [])]
             self._drop_log = [DropEntry(**d) for d in data.get("drop_log", [])]
 
+            # row_buffer and materialized are no longer persisted to disk
+            # (they live in Redis).  Load legacy data if present for backward
+            # compat, but new caches won't have these keys.
             for k, v in data.get("row_buffer", {}).items():
                 self._row_buffer[k] = v
             self._total_rows = data.get("total_rows", sum(len(v) for v in self._row_buffer.values()))
@@ -647,6 +653,12 @@ class IngestStore:
                     self._drift_events = self._drift_events[-_MAX_DRIFT_EVENTS:]
 
             self._schema_registry[pipe_id] = schema_record
+
+            # Evict oldest schema entries when registry exceeds limit
+            if len(self._schema_registry) > _MAX_SCHEMA_ENTRIES:
+                excess = len(self._schema_registry) - _MAX_SCHEMA_ENTRIES
+                for old_key in list(self._schema_registry.keys())[:excess]:
+                    del self._schema_registry[old_key]
 
             receipt = RunReceipt(
                 run_id=run_id,
@@ -1026,6 +1038,11 @@ class IngestStore:
             self._materialized_total = sum(
                 len(v) for v in self._materialized.values()
             )
+            # Evict oldest keys when total points exceed limit
+            while self._materialized_total > _MAX_MATERIALIZED_POINTS and self._materialized:
+                evicted_key = next(iter(self._materialized))
+                evicted_pts = self._materialized.pop(evicted_key)
+                self._materialized_total -= len(evicted_pts)
         self._persist_materialized(key, points)
         # Disk save is deferred to the caller (ingest flow already saves)
 
@@ -1197,6 +1214,25 @@ class IngestStore:
     # Activity Log — discrete 3-phase event tracking
     # ------------------------------------------------------------------
 
+    def _evict_stale_content_tracking(self) -> None:
+        """Remove content-tracking sets for dispatch_ids no longer in the
+        activity log.  Must be called while holding self._lock."""
+        if len(self._seen_dispatch_ids) <= _MAX_CONTENT_DISPATCHES:
+            return
+        # Build the set of dispatch_ids still referenced in the activity log
+        live_ids = {e.dispatch_id for e in self._activity_log if e.dispatch_id}
+        stale = self._seen_dispatch_ids - live_ids
+        for sid in stale:
+            self._content_sources.pop(sid, None)
+            self._content_pipes.pop(sid, None)
+            self._content_mapped.pop(sid, None)
+            self._content_unmapped.pop(sid, None)
+            self._content_fabrics.pop(sid, None)
+            self._content_tooling.pop(sid, None)
+            self._content_sor_pipes.pop(sid, None)
+            self._content_other_pipes.pop(sid, None)
+        self._seen_dispatch_ids = live_ids
+
     def record_activity(self, entry: "ActivityEntry") -> None:
         """Append a discrete activity event and persist to Redis."""
         with self._lock:
@@ -1205,6 +1241,7 @@ class IngestStore:
                 self._seen_dispatch_ids.add(entry.dispatch_id)
             if len(self._activity_log) > _MAX_ACTIVITY:
                 self._activity_log = self._activity_log[-_MAX_ACTIVITY:]
+            self._evict_stale_content_tracking()
         self._persist_activity_log()
         self._save_to_disk()
         logger.info(
@@ -1244,15 +1281,18 @@ class IngestStore:
         pipes_set = self._content_pipes.setdefault(dispatch_id, set())
         pipes_set.add(pipe_id)
 
+        updated = False
         with self._lock:
             for entry in reversed(self._activity_log):
                 if entry.phase == "content" and entry.dispatch_id == dispatch_id:
                     entry.rows += rows_delta
                     entry.records += rows_delta
                     entry.pipes = len(pipes_set)
-                    self._save_to_disk()
-                    return
-        # No existing content entry — caller should create one first
+                    updated = True
+                    break
+        # Persist outside lock to avoid blocking other operations
+        if updated:
+            self._save_to_disk()
 
 
 # ---------------------------------------------------------------------------

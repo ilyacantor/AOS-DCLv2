@@ -43,6 +43,8 @@ _CACHE_DIR = os.path.join("backend", "cache")
 _CACHE_FILE = os.path.join(_CACHE_DIR, "pipe_cache.json")
 os.makedirs(_CACHE_DIR, exist_ok=True)
 
+_MAX_EXPORT_RECEIPTS = 100  # keep last N export receipts in memory
+
 
 # ---------------------------------------------------------------------------
 # Pipe Definition (what AAM's /export-pipes sends us)
@@ -609,6 +611,8 @@ class PipeDefinitionStore:
                 snapshot_name=snapshot_name,
             )
             self._export_receipts.append(receipt)
+            if len(self._export_receipts) > _MAX_EXPORT_RECEIPTS:
+                self._export_receipts = self._export_receipts[-_MAX_EXPORT_RECEIPTS:]
 
         # Write-through to Postgres (source of truth)
         self._persist_batch_to_postgres(definitions, receipt)
