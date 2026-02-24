@@ -597,6 +597,61 @@ class IngestStore:
             logger.warning(f"[IngestStore] Redis evict failed: {e}")
 
     # ------------------------------------------------------------------
+    # Cross-worker sync — reload lightweight lists from Redis so all
+    # workers see the same state.  Called before read endpoints.
+    # ------------------------------------------------------------------
+
+    def _sync_from_redis(self) -> None:
+        """Reload activity log, drop log, and receipts from Redis.
+
+        With --workers 2, each worker has its own in-memory state.
+        This ensures read endpoints return data written by ANY worker.
+        Cheap: 3 Redis GETs per call (~1ms total).
+        """
+        if not self._redis:
+            return
+        try:
+            r = self._redis
+
+            # Activity log
+            raw = r.get(f"{_REDIS_PREFIX}activity_log")
+            if raw:
+                entries = [ActivityEntry(**d) for d in json.loads(raw)]
+                with self._lock:
+                    self._activity_log = entries
+                    self._seen_dispatch_ids = {
+                        e.dispatch_id for e in entries if e.dispatch_id
+                    }
+
+            # Drop log
+            raw = r.get(f"{_REDIS_PREFIX}drop_log")
+            if raw:
+                with self._lock:
+                    self._drop_log = [DropEntry(**d) for d in json.loads(raw)]
+
+            # Receipts (metadata only — rows stay lazy)
+            order = r.lrange(f"{_REDIS_PREFIX}receipt_order", 0, -1)
+            if order:
+                new_receipts: OrderedDict[str, RunReceipt] = OrderedDict()
+                for storage_key in order:
+                    cached = self._receipts.get(storage_key)
+                    if cached:
+                        new_receipts[storage_key] = cached
+                        continue
+                    raw_r = r.hget(f"{_REDIS_PREFIX}receipts", storage_key)
+                    if raw_r:
+                        d = json.loads(raw_r)
+                        receipt = RunReceipt(**d)
+                        if ":" not in storage_key:
+                            storage_key = _make_key(receipt.run_id, receipt.pipe_id)
+                        new_receipts[storage_key] = receipt
+                with self._lock:
+                    self._receipts = new_receipts
+
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis sync failed: {e}")
+
+    # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
@@ -1019,6 +1074,7 @@ class IngestStore:
         return base
 
     def get_stats(self) -> Dict[str, Any]:
+        self._sync_from_redis()
         with self._lock:
             receipts = list(self._receipts.values())
             unique_sources = set(r.source_system for r in receipts)
@@ -1234,6 +1290,7 @@ class IngestStore:
 
     def get_drop_log(self, snapshot_name: Optional[str] = None) -> List[Dict[str, Any]]:
         """Return drop entries, newest first. Optional snapshot filter."""
+        self._sync_from_redis()
         with self._lock:
             entries = list(self._drop_log)
         if snapshot_name:
@@ -1282,11 +1339,13 @@ class IngestStore:
 
     def has_dispatch_activity(self, dispatch_id: str) -> bool:
         """Check if we've already recorded a dispatch-phase entry for this id."""
+        self._sync_from_redis()
         with self._lock:
             return dispatch_id in self._seen_dispatch_ids
 
     def has_phase(self, dispatch_id: str, phase: str) -> bool:
         """Check if a specific phase entry already exists for this dispatch."""
+        self._sync_from_redis()
         with self._lock:
             for entry in self._activity_log:
                 if entry.dispatch_id == dispatch_id and entry.phase == phase:
@@ -1295,6 +1354,7 @@ class IngestStore:
 
     def get_activity_log(self, snapshot_name: Optional[str] = None) -> List[Dict[str, Any]]:
         """Return activity entries, newest first. Optional snapshot filter."""
+        self._sync_from_redis()
         with self._lock:
             entries = list(self._activity_log)
         if snapshot_name:
