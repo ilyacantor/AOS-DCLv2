@@ -349,6 +349,16 @@ class IngestStore:
                 sum(len(v) for v in self._materialized.values()),
             )
 
+            # Enforce limits on legacy data
+            while self._total_rows > _MAX_BUFFERED_ROWS and self._row_buffer:
+                evicted_key, evicted_rows = self._row_buffer.popitem(last=False)
+                self._total_rows -= len(evicted_rows)
+                self._receipts.pop(evicted_key, None)
+            while self._materialized_total > _MAX_MATERIALIZED_POINTS and self._materialized:
+                evicted_key = next(iter(self._materialized))
+                evicted_pts = self._materialized.pop(evicted_key)
+                self._materialized_total -= len(evicted_pts)
+
             self._seen_dispatch_ids = set(data.get("seen_dispatch_ids", []))
             self._content_sources = {k: set(v) for k, v in data.get("content_sources", {}).items()}
             self._content_pipes = {k: set(v) for k, v in data.get("content_pipes", {}).items()}
@@ -468,6 +478,28 @@ class IngestStore:
                     self._materialized[storage_key] = points
                     materialized_loaded += len(points)
             self._materialized_total = materialized_loaded
+
+            # ── Enforce memory limits on rehydrated data ──
+            # Redis may hold data from before limits were reduced.
+            evicted_rows_count = 0
+            while self._total_rows > _MAX_BUFFERED_ROWS and self._row_buffer:
+                evicted_key, evicted_rows = self._row_buffer.popitem(last=False)
+                self._total_rows -= len(evicted_rows)
+                evicted_rows_count += len(evicted_rows)
+                self._receipts.pop(evicted_key, None)
+            while self._materialized_total > _MAX_MATERIALIZED_POINTS and self._materialized:
+                evicted_key = next(iter(self._materialized))
+                evicted_pts = self._materialized.pop(evicted_key)
+                self._materialized_total -= len(evicted_pts)
+            if len(self._schema_registry) > _MAX_SCHEMA_ENTRIES:
+                excess = len(self._schema_registry) - _MAX_SCHEMA_ENTRIES
+                for old_key in list(self._schema_registry.keys())[:excess]:
+                    del self._schema_registry[old_key]
+            if evicted_rows_count:
+                logger.info(
+                    f"[IngestStore] Evicted {evicted_rows_count:,} rows during "
+                    f"rehydration to stay within {_MAX_BUFFERED_ROWS:,} limit"
+                )
 
             # Backfill dispatch_id for legacy receipts (pre-dispatch era)
             backfilled = 0
