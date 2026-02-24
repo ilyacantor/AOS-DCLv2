@@ -48,6 +48,7 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+*:Zone.Identifier
 
 # Project specific — ignore generated schema caches, but track demo fixtures
 schemas/*
@@ -59,3 +60,7 @@ schemas/*
 dump.rdb
 data/history.json
 backend/cache/
+test_results_*.txt
+
+# Claude Code
+.claude/
