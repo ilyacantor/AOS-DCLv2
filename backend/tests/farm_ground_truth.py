@@ -22,7 +22,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-FARM_API_URL = os.getenv("FARM_API_URL", "https://autonomos.farm")
+FARM_API_URL = os.getenv("FARM_API_URL", "https://farmv2.onrender.com")
 
 
 @dataclass

@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 API_VERSION = os.getenv("DCL_API_VERSION", "2.0.0")
 
 # --- Farm API ---
-FARM_API_URL = os.getenv("FARM_API_URL", "https://autonomos.farm")
+FARM_API_URL = os.getenv("FARM_API_URL", "https://farmv2.onrender.com")
 
 # --- Confidence Thresholds (heuristic mapper) ---
 CONFIDENCE_POSITIVE_PATTERN = float(os.getenv("DCL_CONFIDENCE_POSITIVE_PATTERN", "0.95"))

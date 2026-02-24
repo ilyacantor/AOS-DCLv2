@@ -1,7 +1,7 @@
 # AOS-Farm API Integration Guide for DCL
 
 **Last Updated:** November 24, 2025  
-**Base URL:** `https://autonomos.farm` (production) or `http://localhost:5000` (development)
+**Base URL:** `https://farmv2.onrender.com` (production) or `http://localhost:5000` (development)
 
 ---
 
@@ -549,7 +549,7 @@ def transform_to_dcl(farm_data, source_id):
 import requests
 from typing import List, Dict
 
-FARM_URL = "https://autonomos.farm"
+FARM_URL = "https://farmv2.onrender.com"
 
 class FarmIntegration:
     def __init__(self, base_url: str = FARM_URL):
@@ -646,7 +646,7 @@ GET /api/synthetic/erp/invoices
 
 ## Next Steps for DCL Team
 
-1. **Test connectivity:** `curl https://autonomos.farm/health`
+1. **Test connectivity:** `curl https://farmv2.onrender.com/health`
 2. **Generate test data:** POST to generation endpoints
 3. **Fetch sample schemas:** GET with `?limit=5` to inspect structure
 4. **Implement transformation:** Map Farm JSON to DCL `SourceSystem/TableSchema/FieldSchema`

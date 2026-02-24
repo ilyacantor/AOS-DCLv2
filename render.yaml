@@ -24,7 +24,7 @@ services:
       - key: AAM_API_URL
         sync: false
       - key: FARM_API_URL
-        value: "https://autonomos.farm"
+        value: "https://farmv2.onrender.com"
       - key: CORS_ORIGINS
         sync: false
 

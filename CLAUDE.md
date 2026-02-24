@@ -118,7 +118,7 @@ AOS-DCLv2/
 
 ### Data Modes
 - **Demo**: Uses local CSV schemas from 9 legacy sources
-- **Farm**: Fetches real-time synthetic data from AOS-Farm API (https://autonomos.farm)
+- **Farm**: Fetches real-time synthetic data from AOS-Farm API (https://farmv2.onrender.com)
 
 ### Run Modes
 - **Dev**: Uses only heuristic mappings (fast, no LLM costs)
@@ -169,7 +169,7 @@ AOS-DCLv2/
 | `PINECONE_API_KEY` | Vector DB for RAG | Optional |
 | `SUPABASE_DB_URL` | PostgreSQL connection | Optional |
 | `DATABASE_URL` | PostgreSQL connection (alt) | Optional |
-| `FARM_API_URL` | Farm API base URL | Default: https://autonomos.farm |
+| `FARM_API_URL` | Farm API base URL | Default: https://farmv2.onrender.com |
 
 ## Development Conventions
 

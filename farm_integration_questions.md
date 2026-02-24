@@ -89,7 +89,7 @@
 
 **Target Outcome:** DCL will replace hardcoded `load_farm_schemas()` with HTTP calls to Farm, transforming your responses into our `SourceSystem → TableSchema → FieldSchema` model structure.
 
-**Base URL:** https://autonomos.farm/
+**Base URL:** https://farmv2.onrender.com/
 
 ---
 
