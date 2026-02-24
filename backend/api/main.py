@@ -9,6 +9,7 @@ that are tightly coupled to the DCLEngine singleton.
 
 import os
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -70,12 +71,11 @@ logger = get_logger(__name__)
 # App setup
 # =============================================================================
 
-app = FastAPI(title="DCL Engine API")
 
-
-@app.on_event("startup")
-async def enforce_security_constraints():
-    """Enforce Zero-Trust metadata-only constraints at startup."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup and shutdown lifecycle for the DCL Engine."""
+    # ---- Startup ----
     logger.info("=== DCL Zero-Trust Security Check ===")
 
     try:
@@ -98,10 +98,6 @@ async def enforce_security_constraints():
 
     logger.info("=== DCL Engine Ready (Metadata-Only Mode) ===")
 
-
-@app.on_event("startup")
-async def build_semantic_graph():
-    """Build the semantic graph at startup (best-effort)."""
     try:
         from backend.engine.graph_store import rebuild_graph
         rebuild_graph()
@@ -109,6 +105,25 @@ async def build_semantic_graph():
     except Exception as e:
         # Non-fatal — graph will be built on first DCL run
         logger.warning(f"[Startup] Semantic graph build deferred: {e}")
+
+    yield
+
+    # ---- Shutdown ----
+    logger.info("[Shutdown] Closing database connection pools...")
+    try:
+        from backend.semantic_mapper.persist_mappings import MappingPersistence
+        MappingPersistence.close_pool()
+    except Exception as e:
+        logger.warning(f"[Shutdown] MappingPersistence pool close error: {e}")
+    try:
+        from backend.api.pipe_store import PipeDefinitionStore
+        PipeDefinitionStore.close_pool()
+    except Exception as e:
+        logger.warning(f"[Shutdown] PipeStore pool close error: {e}")
+    logger.info("[Shutdown] Database pools closed")
+
+
+app = FastAPI(title="DCL Engine API", lifespan=lifespan)
 
 
 if CORS_ORIGINS == ["*"]:

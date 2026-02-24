@@ -526,59 +526,57 @@ class SchemaLoader:
         database_url = os.getenv("DATABASE_URL")
         if not database_url:
             return []
-        
+
         pool = SchemaLoader._get_pool()
         if pool is None:
             return []
-        
+
         try:
             with pool._get_connection() as conn:
                 with conn.cursor() as cursor:
+                    # Fetch all stream sources
                     cursor.execute("""
                         SELECT id, name, type, vendor, category, trust_score, discovery_status
                         FROM source_systems
                         WHERE type = 'stream'
                     """)
-                    
-                    sources = []
-                    rows = cursor.fetchall()
-                    
-                for row in rows:
+                    source_rows = cursor.fetchall()
+
+                    if not source_rows:
+                        return []
+
+                    # Fetch all mappings for these sources in one query
+                    source_ids = [r[0] for r in source_rows]
+                    cursor.execute("""
+                        SELECT DISTINCT source_id, table_name, field_name, concept_id, confidence
+                        FROM field_concept_mappings
+                        WHERE source_id = ANY(%s)
+                        ORDER BY source_id, table_name, field_name
+                    """, (source_ids,))
+
+                    # Group mappings by source_id → table_name → fields
+                    mappings_by_source: Dict[str, Dict[str, List[FieldSchema]]] = {}
+                    for mapping_row in cursor.fetchall():
+                        sid, table_name, field_name = mapping_row[0], mapping_row[1], mapping_row[2]
+                        mappings_by_source.setdefault(sid, {}).setdefault(table_name, []).append(
+                            FieldSchema(name=field_name, type="string", semantic_hint=None, nullable=True)
+                        )
+
+                sources = []
+                for row in source_rows:
                     source_id = row[0]
-                    
-                    with pool._get_connection() as conn2:
-                        with conn2.cursor() as cursor2:
-                            cursor2.execute("""
-                                SELECT DISTINCT table_name, field_name, concept_id, confidence
-                                FROM field_concept_mappings
-                                WHERE source_id = %s
-                                ORDER BY table_name, field_name
-                            """, (source_id,))
-                            
-                            tables_data: Dict[str, List[FieldSchema]] = {}
-                            for mapping_row in cursor2.fetchall():
-                                table_name = mapping_row[0]
-                                field_name = mapping_row[1]
-                                
-                                if table_name not in tables_data:
-                                    tables_data[table_name] = []
-                                
-                                tables_data[table_name].append(FieldSchema(
-                                    name=field_name,
-                                    type="string",
-                                    semantic_hint=None,
-                                    nullable=True
-                                ))
-                    
-                    tables = []
-                    for table_name, fields in tables_data.items():
-                        tables.append(TableSchema(
+                    tables_data = mappings_by_source.get(source_id, {})
+
+                    tables = [
+                        TableSchema(
                             id=f"{source_id}.{table_name}",
                             system_id=source_id,
                             name=table_name,
-                            fields=fields
-                        ))
-                    
+                            fields=fields,
+                        )
+                        for table_name, fields in tables_data.items()
+                    ]
+
                     source = SourceSystem(
                         id=source_id,
                         name=row[1],
@@ -592,16 +590,16 @@ class SchemaLoader:
                         category=row[4],
                     )
                     sources.append(source)
-                    
+
                     if narration and run_id:
                         total_fields = sum(len(t.fields) for t in tables)
                         narration.add_message(
                             run_id, "SchemaLoader",
                             f"Stream source: {row[1]} - {len(tables)} tables, {total_fields} fields"
                         )
-                
+
                 return sources
-            
+
         except Exception as e:
             logger.warning(f"Failed to load stream sources: {e}")
             return []

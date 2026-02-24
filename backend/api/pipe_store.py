@@ -668,6 +668,20 @@ class PipeDefinitionStore:
             except Exception:
                 pass
 
+    @staticmethod
+    def close_pool() -> None:
+        """Close the Postgres connection pool. Call on shutdown."""
+        global _pg_connection_pool, _pg_pool_initialized
+        if _pg_connection_pool is not None:
+            try:
+                _pg_connection_pool.closeall()
+                logger.info("[PipeStore] Postgres pool closed")
+            except Exception as e:
+                logger.warning(f"[PipeStore] Error closing pool: {e}")
+            finally:
+                _pg_connection_pool = None
+                _pg_pool_initialized = False
+
     def get_stats(self) -> Dict[str, Any]:
         """Return store statistics."""
         with self._lock:
