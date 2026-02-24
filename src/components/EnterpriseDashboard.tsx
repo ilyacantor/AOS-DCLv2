@@ -73,10 +73,17 @@ function extractMappingFromLink(
   };
 }
 
+type KpiPanel = 'sources' | 'canonical' | 'totalMappings' | 'highConfidence' | 'needsReview';
+
 export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [confidenceFilter, setConfidenceFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [expandedKpi, setExpandedKpi] = useState<KpiPanel | null>(null);
+
+  const toggleKpi = (panel: KpiPanel) => {
+    setExpandedKpi(prev => prev === panel ? null : panel);
+  };
 
   const { mappings, sources, sourceNodes, stats, fabricStats } = useMemo(() => {
     if (!data) return { 
@@ -267,90 +274,331 @@ export function EnterpriseDashboard({ data, runId }: EnterpriseDashboardProps) {
           </div>
         </div>
       ) : (
-        // Demo/Farm Mode - Standard KPIs
+        // Demo/Farm Mode - Standard KPIs (clickable accordion)
+        <>
         <div className="grid grid-cols-5 gap-3 p-4 border-b shrink-0">
-          <div className="bg-card rounded-lg p-3 border">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-              <Layers className="w-3.5 h-3.5" />
-              <span>Sources</span>
+          <div
+            className={`bg-card rounded-lg p-3 border cursor-pointer transition-all hover:border-primary/50 ${
+              expandedKpi === 'sources' ? 'border-primary ring-1 ring-primary/30' : ''
+            }`}
+            onClick={() => toggleKpi('sources')}
+          >
+            <div className="flex items-center justify-between text-xs mb-1">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Layers className="w-3.5 h-3.5" />
+                <span>Sources</span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${expandedKpi === 'sources' ? 'rotate-180' : ''}`} />
             </div>
             <div className="text-2xl font-bold">{sourceNodes.length}</div>
           </div>
-          <div className="bg-card rounded-lg p-3 border">
-            <div className="flex items-center gap-2 text-green-400 text-xs mb-1">
-              <Shield className="w-3.5 h-3.5" />
-              <span>Canonical</span>
+          <div
+            className={`bg-card rounded-lg p-3 border cursor-pointer transition-all hover:border-green-500/50 ${
+              expandedKpi === 'canonical' ? 'border-green-500 ring-1 ring-green-500/30' : ''
+            }`}
+            onClick={() => toggleKpi('canonical')}
+          >
+            <div className="flex items-center justify-between text-xs mb-1">
+              <div className="flex items-center gap-2 text-green-400">
+                <Shield className="w-3.5 h-3.5" />
+                <span>Canonical</span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${expandedKpi === 'canonical' ? 'rotate-180' : ''}`} />
             </div>
             <div className="text-2xl font-bold text-green-400">{stats.canonical}</div>
           </div>
-          <div className="bg-card rounded-lg p-3 border">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-              <GitBranch className="w-3.5 h-3.5" />
-              <span>Total Mappings</span>
+          <div
+            className={`bg-card rounded-lg p-3 border cursor-pointer transition-all hover:border-primary/50 ${
+              expandedKpi === 'totalMappings' ? 'border-primary ring-1 ring-primary/30' : ''
+            }`}
+            onClick={() => toggleKpi('totalMappings')}
+          >
+            <div className="flex items-center justify-between text-xs mb-1">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <GitBranch className="w-3.5 h-3.5" />
+                <span>Total Mappings</span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${expandedKpi === 'totalMappings' ? 'rotate-180' : ''}`} />
             </div>
             <div className="text-2xl font-bold">{stats.total}</div>
           </div>
-          <div className="bg-card rounded-lg p-3 border">
-            <div className="flex items-center gap-2 text-green-400 text-xs mb-1">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>High Confidence</span>
+          <div
+            className={`bg-card rounded-lg p-3 border cursor-pointer transition-all hover:border-green-500/50 ${
+              expandedKpi === 'highConfidence' ? 'border-green-500 ring-1 ring-green-500/30' : ''
+            }`}
+            onClick={() => toggleKpi('highConfidence')}
+          >
+            <div className="flex items-center justify-between text-xs mb-1">
+              <div className="flex items-center gap-2 text-green-400">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>High Confidence</span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${expandedKpi === 'highConfidence' ? 'rotate-180' : ''}`} />
             </div>
             <div className="text-2xl font-bold text-green-400">{stats.high}</div>
           </div>
-          <div className="bg-card rounded-lg p-3 border">
-            <div className="flex items-center gap-2 text-yellow-400 text-xs mb-1">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Needs Review</span>
+          <div
+            className={`bg-card rounded-lg p-3 border cursor-pointer transition-all hover:border-yellow-500/50 ${
+              expandedKpi === 'needsReview' ? 'border-yellow-500 ring-1 ring-yellow-500/30' : ''
+            }`}
+            onClick={() => toggleKpi('needsReview')}
+          >
+            <div className="flex items-center justify-between text-xs mb-1">
+              <div className="flex items-center gap-2 text-yellow-400">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Needs Review</span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${expandedKpi === 'needsReview' ? 'rotate-180' : ''}`} />
             </div>
             <div className="text-2xl font-bold text-yellow-400">{stats.medium + stats.low}</div>
           </div>
         </div>
-      )}
 
-      {sourceNodes.length > 0 && (
-        <div className="p-3 border-b shrink-0 bg-card/20">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-            <Building2 className="w-3.5 h-3.5" />
-            <span>Source Registry</span>
-            {stats.pending > 0 && (
-              <span className="flex items-center gap-1 text-yellow-400">
-                <HelpCircle className="w-3 h-3" />
-                {stats.pending} pending triage
-              </span>
+        {/* Accordion Detail Panel */}
+        {expandedKpi && (
+          <div className="border-b shrink-0 bg-card/30 overflow-auto" style={{ maxHeight: '300px' }}>
+            {/* Sources Panel */}
+            {expandedKpi === 'sources' && (
+              <div className="p-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span>Source Registry — {sourceNodes.length} discovered systems</span>
+                  {stats.pending > 0 && (
+                    <span className="flex items-center gap-1 text-yellow-400">
+                      <HelpCircle className="w-3 h-3" />
+                      {stats.pending} pending triage
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {sourceNodes.map(node => {
+                    const metrics = node.metrics as Record<string, unknown> | undefined;
+                    const trustScore = (metrics?.trustScore ?? metrics?.trust_score ?? 50) as number;
+                    const discoveryStatus = (metrics?.discoveryStatus ?? metrics?.discovery_status) as string | undefined;
+                    const vendor = metrics?.vendor as string | undefined;
+                    const isCanonical = discoveryStatus === 'canonical';
+                    return (
+                      <div
+                        key={node.id}
+                        className={`flex items-center gap-2 px-2 py-1 rounded text-xs border ${
+                          isCanonical
+                            ? 'bg-green-500/10 border-green-500/30'
+                            : 'bg-yellow-500/10 border-yellow-500/30'
+                        }`}
+                        title={`${node.label}\nVendor: ${vendor || 'Unknown'}\nTrust: ${trustScore}%\nStatus: ${discoveryStatus || 'unknown'}`}
+                      >
+                        {isCanonical ? (
+                          <Shield className="w-3 h-3 text-green-400" />
+                        ) : (
+                          <HelpCircle className="w-3 h-3 text-yellow-400" />
+                        )}
+                        <span className="font-medium">{node.label}</span>
+                        <span className={`font-mono ${trustScore >= 80 ? 'text-green-400' : trustScore >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                          {trustScore}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Canonical Panel */}
+            {expandedKpi === 'canonical' && (
+              <div className="p-3">
+                <div className="text-xs text-muted-foreground mb-2">
+                  <span className="text-green-400 font-medium">Canonical sources</span> are verified Systems of Record — the authoritative data source for each domain.
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {sourceNodes
+                    .filter(node => {
+                      const metrics = node.metrics as Record<string, unknown> | undefined;
+                      const status = metrics?.discoveryStatus ?? metrics?.discovery_status;
+                      return status === 'canonical';
+                    })
+                    .map(node => {
+                      const metrics = node.metrics as Record<string, unknown> | undefined;
+                      const trustScore = (metrics?.trustScore ?? metrics?.trust_score ?? 50) as number;
+                      const vendor = metrics?.vendor as string | undefined;
+                      return (
+                        <div
+                          key={node.id}
+                          className="flex items-center gap-2 px-2 py-1 rounded text-xs border bg-green-500/10 border-green-500/30"
+                          title={`${node.label}\nVendor: ${vendor || 'Unknown'}\nTrust: ${trustScore}%`}
+                        >
+                          <Shield className="w-3 h-3 text-green-400" />
+                          <span className="font-medium">{node.label}</span>
+                          <span className="font-mono text-green-400">{trustScore}</span>
+                        </div>
+                      );
+                    })}
+                  {stats.canonical === 0 && (
+                    <div className="text-xs text-muted-foreground">No canonical sources identified yet.</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Total Mappings Panel */}
+            {expandedKpi === 'totalMappings' && (
+              <div className="p-3">
+                <div className="text-xs text-muted-foreground mb-3">Confidence distribution across {stats.total} field-to-concept mappings</div>
+                {/* Stacked bar */}
+                {stats.total > 0 && (
+                  <div className="mb-3">
+                    <div className="flex h-4 rounded overflow-hidden">
+                      {stats.high > 0 && (
+                        <div
+                          className="bg-green-500/70 flex items-center justify-center text-[10px] font-mono text-white"
+                          style={{ width: `${(stats.high / stats.total) * 100}%` }}
+                          title={`High: ${stats.high}`}
+                        >{stats.high}</div>
+                      )}
+                      {stats.medium > 0 && (
+                        <div
+                          className="bg-yellow-500/70 flex items-center justify-center text-[10px] font-mono text-white"
+                          style={{ width: `${(stats.medium / stats.total) * 100}%` }}
+                          title={`Medium: ${stats.medium}`}
+                        >{stats.medium}</div>
+                      )}
+                      {stats.low > 0 && (
+                        <div
+                          className="bg-red-500/70 flex items-center justify-center text-[10px] font-mono text-white"
+                          style={{ width: `${(stats.low / stats.total) * 100}%` }}
+                          title={`Low: ${stats.low}`}
+                        >{stats.low}</div>
+                      )}
+                    </div>
+                    <div className="flex gap-4 mt-2 text-[10px]">
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-green-500/70" /> High ({'\u2265'}85%): {stats.high}</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-yellow-500/70" /> Medium (60-84%): {stats.medium}</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-red-500/70" /> Low ({'<'}60%): {stats.low}</span>
+                    </div>
+                  </div>
+                )}
+                {/* Per-source breakdown */}
+                <div className="text-xs text-muted-foreground mb-1.5">Per-source breakdown</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {sources.map(source => {
+                    const sourceMappings = mappings.filter(m => m.sourceSystem === source);
+                    const sHigh = sourceMappings.filter(m => m.confidence >= CONFIDENCE.HIGH).length;
+                    const sMed = sourceMappings.filter(m => m.confidence >= CONFIDENCE.MEDIUM && m.confidence < CONFIDENCE.HIGH).length;
+                    const sLow = sourceMappings.filter(m => m.confidence < CONFIDENCE.MEDIUM).length;
+                    return (
+                      <div key={source} className="flex items-center gap-2 text-xs bg-secondary/20 rounded px-2 py-1">
+                        <span className="font-medium truncate max-w-[100px]" title={source}>{source}</span>
+                        <span className="font-mono text-muted-foreground">{sourceMappings.length}</span>
+                        <span className="text-green-400 font-mono">{sHigh}</span>
+                        <span className="text-yellow-400 font-mono">{sMed}</span>
+                        <span className="text-red-400 font-mono">{sLow}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* High Confidence Panel */}
+            {expandedKpi === 'highConfidence' && (
+              <div className="p-3">
+                <div className="text-xs text-muted-foreground mb-2">
+                  High-confidence mappings ({'\u2265'}85%) — verified field-to-concept links grouped by source
+                </div>
+                {sources.map(source => {
+                  const highMappings = mappings.filter(m => m.sourceSystem === source && m.confidence >= CONFIDENCE.HIGH);
+                  if (highMappings.length === 0) return null;
+                  return (
+                    <div key={source} className="mb-2">
+                      <div className="text-xs font-medium text-primary mb-1">{source} ({highMappings.length})</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {highMappings.slice(0, 10).map(m => (
+                          <div key={m.id} className="flex items-center gap-1 text-[11px] bg-green-500/10 border border-green-500/20 rounded px-1.5 py-0.5">
+                            <span className="font-mono text-muted-foreground">{m.sourceField}</span>
+                            <ArrowRight className="w-3 h-3 text-green-400" />
+                            <span className="font-medium text-green-400">{m.targetConcept}</span>
+                          </div>
+                        ))}
+                        {highMappings.length > 10 && (
+                          <span className="text-[10px] text-muted-foreground self-center">+{highMappings.length - 10} more</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {stats.high === 0 && (
+                  <div className="text-xs text-muted-foreground">No high-confidence mappings yet.</div>
+                )}
+              </div>
+            )}
+
+            {/* Needs Review Panel */}
+            {expandedKpi === 'needsReview' && (
+              <div className="p-3">
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-md p-2.5 mb-3 text-xs">
+                  <div className="font-medium text-yellow-400 mb-1">What are these {stats.medium + stats.low} items?</div>
+                  <div className="text-muted-foreground">
+                    These are field-to-concept semantic mappings where the system's confidence is below 85%.
+                    They need human verification before promotion to the canonical catalog.
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Medium confidence column */}
+                  <div>
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-yellow-400 mb-1.5">
+                      <AlertTriangle className="w-3 h-3" />
+                      Medium (60-84%) — {stats.medium}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mb-2">Likely correct, needs human verification</div>
+                    <div className="space-y-1">
+                      {mappings
+                        .filter(m => m.confidence >= CONFIDENCE.MEDIUM && m.confidence < CONFIDENCE.HIGH)
+                        .slice(0, 8)
+                        .map(m => (
+                          <div key={m.id} className="flex items-center gap-1 text-[11px] bg-yellow-500/10 border border-yellow-500/20 rounded px-1.5 py-0.5">
+                            <span className="font-mono text-muted-foreground truncate max-w-[80px]" title={m.sourceField}>{m.sourceField}</span>
+                            <ArrowRight className="w-3 h-3 text-yellow-400 shrink-0" />
+                            <span className="font-medium text-yellow-400 truncate max-w-[80px]" title={m.targetConcept}>{m.targetConcept}</span>
+                            <span className="font-mono text-[10px] text-yellow-400/70 shrink-0">{(m.confidence * 100).toFixed(0)}%</span>
+                          </div>
+                        ))}
+                      {stats.medium > 8 && (
+                        <div className="text-[10px] text-muted-foreground">+{stats.medium - 8} more</div>
+                      )}
+                    </div>
+                  </div>
+                  {/* Low confidence column */}
+                  <div>
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-red-400 mb-1.5">
+                      <AlertCircle className="w-3 h-3" />
+                      Low ({'<'}60%) — {stats.low}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mb-2">Likely incorrect, needs manual mapping</div>
+                    <div className="space-y-1">
+                      {mappings
+                        .filter(m => m.confidence < CONFIDENCE.MEDIUM)
+                        .slice(0, 8)
+                        .map(m => (
+                          <div key={m.id} className="flex items-center gap-1 text-[11px] bg-red-500/10 border border-red-500/20 rounded px-1.5 py-0.5">
+                            <span className="font-mono text-muted-foreground truncate max-w-[80px]" title={m.sourceField}>{m.sourceField}</span>
+                            <ArrowRight className="w-3 h-3 text-red-400 shrink-0" />
+                            <span className="font-medium text-red-400 truncate max-w-[80px]" title={m.targetConcept}>{m.targetConcept}</span>
+                            <span className="font-mono text-[10px] text-red-400/70 shrink-0">{(m.confidence * 100).toFixed(0)}%</span>
+                          </div>
+                        ))}
+                      {stats.low > 8 && (
+                        <div className="text-[10px] text-muted-foreground">+{stats.low - 8} more</div>
+                      )}
+                      {stats.low === 0 && (
+                        <div className="text-[10px] text-muted-foreground">No low-confidence mappings.</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
-          <div className="flex flex-wrap gap-2">
-            {sourceNodes.map(node => {
-              const metrics = node.metrics as Record<string, unknown> | undefined;
-              const trustScore = (metrics?.trustScore ?? metrics?.trust_score ?? 50) as number;
-              const discoveryStatus = (metrics?.discoveryStatus ?? metrics?.discovery_status) as string | undefined;
-              const vendor = metrics?.vendor as string | undefined;
-              const isCanonical = discoveryStatus === 'canonical';
-
-              return (
-                <div
-                  key={node.id}
-                  className={`flex items-center gap-2 px-2 py-1 rounded text-xs border ${
-                    isCanonical
-                      ? 'bg-green-500/10 border-green-500/30'
-                      : 'bg-yellow-500/10 border-yellow-500/30'
-                  }`}
-                  title={`${node.label}\nVendor: ${vendor || 'Unknown'}\nTrust: ${trustScore}%\nStatus: ${discoveryStatus || 'unknown'}`}
-                >
-                  {isCanonical ? (
-                    <Shield className="w-3 h-3 text-green-400" />
-                  ) : (
-                    <HelpCircle className="w-3 h-3 text-yellow-400" />
-                  )}
-                  <span className="font-medium">{node.label}</span>
-                  <span className={`font-mono ${trustScore >= 80 ? 'text-green-400' : trustScore >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
-                    {trustScore}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        )}
+        </>
       )}
 
       <div className="flex items-center gap-3 p-3 border-b shrink-0 bg-card/30">
