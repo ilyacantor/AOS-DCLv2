@@ -28,8 +28,8 @@ concepts:
     expected_type: string
     typical_source_systems: [netsuite, sap, quickbooks, xero]
     persona_relevance:
-      CFO: 1.0
-      COO: 0.4
+      cfo: 1.0
+      coo: 0.4
 
   - id: invoice
     concept_id: FIN-006
@@ -53,8 +53,8 @@ concepts:
     expected_type: string
     typical_source_systems: [netsuite, stripe, bill_com, quickbooks]
     persona_relevance:
-      CFO: 0.9
-      COO: 0.4
+      cfo: 0.9
+      coo: 0.4
 
   - id: revenue
     concept_id: FIN-010
@@ -82,9 +82,9 @@ concepts:
     expected_type: float
     typical_source_systems: [netsuite, salesforce, zuora, stripe]
     persona_relevance:
-      CFO: 1.0
-      CRO: 0.9
-      COO: 0.5
+      cfo: 1.0
+      cro: 0.9
+      coo: 0.5
 
   - id: cost
     concept_id: FIN-011
@@ -110,9 +110,9 @@ concepts:
     expected_type: float
     typical_source_systems: [expensify, concur, brex, ramp, netsuite]
     persona_relevance:
-      CFO: 1.0
-      COO: 0.7
-      CTO: 0.6
+      cfo: 1.0
+      coo: 0.7
+      cto: 0.6
 
   - id: currency
     concept_id: FIN-015
@@ -133,7 +133,7 @@ concepts:
     expected_type: string
     typical_source_systems: [any_multi_currency_system, netsuite, sap]
     persona_relevance:
-      CFO: 0.7
+      cfo: 0.7
 
   - id: journal_entry
     concept_id: FIN-002
@@ -156,7 +156,7 @@ concepts:
     expected_type: string
     typical_source_systems: [netsuite, sap, oracle_erp]
     persona_relevance:
-      CFO: 0.9
+      cfo: 0.9
 
   - id: cost_center
     concept_id: FIN-003
@@ -178,8 +178,8 @@ concepts:
     expected_type: string
     typical_source_systems: [sap, workday, oracle]
     persona_relevance:
-      CFO: 0.9
-      COO: 0.6
+      cfo: 0.9
+      coo: 0.6
 
   - id: budget
     concept_id: FIN-004
@@ -202,8 +202,8 @@ concepts:
     expected_type: float
     typical_source_systems: [adaptive_insights, anaplan, vena]
     persona_relevance:
-      CFO: 1.0
-      COO: 0.5
+      cfo: 1.0
+      coo: 0.5
 
   - id: forecast
     concept_id: FIN-005
@@ -225,8 +225,8 @@ concepts:
     expected_type: float
     typical_source_systems: [clari, anaplan, pigment]
     persona_relevance:
-      CFO: 0.9
-      CRO: 0.7
+      cfo: 0.9
+      cro: 0.7
 
   - id: payment
     concept_id: FIN-007
@@ -250,7 +250,7 @@ concepts:
     expected_type: string
     typical_source_systems: [stripe, paypal, bill_com, banks]
     persona_relevance:
-      CFO: 0.8
+      cfo: 0.8
 
   - id: payment_status
     concept_id: FIN-PS1
@@ -269,7 +269,7 @@ concepts:
     expected_type: string
     typical_source_systems: [stripe, netsuite, bill_com]
     persona_relevance:
-      CFO: 0.6
+      cfo: 0.6
 
   - id: accounts_receivable
     concept_id: FIN-008
@@ -295,7 +295,7 @@ concepts:
     expected_type: float
     typical_source_systems: [netsuite, sap, quickbooks]
     persona_relevance:
-      CFO: 0.9
+      cfo: 0.9
 
   - id: accounts_payable
     concept_id: FIN-009
@@ -318,8 +318,8 @@ concepts:
     expected_type: float
     typical_source_systems: [netsuite, sap, coupa]
     persona_relevance:
-      CFO: 0.9
-      COO: 0.4
+      cfo: 0.9
+      coo: 0.4
 
   - id: financial_period
     concept_id: FIN-012
@@ -343,7 +343,7 @@ concepts:
     expected_type: string
     typical_source_systems: [netsuite, sap, any_erp]
     persona_relevance:
-      CFO: 0.8
+      cfo: 0.8
 
   - id: tax
     concept_id: FIN-013
@@ -368,7 +368,7 @@ concepts:
     expected_type: float
     typical_source_systems: [avalara, vertex, netsuite]
     persona_relevance:
-      CFO: 0.8
+      cfo: 0.8
 
   - id: fixed_asset
     concept_id: FIN-014
@@ -392,7 +392,7 @@ concepts:
     expected_type: string
     typical_source_systems: [sap, oracle, netsuite]
     persona_relevance:
-      CFO: 0.7
+      cfo: 0.7
 
   # ─── Sales & Revenue ─────────────────────────────────────
   - id: account
@@ -416,9 +416,9 @@ concepts:
     expected_type: string
     typical_source_systems: [salesforce, hubspot, dynamics]
     persona_relevance:
-      CRO: 1.0
-      CFO: 0.6
-      COO: 0.5
+      cro: 1.0
+      cfo: 0.6
+      coo: 0.5
 
   - id: opportunity
     concept_id: SAL-002
@@ -443,8 +443,8 @@ concepts:
     expected_type: string
     typical_source_systems: [salesforce, hubspot, pipedrive]
     persona_relevance:
-      CRO: 1.0
-      CFO: 0.5
+      cro: 1.0
+      cfo: 0.5
 
   - id: subscription
     concept_id: SAL-007
@@ -470,8 +470,8 @@ concepts:
     expected_type: string
     typical_source_systems: [zuora, chargebee, stripe]
     persona_relevance:
-      CFO: 0.9
-      CRO: 0.8
+      cfo: 0.9
+      cro: 0.8
 
   - id: pipeline_stage
     concept_id: SAL-003
@@ -495,7 +495,7 @@ concepts:
     expected_type: string
     typical_source_systems: [salesforce, hubspot]
     persona_relevance:
-      CRO: 0.9
+      cro: 0.9
 
   - id: quote
     concept_id: SAL-004
@@ -519,8 +519,8 @@ concepts:
     expected_type: string
     typical_source_systems: [salesforce_cpq, dealhub, pandadoc]
     persona_relevance:
-      CRO: 0.8
-      CFO: 0.4
+      cro: 0.8
+      cfo: 0.4
 
   - id: contract
     concept_id: SAL-005
@@ -545,8 +545,8 @@ concepts:
     expected_type: string
     typical_source_systems: [salesforce, ironclad, docusign_clm]
     persona_relevance:
-      CRO: 0.8
-      CFO: 0.6
+      cro: 0.8
+      cfo: 0.6
 
   - id: order
     concept_id: SAL-006
@@ -568,8 +568,8 @@ concepts:
     expected_type: string
     typical_source_systems: [salesforce, shopify, netsuite]
     persona_relevance:
-      CRO: 0.7
-      CFO: 0.5
+      cro: 0.7
+      cfo: 0.5
 
   - id: renewal
     concept_id: SAL-008
@@ -590,8 +590,8 @@ concepts:
     expected_type: string
     typical_source_systems: [salesforce, gainsight, zuora]
     persona_relevance:
-      CRO: 0.9
-      CFO: 0.6
+      cro: 0.9
+      cfo: 0.6
 
   - id: territory
     concept_id: SAL-009
@@ -615,7 +615,7 @@ concepts:
     expected_type: string
     typical_source_systems: [salesforce, anaplan]
     persona_relevance:
-      CRO: 0.8
+      cro: 0.8
 
   - id: quota
     concept_id: SAL-010
@@ -637,8 +637,8 @@ concepts:
     expected_type: float
     typical_source_systems: [salesforce, clari, xactly]
     persona_relevance:
-      CRO: 1.0
-      CFO: 0.5
+      cro: 1.0
+      cfo: 0.5
 
   - id: commission
     concept_id: SAL-011
@@ -660,9 +660,9 @@ concepts:
     expected_type: float
     typical_source_systems: [xactly, captivateiq, spiff]
     persona_relevance:
-      CRO: 0.8
-      CFO: 0.6
-      CHRO: 0.4
+      cro: 0.8
+      cfo: 0.6
+      chro: 0.4
 
   - id: contact
     concept_id: SAL-012
@@ -686,7 +686,7 @@ concepts:
     expected_type: string
     typical_source_systems: [salesforce, hubspot, outreach]
     persona_relevance:
-      CRO: 0.7
+      cro: 0.7
 
   - id: sales_activity
     concept_id: SAL-013
@@ -710,7 +710,7 @@ concepts:
     expected_type: string
     typical_source_systems: [salesforce, outreach, gong]
     persona_relevance:
-      CRO: 0.6
+      cro: 0.6
 
   - id: win_loss
     concept_id: SAL-014
@@ -734,8 +734,8 @@ concepts:
     expected_type: string
     typical_source_systems: [salesforce, clari, gong]
     persona_relevance:
-      CRO: 0.9
-      CFO: 0.4
+      cro: 0.9
+      cfo: 0.4
 
   # ─── Human Resources ─────────────────────────────────────
   - id: employee
@@ -766,9 +766,9 @@ concepts:
     expected_type: string
     typical_source_systems: [workday, bamboohr, adp]
     persona_relevance:
-      CHRO: 1.0
-      COO: 0.7
-      CFO: 0.5
+      chro: 1.0
+      coo: 0.7
+      cfo: 0.5
 
   - id: position
     concept_id: HR-002
@@ -793,8 +793,8 @@ concepts:
     expected_type: string
     typical_source_systems: [workday, greenhouse, lever]
     persona_relevance:
-      CHRO: 0.9
-      COO: 0.4
+      chro: 0.9
+      coo: 0.4
 
   - id: department
     concept_id: HR-003
@@ -820,9 +820,9 @@ concepts:
     expected_type: string
     typical_source_systems: [workday, bamboohr, any_hris]
     persona_relevance:
-      CHRO: 0.8
-      COO: 0.6
-      CFO: 0.4
+      chro: 0.8
+      coo: 0.6
+      cfo: 0.4
 
   - id: compensation
     concept_id: HR-004
@@ -848,8 +848,8 @@ concepts:
     expected_type: float
     typical_source_systems: [workday, pave, carta]
     persona_relevance:
-      CHRO: 1.0
-      CFO: 0.7
+      chro: 1.0
+      cfo: 0.7
 
   - id: benefit
     concept_id: HR-005
@@ -873,7 +873,7 @@ concepts:
     expected_type: string
     typical_source_systems: [workday, gusto, justworks]
     persona_relevance:
-      CHRO: 0.9
+      chro: 0.9
 
   - id: requisition
     concept_id: HR-006
@@ -896,7 +896,7 @@ concepts:
     expected_type: string
     typical_source_systems: [greenhouse, lever, workday]
     persona_relevance:
-      CHRO: 0.9
+      chro: 0.9
 
   - id: candidate
     concept_id: HR-007
@@ -921,7 +921,7 @@ concepts:
     expected_type: string
     typical_source_systems: [greenhouse, lever, icims]
     persona_relevance:
-      CHRO: 0.8
+      chro: 0.8
 
   - id: performance_review
     concept_id: HR-008
@@ -945,7 +945,7 @@ concepts:
     expected_type: string
     typical_source_systems: [lattice, culture_amp, fifteen_five]
     persona_relevance:
-      CHRO: 0.9
+      chro: 0.9
 
   - id: goal
     concept_id: HR-009
@@ -969,8 +969,8 @@ concepts:
     expected_type: string
     typical_source_systems: [lattice, betterworks, workday]
     persona_relevance:
-      CHRO: 0.7
-      COO: 0.4
+      chro: 0.7
+      coo: 0.4
 
   - id: time_off
     concept_id: HR-010
@@ -996,8 +996,8 @@ concepts:
     expected_type: string
     typical_source_systems: [workday, bamboohr, gusto]
     persona_relevance:
-      CHRO: 0.7
-      COO: 0.3
+      chro: 0.7
+      coo: 0.3
 
   - id: training
     concept_id: HR-011
@@ -1021,7 +1021,7 @@ concepts:
     expected_type: string
     typical_source_systems: [cornerstone, udemy_business, workday]
     persona_relevance:
-      CHRO: 0.7
+      chro: 0.7
 
   - id: org_unit
     concept_id: HR-012
@@ -1047,8 +1047,8 @@ concepts:
     expected_type: string
     typical_source_systems: [workday, sap_successfactors]
     persona_relevance:
-      CHRO: 0.8
-      COO: 0.5
+      chro: 0.8
+      coo: 0.5
 
   - id: headcount
     concept_id: HR-013
@@ -1074,9 +1074,9 @@ concepts:
     expected_type: float
     typical_source_systems: [workday, any_hris]
     persona_relevance:
-      CHRO: 1.0
-      CFO: 0.6
-      COO: 0.5
+      chro: 1.0
+      cfo: 0.6
+      coo: 0.5
 
   # ─── Customer Success ────────────────────────────────────
   - id: ticket
@@ -1103,8 +1103,8 @@ concepts:
     expected_type: string
     typical_source_systems: [zendesk, freshdesk, servicenow]
     persona_relevance:
-      COO: 0.8
-      CRO: 0.5
+      coo: 0.8
+      cro: 0.5
 
   - id: incident
     concept_id: CS-002
@@ -1134,8 +1134,8 @@ concepts:
     expected_type: string
     typical_source_systems: [pagerduty, servicenow, opsgenie]
     persona_relevance:
-      CTO: 0.9
-      COO: 0.6
+      cto: 0.9
+      coo: 0.6
 
   - id: health
     concept_id: CS-004
@@ -1159,8 +1159,8 @@ concepts:
     expected_type: float
     typical_source_systems: [gainsight, totango, churnzero]
     persona_relevance:
-      CRO: 0.7
-      COO: 0.6
+      cro: 0.7
+      coo: 0.6
 
   - id: sla
     concept_id: CS-003
@@ -1185,8 +1185,8 @@ concepts:
     expected_type: string
     typical_source_systems: [zendesk, servicenow, freshdesk]
     persona_relevance:
-      COO: 0.8
-      CTO: 0.5
+      coo: 0.8
+      cto: 0.5
 
   - id: nps_score
     concept_id: CS-005
@@ -1211,8 +1211,8 @@ concepts:
     expected_type: float
     typical_source_systems: [delighted, qualtrics, gainsight]
     persona_relevance:
-      CRO: 0.7
-      COO: 0.6
+      cro: 0.7
+      coo: 0.6
 
   - id: customer_segment
     concept_id: CS-006
@@ -1235,8 +1235,8 @@ concepts:
     expected_type: string
     typical_source_systems: [gainsight, salesforce, any_crm]
     persona_relevance:
-      CRO: 0.8
-      COO: 0.5
+      cro: 0.8
+      coo: 0.5
 
   - id: lifecycle_stage
     concept_id: CS-007
@@ -1259,8 +1259,8 @@ concepts:
     expected_type: string
     typical_source_systems: [gainsight, totango, hubspot]
     persona_relevance:
-      CRO: 0.6
-      COO: 0.5
+      cro: 0.6
+      coo: 0.5
 
   - id: churn_event
     concept_id: CS-008
@@ -1284,8 +1284,8 @@ concepts:
     expected_type: string
     typical_source_systems: [zuora, salesforce, gainsight]
     persona_relevance:
-      CRO: 0.9
-      CFO: 0.6
+      cro: 0.9
+      cfo: 0.6
 
   - id: engagement
     concept_id: CS-009
@@ -1308,9 +1308,9 @@ concepts:
     expected_type: float
     typical_source_systems: [pendo, amplitude, gainsight]
     persona_relevance:
-      CRO: 0.6
-      COO: 0.5
-      CTO: 0.4
+      cro: 0.6
+      coo: 0.5
+      cto: 0.4
 
   - id: feedback
     concept_id: CS-010
@@ -1334,8 +1334,8 @@ concepts:
     expected_type: string
     typical_source_systems: [productboard, canny, zendesk]
     persona_relevance:
-      CRO: 0.5
-      CTO: 0.4
+      cro: 0.5
+      cto: 0.4
 
   - id: escalation
     concept_id: CS-011
@@ -1360,8 +1360,8 @@ concepts:
     expected_type: string
     typical_source_systems: [zendesk, gainsight, servicenow]
     persona_relevance:
-      COO: 0.8
-      CRO: 0.6
+      coo: 0.8
+      cro: 0.6
 
   # ─── Product & Engineering ───────────────────────────────
   - id: product
@@ -1387,8 +1387,8 @@ concepts:
     expected_type: string
     typical_source_systems: [shopify, salesforce, internal]
     persona_relevance:
-      CTO: 0.8
-      CRO: 0.6
+      cto: 0.8
+      cro: 0.6
 
   - id: feature
     concept_id: PRD-002
@@ -1412,8 +1412,8 @@ concepts:
     expected_type: string
     typical_source_systems: [launchdarkly, productboard, jira]
     persona_relevance:
-      CTO: 0.9
-      CRO: 0.4
+      cto: 0.9
+      cro: 0.4
 
   - id: release
     concept_id: PRD-003
@@ -1438,7 +1438,7 @@ concepts:
     expected_type: string
     typical_source_systems: [github, jira, jenkins]
     persona_relevance:
-      CTO: 0.9
+      cto: 0.9
 
   - id: bug
     concept_id: PRD-004
@@ -1464,7 +1464,7 @@ concepts:
     expected_type: string
     typical_source_systems: [jira, linear, github_issues]
     persona_relevance:
-      CTO: 0.9
+      cto: 0.9
 
   - id: engineering_work
     concept_id: PRD-005
@@ -1492,8 +1492,8 @@ concepts:
     expected_type: string
     typical_source_systems: [jira, linear, shortcut]
     persona_relevance:
-      CTO: 1.0
-      COO: 0.4
+      cto: 1.0
+      coo: 0.4
 
   - id: repository
     concept_id: PRD-006
@@ -1517,7 +1517,7 @@ concepts:
     expected_type: string
     typical_source_systems: [github, gitlab, bitbucket]
     persona_relevance:
-      CTO: 0.7
+      cto: 0.7
 
   - id: pull_request
     concept_id: PRD-007
@@ -1542,7 +1542,7 @@ concepts:
     expected_type: string
     typical_source_systems: [github, gitlab, bitbucket]
     persona_relevance:
-      CTO: 0.8
+      cto: 0.8
 
   - id: usage
     concept_id: PRD-008
@@ -1567,9 +1567,9 @@ concepts:
     expected_type: float
     typical_source_systems: [amplitude, mixpanel, pendo]
     persona_relevance:
-      CTO: 0.8
-      CRO: 0.5
-      COO: 0.6
+      cto: 0.8
+      cro: 0.5
+      coo: 0.6
 
   - id: roadmap_item
     concept_id: PRD-009
@@ -1595,8 +1595,8 @@ concepts:
     expected_type: string
     typical_source_systems: [productboard, aha, jira]
     persona_relevance:
-      CTO: 0.8
-      CRO: 0.4
+      cto: 0.8
+      cro: 0.4
 
   - id: entitlement
     concept_id: PRD-010
@@ -1620,8 +1620,8 @@ concepts:
     expected_type: string
     typical_source_systems: [salesforce, zuora, internal]
     persona_relevance:
-      CTO: 0.6
-      CRO: 0.5
+      cto: 0.6
+      cro: 0.5
 
   # ─── IT & Infrastructure ─────────────────────────────────
   - id: it_asset
@@ -1649,8 +1649,8 @@ concepts:
     expected_type: string
     typical_source_systems: [servicenow, intune, jamf]
     persona_relevance:
-      CTO: 0.8
-      COO: 0.4
+      cto: 0.8
+      coo: 0.4
 
   - id: configuration_item
     concept_id: IT-002
@@ -1674,7 +1674,7 @@ concepts:
     expected_type: string
     typical_source_systems: [servicenow_cmdb, device42]
     persona_relevance:
-      CTO: 0.8
+      cto: 0.8
 
   - id: it_service
     concept_id: IT-003
@@ -1699,8 +1699,8 @@ concepts:
     expected_type: string
     typical_source_systems: [servicenow, backstage]
     persona_relevance:
-      CTO: 0.7
-      COO: 0.4
+      cto: 0.7
+      coo: 0.4
 
   - id: change_request
     concept_id: IT-004
@@ -1725,8 +1725,8 @@ concepts:
     expected_type: string
     typical_source_systems: [servicenow, jira]
     persona_relevance:
-      CTO: 0.7
-      COO: 0.4
+      cto: 0.7
+      coo: 0.4
 
   - id: deployment
     concept_id: IT-005
@@ -1749,7 +1749,7 @@ concepts:
     expected_type: string
     typical_source_systems: [argocd, jenkins, aws_codedeploy]
     persona_relevance:
-      CTO: 0.8
+      cto: 0.8
 
   - id: user_account
     concept_id: IT-006
@@ -1776,8 +1776,8 @@ concepts:
     expected_type: string
     typical_source_systems: [okta, azure_ad, onelogin]
     persona_relevance:
-      CTO: 0.7
-      CHRO: 0.3
+      cto: 0.7
+      chro: 0.3
 
   - id: permission
     concept_id: IT-007
@@ -1803,7 +1803,7 @@ concepts:
     expected_type: string
     typical_source_systems: [okta, aws_iam, azure_ad]
     persona_relevance:
-      CTO: 0.7
+      cto: 0.7
 
   - id: aws_resource
     concept_id: IT-008
@@ -1830,8 +1830,8 @@ concepts:
     expected_type: string
     typical_source_systems: [aws, azure, gcp]
     persona_relevance:
-      CTO: 1.0
-      CFO: 0.4
+      cto: 1.0
+      cfo: 0.4
 
   - id: alert
     concept_id: IT-009
@@ -1856,7 +1856,7 @@ concepts:
     expected_type: string
     typical_source_systems: [datadog, pagerduty, splunk]
     persona_relevance:
-      CTO: 0.8
+      cto: 0.8
 
   - id: integration
     concept_id: IT-010
@@ -1881,8 +1881,8 @@ concepts:
     expected_type: string
     typical_source_systems: [workato, mulesoft, fivetran]
     persona_relevance:
-      CTO: 0.7
-      COO: 0.4
+      cto: 0.7
+      coo: 0.4
 
   # ─── Operations & Supply Chain ─────────────────────────────
   - id: project
@@ -1909,8 +1909,8 @@ concepts:
     expected_type: string
     typical_source_systems: [asana, monday_com, smartsheet]
     persona_relevance:
-      COO: 0.9
-      CTO: 0.5
+      coo: 0.9
+      cto: 0.5
 
   - id: ops_task
     concept_id: OPS-002
@@ -1936,7 +1936,7 @@ concepts:
     expected_type: string
     typical_source_systems: [asana, jira, monday_com]
     persona_relevance:
-      COO: 0.7
+      coo: 0.7
 
   - id: vendor
     concept_id: OPS-003
@@ -1961,8 +1961,8 @@ concepts:
     expected_type: string
     typical_source_systems: [coupa, sap_ariba, netsuite]
     persona_relevance:
-      COO: 0.8
-      CFO: 0.6
+      coo: 0.8
+      cfo: 0.6
 
   - id: purchase_order
     concept_id: OPS-004
@@ -1985,8 +1985,8 @@ concepts:
     expected_type: string
     typical_source_systems: [coupa, sap, netsuite]
     persona_relevance:
-      COO: 0.9
-      CFO: 0.6
+      coo: 0.9
+      cfo: 0.6
 
   - id: inventory
     concept_id: OPS-005
@@ -2011,8 +2011,8 @@ concepts:
     expected_type: float
     typical_source_systems: [netsuite, sap, cin7]
     persona_relevance:
-      COO: 0.9
-      CFO: 0.4
+      coo: 0.9
+      cfo: 0.4
 
   - id: workflow
     concept_id: OPS-006
@@ -2037,8 +2037,8 @@ concepts:
     expected_type: string
     typical_source_systems: [zapier, workato, servicenow]
     persona_relevance:
-      COO: 0.7
-      CTO: 0.4
+      coo: 0.7
+      cto: 0.4
 
   - id: quality_metric
     concept_id: OPS-007
@@ -2063,7 +2063,7 @@ concepts:
     expected_type: float
     typical_source_systems: [various_domain_specific]
     persona_relevance:
-      COO: 0.8
+      coo: 0.8
 
   - id: capacity
     concept_id: OPS-008
@@ -2088,8 +2088,8 @@ concepts:
     expected_type: float
     typical_source_systems: [resource_planning, psa]
     persona_relevance:
-      COO: 0.8
-      CTO: 0.4
+      coo: 0.8
+      cto: 0.4
 
   - id: facility
     concept_id: OPS-009
@@ -2115,7 +2115,7 @@ concepts:
     expected_type: string
     typical_source_systems: [iwms, servicenow, internal]
     persona_relevance:
-      COO: 0.7
+      coo: 0.7
 
   - id: shipment
     concept_id: OPS-010
@@ -2143,7 +2143,7 @@ concepts:
     expected_type: string
     typical_source_systems: [shipbob, fedex, ups, sap_tm]
     persona_relevance:
-      COO: 0.8
+      coo: 0.8
 
   # ─── Marketing ───────────────────────────────────────────
   - id: campaign
@@ -2170,8 +2170,8 @@ concepts:
     expected_type: string
     typical_source_systems: [marketo, hubspot, pardot]
     persona_relevance:
-      CRO: 0.8
-      CFO: 0.4
+      cro: 0.8
+      cfo: 0.4
 
   - id: lead
     concept_id: MKT-002
@@ -2199,8 +2199,8 @@ concepts:
     expected_type: string
     typical_source_systems: [salesforce, hubspot, marketo]
     persona_relevance:
-      CRO: 0.9
-      CFO: 0.3
+      cro: 0.9
+      cfo: 0.3
 
   - id: channel
     concept_id: MKT-003
@@ -2225,7 +2225,7 @@ concepts:
     expected_type: string
     typical_source_systems: [google_analytics, any_attribution]
     persona_relevance:
-      CRO: 0.7
+      cro: 0.7
 
   - id: content
     concept_id: MKT-004
@@ -2252,7 +2252,7 @@ concepts:
     expected_type: string
     typical_source_systems: [cms, wordpress, contentful]
     persona_relevance:
-      CRO: 0.5
+      cro: 0.5
 
   - id: conversion
     concept_id: MKT-005
@@ -2278,7 +2278,7 @@ concepts:
     expected_type: string
     typical_source_systems: [google_analytics, marketo, hubspot]
     persona_relevance:
-      CRO: 0.8
+      cro: 0.8
 
   - id: attribution
     concept_id: MKT-006
@@ -2303,8 +2303,8 @@ concepts:
     expected_type: string
     typical_source_systems: [bizible, hubspot, dreamdata]
     persona_relevance:
-      CRO: 0.7
-      CFO: 0.4
+      cro: 0.7
+      cfo: 0.4
 
   - id: audience
     concept_id: MKT-007
@@ -2329,7 +2329,7 @@ concepts:
     expected_type: string
     typical_source_systems: [sixsense, demandbase, hubspot]
     persona_relevance:
-      CRO: 0.6
+      cro: 0.6
 
   - id: ad
     concept_id: MKT-008
@@ -2357,8 +2357,8 @@ concepts:
     expected_type: string
     typical_source_systems: [google_ads, linkedin, meta]
     persona_relevance:
-      CRO: 0.6
-      CFO: 0.3
+      cro: 0.6
+      cfo: 0.3
 
   - id: marketing_email
     concept_id: MKT-009
@@ -2385,7 +2385,7 @@ concepts:
     expected_type: string
     typical_source_systems: [marketo, hubspot, pardot]
     persona_relevance:
-      CRO: 0.6
+      cro: 0.6
 
   - id: marketing_event
     concept_id: MKT-010
@@ -2413,8 +2413,8 @@ concepts:
     expected_type: string
     typical_source_systems: [splash, cvent, zoom_events]
     persona_relevance:
-      CRO: 0.6
-      CFO: 0.3
+      cro: 0.6
+      cfo: 0.3
 
   # ─── Compliance & Risk ───────────────────────────────────
   - id: audit_trail
@@ -2441,8 +2441,8 @@ concepts:
     expected_type: string
     typical_source_systems: [vanta, drata, splunk]
     persona_relevance:
-      CFO: 0.6
-      CTO: 0.7
+      cfo: 0.6
+      cto: 0.7
 
   - id: control
     concept_id: CMP-002
@@ -2467,8 +2467,8 @@ concepts:
     expected_type: string
     typical_source_systems: [vanta, drata, hyperproof]
     persona_relevance:
-      CTO: 0.8
-      CFO: 0.5
+      cto: 0.8
+      cfo: 0.5
 
   - id: risk
     concept_id: CMP-003
@@ -2494,8 +2494,8 @@ concepts:
     expected_type: string
     typical_source_systems: [logicgate, archer, servicenow_grc]
     persona_relevance:
-      CFO: 0.7
-      CTO: 0.6
+      cfo: 0.7
+      cto: 0.6
 
   - id: policy
     concept_id: CMP-004
@@ -2522,8 +2522,8 @@ concepts:
     expected_type: string
     typical_source_systems: [onetrust, drata, sharepoint]
     persona_relevance:
-      CFO: 0.5
-      CTO: 0.5
+      cfo: 0.5
+      cto: 0.5
 
   - id: violation
     concept_id: CMP-005
@@ -2548,8 +2548,8 @@ concepts:
     expected_type: string
     typical_source_systems: [vanta, drata, grc_tools]
     persona_relevance:
-      CFO: 0.7
-      CTO: 0.6
+      cfo: 0.7
+      cto: 0.6
 
   - id: framework
     concept_id: CMP-006
@@ -2573,8 +2573,8 @@ concepts:
     expected_type: string
     typical_source_systems: [vanta, drata, hyperproof]
     persona_relevance:
-      CFO: 0.6
-      CTO: 0.6
+      cfo: 0.6
+      cto: 0.6
 
   - id: evidence
     concept_id: CMP-007
@@ -2599,7 +2599,7 @@ concepts:
     expected_type: string
     typical_source_systems: [vanta, drata, hyperproof]
     persona_relevance:
-      CTO: 0.6
+      cto: 0.6
 
   - id: data_classification
     concept_id: CMP-008
@@ -2623,8 +2623,8 @@ concepts:
     expected_type: string
     typical_source_systems: [onetrust, bigid, varonis]
     persona_relevance:
-      CTO: 0.7
-      CFO: 0.4
+      cto: 0.7
+      cfo: 0.4
 
   - id: consent
     concept_id: CMP-009
@@ -2649,7 +2649,7 @@ concepts:
     expected_type: string
     typical_source_systems: [onetrust, trustarc, cookiebot]
     persona_relevance:
-      CTO: 0.5
+      cto: 0.5
 
   - id: vendor_risk
     concept_id: CMP-010
@@ -2674,9 +2674,9 @@ concepts:
     expected_type: string
     typical_source_systems: [securityscorecard, prevalent, vanta]
     persona_relevance:
-      COO: 0.6
-      CTO: 0.5
-      CFO: 0.4
+      coo: 0.6
+      cto: 0.5
+      cfo: 0.4
 
   - id: access_review
     concept_id: CMP-011
@@ -2699,7 +2699,7 @@ concepts:
     expected_type: string
     typical_source_systems: [sailpoint, okta, conductorone]
     persona_relevance:
-      CTO: 0.6
+      cto: 0.6
 
   - id: retention_policy
     concept_id: CMP-012
@@ -2724,8 +2724,8 @@ concepts:
     expected_type: string
     typical_source_systems: [onetrust, egnyte, m365]
     persona_relevance:
-      CTO: 0.5
-      CFO: 0.4
+      cto: 0.5
+      cfo: 0.4
 
   # ─── Cross-cutting ───────────────────────────────────────
   - id: date
@@ -2753,8 +2753,8 @@ concepts:
     expected_type: datetime
     typical_source_systems: []
     persona_relevance:
-      CFO: 0.5
-      CRO: 0.5
-      COO: 0.5
-      CTO: 0.5
-      CHRO: 0.5
+      cfo: 0.5
+      cro: 0.5
+      coo: 0.5
+      cto: 0.5
+      chro: 0.5

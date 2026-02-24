@@ -8,6 +8,7 @@ metrics:
       - recurring revenue
       - annual revenue
     pack: cfo
+    unit: usd_millions
     allowed_dims:
       - customer
       - service_line
@@ -28,6 +29,7 @@ metrics:
       - monthly recurring revenue
       - monthly revenue
     pack: cfo
+    unit: usd_millions
     allowed_dims:
       - customer
       - service_line
@@ -48,6 +50,7 @@ metrics:
       - income
       - top line
     pack: cfo
+    unit: usd_millions
     allowed_dims:
       - customer
       - service_line
@@ -70,11 +73,13 @@ metrics:
   - id: services_revenue
     name: Services Revenue
     description: Revenue from professional services
+    data_source: pending
     aliases:
       - professional services
       - PS revenue
       - consulting revenue
     pack: cfo
+    unit: usd_millions
     allowed_dims:
       - customer
       - service_line
@@ -97,6 +102,7 @@ metrics:
       - outstanding invoices
       - A/R
     pack: cfo
+    unit: usd_millions
     allowed_dims:
       - customer
       - invoice
@@ -111,12 +117,14 @@ metrics:
   - id: dso
     name: Days Sales Outstanding
     description: Average days to collect payment from customers
+    data_source: dcl_computed
     aliases:
       - DSO
       - days sales outstanding
       - collection days
       - AR days
     pack: cfo
+    unit: days
     allowed_dims:
       - customer
       - segment
@@ -134,12 +142,14 @@ metrics:
   - id: burn_rate
     name: Burn Rate
     description: Monthly cash consumption rate
+    data_source: dcl_computed
     aliases:
       - burn
       - cash burn
       - monthly burn
       - spending rate
     pack: cfo
+    unit: usd_millions
     allowed_dims:
       - cost_center
       - category
@@ -153,14 +163,16 @@ metrics:
       - cost_center
       - category
 
-  - id: gross_margin
+  - id: gross_margin_pct
     name: Gross Margin
     description: Revenue minus cost of goods sold as percentage
     aliases:
       - margin
       - GM
       - gross profit margin
+      - gross margin
     pack: cfo
+    unit: pct
     allowed_dims:
       - product
       - service_line
@@ -175,11 +187,13 @@ metrics:
   - id: ar_aging
     name: Accounts Receivable Aging
     description: Accounts receivable broken down by aging buckets
+    data_source: pending
     aliases:
       - AR aging
       - receivables aging
       - aged receivables
     pack: cfo
+    unit: usd_millions
     allowed_dims:
       - aging_bucket
     allowed_grains:
@@ -194,9 +208,9 @@ metrics:
     aliases:
       - sales pipeline
       - open pipeline
-      - pipeline value
       - opportunities
     pack: cro
+    unit: usd_millions
     allowed_dims:
       - rep
       - stage
@@ -214,14 +228,16 @@ metrics:
       - region
       - segment
 
-  - id: win_rate
+  - id: win_rate_pct
     name: Win Rate
     description: Percentage of opportunities won
     aliases:
       - close rate
       - conversion rate
       - deal win rate
+      - win rate
     pack: cro
+    unit: pct
     allowed_dims:
       - rep
       - segment
@@ -237,7 +253,7 @@ metrics:
       - segment
       - region
 
-  - id: quota_attainment
+  - id: quota_attainment_pct
     name: Quota Attainment
     description: Percentage of sales quota achieved by rep
     aliases:
@@ -245,7 +261,9 @@ metrics:
       - quota achievement
       - target attainment
       - sales attainment
+      - quota attainment
     pack: cro
+    unit: pct
     allowed_dims:
       - rep
       - segment
@@ -259,14 +277,17 @@ metrics:
       - rep
       - region
 
-  - id: churn_rate
+  - id: churn_rate_pct
     name: Churn Rate
     description: Percentage of customers or revenue lost
+    data_source: dcl_computed
     aliases:
       - churn
       - customer churn
       - revenue churn
+      - churn rate
     pack: cro
+    unit: pct
     allowed_dims:
       - segment
       - region
@@ -291,6 +312,7 @@ metrics:
       - dollar retention
       - NDR
     pack: cro
+    unit: pct
     allowed_dims:
       - segment
       - region
@@ -305,11 +327,12 @@ metrics:
   - id: pipeline_value
     name: Total Pipeline Value
     description: Total value of all open opportunities in the sales pipeline
+    data_source: dcl_computed
     aliases:
-      - pipeline
       - total pipeline
-      - sales pipeline
+      - aggregate pipeline
     pack: cro
+    unit: usd_millions
     allowed_dims:
       - rep
       - stage
@@ -324,10 +347,12 @@ metrics:
   - id: churn_risk
     name: Churn Risk Score
     description: Score indicating likelihood of customer churn
+    data_source: pending
     aliases:
       - churn risk score
       - risk score
     pack: cro
+    unit: score
     allowed_dims:
       - segment
       - customer
@@ -344,10 +369,12 @@ metrics:
   - id: nrr_by_cohort
     name: NRR by Cohort
     description: Net Revenue Retention analyzed by customer cohort
+    data_source: pending
     aliases:
       - cohort NRR
       - retention by cohort
     pack: cro
+    unit: pct
     allowed_dims:
       - cohort
       - product
@@ -360,11 +387,13 @@ metrics:
   - id: throughput
     name: Work Throughput
     description: Work items completed per time period
+    data_source: dcl_computed
     aliases:
       - work throughput
       - items completed
       - tickets resolved
     pack: coo
+    unit: count
     allowed_dims:
       - team
       - work_type
@@ -379,11 +408,13 @@ metrics:
   - id: cycle_time
     name: Cycle Time
     description: Average time to complete work items
+    data_source: pending
     aliases:
       - lead time
       - delivery time
       - time to complete
     pack: coo
+    unit: days
     allowed_dims:
       - team
       - project_type
@@ -399,14 +430,17 @@ metrics:
       - team
       - project_type
 
-  - id: sla_compliance
+  - id: sla_compliance_pct
     name: SLA Compliance Rate
     description: Percentage of SLAs met
+    data_source: pending
     aliases:
       - SLA attainment
       - SLA rate
       - service level compliance
+      - sla compliance
     pack: coo
+    unit: pct
     allowed_dims:
       - team
       - tier
@@ -421,11 +455,13 @@ metrics:
   - id: deploy_frequency
     name: Deployment Frequency
     description: Number of deployments per time period
+    data_source: pending
     aliases:
       - deployment rate
       - deploys per week
       - release frequency
     pack: cto
+    unit: per_week
     allowed_dims:
       - service
       - team
@@ -439,11 +475,13 @@ metrics:
   - id: mttr
     name: Mean Time to Recovery
     description: Average time to recover from incidents
+    data_source: dcl_computed
     aliases:
       - MTTR
       - recovery time
       - incident recovery
     pack: cto
+    unit: minutes
     allowed_dims:
       - team
       - service
@@ -460,14 +498,16 @@ metrics:
       - service
       - severity
 
-  - id: uptime
+  - id: uptime_pct
     name: Service Uptime
     description: Percentage of time services are available
     aliases:
       - availability
       - uptime percentage
       - service availability
+      - uptime
     pack: cto
+    unit: pct
     allowed_dims:
       - service
     allowed_grains:
@@ -476,14 +516,17 @@ metrics:
     measure_op: avg
     default_grain: month
 
-  - id: slo_attainment
+  - id: slo_attainment_pct
     name: SLO Attainment
     description: Percentage of Service Level Objectives met
+    data_source: pending
     aliases:
       - SLO compliance
       - service level objective
       - SLO rate
+      - slo attainment
     pack: cto
+    unit: pct
     allowed_dims:
       - service
     allowed_grains:
@@ -494,15 +537,16 @@ metrics:
     rankable_dimensions:
       - service
 
-  - id: cloud_cost
+  - id: cloud_spend
     name: Cloud Spend
     description: Total cloud infrastructure costs
     aliases:
-      - cloud spend
+      - cloud cost
       - infrastructure cost
       - AWS cost
       - cloud expenses
     pack: cto
+    unit: usd_millions
     allowed_dims:
       - resource_type
       - team
@@ -527,6 +571,7 @@ metrics:
       - HC
       - FTE
     pack: chro
+    unit: count
     allowed_dims:
       - department
       - team
@@ -542,14 +587,16 @@ metrics:
       - department
       - team
 
-  - id: attrition_rate
+  - id: attrition_rate_pct
     name: Attrition Rate
     description: Percentage of employees leaving
     aliases:
       - attrition
       - turnover
       - turnover rate
+      - attrition rate
     pack: chro
+    unit: pct
     allowed_dims:
       - department
       - team
@@ -569,11 +616,13 @@ metrics:
   - id: time_to_fill
     name: Time to Fill
     description: Average days to fill open roles
+    data_source: pending
     aliases:
       - TTF
       - hiring velocity
       - requisition time
     pack: chro
+    unit: days
     allowed_dims:
       - department
       - role
@@ -590,11 +639,13 @@ metrics:
 
   - id: engagement_score
     name: Engagement Score
-    description: Employee engagement percentage
+    description: Employee engagement score from survey data
+    data_source: pending
     aliases:
       - engagement
       - employee engagement
     pack: chro
+    unit: score
     allowed_dims:
       - department
       - team
@@ -603,17 +654,19 @@ metrics:
       - month
       - quarter
       - year
-    measure_op: ratio
+    measure_op: avg
     default_grain: quarter
 
   - id: compensation_ratio
     name: Compensation Ratio
     description: Ratio to market compensation
+    data_source: pending
     aliases:
       - comp ratio
       - pay ratio
       - market ratio
     pack: chro
+    unit: ratio
     allowed_dims:
       - department
       - level
@@ -628,11 +681,13 @@ metrics:
   - id: training_hours
     name: Training Hours
     description: Training hours per employee
+    data_source: pending
     aliases:
       - L&D hours
       - learning hours
       - training
     pack: chro
+    unit: hours
     allowed_dims:
       - department
       - team
@@ -644,13 +699,16 @@ metrics:
     measure_op: avg
     default_grain: quarter
 
-  - id: promotion_rate
+  - id: promotion_rate_pct
     name: Promotion Rate
     description: Percentage of promotions
+    data_source: pending
     aliases:
       - promotions
       - advancement rate
+      - promotion rate
     pack: chro
+    unit: pct
     allowed_dims:
       - department
       - level
@@ -664,12 +722,14 @@ metrics:
 
   - id: diversity_index
     name: Diversity Index
-    description: Diversity percentage
+    description: Composite diversity score
+    data_source: pending
     aliases:
       - diversity
       - D&I
       - DEI
     pack: chro
+    unit: index
     allowed_dims:
       - department
       - level
@@ -681,15 +741,18 @@ metrics:
     measure_op: ratio
     default_grain: quarter
 
-  - id: offer_acceptance_rate
+  - id: offer_acceptance_rate_pct
     name: Offer Acceptance Rate
     description: Percentage of job offers accepted by candidates
+    data_source: pending
     aliases:
       - offer rate
       - acceptance rate
       - recruiting funnel completion
       - offer conversion
+      - offer acceptance rate
     pack: chro
+    unit: pct
     allowed_dims:
       - department
       - role
@@ -701,15 +764,18 @@ metrics:
     measure_op: ratio
     default_grain: quarter
 
-  - id: internal_mobility_rate
+  - id: internal_mobility_rate_pct
     name: Internal Mobility Rate
     description: Percentage of roles filled by internal candidates
+    data_source: pending
     aliases:
       - internal mobility
       - career development
       - internal transfers
       - retention mobility
+      - internal mobility rate
     pack: chro
+    unit: pct
     allowed_dims:
       - department
       - level
@@ -724,12 +790,14 @@ metrics:
   - id: span_of_control
     name: Span of Control
     description: Average number of direct reports per manager
+    data_source: pending
     aliases:
       - org structure health
       - manager ratio
       - direct reports
       - management span
     pack: chro
+    unit: ratio
     allowed_dims:
       - department
       - level
@@ -743,13 +811,14 @@ metrics:
   - id: enps
     name: Employee Net Promoter Score
     description: Employee willingness to recommend the company as a workplace
+    data_source: pending
     aliases:
       - eNPS
-      - nps
       - employee NPS
       - employee net promoter
       - workplace recommendation score
     pack: chro
+    unit: score
     allowed_dims:
       - department
       - team
@@ -762,15 +831,17 @@ metrics:
     measure_op: avg
     default_grain: quarter
 
-  - id: customers
-    name: Customers
+  - id: customer_count
+    name: Customer Count
     description: Total customer count (definition varies by persona)
     aliases:
-      - customer count
+      - customers
       - number of customers
       - active customers
       - client count
+      - customer count
     pack: cro
+    unit: count
     allowed_dims:
       - segment
       - region
@@ -780,3 +851,1297 @@ metrics:
       - year
     measure_op: count
     default_grain: quarter
+
+  # ─────────────────────────────────────────────────────────────────────
+  # ARR Waterfall (source: chargebee, salesforce)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: beginning_arr
+    name: Beginning ARR
+    description: Annual recurring revenue at the start of the period before any changes
+    aliases:
+      - starting ARR
+      - opening ARR
+    pack: cfo
+    unit: usd_millions
+    allowed_dims:
+      - region
+      - segment
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: new_arr
+    name: New ARR
+    description: Net new annual recurring revenue added in the period from all sources
+    aliases:
+      - new annual recurring revenue
+      - ARR added
+    pack: cfo
+    unit: usd_millions
+    allowed_dims:
+      - region
+      - segment
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: new_logo_arr
+    name: New Logo ARR
+    description: ARR from net-new customers acquired in the period
+    aliases:
+      - new customer ARR
+      - new business ARR
+    pack: cro
+    unit: usd_millions
+    allowed_dims:
+      - region
+      - segment
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: expansion_arr
+    name: Expansion ARR
+    description: Additional ARR from existing customer upsells and cross-sells
+    aliases:
+      - upsell ARR
+      - ARR expansion
+    pack: cro
+    unit: usd_millions
+    allowed_dims:
+      - region
+      - segment
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: churned_arr
+    name: Churned ARR
+    description: ARR lost from customers who cancelled or downgraded
+    aliases:
+      - lost ARR
+      - ARR churn
+      - cancelled ARR
+    pack: cro
+    unit: usd_millions
+    allowed_dims:
+      - region
+      - segment
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Revenue Decomposition (source: salesforce, chargebee)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: new_logo_revenue
+    name: New Logo Revenue
+    description: Revenue from net-new customers acquired in the period
+    aliases:
+      - new customer revenue
+      - new business revenue
+    pack: cro
+    unit: usd_millions
+    allowed_dims:
+      - region
+      - segment
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: expansion_revenue
+    name: Expansion Revenue
+    description: Revenue from existing customer upsells and cross-sells
+    aliases:
+      - upsell revenue
+      - cross-sell revenue
+    pack: cro
+    unit: usd_millions
+    allowed_dims:
+      - segment
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: renewal_revenue
+    name: Renewal Revenue
+    description: Revenue from existing customer contract renewals
+    aliases:
+      - recurring renewal
+      - renewal bookings
+    pack: cro
+    unit: usd_millions
+    allowed_dims:
+      - segment
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  # ─────────────────────────────────────────────────────────────────────
+  # P&L Metrics (source: netsuite)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: cogs
+    name: Cost of Goods Sold
+    description: Direct costs attributable to production of goods and services sold
+    aliases:
+      - COGS
+      - cost of revenue
+      - cost of sales
+    pack: cfo
+    unit: usd_millions
+    allowed_dims:
+      - region
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low
+
+  - id: gross_profit
+    name: Gross Profit
+    description: Revenue minus cost of goods sold
+    aliases:
+      - gross income
+      - gross earnings
+    pack: cfo
+    unit: usd_millions
+    allowed_dims:
+      - region
+      - segment
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: sm_expense
+    name: Sales & Marketing Expense
+    description: Total sales and marketing operating expenses
+    aliases:
+      - S&M expense
+      - sales and marketing
+      - sales expense
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low
+
+  - id: rd_expense
+    name: R&D Expense
+    description: Total research and development operating expenses
+    aliases:
+      - R&D spend
+      - research and development
+      - engineering expense
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: ga_expense
+    name: G&A Expense
+    description: Total general and administrative operating expenses
+    aliases:
+      - G&A spend
+      - general and administrative
+      - admin expense
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low
+
+  - id: opex
+    name: Operating Expenses
+    description: Total operating expenses (S&M + R&D + G&A)
+    aliases:
+      - OpEx
+      - operating costs
+      - total expenses
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low
+
+  - id: ebitda
+    name: EBITDA
+    description: Earnings before interest, taxes, depreciation, and amortization
+    aliases:
+      - EBITDA
+      - operating earnings
+      - cash operating income
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: ebitda_margin_pct
+    name: EBITDA Margin
+    description: EBITDA as a percentage of revenue
+    aliases:
+      - EBITDA margin
+      - operating margin before D&A
+    pack: cfo
+    unit: pct
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+
+  - id: da_expense
+    name: Depreciation & Amortization
+    description: Non-cash depreciation and amortization expense
+    aliases:
+      - D&A
+      - depreciation
+      - amortization
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: operating_profit
+    name: Operating Profit
+    description: Revenue minus all operating expenses including depreciation
+    aliases:
+      - operating income
+      - EBIT
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: operating_margin_pct
+    name: Operating Margin
+    description: Operating profit as a percentage of revenue
+    aliases:
+      - operating margin
+      - EBIT margin
+    pack: cfo
+    unit: pct
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+
+  - id: tax_expense
+    name: Tax Expense
+    description: Income tax provision for the period
+    aliases:
+      - income tax
+      - tax provision
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: net_income
+    name: Net Income
+    description: Bottom-line profit after all expenses and taxes
+    aliases:
+      - net profit
+      - net earnings
+      - bottom line
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: net_margin_pct
+    name: Net Margin
+    description: Net income as a percentage of revenue
+    aliases:
+      - net profit margin
+      - net margin
+    pack: cfo
+    unit: pct
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Balance Sheet (source: netsuite)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: cash
+    name: Cash & Equivalents
+    description: Cash and cash equivalents on the balance sheet
+    aliases:
+      - cash balance
+      - cash on hand
+      - liquidity
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: unbilled_revenue
+    name: Unbilled Revenue
+    description: Revenue earned but not yet invoiced
+    aliases:
+      - unbilled AR
+      - accrued revenue
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: prepaid_expenses
+    name: Prepaid Expenses
+    description: Expenses paid in advance not yet recognized
+    aliases:
+      - prepaid
+      - prepaid assets
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: pp_e
+    name: Property, Plant & Equipment
+    description: Net book value of tangible fixed assets
+    aliases:
+      - PP&E
+      - fixed assets
+      - property plant equipment
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: intangibles
+    name: Intangible Assets
+    description: Non-physical assets such as patents, trademarks, and acquired technology
+    aliases:
+      - intangible assets
+      - IP assets
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: goodwill
+    name: Goodwill
+    description: Acquisition premium paid over fair value of acquired net assets
+    aliases:
+      - acquisition goodwill
+      - purchase premium
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: total_assets
+    name: Total Assets
+    description: Sum of all current and non-current assets on the balance sheet
+    aliases:
+      - assets
+      - total balance sheet assets
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: ap
+    name: Accounts Payable
+    description: Outstanding amounts owed to vendors and suppliers
+    aliases:
+      - AP
+      - accounts payable
+      - payables
+      - trade payables
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+    best_direction: low
+
+  - id: accrued_expenses
+    name: Accrued Expenses
+    description: Expenses incurred but not yet paid
+    aliases:
+      - accruals
+      - accrued liabilities
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: deferred_revenue
+    name: Deferred Revenue
+    description: Total payments received for services not yet delivered
+    aliases:
+      - unearned revenue
+      - deferred income
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: deferred_revenue_current
+    name: Deferred Revenue (Current)
+    description: Deferred revenue expected to be recognized within 12 months
+    aliases:
+      - short-term deferred revenue
+      - current deferred
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: deferred_revenue_lt
+    name: Deferred Revenue (Long-Term)
+    description: Deferred revenue expected to be recognized beyond 12 months
+    aliases:
+      - long-term deferred revenue
+      - non-current deferred
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: total_liabilities
+    name: Total Liabilities
+    description: Sum of all current and non-current liabilities
+    aliases:
+      - liabilities
+      - total debt and obligations
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: retained_earnings
+    name: Retained Earnings
+    description: Cumulative net income less dividends paid since inception
+    aliases:
+      - accumulated earnings
+      - retained profit
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: stockholders_equity
+    name: Stockholders Equity
+    description: Total shareholders equity (assets minus liabilities)
+    aliases:
+      - shareholders equity
+      - book value
+      - equity
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Cash Flow (source: netsuite)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: cash_from_operations
+    name: Cash Flow from Operations
+    description: Net cash generated from core business operations
+    aliases:
+      - cfo
+      - operating cash flow
+      - cash from operations
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: capex
+    name: Capital Expenditures
+    description: Cash spent on acquiring or maintaining fixed assets
+    aliases:
+      - CapEx
+      - capital spending
+      - capital investment
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low
+
+  - id: fcf
+    name: Free Cash Flow
+    description: Operating cash flow minus capital expenditures
+    aliases:
+      - FCF
+      - free cash
+      - available cash flow
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  # ─────────────────────────────────────────────────────────────────────
+  # SaaS Efficiency Metrics (source: computed, chargebee, salesforce)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: gross_churn_pct
+    name: Gross Revenue Churn
+    description: Percentage of recurring revenue lost from cancellations and downgrades
+    aliases:
+      - gross churn
+      - revenue churn rate
+    pack: cro
+    unit: pct
+    allowed_dims:
+      - segment
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+    best_direction: low
+
+  - id: logo_churn_pct
+    name: Logo Churn Rate
+    description: Percentage of customers lost in the period regardless of revenue impact
+    aliases:
+      - customer churn rate
+      - logo churn
+    pack: cro
+    unit: pct
+    allowed_dims:
+      - segment
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+    best_direction: low
+
+  - id: acv
+    name: Annual Contract Value
+    description: Average annualized contract value of closed deals
+    aliases:
+      - ACV
+      - average contract value
+      - deal ACV
+    pack: cro
+    unit: usd_millions
+    allowed_dims:
+      - segment
+      - region
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: avg
+    default_grain: quarter
+
+  - id: ltv
+    name: Customer Lifetime Value
+    description: Estimated total revenue from an average customer over their lifetime
+    aliases:
+      - LTV
+      - lifetime value
+      - CLV
+    pack: cfo
+    unit: usd_millions
+    allowed_dims:
+      - segment
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: avg
+    default_grain: quarter
+
+  - id: cac
+    name: Customer Acquisition Cost
+    description: Average cost to acquire a new customer
+    aliases:
+      - CAC
+      - acquisition cost
+      - cost per customer
+    pack: cfo
+    unit: usd_millions
+    allowed_dims:
+      - segment
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: avg
+    default_grain: quarter
+    best_direction: low
+
+  - id: ltv_cac_ratio
+    name: LTV/CAC Ratio
+    description: Ratio of customer lifetime value to acquisition cost
+    aliases:
+      - LTV to CAC
+      - unit economics ratio
+    pack: cfo
+    unit: ratio
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+
+  - id: magic_number
+    name: Magic Number
+    description: Ratio of net new ARR to prior quarter sales and marketing spend
+    aliases:
+      - SaaS magic number
+      - sales efficiency
+    pack: cfo
+    unit: ratio
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: ratio
+    default_grain: quarter
+
+  - id: burn_multiple
+    name: Burn Multiple
+    description: Net cash burned divided by net new ARR added
+    aliases:
+      - cash efficiency
+      - capital efficiency ratio
+    pack: cfo
+    unit: ratio
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: ratio
+    default_grain: quarter
+    best_direction: low
+
+  - id: rule_of_40
+    name: Rule of 40
+    description: Sum of revenue growth rate and profit margin (target >= 40%)
+    aliases:
+      - rule of forty
+      - growth plus margin
+    pack: cfo
+    unit: pct
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+
+  - id: revenue_per_employee
+    name: Revenue per Employee
+    description: Total revenue divided by headcount
+    aliases:
+      - revenue per head
+      - per-employee revenue
+    pack: cfo
+    unit: usd_millions
+    allowed_dims:
+      - department
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+
+  - id: arr_per_employee
+    name: ARR per Employee
+    description: Annual recurring revenue divided by headcount
+    aliases:
+      - ARR per head
+      - per-employee ARR
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: ratio
+    default_grain: quarter
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Pipeline Metrics (source: salesforce)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: sales_cycle_days
+    name: Sales Cycle Length
+    description: Average number of days from opportunity creation to close
+    aliases:
+      - sales cycle
+      - deal cycle time
+      - time to close
+    pack: cro
+    unit: days
+    allowed_dims:
+      - segment
+      - region
+      - rep
+    allowed_grains:
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+    best_direction: low
+
+  - id: avg_deal_size
+    name: Average Deal Size
+    description: Average dollar value of closed-won opportunities
+    aliases:
+      - deal size
+      - average opportunity
+      - ADS
+    pack: cro
+    unit: usd_millions
+    allowed_dims:
+      - segment
+      - region
+      - rep
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: avg
+    default_grain: quarter
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Customer Metrics (source: salesforce, chargebee)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: new_customers
+    name: New Customers
+    description: Number of net-new customers acquired in the period
+    aliases:
+      - new logos
+      - customer additions
+      - new accounts
+    pack: cro
+    unit: count
+    allowed_dims:
+      - segment
+      - region
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: churned_customers
+    name: Churned Customers
+    description: Number of customers lost in the period
+    aliases:
+      - lost customers
+      - customer losses
+    pack: cro
+    unit: count
+    allowed_dims:
+      - segment
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low
+
+  # ─────────────────────────────────────────────────────────────────────
+  # People Metrics (source: workday)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: new_hires
+    name: New Hires
+    description: Number of employees hired in the period
+    aliases:
+      - hires
+      - new employees
+      - hiring count
+    pack: chro
+    unit: count
+    allowed_dims:
+      - department
+      - location
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: terminations
+    name: Terminations
+    description: Number of employees who left the company in the period
+    aliases:
+      - separations
+      - departures
+      - employee exits
+    pack: chro
+    unit: count
+    allowed_dims:
+      - department
+      - location
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low
+
+  - id: engineering_headcount
+    name: Engineering Headcount
+    description: Total employee count in the engineering department
+    aliases:
+      - engineering team size
+      - eng headcount
+    pack: cto
+    unit: count
+    allowed_dims:
+      - team
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: count
+    default_grain: quarter
+
+  - id: sales_headcount
+    name: Sales Headcount
+    description: Total employee count in the sales department
+    aliases:
+      - sales team size
+      - sales FTE
+    pack: cro
+    unit: count
+    allowed_dims:
+      - region
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: count
+    default_grain: quarter
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Support Metrics (source: zendesk)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: support_tickets
+    name: Support Tickets
+    description: Total number of customer support tickets received
+    aliases:
+      - tickets
+      - support volume
+      - ticket count
+    pack: coo
+    unit: count
+    allowed_dims:
+      - priority
+    allowed_grains:
+      - week
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: quarter
+
+  - id: csat
+    name: Customer Satisfaction Score
+    description: Average customer satisfaction rating on a 1-5 scale
+    aliases:
+      - CSAT
+      - customer satisfaction
+      - satisfaction score
+    pack: coo
+    unit: score
+    allowed_dims:
+      - priority
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+
+  - id: nps
+    name: Net Promoter Score
+    description: Customer willingness to recommend the product, scored -100 to +100
+    aliases:
+      - NPS
+      - net promoter
+      - customer NPS
+    pack: coo
+    unit: score
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+
+  - id: first_response_hours
+    name: First Response Time
+    description: Average time in hours to first response on a support ticket
+    aliases:
+      - first reply time
+      - time to first response
+      - FRT
+    pack: coo
+    unit: hours
+    allowed_dims:
+      - priority
+    allowed_grains:
+      - week
+      - month
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+    best_direction: low
+
+  - id: resolution_hours
+    name: Resolution Time
+    description: Average time in hours to resolve a support ticket
+    aliases:
+      - time to resolution
+      - ticket resolution time
+      - TTR
+    pack: coo
+    unit: hours
+    allowed_dims:
+      - priority
+    allowed_grains:
+      - week
+      - month
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+    best_direction: low
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Engineering Metrics (source: jira)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: sprint_velocity
+    name: Sprint Velocity
+    description: Average story points completed per sprint (2-week cadence)
+    aliases:
+      - velocity
+      - team velocity
+      - sprint throughput
+    pack: cto
+    unit: count
+    allowed_dims:
+      - team
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+
+  - id: story_points
+    name: Story Points Delivered
+    description: Total story points completed in the quarter
+    aliases:
+      - points delivered
+      - story point total
+    pack: cto
+    unit: count
+    allowed_dims:
+      - team
+      - project_type
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: quarter
+
+  - id: features_shipped
+    name: Features Shipped
+    description: Number of features or epics delivered to production
+    aliases:
+      - features delivered
+      - releases
+      - epics completed
+    pack: cto
+    unit: count
+    allowed_dims:
+      - team
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: quarter
+
+  - id: tech_debt_pct
+    name: Tech Debt Ratio
+    description: Percentage of engineering effort spent on technical debt vs new features
+    aliases:
+      - tech debt
+      - debt ratio
+      - maintenance ratio
+    pack: cto
+    unit: pct
+    allowed_dims:
+      - team
+    allowed_grains:
+      - quarter
+    measure_op: ratio
+    default_grain: quarter
+    best_direction: low
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Infrastructure Metrics (source: datadog, aws_cost_explorer)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: cloud_spend_pct_revenue
+    name: Cloud Spend as % of Revenue
+    description: Cloud infrastructure spend as a percentage of total revenue
+    aliases:
+      - cloud cost ratio
+      - infra spend pct
+    pack: cto
+    unit: pct
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: ratio
+    default_grain: quarter
+    best_direction: low
+
+  - id: p1_incidents
+    name: P1 Incidents
+    description: Count of severity-1 (critical) production incidents
+    aliases:
+      - SEV-1 incidents
+      - critical incidents
+    pack: cto
+    unit: count
+    allowed_dims:
+      - service
+      - team
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low
+
+  - id: p2_incidents
+    name: P2 Incidents
+    description: Count of severity-2 (major) production incidents
+    aliases:
+      - SEV-2 incidents
+      - major incidents
+    pack: cto
+    unit: count
+    allowed_dims:
+      - service
+      - team
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low
+
+  - id: incident_count
+    name: Total Incidents
+    description: Total number of production incidents across all severity levels
+    aliases:
+      - incidents
+      - total incidents
+    pack: cto
+    unit: count
+    allowed_dims:
+      - service
+      - team
+      - severity
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low
+
+  - id: mttr_p1_hours
+    name: MTTR P1
+    description: Mean time to resolve severity-1 incidents in hours
+    aliases:
+      - P1 recovery time
+      - SEV-1 MTTR
+    pack: cto
+    unit: hours
+    allowed_dims:
+      - service
+      - team
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+    best_direction: low
+
+  - id: mttr_p2_hours
+    name: MTTR P2
+    description: Mean time to resolve severity-2 incidents in hours
+    aliases:
+      - P2 recovery time
+      - SEV-2 MTTR
+    pack: cto
+    unit: hours
+    allowed_dims:
+      - service
+      - team
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+    best_direction: low
+
+  - id: downtime_hours
+    name: Downtime
+    description: Total hours of service unavailability in the period
+    aliases:
+      - outage hours
+      - service downtime
+    pack: cto
+    unit: hours
+    allowed_dims:
+      - service
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low

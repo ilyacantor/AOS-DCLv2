@@ -1,5 +1,6 @@
 bindings:
-  - source_system: Salesforce CRM
+  - source_system: salesforce_crm
+    display_name: Salesforce CRM
     canonical_event: deal_won
     quality_score: 0.95
     freshness_score: 0.98
@@ -9,7 +10,8 @@ bindings:
       region: true
       segment: true
 
-  - source_system: NetSuite ERP
+  - source_system: netsuite_erp
+    display_name: NetSuite ERP
     canonical_event: revenue_recognized
     quality_score: 0.92
     freshness_score: 0.95
@@ -18,7 +20,8 @@ bindings:
       service_line: true
       region: false
 
-  - source_system: NetSuite ERP
+  - source_system: netsuite_erp
+    display_name: NetSuite ERP
     canonical_event: invoice_posted
     quality_score: 0.90
     freshness_score: 0.95
@@ -27,7 +30,8 @@ bindings:
       invoice: true
       aging_bucket: true
 
-  - source_system: Chargebee
+  - source_system: chargebee
+    display_name: Chargebee
     canonical_event: subscription_started
     quality_score: 0.88
     freshness_score: 0.92
@@ -36,7 +40,8 @@ bindings:
       product: true
       segment: true
 
-  - source_system: Jira
+  - source_system: jira
+    display_name: Jira
     canonical_event: work_item_completed
     quality_score: 0.85
     freshness_score: 0.90
@@ -46,7 +51,8 @@ bindings:
       work_type: true
       priority: true
 
-  - source_system: GitHub Actions
+  - source_system: github_actions
+    display_name: GitHub Actions
     canonical_event: deployment_completed
     quality_score: 0.90
     freshness_score: 0.98
@@ -55,7 +61,8 @@ bindings:
       team: true
       environment: true
 
-  - source_system: PagerDuty
+  - source_system: pagerduty
+    display_name: PagerDuty
     canonical_event: incident_resolved
     quality_score: 0.88
     freshness_score: 0.95
@@ -64,7 +71,8 @@ bindings:
       team: true
       severity: true
 
-  - source_system: AWS Cost Explorer
+  - source_system: aws_cost_explorer
+    display_name: AWS Cost Explorer
     canonical_event: cloud_cost_incurred
     quality_score: 0.92
     freshness_score: 0.85
@@ -74,7 +82,8 @@ bindings:
       resource_type: true
       environment: true
 
-  - source_system: Workday
+  - source_system: workday
+    display_name: Workday
     canonical_event: employee_hired
     quality_score: 0.92
     freshness_score: 0.95
@@ -84,7 +93,8 @@ bindings:
       level: true
       location: true
 
-  - source_system: Workday
+  - source_system: workday
+    display_name: Workday
     canonical_event: employee_terminated
     quality_score: 0.90
     freshness_score: 0.95
@@ -94,7 +104,8 @@ bindings:
       tenure_band: true
       location: true
 
-  - source_system: Greenhouse
+  - source_system: greenhouse
+    display_name: Greenhouse
     canonical_event: requisition_opened
     quality_score: 0.88
     freshness_score: 0.92
@@ -103,7 +114,8 @@ bindings:
       role: true
       location: true
 
-  - source_system: Greenhouse
+  - source_system: greenhouse
+    display_name: Greenhouse
     canonical_event: requisition_filled
     quality_score: 0.88
     freshness_score: 0.92
@@ -112,7 +124,8 @@ bindings:
       role: true
       location: true
 
-  - source_system: Culture Amp
+  - source_system: culture_amp
+    display_name: Culture Amp
     canonical_event: survey_completed
     quality_score: 0.85
     freshness_score: 0.90
@@ -120,3 +133,35 @@ bindings:
       department: true
       team: true
       tenure_band: true
+
+  - source_system: zendesk
+    display_name: Zendesk
+    canonical_event: support_ticket_resolved
+    quality_score: 0.88
+    freshness_score: 0.92
+    dims_coverage:
+      priority: true
+    primary_metrics:
+      - support_tickets
+      - csat
+      - nps
+      - first_response_hours
+      - resolution_hours
+
+  - source_system: datadog
+    display_name: Datadog
+    canonical_event: incident_detected
+    quality_score: 0.90
+    freshness_score: 0.95
+    dims_coverage:
+      service: true
+      team: true
+      severity: true
+    primary_metrics:
+      - p1_incidents
+      - p2_incidents
+      - incident_count
+      - mttr_p1_hours
+      - mttr_p2_hours
+      - downtime_hours
+      - uptime_pct

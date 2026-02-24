@@ -39,6 +39,10 @@ entities:
       - territory
       - area
       - location
+    allowed_values:
+      - AMER
+      - EMEA
+      - APAC
 
   - id: segment
     name: Segment
@@ -48,6 +52,10 @@ entities:
       - customer segment
       - tier
       - size
+    allowed_values:
+      - Enterprise
+      - Mid-Market
+      - SMB
 
   - id: rep
     name: Sales Representative
@@ -76,6 +84,14 @@ entities:
       - group
       - department
       - unit
+    allowed_values:
+      - Platform
+      - Frontend
+      - Backend
+      - Data
+      - Infrastructure
+      - Security
+      - SRE
 
   - id: product
     name: Product
@@ -84,6 +100,11 @@ entities:
       - SKU
       - item
       - offering
+    allowed_values:
+      - Enterprise
+      - Professional
+      - Team
+      - Starter
 
   - id: project
     name: Project
@@ -148,10 +169,10 @@ entities:
     pack: cfo
     allowed_values:
       - Current
-      - 1-30 days
-      - 31-60 days
-      - 61-90 days
-      - 90+ days
+      - 1-30 Days
+      - 31-60 Days
+      - 61-90 Days
+      - 90+ Days
 
   - id: project_type
     name: Project Type
@@ -163,9 +184,8 @@ entities:
     allowed_values:
       - Feature
       - Bug Fix
+      - Tech Debt
       - Infrastructure
-      - Compliance
-      - Maintenance
 
   - id: work_type
     name: Work Type
@@ -205,11 +225,14 @@ entities:
     allowed_values:
       - API Gateway
       - Auth Service
-      - Payment Service
-      - Notification Service
+      - Payment Processor
+      - Search Service
+      - Notification Engine
       - Data Pipeline
-      - Web App
-      - Mobile Backend
+      - CDN
+      - Worker Queue
+      - Cache Layer
+      - ML Inference
 
   - id: resource_type
     name: Cloud Resource Type
@@ -243,12 +266,22 @@ entities:
     description: Service level agreement category
     aliases:
       - SLA category
+    pack: coo
+    allowed_values:
+      - Response Time
+      - Resolution Time
+      - Uptime
 
   - id: slo_type
     name: SLO Type
     description: Service level objective category
     aliases:
       - objective type
+    pack: cto
+    allowed_values:
+      - Availability
+      - Latency
+      - Error Rate
 
   - id: severity
     name: Incident Severity
@@ -258,10 +291,10 @@ entities:
       - priority
     pack: cto
     allowed_values:
-      - P1
-      - P2
-      - P3
-      - P4
+      - SEV-1
+      - SEV-2
+      - SEV-3
+      - SEV-4
 
   - id: category
     name: Category
@@ -269,6 +302,8 @@ entities:
     aliases:
       - type
       - class
+    # NEEDS_FARM_AUDIT: No explicit category enum in farm_dcl_contract.md.
+    # Values depend on metric context (expense category, ticket category, etc.).
 
   - id: department
     name: Department
@@ -277,6 +312,14 @@ entities:
       - dept
       - division
       - org unit
+    pack: chro
+    allowed_values:
+      - Engineering
+      - Product
+      - Sales
+      - Marketing
+      - Customer Success
+      - G&A
 
   - id: level
     name: Level
@@ -285,6 +328,15 @@ entities:
       - job_level
       - grade
       - band
+    pack: chro
+    allowed_values:
+      - Individual Contributor
+      - Team Lead
+      - Manager
+      - Senior Manager
+      - Director
+      - VP
+      - C-Suite
 
   - id: tenure_band
     name: Tenure Band
@@ -292,6 +344,13 @@ entities:
     aliases:
       - tenure
       - years_of_service
+    pack: chro
+    allowed_values:
+      - 0-1 Years
+      - 1-3 Years
+      - 3-5 Years
+      - 5-10 Years
+      - 10+ Years
 
   - id: role
     name: Role
@@ -306,6 +365,8 @@ entities:
     aliases:
       - course_type
       - learning_category
+    pack: chro
+    # NEEDS_FARM_AUDIT: No explicit training_type enum in farm_dcl_contract.md.
 
   - id: location
     name: Location
@@ -314,3 +375,19 @@ entities:
       - office
       - site
       - workplace
+    pack: chro
+    allowed_values:
+      - San Francisco, CA
+      - New York, NY
+      - Austin, TX
+      - Seattle, WA
+      - Denver, CO
+      - Chicago, IL
+      - Boston, MA
+      - Atlanta, GA
+      - London, UK
+      - Berlin, DE
+      - Dublin, IE
+      - Sydney, AU
+      - Singapore, SG
+      - Tokyo, JP

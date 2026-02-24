@@ -7,39 +7,40 @@ persona_concepts:
     - ar
     - dso
     - burn_rate
-    - gross_margin
+    - gross_margin_pct
     - ar_aging
   cro:
     - pipeline
-    - win_rate
-    - quota_attainment
-    - churn_rate
+    - win_rate_pct
+    - quota_attainment_pct
+    - churn_rate_pct
     - nrr
     - revenue
     - arr
     - pipeline_value
     - churn_risk
     - nrr_by_cohort
+    - customer_count
   coo:
     - throughput
     - cycle_time
-    - sla_compliance
+    - sla_compliance_pct
   cto:
     - deploy_frequency
     - mttr
-    - uptime
-    - slo_attainment
-    - cloud_cost
+    - uptime_pct
+    - slo_attainment_pct
+    - cloud_spend
   chro:
     - headcount
-    - attrition_rate
+    - attrition_rate_pct
     - time_to_fill
     - engagement_score
     - compensation_ratio
     - training_hours
-    - promotion_rate
+    - promotion_rate_pct
     - diversity_index
-    - offer_acceptance_rate
-    - internal_mobility_rate
+    - offer_acceptance_rate_pct
+    - internal_mobility_rate_pct
     - span_of_control
     - enps

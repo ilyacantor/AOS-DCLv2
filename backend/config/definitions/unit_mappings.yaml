@@ -1,0 +1,30 @@
+# Farm → DCL Unit Mapping
+#
+# Maps Farm's unit label strings (as they appear in ground_truth manifests)
+# to DCL's canonical unit vocabulary (from dcl_conventions.md Section 4).
+#
+# Any future Farm unit label that doesn't appear here must be added
+# before any binding that uses it is created.
+
+farm_to_dcl:
+  millions_usd: usd_millions
+  percent: pct
+  count: count
+  ratio: ratio
+  days: days
+  hours: hours
+
+  # Farm uses score_5 for CSAT (1-5 scale). DCL unit is "score".
+  # The scale range (1-5) must be documented in the metric description field,
+  # not the unit field.
+  score_5: score
+
+  # Farm NPS uses "score" for integer score (-100 to +100).
+  score: score
+
+  # Both normalize to "count" in DCL. Sprint velocity is story points per
+  # sprint — the "per sprint" context belongs in the metric description,
+  # not the unit. story_points is a per-sprint measure; points is a
+  # per-quarter total.
+  story_points: count
+  points: count

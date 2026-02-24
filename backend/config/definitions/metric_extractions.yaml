@@ -90,7 +90,7 @@ extractions:
       cost_center: cost_center
     unit_scale: 0.000001
 
-  - metric: gross_margin
+  - metric: gross_margin_pct
     value_concept: revenue
     measure_op: ratio
     period_concept: date
@@ -137,7 +137,7 @@ extractions:
       pipeline_stage: stage
     unit_scale: 0.000001
 
-  - metric: win_rate
+  - metric: win_rate_pct
     value_concept: win_loss
     measure_op: ratio
     period_concept: date
@@ -146,7 +146,7 @@ extractions:
       territory: region
       customer_segment: segment
 
-  - metric: quota_attainment
+  - metric: quota_attainment_pct
     value_concept: quota
     measure_op: ratio
     period_concept: date
@@ -154,7 +154,7 @@ extractions:
     dimension_map:
       territory: region
 
-  - metric: churn_rate
+  - metric: churn_rate_pct
     value_concept: churn_event
     measure_op: ratio
     period_concept: date
@@ -188,7 +188,7 @@ extractions:
     dimension_map:
       customer_segment: segment
 
-  - metric: customers
+  - metric: customer_count
     value_concept: account
     measure_op: count
     count_concept: account
@@ -215,7 +215,7 @@ extractions:
     dimension_map:
       department: team
 
-  - metric: sla_compliance
+  - metric: sla_compliance_pct
     value_concept: sla
     measure_op: avg
     period_concept: date
@@ -241,7 +241,7 @@ extractions:
     dimension_map:
       it_service: service
 
-  - metric: uptime
+  - metric: uptime_pct
     value_concept: incident
     measure_op: avg
     period_concept: date
@@ -249,7 +249,7 @@ extractions:
     dimension_map:
       it_service: service
 
-  - metric: slo_attainment
+  - metric: slo_attainment_pct
     value_concept: incident
     measure_op: avg
     period_concept: date
@@ -257,7 +257,7 @@ extractions:
     dimension_map:
       it_service: service
 
-  - metric: cloud_cost
+  - metric: cloud_spend
     value_concept: cost
     measure_op: sum
     period_concept: date
@@ -284,7 +284,7 @@ extractions:
     dimension_map:
       department: department
 
-  - metric: attrition_rate
+  - metric: attrition_rate_pct
     value_concept: employee
     measure_op: ratio
     period_concept: date
@@ -324,7 +324,7 @@ extractions:
     dimension_map:
       department: department
 
-  - metric: promotion_rate
+  - metric: promotion_rate_pct
     value_concept: employee
     measure_op: ratio
     period_concept: date
@@ -340,7 +340,7 @@ extractions:
     dimension_map:
       department: department
 
-  - metric: offer_acceptance_rate
+  - metric: offer_acceptance_rate_pct
     value_concept: candidate
     measure_op: ratio
     period_concept: date
@@ -348,7 +348,7 @@ extractions:
     dimension_map:
       department: department
 
-  - metric: internal_mobility_rate
+  - metric: internal_mobility_rate_pct
     value_concept: employee
     measure_op: ratio
     period_concept: date
