@@ -1210,6 +1210,14 @@ class IngestStore:
     # Drop Log — rejected ingestion attempts
     # ------------------------------------------------------------------
 
+    def clear_drops(self) -> None:
+        """Clear the drop log at the start of a new run."""
+        with self._lock:
+            self._drop_log.clear()
+        self._persist_drop_log()
+        self._save_to_disk()
+        logger.info("[IngestStore] Drop log cleared (new run)")
+
     def record_drop(self, entry: "DropEntry") -> None:
         """Record a rejected ingestion attempt and persist."""
         with self._lock:

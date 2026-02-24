@@ -181,6 +181,8 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
 
     display_name = resolved_snapshot or request.aod_run_id or ""
     ingest_store = get_ingest_store()
+    # New run starting — clear drops from previous run
+    ingest_store.clear_drops()
     ingest_store.record_activity(ActivityEntry(
         phase="structure",
         source="AAM",
