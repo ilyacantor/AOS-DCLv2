@@ -35,7 +35,7 @@ DCL uses a four-tier storage hierarchy. Each tier serves a different purpose.
 | `persona_concept_relevance` | Which concepts matter to which persona (with relevance scores) | Config sync at startup | Persona view, graph builder |
 | `source_systems` | Registered data sources (type, vendor, trust score) | Mapping service | Schema loader |
 
-**Connection pooling:** `psycopg2.pool.SimpleConnectionPool`, min 2 / max 5 connections, 30-second connect timeout. Connections are borrowed via context managers and returned after each operation.
+**Connection pooling:** A single shared `psycopg2.pool.SimpleConnectionPool` in `backend/core/db.py`, min 2 / max 3 connections, 30-second connect timeout. All modules (MappingPersistence, PipeStore, SchemaLoader, PersonaView) borrow from this one pool via `get_connection()` context manager.
 
 **When Postgres is unavailable:** The system falls back to Redis, then disk, then hardcoded defaults. Nothing crashes — Postgres is preferred but optional.
 
@@ -147,22 +147,23 @@ DCL uses a four-tier storage hierarchy. Each tier serves a different purpose.
 
 ## Connection Pool Architecture
 
-**Two independent connection pools** exist:
+**One shared Postgres pool** in `backend/core/db.py`:
 
-| Pool | Owner | Min | Max | Used By |
-|------|-------|-----|-----|---------|
-| Pool A | `MappingPersistence` (class-level singleton) | 2 | 3 | persist_mappings.py, schema_loader.py, persona_view.py |
-| Pool B | `pipe_store.py` (module-level singleton) | 2 | 3 | pipe_store.py only |
+| Pool | Min | Max | Used By |
+|------|-----|-----|---------|
+| Shared pool | 2 | 3 | persist_mappings.py, pipe_store.py, schema_loader.py, persona_view.py |
 
 Additionally, **two modules create standalone connections** (no pool):
 - `config_sync.py` — one connection at startup, closed after sync
 - `mapping_evaluator.py` — one connection for CLI evaluation, closed after use
 
-**Worst case:** 3 (Pool A) + 3 (Pool B) + 1 (config_sync) + 1 (evaluator) = **8 connections per worker process**. With 2 Uvicorn workers, that's up to 16 connections.
+**One shared Redis client** in `backend/core/redis_client.py` — used by IngestStore and PipeStore.
+
+**Worst case:** 3 (shared pool) + 1 (config_sync) + 1 (evaluator) = **5 connections per worker process**. With 2 Uvicorn workers, that's up to 10 connections.
 
 **Connection mode:** Transaction mode (port 6543) — Supabase pooler releases the upstream Postgres connection after each transaction, so app-side pool slots recycle quickly.
 
-**Shutdown:** Both pools are closed via FastAPI's lifespan handler on graceful shutdown, preventing abandoned connections on Supabase's pooler.
+**Shutdown:** Pool is closed via FastAPI's lifespan handler on graceful shutdown, preventing abandoned connections on Supabase's pooler.
 
 ### Cache TTLs
 
@@ -227,27 +228,29 @@ Connection string switched from port 5432 (Session mode) to 6543 (Transaction mo
 
 ---
 
+### 5. Consolidated to Single Shared Postgres Pool (Done)
+
+Created `backend/core/db.py` with one `SimpleConnectionPool`. Both MappingPersistence and PipeStore now borrow from it. Max connections per worker dropped from 6 to 3.
+
+### 6. Shared Single Redis Client (Done)
+
+Created `backend/core/redis_client.py`. IngestStore and PipeStore now share one connection. NarrationService no longer uses Redis at all (dead code removed).
+
+### 7. Removed Dead NarrationService Redis Code (Done)
+
+Removed `_get_redis()`, `_fetch_ingest_logs()`, and the `redis` import from `narration_service.py`. The service is now pure in-memory message storage as intended.
+
+---
+
 ## Remaining Optimization Opportunities
 
-### 5. Consolidate to a Single Postgres Pool (Medium Effort)
+### Eliminate Standalone Connection in config_sync.py (Low Effort)
 
-Two independent pools (MappingPersistence + PipeStore) each reserve up to 3 connections. A single shared pool in `backend/core/db.py` would drop the total from 6 to 3 per worker. Main consideration: the two pools have different error-handling philosophies (MappingPersistence raises on missing DATABASE_URL; PipeStore gracefully returns None).
+`config_sync.py` creates its own direct `psycopg2.connect()` call, bypassing the shared pool. Having it borrow from `backend.core.db.get_connection()` would give it proper lifecycle management for free.
 
-### 6. Eliminate Standalone Connection in config_sync.py (Low Effort)
-
-`config_sync.py` creates its own direct `psycopg2.connect()` call, bypassing the pool. Having it borrow from the shared pool would give it proper lifecycle management for free.
-
-### 7. Share a Single Redis Client (Low Priority)
-
-Three independent `redis.from_url()` calls (IngestStore, PipeStore, NarrationService). Redis handles many connections cheaply, so this is cosmetic — a shared client in `backend/core/redis.py` would be cleaner but isn't urgent.
-
-### 8. Row Data Durability (Design Decision)
+### Row Data Durability (Design Decision)
 
 Ingested rows live in Redis for 24 hours, then auto-expire. Disk cache intentionally excludes rows (zero-trust policy). After 24h or a restart without Redis, raw row data is gone — materialized metric points survive longer. Consider a scheduled materialization job or external archival if long-term row retention matters.
-
-### 9. Remove Dead NarrationService Redis Code (Cleanup)
-
-`narration_service.py` still has Redis code for `dcl.logs` that's commented out. Dead code that creates a Redis client nobody uses.
 
 ---
 

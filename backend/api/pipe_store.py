@@ -19,20 +19,13 @@ Persistence (ordered by durability):
 import json
 import os
 import tempfile
-import time
-from contextlib import contextmanager
 from dataclasses import dataclass, field as dc_field, asdict
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Any, Dict, List, Optional
 
 from backend.utils.log_utils import get_logger
-from backend.core.constants import (
-    POOL_MIN_CONN as _POOL_MIN_CONN,
-    POOL_MAX_CONN as _POOL_MAX_CONN,
-    DB_CONNECT_TIMEOUT as _DB_CONNECT_TIMEOUT,
-    POOL_RETRY_COOLDOWN as _POOL_RETRY_COOLDOWN,
-)
+from backend.core.db import get_connection as _pg_conn, close_pool as _close_shared_pool
 
 logger = get_logger(__name__)
 
@@ -98,105 +91,14 @@ class ExportReceipt:
 # ---------------------------------------------------------------------------
 
 def _get_redis():
-    """Try to connect to Redis via REDIS_URL env var. Returns client or None."""
-    redis_url = os.environ.get("REDIS_URL")
-    if not redis_url:
-        logger.warning("[PipeStore] REDIS_URL not set — running without Redis cache")
-        return None
-    try:
-        import redis
-        r = redis.from_url(redis_url, decode_responses=True)
-        r.ping()
-        return r
-    except Exception as e:
-        logger.warning(f"[PipeStore] Redis unavailable: {e} — running without Redis cache")
-        return None
+    """Return the shared Redis client (or None if unavailable)."""
+    from backend.core.redis_client import get_redis
+    return get_redis()
 
 
 # ---------------------------------------------------------------------------
-# Postgres helpers — reuses the same pool pattern as MappingPersistence
+# Postgres helpers — uses shared pool from backend.core.db
 # ---------------------------------------------------------------------------
-
-try:
-    import psycopg2
-    from psycopg2 import pool as _pg_pool
-except ImportError:
-    psycopg2 = None  # type: ignore[assignment]
-    _pg_pool = None  # type: ignore[assignment]
-
-_pg_connection_pool: Optional[Any] = None
-_pg_pool_initialized = False
-_pg_pool_last_attempt: float = 0
-
-
-def _get_pg_pool():
-    """Get or create the Postgres connection pool (module-level singleton)."""
-    global _pg_connection_pool, _pg_pool_initialized, _pg_pool_last_attempt
-
-    if psycopg2 is None:
-        return None
-
-    if _pg_pool_initialized and _pg_connection_pool is not None:
-        return _pg_connection_pool
-
-    now = time.time()
-    if (_pg_connection_pool is None
-            and _pg_pool_last_attempt > 0
-            and (now - _pg_pool_last_attempt) < _POOL_RETRY_COOLDOWN):
-        return None
-
-    database_url = os.environ.get("DATABASE_URL")
-    if not database_url:
-        logger.warning("[PipeStore] DATABASE_URL not set — running without Postgres persistence")
-        return None
-
-    try:
-        _pg_pool_last_attempt = now
-        _pg_connection_pool = _pg_pool.SimpleConnectionPool(
-            minconn=_POOL_MIN_CONN,
-            maxconn=_POOL_MAX_CONN,
-            dsn=database_url,
-            connect_timeout=_DB_CONNECT_TIMEOUT,
-        )
-        _pg_pool_initialized = True
-        logger.info(
-            f"[PipeStore] Postgres pool initialized "
-            f"(min={_POOL_MIN_CONN}, max={_POOL_MAX_CONN})"
-        )
-        return _pg_connection_pool
-    except Exception as e:
-        logger.warning(f"[PipeStore] Postgres pool failed: {e} — running without Postgres persistence")
-        _pg_connection_pool = None
-        return None
-
-
-@contextmanager
-def _pg_conn():
-    """Borrow a connection from the Postgres pool (context manager)."""
-    pg_pool = _get_pg_pool()
-    if pg_pool is None:
-        yield None
-        return
-
-    conn = None
-    try:
-        conn = pg_pool.getconn()
-        if conn.closed:
-            pg_pool.putconn(conn, close=True)
-            conn = pg_pool.getconn()
-        yield conn
-    except Exception as e:
-        logger.warning(f"[PipeStore] Postgres connection error: {e}")
-        yield None
-    finally:
-        if conn is not None and pg_pool is not None:
-            try:
-                pg_pool.putconn(conn)
-            except Exception:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
 
 
 _CREATE_DEFINITIONS_TABLE = """
@@ -670,17 +572,8 @@ class PipeDefinitionStore:
 
     @staticmethod
     def close_pool() -> None:
-        """Close the Postgres connection pool. Call on shutdown."""
-        global _pg_connection_pool, _pg_pool_initialized
-        if _pg_connection_pool is not None:
-            try:
-                _pg_connection_pool.closeall()
-                logger.info("[PipeStore] Postgres pool closed")
-            except Exception as e:
-                logger.warning(f"[PipeStore] Error closing pool: {e}")
-            finally:
-                _pg_connection_pool = None
-                _pg_pool_initialized = False
+        """Close the shared Postgres connection pool."""
+        _close_shared_pool()
 
     def get_stats(self) -> Dict[str, Any]:
         """Return store statistics."""

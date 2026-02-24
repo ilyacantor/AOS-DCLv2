@@ -109,18 +109,13 @@ async def lifespan(app: FastAPI):
     yield
 
     # ---- Shutdown ----
-    logger.info("[Shutdown] Closing database connection pools...")
+    logger.info("[Shutdown] Closing database connection pool...")
     try:
         from backend.semantic_mapper.persist_mappings import MappingPersistence
-        MappingPersistence.close_pool()
+        MappingPersistence.close_pool()  # clears caches + closes shared pool
     except Exception as e:
-        logger.warning(f"[Shutdown] MappingPersistence pool close error: {e}")
-    try:
-        from backend.api.pipe_store import PipeDefinitionStore
-        PipeDefinitionStore.close_pool()
-    except Exception as e:
-        logger.warning(f"[Shutdown] PipeStore pool close error: {e}")
-    logger.info("[Shutdown] Database pools closed")
+        logger.warning(f"[Shutdown] Pool close error: {e}")
+    logger.info("[Shutdown] Database pool closed")
 
 
 app = FastAPI(title="DCL Engine API", lifespan=lifespan)
