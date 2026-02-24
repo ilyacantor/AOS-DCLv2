@@ -433,7 +433,9 @@ class IngestStore:
                 self._receipts[storage_key] = receipt
                 loaded_receipts += 1
 
-                # Load rows (try composite key first, fall back to old key)
+                # Load rows — skip if already at memory limit
+                if self._total_rows >= _MAX_BUFFERED_ROWS:
+                    continue
                 rows_raw = r.get(f"{_REDIS_PREFIX}rows:{storage_key}")
                 if not rows_raw:
                     rows_raw = r.get(f"{_REDIS_PREFIX}rows:{receipt.run_id}")
@@ -469,9 +471,11 @@ class IngestStore:
                 for d in json.loads(drop_raw):
                     self._drop_log.append(DropEntry(**d))
 
-            # Load materialized data points from Redis
+            # Load materialized data points from Redis — skip once at limit
             materialized_loaded = 0
             for storage_key in order:
+                if materialized_loaded >= _MAX_MATERIALIZED_POINTS:
+                    break
                 mat_raw = r.get(f"{_REDIS_PREFIX}materialized:{storage_key}")
                 if mat_raw:
                     points = json.loads(mat_raw)
@@ -479,27 +483,11 @@ class IngestStore:
                     materialized_loaded += len(points)
             self._materialized_total = materialized_loaded
 
-            # ── Enforce memory limits on rehydrated data ──
-            # Redis may hold data from before limits were reduced.
-            evicted_rows_count = 0
-            while self._total_rows > _MAX_BUFFERED_ROWS and self._row_buffer:
-                evicted_key, evicted_rows = self._row_buffer.popitem(last=False)
-                self._total_rows -= len(evicted_rows)
-                evicted_rows_count += len(evicted_rows)
-                self._receipts.pop(evicted_key, None)
-            while self._materialized_total > _MAX_MATERIALIZED_POINTS and self._materialized:
-                evicted_key = next(iter(self._materialized))
-                evicted_pts = self._materialized.pop(evicted_key)
-                self._materialized_total -= len(evicted_pts)
+            # Cap schema registry (loaded via hgetall above, may exceed limit)
             if len(self._schema_registry) > _MAX_SCHEMA_ENTRIES:
                 excess = len(self._schema_registry) - _MAX_SCHEMA_ENTRIES
                 for old_key in list(self._schema_registry.keys())[:excess]:
                     del self._schema_registry[old_key]
-            if evicted_rows_count:
-                logger.info(
-                    f"[IngestStore] Evicted {evicted_rows_count:,} rows during "
-                    f"rehydration to stay within {_MAX_BUFFERED_ROWS:,} limit"
-                )
 
             # Backfill dispatch_id for legacy receipts (pre-dispatch era)
             backfilled = 0
@@ -1190,6 +1178,8 @@ class IngestStore:
             order = r.lrange(f"{_REDIS_PREFIX}receipt_order", 0, -1)
             loaded = 0
             for storage_key in order:
+                if loaded >= _MAX_MATERIALIZED_POINTS:
+                    break
                 mat_raw = r.get(f"{_REDIS_PREFIX}materialized:{storage_key}")
                 if mat_raw:
                     points = json.loads(mat_raw)
