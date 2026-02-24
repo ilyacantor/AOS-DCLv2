@@ -315,33 +315,75 @@ class PipeDefinitionStore:
         definitions: List[PipeDefinition],
         receipt: ExportReceipt,
     ) -> None:
-        """Upsert definitions and insert receipt into Postgres."""
+        """Upsert definitions and insert receipt into Postgres.
+
+        Uses psycopg2.extras.execute_values for batch upsert (single round-trip)
+        instead of per-row execute.
+        """
+        from psycopg2.extras import execute_values
+
         with _pg_conn() as conn:
             if conn is None:
                 return
             try:
                 with conn.cursor() as cur:
-                    for defn in definitions:
-                        cur.execute(_UPSERT_DEFINITION, (
-                            defn.pipe_id,
-                            defn.candidate_id,
-                            defn.source_name,
-                            defn.vendor,
-                            defn.category,
-                            defn.governance_status,
-                            json.dumps(defn.fields),
-                            defn.entity_scope,
-                            json.dumps(defn.identity_keys),
-                            defn.transport_kind,
-                            defn.modality,
-                            defn.change_semantics,
-                            defn.health,
-                            defn.last_sync,
-                            defn.asset_key,
-                            defn.aod_asset_id,
-                            defn.fabric_plane,
-                            defn.received_at,
-                        ))
+                    # Batch upsert all definitions via execute_values
+                    if definitions:
+                        values = [
+                            (
+                                defn.pipe_id,
+                                defn.candidate_id,
+                                defn.source_name,
+                                defn.vendor,
+                                defn.category,
+                                defn.governance_status,
+                                json.dumps(defn.fields),
+                                defn.entity_scope,
+                                json.dumps(defn.identity_keys),
+                                defn.transport_kind,
+                                defn.modality,
+                                defn.change_semantics,
+                                defn.health,
+                                defn.last_sync,
+                                defn.asset_key,
+                                defn.aod_asset_id,
+                                defn.fabric_plane,
+                                defn.received_at,
+                            )
+                            for defn in definitions
+                        ]
+                        execute_values(
+                            cur,
+                            """
+                            INSERT INTO pipe_definitions (
+                                pipe_id, candidate_id, source_name, vendor, category,
+                                governance_status, fields, entity_scope, identity_keys,
+                                transport_kind, modality, change_semantics, health,
+                                last_sync, asset_key, aod_asset_id, fabric_plane, received_at
+                            ) VALUES %s
+                            ON CONFLICT (pipe_id) DO UPDATE SET
+                                candidate_id     = EXCLUDED.candidate_id,
+                                source_name      = EXCLUDED.source_name,
+                                vendor           = EXCLUDED.vendor,
+                                category         = EXCLUDED.category,
+                                governance_status = EXCLUDED.governance_status,
+                                fields           = EXCLUDED.fields,
+                                entity_scope     = EXCLUDED.entity_scope,
+                                identity_keys    = EXCLUDED.identity_keys,
+                                transport_kind   = EXCLUDED.transport_kind,
+                                modality         = EXCLUDED.modality,
+                                change_semantics = EXCLUDED.change_semantics,
+                                health           = EXCLUDED.health,
+                                last_sync        = EXCLUDED.last_sync,
+                                asset_key        = EXCLUDED.asset_key,
+                                aod_asset_id     = EXCLUDED.aod_asset_id,
+                                fabric_plane     = EXCLUDED.fabric_plane,
+                                received_at      = EXCLUDED.received_at
+                            """,
+                            values,
+                            template="(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        )
+
                     cur.execute(_INSERT_RECEIPT, (
                         receipt.aod_run_id,
                         receipt.source,
@@ -353,14 +395,15 @@ class PipeDefinitionStore:
                 conn.commit()
                 self._pg_available = True
                 logger.info(
-                    f"[PipeStore] Persisted {len(definitions)} definitions to Postgres"
+                    f"[PipeStore] Persisted {len(definitions)} definitions to Postgres (batch)"
                 )
             except Exception as e:
-                logger.warning(f"[PipeStore] Postgres batch persist failed: {e}")
+                logger.error(f"[PipeStore] Postgres batch persist failed: {e}")
                 try:
                     conn.rollback()
                 except Exception:
                     pass
+                raise
 
     # ------------------------------------------------------------------
     # Disk persistence (JSON file fallback)

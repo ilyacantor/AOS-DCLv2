@@ -11,6 +11,7 @@ Persistence:
   - If Redis is unavailable, in-memory only (logs warning at startup).
 """
 
+import atexit
 import hashlib
 import json
 import os
@@ -19,7 +20,7 @@ import time
 from collections import OrderedDict
 from dataclasses import dataclass, field as dc_field, asdict
 from datetime import datetime, timezone
-from threading import Lock
+from threading import Lock, Timer
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -257,11 +258,22 @@ class IngestStore:
         # Redis connection (None if unavailable)
         self._redis = _get_redis()
 
+        # Debounced disk writes: coalesce rapid writes into one flush every 2s
+        self._disk_dirty = False
+        self._disk_timer: Optional[Timer] = None
+        self._disk_timer_lock = Lock()
+
+        # Throttled Redis sync: skip if called within last 250ms
+        self._last_sync_time: float = 0.0
+
         # Rehydrate from Redis on startup
         if self._redis:
             self._load_from_redis()
 
         self._load_from_disk()
+
+        # Ensure pending disk writes flush on process exit
+        atexit.register(self._flush_to_disk)
 
     # ------------------------------------------------------------------
     # Disk persistence (JSON file fallback)
@@ -305,6 +317,30 @@ class IngestStore:
                 raise
         except Exception as e:
             logger.warning(f"[IngestStore] Failed to save to disk: {e}")
+
+    def _mark_disk_dirty(self) -> None:
+        """Schedule a debounced disk flush (2s delay).
+
+        Multiple calls within the 2s window coalesce into a single write.
+        Redis is the durable buffer — disk is a cold backup that can lag 2s.
+        """
+        with self._disk_timer_lock:
+            self._disk_dirty = True
+            if self._disk_timer is not None and self._disk_timer.is_alive():
+                return  # timer already pending, will pick up the dirty flag
+            self._disk_timer = Timer(2.0, self._flush_to_disk)
+            self._disk_timer.daemon = True
+            self._disk_timer.start()
+
+    def _flush_to_disk(self) -> None:
+        """Execute the actual disk write if dirty. Called by Timer or atexit."""
+        with self._disk_timer_lock:
+            if not self._disk_dirty:
+                return
+            self._disk_dirty = False
+            self._disk_timer = None
+        logger.debug("[IngestStore] Debounced disk flush firing")
+        self._save_to_disk()
 
     def _load_from_disk(self) -> None:
         if not os.path.exists(_CACHE_FILE):
@@ -586,6 +622,70 @@ class IngestStore:
         except Exception as e:
             logger.warning(f"[IngestStore] Redis evict failed: {e}")
 
+    def _persist_ingest_batch(
+        self,
+        key: str,
+        receipt: "RunReceipt",
+        tagged_rows: List[Dict[str, Any]],
+        pipe_id: str,
+        schema_record: "SchemaRecord",
+        drift: bool,
+        evicted_ids: List[str],
+    ) -> None:
+        """Batch all Redis writes for one ingest into a single pipeline round-trip.
+
+        Replaces 8-10 sequential Redis calls with 1 pipelined batch (~5ms vs ~80ms on Render).
+        Falls back to individual persist methods if pipeline fails.
+        """
+        if not self._redis:
+            return
+        try:
+            pipe = self._redis.pipeline(transaction=False)
+
+            # Receipt
+            pipe.hset(f"{_REDIS_PREFIX}receipts", key, json.dumps(asdict(receipt)))
+            pipe.rpush(f"{_REDIS_PREFIX}receipt_order", key)
+            pipe.expire(f"{_REDIS_PREFIX}receipts", _REDIS_TTL)
+            pipe.expire(f"{_REDIS_PREFIX}receipt_order", _REDIS_TTL)
+
+            # Rows
+            rows_key = f"{_REDIS_PREFIX}rows:{key}"
+            pipe.set(rows_key, json.dumps(tagged_rows, default=str))
+            pipe.expire(rows_key, _REDIS_TTL)
+
+            # Schema
+            pipe.hset(f"{_REDIS_PREFIX}schemas", pipe_id, json.dumps(asdict(schema_record)))
+            pipe.expire(f"{_REDIS_PREFIX}schemas", _REDIS_TTL)
+
+            # Drift events (only if drift occurred)
+            if drift:
+                pipe.set(
+                    f"{_REDIS_PREFIX}drift_events",
+                    json.dumps([asdict(e) for e in self._drift_events]),
+                )
+                pipe.expire(f"{_REDIS_PREFIX}drift_events", _REDIS_TTL)
+
+            # Evictions
+            for eid in evicted_ids:
+                pipe.hdel(f"{_REDIS_PREFIX}receipts", eid)
+                pipe.lrem(f"{_REDIS_PREFIX}receipt_order", 1, eid)
+                pipe.delete(f"{_REDIS_PREFIX}rows:{eid}")
+
+            pipe.execute()
+        except Exception as e:
+            logger.error(
+                f"[IngestStore] Redis pipeline failed for key={key} pipe_id={pipe_id}: {e}. "
+                f"Falling back to individual persist calls."
+            )
+            # Fallback: individual calls so data is not silently lost
+            self._persist_receipt(key, receipt)
+            self._persist_rows(key, tagged_rows)
+            self._persist_schema(pipe_id, schema_record)
+            if drift:
+                self._persist_drift_events()
+            for eid in evicted_ids:
+                self._evict_from_redis(eid)
+
     # ------------------------------------------------------------------
     # Cross-worker sync — reload lightweight lists from Redis so all
     # workers see the same state.  Called before read endpoints.
@@ -597,9 +697,17 @@ class IngestStore:
         With --workers 2, each worker has its own in-memory state.
         This ensures read endpoints return data written by ANY worker.
         Cheap: 3 Redis GETs per call (~1ms total).
+
+        Throttled: skips if called within last 250ms to avoid redundant
+        syncs during burst ingest.
         """
         if not self._redis:
             return
+        now = time.monotonic()
+        if now - self._last_sync_time < 0.25:
+            return
+        self._last_sync_time = now
+        logger.debug("[IngestStore] Redis sync firing")
         try:
             r = self._redis
 
@@ -759,16 +867,11 @@ class IngestStore:
                 self._total_rows -= len(evicted_rows)
                 evicted_ids.append(evicted_id)
 
-        # Write-through to Redis (outside lock)
-        self._persist_receipt(key, receipt)
-        self._persist_rows(key, tagged)
-        self._persist_schema(pipe_id, schema_record)
-        if drift:
-            self._persist_drift_events()
-        for eid in evicted_ids:
-            self._evict_from_redis(eid)
+        # Write-through to Redis (pipelined — single round-trip)
+        self._persist_ingest_batch(key, receipt, tagged, pipe_id, schema_record, drift, evicted_ids)
 
-        self._save_to_disk()
+        # Debounced disk write (coalesces rapid writes into one flush every 2s)
+        self._mark_disk_dirty()
         return receipt
 
     # --- Query helpers ---

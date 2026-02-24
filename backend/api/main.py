@@ -109,6 +109,14 @@ async def lifespan(app: FastAPI):
     yield
 
     # ---- Shutdown ----
+    # Flush any pending debounced disk writes before closing pools
+    try:
+        store = get_ingest_store()
+        store._flush_to_disk()
+        logger.info("[Shutdown] IngestStore disk flush complete")
+    except Exception as e:
+        logger.warning(f"[Shutdown] IngestStore flush error: {e}")
+
     logger.info("[Shutdown] Closing database connection pool...")
     try:
         from backend.semantic_mapper.persist_mappings import MappingPersistence

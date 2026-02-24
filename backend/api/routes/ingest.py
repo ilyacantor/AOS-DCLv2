@@ -13,8 +13,10 @@ Handles:
   GET  /api/dcl/ingest/dispatches/X — dispatch detail
 """
 
+import asyncio
 import os
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, HTTPException, Header, Request
 from typing import Optional
@@ -35,6 +37,9 @@ from backend.utils.log_utils import get_logger
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/dcl/ingest", tags=["Ingestion"])
+
+# Background thread pool for deferred materialization (avoids blocking ingest response)
+_materialize_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="materialize")
 
 
 # ---------------------------------------------------------------------------
@@ -510,25 +515,32 @@ async def dcl_ingest(
         now=now,
     )
 
-    # --- Materialize metric data points ---
-    try:
-        from backend.engine.metric_materializer import get_materializer
-        materializer = get_materializer()
-        mat_points = materializer.materialize(
-            pipe_id=pipe_id,
-            source_system=ingest_req.source_system,
-            rows=ingest_req.rows,
-            dispatch_id=dispatch_id,
-        )
-        if mat_points:
-            mat_key = f"{run_id}:{pipe_id}"
-            store.store_materialized(mat_key, mat_points)
-            logger.info(
-                f"[Ingest] Materialized {len(mat_points)} data points "
-                f"from {pipe_id} ({ingest_req.source_system})"
+    # --- Materialize metric data points (deferred to background thread) ---
+    def _materialize_sync():
+        try:
+            from backend.engine.metric_materializer import get_materializer
+            materializer = get_materializer()
+            mat_points = materializer.materialize(
+                pipe_id=pipe_id,
+                source_system=ingest_req.source_system,
+                rows=ingest_req.rows,
+                dispatch_id=dispatch_id,
             )
-    except Exception as e:
-        logger.warning(f"[Ingest] Materialization failed for {pipe_id}: {e}")
+            if mat_points:
+                mat_key = f"{run_id}:{pipe_id}"
+                store.store_materialized(mat_key, mat_points)
+                logger.info(
+                    f"[Ingest] Materialized {len(mat_points)} data points "
+                    f"from {pipe_id} ({ingest_req.source_system})"
+                )
+        except Exception as e:
+            logger.error(
+                f"[Ingest] Materialization failed for pipe_id={pipe_id} "
+                f"source={ingest_req.source_system} run_id={run_id}: {e}"
+            )
+
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(_materialize_pool, _materialize_sync)
 
     logger.info(
         f"[Ingest] Accepted {actual_rows} rows from {ingest_req.source_system} "
