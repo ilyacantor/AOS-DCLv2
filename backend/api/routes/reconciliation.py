@@ -2,9 +2,10 @@
 DCL Reconciliation routes — AAM vs DCL source comparison.
 
 Handles:
-  GET  /api/dcl/reconciliation      — mode-aware reconciliation
-  GET  /api/dcl/reconciliation/sor  — SOR reconciliation
-  POST /api/reconcile               — stateless AAM reconciliation
+  GET  /api/dcl/reconciliation              — mode-aware reconciliation
+  GET  /api/dcl/reconciliation/sor          — SOR reconciliation
+  GET  /api/dcl/reconciliation/cross-system — cross-system stats reconciliation
+  POST /api/reconcile                       — stateless AAM reconciliation
 """
 
 from pathlib import Path
@@ -14,6 +15,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
 from backend.api.ingest import get_ingest_store
+from backend.api.pipe_store import get_pipe_store
 from backend.core.mode_state import get_current_mode
 from backend.core.constants import utc_now
 from backend.utils.log_utils import get_logger
@@ -534,3 +536,240 @@ def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
     }
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# GET /api/dcl/reconciliation/cross-system
+# ---------------------------------------------------------------------------
+
+@router.get("/api/dcl/reconciliation/cross-system")
+def get_cross_system_reconciliation():
+    """Cross-system stats reconciliation — read-only aggregation.
+
+    Pulls numbers from:
+      - PipeDefinitionStore (structure phase: definitions, vendors, fabrics)
+      - IngestStore activity log (3-phase entries)
+      - IngestStore drop log (rejected pipes)
+      - IngestStore receipts (content phase: ingested pipes)
+
+    Returns a unified view with per-system stats, deltas, and explanations.
+    No data is mutated — this is purely a read endpoint.
+    """
+    store = get_ingest_store()
+    pipe_store = get_pipe_store()
+    now = utc_now()
+
+    # --- Structure phase (from PipeDefinitionStore) ---
+    pipe_stats = pipe_store.get_stats()
+    all_definitions = pipe_store.get_all_definitions()
+    export_receipts = pipe_store.get_export_receipts()
+    latest_export = export_receipts[-1] if export_receipts else None
+
+    structure_pipes = pipe_stats["total_definitions"]
+    structure_vendors = pipe_stats["vendors"]  # list of vendor names
+    structure_fabrics = pipe_stats["fabric_planes"]  # list of fabric names
+
+    # Category breakdown from definitions
+    category_counts: Dict[str, int] = {}
+    for d in all_definitions:
+        cat = (d.category or "").lower() or "(empty)"
+        category_counts[cat] = category_counts.get(cat, 0) + 1
+
+    # Governance breakdown from definitions
+    governed_count = sum(
+        1 for d in all_definitions
+        if getattr(d, "governance_status", None) == "governed"
+    )
+
+    # --- Activity log (3-phase entries) ---
+    activity = store.get_activity_log()
+    structure_entry = next((e for e in activity if e["phase"] == "structure"), None)
+    dispatch_entry = next((e for e in activity if e["phase"] == "dispatch"), None)
+    content_entry = next((e for e in activity if e["phase"] == "content"), None)
+
+    # --- Drop log ---
+    drops = store.get_drop_log()
+    unique_drop_pipes = sorted(set(d["pipe_id"] for d in drops))
+    drops_by_error: Dict[str, int] = {}
+    for d in drops:
+        code = d.get("error_code", "UNKNOWN")
+        drops_by_error[code] = drops_by_error.get(code, 0) + 1
+
+    # --- Content phase (from receipts) ---
+    all_receipts = store.get_all_receipts()
+    dispatches = store.get_dispatches()
+
+    # Use latest AAM dispatch if available, else latest Farm dispatch
+    aam_dispatches = [d for d in dispatches if d["dispatch_id"].startswith("aam_")]
+    target_dispatch = aam_dispatches[0] if aam_dispatches else (dispatches[0] if dispatches else None)
+
+    content_pipes = 0
+    content_rows = 0
+    content_sources: List[str] = []
+    dispatch_id = ""
+    if target_dispatch:
+        dispatch_id = target_dispatch["dispatch_id"]
+        content_pipes = target_dispatch["pipe_count"]
+        content_rows = target_dispatch["total_rows"]
+        content_sources = target_dispatch["unique_sources"]
+
+    # --- Build per-system view ---
+    # AAM numbers (from structure + dispatch activity)
+    aam_total = structure_entry["pipes"] if structure_entry else structure_pipes
+    aam_dispatched = dispatch_entry["pipes"] if dispatch_entry else 0
+    aam_sors = structure_entry["sors"] if structure_entry else len(structure_vendors)
+    aam_fabrics = structure_entry["fabrics"] if structure_entry else len(structure_fabrics)
+
+    # DCL numbers (from content activity + drops)
+    dcl_total = aam_total  # DCL received same total via export-pipes
+    dcl_ingested = content_entry["pipes"] if content_entry else content_pipes
+    dcl_sors = content_entry["sors"] if content_entry else 0
+    dcl_tooling = content_entry.get("tooling_pipes", 0) if content_entry else 0
+    dcl_fabrics = content_entry["fabrics"] if content_entry else 0
+    dcl_mapped = content_entry.get("mapped_pipes", 0) if content_entry else 0
+    dcl_unmapped = content_entry.get("unmapped_pipes", 0) if content_entry else 0
+    dcl_sor_pipes = content_entry.get("sor_pipes", 0) if content_entry else 0
+    dcl_other_pipes = content_entry.get("other_pipes", 0) if content_entry else 0
+    dcl_rows = content_entry.get("rows", 0) if content_entry else content_rows
+    dcl_drops_total = len(drops)
+    dcl_drops_unique = len(unique_drop_pipes)
+
+    # --- Deltas & explanations ---
+    deltas: List[Dict[str, Any]] = []
+
+    # Delta: AAM dispatched vs DCL ingested
+    farm_pushed = dcl_ingested + dcl_drops_unique  # best estimate of what Farm actually pushed
+    if aam_dispatched > 0 and aam_dispatched != farm_pushed:
+        farm_failed = aam_dispatched - farm_pushed
+        deltas.append({
+            "label": "Farm execution failures",
+            "left": f"AAM dispatched {aam_dispatched}",
+            "right": f"Farm pushed {farm_pushed}",
+            "delta": farm_failed,
+            "explanation": (
+                f"{farm_failed} pipes were dispatched by AAM but never pushed by Farm. "
+                f"These failed during Farm's data generation phase (timeouts, "
+                f"connection errors, or synthetic data failures)."
+            ),
+            "severity": "warning" if farm_failed > 0 else "info",
+        })
+
+    # Delta: AAM total vs AAM dispatched
+    if aam_total > 0 and aam_dispatched > 0 and aam_total != aam_dispatched:
+        aam_failed = aam_total - aam_dispatched
+        deltas.append({
+            "label": "AAM pre-dispatch failures",
+            "left": f"AAM total {aam_total}",
+            "right": f"AAM dispatched {aam_dispatched}",
+            "delta": aam_failed,
+            "explanation": (
+                f"{aam_failed} pipes were defined but not dispatched. "
+                f"AAM rejected these before telling Farm to run "
+                f"(unhealthy connections, missing credentials, or vendor failures)."
+            ),
+            "severity": "warning" if aam_failed > 0 else "info",
+        })
+
+    # Delta: DCL drops
+    if dcl_drops_unique > 0:
+        deltas.append({
+            "label": "DCL schema-on-write rejections",
+            "left": f"Farm pushed {farm_pushed}",
+            "right": f"DCL ingested {dcl_ingested}",
+            "delta": dcl_drops_unique,
+            "explanation": (
+                f"{dcl_drops_unique} unique pipes rejected by DCL's schema-on-write guard "
+                f"(NO_MATCHING_PIPE). These pipe_ids from Farm did not match any "
+                f"pipe definition registered via /export-pipes. "
+                f"Total drop events: {dcl_drops_total} (includes retries)."
+            ),
+            "severity": "error" if dcl_drops_unique > 5 else "warning",
+        })
+
+    # Delta: fabric counts (structure vs content)
+    if aam_fabrics != dcl_fabrics and aam_fabrics > 0:
+        deltas.append({
+            "label": "Fabric plane coverage gap",
+            "left": f"Structure defined {aam_fabrics} fabrics",
+            "right": f"Content received {dcl_fabrics} fabrics",
+            "delta": aam_fabrics - dcl_fabrics,
+            "explanation": (
+                f"Structure phase registered {aam_fabrics} fabric planes "
+                f"({', '.join(structure_fabrics)}), but only {dcl_fabrics} had pipes "
+                f"that successfully pushed content data."
+            ),
+            "severity": "info",
+        })
+
+    # Delta: SOR counts (structure vs content)
+    if aam_sors != dcl_sors and aam_sors > 0:
+        deltas.append({
+            "label": "SOR count discrepancy",
+            "left": f"Structure: {aam_sors} SORs (vendor-based)",
+            "right": f"Content: {dcl_sors} SORs (category-based)",
+            "delta": aam_sors - dcl_sors,
+            "explanation": (
+                f"Structure phase counts SORs as unique vendors ({aam_sors}). "
+                f"Content phase counts SORs as unique non-tooling source_systems ({dcl_sors}). "
+                f"These use different classification methods — vendor name vs category membership."
+            ),
+            "severity": "info",
+        })
+
+    # Snapshot identity
+    snapshot_name = ""
+    aod_run_id = ""
+    if latest_export:
+        snapshot_name = latest_export.snapshot_name or ""
+        aod_run_id = latest_export.aod_run_id or ""
+
+    return {
+        "snapshot_name": snapshot_name,
+        "aod_run_id": aod_run_id,
+        "dispatch_id": dispatch_id,
+        "recon_at": now,
+        "systems": {
+            "aam": {
+                "total_pipes": aam_total,
+                "dispatched": aam_dispatched,
+                "failed_pre_dispatch": aam_total - aam_dispatched if aam_dispatched > 0 else 0,
+                "sors": aam_sors,
+                "fabrics": aam_fabrics,
+                "fabric_names": structure_fabrics,
+                "vendor_names": structure_vendors,
+            },
+            "farm": {
+                "total_received": aam_dispatched,
+                "pushed_to_dcl": farm_pushed,
+                "failed_execution": aam_dispatched - farm_pushed if aam_dispatched > farm_pushed else 0,
+            },
+            "dcl": {
+                "total_definitions": dcl_total,
+                "ingested": dcl_ingested,
+                "sors_category": dcl_sors,
+                "sors_governed": dcl_sor_pipes,
+                "tooling_pipes": dcl_tooling,
+                "fabrics_active": dcl_fabrics,
+                "fabrics_defined": aam_fabrics,
+                "mapped_pipes": dcl_mapped,
+                "unmapped_pipes": dcl_unmapped,
+                "other_pipes": dcl_other_pipes,
+                "rows": dcl_rows,
+                "drops_total": dcl_drops_total,
+                "drops_unique_pipes": dcl_drops_unique,
+                "drop_pipe_ids": unique_drop_pipes,
+            },
+        },
+        "category_breakdown": category_counts,
+        "governance": {
+            "governed": governed_count,
+            "ungoverned": structure_pipes - governed_count,
+        },
+        "drops_by_error": drops_by_error,
+        "deltas": deltas,
+        "activity": {
+            "structure": structure_entry,
+            "dispatch": dispatch_entry,
+            "content": content_entry,
+        },
+    }

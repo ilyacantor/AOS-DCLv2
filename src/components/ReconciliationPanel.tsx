@@ -129,6 +129,61 @@ interface SorReconciliationData {
   };
 }
 
+interface CrossSystemData {
+  snapshot_name: string;
+  aod_run_id: string;
+  dispatch_id: string;
+  recon_at: string;
+  systems: {
+    aam: {
+      total_pipes: number;
+      dispatched: number;
+      failed_pre_dispatch: number;
+      sors: number;
+      fabrics: number;
+      fabric_names: string[];
+      vendor_names: string[];
+    };
+    farm: {
+      total_received: number;
+      pushed_to_dcl: number;
+      failed_execution: number;
+    };
+    dcl: {
+      total_definitions: number;
+      ingested: number;
+      sors_category: number;
+      sors_governed: number;
+      tooling_pipes: number;
+      fabrics_active: number;
+      fabrics_defined: number;
+      mapped_pipes: number;
+      unmapped_pipes: number;
+      other_pipes: number;
+      rows: number;
+      drops_total: number;
+      drops_unique_pipes: number;
+      drop_pipe_ids: string[];
+    };
+  };
+  category_breakdown: Record<string, number>;
+  governance: { governed: number; ungoverned: number };
+  drops_by_error: Record<string, number>;
+  deltas: Array<{
+    label: string;
+    left: string;
+    right: string;
+    delta: number;
+    explanation: string;
+    severity: string;
+  }>;
+  activity: {
+    structure: Record<string, unknown> | null;
+    dispatch: Record<string, unknown> | null;
+    content: Record<string, unknown> | null;
+  };
+}
+
 const statusColors: Record<string, string> = {
   synced: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
   drifted: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
@@ -173,13 +228,16 @@ interface ReconciliationPanelProps {
 
 export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProps) {
   const isFarm = dataMode === 'Farm';
-  const [activeTab, setActiveTab] = useState<'aam' | 'sor'>('aam');
+  const [activeTab, setActiveTab] = useState<'aam' | 'sor' | 'xsys'>('xsys');
   const [data, setData] = useState<ReconciliationData | null>(null);
   const [sorData, setSorData] = useState<SorReconciliationData | null>(null);
+  const [xsysData, setXsysData] = useState<CrossSystemData | null>(null);
   const [loading, setLoading] = useState(true);
   const [sorLoading, setSorLoading] = useState(true);
+  const [xsysLoading, setXsysLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sorError, setSorError] = useState<string | null>(null);
+  const [xsysError, setXsysError] = useState<string | null>(null);
   const [unmappedExpanded, setUnmappedExpanded] = useState(false);
   const [unmappedLimit, setUnmappedLimit] = useState(50);
   const [traceExpanded, setTraceExpanded] = useState(false);
@@ -204,6 +262,21 @@ export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProp
     }
   };
 
+  const fetchXsysData = async () => {
+    setXsysLoading(true);
+    setXsysError(null);
+    try {
+      const res = await fetch('/api/dcl/reconciliation/cross-system');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      setXsysData(json);
+    } catch (e: any) {
+      setXsysError(e.message || 'Failed to fetch cross-system reconciliation data');
+    } finally {
+      setXsysLoading(false);
+    }
+  };
+
   const fetchSorData = async () => {
     setSorLoading(true);
     setSorError(null);
@@ -222,6 +295,7 @@ export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProp
   useEffect(() => {
     fetchData();
     fetchSorData();
+    fetchXsysData();
   }, [runId]);
 
   const formatTimestamp = (ts: string) => {
@@ -764,11 +838,290 @@ export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProp
     );
   };
 
+  const renderXsysTab = () => {
+    if (xsysLoading) return renderLoading();
+    if (xsysError) return renderError(xsysError, fetchXsysData);
+    if (!xsysData) return null;
+
+    const { systems, deltas, category_breakdown, governance, drops_by_error } = xsysData;
+    const { aam, farm, dcl } = systems;
+
+    return (
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+        {/* Snapshot identity bar */}
+        {xsysData.snapshot_name && (
+          <div className="rounded-lg border border-border bg-card/30 px-4 py-2.5">
+            <div className="flex items-center gap-6 text-xs font-mono">
+              <span>
+                <span className="text-muted-foreground">Snapshot</span>{' '}
+                <span className="text-foreground font-semibold">{xsysData.snapshot_name}</span>
+              </span>
+              {xsysData.aod_run_id && (
+                <span>
+                  <span className="text-muted-foreground">AOD</span>{' '}
+                  <span className="text-foreground/70">{xsysData.aod_run_id}</span>
+                </span>
+              )}
+              <span className="text-muted-foreground/50 ml-auto">{formatTimestamp(xsysData.recon_at)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Pipeline flow — 3-column system comparison */}
+        <div className="grid grid-cols-3 gap-3">
+          {/* AAM column */}
+          <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3 space-y-2">
+            <div className="text-xs font-semibold text-blue-400 uppercase tracking-wider">AAM</div>
+            <div className="space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total pipes</span>
+                <span className="font-mono font-semibold text-foreground">{aam.total_pipes}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Dispatched</span>
+                <span className="font-mono font-semibold text-emerald-400">{aam.dispatched}</span>
+              </div>
+              {aam.failed_pre_dispatch > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Failed (pre-dispatch)</span>
+                  <span className="font-mono font-semibold text-red-400">{aam.failed_pre_dispatch}</span>
+                </div>
+              )}
+              <div className="border-t border-blue-500/20 pt-1.5 mt-1.5" />
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">SORs (vendors)</span>
+                <span className="font-mono text-foreground">{aam.sors}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Fabrics</span>
+                <span className="font-mono text-foreground">{aam.fabrics}</span>
+              </div>
+              {aam.fabric_names.length > 0 && (
+                <div className="text-[10px] text-muted-foreground/60 font-mono">
+                  {aam.fabric_names.join(', ')}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Farm column */}
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-2">
+            <div className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Farm</div>
+            <div className="space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Received from AAM</span>
+                <span className="font-mono font-semibold text-foreground">{farm.total_received}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Pushed to DCL</span>
+                <span className="font-mono font-semibold text-emerald-400">{farm.pushed_to_dcl}</span>
+              </div>
+              {farm.failed_execution > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Failed (execution)</span>
+                  <span className="font-mono font-semibold text-red-400">{farm.failed_execution}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* DCL column */}
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+            <div className="text-xs font-semibold text-amber-400 uppercase tracking-wider">DCL</div>
+            <div className="space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Definitions</span>
+                <span className="font-mono font-semibold text-foreground">{dcl.total_definitions}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Ingested</span>
+                <span className="font-mono font-semibold text-emerald-400">{dcl.ingested}</span>
+              </div>
+              <div className="border-t border-amber-500/20 pt-1.5 mt-1.5" />
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">SORs (category)</span>
+                <span className="font-mono text-foreground">{dcl.sors_category}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">SORs (governed)</span>
+                <span className="font-mono text-foreground">{dcl.sors_governed}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tooling</span>
+                <span className="font-mono text-amber-400">{dcl.tooling_pipes}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Fabrics (active)</span>
+                <span className="font-mono text-foreground">{dcl.fabrics_active}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Mapped / Unmapped</span>
+                <span className="font-mono">
+                  <span className="text-emerald-400">{dcl.mapped_pipes}</span>
+                  {' / '}
+                  <span className="text-red-400">{dcl.unmapped_pipes}</span>
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Rows</span>
+                <span className="font-mono text-foreground">{dcl.rows.toLocaleString()}</span>
+              </div>
+              {dcl.drops_unique_pipes > 0 && (
+                <>
+                  <div className="border-t border-red-500/20 pt-1.5 mt-1.5" />
+                  <div className="flex justify-between">
+                    <span className="text-red-400">Drops (unique pipes)</span>
+                    <span className="font-mono font-semibold text-red-400">{dcl.drops_unique_pipes}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Drop events (incl. retries)</span>
+                    <span className="font-mono text-muted-foreground">{dcl.drops_total}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Deltas — gap explanations */}
+        {deltas.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
+              Gap Analysis ({deltas.length})
+            </h3>
+            {deltas.map((d, idx) => {
+              const sev = d.severity === 'error'
+                ? 'border-red-500/30 bg-red-500/5'
+                : d.severity === 'warning'
+                  ? 'border-amber-500/30 bg-amber-500/5'
+                  : 'border-blue-500/30 bg-blue-500/5';
+              const sevIcon = d.severity === 'error' ? '!' : d.severity === 'warning' ? '~' : 'i';
+              const sevColor = d.severity === 'error'
+                ? 'text-red-400'
+                : d.severity === 'warning'
+                  ? 'text-amber-400'
+                  : 'text-blue-400';
+              return (
+                <div key={idx} className={`rounded-lg border ${sev} p-3`}>
+                  <div className="flex items-start gap-2">
+                    <span className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold border ${sevColor} border-current/30 bg-current/10`}>
+                      {sevIcon}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="font-semibold text-foreground">{d.label}</span>
+                        <span className={`font-mono font-bold ${sevColor}`}>
+                          {d.delta > 0 ? `+${d.delta}` : d.delta}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 text-[10px] font-mono text-muted-foreground">
+                        <span>{d.left}</span>
+                        <span className="text-muted-foreground/40">&rarr;</span>
+                        <span>{d.right}</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground/80 mt-1.5 leading-relaxed">
+                        {d.explanation}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Category breakdown */}
+        {Object.keys(category_breakdown).length > 0 && (
+          <div className="rounded-lg border border-border bg-card/30 p-3">
+            <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-2">
+              Pipe Categories (from definitions)
+            </h3>
+            <div className="grid grid-cols-4 gap-2">
+              {Object.entries(category_breakdown).sort((a, b) => b[1] - a[1]).map(([cat, count]) => (
+                <div key={cat} className="flex justify-between text-xs px-2 py-1 rounded bg-card/50">
+                  <span className="text-muted-foreground font-mono">{cat}</span>
+                  <span className="font-mono font-semibold text-foreground">{count}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-4 mt-2 text-[10px] text-muted-foreground">
+              <span>Governed: <span className="text-emerald-400 font-semibold">{governance.governed}</span></span>
+              <span>Ungoverned: <span className="text-muted-foreground/60">{governance.ungoverned}</span></span>
+            </div>
+          </div>
+        )}
+
+        {/* Drop breakdown by error code */}
+        {Object.keys(drops_by_error).length > 0 && (
+          <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
+            <h3 className="text-xs font-semibold uppercase text-red-400/80 tracking-wide mb-2">
+              Drops by Error Code
+            </h3>
+            <div className="space-y-1">
+              {Object.entries(drops_by_error).sort((a, b) => b[1] - a[1]).map(([code, count]) => (
+                <div key={code} className="flex justify-between text-xs px-2 py-1 rounded bg-red-500/5">
+                  <span className="font-mono text-red-400/80">{code}</span>
+                  <span className="font-mono font-semibold text-red-400">{count}</span>
+                </div>
+              ))}
+            </div>
+            {dcl.drop_pipe_ids.length > 0 && dcl.drop_pipe_ids.length <= 20 && (
+              <div className="mt-2 text-[10px] text-muted-foreground/60 font-mono">
+                {dcl.drop_pipe_ids.join(', ')}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 3-phase activity raw data */}
+        <div className="rounded-lg border border-border bg-card/30 p-3">
+          <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-2">
+            3-Phase Activity
+          </h3>
+          <div className="grid grid-cols-3 gap-3 text-xs">
+            {(['structure', 'dispatch', 'content'] as const).map((phase) => {
+              const entry = xsysData.activity[phase];
+              const colors = {
+                structure: { border: 'border-blue-500/30', text: 'text-blue-400', bg: 'bg-blue-500/10' },
+                dispatch: { border: 'border-amber-500/30', text: 'text-amber-400', bg: 'bg-amber-500/10' },
+                content: { border: 'border-emerald-500/30', text: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+              };
+              const c = colors[phase];
+              return (
+                <div key={phase} className={`rounded border ${c.border} ${c.bg} p-2`}>
+                  <div className={`font-semibold ${c.text} uppercase text-[10px] tracking-wider mb-1`}>
+                    {phase}
+                  </div>
+                  {entry ? (
+                    <div className="space-y-0.5 font-mono text-[10px]">
+                      <div className="text-muted-foreground">
+                        {(entry as any).source} &middot; {formatTimestamp((entry as any).timestamp)}
+                      </div>
+                      <div>Pipes: <span className="text-foreground font-semibold">{(entry as any).pipes}</span></div>
+                      {(entry as any).sors > 0 && <div>SORs: {(entry as any).sors}</div>}
+                      {(entry as any).fabrics > 0 && <div>Fabrics: {(entry as any).fabrics}</div>}
+                      {(entry as any).tooling_pipes > 0 && <div>Tooling: {(entry as any).tooling_pipes}</div>}
+                      {(entry as any).rows > 0 && <div>Rows: {((entry as any).rows as number).toLocaleString()}</div>}
+                    </div>
+                  ) : (
+                    <div className="text-muted-foreground/40 text-[10px]">Not received</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const handleRefresh = () => {
     if (activeTab === 'aam') {
       fetchData();
-    } else {
+    } else if (activeTab === 'sor') {
       fetchSorData();
+    } else {
+      fetchXsysData();
     }
   };
 
@@ -778,6 +1131,8 @@ export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProp
       downloadJson(data, `dcl-aam-recon-${dateStr}.json`);
     } else if (activeTab === 'sor' && sorData) {
       downloadJson(sorData, `dcl-sor-recon-${dateStr}.json`);
+    } else if (activeTab === 'xsys' && xsysData) {
+      downloadJson(xsysData, `dcl-xsys-recon-${dateStr}.json`);
     }
   };
 
@@ -788,7 +1143,7 @@ export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProp
         <div className="flex items-center gap-2">
           <button
             onClick={handleDownload}
-            disabled={(activeTab === 'aam' && !data) || (activeTab === 'sor' && !sorData)}
+            disabled={(activeTab === 'aam' && !data) || (activeTab === 'sor' && !sorData) || (activeTab === 'xsys' && !xsysData)}
             className="px-3 py-1 text-xs rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Download JSON
@@ -803,6 +1158,16 @@ export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProp
       </div>
 
       <div className="shrink-0 flex border-b border-border bg-card/30">
+        <button
+          onClick={() => setActiveTab('xsys')}
+          className={`px-4 py-2 text-xs font-medium transition-colors ${
+            activeTab === 'xsys'
+              ? 'text-primary border-b-2 border-primary'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          X-System
+        </button>
         <button
           onClick={() => setActiveTab('aam')}
           className={`px-4 py-2 text-xs font-medium transition-colors ${
@@ -825,7 +1190,7 @@ export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProp
         </button>
       </div>
 
-      {activeTab === 'aam' ? renderAamTab() : renderSorTab()}
+      {activeTab === 'xsys' ? renderXsysTab() : activeTab === 'aam' ? renderAamTab() : renderSorTab()}
     </div>
   );
 }

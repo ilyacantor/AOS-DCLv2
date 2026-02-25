@@ -106,6 +106,22 @@ async def lifespan(app: FastAPI):
         # Non-fatal — graph will be built on first DCL run
         logger.warning(f"[Startup] Semantic graph build deferred: {e}")
 
+    # Auto-promote mode if ingest buffer has data from a previous session.
+    # mode_state resets to "Demo" on reboot, but ingest data persists (Redis/disk).
+    # Without this, semantic-export reports "Demo" until the next ingest push.
+    try:
+        store = get_ingest_store()
+        stats = store.get_stats()
+        buffered = stats.get("total_rows_buffered", 0)
+        if buffered > 0:
+            set_current_mode("Ingest", run_mode="Dev")
+            logger.info(
+                f"[Startup] Mode auto-promoted: Demo → Ingest "
+                f"({buffered} buffered rows, {stats.get('unique_sources', 0)} sources)"
+            )
+    except Exception as e:
+        logger.warning(f"[Startup] Ingest store check failed (non-fatal): {e}")
+
     yield
 
     # ---- Shutdown ----

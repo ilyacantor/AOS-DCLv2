@@ -32,6 +32,7 @@ from backend.api.ingest import (
     _derive_dispatch_id,
 )
 from backend.api.pipe_store import get_pipe_store
+from backend.core.mode_state import get_current_mode, set_current_mode
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -497,6 +498,13 @@ async def dcl_ingest(
     except Exception as e:
         logger.error(f"[Ingest] Failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+    # Auto-promote mode from Demo → Ingest when real data arrives.
+    # This is the root-cause fix: the mode must reflect what data exists,
+    # not remain stuck at the boot-time default.
+    if get_current_mode().data_mode == "Demo":
+        set_current_mode("Ingest", run_id=run_id)
+        logger.info(f"[Ingest] Mode auto-promoted: Demo → Ingest (run_id={run_id})")
 
     # Build enriched response with schema join confirmation
     matched_schema = pipe_def is not None

@@ -84,7 +84,7 @@ class BindingSummary(BaseModel):
 
 class ModeInfo(BaseModel):
     """Current DCL mode information."""
-    data_mode: str  # "Demo" or "Farm"
+    data_mode: str  # "Demo", "Farm", "AAM", or "Ingest"
     run_mode: str   # "Dev" or "Prod"
     last_updated: Optional[str] = None
 
