@@ -145,6 +145,7 @@ extractions:
     dimension_map:
       territory: region
       customer_segment: segment
+    unit_scale: 100
 
   - metric: quota_attainment_pct
     value_concept: quota

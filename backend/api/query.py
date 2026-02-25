@@ -481,11 +481,25 @@ def _query_ingest_store(
         ]
 
     if mat_points:
-        # Aggregate across pipes: group by (period, dim_key) and sum values.
+        # Aggregate across pipes: group by (period, dim_key).
         # Each pipe's materialization already aggregated its own rows;
         # this step combines the same metric from multiple source pipes.
+        #
+        # Additive metrics (revenue, headcount, etc.) → SUM
+        # Non-additive metrics (_pct, _ratio, _score, _days, etc.) → AVERAGE
         from collections import defaultdict as _dd
+        _NON_ADDITIVE_UNITS = {"percent", "pct", "ratio", "score", "days", "hours", "months", "index"}
+        _metric_unit = None
+        try:
+            _mdef = resolve_metric(metric)
+            if _mdef and _mdef.unit:
+                _metric_unit = _mdef.unit.lower()
+        except Exception:
+            pass
+        _is_additive = _metric_unit not in _NON_ADDITIVE_UNITS
+
         agg: dict = _dd(float)
+        agg_count: dict = _dd(int)
         for pt in mat_points:
             if dimensions:
                 # Only keep the requested dimensions in the grouping key
@@ -497,13 +511,29 @@ def _query_ingest_store(
             period = pt.get("period", "current")
             key = (period, tuple(sorted(dim_vals.items())))
             agg[key] += float(pt["value"])
+            agg_count[key] += 1
 
-        data_points = [
-            QueryDataPoint(period=k[0], value=round(v, 6), dimensions=dict(k[1]))
-            for k, v in sorted(agg.items())
-        ]
+        if _is_additive:
+            data_points = [
+                QueryDataPoint(period=k[0], value=round(v, 6), dimensions=dict(k[1]))
+                for k, v in sorted(agg.items())
+            ]
+        else:
+            # Average for rate/percentage/score metrics
+            data_points = [
+                QueryDataPoint(period=k[0], value=round(agg[k] / agg_count[k], 6), dimensions=dict(k[1]))
+                for k in sorted(agg.keys())
+            ]
 
-        contributing_receipt = max(all_receipts, key=lambda r: r.received_at)
+        # Pick the receipt whose source actually contributed data (not just
+        # the most-recent receipt from any source).  Materialized points carry
+        # source_system — match against receipts.
+        _contributing_sources = {pt.get("source_system") for pt in mat_points if pt.get("source_system")}
+        _candidate_receipts = [r for r in all_receipts if r.source_system in _contributing_sources]
+        if _candidate_receipts:
+            contributing_receipt = max(_candidate_receipts, key=lambda r: r.received_at)
+        else:
+            contributing_receipt = max(all_receipts, key=lambda r: r.received_at)
         return data_points, contributing_receipt
 
     # --- Fallback: scan raw rows (legacy path) ---
