@@ -90,15 +90,9 @@ extractions:
       cost_center: cost_center
     unit_scale: 0.000001
 
-  - metric: gross_margin_pct
-    value_concept: revenue
-    measure_op: ratio
-    period_concept: date
-    ratio_hint: gross_margin
-    dimension_map:
-      product: product
-      customer_segment: segment
-    unit_scale: 100
+  # gross_margin_pct: extraction rule removed — ratio_hint partial-matches
+  # dollar-amount GL fields instead of a pre-computed ratio.  DCL falls back
+  # to fact_base (~65%) which is correct.
 
   - metric: ar_aging
     value_concept: accounts_receivable
