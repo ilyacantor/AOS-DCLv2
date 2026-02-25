@@ -84,10 +84,10 @@ export function IngestionPanel() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('/api/dcl/ingest/runs');
+      const res = await fetch('/api/dcl/ingest/stats');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json: IngestRunsResponse = await res.json();
-      setStats(json.stats);
+      const json: IngestStats = await res.json();
+      setStats(json);
       setError(null);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to fetch ingestion data';

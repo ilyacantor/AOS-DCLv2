@@ -758,10 +758,16 @@ class IngestStore:
         try:
             r = self._redis
 
+            # Batch the 3 initial GETs into one pipeline round-trip
+            pipe = r.pipeline()
+            pipe.get(f"{_REDIS_PREFIX}activity_log")
+            pipe.get(f"{_REDIS_PREFIX}drop_log")
+            pipe.lrange(f"{_REDIS_PREFIX}receipt_order", 0, -1)
+            activity_raw, drop_raw, order = pipe.execute()
+
             # Activity log
-            raw = r.get(f"{_REDIS_PREFIX}activity_log")
-            if raw:
-                entries = [ActivityEntry(**d) for d in json.loads(raw)]
+            if activity_raw:
+                entries = [ActivityEntry(**d) for d in json.loads(activity_raw)]
                 with self._lock:
                     self._activity_log = entries
                     self._seen_dispatch_ids = {
@@ -769,29 +775,42 @@ class IngestStore:
                     }
 
             # Drop log
-            raw = r.get(f"{_REDIS_PREFIX}drop_log")
-            if raw:
+            if drop_raw:
                 with self._lock:
-                    self._drop_log = [DropEntry(**d) for d in json.loads(raw)]
+                    self._drop_log = [DropEntry(**d) for d in json.loads(drop_raw)]
 
             # Receipts (metadata only — rows stay lazy)
-            order = r.lrange(f"{_REDIS_PREFIX}receipt_order", 0, -1)
             if order:
                 new_receipts: OrderedDict[str, RunReceipt] = OrderedDict()
+                uncached_keys = []
                 for storage_key in order:
                     cached = self._receipts.get(storage_key)
                     if cached:
                         new_receipts[storage_key] = cached
-                        continue
-                    raw_r = r.hget(f"{_REDIS_PREFIX}receipts", storage_key)
-                    if raw_r:
-                        d = json.loads(raw_r)
-                        receipt = RunReceipt(**d)
-                        if ":" not in storage_key:
-                            storage_key = _make_key(receipt.run_id, receipt.pipe_id)
-                        new_receipts[storage_key] = receipt
+                    else:
+                        uncached_keys.append(storage_key)
+
+                if uncached_keys:
+                    pipe2 = r.pipeline()
+                    for k in uncached_keys:
+                        pipe2.hget(f"{_REDIS_PREFIX}receipts", k)
+                    results = pipe2.execute()
+                    for storage_key, raw_r in zip(uncached_keys, results):
+                        if raw_r:
+                            d = json.loads(raw_r)
+                            receipt = RunReceipt(**d)
+                            if ":" not in storage_key:
+                                storage_key = _make_key(receipt.run_id, receipt.pipe_id)
+                            new_receipts[storage_key] = receipt
+
+                # Preserve original order from receipt_order list
+                ordered_receipts: OrderedDict[str, RunReceipt] = OrderedDict()
+                for storage_key in order:
+                    if storage_key in new_receipts:
+                        ordered_receipts[storage_key] = new_receipts[storage_key]
+
                 with self._lock:
-                    self._receipts = new_receipts
+                    self._receipts = ordered_receipts
 
         except Exception as e:
             logger.warning(f"[IngestStore] Redis sync failed: {e}")
