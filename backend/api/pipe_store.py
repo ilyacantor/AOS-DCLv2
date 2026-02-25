@@ -19,6 +19,7 @@ Persistence (ordered by durability):
 import json
 import os
 import tempfile
+import time
 from dataclasses import dataclass, field as dc_field, asdict
 from datetime import datetime, timezone
 from threading import Lock
@@ -199,6 +200,7 @@ class PipeDefinitionStore:
         self._export_receipts: List[ExportReceipt] = []
         self._redis = _get_redis()
         self._pg_available = False
+        self._last_sync_time: float = 0.0
 
         # Ensure Postgres tables exist, then load from PG first
         self._ensure_pg_tables()
@@ -279,7 +281,7 @@ class PipeDefinitionStore:
                             last_sync=row[13],
                             asset_key=row[14] or "",
                             aod_asset_id=row[15],
-                            fabric_plane=row[16] or "",
+                            fabric_plane=(row[16] or "").lower(),
                             received_at=str(row[17]) if row[17] else "",
                         )
                         self._definitions[defn.pipe_id] = defn
@@ -476,7 +478,10 @@ class PipeDefinitionStore:
             loaded = 0
             for pipe_id, raw in raw_defs.items():
                 d = json.loads(raw)
-                self._definitions[pipe_id] = PipeDefinition(**d)
+                defn = PipeDefinition(**d)
+                if defn.fabric_plane:
+                    defn.fabric_plane = defn.fabric_plane.lower()
+                self._definitions[pipe_id] = defn
                 loaded += 1
 
             raw_receipts = r.get(f"{_REDIS_PREFIX}export_receipts")
@@ -492,6 +497,43 @@ class PipeDefinitionStore:
                 )
         except Exception as e:
             logger.warning(f"[PipeStore] Redis rehydration failed: {e}")
+
+    def _sync_from_redis(self) -> None:
+        """Reload definitions from Redis written by another worker.
+
+        With --workers 2, Worker A may register definitions via /export-pipes
+        while Worker B handles /ingest. Without this sync, Worker B's lookup()
+        misses valid pipe_ids and creates false NO_MATCHING_PIPE drops.
+
+        Throttled to at most once per second to avoid Redis spam during
+        burst ingest.
+        """
+        if not self._redis:
+            return
+        now = time.monotonic()
+        if now - self._last_sync_time < 1.0:
+            return
+        self._last_sync_time = now
+        try:
+            raw_defs = self._redis.hgetall(f"{_REDIS_PREFIX}definitions")
+            if not raw_defs:
+                return
+            new_count = 0
+            with self._lock:
+                for pipe_id, raw in raw_defs.items():
+                    if pipe_id not in self._definitions:
+                        defn = PipeDefinition(**json.loads(raw))
+                        if defn.fabric_plane:
+                            defn.fabric_plane = defn.fabric_plane.lower()
+                        self._definitions[pipe_id] = defn
+                        new_count += 1
+            if new_count > 0:
+                logger.info(
+                    f"[PipeStore] Cross-worker sync: loaded {new_count} new "
+                    f"definitions from Redis (total={len(self._definitions)})"
+                )
+        except Exception as e:
+            logger.warning(f"[PipeStore] Redis sync failed: {e}")
 
     def _persist_definition(self, pipe_id: str, defn: PipeDefinition) -> None:
         """Write a single pipe definition to Redis."""
@@ -544,6 +586,9 @@ class PipeDefinitionStore:
         with self._lock:
             for defn in definitions:
                 defn.received_at = now
+                # Normalize fabric_plane to lowercase for consistent counting
+                if defn.fabric_plane:
+                    defn.fabric_plane = defn.fabric_plane.lower()
                 self._definitions[defn.pipe_id] = defn
                 pipe_ids.append(defn.pipe_id)
 
@@ -577,7 +622,17 @@ class PipeDefinitionStore:
         return receipt
 
     def lookup(self, pipe_id: str) -> Optional[PipeDefinition]:
-        """Look up a pipe definition by pipe_id (the JOIN key)."""
+        """Look up a pipe definition by pipe_id (the JOIN key).
+
+        On cache miss, syncs from Redis to pick up definitions
+        registered by another worker (multi-worker support).
+        """
+        with self._lock:
+            defn = self._definitions.get(pipe_id)
+        if defn is not None:
+            return defn
+        # Cache miss — try syncing from Redis (another worker may have it)
+        self._sync_from_redis()
         with self._lock:
             return self._definitions.get(pipe_id)
 

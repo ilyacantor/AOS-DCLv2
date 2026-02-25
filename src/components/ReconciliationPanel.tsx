@@ -889,7 +889,7 @@ export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProp
               )}
               <div className="border-t border-blue-500/20 pt-1.5 mt-1.5" />
               <div className="flex justify-between">
-                <span className="text-muted-foreground">SORs (vendors)</span>
+                <span className="text-muted-foreground" title="Unique vendor names from AAM pipe definitions. This is not the same as DCL's SOR count which uses category-based classification.">SORs (vendors)</span>
                 <span className="font-mono text-foreground">{aam.sors}</span>
               </div>
               <div className="flex justify-between">
@@ -939,11 +939,11 @@ export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProp
               </div>
               <div className="border-t border-amber-500/20 pt-1.5 mt-1.5" />
               <div className="flex justify-between">
-                <span className="text-muted-foreground">SORs (category)</span>
+                <span className="text-muted-foreground" title="Unique non-tooling source_systems. Counts sources where category is crm, erp, finops, infra, or aod. Different definition than AAM's vendor-based count.">SORs (category)</span>
                 <span className="font-mono text-foreground">{dcl.sors_category}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">SORs (governed)</span>
+                <span className="text-muted-foreground" title="Pipes with governance_status='governed'. A third SOR definition based on governance metadata.">SORs (governed)</span>
                 <span className="font-mono text-foreground">{dcl.sors_governed}</span>
               </div>
               <div className="flex justify-between">
@@ -951,7 +951,12 @@ export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProp
                 <span className="font-mono text-amber-400">{dcl.tooling_pipes}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Fabrics (active)</span>
+                <span className="text-muted-foreground" title={`${dcl.fabrics_active} of ${dcl.fabrics_defined} defined fabrics have pipes that pushed content. Gap is expected if no pipes are currently routed to those fabrics.`}>
+                  Fabrics (active)
+                  {dcl.fabrics_active < dcl.fabrics_defined && (
+                    <span className="text-[10px] text-muted-foreground/50 ml-1">/{dcl.fabrics_defined} defined</span>
+                  )}
+                </span>
                 <span className="font-mono text-foreground">{dcl.fabrics_active}</span>
               </div>
               <div className="flex justify-between">

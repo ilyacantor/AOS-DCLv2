@@ -696,7 +696,8 @@ def get_cross_system_reconciliation():
             "explanation": (
                 f"Structure phase registered {aam_fabrics} fabric planes "
                 f"({', '.join(structure_fabrics)}), but only {dcl_fabrics} had pipes "
-                f"that successfully pushed content data."
+                f"that successfully pushed content data. This is expected if no "
+                f"pipes are currently routed through those fabric planes."
             ),
             "severity": "info",
         })
@@ -711,7 +712,9 @@ def get_cross_system_reconciliation():
             "explanation": (
                 f"Structure phase counts SORs as unique vendors ({aam_sors}). "
                 f"Content phase counts SORs as unique non-tooling source_systems ({dcl_sors}). "
-                f"These use different classification methods — vendor name vs category membership."
+                f"This is a definition difference, not a counting error — AAM uses "
+                f"vendor names, DCL uses category-based classification "
+                f"(crm, erp, finops, infra, aod)."
             ),
             "severity": "info",
         })
