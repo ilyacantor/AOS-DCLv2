@@ -263,6 +263,11 @@ class IngestStore:
         self._disk_timer: Optional[Timer] = None
         self._disk_timer_lock = Lock()
 
+        # Debounced activity log Redis writes: coalesce into one flush every 1s
+        self._activity_dirty = False
+        self._activity_timer: Optional[Timer] = None
+        self._activity_timer_lock = Lock()
+
         # Throttled Redis sync: skip if called within last 250ms
         self._last_sync_time: float = 0.0
 
@@ -272,8 +277,9 @@ class IngestStore:
 
         self._load_from_disk()
 
-        # Ensure pending disk writes flush on process exit
+        # Ensure pending writes flush on process exit
         atexit.register(self._flush_to_disk)
+        atexit.register(self._flush_activity_log)
 
     # ------------------------------------------------------------------
     # Disk persistence (JSON file fallback)
@@ -597,6 +603,30 @@ class IngestStore:
             self._redis.expire(f"{_REDIS_PREFIX}activity_log", _REDIS_TTL)
         except Exception as e:
             logger.warning(f"[IngestStore] Redis persist activity log failed: {e}")
+
+    def _mark_activity_dirty(self) -> None:
+        """Schedule a debounced activity log Redis flush (1s delay).
+
+        Multiple calls within the 1s window coalesce into a single write.
+        The in-memory activity log is always up-to-date for reads.
+        """
+        with self._activity_timer_lock:
+            self._activity_dirty = True
+            if self._activity_timer is not None and self._activity_timer.is_alive():
+                return  # timer already pending, will pick up the dirty flag
+            self._activity_timer = Timer(1.0, self._flush_activity_log)
+            self._activity_timer.daemon = True
+            self._activity_timer.start()
+
+    def _flush_activity_log(self) -> None:
+        """Execute the actual activity log Redis write if dirty. Called by Timer or atexit."""
+        with self._activity_timer_lock:
+            if not self._activity_dirty:
+                return
+            self._activity_dirty = False
+            self._activity_timer = None
+        logger.debug("[IngestStore] Debounced activity log flush firing")
+        self._persist_activity_log()
 
     def _persist_drop_log(self) -> None:
         """Write drop log to Redis."""
@@ -1394,7 +1424,7 @@ class IngestStore:
         with self._lock:
             self._drop_log.clear()
         self._persist_drop_log()
-        self._save_to_disk()
+        self._mark_disk_dirty()
         logger.info("[IngestStore] Drop log cleared (new run)")
 
     def record_drop(self, entry: "DropEntry") -> None:
@@ -1404,7 +1434,7 @@ class IngestStore:
             if len(self._drop_log) > _MAX_DROPS:
                 self._drop_log = self._drop_log[-_MAX_DROPS:]
         self._persist_drop_log()
-        self._save_to_disk()
+        self._mark_disk_dirty()
         logger.warning(
             f"[Drop] {entry.error_code} pipe={entry.pipe_id} "
             f"source={entry.source_system}: {entry.reason}"
@@ -1452,8 +1482,8 @@ class IngestStore:
             if len(self._activity_log) > _MAX_ACTIVITY:
                 self._activity_log = self._activity_log[-_MAX_ACTIVITY:]
             self._evict_stale_content_tracking()
-        self._persist_activity_log()
-        self._save_to_disk()
+        self._mark_activity_dirty()
+        self._mark_disk_dirty()
         logger.info(
             f"[Activity] {entry.phase}|{entry.source}|{entry.snapshot_name} "
             f"pipes={entry.pipes} rows={entry.rows}"
@@ -1505,7 +1535,7 @@ class IngestStore:
                     break
         # Persist outside lock to avoid blocking other operations
         if updated:
-            self._save_to_disk()
+            self._mark_disk_dirty()
 
 
 # ---------------------------------------------------------------------------

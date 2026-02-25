@@ -40,7 +40,7 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/dcl/ingest", tags=["Ingestion"])
 
 # Background thread pool for deferred materialization (avoids blocking ingest response)
-_materialize_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="materialize")
+_materialize_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="materialize")
 
 
 # ---------------------------------------------------------------------------
@@ -312,7 +312,7 @@ def _record_ingest_activity(
                     entry.sor_pipes = len(sor_set)
                     entry.other_pipes = len(other_set)
                     break
-        store._persist_activity_log()
+        store._mark_activity_dirty()
     else:
         # No dispatch_id and no export receipt — standalone push
         logger.error(

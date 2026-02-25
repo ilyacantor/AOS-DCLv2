@@ -167,6 +167,9 @@ class MetricMaterializer:
     def _resolve_field(
         self, row: Dict[str, Any], concept_id: str,
         field_hint: Optional[str] = None, partial: bool = False,
+        *,
+        _keys_lower: Optional[Dict[str, str]] = None,
+        _keys_normalized: Optional[Dict[str, str]] = None,
     ) -> Optional[str]:
         """Find the actual field name in a row that maps to the given concept.
 
@@ -176,6 +179,8 @@ class MetricMaterializer:
             field_hint: Prefer a field literally matching this name.
             partial: If True, allow substring matching as a fallback.
                      Use for value/period fields, NOT for dimensions or counts.
+            _keys_lower: Pre-computed {lowercase_key: original_key} index.
+            _keys_normalized: Pre-computed {normalized_key: original_key} index.
 
         Priority:
           1. field_hint matches a key in the row (case-insensitive, then normalized)
@@ -183,9 +188,12 @@ class MetricMaterializer:
           3. Reverse index: row key maps to concept_id (lowercase, then normalized)
           4. (partial only) Substring match with length constraints
         """
-        row_keys_lower = {k.lower(): k for k in row.keys() if not k.startswith("_")}
-        # Normalized index: PascalCase→snake_case, strip __c
-        row_keys_normalized = {_normalize_key(k): k for k in row.keys() if not k.startswith("_")}
+        if _keys_lower is None:
+            _keys_lower = {k.lower(): k for k in row.keys() if not k.startswith("_")}
+        if _keys_normalized is None:
+            _keys_normalized = {_normalize_key(k): k for k in row.keys() if not k.startswith("_")}
+        row_keys_lower = _keys_lower
+        row_keys_normalized = _keys_normalized
 
         # Priority 1: field hint (exact, then normalized)
         if field_hint:
@@ -258,7 +266,10 @@ class MetricMaterializer:
         return None
 
     def _check_filters(
-        self, row: Dict[str, Any], filters: List[Dict[str, Any]]
+        self, row: Dict[str, Any], filters: List[Dict[str, Any]],
+        *,
+        _keys_lower: Optional[Dict[str, str]] = None,
+        _keys_normalized: Optional[Dict[str, str]] = None,
     ) -> bool:
         """Evaluate concept-based filter conditions. Returns True if row passes.
 
@@ -274,7 +285,10 @@ class MetricMaterializer:
 
             # Find the field in the row for this concept
             hint = filt.get("field_hint")
-            field_name = self._resolve_field(row, concept_id, hint)
+            field_name = self._resolve_field(
+                row, concept_id, hint,
+                _keys_lower=_keys_lower, _keys_normalized=_keys_normalized,
+            )
 
             if field_name is None:
                 # Field not present in this row
@@ -309,12 +323,18 @@ class MetricMaterializer:
         return True
 
     def _resolve_dimensions(
-        self, row: Dict[str, Any], dimension_map: Dict[str, str]
+        self, row: Dict[str, Any], dimension_map: Dict[str, str],
+        *,
+        _keys_lower: Optional[Dict[str, str]] = None,
+        _keys_normalized: Optional[Dict[str, str]] = None,
     ) -> Dict[str, str]:
         """Extract canonical dimension values from a row using concept mapping."""
         dims: Dict[str, str] = {}
         for concept_id, dim_name in dimension_map.items():
-            field_name = self._resolve_field(row, concept_id)
+            field_name = self._resolve_field(
+                row, concept_id,
+                _keys_lower=_keys_lower, _keys_normalized=_keys_normalized,
+            )
             if field_name:
                 val = row.get(field_name)
                 if val is not None:
@@ -339,6 +359,12 @@ class MetricMaterializer:
         now = datetime.now(timezone.utc).isoformat()
         all_points: List[Dict[str, Any]] = []
 
+        # Pre-compute key indexes once — all rows in a pipe share the same keys.
+        # This eliminates ~50k redundant dict constructions per pipe.
+        sample = rows[0]
+        keys_lower = {k.lower(): k for k in sample.keys() if not k.startswith("_")}
+        keys_normalized = {_normalize_key(k): k for k in sample.keys() if not k.startswith("_")}
+
         for rule in self._rules:
             metric_id = rule["metric"]
             value_concept = rule.get("value_concept", "")
@@ -360,11 +386,17 @@ class MetricMaterializer:
 
             for row in rows:
                 # Step 1: Check filters
-                if filters and not self._check_filters(row, filters):
+                if filters and not self._check_filters(
+                    row, filters,
+                    _keys_lower=keys_lower, _keys_normalized=keys_normalized,
+                ):
                     continue
 
                 # Step 2: Find the period (use partial matching for date fields)
-                period_field = self._resolve_field(row, period_concept, partial=True)
+                period_field = self._resolve_field(
+                    row, period_concept, partial=True,
+                    _keys_lower=keys_lower, _keys_normalized=keys_normalized,
+                )
                 period = None
                 if period_field:
                     period = _derive_period(row.get(period_field), grain)
@@ -372,21 +404,30 @@ class MetricMaterializer:
                     period = "current"
 
                 # Step 3: Resolve dimensions (exact matching only — no false positives)
-                dims = self._resolve_dimensions(row, dim_map)
+                dims = self._resolve_dimensions(
+                    row, dim_map,
+                    _keys_lower=keys_lower, _keys_normalized=keys_normalized,
+                )
                 group_key = (period, tuple(sorted(dims.items())))
 
                 # Step 4: Extract value or count
                 if measure_op == "count" and count_concept:
                     # For count metrics, check if this row has fields for the concept
                     # Use exact matching only to avoid false positives
-                    count_field = self._resolve_field(row, count_concept)
+                    count_field = self._resolve_field(
+                        row, count_concept,
+                        _keys_lower=keys_lower, _keys_normalized=keys_normalized,
+                    )
                     if count_field is not None:
                         count_groups[group_key] += 1
                     continue
 
                 if measure_op == "ratio" and ratio_hint:
                     # For ratio metrics, look for a pre-computed ratio field
-                    ratio_field = self._resolve_field(row, value_concept, ratio_hint, partial=True)
+                    ratio_field = self._resolve_field(
+                        row, value_concept, ratio_hint, partial=True,
+                        _keys_lower=keys_lower, _keys_normalized=keys_normalized,
+                    )
                     if ratio_field:
                         val = self._extract_numeric(row, ratio_field)
                         if val is not None:
@@ -394,7 +435,10 @@ class MetricMaterializer:
                     continue
 
                 # Standard value extraction (use partial for value fields)
-                value_field = self._resolve_field(row, value_concept, value_hint, partial=True)
+                value_field = self._resolve_field(
+                    row, value_concept, value_hint, partial=True,
+                    _keys_lower=keys_lower, _keys_normalized=keys_normalized,
+                )
                 if value_field is None:
                     continue
 
