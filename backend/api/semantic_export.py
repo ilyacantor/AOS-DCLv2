@@ -54,6 +54,7 @@ class MetricDefinition(BaseModel):
     description: str
     aliases: List[str] = Field(default_factory=list)
     pack: Pack
+    unit: Optional[str] = None
     allowed_dims: List[str] = Field(default_factory=list)
     allowed_grains: List[TimeGrain] = Field(default_factory=list)
     measure_op: Optional[str] = None
@@ -130,6 +131,7 @@ def _load_metrics() -> List[MetricDefinition]:
             description=m["description"],
             aliases=m.get("aliases", []),
             pack=Pack(m["pack"]),
+            unit=m.get("unit"),
             allowed_dims=m.get("allowed_dims", []),
             allowed_grains=[TimeGrain(g) for g in m.get("allowed_grains", [])],
             measure_op=m.get("measure_op"),

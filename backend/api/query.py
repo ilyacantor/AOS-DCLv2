@@ -139,89 +139,100 @@ def load_fact_base() -> Dict[str, Any]:
     return _fact_base_cache
 
 
-METRIC_TO_FACTBASE_KEY = {
-    "arr": "arr",
-    "mrr": "mrr",
-    "revenue": "revenue",
-    "services_revenue": "services_revenue",
-    "ar": "ar",
-    "dso": "dso",
-    "burn_rate": "burn_rate",
-    "gross_margin": "gross_profit",
-    "ar_aging": "ar_aging",
-    "pipeline": "pipeline",
+# ---------------------------------------------------------------------------
+# Data-driven metric-to-factbase key mapping
+#
+# Instead of a hardcoded whitelist, we build the mapping at module load from:
+#   1. The fact_base.json quarterly keys (what data actually exists)
+#   2. The metrics.yaml catalog IDs (what the semantic layer publishes)
+#   3. Explicit overrides for the handful of cases where the catalog metric
+#      ID intentionally differs from the fact_base column name.
+#
+# Any metric whose catalog ID matches a fact_base key directly needs no
+# explicit entry — the identity mapping is applied automatically.
+# ---------------------------------------------------------------------------
+
+# Explicit overrides: catalog metric_id -> fact_base quarterly key
+# Only needed when the names differ intentionally.
+_FACTBASE_KEY_OVERRIDES: Dict[str, Optional[str]] = {
+    "win_rate_pct": "win_rate",
+    "quota_attainment_pct": "quota_attainment",
+    "churn_rate_pct": "churn_pct",
+    "attrition_rate_pct": "attrition_rate",
+    "offer_acceptance_rate_pct": "offer_acceptance_rate",
+    "internal_mobility_rate_pct": "internal_mobility_rate",
+    "net_margin_pct": "net_income_pct",
+    "ltv_cac_ratio": "ltv_cac",
     "pipeline_value": "pipeline",
-    "win_rate": "win_rate",
-    "quota_attainment": "quota",
-    "churn_rate": "churn_pct",
-    "churn_risk": "churn_risk",
-    "nrr": "nrr",
-    "nrr_by_cohort": "nrr_by_cohort",
-    "throughput": "throughput",
-    "cycle_time": "cycle_time",
-    "sla_compliance": "sla_compliance",
-    "deploy_frequency": "deploys_per_week",
+    "customer_count": "customer_count",
     "mttr": "mttr_p1_hours",
-    "uptime": "uptime_pct",
-    "slo_attainment": "slo_attainment",
-    "cloud_spend": "cloud_spend",
-    "cloud_cost": "cloud_spend",
-    "headcount": "headcount",
-    "attrition_rate": "attrition_rate",
+    "deploy_frequency": "deploys_per_week",
     "time_to_fill": "time_to_fill_days",
-    "engagement_score": "engagement_score",
-    "compensation_ratio": None,
     "training_hours": "training_hours_per_employee",
-    "promotion_rate": None,
-    "diversity_index": None,
-    "offer_acceptance_rate": "offer_acceptance_rate",
-    "internal_mobility_rate": "internal_mobility_rate",
-    "span_of_control": "span_of_control",
-    "enps": "enps",
-    "customers": "customer_count",
+    "da_expense": "d_and_a",
+    "new_hires": "hires",
 }
 
-METRIC_UNIT_MAP = {
-    "arr": "USD (millions)",
-    "mrr": "USD (millions)",
-    "revenue": "USD (millions)",
-    "services_revenue": "USD (millions)",
-    "ar": "USD (millions)",
-    "ar_aging": "USD (millions)",
-    "dso": "days",
-    "burn_rate": "USD (millions)",
-    "gross_margin": "percent",
-    "pipeline": "USD (millions)",
-    "pipeline_value": "USD (millions)",
-    "win_rate": "percent",
-    "churn_rate": "percent",
-    "churn_risk": "score (0-100)",
-    "nrr": "percent",
-    "nrr_by_cohort": "%",
-    "throughput": "count",
-    "cycle_time": "days",
-    "sla_compliance": "percent",
-    "deploy_frequency": "count/week",
-    "mttr": "hours",
-    "uptime": "percent",
-    "slo_attainment": "percent",
-    "cloud_spend": "USD (millions)",
-    "cloud_cost": "USD (millions)",
-    "headcount": "count",
-    "attrition_rate": "percent",
-    "time_to_fill": "days",
-    "engagement_score": "percent",
-    "compensation_ratio": "percent",
-    "training_hours": "hours",
-    "promotion_rate": "percent",
-    "diversity_index": "percent",
-    "offer_acceptance_rate": "percent",
-    "internal_mobility_rate": "percent",
-    "span_of_control": "ratio",
-    "enps": "score",
-    "customers": "count",
-    "quota_attainment": "percent",
+
+def _build_factbase_key_map() -> Dict[str, Optional[str]]:
+    """Build the complete metric_id -> fact_base key mapping.
+
+    Strategy:
+      1. Start with explicit overrides for known mismatches.
+      2. For every catalog metric not yet mapped, check if its ID
+         appears directly as a quarterly key in fact_base — if so,
+         use identity mapping.
+      3. Metrics with no fact_base data get None (no data to serve).
+    """
+    fb = load_fact_base()
+    quarterly = fb.get("quarterly", [])
+    fb_keys = set()
+    if quarterly:
+        fb_keys = set(k for k in quarterly[0].keys()
+                      if k not in ("year", "quarter", "period"))
+
+    mapping: Dict[str, Optional[str]] = dict(_FACTBASE_KEY_OVERRIDES)
+
+    for metric_def in PUBLISHED_METRICS:
+        mid = metric_def.id
+        if mid in mapping:
+            continue  # already has an explicit override
+        if mid in fb_keys:
+            mapping[mid] = mid  # identity mapping
+        else:
+            mapping[mid] = None  # no fact_base data for this metric
+
+    return mapping
+
+
+METRIC_TO_FACTBASE_KEY: Dict[str, Optional[str]] = _build_factbase_key_map()
+
+
+# ---------------------------------------------------------------------------
+# Unit resolution — read from the metric catalog, not a hardcoded map.
+# The canonical unit string comes from metrics.yaml via MetricDefinition.
+# ---------------------------------------------------------------------------
+
+_UNIT_DISPLAY: Dict[str, str] = {
+    "usd_millions": "USD (millions)",
+    "pct": "percent",
+    "count": "count",
+    "days": "days",
+    "hours": "hours",
+    "minutes": "minutes",
+    "ratio": "ratio",
+    "score": "score",
+    "index": "index",
+    "per_week": "count/week",
 }
+
+
+def _resolve_unit(metric_def: Any) -> str:
+    """Resolve the display unit from a MetricDefinition's unit field."""
+    raw = getattr(metric_def, "unit", None)
+    if raw:
+        return _UNIT_DISPLAY.get(raw, raw)
+    return "unknown"
 
 DIMENSION_TO_FACTBASE_KEY = {
     "region": {
@@ -230,6 +241,7 @@ DIMENSION_TO_FACTBASE_KEY = {
         "ebitda": "ebitda_by_region",
         "services_revenue": "services_revenue_by_region",
         "win_rate": "win_rate_by_region",
+        "win_rate_pct": "win_rate_by_region",
     },
     "segment": {
         "revenue": "revenue_by_segment",
@@ -238,20 +250,26 @@ DIMENSION_TO_FACTBASE_KEY = {
         "mrr": "mrr_by_segment",
         "dso": "dso_by_segment",
         "churn_rate": "churn_by_segment",
+        "churn_rate_pct": "churn_by_segment",
         "gross_margin": "gross_margin_by_product",
+        "gross_margin_pct": "gross_margin_by_product",
     },
     "product": {
         "revenue": "revenue_by_product",
         "gross_margin": "gross_margin_by_product",
+        "gross_margin_pct": "gross_margin_by_product",
         "nrr": "nrr_by_product",
     },
     "stage": {
         "pipeline": "pipeline_by_stage",
+        "pipeline_value": "pipeline_by_stage",
     },
     "rep": {
         "pipeline": "pipeline_by_rep",
         "win_rate": "win_rate_by_rep",
+        "win_rate_pct": "win_rate_by_rep",
         "quota_attainment": "quota_by_rep",
+        "quota_attainment_pct": "quota_by_rep",
         "quota": "quota_by_rep",
     },
     "team": {
@@ -259,13 +277,16 @@ DIMENSION_TO_FACTBASE_KEY = {
         "engineering": "engineering_by_team",
         "headcount": "headcount_by_team",
         "attrition_rate": "attrition_by_team",
+        "attrition_rate_pct": "attrition_by_team",
         "engagement_score": "engagement_by_team",
         "throughput": "throughput_by_team",
         "sla_compliance": "sla_compliance_by_team",
+        "sla_compliance_pct": "sla_compliance_by_team",
     },
     "department": {
         "headcount": "headcount_by_department",
         "attrition_rate": "attrition_by_department",
+        "attrition_rate_pct": "attrition_by_department",
         "engagement_score": "engagement_by_department",
         "time_to_fill": "time_to_fill_by_department",
         "training_hours": "training_by_department",
@@ -274,7 +295,9 @@ DIMENSION_TO_FACTBASE_KEY = {
         "incidents": "incidents_by_service",
         "deploy_frequency": "deploy_frequency_by_service",
         "uptime": "uptime_by_service",
+        "uptime_pct": "uptime_by_service",
         "slo_attainment": "slo_attainment_by_service",
+        "slo_attainment_pct": "slo_attainment_by_service",
         "mttr": "mttr_by_service",
     },
     "category": {
@@ -369,7 +392,9 @@ def filter_periods(data: Dict, time_range: Optional[Dict[str, str]]) -> List[str
 
 NESTED_VALUE_KEY_MAP: Dict[tuple, str] = {
     ("quota_attainment", "quota_by_rep"): "attainment_pct",
+    ("quota_attainment_pct", "quota_by_rep"): "attainment_pct",
     ("pipeline", "pipeline_by_rep"): "pipeline",
+    ("pipeline_value", "pipeline_by_rep"): "pipeline",
 }
 
 
@@ -538,7 +563,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
         raise ValueError(f"Metric '{request.metric}' not found")
 
     grain = request.grain or metric_def.default_grain or "quarter"
-    unit = METRIC_UNIT_MAP.get(request.metric, "unknown")
+    unit = _resolve_unit(metric_def)
 
     use_live = (request.data_mode or "").lower() == "live"
 
