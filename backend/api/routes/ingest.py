@@ -28,6 +28,7 @@ from backend.api.ingest import (
     DropEntry,
     IngestRequest,
     IngestResponse,
+    _REDIS_PREFIX,
     get_ingest_store,
     compute_schema_hash,
     _derive_dispatch_id,
@@ -865,15 +866,16 @@ def sample_rows(pipe_id: Optional[str] = None, limit: int = 3):
 
 
 # ---------------------------------------------------------------------------
-# Purge non-canonical sources (admin maintenance)
+# Flush ingest store (admin maintenance)
 # ---------------------------------------------------------------------------
 
-@router.post("/purge-non-canonical")
-async def purge_non_canonical():
-    """Remove all ingest data from non-canonical source systems.
+@router.post("/flush")
+async def flush_ingest_store():
+    """Flush all ingest data — receipts, rows, and materialized points.
 
-    Deletes receipts, raw rows, and materialized data points where the
-    source_system is not in the CANONICAL_SOURCES allowlist.
+    Used when the store is contaminated with non-Farm data and a selective
+    purge isn't feasible (e.g. materialized points have canonical-looking
+    source names inherited from AAM dispatch configs).
     """
     store = get_ingest_store()
 
@@ -881,14 +883,20 @@ async def purge_non_canonical():
     stats_before = store.get_stats()
     mat_before = store.get_materialized_stats()
 
-    result = store.purge_non_canonical()
+    store.reset()
 
-    # Snapshot after counts
-    stats_after = store.get_stats()
-    mat_after = store.get_materialized_stats()
+    # Also flush Redis materialized keys
+    if store._redis:
+        try:
+            keys = store._redis.keys(f"{_REDIS_PREFIX}materialized:*")
+            if keys:
+                store._redis.delete(*keys)
+                logger.info(f"[Flush] Deleted {len(keys)} Redis materialized keys")
+        except Exception as e:
+            logger.warning(f"[Flush] Redis cleanup failed: {e}")
 
     return {
-        "status": "purged",
+        "status": "flushed",
         "before": {
             "total_runs": stats_before.get("total_runs", 0),
             "total_rows": stats_before.get("total_rows_buffered", 0),
@@ -896,10 +904,9 @@ async def purge_non_canonical():
             "unique_sources": stats_before.get("unique_sources", 0),
         },
         "after": {
-            "total_runs": stats_after.get("total_runs", 0),
-            "total_rows": stats_after.get("total_rows_buffered", 0),
-            "materialized_points": mat_after.get("total_points", 0),
-            "unique_sources": stats_after.get("unique_sources", 0),
+            "total_runs": 0,
+            "total_rows": 0,
+            "materialized_points": 0,
+            "unique_sources": 0,
         },
-        **result,
     }
