@@ -535,8 +535,12 @@ class IngestStore:
             for mat_key, points in self._materialized.items():
                 if not points:
                     continue
-                # Check source_system on the first point
-                src = normalize_source_id(points[0].get("source_system", ""))
+                # Check source_system on the first point (skip if entry is a
+                # plain string — legacy/malformed data that has no .get())
+                first = points[0]
+                if isinstance(first, str):
+                    continue
+                src = normalize_source_id(first.get("source_system", ""))
                 if src not in CANONICAL_SOURCES:
                     bad_mat_keys.append(mat_key)
 
