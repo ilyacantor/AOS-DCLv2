@@ -8,6 +8,7 @@ that are tightly coupled to the DCLEngine singleton.
 """
 
 import os
+import signal
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -125,11 +126,15 @@ async def lifespan(app: FastAPI):
     yield
 
     # ---- Shutdown ----
-    # Flush any pending debounced disk writes before closing pools
+    # Flush ALL pending debounced writes before closing pools.
+    # Both disk and activity-log (Redis) must flush — the daemon timer
+    # threads are killed on exit, so any dirty state in the 1s/2s
+    # debounce window would be lost without explicit flushes here.
     try:
         store = get_ingest_store()
         store._flush_to_disk()
-        logger.info("[Shutdown] IngestStore disk flush complete")
+        store._flush_activity_log()
+        logger.info("[Shutdown] IngestStore disk + activity log flush complete")
     except Exception as e:
         logger.warning(f"[Shutdown] IngestStore flush error: {e}")
 
@@ -140,6 +145,26 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"[Shutdown] Pool close error: {e}")
     logger.info("[Shutdown] Database pool closed")
+
+
+def _sigterm_flush(signum, frame):
+    """Flush all pending writes on SIGTERM before the process exits.
+
+    Render sends SIGTERM before SIGKILL. Without this handler, daemon
+    timer threads are killed and atexit may not fire in time, losing
+    activity entries in the 1s debounce window.
+    """
+    try:
+        store = get_ingest_store()
+        store._flush_to_disk()
+        store._flush_activity_log()
+        logger.info("[SIGTERM] IngestStore emergency flush complete")
+    except Exception as e:
+        logger.warning(f"[SIGTERM] IngestStore flush error: {e}")
+    raise SystemExit(0)
+
+
+signal.signal(signal.SIGTERM, _sigterm_flush)
 
 
 app = FastAPI(title="DCL Engine API", lifespan=lifespan)
