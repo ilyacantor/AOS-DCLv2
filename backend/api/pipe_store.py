@@ -499,11 +499,14 @@ class PipeDefinitionStore:
             logger.warning(f"[PipeStore] Redis rehydration failed: {e}")
 
     def _sync_from_redis(self) -> None:
-        """Reload definitions from Redis written by another worker.
+        """Reload definitions and export receipts from Redis written by another worker.
 
         With --workers 2, Worker A may register definitions via /export-pipes
         while Worker B handles /ingest. Without this sync, Worker B's lookup()
         misses valid pipe_ids and creates false NO_MATCHING_PIPE drops.
+
+        Also syncs export receipts so _resolve_export_identity() in the
+        ingest route gets the correct snapshot_name cross-worker.
 
         Throttled to at most once per second to avoid Redis spam during
         burst ingest.
@@ -515,23 +518,35 @@ class PipeDefinitionStore:
             return
         self._last_sync_time = now
         try:
+            # Sync definitions
             raw_defs = self._redis.hgetall(f"{_REDIS_PREFIX}definitions")
-            if not raw_defs:
-                return
             new_count = 0
-            with self._lock:
-                for pipe_id, raw in raw_defs.items():
-                    if pipe_id not in self._definitions:
-                        defn = PipeDefinition(**json.loads(raw))
-                        if defn.fabric_plane:
-                            defn.fabric_plane = defn.fabric_plane.lower()
-                        self._definitions[pipe_id] = defn
-                        new_count += 1
+            if raw_defs:
+                with self._lock:
+                    for pipe_id, raw in raw_defs.items():
+                        if pipe_id not in self._definitions:
+                            defn = PipeDefinition(**json.loads(raw))
+                            if defn.fabric_plane:
+                                defn.fabric_plane = defn.fabric_plane.lower()
+                            self._definitions[pipe_id] = defn
+                            new_count += 1
             if new_count > 0:
                 logger.info(
                     f"[PipeStore] Cross-worker sync: loaded {new_count} new "
                     f"definitions from Redis (total={len(self._definitions)})"
                 )
+
+            # Sync export receipts — only replace if Redis has more entries
+            raw_receipts = self._redis.get(f"{_REDIS_PREFIX}export_receipts")
+            if raw_receipts:
+                redis_receipts = [ExportReceipt(**d) for d in json.loads(raw_receipts)]
+                with self._lock:
+                    if len(redis_receipts) > len(self._export_receipts):
+                        self._export_receipts = redis_receipts
+                        logger.info(
+                            f"[PipeStore] Cross-worker sync: updated export receipts "
+                            f"({len(redis_receipts)} from Redis)"
+                        )
         except Exception as e:
             logger.warning(f"[PipeStore] Redis sync failed: {e}")
 
@@ -652,7 +667,13 @@ class PipeDefinitionStore:
             return len(self._definitions)
 
     def get_export_receipts(self) -> List[ExportReceipt]:
-        """Return all export receipt history."""
+        """Return all export receipt history.
+
+        Syncs from Redis first so cross-worker reads always see the
+        latest receipts (e.g. Worker B reading receipts written by
+        Worker A via /export-pipes).
+        """
+        self._sync_from_redis()
         with self._lock:
             return list(self._export_receipts)
 

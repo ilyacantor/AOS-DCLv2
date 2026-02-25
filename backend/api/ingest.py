@@ -355,58 +355,74 @@ class IngestStore:
             with open(_CACHE_FILE, "r") as f:
                 data = json.load(f)
 
-            if self._receipts:
-                return
+            # If Redis already loaded receipts, skip the bulk data sections
+            # but STILL load content tracking sets below — they are NOT
+            # persisted to Redis and would otherwise be lost on restart.
+            redis_loaded = bool(self._receipts)
 
-            for k, v in data.get("receipts", {}).items():
-                self._receipts[k] = RunReceipt(**v)
+            if not redis_loaded:
+                for k, v in data.get("receipts", {}).items():
+                    self._receipts[k] = RunReceipt(**v)
 
-            for k, v in data.get("schema_registry", {}).items():
-                self._schema_registry[k] = SchemaRecord(**v)
+                for k, v in data.get("schema_registry", {}).items():
+                    self._schema_registry[k] = SchemaRecord(**v)
 
-            self._drift_events = [SchemaDriftEvent(**d) for d in data.get("drift_events", [])]
-            self._activity_log = [ActivityEntry(**d) for d in data.get("activity_log", [])]
-            self._drop_log = [DropEntry(**d) for d in data.get("drop_log", [])]
+                self._drift_events = [SchemaDriftEvent(**d) for d in data.get("drift_events", [])]
+                self._activity_log = [ActivityEntry(**d) for d in data.get("activity_log", [])]
+                self._drop_log = [DropEntry(**d) for d in data.get("drop_log", [])]
 
-            # row_buffer and materialized are no longer persisted to disk
-            # (they live in Redis).  Load legacy data if present for backward
-            # compat, but new caches won't have these keys.
-            for k, v in data.get("row_buffer", {}).items():
-                self._row_buffer[k] = v
-            self._total_rows = data.get("total_rows", sum(len(v) for v in self._row_buffer.values()))
+                # row_buffer and materialized are no longer persisted to disk
+                # (they live in Redis).  Load legacy data if present for backward
+                # compat, but new caches won't have these keys.
+                for k, v in data.get("row_buffer", {}).items():
+                    self._row_buffer[k] = v
+                self._total_rows = data.get("total_rows", sum(len(v) for v in self._row_buffer.values()))
 
-            for k, v in data.get("materialized", {}).items():
-                self._materialized[k] = v
-            self._materialized_total = data.get(
-                "materialized_total",
-                sum(len(v) for v in self._materialized.values()),
-            )
+                for k, v in data.get("materialized", {}).items():
+                    self._materialized[k] = v
+                self._materialized_total = data.get(
+                    "materialized_total",
+                    sum(len(v) for v in self._materialized.values()),
+                )
 
-            # Enforce limits on legacy data
-            while self._total_rows > _MAX_BUFFERED_ROWS and self._row_buffer:
-                evicted_key, evicted_rows = self._row_buffer.popitem(last=False)
-                self._total_rows -= len(evicted_rows)
-                self._receipts.pop(evicted_key, None)
-            while self._materialized_total > _MAX_MATERIALIZED_POINTS and self._materialized:
-                evicted_key = next(iter(self._materialized))
-                evicted_pts = self._materialized.pop(evicted_key)
-                self._materialized_total -= len(evicted_pts)
+                # Enforce limits on legacy data
+                while self._total_rows > _MAX_BUFFERED_ROWS and self._row_buffer:
+                    evicted_key, evicted_rows = self._row_buffer.popitem(last=False)
+                    self._total_rows -= len(evicted_rows)
+                    self._receipts.pop(evicted_key, None)
+                while self._materialized_total > _MAX_MATERIALIZED_POINTS and self._materialized:
+                    evicted_key = next(iter(self._materialized))
+                    evicted_pts = self._materialized.pop(evicted_key)
+                    self._materialized_total -= len(evicted_pts)
 
-            self._seen_dispatch_ids = set(data.get("seen_dispatch_ids", []))
-            self._content_sources = {k: set(v) for k, v in data.get("content_sources", {}).items()}
-            self._content_pipes = {k: set(v) for k, v in data.get("content_pipes", {}).items()}
-            self._content_mapped = {k: set(v) for k, v in data.get("content_mapped", {}).items()}
-            self._content_unmapped = {k: set(v) for k, v in data.get("content_unmapped", {}).items()}
-            self._content_fabrics = {k: set(v) for k, v in data.get("content_fabrics", {}).items()}
-            self._content_tooling = {k: set(v) for k, v in data.get("content_tooling", {}).items()}
-            self._content_sor_pipes = {k: set(v) for k, v in data.get("content_sor_pipes", {}).items()}
-            self._content_other_pipes = {k: set(v) for k, v in data.get("content_other_pipes", {}).items()}
+            # Always load content tracking sets from disk — these are NOT
+            # persisted to Redis, so they must come from the disk cache
+            # even when Redis provided receipts and activity log above.
+            if not self._seen_dispatch_ids:
+                self._seen_dispatch_ids = set(data.get("seen_dispatch_ids", []))
+            if not self._content_sources:
+                self._content_sources = {k: set(v) for k, v in data.get("content_sources", {}).items()}
+            if not self._content_pipes:
+                self._content_pipes = {k: set(v) for k, v in data.get("content_pipes", {}).items()}
+            if not self._content_mapped:
+                self._content_mapped = {k: set(v) for k, v in data.get("content_mapped", {}).items()}
+            if not self._content_unmapped:
+                self._content_unmapped = {k: set(v) for k, v in data.get("content_unmapped", {}).items()}
+            if not self._content_fabrics:
+                self._content_fabrics = {k: set(v) for k, v in data.get("content_fabrics", {}).items()}
+            if not self._content_tooling:
+                self._content_tooling = {k: set(v) for k, v in data.get("content_tooling", {}).items()}
+            if not self._content_sor_pipes:
+                self._content_sor_pipes = {k: set(v) for k, v in data.get("content_sor_pipes", {}).items()}
+            if not self._content_other_pipes:
+                self._content_other_pipes = {k: set(v) for k, v in data.get("content_other_pipes", {}).items()}
 
             logger.info(
                 f"[IngestStore] Restored from disk: "
                 f"{len(self._receipts)} receipts, {self._total_rows:,} rows, "
                 f"{self._materialized_total:,} materialized points, "
                 f"{len(self._schema_registry)} schemas, {len(self._activity_log)} activity entries"
+                + (", content tracking loaded separately" if redis_loaded else "")
             )
         except Exception as e:
             logger.warning(f"[IngestStore] Failed to load from disk: {e}")
@@ -721,7 +737,7 @@ class IngestStore:
     # workers see the same state.  Called before read endpoints.
     # ------------------------------------------------------------------
 
-    def _sync_from_redis(self) -> None:
+    def _sync_from_redis(self, force: bool = False) -> None:
         """Reload activity log, drop log, and receipts from Redis.
 
         With --workers 2, each worker has its own in-memory state.
@@ -729,12 +745,13 @@ class IngestStore:
         Cheap: 3 Redis GETs per call (~1ms total).
 
         Throttled: skips if called within last 250ms to avoid redundant
-        syncs during burst ingest.
+        syncs during burst ingest.  Use force=True to bypass the throttle
+        (e.g. before recording a new activity phase entry).
         """
         if not self._redis:
             return
         now = time.monotonic()
-        if now - self._last_sync_time < 0.25:
+        if not force and now - self._last_sync_time < 0.25:
             return
         self._last_sync_time = now
         logger.debug("[IngestStore] Redis sync firing")
@@ -1474,7 +1491,14 @@ class IngestStore:
         self._seen_dispatch_ids = live_ids
 
     def record_activity(self, entry: "ActivityEntry") -> None:
-        """Append a discrete activity event and persist to Redis."""
+        """Append a discrete activity event and persist to Redis.
+
+        Uses sync-before-write to pull in entries from other workers,
+        then flushes to Redis immediately so the new entry is visible
+        cross-worker without waiting for the debounce timer.
+        """
+        # Pull in entries written by other workers before appending
+        self._sync_from_redis(force=True)
         with self._lock:
             self._activity_log.append(entry)
             if entry.dispatch_id:
@@ -1482,7 +1506,9 @@ class IngestStore:
             if len(self._activity_log) > _MAX_ACTIVITY:
                 self._activity_log = self._activity_log[-_MAX_ACTIVITY:]
             self._evict_stale_content_tracking()
-        self._mark_activity_dirty()
+        # Flush to Redis immediately — phase entries are rare (3 per cycle)
+        # and must be visible to other workers without delay.
+        self._persist_activity_log()
         self._mark_disk_dirty()
         logger.info(
             f"[Activity] {entry.phase}|{entry.source}|{entry.snapshot_name} "
@@ -1535,6 +1561,7 @@ class IngestStore:
                     break
         # Persist outside lock to avoid blocking other operations
         if updated:
+            self._mark_activity_dirty()
             self._mark_disk_dirty()
 
 
