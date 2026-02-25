@@ -457,7 +457,8 @@ def _query_ingest_store(
         (data_points, receipt) — receipt is the most-recent run that
         contributed rows, or None if no ingested data matches.
     """
-    from backend.api.ingest import get_ingest_store, RunReceipt
+    from backend.api.ingest import get_ingest_store, RunReceipt, CANONICAL_SOURCES
+    from backend.aam.ingress import normalize_source_id as _norm_src
 
     store = get_ingest_store()
     all_receipts = store.get_all_receipts()
@@ -471,6 +472,13 @@ def _query_ingest_store(
         filters=filters if filters else None,
         time_range=time_range,
     )
+
+    # Filter to canonical sources only — reject AAM demo data
+    if mat_points:
+        mat_points = [
+            pt for pt in mat_points
+            if _norm_src(pt.get("source_system", "")) in CANONICAL_SOURCES
+        ]
 
     if mat_points:
         # Aggregate across pipes: group by (period, dim_key) and sum values.
@@ -505,6 +513,9 @@ def _query_ingest_store(
     contributing_receipt: Optional[RunReceipt] = None
 
     for receipt in reversed(all_receipts):
+        # Skip non-canonical sources in fallback path too
+        if _norm_src(receipt.source_system) not in CANONICAL_SOURCES:
+            continue
         rows = store.get_rows(receipt.run_id, receipt.pipe_id)
         for row in rows:
             if metric not in row:

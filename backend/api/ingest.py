@@ -37,6 +37,48 @@ _CACHE_DIR = os.path.join("backend", "cache")
 _CACHE_FILE = os.path.join(_CACHE_DIR, "ingest_cache.json")
 os.makedirs(_CACHE_DIR, exist_ok=True)
 
+# ---------------------------------------------------------------------------
+# Canonical source systems — only these are allowed through the ingest gate.
+# Matches DCL conventions §7: machine IDs (snake_case).
+# "farm" is the synthetic data generator; "aam" is the orchestrator itself.
+# ---------------------------------------------------------------------------
+CANONICAL_SOURCES: frozenset = frozenset({
+    "salesforce", "salesforce_crm",
+    "netsuite", "netsuite_erp",
+    "chargebee",
+    "workday",
+    "zendesk",
+    "jira",
+    "datadog",
+    "aws_cost_explorer",
+    "farm",
+    "aam",
+    "pagerduty",
+    "github_actions",
+    "greenhouse",
+    "culture_amp",
+    "sap",
+    "quickbooks",
+    "xero",
+    "stripe",
+    "bill_com",
+    "zuora",
+    "expensify",
+    "concur",
+    "brex",
+    "ramp",
+    "adaptive_insights",
+    "anaplan",
+    "clari",
+    "snowflake",
+    "bigquery",
+    "okta",
+    "sailpoint",
+    "onetrust",
+    "servicenow",
+    "splunk",
+})
+
 
 # ---------------------------------------------------------------------------
 # Request / Response Models
@@ -453,6 +495,79 @@ class IngestStore:
         except Exception as e:
             logger.warning(f"[IngestStore] Failed to delete cache file: {e}")
         logger.info("[IngestStore] All state reset")
+
+    def purge_non_canonical(self) -> Dict[str, int]:
+        """Remove all receipts, rows, and materialized points from non-canonical sources.
+
+        Returns counts of purged items for reporting.
+        """
+        purged_receipts = 0
+        purged_rows = 0
+        purged_mat_keys = 0
+        purged_mat_points = 0
+        evicted_storage_keys: list = []
+        evicted_mat_redis_keys: list = []
+
+        with self._lock:
+            # --- Purge receipts and their row buffers ---
+            bad_receipt_keys = []
+            for key, receipt in self._receipts.items():
+                src = normalize_source_id(receipt.source_system)
+                if src not in CANONICAL_SOURCES:
+                    bad_receipt_keys.append(key)
+
+            for key in bad_receipt_keys:
+                receipt = self._receipts.pop(key)
+                purged_receipts += 1
+                storage_key = f"{receipt.run_id}:{receipt.pipe_id}"
+                evicted_storage_keys.append(storage_key)
+                # Remove associated row buffer
+                rows = self._row_buffer.pop(storage_key, [])
+                purged_rows += len(rows)
+                self._total_rows -= len(rows)
+                # Also try legacy key format
+                rows2 = self._row_buffer.pop(receipt.run_id, [])
+                purged_rows += len(rows2)
+                self._total_rows -= len(rows2)
+
+            # --- Purge materialized data points from non-canonical sources ---
+            bad_mat_keys = []
+            for mat_key, points in self._materialized.items():
+                if not points:
+                    continue
+                # Check source_system on the first point
+                src = normalize_source_id(points[0].get("source_system", ""))
+                if src not in CANONICAL_SOURCES:
+                    bad_mat_keys.append(mat_key)
+
+            for mat_key in bad_mat_keys:
+                points = self._materialized.pop(mat_key)
+                purged_mat_keys += 1
+                purged_mat_points += len(points)
+                self._materialized_total -= len(points)
+                evicted_mat_redis_keys.append(f"{_REDIS_PREFIX}materialized:{mat_key}")
+
+        # Clean up Redis
+        if self._redis:
+            for sk in evicted_storage_keys:
+                self._evict_from_redis(sk)
+            for rk in evicted_mat_redis_keys:
+                try:
+                    self._redis.delete(rk)
+                except Exception as e:
+                    logger.warning(f"[IngestStore] Redis delete materialized failed: {e}")
+
+        # Persist disk cache
+        self._mark_disk_dirty()
+
+        result = {
+            "purged_receipts": purged_receipts,
+            "purged_rows": purged_rows,
+            "purged_materialized_keys": purged_mat_keys,
+            "purged_materialized_points": purged_mat_points,
+        }
+        logger.info(f"[IngestStore] Purged non-canonical sources: {result}")
+        return result
 
     # ------------------------------------------------------------------
     # Redis persistence

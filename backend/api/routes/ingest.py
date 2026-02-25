@@ -24,6 +24,7 @@ from typing import Optional
 from backend.core.constants import utc_now
 from backend.api.ingest import (
     ActivityEntry,
+    CANONICAL_SOURCES,
     DropEntry,
     IngestRequest,
     IngestResponse,
@@ -31,6 +32,7 @@ from backend.api.ingest import (
     compute_schema_hash,
     _derive_dispatch_id,
 )
+from backend.aam.ingress import normalize_source_id
 from backend.api.pipe_store import get_pipe_store
 from backend.core.mode_state import get_current_mode, set_current_mode
 from backend.utils.log_utils import get_logger
@@ -442,6 +444,33 @@ async def dcl_ingest(
         ))
         raise HTTPException(status_code=422, detail=str(e))
 
+    # ── Source system allowlist gate ──
+    # Reject payloads from non-canonical sources (e.g. AAM demo synthetic companies).
+    # Rejected payloads are logged to the drop log — never silently discarded.
+    canonical_src = normalize_source_id(ingest_req.source_system)
+    if canonical_src not in CANONICAL_SOURCES:
+        pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
+        logger.warning(
+            f"[Ingest] REJECTED non-canonical source: '{ingest_req.source_system}' "
+            f"(normalized: '{canonical_src}') tenant={ingest_req.tenant_id} "
+            f"snapshot={ingest_req.snapshot_name} rows={ingest_req.row_count}"
+        )
+        get_ingest_store().record_drop(DropEntry(
+            pipe_id=pipe_id,
+            reason=f"Non-canonical source system: '{ingest_req.source_system}' (normalized: '{canonical_src}')",
+            error_code="NON_CANONICAL_SOURCE",
+            source_system=ingest_req.source_system,
+            timestamp=now,
+            run_id=x_run_id or "",
+            snapshot_name=ingest_req.snapshot_name,
+            tenant_id=ingest_req.tenant_id,
+        ))
+        raise HTTPException(
+            status_code=422,
+            detail=f"Source system '{ingest_req.source_system}' is not in the canonical allowlist. "
+                   f"Allowed sources: {sorted(CANONICAL_SOURCES)}"
+        )
+
     expected_key = os.environ.get("DCL_INGEST_KEY")
     if expected_key and x_api_key != expected_key:
         pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
@@ -833,3 +862,44 @@ def sample_rows(pipe_id: Optional[str] = None, limit: int = 3):
             break
 
     return {"samples": samples}
+
+
+# ---------------------------------------------------------------------------
+# Purge non-canonical sources (admin maintenance)
+# ---------------------------------------------------------------------------
+
+@router.post("/purge-non-canonical")
+async def purge_non_canonical():
+    """Remove all ingest data from non-canonical source systems.
+
+    Deletes receipts, raw rows, and materialized data points where the
+    source_system is not in the CANONICAL_SOURCES allowlist.
+    """
+    store = get_ingest_store()
+
+    # Snapshot before counts
+    stats_before = store.get_stats()
+    mat_before = store.get_materialized_stats()
+
+    result = store.purge_non_canonical()
+
+    # Snapshot after counts
+    stats_after = store.get_stats()
+    mat_after = store.get_materialized_stats()
+
+    return {
+        "status": "purged",
+        "before": {
+            "total_runs": stats_before.get("total_runs", 0),
+            "total_rows": stats_before.get("total_rows_buffered", 0),
+            "materialized_points": mat_before.get("total_points", 0),
+            "unique_sources": stats_before.get("unique_sources", 0),
+        },
+        "after": {
+            "total_runs": stats_after.get("total_runs", 0),
+            "total_rows": stats_after.get("total_rows_buffered", 0),
+            "materialized_points": mat_after.get("total_points", 0),
+            "unique_sources": stats_after.get("unique_sources", 0),
+        },
+        **result,
+    }
