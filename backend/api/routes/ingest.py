@@ -87,12 +87,26 @@ def _normalize_ingest_body(raw_body: dict) -> dict:
 
 def _validate_pipe_guard(pipe_id: str, run_id: str, source_system: str, now: str,
                          tenant_id: str = "", snapshot_name: str = ""):
-    """Schema-on-write gate. Returns (pipe_def, guard_active) or raises 422."""
+    """Schema-on-write gate. Returns (pipe_def, guard_active) or raises 422.
+
+    Farm self-directed pushes (run_id starts with 'farm_') bypass the guard
+    because Farm generates its own pipe_ids without AAM pipe registration.
+    AAM-dispatched pushes are still validated against registered blueprints.
+    """
     pipe_store = get_pipe_store()
     pipe_def = pipe_store.lookup(pipe_id)
     guard_active = pipe_store.count() > 0
 
     if guard_active and pipe_def is None:
+        # Farm self-directed pushes bypass the AAM pipe guard
+        if run_id.startswith("farm_"):
+            logger.info(
+                f"[Ingest] Farm self-directed bypass: pipe_id={pipe_id} "
+                f"(run_id={run_id}, source={source_system}) — no AAM blueprint "
+                f"required for Farm pushes."
+            )
+            return None, False
+
         logger.error(
             f"[Ingest] REJECTED: No matching pipe definition for pipe_id={pipe_id} "
             f"(run_id={run_id}, source={source_system}). "
