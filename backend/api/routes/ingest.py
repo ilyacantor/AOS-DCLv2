@@ -903,15 +903,15 @@ async def flush_ingest_store():
     # --- Ingest store: memory + disk ---
     store.reset()
 
-    # --- Ingest store: Redis materialized keys ---
+    # --- Ingest store: ALL Redis keys (receipts, rows, schemas, activity) ---
     if store._redis:
         try:
-            keys = store._redis.keys(f"{_REDIS_PREFIX}materialized:*")
-            if keys:
-                store._redis.delete(*keys)
-                logger.info(f"[Flush] Deleted {len(keys)} Redis materialized keys")
+            ingest_keys = store._redis.keys(f"{_REDIS_PREFIX}*")
+            if ingest_keys:
+                store._redis.delete(*ingest_keys)
+                logger.info(f"[Flush] Deleted {len(ingest_keys)} Redis ingest keys")
         except Exception as e:
-            logger.warning(f"[Flush] Redis cleanup failed: {e}")
+            logger.warning(f"[Flush] Redis ingest cleanup failed: {e}")
 
     # --- Pipe store: memory + disk ---
     pipe_store.reset()
@@ -926,18 +926,18 @@ async def flush_ingest_store():
         except Exception as e:
             logger.warning(f"[Flush] Redis pipe cleanup failed: {e}")
 
-    # --- Pipe store: Postgres ---
+    # --- Pipe store: Postgres (get_connection is a context manager) ---
     try:
         from backend.core.db import get_connection
-        conn = get_connection()
-        if conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM pipe_definitions")
-                deleted_defs = cur.rowcount
-                cur.execute("DELETE FROM pipe_export_receipts")
-                deleted_rcpts = cur.rowcount
-                conn.commit()
-                logger.info(f"[Flush] Deleted {deleted_defs} pipe defs, {deleted_rcpts} receipts from Postgres")
+        with get_connection() as conn:
+            if conn:
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM pipe_definitions")
+                    deleted_defs = cur.rowcount
+                    cur.execute("DELETE FROM pipe_export_receipts")
+                    deleted_rcpts = cur.rowcount
+                    conn.commit()
+                    logger.info(f"[Flush] Deleted {deleted_defs} pipe defs, {deleted_rcpts} receipts from Postgres")
     except Exception as e:
         logger.warning(f"[Flush] Postgres pipe cleanup failed: {e}")
 
