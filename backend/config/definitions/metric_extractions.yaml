@@ -98,6 +98,7 @@ extractions:
     dimension_map:
       product: product
       customer_segment: segment
+    unit_scale: 100
 
   - metric: ar_aging
     value_concept: accounts_receivable
@@ -154,6 +155,7 @@ extractions:
     ratio_hint: attainment_pct
     dimension_map:
       territory: region
+    unit_scale: 100
 
   - metric: churn_rate_pct
     value_concept: churn_event
@@ -163,6 +165,7 @@ extractions:
     dimension_map:
       customer_segment: segment
       territory: region
+    unit_scale: 100
 
   - metric: nrr
     value_concept: subscription
@@ -172,6 +175,7 @@ extractions:
     dimension_map:
       customer_segment: segment
       territory: region
+    unit_scale: 100
 
   - metric: nrr_by_cohort
     value_concept: subscription
@@ -292,6 +296,7 @@ extractions:
     ratio_hint: attrition_rate
     dimension_map:
       department: department
+    unit_scale: 100
 
   - metric: time_to_fill
     value_concept: requisition
