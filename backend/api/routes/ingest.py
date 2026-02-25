@@ -871,21 +871,25 @@ def sample_rows(pipe_id: Optional[str] = None, limit: int = 3):
 
 @router.post("/flush")
 async def flush_ingest_store():
-    """Flush all ingest data — receipts, rows, and materialized points.
+    """Flush all ingest data AND pipe definitions.
 
-    Used when the store is contaminated with non-Farm data and a selective
-    purge isn't feasible (e.g. materialized points have canonical-looking
-    source names inherited from AAM dispatch configs).
+    Clears: IngestStore (memory + disk + Redis) and PipeStore (memory +
+    disk + Redis + Postgres).  After flush the schema-on-write guard is
+    inactive (pipe count = 0), allowing the next Farm push through
+    without pre-registered AAM blueprints.
     """
     store = get_ingest_store()
+    pipe_store = get_pipe_store()
 
     # Snapshot before counts
     stats_before = store.get_stats()
     mat_before = store.get_materialized_stats()
+    pipes_before = pipe_store.count()
 
+    # --- Ingest store: memory + disk ---
     store.reset()
 
-    # Also flush Redis materialized keys
+    # --- Ingest store: Redis materialized keys ---
     if store._redis:
         try:
             keys = store._redis.keys(f"{_REDIS_PREFIX}materialized:*")
@@ -895,6 +899,34 @@ async def flush_ingest_store():
         except Exception as e:
             logger.warning(f"[Flush] Redis cleanup failed: {e}")
 
+    # --- Pipe store: memory + disk ---
+    pipe_store.reset()
+
+    # --- Pipe store: Redis ---
+    if store._redis:
+        try:
+            pipe_keys = store._redis.keys("dcl:pipes:*")
+            if pipe_keys:
+                store._redis.delete(*pipe_keys)
+                logger.info(f"[Flush] Deleted {len(pipe_keys)} Redis pipe keys")
+        except Exception as e:
+            logger.warning(f"[Flush] Redis pipe cleanup failed: {e}")
+
+    # --- Pipe store: Postgres ---
+    try:
+        from backend.core.db import get_connection
+        conn = get_connection()
+        if conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM pipe_definitions")
+                deleted_defs = cur.rowcount
+                cur.execute("DELETE FROM pipe_export_receipts")
+                deleted_rcpts = cur.rowcount
+                conn.commit()
+                logger.info(f"[Flush] Deleted {deleted_defs} pipe defs, {deleted_rcpts} receipts from Postgres")
+    except Exception as e:
+        logger.warning(f"[Flush] Postgres pipe cleanup failed: {e}")
+
     return {
         "status": "flushed",
         "before": {
@@ -902,11 +934,13 @@ async def flush_ingest_store():
             "total_rows": stats_before.get("total_rows_buffered", 0),
             "materialized_points": mat_before.get("total_points", 0),
             "unique_sources": stats_before.get("unique_sources", 0),
+            "pipe_definitions": pipes_before,
         },
         "after": {
             "total_runs": 0,
             "total_rows": 0,
             "materialized_points": 0,
             "unique_sources": 0,
+            "pipe_definitions": 0,
         },
     }
