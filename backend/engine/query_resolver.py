@@ -209,8 +209,12 @@ class QueryResolver:
             for c in get_ontology():
                 if concept_name in [a.lower() for a in (c.aliases or [])]:
                     return c.id
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(
+                f"[query_resolver] Ontology alias resolution failed: {e}. "
+                "Returning None — query may degrade silently.",
+                exc_info=True
+            )
         return None
 
     # ------------------------------------------------------------------

@@ -392,7 +392,12 @@ def _get_dcl_detected_conflicts() -> List[Dict[str, Any]]:
         store = get_conflict_store()
         conflicts = store.get_active_conflicts()
         return [c.model_dump() for c in conflicts]
-    except Exception:
+    except Exception as e:
+        logger.error(
+            f"[verification] Conflict store fetch failed: {e}. "
+            "Returning empty list — conflict count will show 0 even if detection is down.",
+            exc_info=True
+        )
         return []
 
 

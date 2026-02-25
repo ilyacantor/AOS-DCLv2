@@ -112,8 +112,12 @@ def get_connection():
             except Exception:
                 try:
                     conn.close()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(
+                        f"[db] Failed to close connection during pool return: {e}. "
+                        "Pool may be corrupted — monitor borrow failures.",
+                        exc_info=True
+                    )
 
 
 def close_pool() -> None:

@@ -20,6 +20,7 @@ Install:
     pip install anthropic httpx pyyaml slack-sdk
 """
 
+import logging
 import os
 import re
 import json
@@ -28,6 +29,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any, List
+
+logger = logging.getLogger("dcl.autonomous_worker")
 from dataclasses import dataclass, asdict
 import yaml
 
@@ -125,7 +128,8 @@ def extract_yaml_block(content: str, section_name: str) -> Optional[Dict]:
     if match:
         try:
             return yaml.safe_load(match.group(1))
-        except:
+        except Exception as e:
+            logger.error(f"[autonomous_worker] YAML parse failed: {e}", exc_info=True)
             return None
     return None
 
@@ -340,16 +344,16 @@ def call_claude(config: Config, system_prompt: str, user_prompt: str) -> Dict:
     if json_match:
         try:
             return {"parsed": json.loads(json_match.group(1)), "raw": response_text}
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"[autonomous_worker] JSON parse attempt failed: {e}")
     
     # Try to extract YAML
     yaml_match = re.search(r'```yaml\s*(.*?)```', response_text, re.DOTALL)
     if yaml_match:
         try:
             return {"parsed": yaml.safe_load(yaml_match.group(1)), "raw": response_text}
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"[autonomous_worker] YAML fallback parse failed: {e}")
     
     return {"parsed": None, "raw": response_text}
 
@@ -615,8 +619,8 @@ def send_slack_notification(config: Config, message: str, level: str = "info"):
         httpx.post(config.slack_webhook, json={
             "text": f"{emoji} *Autonomous Worker*\n{message}"
         })
-    except:
-        print(f"Failed to send Slack notification: {message}")
+    except Exception as e:
+        logger.error(f"[autonomous_worker] Slack webhook failed: {e}", exc_info=True)
 
 
 # =============================================================================
