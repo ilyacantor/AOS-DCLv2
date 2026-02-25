@@ -33,11 +33,6 @@ interface DropEntry {
   tenant_id: string;
 }
 
-interface IngestRunsResponse {
-  runs: unknown[];
-  stats: IngestStats;
-}
-
 interface ActivityEntry {
   phase: 'structure' | 'dispatch' | 'content';
   source: string;
