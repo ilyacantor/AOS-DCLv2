@@ -991,16 +991,22 @@ class IngestStore:
         schema_hash: str,
         request: IngestRequest,
         dispatch_id: str = "",
+        canonical_source_override: str = "",
     ) -> RunReceipt:
         """
         Accept a Runner push.  Returns the RunReceipt.
+
+        canonical_source_override: if provided, use this instead of
+        request.source_system for the canonical source identity.  The
+        ingest route resolves this from pipe_def.vendor (AOD authority)
+        so the receipt reflects the real SOR, not Farm's self-label.
 
         Concurrency-safe: all heavy computation (field extraction, row
         tagging, receipt construction) runs OUTSIDE the lock.  The lock
         protects only the dict mutations (~microseconds).
         """
         now = datetime.now(timezone.utc).isoformat()
-        canonical_id = normalize_source_id(request.source_system)
+        canonical_id = canonical_source_override or normalize_source_id(request.source_system)
 
         actual = len(request.rows)
         if actual != request.row_count:

@@ -478,11 +478,12 @@ async def dcl_ingest(
         raise HTTPException(status_code=422, detail=str(e))
 
     # ── Source system allowlist gate ──
-    # Reject payloads from non-canonical sources (e.g. AAM demo synthetic companies).
-    # Rejected payloads are logged to the drop log — never silently discarded.
+    # The canonical source is determined by the pipe_def vendor (AOD authority),
+    # NOT by what Farm writes in the request body.  Farm may send
+    # source_system="farm" — that's its self-label, not a SOR identity.
     #
-    # If pipe_store is empty, DCL is not initialized — return 503 so operators
-    # know to run AAM /export-pipes first.
+    # Flow: look up pipe_def → use vendor for canonical_src → check allowlist.
+    # If pipe_store is empty, DCL is not initialized — return 503.
     canonical_sources = get_canonical_sources()
     if not canonical_sources:
         raise HTTPException(
@@ -493,17 +494,31 @@ async def dcl_ingest(
             },
         )
 
-    canonical_src = normalize_source_id(ingest_req.source_system)
+    # Resolve canonical source from pipe_def vendor (the join key is pipe_id).
+    # Falls back to request.source_system only if pipe_def is missing.
+    pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
+    pipe_store = get_pipe_store()
+    pipe_def_for_src = pipe_store.lookup(pipe_id)
+    if pipe_def_for_src and pipe_def_for_src.vendor:
+        canonical_src = normalize_source_id(pipe_def_for_src.vendor)
+        if canonical_src != normalize_source_id(ingest_req.source_system):
+            logger.info(
+                f"[Ingest] Source override: request said '{ingest_req.source_system}', "
+                f"pipe_def vendor='{pipe_def_for_src.vendor}' → canonical='{canonical_src}' "
+                f"(pipe_id={pipe_id})"
+            )
+    else:
+        canonical_src = normalize_source_id(ingest_req.source_system)
+
     if canonical_src not in canonical_sources:
-        pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
         logger.warning(
             f"[Ingest] REJECTED non-canonical source: '{ingest_req.source_system}' "
-            f"(normalized: '{canonical_src}') tenant={ingest_req.tenant_id} "
+            f"(canonical: '{canonical_src}') tenant={ingest_req.tenant_id} "
             f"snapshot={ingest_req.snapshot_name} rows={ingest_req.row_count}"
         )
         get_ingest_store().record_drop(DropEntry(
             pipe_id=pipe_id,
-            reason=f"Non-canonical source system: '{ingest_req.source_system}' (normalized: '{canonical_src}')",
+            reason=f"Non-canonical source: '{ingest_req.source_system}' (canonical: '{canonical_src}')",
             error_code="NON_CANONICAL_SOURCE",
             source_system=ingest_req.source_system,
             timestamp=now,
@@ -513,7 +528,8 @@ async def dcl_ingest(
         ))
         raise HTTPException(
             status_code=422,
-            detail=f"Source system '{ingest_req.source_system}' is not in the canonical allowlist. "
+            detail=f"Source '{ingest_req.source_system}' (canonical: '{canonical_src}') "
+                   f"is not in the canonical allowlist. "
                    f"Allowed sources: {sorted(canonical_sources)}"
         )
 
@@ -569,6 +585,7 @@ async def dcl_ingest(
             schema_hash=schema_hash,
             request=ingest_req,
             dispatch_id=dispatch_id,
+            canonical_source_override=canonical_src,
         )
     except Exception as e:
         logger.error(f"[Ingest] Failed: {e}", exc_info=True)
