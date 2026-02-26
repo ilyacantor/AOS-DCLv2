@@ -39,7 +39,7 @@ from backend.api.query import (
     QueryError,
     handle_query,
 )
-from backend.api.ingest import get_ingest_store, ActivityEntry
+from backend.api.ingest import get_ingest_store, ActivityEntry, DropEntry
 from backend.api.pipe_store import get_pipe_store
 from backend.api.mcp_server import (
     MCPToolCall,
@@ -396,6 +396,54 @@ def _ensure_farm_content_activity() -> None:
         f"snapshot={snapshot_name} run_id={farm_run_id} "
         f"{total_pipes} pipes, {total_rows:,} rows, {len(unique_sors)} SORs"
     )
+
+
+@app.post("/api/dcl/ingest/seed")
+async def seed_ingest(request: Request):
+    """Seed local IngestStore from remote snapshot (dev only)."""
+    payload = await request.json()
+    store = get_ingest_store()
+    activity_items = payload.get("activity", [])
+    drop_items = payload.get("drops", [])
+    added_activity = 0
+    added_drops = 0
+    with store._lock:
+        for item in activity_items:
+            store._activity_log.append(ActivityEntry(
+                phase=item.get("phase", ""),
+                source=item.get("source", ""),
+                snapshot_name=item.get("snapshot_name", ""),
+                run_id=item.get("run_id", ""),
+                timestamp=item.get("timestamp", ""),
+                pipes=item.get("pipes", 0),
+                sors=item.get("sors", 0),
+                tooling_pipes=item.get("tooling_pipes", 0),
+                fabrics=item.get("fabrics", 0),
+                mapped_pipes=item.get("mapped_pipes", 0),
+                unmapped_pipes=item.get("unmapped_pipes", 0),
+                rows=item.get("rows", 0),
+                records=item.get("records", 0),
+                sor_pipes=item.get("sor_pipes", 0),
+                other_pipes=item.get("other_pipes", 0),
+                dispatch_id=item.get("dispatch_id", ""),
+                aod_run_id=item.get("aod_run_id", ""),
+            ))
+            added_activity += 1
+        for item in drop_items:
+            store._drop_log.append(DropEntry(
+                pipe_id=item.get("pipe_id", ""),
+                reason=item.get("reason", ""),
+                error_code=item.get("error_code", ""),
+                source_system=item.get("source_system", ""),
+                timestamp=item.get("timestamp", ""),
+                run_id=item.get("run_id", ""),
+                dispatch_id=item.get("dispatch_id", ""),
+                snapshot_name=item.get("snapshot_name", ""),
+                tenant_id=item.get("tenant_id", ""),
+            ))
+            added_drops += 1
+    store._save_to_disk()
+    return {"status": "seeded", "activity_added": added_activity, "drops_added": added_drops}
 
 
 @app.post("/api/dcl/ingest/reset")
