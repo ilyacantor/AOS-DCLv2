@@ -460,16 +460,8 @@ export function IngestionPanel() {
                                   <td colSpan={9} className="px-3 py-2 pl-12">
                                     <div className="flex flex-wrap gap-x-6 gap-y-1 text-[10px] font-mono">
                                       <span>
-                                        <span className="text-muted-foreground/60">run_id </span>
-                                        <span className="text-foreground/80">{entry.run_id || '-'}</span>
-                                      </span>
-                                      <span>
                                         <span className="text-muted-foreground/60">dispatch_id </span>
                                         <span className="text-foreground/80">{entry.dispatch_id || '-'}</span>
-                                      </span>
-                                      <span>
-                                        <span className="text-muted-foreground/60">rows </span>
-                                        <span className="text-foreground/80">{entry.rows > 0 ? fmtRows(entry.rows) : '-'}</span>
                                       </span>
                                       <span>
                                         <span className="text-muted-foreground/60">records </span>
