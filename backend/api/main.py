@@ -618,6 +618,14 @@ if DIST_DIR.exists() and (DIST_DIR / "assets").exists():
     app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
 
 
+@app.get("/favicon.png")
+async def serve_favicon():
+    favicon = DIST_DIR / "favicon.png"
+    if favicon.exists():
+        return FileResponse(favicon, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+    raise HTTPException(status_code=404, detail="Favicon not found")
+
+
 @app.get("/")
 async def serve_root():
     index_file = DIST_DIR / "index.html"
