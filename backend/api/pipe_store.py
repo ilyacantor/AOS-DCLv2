@@ -611,6 +611,14 @@ class PipeDefinitionStore:
     # Public API
     # ------------------------------------------------------------------
 
+    def sync(self) -> None:
+        """Trigger cross-worker sync from Redis.
+
+        Call before count()/get_all_definitions() when cross-worker
+        freshness matters (e.g. the ingest allowlist gate).
+        """
+        self._sync_from_redis()
+
     def register(self, defn: PipeDefinition) -> None:
         """Register or update a pipe definition."""
         with self._lock:

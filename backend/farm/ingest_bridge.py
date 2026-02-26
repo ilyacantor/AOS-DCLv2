@@ -13,6 +13,7 @@ The 20 pipes map to 8 source systems:
 """
 
 from typing import Dict, List, Any, Optional, Tuple
+from backend.aam.ingress import normalize_source_id
 from backend.api.ingest import get_ingest_store, RunReceipt
 from backend.api.pipe_store import get_pipe_store
 from backend.domain import (
@@ -138,12 +139,20 @@ def build_sources_from_ingest(
     source_groups: Dict[str, List[RunReceipt]] = {}
     for receipt in receipts:
         pipe_def = pipe_store.lookup(receipt.pipe_id)
-        if pipe_def:
-            # Derive canonical_id from pipe_store source_name
-            canonical_id = pipe_def.source_name.lower().strip().replace(" ", "_").replace("-", "_")
+        if pipe_def and pipe_def.vendor:
+            canonical_id = normalize_source_id(pipe_def.vendor)
+        elif pipe_def:
+            logger.warning(
+                f"[FarmBridge] pipe_def for {receipt.pipe_id} has no vendor, "
+                f"falling back to source_name='{pipe_def.source_name}'"
+            )
+            canonical_id = normalize_source_id(pipe_def.source_name)
         else:
-            # pipe_store has no entry — use receipt metadata, trust_score=0
-            canonical_id = receipt.canonical_source_id or receipt.source_system
+            logger.error(
+                f"[FarmBridge] REJECTED pipe_id={receipt.pipe_id} — not registered "
+                f"in pipe_store. Register via AAM /export-pipes."
+            )
+            continue  # REJECT, don't group with a bad value
         source_groups.setdefault(canonical_id, []).append(receipt)
 
     sources: List[SourceSystem] = []
@@ -154,14 +163,16 @@ def build_sources_from_ingest(
         pipe_def = pipe_store.lookup(first_receipt.pipe_id)
 
         if pipe_def:
-            display_name = pipe_def.source_name or canonical_id
+            display_name = pipe_def.source_name or pipe_def.vendor or canonical_id
             category = pipe_def.category or "unknown"
             trust_score = pipe_def.trust_score
             data_quality = pipe_def.data_quality_score
         else:
-            display_name = first_receipt.source_system
+            # All receipts in this group had pipe_defs (unregistered ones were skipped)
+            # This branch only executes if the pipe_def was evicted between loops.
+            display_name = canonical_id
             category = "unknown"
-            trust_score = 0  # Signal that AOD chain didn't run
+            trust_score = 0
             data_quality = 0
 
         # Build tables from each pipe's rows

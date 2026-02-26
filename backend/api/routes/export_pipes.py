@@ -125,6 +125,13 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
                 )
                 continue
 
+            if not conn.vendor:
+                logger.warning(
+                    f"[ExportPipes] Skipping connection with empty vendor "
+                    f"(pipe_id={conn.pipe_id}, source_name={conn.source_name})"
+                )
+                continue
+
             defn = PipeDefinition(
                 pipe_id=conn.pipe_id,
                 candidate_id=conn.candidate_id,

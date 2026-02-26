@@ -81,31 +81,29 @@ _BOOTSTRAP_SOURCES: frozenset = frozenset({
 # Backward-compat alias — imported by name in some modules
 CANONICAL_SOURCES = _BOOTSTRAP_SOURCES
 
-# Cache for pipe_store-derived canonical sources
-_canonical_sources_cache: Optional[frozenset] = None
-
-
 def get_canonical_sources() -> frozenset:
     """Return the set of canonical source IDs allowed through the ingest gate.
 
     If pipe_store has registered definitions, derive the allowlist from
     those definitions (AOD → AAM → DCL chain). If pipe_store is empty,
     return an empty frozenset — the ingest route handles this with HTTP 503.
+
+    Uses PipeDefinition.vendor (canonical machine ID like "salesforce")
+    rather than source_name (display name like "Salesforce CRM") so the
+    allowlist matches the IDs Farm sends in source_system.
     """
-    global _canonical_sources_cache
     from backend.api.pipe_store import get_pipe_store
     pipe_store = get_pipe_store()
+    pipe_store.sync()
 
     if pipe_store.count() > 0:
-        # Derive from registered pipe definitions
         definitions = pipe_store.get_all_definitions()
         source_ids = set()
         for defn in definitions:
-            src = defn.source_name.lower().strip().replace(" ", "_").replace("-", "_")
-            if src:
-                source_ids.add(src)
-        _canonical_sources_cache = frozenset(source_ids)
-        return _canonical_sources_cache
+            vid = normalize_source_id(defn.vendor) if defn.vendor else ""
+            if vid:
+                source_ids.add(vid)
+        return frozenset(source_ids)
 
     # pipe_store is empty — return empty so the ingest route returns 503
     return frozenset()

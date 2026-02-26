@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from difflib import SequenceMatcher
 
+from backend.aam.ingress import normalize_source_id
+
 
 class DiscoveryStatus(str, Enum):
     CANONICAL = "canonical"
@@ -109,17 +111,17 @@ class SourceNormalizer:
         if not definitions:
             return 0
 
-        # Deduplicate by source_name — multiple pipes may share a source
+        # Deduplicate by vendor — multiple pipes may share a source
         seen_sources: Dict[str, bool] = {}
         for defn in definitions:
-            source_id = defn.source_name.lower().strip().replace(" ", "_").replace("-", "_")
-            if source_id in seen_sources:
+            source_id = normalize_source_id(defn.vendor) if defn.vendor else ""
+            if not source_id or source_id in seen_sources:
                 continue
             seen_sources[source_id] = True
 
             canonical = CanonicalSource(
                 source_id=source_id,
-                name=defn.source_name,
+                name=defn.source_name or defn.vendor,
                 description=f"Registered via AAM /export-pipes",
                 source_type=defn.category.upper() if defn.category else "UNKNOWN",
                 category=defn.category or "unknown",
