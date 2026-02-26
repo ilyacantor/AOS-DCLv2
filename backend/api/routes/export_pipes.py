@@ -12,7 +12,7 @@ from typing import List, Optional
 
 from backend.core.constants import utc_now
 from backend.api.pipe_store import PipeDefinition, get_pipe_store
-from backend.api.ingest import get_ingest_store, ActivityEntry
+from backend.api.ingest import get_ingest_store, ActivityEntry, INTERNAL_SERVICE_NAMES
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -86,9 +86,8 @@ class ExportPipesResponse(BaseModel):
     timestamp: str
 
 
-# Internal service names that must never appear as a pipe vendor.
-# If AAM sends one of these, the pipe definition is malformed.
-_INTERNAL_VENDOR_NAMES = frozenset({"farm", "aam", "dcl", "aod", "runner"})
+# Re-export for local use — single source of truth in backend.api.ingest
+_INTERNAL_VENDOR_NAMES = INTERNAL_SERVICE_NAMES
 
 
 # ---------------------------------------------------------------------------

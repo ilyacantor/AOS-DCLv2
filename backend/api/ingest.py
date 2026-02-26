@@ -50,8 +50,7 @@ _BOOTSTRAP_SOURCES: frozenset = frozenset({
     "jira",
     "datadog",
     "aws_cost_explorer",
-    "farm",
-    "aam",
+    # "farm" and "aam" removed — internal services, not SOR vendors
     "pagerduty",
     "github_actions",
     "greenhouse",
@@ -81,6 +80,11 @@ _BOOTSTRAP_SOURCES: frozenset = frozenset({
 # Backward-compat alias — imported by name in some modules
 CANONICAL_SOURCES = _BOOTSTRAP_SOURCES
 
+# Internal service names that must never appear as a canonical source.
+# Shared across get_canonical_sources() and the AAM pull path.
+INTERNAL_SERVICE_NAMES = frozenset({"farm", "aam", "dcl", "aod", "runner"})
+
+
 def get_canonical_sources() -> frozenset:
     """Return the set of canonical source IDs allowed through the ingest gate.
 
@@ -91,6 +95,9 @@ def get_canonical_sources() -> frozenset:
     Uses PipeDefinition.vendor (canonical machine ID like "salesforce")
     rather than source_name (display name like "Salesforce CRM") so the
     allowlist matches the IDs Farm sends in source_system.
+
+    Internal service names (farm, aam, dcl, aod, runner) are excluded
+    even if they somehow appear as vendors in pipe definitions.
     """
     from backend.api.pipe_store import get_pipe_store
     pipe_store = get_pipe_store()
@@ -101,7 +108,7 @@ def get_canonical_sources() -> frozenset:
         source_ids = set()
         for defn in definitions:
             vid = normalize_source_id(defn.vendor) if defn.vendor else ""
-            if vid:
+            if vid and vid not in INTERNAL_SERVICE_NAMES:
                 source_ids.add(vid)
         return frozenset(source_ids)
 
@@ -1413,7 +1420,7 @@ class IngestStore:
         self._sync_from_redis()
         with self._lock:
             receipts = list(self._receipts.values())
-            unique_sources = set(r.source_system for r in receipts)
+            unique_sources = set(r.canonical_source_id for r in receipts if r.canonical_source_id)
             unique_tenants = set(r.tenant_id for r in receipts)
             latest = max(receipts, key=lambda r: r.received_at) if receipts else None
             first = min(receipts, key=lambda r: r.received_at) if receipts else None

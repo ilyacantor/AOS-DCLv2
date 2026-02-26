@@ -464,9 +464,18 @@ class SchemaLoader:
             now = datetime.now(tz.utc).isoformat()
             definitions = []
 
+            from backend.api.ingest import INTERNAL_SERVICE_NAMES
+
             for plane in payload.planes:
                 for pipe in plane.pipes:
                     if not pipe.pipe_id:
+                        continue
+                    if pipe.vendor and pipe.vendor.lower() in INTERNAL_SERVICE_NAMES:
+                        logger.error(
+                            f"[SchemaLoader] REJECTED pipe with internal vendor "
+                            f"'{pipe.vendor}' (pipe_id={pipe.pipe_id}) in AAM pull path. "
+                            f"Vendor must be an external SOR."
+                        )
                         continue
                     defn = PipeDefinition(
                         pipe_id=pipe.pipe_id,

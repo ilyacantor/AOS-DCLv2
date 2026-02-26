@@ -142,11 +142,12 @@ def build_sources_from_ingest(
         if pipe_def and pipe_def.vendor:
             canonical_id = normalize_source_id(pipe_def.vendor)
         elif pipe_def:
-            logger.warning(
-                f"[FarmBridge] pipe_def for {receipt.pipe_id} has no vendor, "
-                f"falling back to source_name='{pipe_def.source_name}'"
+            logger.error(
+                f"[FarmBridge] REJECTED pipe_id={receipt.pipe_id} — pipe_def has "
+                f"no vendor (source_name='{pipe_def.source_name}'). "
+                f"No fallback — vendor is required for source identity."
             )
-            canonical_id = normalize_source_id(pipe_def.source_name)
+            continue
         else:
             logger.error(
                 f"[FarmBridge] REJECTED pipe_id={receipt.pipe_id} — not registered "
