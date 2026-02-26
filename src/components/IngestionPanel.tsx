@@ -151,15 +151,17 @@ export function IngestionPanel() {
 
   const fmtRows = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 
-  // Group activity by snapshot_name, preserving newest-first order
-  const groupedBySnapshot: Record<string, ActivityEntry[]> = {};
-  const snapshotOrder: string[] = [];
+  // Group activity by dispatch_id (one collapsible entry per run cycle)
+  const groupedByRun: Record<string, ActivityEntry[]> = {};
+  const runOrder: string[] = [];
+  let _unkeyed = 0;
   for (const entry of activity) {
-    if (!groupedBySnapshot[entry.snapshot_name]) {
-      groupedBySnapshot[entry.snapshot_name] = [];
-      snapshotOrder.push(entry.snapshot_name);
+    const key = entry.dispatch_id || `_unkeyed_${_unkeyed++}`;
+    if (!groupedByRun[key]) {
+      groupedByRun[key] = [];
+      runOrder.push(key);
     }
-    groupedBySnapshot[entry.snapshot_name].push(entry);
+    groupedByRun[key].push(entry);
   }
 
   // --- Render ---
@@ -221,7 +223,7 @@ export function IngestionPanel() {
         {stats && (stats.total_runs > 0 || activity.length > 0) && (
           <div className="rounded-lg border border-border bg-card/30 px-4 py-2.5">
             <div className="flex items-center gap-6 text-xs font-mono">
-              <span><span className="text-foreground font-semibold">{snapshotOrder.length}</span> <span className="text-muted-foreground">snapshots</span></span>
+              <span><span className="text-foreground font-semibold">{runOrder.length}</span> <span className="text-muted-foreground">runs</span></span>
               <span><span className="text-foreground font-semibold">{activity.length}</span> <span className="text-muted-foreground">events</span></span>
               <span><span className="text-foreground font-semibold">{stats.total_runs}</span> <span className="text-muted-foreground">receipts</span></span>
               <span><span className="text-foreground font-semibold">{fmtRows(stats.total_rows_buffered)}</span> <span className="text-muted-foreground">rows</span></span>
@@ -316,20 +318,21 @@ export function IngestionPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {snapshotOrder.map((snapName) => {
-                    const entries = groupedBySnapshot[snapName];
+                  {runOrder.map((runKey) => {
+                    const entries = groupedByRun[runKey];
                     // Sort: structure first, dispatch second, content third
                     const phaseOrder = { structure: 0, dispatch: 1, content: 2 };
                     const sorted = [...entries].sort(
                       (a, b) => (phaseOrder[a.phase] ?? 9) - (phaseOrder[b.phase] ?? 9)
                     );
-                    const isExpanded = expandedSnap === snapName;
+                    const isExpanded = expandedSnap === runKey;
+                    const snapName = sorted[0]?.snapshot_name || '(unknown)';
 
                     return (
-                      <Fragment key={snapName}>
-                        {/* Snapshot group header */}
+                      <Fragment key={runKey}>
+                        {/* Run group header */}
                         <tr
-                          onClick={() => setExpandedSnap(isExpanded ? null : snapName)}
+                          onClick={() => setExpandedSnap(isExpanded ? null : runKey)}
                           className="border-b border-border/50 bg-card/10 hover:bg-card/30 cursor-pointer transition-colors"
                         >
                           <td colSpan={9} className="px-3 py-2">
@@ -374,7 +377,7 @@ export function IngestionPanel() {
                             : entry.source === 'AAM'
                               ? 'text-blue-400'
                               : 'text-amber-400';
-                          const phaseKey = `${snapName}-${entry.phase}-${idx}`;
+                          const phaseKey = `${runKey}-${entry.phase}-${idx}`;
                           const isPhaseExpanded = expandedPhase === phaseKey;
 
                           return (
