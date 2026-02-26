@@ -477,6 +477,12 @@ async def dcl_ingest(
         ))
         raise HTTPException(status_code=422, detail=str(e))
 
+    # ── Farm self-directed bypass ──
+    # Farm generates its own pipe_ids without AOD discovery or AAM registration.
+    # It doesn't participate in the vendor-based identity chain.
+    # Skip canonical source checks entirely for Farm pushes.
+    _is_farm_push = (x_run_id or "").startswith("farm_")
+
     # ── Source system allowlist gate ──
     # The canonical source is determined by the pipe_def vendor (AOD authority),
     # NOT by what Farm writes in the request body.  Farm may send
@@ -485,7 +491,7 @@ async def dcl_ingest(
     # Flow: look up pipe_def → use vendor for canonical_src → check allowlist.
     # If pipe_store is empty, DCL is not initialized — return 503.
     canonical_sources = get_canonical_sources()
-    if not canonical_sources:
+    if not canonical_sources and not _is_farm_push:
         raise HTTPException(
             status_code=503,
             detail={
@@ -494,43 +500,54 @@ async def dcl_ingest(
             },
         )
 
-    # Resolve canonical source from pipe_def vendor (the join key is pipe_id).
-    # Falls back to request.source_system only if pipe_def is missing.
-    pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
-    pipe_store = get_pipe_store()
-    pipe_def_for_src = pipe_store.lookup(pipe_id)
-    if pipe_def_for_src and pipe_def_for_src.vendor:
-        canonical_src = normalize_source_id(pipe_def_for_src.vendor)
-        if canonical_src != normalize_source_id(ingest_req.source_system):
-            logger.info(
-                f"[Ingest] Source override: request said '{ingest_req.source_system}', "
-                f"pipe_def vendor='{pipe_def_for_src.vendor}' → canonical='{canonical_src}' "
-                f"(pipe_id={pipe_id})"
+    if not _is_farm_push:
+        # Resolve canonical source from pipe_def vendor (the join key is pipe_id).
+        # Falls back to request.source_system only if pipe_def is missing.
+        pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
+        pipe_store = get_pipe_store()
+        pipe_def_for_src = pipe_store.lookup(pipe_id)
+        if pipe_def_for_src and pipe_def_for_src.vendor:
+            canonical_src = normalize_source_id(pipe_def_for_src.vendor)
+            if canonical_src != normalize_source_id(ingest_req.source_system):
+                logger.info(
+                    f"[Ingest] Source override: request said '{ingest_req.source_system}', "
+                    f"pipe_def vendor='{pipe_def_for_src.vendor}' → canonical='{canonical_src}' "
+                    f"(pipe_id={pipe_id})"
+                )
+        else:
+            canonical_src = normalize_source_id(ingest_req.source_system)
+
+        if canonical_src not in canonical_sources:
+            logger.warning(
+                f"[Ingest] REJECTED non-canonical source: '{ingest_req.source_system}' "
+                f"(canonical: '{canonical_src}') tenant={ingest_req.tenant_id} "
+                f"snapshot={ingest_req.snapshot_name} rows={ingest_req.row_count}"
+            )
+            get_ingest_store().record_drop(DropEntry(
+                pipe_id=pipe_id,
+                reason=f"Non-canonical source: '{ingest_req.source_system}' (canonical: '{canonical_src}')",
+                error_code="NON_CANONICAL_SOURCE",
+                source_system=ingest_req.source_system,
+                timestamp=now,
+                run_id=x_run_id or "",
+                snapshot_name=ingest_req.snapshot_name,
+                tenant_id=ingest_req.tenant_id,
+            ))
+            raise HTTPException(
+                status_code=422,
+                detail=f"Source '{ingest_req.source_system}' (canonical: '{canonical_src}') "
+                       f"is not in the canonical allowlist. "
+                       f"Allowed sources: {sorted(canonical_sources)}"
             )
     else:
+        # Farm sends real vendor names as source_system (salesforce, netsuite, etc.)
+        # Used as a label only — passed to store.ingest() as canonical_source_override
+        # (line 588), where it tags rows and the receipt. No downstream code validates
+        # it against canonical_sources.
         canonical_src = normalize_source_id(ingest_req.source_system)
-
-    if canonical_src not in canonical_sources:
-        logger.warning(
-            f"[Ingest] REJECTED non-canonical source: '{ingest_req.source_system}' "
-            f"(canonical: '{canonical_src}') tenant={ingest_req.tenant_id} "
-            f"snapshot={ingest_req.snapshot_name} rows={ingest_req.row_count}"
-        )
-        get_ingest_store().record_drop(DropEntry(
-            pipe_id=pipe_id,
-            reason=f"Non-canonical source: '{ingest_req.source_system}' (canonical: '{canonical_src}')",
-            error_code="NON_CANONICAL_SOURCE",
-            source_system=ingest_req.source_system,
-            timestamp=now,
-            run_id=x_run_id or "",
-            snapshot_name=ingest_req.snapshot_name,
-            tenant_id=ingest_req.tenant_id,
-        ))
-        raise HTTPException(
-            status_code=422,
-            detail=f"Source '{ingest_req.source_system}' (canonical: '{canonical_src}') "
-                   f"is not in the canonical allowlist. "
-                   f"Allowed sources: {sorted(canonical_sources)}"
+        logger.info(
+            f"[Ingest] Farm self-directed push: skipping canonical source "
+            f"gate (run_id={x_run_id}, source={ingest_req.source_system})"
         )
 
     expected_key = os.environ.get("DCL_INGEST_KEY")
