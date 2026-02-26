@@ -1,0 +1,238 @@
+﻿Category,Capability,AOD,AAM,DCL,NLQ,AOA,FARM,Platform,Status,Notes
+A2A Protocol,Agent discovery,,,,,A/R,I,,Aspirational,
+A2A Protocol,Context sharing,,,,,A/R,I,,Aspirational,
+A2A Protocol,Task delegation,,,,,A/R,C,,Aspirational,
+AAM Handoff,ConnectionCandidate export,A/R,,,,,,,Live,
+Action,Fabric Action Routing,,C,,,A/R,I,,Live,Routes 'Write' intent to Fabric Plane
+Action,Transaction Execution,,R,,,A/R,I,,Live,Executes via AAM Adapters
+Adapters,"API Gateway Adapter (Kong, Apigee)",,A/R,,,,I,,Stub,Managed API Proxy
+Adapters,"API Gateway Connection (Kong, Apigee)",,A/R,,,,I,,Stub,Proxy/REST modality
+Adapters,Adapter Factory Resolution,,A/R,,,,I,,Stub,Instantiates Strategy (Gateway vs Bus)
+Adapters,"Data Warehouse Connection (Snowflake, BigQuery)",,A/R,,,,I,,Stub,JDBC/Bulk Read modality
+Adapters,"Event Bus Adapter (Kafka, EventBridge)",,A/R,,,,I,,Stub,Streaming Consumer
+Adapters,"Event Bus Connection (Kafka, EventBridge)",,A/R,,,,I,,Stub,Streaming Consumer modality
+Adapters,"IPAAS Connection (Workato, MuleSoft)",,A/R,,,,I,,Stub,Webhooks/Signals modality
+Adapters,Pipe Discovery from Plane,,A/R,,,,I,,Stub,Inventory reusable data pipes
+Adapters,Plane Health Check,,A/R,,,,I,,Stub,Monitor adapter connectivity
+Adapters,"Warehouse Adapter (Snowflake, BigQuery)",,A/R,,,,I,,Stub,JDBC Read
+Adapters,"iPaaS Adapter (Workato, MuleSoft)",,A/R,,,,I,,Stub,Webhooks/Signals
+Agent Lifecycle,Agent health monitoring,,,,,A/R,C,,On Docket,
+Agent Lifecycle,Agent registration & configuration,,,,,A/R,I,,On Docket,
+Agent Lifecycle,Agent version management,,,,,A/R,I,,On Docket,
+Agent Registry,Agent discovery & inventory,C,C,I,,A/R,I,,On Docket,Agents as first-class assets
+Agent Registry,Agent metadata & ownership,I,I,C,,A/R,I,,On Docket,"Domain, owner, trust"
+Approval Workflows,Approval request generation,,,,,A/R,I,,On Docket,
+Approval Workflows,Human-in-the-loop routing,,,,,A/R,I,,On Docket,
+Approval Workflows,Override tracking,,,,,A/R,I,,On Docket,
+Asset Scan,Asset Discovery (Legacy Endpoints),A/R,,,,,,,Live,Legacy Fallback
+Asset Scan,Policy Manifest Export (Governance Rules),A/R,C,,,,,,Live,Export rules for AAM to enforce
+Candidate Intake,Candidate Defer,,A/R,,,,I,,Live,Defer with reason
+Candidate Intake,Candidate Ingestion,R,A,,,,I,,Live,Receives from AOD
+Candidate Intake,Candidate Match to Pipe,,A/R,,,,I,,Live,Link candidate to existing pipe
+Candidate Intake,Candidate Triage,,A/R,,,,I,,Live,Status management
+Capabilities,Capability contract registration,I,I,C,,A/R,I,,Live,Declared agent abilities
+Capabilities,Capability drift detection,C,C,C,,A/R,I,,Live,Observed vs declared behavior
+Classification & Governance,Governance status determination,A/R,,,,,C,,Live,
+Classification & Governance,IdP governance policy enforcement,A/R,,,,,C,,Live,
+Classification & Governance,Shadow IT classification,A/R,,,,,C,,Live,
+Classification & Governance,Vendor governance propagation,A/R,,,,,,,Live,
+Classification & Governance,Zombie asset detection,A/R,,,,,C,,Live,
+Collector Operations,Collector Registration,,A/R,,,,I,,Live,Register collection strategies
+Collector Operations,Collector Run Execution,,A/R,,,,I,,Live,Execute with tracking
+Collector Operations,Generate Observations,,A/R,,,,C,,Live,
+Collector Operations,Observation Storage,,A/R,,,,I,,Live,Raw collector output
+Collector Operations,Register Collectors,,A/R,,,,I,,Live,
+Collector Operations,Run Collectors,,A/R,,,,C,,Live,
+Collector Operations,Track Collector Runs,,A/R,,,,I,,Live,
+Connector Provisioning,Config Storage,,,A/R,,,I,,Aspirational,Aspirational — no code implementation
+Connector Provisioning,Dynamic Reconnection,,,A/R,,,C,,Aspirational,Aspirational — no code implementation
+Contract,Downstream Consumer Protocol (NLQ Interface),,,A/R,C,,C,,Live,DCL provides semantic API for NLQ consumption
+Coordination,Arbitration & conflict resolution,I,I,C,,A/R,I,,On Docket,Deterministic outcomes
+Coordination,Multi-agent workflow orchestration,I,C,C,,A/R,I,,On Docket,Fan-in / fan-out
+Data Mode,Demo Mode (Farm-sourced synthetic data),,C,R,I,,A/R,,Live,Farm generates synthetic data for demos/pilots; Farm owns data generation
+Data Mode,Mode Switching & Fallback,,,A/R,I,,,,On Docket,"DCL decides data source per query; live data preferred, demo fallback if unavailable"
+Data Mode,Production Mode (Enterprise-sourced live data),,R,A/R,I,,,,On Docket,Enterprise SORs push directly to DCL via AAM-provisioned pipes; Farm has no role
+Data Query,Fact Base Execution,,,A/R,,,I,,Live,"51 data arrays, 1500+ records"
+Data Query,Quality Score Metadata,,,A/R,,,I,,Live,"freshness, quality_score, record_count"
+Data Query,Query Endpoint (POST /api/dcl/query),,,A/R,C,,I,,Live,Metric + dimensions + filters
+Data Query,Ranking/Superlative Support,,,A/R,C,,I,,Live,"Top N, Bottom N, Best, Worst"
+Discovery & Cataloging,Asset discovery (find data sources),A/R,,,,,,,Live,
+Discovery & Cataloging,Domain canonicalization (alias collapsing),A/R,,,,,C,,Live,
+Discovery & Cataloging,Source catalog management,A/R,,,,,,,Live,
+Drift Detection,Acknowledge Drift,,A/R,,I,,I,,Live,
+Drift Detection,Detect Contract Drift,,A/R,,I,,C,,Live,
+Drift Detection,Detect Freshness Drift,,A/R,,I,,C,,Live,
+Drift Detection,Detect Schema Drift,,A/R,,I,,C,,Live,
+Drift Detection,Drift Acknowledgement,,A/R,,I,,I,,Live,Operator action
+Drift Detection,Fabric Drift Detection,,A/R,,I,,I,,Live,Connectivity drift
+Drift Detection,Schema Drift Detection,,A/R,,I,,C,,Live,Field changes (not connection)
+Drift Detection,Schema Hash Computation,,A/R,,I,,C,,Live,Data structure drift
+Drift Detection,Suppress Drift,,A/R,,I,,I,,Live,
+Economics,Budget enforcement,I,C,I,,A/R,I,,On Docket,Prevent runaway spend
+Economics,Cost attribution per agent,I,C,C,,A/R,I,,On Docket,Tokens & infra
+Execution,Fabric action routing,I,C,I,,A/R,I,,Live,Writes routed via AAM
+Execution,Transaction execution,I,R,I,,A/R,I,,Live,Execution via adapters
+Export,DCL Pipe Export,,A/R,R,,,I,,Live,DeclaredPipes for DCL consumption
+Export,Pipe Snapshot Export,,A/R,,,,I,,Live,Point-in-time export
+Fabric Detection,Connection Routing Logic,A/R,I,,,,,,Live,Context for AAM Handoff
+Fabric Detection,Evidence Lead Export to AAM,A/R,I,,,,I,,Live,Passes connection hints in ConnectionCandidate handoff for AAM to validate against plane crawl
+Fabric Detection,Evidence Lead Generation (Connection Hints),A/R,C,,,,C,,Live,"Observation plane signals hinting at asset-to-fabric connections (Network traffic, IdP OAuth, CMDB deps)"
+Fabric Detection,Fabric Plane Identification,A/R,C,,,,,,Live,Detects the Backbone
+Fabric Mgmt,Fabric Plane Connection (The Backbone),,A/R,,,,I,,Live,"Connects to Planes, not Apps"
+Fabric Mgmt,Routing Policy Enforcement,,A/R,,,,I,,Live,Enforces 'Block Direct Access'
+Findings & Issues,CMDB gap detection,A/R,,,,,C,,Live,
+Findings & Issues,Data conflict detection,A/R,,,,,C,,Live,
+Findings & Issues,Finance gap detection,A/R,,,,,C,,Live,
+Findings & Issues,Identity gap detection,A/R,,,,,C,,Live,
+Governance,Auth Policy Enforcement,,A/R,,,,I,,Live,Plane-level auth validation
+Governance,PII Redaction (Edge),,A/R,,,,I,,Live,Redacts before data enters DCL
+Governance,Rate Limit Enforcement,,A/R,,,,I,,Live,Plane-level rate limiting
+Identity & Trust,Agent identity issuance,I,C,I,,A/R,I,,Live,Separate from service identity
+Identity & Trust,Trust tier enforcement,I,C,I,,A/R,I,,Live,Native vs customer vs third-party
+Ingest Pipeline,Drift Detection,,,A/R,I,,C,,Live,
+Ingest Pipeline,Record Buffering,,,A/R,I,,I,,Live,
+Ingest Pipeline,Self-Healing Repair,,,A/R,I,,C,,Live,
+Ingest Pipeline,Stream Consumption (Sidecar),,,A/R,I,,C,,Aspirational,Aspirational — no code implementation
+Ingest Pipeline,Verification with Farm,,,C,I,,A/R,,Live,
+Ingestion,Fabric Pointer Buffering (Zero-Trust),,,A/R,I,,I,,Live,"Buffers Pointers, NOT Payloads"
+Ingestion,Ingest Rejection Feedback,,I,A/R,I,,R,,Live,DCL produces structured rejection errors (NO_MATCHING_PIPE). Farm captures in push_results
+Ingestion,Just-in-Time Payload Fetching,,C,A/R,I,,,,Live,Fetch only on Semantic Map request
+Ingestion,Schema Drift Detection,,C,A/R,I,,C,,Live,Field changes (not connection)
+Ingestion,Schema-on-Write Validation (Ingest Guard),,,A/R,I,,I,,Live,DCL validates pipe schema exists before accepting ingest. Rejects with HTTP 422 if no matching pipe_id
+Inter-Service Contracts,AAM → DCL Pipe Export Contract,,A/R,R,,,,,Live,"Pipe definition schema, rejection handling, retry policy — needs formal spec"
+Inter-Service Contracts,AAM → Farm Dispatch Contract,,A/R,,,,R,,Live,"Manifest format, auth_token_ref requirement, timeout policy"
+Inter-Service Contracts,AOD → AAM Handoff Protocol,A/R,R,,,,,,Live,Underspecified — handoff.py is large module; contract doc needed
+Inter-Service Contracts,DCL → NLQ Query Contract,,,A/R,R,,,,Live,"Semantic catalog export, query endpoint, confidence propagation"
+Inter-Service Contracts,Farm → DCL Ingest Contract,,,A/R,,,R,,Live,"Row format, pipe_id matching, rejection feedback (422 NO_MATCHING_PIPE)"
+Lifecycle,Agent onboarding & versioning,I,I,I,,A/R,I,,Live,Promotion & rollback
+Lifecycle,Zombie agent detection,C,C,C,,A/R,I,,Live,Sprawl control
+Observability,Cost tracking,,,,,A/R,I,,Live,
+Observability,Deterministic replay,I,I,C,,A/R,C,,Live,Debug & audit
+Observability,Execution trace & audit,I,I,C,,A/R,C,,Live,"Who did what, when"
+Observability,Performance metrics,,,,,A/R,C,,Live,
+Observability,Vitals aggregation,,,,,A/R,C,,Live,
+Operator UI,Display Candidates,,A/R,,,,I,,Live,
+Operator UI,Display Drift Events,,A/R,,,,I,,Live,
+Operator UI,Display Pipe Inventory,,A/R,,,,I,,Live,
+Pipe Inference,Create DeclaredPipe,,A/R,,,,I,,Live,
+Pipe Inference,DeclaredPipe Creation,,A/R,I,,,I,,Live,Publish to DCL
+Pipe Inference,Fabric Plane Inference,,A/R,,,,I,,Live,WHERE pipes live
+Pipe Inference,Infer Change Semantics,,A/R,,,,I,,Live,
+Pipe Inference,Infer Entity Scope,,A/R,,,,I,,Live,
+Pipe Inference,Infer Fabric Plane,,A/R,,,,I,,Live,
+Pipe Inference,Infer Identity Keys,,A/R,,,,I,,Live,
+Pipe Inference,Infer Modality,,A/R,,,,I,,Live,
+Pipe Inference,Infer Transport Kind,,A/R,,,,I,,Live,
+Pipe Inference,Modality Inference,,A/R,,,,I,,Live,HOW pipes are accessed
+Pipe Inference,Transport Kind Inference,,A/R,,,,I,,Live,"API, EVENT_STREAM, TABLE, FILE"
+Pipe Registry,Compute Schema Hash,,A/R,,,,I,,Live,
+Pipe Registry,Serve Pipe Queries,,A/R,,,,I,,Live,
+Pipe Registry,Store Declared Pipes,,A/R,,,,I,,Live,
+Pipe Registry,Version Pipe Changes,,A/R,,,,I,,Live,
+Pipeline Execution,Graph Building,,,A/R,I,,I,,Live,
+Pipeline Execution,Narration Broadcasting,,,A/R,I,,I,,Live,
+Pipeline Execution,Persona Filtering,,,A/R,I,,I,,Live,
+Pipeline Execution,Run Metrics Collection,,,A/R,I,,I,,Live,
+Policy & Governance,Agent-level policy evaluation,I,C,C,,A/R,I,,Live,"Autonomy, scope, cost"
+Policy & Governance,Autonomy bounds enforcement,I,C,I,,A/R,I,,Live,Guardrails
+Policy & Governance,HITL escalation,I,I,C,,A/R,I,,Live,Confidence-based approval
+Query Cache,Cache Learning (AI Mode),,,,A/R,,I,,Live,Stores successful parses
+Query Cache,LLM Call Tracking,,,,A/R,,I,,Live,Per-session counts with Supabase
+Query Cache,Query Cache Lookup,,,,A/R,,I,,Live,EXACT/HIGH/MEDIUM thresholds
+Query Cache,Query Learning Log,,,,A/R,,I,,Live,Logs all queries with success/failure
+Query Cache,Semantic Query Cache (Pinecone),,,,A/R,,I,,Live,Vector similarity for query matching
+Query Cache,Static/AI Mode Routing,,,,A/R,,I,,Live,Mode toggle for speed vs learning
+Query Engine,Answer Assembly & Formatting,,,,A/R,,I,,Live,Structures response for consumers
+Query Engine,Confidence Scoring,,,,A/R,,C,,Live,"Bounded [0,1] with weighted factors"
+Query Engine,Grounding & Citation,,,,A/R,,I,,Live,Attaches evidence to answers
+Query Engine,"Intent Classification (POINT, COMPARISON, TREND, AGGREGATION, BREAKDOWN)",,,,A/R,,I,,Live,5 intent types from natural language
+Query Engine,LLM-Based Query Parsing,,,,A/R,,I,,Live,Claude API extracts structured JSON
+Query Engine,Metric/Dimension Extraction,,,,A/R,,I,,Live,LLM extracts + synonym normalization
+Query Engine,Pattern-Based Pre-parsing,,,,A/R,,I,,Live,Regex before LLM for dashboards/viz
+Query Engine,"Query Execution (Aggregation, Filtering)",,,R,A,,I,,Live,"NLQ orchestrates, DCL provides data"
+Query Engine,Query Planning & Decomposition,,,,A/R,,I,,Live,Breaks complex questions into steps
+Query Engine,"Temporal Resolution (last year, Q3, etc.)",,,,A/R,,I,,Live,Interprets time references
+Reconciliation,Pipeline execution,C,,,,,A/R,,Live,
+Response Generation,Ambiguity Detection,,,,A/R,,I,,Live,"Pattern-based, returns prompts"
+Response Generation,Graceful Fallbacks,,,,A/R,,I,,Live,Never show raw errors
+Response Generation,Off-Topic Handling,,,,A/R,,I,,Live,"Easter eggs, polite redirects"
+Response Generation,Synonym Normalization,,,,A/R,,I,,Live,100+ synonyms → canonical names
+Response Generation,Text Response Formatting,,,,A/R,,I,,Live,"Value, unit, period, confidence"
+Runner Dispatch,Content Push to DCL,,I,R,I,,A/R,,Live,Farm pushes extracted data to DCL /ingest endpoint
+Runner Dispatch,Manifest Dispatch to Farm,,A/R,,I,,R,,Live,AAM constructs and dispatches JobManifest to Farm
+Runner Dispatch,Runner Execution (Data Extraction),,I,,I,,A/R,,Live,"Farm receives manifest, connects to external APIs, extracts data"
+Runtime,Task Queue Management,,,,,A/R,I,,Live,Moved from FARM (Ops) | AOA owns orchestration logic; Farm owns infra — see Scaling Infrastructure for Farm boundary
+Runtime,Worker pool management,I,I,I,,A/R,I,,Live,Scalable execution | AOA owns worker dispatch logic; Farm owns worker pool infra — see Scaling Infrastructure
+SOR Identification,Data domain classification,A/R,,,,,C,,Live,
+SOR Identification,System of Record scoring,A/R,,,,,C,,Live,
+Scaling Infrastructure,Auto-recovery,,,,,I,A/R,,Live,
+Scaling Infrastructure,Load balancing,,,,,I,A/R,,Live,
+Scaling Infrastructure,Task queue management,,,,,C,A/R,,Live,Farm owns infra; AOA owns orchestration logic — see Runtime for AOA-managed scheduling
+Scaling Infrastructure,Worker pool orchestration,,,,,I,A/R,,Live,Farm owns worker pool infra; AOA owns dispatch logic — see Runtime
+Scheduling,Cron-based scheduling,,,,,A/R,I,,On Docket,
+Scheduling,Event-driven triggers,,,,,A/R,R,,On Docket,
+Scheduling,Webhook triggers,,,,,A,R,,On Docket,
+Schema Ingestion,Demo Schema Loading,,,A/R,I,,I,,Live,CSV files + fact_base.json
+Schema Ingestion,Farm Schema Fetching,,,A/R,I,,C,,Live,From FARM_API_URL
+Schema Ingestion,Stream Source Loading,,,A/R,I,,C,,Live,Real-time sources from DB
+Security,Context Sanitization,,,,,A/R,C,,Live,Security layer before Agent Logic
+Self-Healing,Connection/Fabric Drift Detection,,A/R,,,,I,,Stub,Detects lost connectivity to Plane
+Self-Healing,Consumer Lag Detection,,A/R,,,,I,,Stub,Event Bus specific drift
+Self-Healing,Execute Self-Heal (Restart Consumers),,A/R,,,,I,,Stub,Restarts Consumers/Reconnects
+Self-Healing,Heal History Logging,,A/R,,,,I,,Stub,Audit trail of repairs
+Self-Healing,Warehouse Suspend Detection,,A/R,,,,I,,Stub,Warehouse specific drift
+Semantic Catalog,Alias Resolution,,,A/R,C,,I,,Live,"'AR' → 'ar', 'attainment' → 'quota_attainment'"
+Semantic Catalog,Dimension Definitions,,,A/R,C,,I,,Live,"107 concepts across 9 enterprise domains (Business, Pipeline, Ops, Tech, HR, Finance, Sales, Product, Support)"
+Semantic Catalog,Metric Definitions,,,A/R,C,,I,,Live,325 valid concept-dimension pairings across CFO/CRO/COO/CTO/CHRO persona packs
+Semantic Catalog,Metric-Dimension Validation,,,A/R,C,,I,,Live,Validates which dimensions apply to which concepts — 325 valid pairings enforced
+Semantic Catalog,Semantic Export API,,,A/R,C,,I,,Live,Full catalog for NLQ consumption
+Semantic Intelligence,Concept Registry Management,,,A/R,I,,I,,Live,107 concept nodes across 9 enterprise domains
+Semantic Intelligence,Concept-Dimension Pairing Validation,,,A/R,I,,,,Live,325 valid pairings — enforced at graph build and query time
+Semantic Intelligence,Confidence Scoring,,,A/R,C,,,,Live,0.0-1.0 confidence on concept-dimension mappings; propagated to NLQ answers
+Semantic Intelligence,Inference Layer (Graph-based Discovery),,,A/R,C,,I,,Live,Approach 5 Layer 2 — graph traversal discovers implicit relationships between concepts
+Semantic Intelligence,Ontology Versioning,,,A/R,I,,,,On Docket,Track ontology changes over time; not yet implemented
+Semantic Intelligence,Runtime Resolution (LLM Pathfinding),,,A/R,C,,I,,Live,Approach 5 Layer 3 — LLM resolves ambiguous queries through semantic graph at query time
+Semantic Intelligence,Semantic Graph Build & Rebuild,,,A/R,I,,I,,Live,POST /api/dcl/run — auto-trigger on ingest is On Docket (currently manual)
+Semantic Intelligence,Skeleton Layer (Curated Ontology),,,A/R,C,,I,,Live,"Approach 5 Layer 1 — hand-curated concept-dimension pairings, authoritative"
+Semantic Mapping,Batch Mapping API,,,A/R,I,,I,,Live,Bulk semantic mapping endpoint
+Semantic Mapping,Heuristic Mapping (Dev Mode),,,A/R,I,,I,,Live,Pattern matching ~1s
+Semantic Mapping,LLM Refinement (Prod Mode),,,A/R,I,,I,,Live,OpenAI + Pinecone RAG ~5s
+Semantic Mapping,Mapping Persistence,,,A/R,I,,I,,Live,PostgreSQL storage
+Session Management,Row-Level Security,,,,A/R,,I,,Live,Supabase RLS policies
+Session Management,Session State (In-Memory),,,,A/R,,I,,Live,"Dashboard state, 2hr TTL"
+Session Management,Session Stats Persistence,,,,A/R,,I,,Live,Supabase storage
+Session Management,Tenant Isolation,,,,A/R,,I,,Live,tenant_id on all DB queries
+Source Normalization,Alias Resolution,,,A/R,I,,C,,Live,
+Source Normalization,Discovery Mode (New Sources),,,A/R,I,,C,,Live,
+Source Normalization,Pattern Matching,,,A/R,I,,I,,Live,
+Source Normalization,Registry Loading,,,A/R,I,,C,,Live,
+Tee Request Management,Approve/Reject Tee,,A/R,,,,I,,Live,
+Tee Request Management,Create Tee Request,,A/R,,,,I,,Live,
+Tee Request Management,Track Tee Status,,A/R,,,,I,,Live,
+Telemetry,Metrics Collection,,,A/R,,,I,,Live,
+Telemetry,TPS/Quality Calculation,,,A/R,,,C,,Live,
+Telemetry,Telemetry Broadcasting,,,A/R,,,I,,Live,
+Triage & Prioritization,Asset prioritization scoring,A/R,,,,,,,Live,
+Triage & Prioritization,Provisioning status assignment,A/R,,,,,,,Live,
+Trust & Security,Injection defense,,,,,A/R,I,,Live,
+Trust & Security,PII detection & redaction,,,,,A/R,I,,Live,
+Trust & Security,Policy enforcement,,,,,A/R,C,,Live,
+Verification,Accuracy Measurement,C,C,,,,A/R,,Live,Consolidated from Truth/Reconciliation per G2
+Verification,End-to-End Injection Tests,,I,I,,,A/R,,Live,"Farm pushes to DCL, verifies at DCL"
+Verification,Generate Test Data,,I,,,,A/R,,Live,
+Verification,Ground Truth Validation,C,C,C,,,A/R,,Live,FARM is Test Oracle
+Verification,Provide Source of Truth,,C,,,,A/R,,Live,
+Verification,Verify Against Truth,,C,,,,A/R,,Live,
+Visualization,4-Layer Sankey Graph,,,A/R,,,I,,Live,Pipeline→Sources→Ontology→Personas
+Visualization,Chart Generation,,,,A/R,,I,,Live,"Line, bar, area, pie, stacked, waterfall"
+Visualization,Dashboard Generation,,,,A/R,,I,,Live,Dynamic widget schemas from intent
+Visualization,Dashboard Refinement Actions,,,,A/R,,I,,Live,"'Add a chart', 'Show by region'"
+Visualization,Galaxy Visualization,,,,A/R,,I,,Live,Node-based with related metrics
+Visualization,Monitor Dashboard,,,A/R,,,I,,Live,Collapsible right panel
+Visualization,Persona-Based Filtering,,,A/R,,,I,,Live,CFO/CRO/COO/CTO buttons
+Visualization,Telemetry Ribbon,,,A/R,,,I,,Live,
+Visualization,Terminal Narration,,,A/R,,,I,,Live,Real-time processing log
+Visualization,Topology API Exposure,,I,A/R,,,,,Live,Backend for Graph UI
+Workflow Orchestration,Run cancellation,,,,,A,R,,Live,
+Workflow Orchestration,Run creation & tracking,,,,,A/R,R,,Live,
+Workflow Orchestration,Step sequencing,,,,,A/R,C,,Live,

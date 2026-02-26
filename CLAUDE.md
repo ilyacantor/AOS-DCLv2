@@ -1,293 +1,173 @@
-# CLAUDE.md - DCL Engine Codebase Guide
+# AutonomOS (AOS) — Agent Constitution
+> Version: 4.0 | Updated: February 2026 | Owner: Ilya (CEO)
 
-## Project Overview
+---
 
-The DCL (Data Connectivity Layer) Engine is a full-stack application that:
-- Ingests schemas and data from multiple sources (Demo or Farm mode)
-- Unifies data into a common ontology using heuristics and AI
-- Visualizes data flow through an interactive Sankey diagram
-- Provides persona-driven business views (CFO, CRO, COO, CTO)
+## WHO YOU ARE TALKING TO
+Ilya is the CEO and technical lead. He is NOT a developer. He reasons architecturally, not syntactically.
+- **Never show raw code diffs or stack traces without a plain-English summary first**
+- **Never add tech debt, workarounds, or shortcuts** — Ilya will find them and it will be unpleasant
+- **Always fix root causes** — patches and band-aids are forbidden
+- **Never implement silent fallbacks** — if something fails, surface it loudly. Substituting mock data, empty results, or swallowing exceptions when real calls fail is forbidden. See SILENT FALLBACKS section.
+- **Before starting any task, read everything in the ONGOING_PROMPTS folder** — focus on the latest version of the RACI CSV (highest version number). If ONGOING_PROMPTS is not in your context pack, ask for it before proceeding.
+- If a fix requires a RACI boundary decision, surface it to Ilya before touching code
 
-## Quick Start
+---
 
-### Running the Application
+## PLATFORM IN ONE PARAGRAPH
+AutonomOS is an AI-native enterprise operating system that sits on top of existing enterprise systems (Salesforce, SAP, AWS, etc.) without replacing them. It discovers what exists (AOD), understands how to connect (AAM), maps everything to business meaning (DCL), lets humans and AI agents query it in plain English (NLQ), and governs the agents doing work (AOA). The moat is the semantic data layer — not the runtime. MEI/Convergence is a product extension of AOS applied to multi-entity M&A scenarios; ~90% shared technology.
 
-**Backend (FastAPI):**
-```bash
-python run_backend.py
-# OR
-uvicorn backend.api.main:app --host 0.0.0.0 --port 8000
-```
+---
 
-**Frontend (React/Vite):**
-```bash
-npm install
-npm run dev
-```
+## MODULE RACI — THE LAW
 
-- Frontend: http://localhost:5000
-- Backend API: http://localhost:8000
-- API docs: http://localhost:8000/docs
+| Module | Owns | NEVER touches |
+|--------|------|---------------|
+| **AOD** | Discovery, classification (Governed/Shadow/Zombie), SOR detection, Fabric Plane hints, ConnectionCandidate generation | Pipe blueprints, data extraction, semantic mapping |
+| **AAM** | Pipe blueprint creation, work order dispatch, drift detection, self-healing | Data movement, fabric plane inference (that's AOD's job), semantic mapping |
+| **DCL** | Semantic catalog, ontology, schema-on-write validation, MCP exposure, entity resolution | Discovery logic, connection logic, NLQ response formatting |
+| **NLQ** | Intent resolution (3-tier), persona filtering, query dispatch to DCL, output rendering | Semantic mapping, data storage, agent orchestration |
+| **AOA** | Agent identity, policy enforcement, HITL workflows, budget tracking, observability | Semantic mapping, discovery, NLQ query handling |
+| **Farm** | Synthetic data generation, financial models, test oracle | Production data, live connections |
 
-### Build for Production
-```bash
-npm run build  # Outputs to dist/
-```
+**RACI VIOLATION = STOP AND FLAG.** If a fix requires Module A to implement logic that belongs to Module B, do not implement it. Surface the architectural conflict with a clear description and proposed resolution.
 
-## Architecture
+---
 
-### Three-Layer Design
+## CURRENT PRIORITIES (Feb 2026)
 
-```
-┌─────────────────────────────────────┐
-│  Semantic Mapper (Batch / Cold)     │ ← Pre-computes field→concept mappings
-│  backend/semantic_mapper/           │
-└─────────────────────────────────────┘
-              ↓
-┌─────────────────────────────────────┐
-│  Semantic Model (Data Layer)        │ ← YAML configs + Database tables
-│  config/*.yaml → PostgreSQL         │
-└─────────────────────────────────────┘
-              ↓
-┌─────────────────────────────────────┐
-│  DCL Engine (Runtime / Hot)         │ ← Fast graph generation at request time
-│  backend/engine/dcl_engine.py       │
-└─────────────────────────────────────┘
-```
+### P1 — NLQ Demo Stability & UX
+The AOD→AAM→Farm→DCL flow is stable. NLQ is now the critical path. It must work reliably in demo mode without human hand-holding.
 
-### Graph Structure (Sankey Layers)
+Known issues (fix these before anything else in NLQ):
+- KPI boxes are too large — reduce size, tighten layout
+- Clicking EBITDA KPI should trigger a trend/revenue chart — this is broken or unreliable
+- Dashboard auto-generation from "build me a CFO dashboard" must be consistent
+- Tier 1 free cache hit rate target: 60-70% — if below this, something is wrong
 
-- **L0 (Pipe)**: Pipeline entry point (Demo or Farm)
-- **L1 (Sources)**: Data sources (Salesforce, HubSpot, NetSuite, etc.)
-- **L2 (Ontology)**: Unified concepts (Account, Revenue, Cost, etc.)
-- **L3 (BLL)**: Business Logic Layer per persona (CFO, CRO, COO, CTO)
+### P2 — DCL→NLQ E2E Throughput
+Goal: Complete the real data pipeline handoff — currently clunky and manual.
+- DCL and NLQ are 90% connected; the last 10% is the blocking issue
+- Pushing/pulling metadata dumps manually is not acceptable — must be automated pipeline
+- When this works, it's the demo-worthy moment: real data, real semantics, real query
 
-## Directory Structure
+### P3 — DCL Semantic Catalog
+Goal: Expand the ontology to cover real enterprise data elements with proper depth.
+- MCP integration in progress — DCL must expose semantic catalog via MCP tools: `concept_lookup`, `semantic_export`, `query`, `provenance`
+- Current 3-tier normalization funnel must not degrade under load
+- Target: any MCP-compatible agent can query DCL without custom integration
 
-```
-AOS-DCLv2/
-├── backend/
-│   ├── api/
-│   │   └── main.py              # FastAPI app, REST endpoints
-│   ├── domain/
-│   │   └── models.py            # Pydantic models (SourceSystem, Mapping, GraphNode, etc.)
-│   ├── engine/
-│   │   ├── dcl_engine.py        # Main orchestrator - builds graph snapshots
-│   │   ├── schema_loader.py     # Loads schemas from Demo/Farm
-│   │   ├── mapping_service.py   # Field→concept mapping logic
-│   │   ├── ontology.py          # Ontology concept definitions
-│   │   ├── persona_view.py      # DB-driven persona filtering
-│   │   ├── narration_service.py # Real-time processing messages
-│   │   ├── rag_service.py       # Pinecone vector DB integration
-│   │   └── source_normalizer.py # Normalizes raw source IDs to canonical
-│   ├── semantic_mapper/
-│   │   ├── heuristic_mapper.py  # Pattern-based field matching
-│   │   ├── persist_mappings.py  # DB persistence layer
-│   │   └── runner.py            # Orchestrates mapping pipeline
-│   ├── llm/
-│   │   └── mapping_validator.py # LLM-based mapping validation (Prod mode)
-│   ├── eval/
-│   │   └── mapping_evaluator.py # Validates mapping quality
-│   └── utils/
-│       └── config_sync.py       # Syncs YAML configs to database
-├── src/
-│   ├── App.tsx                  # Main React component
-│   ├── types.ts                 # TypeScript type definitions
-│   ├── components/
-│   │   ├── SankeyGraph.tsx      # D3 Sankey visualization
-│   │   ├── ControlsBar.tsx      # Mode/persona selection controls
-│   │   ├── MonitorPanel.tsx     # Data lineage drill-down
-│   │   ├── NarrationPanel.tsx   # Real-time processing log
-│   │   ├── EnterpriseDashboard.tsx # Source registry view
-│   │   └── ui/                  # Radix UI components
-│   └── hooks/
-│       └── use-toast.ts         # Toast notification hook
-├── config/
-│   ├── ontology_concepts.yaml   # Ontology definitions with clusters
-│   └── persona_profiles.yaml    # Persona→concept relevance mappings
-├── docs/
-│   ├── ARCH-DCL-CURRENT.md      # Current architecture documentation
-│   └── ARCH-DCL-TARGET.md       # Target architecture (completed)
-├── package.json                 # Frontend dependencies
-├── requirements.txt             # Python dependencies
-├── vite.config.ts               # Vite bundler configuration
-└── run_backend.py               # Backend entry point
-```
+### P4 — Consolidated Demo UX
+Goal: Single AOS demo file housing all modules via iframes + AOA panel.
+- Currently modules demo independently — investor/customer demo requires switching between tabs
+- MEI/Convergence demo is credible once AOS demo works — don't build separately yet
+- AOA governance panel must be integrated into the consolidated view
 
-## Key Concepts
+---
 
-### Data Modes
-- **Demo**: Uses local CSV schemas from 9 legacy sources
-- **Farm**: Fetches real-time synthetic data from AOS-Farm API (https://farmv2.onrender.com)
+## WHAT "DONE" MEANS
+Every completed task must satisfy ALL four:
+1. **Semantics preserved** — behavior matches real-world meaning
+2. **No cheating** — no silent fallbacks, no optional-everything, no demo-only paths
+3. **Proof is real** — failure-before / success-after evidence
+4. **Negative test included** — confirm the bad behavior can't return
 
-### Run Modes
-- **Dev**: Uses only heuristic mappings (fast, no LLM costs)
-- **Prod**: Enhances mappings with LLM validation (slower, uses OpenAI API)
+---
 
-### Personas
-| Persona | Focus Areas | Key Concepts |
-|---------|-------------|--------------|
-| CFO | Financial metrics | revenue, cost |
-| CRO | Sales & growth | account, opportunity, revenue |
-| COO | Operations | usage, health |
-| CTO | Infrastructure | aws_resource, usage, cost |
+## SILENT FALLBACKS — ABSOLUTE PROHIBITION
+Silent fallbacks are the most dangerous failure mode in this codebase. They make broken features look working.
 
-### Ontology Concepts
-8 core concepts organized into clusters:
-- **Finance**: revenue, cost
-- **Growth**: account, opportunity
-- **Infra**: aws_resource
-- **Ops**: health, usage, date
+**Prohibited patterns — no exceptions:**
+- Catching an exception and returning empty results instead of raising
+- Defaulting to demo/mock data when a real data call fails, without surfacing the failure
+- `try/except` blocks that swallow errors silently
+- Any code path that returns a successful HTTP 200 when the underlying operation failed
+- Logging a warning and continuing when the correct behavior is to stop and fail
 
-## API Endpoints
+**If a real data source is unavailable, the system must:**
+1. Return an explicit error response that names what failed, why, and what was being attempted
+2. Log the failure with full context — service name, endpoint, input parameters, exception detail
+3. Never substitute mock or cached data without the caller explicitly requesting it
 
-### Core Endpoints
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Health check |
-| POST | `/api/dcl/run` | Build graph snapshot |
-| POST | `/api/dcl/batch-mapping` | Trigger batch semantic mapping |
-| GET | `/api/dcl/narration/{run_id}` | Get processing messages |
-| GET | `/api/dcl/monitor/{run_id}` | Get monitor data |
+**Error messages must be informative, not just loud.** "Connection failed" is not acceptable. "AAM could not reach DCL at http://localhost:8004/api/concepts — connection refused after 3 retries — NLQ intent resolution aborted" is acceptable. The error must tell an engineer exactly where to look.
 
-### POST /api/dcl/run Request Body
-```json
-{
-  "mode": "Demo" | "Farm",
-  "run_mode": "Dev" | "Prod",
-  "personas": ["CFO", "CRO", "COO", "CTO"],
-  "source_limit": 5
-}
-```
+---
 
-## Environment Variables
+## TECH STACK QUICK REFERENCE
 
-| Variable | Purpose | Required |
-|----------|---------|----------|
-| `OPENAI_API_KEY` | LLM validation in Prod mode | For Prod mode |
-| `GEMINI_API_KEY` | Alternative LLM provider | Optional |
-| `PINECONE_API_KEY` | Vector DB for RAG | Optional |
-| `SUPABASE_DB_URL` | PostgreSQL connection | Optional |
-| `DATABASE_URL` | PostgreSQL connection (alt) | Optional |
-| `FARM_API_URL` | Farm API base URL | Default: https://farmv2.onrender.com |
+| Module | Backend | Frontend | DB | Notes |
+|--------|---------|----------|----|-------|
+| NLQ | FastAPI/Python | React 18 + Vite | Supabase PG | Claude (Tier 3 LLM) |
+| DCL | FastAPI/Python | React 18 + Vite | Supabase PG + Pinecone | Gemini 2.5 Flash + OpenAI |
+| AOD | FastAPI/Python | React 18 + Vite | Supabase PG | — |
+| AAM | FastAPI/Python | Server-rendered HTML | SQLite | UI lives in ui_pages.py — no Vite |
+| AOA | FastAPI/Python | React 18 + Vite | Supabase PG | **Not yet built — placeholder only** |
+| Farm | FastAPI/Python | Jinja2/Tailwind | Supabase PG | Server-rendered, no Vite |
+| FinOps | Express/Node | React 18 | Neon PG + Pinecone | **Anomaly: Node backend** |
 
-## Development Conventions
+**Separate repos per module.**
 
-### Python Backend
-- Use Pydantic V2 for data validation
-- Follow FastAPI patterns for endpoints
-- Type hints required on all functions
-- Use `snake_case` for variables and functions
-- Domain models in `backend/domain/models.py`
+---
 
-### TypeScript Frontend
-- React functional components with hooks
-- TypeScript strict mode enabled
-- Use Tailwind CSS for styling
-- Component files use PascalCase
-- Types defined in `src/types.ts`
+## DEPLOYMENT & ENVIRONMENTS
 
-### File Naming
-- Python: `snake_case.py`
-- TypeScript/React: `PascalCase.tsx` for components, `kebab-case.ts` for utilities
-- Config files: `snake_case.yaml`
+### Production
+- **Platform:** Render (migrated from Replit — Replit is dead, do not reference it)
+- **Secrets:** Render environment variables — never in .env files committed to repos
+- **Build:** Each module has its own Render service
 
-### Git Conventions
-- Descriptive commit messages
-- Feature branches off main
-- No force pushes to main/dev
+### Local Development — Desktop (Windows)
+- **OS:** Windows 11, PowerShell terminal
+- **Repos:** `C:\Users\ilyac\code\`
+- **Process manager:** pm2 via PowerShell
+- **Aliases:** `aos-start` (all backends), `aos-stop`, `aos-frontends` (Vite dev servers)
+- **Local ports:**
 
-## Common Tasks
+| Service | Backend | Frontend |
+|---------|---------|----------|
+| AOD | 8001 | 3001 |
+| AAM | 8002 | UI on 8002 (server-rendered) |
+| DCL | 8004 | 3004 |
+| Farm | 8003 | UI on 8003 (server-rendered) |
+| NLQ | 8005 | 3005 |
+| Platform | 8006 | 3006 |
 
-### Adding a New Ontology Concept
-1. Edit `config/ontology_concepts.yaml`
-2. Add concept with id, name, description, cluster, and metadata
-3. Update persona relevance in `config/persona_profiles.yaml` if needed
-4. Config sync happens automatically on backend startup
+### Local Development — Laptop (Ubuntu / WSL)
+- **OS:** Ubuntu (WSL on Windows laptop)
+- **Repos:** `~/code/` (also accessible at `\\wsl$\Ubuntu\home\ilyac\code\` from Windows Explorer)
+- **Process manager:** pm2 via bash
+- **Launch script:** `~/code/aos-launch.sh` — interactive service selector with git pull + pm2 start + browser open
+- **Alias:** `aos` runs the launch script, `aos-stop` kills everything
+- **Ports:** same as desktop above
 
-### Adding a New Data Source
-1. For Demo: Add CSV files to `schemas/` directory
-2. For Farm: Source is automatically inferred from API response
-3. Source normalizer handles ID canonicalization
+---
 
-### Running Batch Mapping
-```bash
-curl -X POST http://localhost:8000/api/dcl/batch-mapping \
-  -H "Content-Type: application/json" \
-  -d '{"mode": "Demo", "mapping_mode": "heuristic"}'
-```
+## AGENT TEAM INSTRUCTIONS
+- Each agent must declare which module it is working on at the start of every message
+- Before proposing any cross-module change, agents must check the RACI table above
+- **Use Opus for all tasks** — Ilya is on the 200x plan. Opus is preferred for both implementation and architecture.
+- All agents report RACI violations to the lead — do not silently implement workarounds
+- Do not reference or suggest Replit in any context
 
-### Testing the Pipeline
-1. Start backend: `python run_backend.py`
-2. Start frontend: `npm run dev`
-3. Open http://localhost:5000
-4. Select data mode and personas
-5. Click "Run" to generate graph
+---
 
-## Domain Models Reference
+## FORBIDDEN PATTERNS
+- Tests that pass while the real feature fails
+- **Silent fallbacks that hide errors** ← this is the #1 most forbidden pattern
+- Permissive schemas to avoid contract mismatches
+- Converting errors into empty results
+- Any shortcut that works in demo but breaks in production
+- Band-aids, patches, workarounds
+- Adding features to Module X that belong to Module Y (RACI violation)
+- FinOps pattern propagating to other modules (Node.js anomaly — don't spread it)
+- Any reference to Replit, Replit Secrets, or Replit-specific configuration
 
-### SourceSystem
-```python
-class SourceSystem(BaseModel):
-    id: str                    # Unique identifier
-    name: str                  # Display name
-    type: str                  # crm, erp, datawarehouse, etc.
-    tables: List[TableSchema]  # Tables in this source
-    canonical_id: str          # Normalized ID
-    discovery_status: DiscoveryStatus  # canonical, pending_triage, custom
-    trust_score: int           # 0-100 trust rating
-```
+---
 
-### Mapping
-```python
-class Mapping(BaseModel):
-    source_field: str          # Field name
-    source_table: str          # Table name
-    source_system: str         # Source ID
-    ontology_concept: str      # Target concept ID
-    confidence: float          # 0.0-1.0 confidence score
-    method: str                # heuristic, rag, llm, llm_validated
-```
-
-### GraphSnapshot
-```python
-class GraphSnapshot(BaseModel):
-    nodes: List[GraphNode]     # L0, L1, L2, L3 nodes
-    links: List[GraphLink]     # Connections between nodes
-    meta: Dict[str, Any]       # Mode, run_id, stats
-```
-
-## Troubleshooting
-
-### Backend won't start
-- Check Python dependencies: `pip install -r requirements.txt`
-- Verify port 8000 is available
-- Check for syntax errors in Python files
-
-### Frontend shows no data
-- Ensure backend is running on port 8000
-- Check browser console for API errors
-- Verify Vite proxy configuration in `vite.config.ts`
-
-### Mappings not appearing
-- Run batch mapping: POST to `/api/dcl/batch-mapping`
-- Check narration panel for errors
-- Verify ontology concepts match field patterns
-
-### LLM validation not working
-- Set `OPENAI_API_KEY` environment variable
-- Use `run_mode: "Prod"` in request
-- Check API key validity
-
-## Performance Notes
-
-- **Dev mode**: No LLM calls, graph builds in <100ms
-- **Prod mode**: LLM validation adds 1-3 seconds per batch
-- **Source limit**: Farm mode respects `source_limit` to control data volume
-- **Caching**: Source normalizer caches registry for 5 minutes
-
-## Related Documentation
-
-- `docs/ARCH-DCL-CURRENT.md` - Detailed architecture documentation
-- `docs/ARCH-DCL-TARGET.md` - Target architecture (completed)
-- `replit.md` - Replit-specific configuration notes
+## MEI / CONVERGENCE NOTE
+MEI (Multi-Entity Intelligence) = Convergence product. Lives under AOS umbrella.
+- ~90% AOS technology reused
+- Primary use case: M&A post-close semantic reconciliation across heterogeneous systems
+- The insight: reconciling two companies' systems is architecturally identical to reconciling multiple ERP instances — which AOS already solves
+- Do NOT build a separate MEI demo until the core AOS demo (P4) is working
+- MEI demo will be a product extension narrative on top of AOS, not a separate stack
