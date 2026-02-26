@@ -77,8 +77,8 @@ _BOOTSTRAP_SOURCES: frozenset = frozenset({
     "splunk",
 })
 
-# Backward-compat alias — imported by name in some modules
-CANONICAL_SOURCES = _BOOTSTRAP_SOURCES
+# CANONICAL_SOURCES alias removed — all live code uses get_canonical_sources().
+# _BOOTSTRAP_SOURCES is retained as a reference set only.
 
 # Internal service names that must never appear as a canonical source.
 # Shared across get_canonical_sources() and the AAM pull path.
@@ -535,8 +535,18 @@ class IngestStore:
     def purge_non_canonical(self) -> Dict[str, int]:
         """Remove all receipts, rows, and materialized points from non-canonical sources.
 
-        Returns counts of purged items for reporting.
+        Uses the live pipe_store-derived allowlist (get_canonical_sources()),
+        not the static bootstrap list.  Returns counts of purged items.
         """
+        canonical = get_canonical_sources()
+        if not canonical:
+            logger.warning(
+                "[Purge] get_canonical_sources() returned empty — pipe_store "
+                "has no definitions. Skipping purge to avoid deleting everything."
+            )
+            return {"purged_receipts": 0, "purged_rows": 0,
+                    "purged_mat_keys": 0, "purged_mat_points": 0}
+
         purged_receipts = 0
         purged_rows = 0
         purged_mat_keys = 0
@@ -549,7 +559,7 @@ class IngestStore:
             bad_receipt_keys = []
             for key, receipt in self._receipts.items():
                 src = normalize_source_id(receipt.source_system)
-                if src not in CANONICAL_SOURCES:
+                if src not in canonical:
                     bad_receipt_keys.append(key)
 
             for key in bad_receipt_keys:
@@ -577,7 +587,7 @@ class IngestStore:
                 if isinstance(first, str):
                     continue
                 src = normalize_source_id(first.get("source_system", ""))
-                if src not in CANONICAL_SOURCES:
+                if src not in canonical:
                     bad_mat_keys.append(mat_key)
 
             for mat_key in bad_mat_keys:

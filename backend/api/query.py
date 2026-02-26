@@ -544,7 +544,7 @@ def _query_ingest_store(
 
     for receipt in reversed(all_receipts):
         # Skip non-canonical sources in fallback path too
-        if _norm_src(receipt.source_system) not in CANONICAL_SOURCES:
+        if _norm_src(receipt.source_system) not in get_canonical_sources():
             continue
         rows = store.get_rows(receipt.run_id, receipt.pipe_id)
         for row in rows:
