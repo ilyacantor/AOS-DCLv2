@@ -637,6 +637,31 @@ metrics:
     rankable_dimensions:
       - department
 
+  - id: open_roles
+    name: Open Roles
+    description: Number of unfilled positions currently open
+    data_source: workday
+    aliases:
+      - open positions
+      - open reqs
+      - requisitions
+      - job openings
+    pack: chro
+    unit: count
+    allowed_dims:
+      - department
+      - role
+      - location
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low
+    rankable_dimensions:
+      - department
+
   - id: engagement_score
     name: Engagement Score
     description: Employee engagement score from survey data

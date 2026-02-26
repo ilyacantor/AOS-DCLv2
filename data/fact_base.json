@@ -15056,5 +15056,104 @@
         "time_to_fill_days": 15
       }
     }
+  },
+  "cloud_spend_by_resource_type": {
+    "source": "aws_cost_explorer",
+    "2024-Q1": {
+      "Compute": 0.24,
+      "Storage": 0.09,
+      "Database": 0.12,
+      "Network": 0.06,
+      "ML/AI": 0.05,
+      "Other": 0.04
+    },
+    "2024-Q2": {
+      "Compute": 0.26,
+      "Storage": 0.1,
+      "Database": 0.13,
+      "Network": 0.07,
+      "ML/AI": 0.05,
+      "Other": 0.05
+    },
+    "2024-Q3": {
+      "Compute": 0.28,
+      "Storage": 0.1,
+      "Database": 0.14,
+      "Network": 0.07,
+      "ML/AI": 0.06,
+      "Other": 0.05
+    },
+    "2024-Q4": {
+      "Compute": 0.3,
+      "Storage": 0.11,
+      "Database": 0.15,
+      "Network": 0.08,
+      "ML/AI": 0.06,
+      "Other": 0.05
+    },
+    "2025-Q1": {
+      "Compute": 0.32,
+      "Storage": 0.12,
+      "Database": 0.16,
+      "Network": 0.08,
+      "ML/AI": 0.06,
+      "Other": 0.06
+    },
+    "2025-Q2": {
+      "Compute": 0.34,
+      "Storage": 0.13,
+      "Database": 0.17,
+      "Network": 0.08,
+      "ML/AI": 0.07,
+      "Other": 0.06
+    },
+    "2025-Q3": {
+      "Compute": 0.36,
+      "Storage": 0.13,
+      "Database": 0.18,
+      "Network": 0.09,
+      "ML/AI": 0.07,
+      "Other": 0.06
+    },
+    "2025-Q4": {
+      "Compute": 0.38,
+      "Storage": 0.14,
+      "Database": 0.19,
+      "Network": 0.1,
+      "ML/AI": 0.08,
+      "Other": 0.07
+    },
+    "2026-Q1": {
+      "Compute": 0.4,
+      "Storage": 0.15,
+      "Database": 0.2,
+      "Network": 0.1,
+      "ML/AI": 0.08,
+      "Other": 0.07
+    },
+    "2026-Q2": {
+      "Compute": 0.42,
+      "Storage": 0.16,
+      "Database": 0.21,
+      "Network": 0.1,
+      "ML/AI": 0.08,
+      "Other": 0.07
+    },
+    "2026-Q3": {
+      "Compute": 0.44,
+      "Storage": 0.16,
+      "Database": 0.22,
+      "Network": 0.11,
+      "ML/AI": 0.09,
+      "Other": 0.08
+    },
+    "2026-Q4": {
+      "Compute": 0.46,
+      "Storage": 0.17,
+      "Database": 0.23,
+      "Network": 0.11,
+      "ML/AI": 0.09,
+      "Other": 0.08
+    }
   }
 }
