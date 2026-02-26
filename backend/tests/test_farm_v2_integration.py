@@ -27,7 +27,7 @@ from backend.api.ingest import get_ingest_store, IngestRequest
 from backend.farm.ingest_bridge import (
     build_sources_from_ingest,
     get_ingest_summary,
-    PIPE_SOURCE_MAP,
+    _BOOTSTRAP_PIPE_MAP,
 )
 from backend.domain import Persona
 
@@ -409,7 +409,7 @@ class FarmV2TestHarness:
 
         for pipe_id, generator in PIPE_GENERATORS.items():
             rows = generator()
-            pipe_info = PIPE_SOURCE_MAP.get(pipe_id)
+            pipe_info = _BOOTSTRAP_PIPE_MAP.get(pipe_id)
             source_system = pipe_info[1] if pipe_info else "unknown"
 
             req = IngestRequest(

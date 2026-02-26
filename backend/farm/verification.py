@@ -16,7 +16,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional, Tuple
 
 from backend.farm.client import get_farm_client
-from backend.farm.ingest_bridge import get_ingest_summary, PIPE_SOURCE_MAP
+from backend.farm.ingest_bridge import get_ingest_summary
+from backend.api.pipe_store import get_pipe_store
 from backend.api.ingest import get_ingest_store
 from backend.utils.log_utils import get_logger
 
@@ -329,11 +330,12 @@ def _build_dcl_actuals_from_ingest() -> Dict[str, Any]:
     actuals: Dict[str, Any] = {}
 
     # Aggregate basic counts per source system
+    pipe_store = get_pipe_store()
     source_record_counts: Dict[str, int] = {}
     for receipt in receipts:
-        pipe_info = PIPE_SOURCE_MAP.get(receipt.pipe_id)
-        if pipe_info:
-            source_name = pipe_info[1]
+        pipe_def = pipe_store.lookup(receipt.pipe_id)
+        if pipe_def:
+            source_name = pipe_def.source_name
         else:
             source_name = receipt.source_system
         source_record_counts[source_name] = (

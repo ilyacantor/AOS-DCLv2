@@ -33,6 +33,7 @@ class ResolutionType(str, Enum):
     PATTERN = "pattern"
     FUZZY = "fuzzy"
     DISCOVERED = "discovered"
+    REJECTED = "rejected"
 
 
 @dataclass
@@ -96,7 +97,68 @@ class SourceNormalizer:
             self.PATTERN_RULES = []
             self.CATEGORY_PATTERNS = {}
 
+    def load_registry_from_pipe_store(self, narration=None, run_id: Optional[str] = None) -> int:
+        """Populate registry cache from DCL's pipe_store (AOD → AAM → DCL chain).
+
+        This is the authoritative registry source per RACI v6.
+        """
+        from backend.api.pipe_store import get_pipe_store
+        pipe_store = get_pipe_store()
+        definitions = pipe_store.get_all_definitions()
+
+        if not definitions:
+            return 0
+
+        # Deduplicate by source_name — multiple pipes may share a source
+        seen_sources: Dict[str, bool] = {}
+        for defn in definitions:
+            source_id = defn.source_name.lower().strip().replace(" ", "_").replace("-", "_")
+            if source_id in seen_sources:
+                continue
+            seen_sources[source_id] = True
+
+            canonical = CanonicalSource(
+                source_id=source_id,
+                name=defn.source_name,
+                description=f"Registered via AAM /export-pipes",
+                source_type=defn.category.upper() if defn.category else "UNKNOWN",
+                category=defn.category or "unknown",
+                vendor=defn.vendor or "Unknown",
+                connection_type="api",
+                entities=[],
+                trust_score=defn.trust_score,
+                data_quality_score=defn.data_quality_score,
+                is_primary=False,
+                metadata={"pipe_store": True, "pipe_id": defn.pipe_id},
+                discovery_status=DiscoveryStatus.CANONICAL,
+            )
+            self._registry_cache[canonical.source_id] = canonical
+
+        self._registry_loaded = True
+
+        if narration and run_id:
+            narration.add_message(
+                run_id, "SourceNormalizer",
+                f"Loaded {len(self._registry_cache)} canonical sources from pipe_store"
+            )
+
+        return len(self._registry_cache)
+
     def load_registry(self, narration=None, run_id: Optional[str] = None) -> int:
+        """Load registry from pipe_store. Hard fail if pipe_store is empty."""
+        count = self.load_registry_from_pipe_store(narration, run_id)
+        if count > 0:
+            return count
+
+        # pipe_store is empty — raise instead of falling back
+        raise RuntimeError(
+            "SourceNormalizer registry not loaded — pipe_store is empty. "
+            "Call load_registry_from_pipe_store() after AAM /export-pipes completes."
+        )
+
+    # DEPRECATED: Farm API as registry source. Retained for reference only.
+    # Do not call. Remove by 2026-04-26.
+    def _load_registry_from_farm_api_deprecated(self, narration=None, run_id: Optional[str] = None) -> int:
         # Circuit breaker: if Farm API failed recently, skip the network call
         now = time.time()
         if SourceNormalizer._cb_last_failure > 0 and (now - SourceNormalizer._cb_last_failure) < self._cb_cooldown:
@@ -182,7 +244,7 @@ class SourceNormalizer:
         if result:
             return result
 
-        return self._create_discovered_source(raw_source, narration, run_id)
+        return self._reject_unknown_source(raw_source, narration, run_id)
 
     def _try_exact_match(self, raw_lower: str, raw_source: str) -> Optional[NormalizationResult]:
         for canonical_id, canonical in self._registry_cache.items():
@@ -280,6 +342,57 @@ class SourceNormalizer:
 
         return None
 
+    def _reject_unknown_source(
+        self, raw_source: str, narration=None, run_id: Optional[str] = None
+    ) -> NormalizationResult:
+        """Reject an unrecognized source with an actionable error message.
+
+        Per RACI v6: AOD owns SOR identification. DCL does not infer or
+        auto-discover sources — it rejects them with guidance.
+        """
+        from backend.utils.log_utils import get_logger as _gl
+        _gl(__name__).warning(
+            f"[SourceNormalizer] REJECTED unknown source '{raw_source}'. "
+            f"Register via AOD discovery, then run AAM /export-pipes."
+        )
+
+        if narration and run_id:
+            narration.add_message(
+                run_id, "SourceNormalizer",
+                f"REJECTED unknown source: '{raw_source}' — not registered. "
+                f"Register via AOD discovery, then run AAM /export-pipes to propagate to DCL."
+            )
+
+        rejected_canonical = CanonicalSource(
+            source_id=f"rejected_{raw_source.lower().strip()}",
+            name=raw_source,
+            description=f"Rejected: not registered in AOD",
+            source_type="REJECTED",
+            category="unknown",
+            vendor="Unknown",
+            connection_type="unknown",
+            entities=[],
+            trust_score=0,
+            data_quality_score=0,
+            is_primary=False,
+            metadata={"raw_identifier": raw_source, "rejected": True},
+            discovery_status=DiscoveryStatus.REJECTED,
+        )
+
+        return NormalizationResult(
+            canonical_id=rejected_canonical.source_id,
+            raw_id=raw_source,
+            canonical_source=rejected_canonical,
+            resolution_type=ResolutionType.REJECTED,
+            confidence=0.0,
+            match_details=(
+                f"Source '{raw_source}' is not registered. Register via AOD "
+                f"discovery, then run AAM /export-pipes to propagate to DCL."
+            ),
+        )
+
+    # DEPRECATED: _create_discovered_source() — retained for reference only.
+    # AOD owns SOR identification per RACI v6. Remove by 2026-04-26.
     def _create_discovered_source(
         self, raw_source: str, narration=None, run_id: Optional[str] = None
     ) -> NormalizationResult:

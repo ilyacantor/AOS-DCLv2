@@ -14,6 +14,7 @@ The 20 pipes map to 8 source systems:
 
 from typing import Dict, List, Any, Optional, Tuple
 from backend.api.ingest import get_ingest_store, RunReceipt
+from backend.api.pipe_store import get_pipe_store
 from backend.domain import (
     SourceSystem, TableSchema, FieldSchema,
     DiscoveryStatus, ResolutionType,
@@ -22,8 +23,13 @@ from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
+# ---------------------------------------------------------------------------
+# BOOTSTRAP MAPS — migration reference only, NOT used in live paths.
+# Live code uses pipe_store.lookup(). Remove by 2026-04-26.
+# ---------------------------------------------------------------------------
+
 # Pipe ID → (canonical_source_id, source_display_name, category, tier)
-PIPE_SOURCE_MAP: Dict[str, Tuple[str, str, str, int]] = {
+_BOOTSTRAP_PIPE_MAP: Dict[str, Tuple[str, str, str, int]] = {
     "sf_users":              ("salesforce", "Salesforce", "crm", 1),
     "sf_accounts":           ("salesforce", "Salesforce", "crm", 1),
     "sf_opportunities":      ("salesforce", "Salesforce", "crm", 1),
@@ -46,8 +52,8 @@ PIPE_SOURCE_MAP: Dict[str, Tuple[str, str, str, int]] = {
     "aws_cost_line_items":   ("aws_cost", "AWS Cost Explorer", "cloud", 3),
 }
 
-# Trust scores by tier: Tier 1 = financial SoR, Tier 2 = ops, Tier 3 = infra
-TIER_TRUST = {1: 90, 2: 80, 3: 70}
+# BOOTSTRAP — not used in live paths. Remove by 2026-04-26.
+_BOOTSTRAP_TIER_TRUST = {1: 90, 2: 80, 3: 70}
 
 
 def build_sources_from_ingest(
@@ -70,6 +76,15 @@ def build_sources_from_ingest(
         List of SourceSystem objects, one per canonical source.
     """
     store = get_ingest_store()
+    pipe_store = get_pipe_store()
+
+    # Hard fail if pipe_store is empty — the AOD→AAM→DCL chain must run first
+    if pipe_store.count() == 0:
+        raise RuntimeError(
+            "FarmBridge: pipe_store is empty. "
+            "Run AAM /export-pipes before building sources from ingest."
+        )
+
     receipts = store.get_all_receipts()
 
     if not receipts:
@@ -119,32 +134,35 @@ def build_sources_from_ingest(
             f"Processing {len(receipts)} ingested pipe receipts"
         )
 
-    # Group receipts by source system (canonical)
+    # Group receipts by source system using pipe_store (AOD authority)
     source_groups: Dict[str, List[RunReceipt]] = {}
     for receipt in receipts:
-        pipe_info = PIPE_SOURCE_MAP.get(receipt.pipe_id)
-        if pipe_info:
-            canonical_id = pipe_info[0]
+        pipe_def = pipe_store.lookup(receipt.pipe_id)
+        if pipe_def:
+            # Derive canonical_id from pipe_store source_name
+            canonical_id = pipe_def.source_name.lower().strip().replace(" ", "_").replace("-", "_")
         else:
-            # Fall back to source_system from the receipt
+            # pipe_store has no entry — use receipt metadata, trust_score=0
             canonical_id = receipt.canonical_source_id or receipt.source_system
         source_groups.setdefault(canonical_id, []).append(receipt)
 
     sources: List[SourceSystem] = []
 
     for canonical_id, group_receipts in sorted(source_groups.items()):
-        # Determine source metadata from the first pipe's known mapping
+        # Determine source metadata from pipe_store
         first_receipt = group_receipts[0]
-        pipe_info = PIPE_SOURCE_MAP.get(first_receipt.pipe_id)
+        pipe_def = pipe_store.lookup(first_receipt.pipe_id)
 
-        if pipe_info:
-            _, display_name, category, tier = pipe_info
+        if pipe_def:
+            display_name = pipe_def.source_name or canonical_id
+            category = pipe_def.category or "unknown"
+            trust_score = pipe_def.trust_score
+            data_quality = pipe_def.data_quality_score
         else:
             display_name = first_receipt.source_system
             category = "unknown"
-            tier = 3
-
-        trust_score = TIER_TRUST.get(tier, 70)
+            trust_score = 0  # Signal that AOD chain didn't run
+            data_quality = 0
 
         # Build tables from each pipe's rows
         tables: List[TableSchema] = []
@@ -174,14 +192,14 @@ def build_sources_from_ingest(
             id=canonical_id,
             name=display_name,
             type=category.upper(),
-            tags=["farm", "v2", f"tier_{tier}", category],
+            tags=["farm", "v2", category],
             tables=tables,
             canonical_id=canonical_id,
             raw_id=canonical_id,
             discovery_status=DiscoveryStatus.CANONICAL,
             resolution_type=ResolutionType.EXACT,
             trust_score=trust_score,
-            data_quality_score=85,
+            data_quality_score=data_quality,
             vendor=display_name,
             category=category,
             entities=[],
@@ -193,7 +211,8 @@ def build_sources_from_ingest(
             narration.add_message(
                 dcl_run_id, "FarmBridge",
                 f"  {display_name}: {len(tables)} pipes, "
-                f"{total_fields} fields, {total_records:,} records (tier {tier})"
+                f"{total_fields} fields, {total_records:,} records "
+                f"(trust={trust_score})"
             )
 
     # Sort by tier (lower is higher priority)
@@ -217,6 +236,7 @@ def get_ingest_summary() -> Dict[str, Any]:
     Return a summary of what's in the ingest store, suitable for API responses.
     """
     store = get_ingest_store()
+    pipe_store = get_pipe_store()
     receipts = store.get_all_receipts()
     stats = store.get_stats()
 
@@ -224,8 +244,8 @@ def get_ingest_summary() -> Dict[str, Any]:
     total_records = 0
 
     for receipt in receipts:
-        pipe_info = PIPE_SOURCE_MAP.get(receipt.pipe_id)
-        source_name = pipe_info[1] if pipe_info else receipt.source_system
+        pipe_def = pipe_store.lookup(receipt.pipe_id)
+        source_name = pipe_def.source_name if pipe_def else receipt.source_system
         pipes_by_source.setdefault(source_name, []).append(receipt.pipe_id)
         total_records += receipt.row_count
 

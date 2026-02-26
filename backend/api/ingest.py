@@ -38,11 +38,10 @@ _CACHE_FILE = os.path.join(_CACHE_DIR, "ingest_cache.json")
 os.makedirs(_CACHE_DIR, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Canonical source systems — only these are allowed through the ingest gate.
-# Matches DCL conventions §7: machine IDs (snake_case).
-# "farm" is the synthetic data generator; "aam" is the orchestrator itself.
+# Bootstrap source allowlist — migration reference only, NOT used in live paths.
+# Live code uses get_canonical_sources() which reads from pipe_store.
 # ---------------------------------------------------------------------------
-CANONICAL_SOURCES: frozenset = frozenset({
+_BOOTSTRAP_SOURCES: frozenset = frozenset({
     "salesforce", "salesforce_crm",
     "netsuite", "netsuite_erp",
     "chargebee",
@@ -78,6 +77,38 @@ CANONICAL_SOURCES: frozenset = frozenset({
     "servicenow",
     "splunk",
 })
+
+# Backward-compat alias — imported by name in some modules
+CANONICAL_SOURCES = _BOOTSTRAP_SOURCES
+
+# Cache for pipe_store-derived canonical sources
+_canonical_sources_cache: Optional[frozenset] = None
+
+
+def get_canonical_sources() -> frozenset:
+    """Return the set of canonical source IDs allowed through the ingest gate.
+
+    If pipe_store has registered definitions, derive the allowlist from
+    those definitions (AOD → AAM → DCL chain). If pipe_store is empty,
+    return an empty frozenset — the ingest route handles this with HTTP 503.
+    """
+    global _canonical_sources_cache
+    from backend.api.pipe_store import get_pipe_store
+    pipe_store = get_pipe_store()
+
+    if pipe_store.count() > 0:
+        # Derive from registered pipe definitions
+        definitions = pipe_store.get_all_definitions()
+        source_ids = set()
+        for defn in definitions:
+            src = defn.source_name.lower().strip().replace(" ", "_").replace("-", "_")
+            if src:
+                source_ids.add(src)
+        _canonical_sources_cache = frozenset(source_ids)
+        return _canonical_sources_cache
+
+    # pipe_store is empty — return empty so the ingest route returns 503
+    return frozenset()
 
 
 # ---------------------------------------------------------------------------

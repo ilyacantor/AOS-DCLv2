@@ -42,6 +42,8 @@ class ExportPipesConnection(BaseModel):
     last_sync: Optional[str] = None
     asset_key: str = ""
     aod_asset_id: Optional[str] = None
+    trust_score: int = 0
+    data_quality_score: int = 0
 
 
 class ExportPipesFabricPlane(BaseModel):
@@ -141,6 +143,8 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
                 asset_key=conn.asset_key,
                 aod_asset_id=conn.aod_asset_id,
                 fabric_plane=plane.plane_type,
+                trust_score=conn.trust_score,
+                data_quality_score=conn.data_quality_score,
                 received_at=now,
             )
             definitions.append(defn)

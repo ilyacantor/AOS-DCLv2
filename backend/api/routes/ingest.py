@@ -24,11 +24,11 @@ from typing import Optional
 from backend.core.constants import utc_now
 from backend.api.ingest import (
     ActivityEntry,
-    CANONICAL_SOURCES,
     DropEntry,
     IngestRequest,
     IngestResponse,
     _REDIS_PREFIX,
+    get_canonical_sources,
     get_ingest_store,
     compute_schema_hash,
     _derive_dispatch_id,
@@ -462,8 +462,21 @@ async def dcl_ingest(
     # ── Source system allowlist gate ──
     # Reject payloads from non-canonical sources (e.g. AAM demo synthetic companies).
     # Rejected payloads are logged to the drop log — never silently discarded.
+    #
+    # If pipe_store is empty, DCL is not initialized — return 503 so operators
+    # know to run AAM /export-pipes first.
+    canonical_sources = get_canonical_sources()
+    if not canonical_sources:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "DCL not initialized",
+                "action": "Run AAM /export-pipes to register pipe definitions before ingesting",
+            },
+        )
+
     canonical_src = normalize_source_id(ingest_req.source_system)
-    if canonical_src not in CANONICAL_SOURCES:
+    if canonical_src not in canonical_sources:
         pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
         logger.warning(
             f"[Ingest] REJECTED non-canonical source: '{ingest_req.source_system}' "
@@ -483,7 +496,7 @@ async def dcl_ingest(
         raise HTTPException(
             status_code=422,
             detail=f"Source system '{ingest_req.source_system}' is not in the canonical allowlist. "
-                   f"Allowed sources: {sorted(CANONICAL_SOURCES)}"
+                   f"Allowed sources: {sorted(canonical_sources)}"
         )
 
     expected_key = os.environ.get("DCL_INGEST_KEY")

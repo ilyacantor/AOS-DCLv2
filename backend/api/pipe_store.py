@@ -69,6 +69,8 @@ class PipeDefinition:
     asset_key: str = ""
     aod_asset_id: Optional[str] = None
     fabric_plane: str = ""
+    trust_score: int = 0                  # 0 = AOD chain didn't run
+    data_quality_score: int = 0           # 0 = AOD chain didn't run
     received_at: str = ""                 # when DCL stored it
 
 
@@ -121,6 +123,8 @@ CREATE TABLE IF NOT EXISTS pipe_definitions (
     asset_key     VARCHAR(256) DEFAULT '',
     aod_asset_id  VARCHAR(128),
     fabric_plane  VARCHAR(128) DEFAULT '',
+    trust_score   INTEGER DEFAULT 0,
+    data_quality_score INTEGER DEFAULT 0,
     received_at   TIMESTAMPTZ DEFAULT NOW()
 );
 """
@@ -142,12 +146,14 @@ INSERT INTO pipe_definitions (
     pipe_id, candidate_id, source_name, vendor, category,
     governance_status, fields, entity_scope, identity_keys,
     transport_kind, modality, change_semantics, health,
-    last_sync, asset_key, aod_asset_id, fabric_plane, received_at
+    last_sync, asset_key, aod_asset_id, fabric_plane,
+    trust_score, data_quality_score, received_at
 ) VALUES (
     %s, %s, %s, %s, %s,
     %s, %s, %s, %s,
     %s, %s, %s, %s,
-    %s, %s, %s, %s, %s
+    %s, %s, %s, %s,
+    %s, %s, %s
 )
 ON CONFLICT (pipe_id) DO UPDATE SET
     candidate_id     = EXCLUDED.candidate_id,
@@ -166,6 +172,8 @@ ON CONFLICT (pipe_id) DO UPDATE SET
     asset_key        = EXCLUDED.asset_key,
     aod_asset_id     = EXCLUDED.aod_asset_id,
     fabric_plane     = EXCLUDED.fabric_plane,
+    trust_score      = EXCLUDED.trust_score,
+    data_quality_score = EXCLUDED.data_quality_score,
     received_at      = EXCLUDED.received_at;
 """
 
@@ -238,6 +246,20 @@ class PipeDefinitionStore:
                 with conn.cursor() as cur:
                     cur.execute(_CREATE_DEFINITIONS_TABLE)
                     cur.execute(_CREATE_RECEIPTS_TABLE)
+                    # Migrate: add trust_score / data_quality_score if missing
+                    for col, default in [
+                        ("trust_score", 0),
+                        ("data_quality_score", 0),
+                    ]:
+                        cur.execute(f"""
+                            DO $$
+                            BEGIN
+                                ALTER TABLE pipe_definitions
+                                    ADD COLUMN {col} INTEGER DEFAULT {default};
+                            EXCEPTION WHEN duplicate_column THEN
+                                NULL;
+                            END $$;
+                        """)
                 conn.commit()
                 self._pg_available = True
                 logger.info("[PipeStore] Postgres tables ensured")
@@ -259,7 +281,8 @@ class PipeDefinitionStore:
                         "SELECT pipe_id, candidate_id, source_name, vendor, category, "
                         "governance_status, fields, entity_scope, identity_keys, "
                         "transport_kind, modality, change_semantics, health, "
-                        "last_sync, asset_key, aod_asset_id, fabric_plane, received_at "
+                        "last_sync, asset_key, aod_asset_id, fabric_plane, "
+                        "trust_score, data_quality_score, received_at "
                         "FROM pipe_definitions"
                     )
                     rows = cur.fetchall()
@@ -282,7 +305,9 @@ class PipeDefinitionStore:
                             asset_key=row[14] or "",
                             aod_asset_id=row[15],
                             fabric_plane=(row[16] or "").lower(),
-                            received_at=str(row[17]) if row[17] else "",
+                            trust_score=row[17] or 0,
+                            data_quality_score=row[18] or 0,
+                            received_at=str(row[19]) if row[19] else "",
                         )
                         self._definitions[defn.pipe_id] = defn
 
@@ -350,6 +375,8 @@ class PipeDefinitionStore:
                                 defn.asset_key,
                                 defn.aod_asset_id,
                                 defn.fabric_plane,
+                                defn.trust_score,
+                                defn.data_quality_score,
                                 defn.received_at,
                             )
                             for defn in definitions
@@ -361,7 +388,8 @@ class PipeDefinitionStore:
                                 pipe_id, candidate_id, source_name, vendor, category,
                                 governance_status, fields, entity_scope, identity_keys,
                                 transport_kind, modality, change_semantics, health,
-                                last_sync, asset_key, aod_asset_id, fabric_plane, received_at
+                                last_sync, asset_key, aod_asset_id, fabric_plane,
+                                trust_score, data_quality_score, received_at
                             ) VALUES %s
                             ON CONFLICT (pipe_id) DO UPDATE SET
                                 candidate_id     = EXCLUDED.candidate_id,
@@ -380,10 +408,12 @@ class PipeDefinitionStore:
                                 asset_key        = EXCLUDED.asset_key,
                                 aod_asset_id     = EXCLUDED.aod_asset_id,
                                 fabric_plane     = EXCLUDED.fabric_plane,
+                                trust_score      = EXCLUDED.trust_score,
+                                data_quality_score = EXCLUDED.data_quality_score,
                                 received_at      = EXCLUDED.received_at
                             """,
                             values,
-                            template="(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                            template="(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                         )
 
                     cur.execute(_INSERT_RECEIPT, (

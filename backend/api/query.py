@@ -457,7 +457,7 @@ def _query_ingest_store(
         (data_points, receipt) — receipt is the most-recent run that
         contributed rows, or None if no ingested data matches.
     """
-    from backend.api.ingest import get_ingest_store, RunReceipt, CANONICAL_SOURCES
+    from backend.api.ingest import get_ingest_store, RunReceipt, get_canonical_sources
     from backend.aam.ingress import normalize_source_id as _norm_src
 
     store = get_ingest_store()
@@ -477,7 +477,7 @@ def _query_ingest_store(
     if mat_points:
         mat_points = [
             pt for pt in mat_points
-            if _norm_src(pt.get("source_system", "")) in CANONICAL_SOURCES
+            if _norm_src(pt.get("source_system", "")) in get_canonical_sources()
         ]
 
     if mat_points:

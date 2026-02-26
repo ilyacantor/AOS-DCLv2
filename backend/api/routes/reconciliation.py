@@ -288,7 +288,7 @@ def _invalidate_aam_caches():
 def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
     """Reconcile Farm push receipts against DCL loaded sources — per dispatch."""
     from backend.aam.ingress import NormalizedPipe
-    from backend.farm.ingest_bridge import PIPE_SOURCE_MAP, TIER_TRUST
+    from backend.api.pipe_store import get_pipe_store
     from backend.engine.reconciliation import reconcile
     from backend.api.main import app
 
@@ -341,7 +341,8 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
             receipts = [r for r in all_receipts if r.run_id == latest.run_id]
             logger.info(f"[FarmRecon] Fallback: latest run_id={latest.run_id} ({len(receipts)} pipes)")
 
-    # Group receipts by canonical source via PIPE_SOURCE_MAP
+    # Group receipts by canonical source via pipe_store
+    pipe_store = get_pipe_store()
     source_groups: Dict[str, Dict[str, Any]] = {}
     unmapped_pipes: List[str] = []
     schema_registry = store.get_schema_registry()
@@ -349,14 +350,18 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
 
     for receipt in receipts:
         total_records += receipt.row_count
-        pipe_info = PIPE_SOURCE_MAP.get(receipt.pipe_id)
-        if not pipe_info:
+        pipe_def = pipe_store.lookup(receipt.pipe_id)
+        if not pipe_def:
             unmapped_pipes.append(receipt.pipe_id)
             continue
-        canonical_id, display_name, category, tier = pipe_info
+        canonical_id = pipe_def.source_name.lower().strip().replace(" ", "_").replace("-", "_")
+        display_name = pipe_def.source_name or canonical_id
+        category = pipe_def.category or "unknown"
         grp = source_groups.setdefault(canonical_id, {
             "canonical_id": canonical_id, "display_name": display_name,
-            "category": category, "tier": tier,
+            "category": category,
+            "trust_score": pipe_def.trust_score,
+            "data_quality_score": pipe_def.data_quality_score,
             "pipes": [], "total_records": 0, "fields": set(),
         })
         grp["pipes"].append(receipt.pipe_id)
@@ -378,8 +383,8 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
             field_count=len(grp["fields"]),
             category=grp["category"],
             governance_status="canonical",
-            trust_score=TIER_TRUST.get(grp["tier"], 70),
-            data_quality_score=85,
+            trust_score=grp["trust_score"],
+            data_quality_score=grp["data_quality_score"],
         ))
 
     # DCL side: what was actually loaded
@@ -391,7 +396,7 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
     if unmapped_pipes:
         result["diffCauses"].append({
             "cause": "UNMAPPED_PIPES",
-            "description": f"{len(unmapped_pipes)} pipes have no entry in PIPE_SOURCE_MAP: {', '.join(unmapped_pipes)}",
+            "description": f"{len(unmapped_pipes)} pipes have no entry in pipe_store: {', '.join(unmapped_pipes)}",
             "severity": "warning",
             "count": len(unmapped_pipes),
         })
@@ -408,7 +413,8 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
     result["sourceBreakdown"] = [
         {
             "sourceName": grp["display_name"], "canonicalId": cid,
-            "category": grp["category"], "tier": grp["tier"],
+            "category": grp["category"],
+            "trustScore": grp["trust_score"],
             "pipeCount": len(grp["pipes"]), "recordCount": grp["total_records"],
             "fieldCount": len(grp["fields"]), "loaded": cid in set(dcl_ids),
         }

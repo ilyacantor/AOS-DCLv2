@@ -27,6 +27,7 @@ class ResolutionType(str, Enum):
     PATTERN = "pattern"
     FUZZY = "fuzzy"
     DISCOVERED = "discovered"
+    REJECTED = "rejected"
 
 
 class FieldSchema(BaseModel):

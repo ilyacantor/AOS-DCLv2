@@ -60,6 +60,8 @@ class AAMConnectionWire(BaseModel):
     fields: List[str] = Field(default_factory=list)
     category: Optional[str] = None
     governance_status: Optional[str] = None
+    trust_score: Optional[int] = None
+    data_quality_score: Optional[int] = None
 
 
 class AAMFabricPlaneWire(BaseModel):
@@ -191,6 +193,28 @@ class AAMIngressAdapter:
                 canonical_id = normalize_source_id(conn.source_name)
                 governance = (conn.governance_status or "unknown").lower()
 
+                # Use AOD-provided scores when present; fall back to
+                # governance heuristic with a warning.
+                if conn.trust_score is not None:
+                    trust = conn.trust_score
+                else:
+                    trust = 85 if governance == "governed" else 60
+                    logger.warning(
+                        f"[AAMIngress] trust_score not provided by AAM for "
+                        f"'{conn.source_name}' — using governance heuristic. "
+                        f"AOD should provide trust scores."
+                    )
+
+                if conn.data_quality_score is not None:
+                    quality = conn.data_quality_score
+                else:
+                    quality = 80 if governance == "governed" else 50
+                    logger.warning(
+                        f"[AAMIngress] data_quality_score not provided by AAM for "
+                        f"'{conn.source_name}' — using governance heuristic. "
+                        f"AOD should provide data quality scores."
+                    )
+
                 pipe = NormalizedPipe(
                     canonical_id=canonical_id,
                     display_name=conn.source_name,
@@ -201,8 +225,8 @@ class AAMIngressAdapter:
                     field_count=len(conn.fields),
                     category=(conn.category or "other").lower(),
                     governance_status=governance,
-                    trust_score=85 if governance == "governed" else 60,
-                    data_quality_score=80 if governance == "governed" else 50,
+                    trust_score=trust,
+                    data_quality_score=quality,
                 )
                 plane_pipes.append(pipe)
                 all_pipes.append(pipe)
