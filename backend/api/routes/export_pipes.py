@@ -80,9 +80,15 @@ class ExportPipesResponse(BaseModel):
     status: str
     pipes_registered: int
     pipe_ids: List[str]
+    canonical_sources: List[str]
     skipped_noted: int
     aod_run_id: Optional[str]
     timestamp: str
+
+
+# Internal service names that must never appear as a pipe vendor.
+# If AAM sends one of these, the pipe definition is malformed.
+_INTERNAL_VENDOR_NAMES = frozenset({"farm", "aam", "dcl", "aod", "runner"})
 
 
 # ---------------------------------------------------------------------------
@@ -132,6 +138,15 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
                 )
                 continue
 
+            if conn.vendor.lower() in _INTERNAL_VENDOR_NAMES:
+                logger.error(
+                    f"[ExportPipes] REJECTED connection with internal vendor name "
+                    f"'{conn.vendor}' (pipe_id={conn.pipe_id}, "
+                    f"source_name={conn.source_name}). "
+                    f"Vendor must be an external SOR, not an internal service."
+                )
+                continue
+
             defn = PipeDefinition(
                 pipe_id=conn.pipe_id,
                 candidate_id=conn.candidate_id,
@@ -173,11 +188,22 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
         snapshot_name=resolved_snapshot,
     )
 
+    # --- Diagnostic: log canonical sources derived from vendors ---
+    canonical_sources = sorted(set(d.vendor for d in definitions if d.vendor))
     logger.info(
         f"[ExportPipes] Stored {len(definitions)} pipe definitions "
         f"from {len(request.fabric_planes)} fabric planes "
         f"(aod_run_id={request.aod_run_id})"
     )
+    logger.info(
+        f"[ExportPipes] Canonical sources ({len(canonical_sources)}): "
+        f"{canonical_sources}"
+    )
+    for d in definitions:
+        logger.info(
+            f"[ExportPipes]   pipe={d.pipe_id} vendor={d.vendor!r} "
+            f"source_name={d.source_name!r} category={d.category!r}"
+        )
 
     # --- Record Path 1 activity (Structure) ---
     unique_sors = sorted(set(d.vendor for d in definitions if d.vendor))
@@ -219,6 +245,7 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
         status="accepted",
         pipes_registered=len(definitions),
         pipe_ids=receipt.pipe_ids,
+        canonical_sources=canonical_sources,
         skipped_noted=skipped_noted,
         aod_run_id=request.aod_run_id,
         timestamp=now,

@@ -236,11 +236,29 @@ def _record_ingest_activity(
     # dispatch_id doesn't shadow content creation.
     # Resolve fabric plane and category for this pipe from the pipe definition store
     pipe_def = pipe_store.lookup(pipe_id)
-    pipe_fabric = pipe_def.fabric_plane if pipe_def and pipe_def.fabric_plane else None
+
+    if pipe_def is None:
+        logger.error(
+            f"[Activity] pipe_def missing for pipe_id={pipe_id} "
+            f"(source_system={source_system}, dispatch_id={did}). "
+            f"Skipping SOR attribution — no fallback."
+        )
+        return
+
+    # Use pipe_def.vendor as the canonical source for attribution
+    vendor_source = pipe_def.vendor or ""
+    if not vendor_source:
+        logger.error(
+            f"[Activity] pipe_def for pipe_id={pipe_id} has empty vendor. "
+            f"Skipping SOR attribution — no fallback."
+        )
+        return
+
+    pipe_fabric = pipe_def.fabric_plane if pipe_def.fabric_plane else None
     is_tooling = _is_tooling_pipe(pipe_def)
 
     # Classify pipe as SOR (governed) or other based on governance_status
-    is_sor = pipe_def is not None and getattr(pipe_def, "governance_status", None) == "governed"
+    is_sor = getattr(pipe_def, "governance_status", None) == "governed"
 
     if did and not store.has_phase(did, "content"):
         # First pipe for this dispatch — create the content entry
@@ -286,7 +304,7 @@ def _record_ingest_activity(
             dispatch_id=did,
             aod_run_id=export_run_id,
         ))
-        store._content_sources.setdefault(did, set()).add(source_system)
+        store._content_sources.setdefault(did, set()).add(vendor_source)
     elif did:
         # Subsequent push — update the existing content entry
         store.update_content_activity(did, rows, pipe_id)
@@ -310,9 +328,9 @@ def _record_ingest_activity(
             store._content_sor_pipes.setdefault(did, set()).add(pipe_id)
         else:
             store._content_other_pipes.setdefault(did, set()).add(pipe_id)
-        # Track sources
+        # Track sources (using pipe_def vendor, not raw source_system)
         sources = store._content_sources.setdefault(did, set())
-        sources.add(source_system)
+        sources.add(vendor_source)
         mapped_set = store._content_mapped.get(did, set())
         unmapped_set = store._content_unmapped.get(did, set())
         tooling_set = store._content_tooling.get(did, set())
@@ -970,4 +988,71 @@ async def flush_ingest_store():
             "unique_sources": 0,
             "pipe_definitions": 0,
         },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Seed endpoint — replay remote activity/drops into local store (dev only)
+# ---------------------------------------------------------------------------
+
+@router.post("/seed", summary="Seed local IngestStore from remote snapshot (dev)")
+async def seed_ingest_store(request: Request):
+    """Accept a JSON payload with 'activity' and/or 'drops' arrays
+    and inject them directly into the local IngestStore.
+    """
+    payload = await request.json()
+    store = get_ingest_store()
+
+    activity_items = payload.get("activity", [])
+    drop_items = payload.get("drops", [])
+
+    added_activity = 0
+    added_drops = 0
+
+    with store._lock:
+        for item in activity_items:
+            entry = ActivityEntry(
+                phase=item.get("phase", ""),
+                source=item.get("source", ""),
+                snapshot_name=item.get("snapshot_name", ""),
+                run_id=item.get("run_id", ""),
+                timestamp=item.get("timestamp", ""),
+                pipes=item.get("pipes", 0),
+                sors=item.get("sors", 0),
+                tooling_pipes=item.get("tooling_pipes", 0),
+                fabrics=item.get("fabrics", 0),
+                mapped_pipes=item.get("mapped_pipes", 0),
+                unmapped_pipes=item.get("unmapped_pipes", 0),
+                rows=item.get("rows", 0),
+                records=item.get("records", 0),
+                sor_pipes=item.get("sor_pipes", 0),
+                other_pipes=item.get("other_pipes", 0),
+                dispatch_id=item.get("dispatch_id", ""),
+                aod_run_id=item.get("aod_run_id", ""),
+            )
+            store._activity_log.append(entry)
+            added_activity += 1
+
+        for item in drop_items:
+            entry = DropEntry(
+                pipe_id=item.get("pipe_id", ""),
+                reason=item.get("reason", ""),
+                error_code=item.get("error_code", ""),
+                source_system=item.get("source_system", ""),
+                timestamp=item.get("timestamp", ""),
+                run_id=item.get("run_id", ""),
+                dispatch_id=item.get("dispatch_id", ""),
+                snapshot_name=item.get("snapshot_name", ""),
+                tenant_id=item.get("tenant_id", ""),
+            )
+            store._drop_log.append(entry)
+            added_drops += 1
+
+    # Persist to disk
+    store._save_to_disk()
+
+    return {
+        "status": "seeded",
+        "activity_added": added_activity,
+        "drops_added": added_drops,
     }

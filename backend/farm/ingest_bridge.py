@@ -256,7 +256,20 @@ def get_ingest_summary() -> Dict[str, Any]:
 
     for receipt in receipts:
         pipe_def = pipe_store.lookup(receipt.pipe_id)
-        source_name = pipe_def.source_name if pipe_def else receipt.source_system
+        if pipe_def is None:
+            logger.error(
+                f"[IngestSummary] pipe_def missing for pipe_id={receipt.pipe_id} "
+                f"(source_system={receipt.source_system}). "
+                f"Skipping — not recording unregistered pipe."
+            )
+            continue
+        if not pipe_def.vendor:
+            logger.error(
+                f"[IngestSummary] pipe_def for pipe_id={receipt.pipe_id} has empty "
+                f"vendor. Skipping — no fallback."
+            )
+            continue
+        source_name = pipe_def.vendor
         pipes_by_source.setdefault(source_name, []).append(receipt.pipe_id)
         total_records += receipt.row_count
 
