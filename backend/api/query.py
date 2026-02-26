@@ -291,7 +291,7 @@ DIMENSION_TO_FACTBASE_KEY = {
         "mttr": "mttr_by_service",
     },
     "category": {
-        "cloud_spend": "cloud_spend_by_category",
+        "cloud_spend": "cloud_spend_by_resource_type",
         "support_tickets": "support_tickets_by_category",
     },
     "tier": {
@@ -314,8 +314,8 @@ DIMENSION_TO_FACTBASE_KEY = {
         "mttr": "mttr_by_severity",
     },
     "resource_type": {
-        "cloud_spend": "cloud_spend_by_resource",
-        "cloud_cost": "cloud_spend_by_resource",
+        "cloud_spend": "cloud_spend_by_resource_type",
+        "cloud_cost": "cloud_spend_by_resource_type",
     },
 }
 
