@@ -153,24 +153,14 @@ def load_fact_base() -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 # Explicit overrides: catalog metric_id -> fact_base quarterly key
-# Only needed when the names differ intentionally.
+# Only needed when the catalog name differs from the v5.0 fact_base key.
+# Metrics whose catalog ID matches the fact_base key use identity mapping
+# (handled by _build_factbase_key_map).
 _FACTBASE_KEY_OVERRIDES: Dict[str, Optional[str]] = {
-    "win_rate_pct": "win_rate",
-    "quota_attainment_pct": "quota_attainment",
-    "churn_rate_pct": "churn_pct",
-    "attrition_rate_pct": "attrition_rate",
-    "offer_acceptance_rate_pct": "offer_acceptance_rate",
-    "internal_mobility_rate_pct": "internal_mobility_rate",
-    "net_margin_pct": "net_income_pct",
-    "ltv_cac_ratio": "ltv_cac",
+    "churn_rate_pct": "gross_churn_pct",
     "pipeline_value": "pipeline",
-    "customer_count": "customer_count",
     "mttr": "mttr_p1_hours",
-    "deploy_frequency": "deploys_per_week",
-    "time_to_fill": "time_to_fill_days",
     "training_hours": "training_hours_per_employee",
-    "da_expense": "d_and_a",
-    "new_hires": "hires",
 }
 
 
