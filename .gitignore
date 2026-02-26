@@ -64,3 +64,6 @@ test_results_*.txt
 
 # Claude Code
 .claude/
+
+# Binary documents
+*.xlsx
