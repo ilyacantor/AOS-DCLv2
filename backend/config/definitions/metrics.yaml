@@ -111,6 +111,8 @@ metrics:
       - day
       - week
       - month
+      - quarter
+      - year
     measure_op: point_in_time_sum
     default_grain: month
 
