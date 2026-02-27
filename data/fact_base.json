@@ -163,7 +163,10 @@
       "product_headcount": 18,
       "finance_headcount": 20,
       "ga_headcount": 25,
-      "is_forecast": false
+      "is_forecast": false,
+      "engagement_score": 72.1,
+      "time_to_fill": 34.3,
+      "enps": 21
     },
     {
       "period": "2024-Q2",
@@ -282,7 +285,10 @@
       "product_headcount": 19,
       "finance_headcount": 21,
       "ga_headcount": 26,
-      "is_forecast": false
+      "is_forecast": false,
+      "engagement_score": 73.5,
+      "time_to_fill": 36.7,
+      "enps": 22
     },
     {
       "period": "2024-Q3",
@@ -401,7 +407,10 @@
       "product_headcount": 20,
       "finance_headcount": 22,
       "ga_headcount": 28,
-      "is_forecast": false
+      "is_forecast": false,
+      "engagement_score": 74.1,
+      "time_to_fill": 33.3,
+      "enps": 23
     },
     {
       "period": "2024-Q4",
@@ -520,7 +529,10 @@
       "product_headcount": 21,
       "finance_headcount": 22,
       "ga_headcount": 29,
-      "is_forecast": false
+      "is_forecast": false,
+      "engagement_score": 73.9,
+      "time_to_fill": 32.8,
+      "enps": 23
     },
     {
       "period": "2025-Q1",
@@ -639,7 +651,10 @@
       "product_headcount": 22,
       "finance_headcount": 23,
       "ga_headcount": 30,
-      "is_forecast": false
+      "is_forecast": false,
+      "engagement_score": 75.5,
+      "time_to_fill": 30.7,
+      "enps": 25
     },
     {
       "period": "2025-Q2",
@@ -758,7 +773,10 @@
       "product_headcount": 23,
       "finance_headcount": 25,
       "ga_headcount": 32,
-      "is_forecast": false
+      "is_forecast": false,
+      "engagement_score": 75.8,
+      "time_to_fill": 33.2,
+      "enps": 25
     },
     {
       "period": "2025-Q3",
@@ -877,7 +895,10 @@
       "product_headcount": 24,
       "finance_headcount": 26,
       "ga_headcount": 33,
-      "is_forecast": false
+      "is_forecast": false,
+      "engagement_score": 75.4,
+      "time_to_fill": 32.7,
+      "enps": 24
     },
     {
       "period": "2025-Q4",
@@ -996,7 +1017,10 @@
       "product_headcount": 25,
       "finance_headcount": 27,
       "ga_headcount": 35,
-      "is_forecast": false
+      "is_forecast": false,
+      "engagement_score": 75.3,
+      "time_to_fill": 28.7,
+      "enps": 24
     },
     {
       "period": "2026-Q1",
@@ -1115,7 +1139,10 @@
       "product_headcount": 26,
       "finance_headcount": 28,
       "ga_headcount": 35,
-      "is_forecast": false
+      "is_forecast": false,
+      "engagement_score": 77.5,
+      "time_to_fill": 30.2,
+      "enps": 27
     },
     {
       "period": "2026-Q2",
@@ -1234,7 +1261,10 @@
       "product_headcount": 26,
       "finance_headcount": 29,
       "ga_headcount": 36,
-      "is_forecast": false
+      "is_forecast": false,
+      "engagement_score": 76.9,
+      "time_to_fill": 28.0,
+      "enps": 26
     },
     {
       "period": "2026-Q3",
@@ -1353,7 +1383,10 @@
       "product_headcount": 27,
       "finance_headcount": 30,
       "ga_headcount": 38,
-      "is_forecast": true
+      "is_forecast": true,
+      "engagement_score": 77.2,
+      "time_to_fill": 26.7,
+      "enps": 27
     },
     {
       "period": "2026-Q4",
@@ -1472,7 +1505,10 @@
       "product_headcount": 28,
       "finance_headcount": 31,
       "ga_headcount": 39,
-      "is_forecast": true
+      "is_forecast": true,
+      "engagement_score": 78.6,
+      "time_to_fill": 25.3,
+      "enps": 28
     }
   ],
   "annual": [
@@ -15154,6 +15190,384 @@
       "Network": 0.11,
       "ML/AI": 0.09,
       "Other": 0.08
+    }
+  },
+  "csat_by_segment": {
+    "source": "zendesk",
+    "2024-Q1": {
+      "Enterprise": {
+        "csat": 4.3
+      },
+      "Mid-Market": {
+        "csat": 4.15
+      },
+      "SMB": {
+        "csat": 3.95
+      }
+    },
+    "2024-Q2": {
+      "Enterprise": {
+        "csat": 4.31
+      },
+      "Mid-Market": {
+        "csat": 4.16
+      },
+      "SMB": {
+        "csat": 3.96
+      }
+    },
+    "2024-Q3": {
+      "Enterprise": {
+        "csat": 4.32
+      },
+      "Mid-Market": {
+        "csat": 4.17
+      },
+      "SMB": {
+        "csat": 3.97
+      }
+    },
+    "2024-Q4": {
+      "Enterprise": {
+        "csat": 4.33
+      },
+      "Mid-Market": {
+        "csat": 4.18
+      },
+      "SMB": {
+        "csat": 3.98
+      }
+    },
+    "2025-Q1": {
+      "Enterprise": {
+        "csat": 4.34
+      },
+      "Mid-Market": {
+        "csat": 4.19
+      },
+      "SMB": {
+        "csat": 3.99
+      }
+    },
+    "2025-Q2": {
+      "Enterprise": {
+        "csat": 4.35
+      },
+      "Mid-Market": {
+        "csat": 4.2
+      },
+      "SMB": {
+        "csat": 4.0
+      }
+    },
+    "2025-Q3": {
+      "Enterprise": {
+        "csat": 4.36
+      },
+      "Mid-Market": {
+        "csat": 4.21
+      },
+      "SMB": {
+        "csat": 4.01
+      }
+    },
+    "2025-Q4": {
+      "Enterprise": {
+        "csat": 4.37
+      },
+      "Mid-Market": {
+        "csat": 4.22
+      },
+      "SMB": {
+        "csat": 4.02
+      }
+    },
+    "2026-Q1": {
+      "Enterprise": {
+        "csat": 4.38
+      },
+      "Mid-Market": {
+        "csat": 4.23
+      },
+      "SMB": {
+        "csat": 4.03
+      }
+    },
+    "2026-Q2": {
+      "Enterprise": {
+        "csat": 4.39
+      },
+      "Mid-Market": {
+        "csat": 4.24
+      },
+      "SMB": {
+        "csat": 4.04
+      }
+    },
+    "2026-Q3": {
+      "Enterprise": {
+        "csat": 4.4
+      },
+      "Mid-Market": {
+        "csat": 4.25
+      },
+      "SMB": {
+        "csat": 4.05
+      }
+    },
+    "2026-Q4": {
+      "Enterprise": {
+        "csat": 4.41
+      },
+      "Mid-Market": {
+        "csat": 4.26
+      },
+      "SMB": {
+        "csat": 4.06
+      }
+    }
+  },
+  "enps_by_department": {
+    "source": "workday",
+    "2024-Q1": {
+      "Engineering": {
+        "enps": 22
+      },
+      "Product": {
+        "enps": 26
+      },
+      "Sales": {
+        "enps": 15
+      },
+      "Marketing": {
+        "enps": 22
+      },
+      "Customer Success": {
+        "enps": 17
+      },
+      "G&A": {
+        "enps": 22
+      }
+    },
+    "2024-Q2": {
+      "Engineering": {
+        "enps": 20
+      },
+      "Product": {
+        "enps": 28
+      },
+      "Sales": {
+        "enps": 18
+      },
+      "Marketing": {
+        "enps": 24
+      },
+      "Customer Success": {
+        "enps": 20
+      },
+      "G&A": {
+        "enps": 22
+      }
+    },
+    "2024-Q3": {
+      "Engineering": {
+        "enps": 22
+      },
+      "Product": {
+        "enps": 31
+      },
+      "Sales": {
+        "enps": 17
+      },
+      "Marketing": {
+        "enps": 25
+      },
+      "Customer Success": {
+        "enps": 20
+      },
+      "G&A": {
+        "enps": 24
+      }
+    },
+    "2024-Q4": {
+      "Engineering": {
+        "enps": 23
+      },
+      "Product": {
+        "enps": 31
+      },
+      "Sales": {
+        "enps": 16
+      },
+      "Marketing": {
+        "enps": 25
+      },
+      "Customer Success": {
+        "enps": 19
+      },
+      "G&A": {
+        "enps": 23
+      }
+    },
+    "2025-Q1": {
+      "Engineering": {
+        "enps": 24
+      },
+      "Product": {
+        "enps": 32
+      },
+      "Sales": {
+        "enps": 20
+      },
+      "Marketing": {
+        "enps": 26
+      },
+      "Customer Success": {
+        "enps": 20
+      },
+      "G&A": {
+        "enps": 26
+      }
+    },
+    "2025-Q2": {
+      "Engineering": {
+        "enps": 25
+      },
+      "Product": {
+        "enps": 31
+      },
+      "Sales": {
+        "enps": 20
+      },
+      "Marketing": {
+        "enps": 27
+      },
+      "Customer Success": {
+        "enps": 22
+      },
+      "G&A": {
+        "enps": 25
+      }
+    },
+    "2025-Q3": {
+      "Engineering": {
+        "enps": 23
+      },
+      "Product": {
+        "enps": 33
+      },
+      "Sales": {
+        "enps": 18
+      },
+      "Marketing": {
+        "enps": 26
+      },
+      "Customer Success": {
+        "enps": 21
+      },
+      "G&A": {
+        "enps": 27
+      }
+    },
+    "2025-Q4": {
+      "Engineering": {
+        "enps": 23
+      },
+      "Product": {
+        "enps": 32
+      },
+      "Sales": {
+        "enps": 19
+      },
+      "Marketing": {
+        "enps": 26
+      },
+      "Customer Success": {
+        "enps": 20
+      },
+      "G&A": {
+        "enps": 26
+      }
+    },
+    "2026-Q1": {
+      "Engineering": {
+        "enps": 26
+      },
+      "Product": {
+        "enps": 32
+      },
+      "Sales": {
+        "enps": 21
+      },
+      "Marketing": {
+        "enps": 31
+      },
+      "Customer Success": {
+        "enps": 22
+      },
+      "G&A": {
+        "enps": 29
+      }
+    },
+    "2026-Q2": {
+      "Engineering": {
+        "enps": 25
+      },
+      "Product": {
+        "enps": 33
+      },
+      "Sales": {
+        "enps": 21
+      },
+      "Marketing": {
+        "enps": 30
+      },
+      "Customer Success": {
+        "enps": 21
+      },
+      "G&A": {
+        "enps": 26
+      }
+    },
+    "2026-Q3": {
+      "Engineering": {
+        "enps": 27
+      },
+      "Product": {
+        "enps": 31
+      },
+      "Sales": {
+        "enps": 21
+      },
+      "Marketing": {
+        "enps": 28
+      },
+      "Customer Success": {
+        "enps": 24
+      },
+      "G&A": {
+        "enps": 29
+      }
+    },
+    "2026-Q4": {
+      "Engineering": {
+        "enps": 27
+      },
+      "Product": {
+        "enps": 33
+      },
+      "Sales": {
+        "enps": 23
+      },
+      "Marketing": {
+        "enps": 32
+      },
+      "Customer Success": {
+        "enps": 25
+      },
+      "G&A": {
+        "enps": 29
+      }
     }
   }
 }

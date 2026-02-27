@@ -1914,6 +1914,7 @@ metrics:
     pack: coo
     unit: score
     allowed_dims:
+      - segment
       - priority
     allowed_grains:
       - month

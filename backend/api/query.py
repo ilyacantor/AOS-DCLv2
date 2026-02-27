@@ -279,6 +279,7 @@ DIMENSION_TO_FACTBASE_KEY = {
         "attrition_rate_pct": "attrition_by_department",
         "engagement_score": "engagement_by_department",
         "time_to_fill": "time_to_fill_by_department",
+        "enps": "enps_by_department",
         "training_hours": "training_by_department",
     },
     "service": {
