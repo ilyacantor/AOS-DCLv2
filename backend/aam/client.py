@@ -23,7 +23,7 @@ class AAMClient:
         if not raw_url:
             raise ValueError(
                 "AAM_URL environment variable is required. "
-                "Set it in Replit Secrets or your environment."
+                "Set AAM_URL in your environment."
             )
         self.base_url = raw_url.rstrip("/")
         self.timeout = timeout

@@ -7,9 +7,12 @@ DCL run/narration/mapping/topology/semantic/query/MCP endpoints
 that are tightly coupled to the DCLEngine singleton.
 """
 
+import asyncio
 import os
 import signal
+import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
 from datetime import datetime, timezone
@@ -17,7 +20,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from typing import List, Literal, Optional, Dict, Any
 
@@ -53,6 +56,7 @@ from backend.core.security_constraints import (
 )
 from backend.core.mode_state import set_current_mode
 from backend.core.constants import CORS_ORIGINS, API_VERSION, utc_now
+from backend.core.redis_client import is_redis_available
 
 # Route modules
 from backend.api.routes.ingest import router as ingest_router
@@ -69,6 +73,29 @@ logger = get_logger(__name__)
 
 
 # =============================================================================
+# Startup readiness state
+# =============================================================================
+
+# Phase transitions: "starting" → "warming" → "ready" or "degraded"
+_startup_phase: str = "starting"
+_startup_error: Optional[str] = None
+_startup_ready: Optional[asyncio.Event] = None
+
+_WARMUP_TIMEOUT_SECONDS = 60
+
+
+def _is_graph_required_endpoint(path: str) -> bool:
+    """Return True if this endpoint requires the semantic graph to be built."""
+    graph_required = (
+        "/api/dcl/run",
+        "/api/dcl/semantic-export",
+        "/api/dcl/query",
+        "/api/dcl/batch-mapping",
+    )
+    return any(path.startswith(p) for p in graph_required)
+
+
+# =============================================================================
 # App setup
 # =============================================================================
 
@@ -76,7 +103,9 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle for the DCL Engine."""
-    # ---- Startup ----
+    global _startup_phase, _startup_error, _startup_ready
+
+    # ---- Fast startup (sync, <100ms) ----
     logger.info("=== DCL Zero-Trust Security Check ===")
 
     try:
@@ -97,39 +126,26 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("[SECURITY] No payload write violations detected")
 
-    logger.info("=== DCL Engine Ready (Metadata-Only Mode) ===")
+    logger.info("=== DCL Engine Starting (Metadata-Only Mode) ===")
 
-    try:
-        from backend.engine.graph_store import rebuild_graph
-        rebuild_graph()
-        logger.info("[Startup] Semantic graph built")
-    except Exception as e:
-        # Non-fatal — graph will be built on first DCL run
-        logger.warning(f"[Startup] Semantic graph build deferred: {e}")
+    # Set up readiness event and launch background warmup
+    _startup_ready = asyncio.Event()
+    _startup_phase = "warming"
 
-    # Auto-promote mode if ingest buffer has data from a previous session.
-    # mode_state resets to "Demo" on reboot, but ingest data persists (Redis/disk).
-    # Without this, semantic-export reports "Demo" until the next ingest push.
-    try:
-        store = get_ingest_store()
-        stats = store.get_stats()
-        buffered = stats.get("total_rows_buffered", 0)
-        if buffered > 0:
-            set_current_mode("Ingest", run_mode="Dev")
-            logger.info(
-                f"[Startup] Mode auto-promoted: Demo → Ingest "
-                f"({buffered} buffered rows, {stats.get('unique_sources', 0)} sources)"
-            )
-    except Exception as e:
-        logger.warning(f"[Startup] Ingest store check failed (non-fatal): {e}")
+    warmup_task = asyncio.create_task(_warm_up())
 
-    yield
+    yield  # ← App starts accepting requests NOW
 
     # ---- Shutdown ----
+    # Cancel warmup if still running
+    if not warmup_task.done():
+        warmup_task.cancel()
+        try:
+            await warmup_task
+        except asyncio.CancelledError:
+            pass
+
     # Flush ALL pending debounced writes before closing pools.
-    # Both disk and activity-log (Redis) must flush — the daemon timer
-    # threads are killed on exit, so any dirty state in the 1s/2s
-    # debounce window would be lost without explicit flushes here.
     try:
         store = get_ingest_store()
         store._flush_to_disk()
@@ -141,19 +157,87 @@ async def lifespan(app: FastAPI):
     logger.info("[Shutdown] Closing database connection pool...")
     try:
         from backend.semantic_mapper.persist_mappings import MappingPersistence
-        MappingPersistence.close_pool()  # clears caches + closes shared pool
+        MappingPersistence.close_pool()
     except Exception as e:
         logger.warning(f"[Shutdown] Pool close error: {e}")
     logger.info("[Shutdown] Database pool closed")
 
 
-def _sigterm_flush(signum, frame):
-    """Flush all pending writes on SIGTERM before the process exits.
+async def _warm_up():
+    """Background warmup: build graph + check ingest store.
 
-    Render sends SIGTERM before SIGKILL. Without this handler, daemon
-    timer threads are killed and atexit may not fire in time, losing
-    activity entries in the 1s debounce window.
+    Runs after the app is already accepting requests. Sets _startup_ready
+    when done so endpoints that need the graph can proceed.
     """
+    global _startup_phase, _startup_error, _startup_ready
+
+    started = time.monotonic()
+
+    try:
+        # Run blocking I/O in executor to not block the event loop
+        loop = asyncio.get_running_loop()
+
+        # 1. Build semantic graph (DB + AAM remote I/O)
+        try:
+            await asyncio.wait_for(
+                loop.run_in_executor(None, _sync_rebuild_graph),
+                timeout=_WARMUP_TIMEOUT_SECONDS,
+            )
+            logger.info("[Startup] Semantic graph built")
+        except asyncio.TimeoutError:
+            logger.error(
+                f"[Startup] Semantic graph build timed out after {_WARMUP_TIMEOUT_SECONDS}s. "
+                f"Check Supabase/AAM connectivity."
+            )
+            _startup_phase = "degraded"
+            _startup_error = f"Graph build timed out after {_WARMUP_TIMEOUT_SECONDS}s"
+            _startup_ready.set()
+            return
+        except Exception as e:
+            logger.warning(f"[Startup] Semantic graph build deferred: {e}")
+
+        # 2. Auto-promote mode if ingest buffer has data
+        try:
+            await loop.run_in_executor(None, _sync_check_ingest_mode)
+        except Exception as e:
+            logger.warning(f"[Startup] Ingest store check failed (non-fatal): {e}")
+
+        elapsed = time.monotonic() - started
+        _startup_phase = "ready"
+        _startup_ready.set()
+        logger.info(f"=== DCL Engine Ready ({elapsed:.1f}s warmup) ===")
+
+    except asyncio.CancelledError:
+        logger.info("[Startup] Warmup cancelled (shutdown)")
+        raise
+    except Exception as e:
+        logger.error(f"[Startup] Warmup failed: {e}", exc_info=True)
+        _startup_phase = "degraded"
+        _startup_error = str(e)
+        _startup_ready.set()
+
+
+def _sync_rebuild_graph():
+    """Synchronous wrapper for rebuild_graph (runs in executor thread)."""
+    from backend.engine.graph_store import rebuild_graph
+    rebuild_graph()
+
+
+def _sync_check_ingest_mode():
+    """Check ingest buffer and auto-promote mode if data exists."""
+    store = get_ingest_store()
+    stats = store.get_stats()
+    buffered = stats.get("total_rows_buffered", 0)
+    if buffered > 0:
+        set_current_mode("Ingest", run_mode="Dev")
+        logger.info(
+            f"[Startup] Mode auto-promoted: Demo → Ingest "
+            f"({buffered} buffered rows, {stats.get('unique_sources', 0)} sources)"
+        )
+
+
+def _sigterm_flush(signum, frame):
+    """Flush all pending writes on SIGTERM before the process exits."""
     try:
         store = get_ingest_store()
         store._flush_to_disk()
@@ -184,6 +268,29 @@ app.add_middleware(
 engine = DCLEngine()
 app.state.loaded_sources = []
 app.state.loaded_source_ids = []
+
+# Shared executor for offloading sync engine work
+_run_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="dcl-run")
+
+
+# =============================================================================
+# Startup-phase middleware
+# =============================================================================
+
+
+@app.middleware("http")
+async def startup_gate_middleware(request: Request, call_next):
+    """Return 503 for graph-dependent endpoints during warmup."""
+    if _startup_phase not in ("ready", "degraded"):
+        if _is_graph_required_endpoint(request.url.path):
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": "DCL is warming up — semantic graph not yet built. Retry in a few seconds.",
+                    "phase": _startup_phase,
+                },
+            )
+    return await call_next(request)
 
 
 # =============================================================================
@@ -238,13 +345,19 @@ def _invalidate_aam_caches():
 # =============================================================================
 
 
+@app.get("/health")
 @app.get("/api/health")
 def health():
+    from backend.engine.graph_store import get_semantic_graph
+    graph = get_semantic_graph()
     return {
         "status": "DCL Engine API is running",
         "version": API_VERSION,
         "mode": "metadata-only",
-        "note": "NLQ/BLL moved to AOS-NLQ",
+        "phase": _startup_phase,
+        "graph_ready": graph is not None,
+        "redis_available": is_redis_available(),
+        "error": _startup_error,
     }
 
 
@@ -264,7 +377,7 @@ class RunResponse(BaseModel):
 
 
 @app.post("/api/dcl/run", response_model=RunResponse)
-def run_dcl(request: RunRequest):
+async def run_dcl(request: RunRequest):
     run_id = str(uuid.uuid4())
 
     set_current_mode(
@@ -278,8 +391,11 @@ def run_dcl(request: RunRequest):
 
     personas = request.personas or [Persona.CFO, Persona.CRO, Persona.COO, Persona.CTO]
 
-    try:
-        snapshot, metrics = engine.build_graph_snapshot(
+    loop = asyncio.get_running_loop()
+
+    def _sync_run():
+        """Run the graph build in a thread (uses ThreadedConnectionPool)."""
+        return engine.build_graph_snapshot(
             mode=request.mode,
             run_mode=request.run_mode,
             personas=personas,
@@ -288,46 +404,54 @@ def run_dcl(request: RunRequest):
             aod_run_id=request.aod_run_id,
         )
 
-        app.state.loaded_sources = snapshot.meta.get("source_names", [])
-        app.state.loaded_source_ids = snapshot.meta.get("source_canonical_ids", [])
-
-        if request.mode == "AAM":
-            try:
-                store = get_ingest_store()
-                source_names = snapshot.meta.get("source_names", [])
-                source_ids = snapshot.meta.get("source_canonical_ids", [])
-                fabric_planes = snapshot.meta.get("source_fabric_planes", [])
-                aam_kpis = metrics.payload_kpis if metrics.payload_kpis else {}
-                aam_count, aam_snap = store.record_aam_pull(
-                    run_id=run_id,
-                    source_names=source_names,
-                    source_ids=source_ids,
-                    kpis=aam_kpis,
-                    fabric_planes=fabric_planes,
-                )
-                app.state.aam_snapshot_name = aam_snap
-                logger.info(f"[AAM] Recorded {aam_count} AAM pull receipts as '{aam_snap}'")
-            except Exception as e:
-                logger.warning(f"[AAM] Failed to record AAM pull in IngestStore: {e}")
-
-        if request.mode == "Farm":
-            _ensure_farm_content_activity()
-
-        # Rebuild semantic graph after new classification data
-        try:
-            from backend.engine.graph_store import rebuild_graph
-            rebuild_graph()
-        except Exception as e:
-            logger.warning(f"[GraphStore] Post-run graph rebuild failed: {e}")
-
-        return RunResponse(
-            graph=snapshot,
-            run_metrics=metrics,
-            run_id=run_id,
+    try:
+        snapshot, metrics = await asyncio.wait_for(
+            loop.run_in_executor(_run_executor, _sync_run),
+            timeout=120.0,
+        )
+    except asyncio.TimeoutError:
+        logger.error(f"DCL run timed out after 120s (run_id={run_id})")
+        raise HTTPException(
+            status_code=504,
+            detail="Graph build timed out after 120s. Check Supabase/AAM connectivity.",
         )
     except Exception as e:
         logger.error(f"DCL run failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+    app.state.loaded_sources = snapshot.meta.get("source_names", [])
+    app.state.loaded_source_ids = snapshot.meta.get("source_canonical_ids", [])
+
+    if request.mode == "AAM":
+        try:
+            store = get_ingest_store()
+            source_names = snapshot.meta.get("source_names", [])
+            source_ids = snapshot.meta.get("source_canonical_ids", [])
+            fabric_planes = snapshot.meta.get("source_fabric_planes", [])
+            aam_kpis = metrics.payload_kpis if metrics.payload_kpis else {}
+            aam_count, aam_snap = store.record_aam_pull(
+                run_id=run_id,
+                source_names=source_names,
+                source_ids=source_ids,
+                kpis=aam_kpis,
+                fabric_planes=fabric_planes,
+            )
+            app.state.aam_snapshot_name = aam_snap
+            logger.info(f"[AAM] Recorded {aam_count} AAM pull receipts as '{aam_snap}'")
+        except Exception as e:
+            logger.warning(f"[AAM] Failed to record AAM pull in IngestStore: {e}")
+
+    if request.mode == "Farm":
+        _ensure_farm_content_activity()
+
+    # build_graph_snapshot already builds and sets the graph via set_semantic_graph().
+    # No redundant rebuild_graph() call — that would double DB queries and AAM calls.
+
+    return RunResponse(
+        graph=snapshot,
+        run_metrics=metrics,
+        run_id=run_id,
+    )
 
 
 def _ensure_farm_content_activity() -> None:

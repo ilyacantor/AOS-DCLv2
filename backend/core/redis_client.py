@@ -5,7 +5,7 @@ All modules that need Redis should import from here instead of creating
 their own connections. This keeps the connection count predictable.
 
 Usage:
-    from backend.core.redis_client import get_redis
+    from backend.core.redis_client import get_redis, is_redis_available
 
     r = get_redis()
     if r is None:
@@ -27,11 +27,12 @@ logger = get_logger(__name__)
 
 _client: Optional[_redis_lib.Redis] = None  # type: ignore[union-attr]
 _initialized: bool = False
+_redis_available: bool = False
 
 
 def get_redis():
     """Return the shared Redis client, or None if unavailable."""
-    global _client, _initialized
+    global _client, _initialized, _redis_available
 
     if _initialized:
         return _client
@@ -47,11 +48,36 @@ def get_redis():
         return None
 
     try:
-        _client = _redis_lib.from_url(redis_url, decode_responses=True)
+        _client = _redis_lib.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_connect_timeout=5,
+            socket_timeout=5,
+        )
         _client.ping()
+        _redis_available = True
         logger.info("[redis] Shared Redis client connected")
         return _client
     except Exception as e:
-        logger.warning(f"[redis] Redis unavailable: {e} — running without Redis")
+        logger.error(
+            f"[redis] Redis unavailable: {e} — running without Redis. "
+            f"Data will be stored in-memory only and lost on restart. "
+            f"REDIS_URL={redis_url[:20]}..."
+        )
         _client = None
+        _redis_available = False
         return None
+
+
+def is_redis_available() -> bool:
+    """Check if Redis is currently reachable.
+
+    Re-pings on each call so the health endpoint reflects real-time state.
+    """
+    if _client is None:
+        return False
+    try:
+        _client.ping()
+        return True
+    except Exception:
+        return False
