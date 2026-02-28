@@ -643,14 +643,18 @@ def get_cross_system_reconciliation():
     # Determine the snapshot to scope receipt counting
     snapshot_name_filter = latest_export.snapshot_name if latest_export else None
 
-    # Count unique receipt pipe_ids matching this snapshot across ALL dispatches.
+    # Count unique receipt pipe_ids matching this snapshot across Farm dispatches.
     # This is the ground truth — each receipt is proof DCL accepted and stored data
     # for that pipe_id. The activity log accumulates across dispatches and overcounts.
+    # Exclude aam_ dispatches (structure metadata pushes, not Farm content).
     receipt_pipe_id_set: set = set()
     content_rows = 0
     content_sources: List[str] = []
     dispatch_id = ""
     for d in dispatches:
+        # Skip AAM structure dispatches — these are metadata pushes, not Farm content
+        if d.get("dispatch_id", "").startswith("aam_"):
+            continue
         d_snapshot = d.get("snapshot_name", "")
         # Match by snapshot if available, else include all
         if snapshot_name_filter:
