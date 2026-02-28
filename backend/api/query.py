@@ -359,25 +359,43 @@ def validate_query(request: QueryRequest) -> Optional[QueryError]:
     return None
 
 
+def _period_in_range(period: str, start: str, end: str) -> bool:
+    """Check if a period (e.g. '2025-Q1') falls within start/end range.
+
+    Handles year-only boundaries correctly: when start or end is a 4-digit
+    year string (e.g. '2025'), comparison is done by year extraction so that
+    '2025-Q1' is correctly matched as within year '2025'.  Plain string
+    comparison fails here because '2025-Q1' > '2025' due to the dash.
+    """
+    period_year = period[:4]
+    if start:
+        if len(start) == 4 and start.isdigit():
+            if period_year < start:
+                return False
+        elif period < start:
+            return False
+    if end:
+        if len(end) == 4 and end.isdigit():
+            if period_year > end:
+                return False
+        elif period > end:
+            return False
+    return True
+
+
 def filter_periods(data: Dict, time_range: Optional[Dict[str, str]]) -> List[str]:
     """Get list of periods that match the time range filter."""
     fb = load_fact_base()
     all_periods = [q["period"] for q in fb.get("quarterly", [])]
-    
+
     if not time_range:
         return all_periods
-    
+
     start = time_range.get("start", "")
     end = time_range.get("end", "")
-    
-    filtered = []
-    for period in all_periods:
-        if start and period < start:
-            continue
-        if end and period > end:
-            continue
-        filtered.append(period)
-    
+
+    filtered = [p for p in all_periods if _period_in_range(p, start, end)]
+
     return filtered if filtered else all_periods
 
 
