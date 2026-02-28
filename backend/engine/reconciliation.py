@@ -73,6 +73,7 @@ def reconcile(
         fabric_breakdown.append({
             "planeType": plane_type,
             "vendor": conns[0]["vendor"] if conns else "unknown",
+            "source": "aod",  # AOD is A/R for Fabric Plane Identification (RACI v6)
             "aamConnections": aam_count,
             "dclLoaded": dcl_count,
             "delta": aam_count - dcl_count,

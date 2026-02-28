@@ -58,6 +58,7 @@ class PipeDefinition:
     vendor: str = ""
     category: str = ""
     governance_status: Optional[str] = None
+    sor_tagging: Optional[str] = None
     fields: List[str] = dc_field(default_factory=list)
     entity_scope: Optional[str] = None
     identity_keys: List[str] = dc_field(default_factory=list)

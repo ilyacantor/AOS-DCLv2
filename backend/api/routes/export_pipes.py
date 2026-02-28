@@ -32,6 +32,7 @@ class ExportPipesConnection(BaseModel):
     vendor: str = ""
     category: str = ""
     governance_status: Optional[str] = None
+    sor_tagging: Optional[str] = None
     fields: List[str] = Field(default_factory=list)
     entity_scope: Optional[str] = None
     identity_keys: List[str] = Field(default_factory=list)
@@ -153,6 +154,7 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
                 vendor=conn.vendor,
                 category=conn.category,
                 governance_status=conn.governance_status,
+                sor_tagging=conn.sor_tagging,
                 fields=conn.fields,
                 entity_scope=conn.entity_scope,
                 identity_keys=conn.identity_keys,

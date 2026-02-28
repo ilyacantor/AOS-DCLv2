@@ -177,6 +177,12 @@ interface CrossSystemData {
     explanation: string;
     severity: string;
   }>;
+  failed_pipes: Array<{
+    pipe_id: string;
+    vendor: string;
+    category: string;
+    fabric_plane: string;
+  }>;
   activity: {
     structure: Record<string, unknown> | null;
     dispatch: Record<string, unknown> | null;
@@ -1032,6 +1038,37 @@ export function ReconciliationPanel({ runId, dataMode }: ReconciliationPanelProp
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Failed pipes — per-pipe detail for execution failures */}
+        {(xsysData.failed_pipes ?? []).length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
+              Failed Pipes ({xsysData.failed_pipes.length})
+            </h3>
+            <div className="rounded-lg border border-red-500/20 bg-red-500/5 overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-red-500/10 text-muted-foreground">
+                    <th className="text-left p-2 font-medium">Pipe ID</th>
+                    <th className="text-left p-2 font-medium">Vendor</th>
+                    <th className="text-left p-2 font-medium">Category</th>
+                    <th className="text-left p-2 font-medium">Fabric</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {xsysData.failed_pipes.map((fp) => (
+                    <tr key={fp.pipe_id} className="border-b border-red-500/5 last:border-0">
+                      <td className="p-2 font-mono text-red-400">{fp.pipe_id}</td>
+                      <td className="p-2 text-foreground">{fp.vendor}</td>
+                      <td className="p-2 text-muted-foreground">{fp.category}</td>
+                      <td className="p-2 text-muted-foreground">{fp.fabric_plane}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

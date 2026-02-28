@@ -348,16 +348,20 @@ def _invalidate_aam_caches():
 @app.get("/health")
 @app.get("/api/health")
 def health():
+    from backend.core.mode_state import get_current_mode
     from backend.engine.graph_store import get_semantic_graph
+    mode = get_current_mode()
     graph = get_semantic_graph()
     return {
         "status": "DCL Engine API is running",
         "version": API_VERSION,
-        "mode": "metadata-only",
         "phase": _startup_phase,
         "graph_ready": graph is not None,
         "redis_available": is_redis_available(),
         "error": _startup_error,
+        "data_mode": mode.data_mode,
+        "last_run_id": mode.last_run_id,
+        "last_updated": mode.last_updated,
     }
 
 

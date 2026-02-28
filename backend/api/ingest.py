@@ -736,6 +736,24 @@ class IngestStore:
         except Exception as e:
             logger.warning(f"[IngestStore] Redis persist receipt failed: {e}")
 
+    def _persist_receipt_immediate(self, storage_key: str, receipt: RunReceipt) -> None:
+        """Write JUST the receipt to Redis immediately (standalone HSET).
+
+        Defense-in-depth: called before the batched pipeline so the receipt
+        is durable even if the pipeline (which also writes rows, schema,
+        drift, evictions) fails.  Cost: one extra Redis HSET (~1ms).
+        """
+        if not self._redis:
+            return
+        try:
+            self._redis.hset(
+                f"{_REDIS_PREFIX}receipts",
+                storage_key,
+                json.dumps(asdict(receipt)),
+            )
+        except Exception as e:
+            logger.warning(f"[IngestStore] Immediate receipt persist failed: {e}")
+
     def _persist_rows(self, storage_key: str, rows: List[Dict[str, Any]]) -> None:
         """Write rows to Redis with TTL."""
         if not self._redis:
@@ -1104,11 +1122,19 @@ class IngestStore:
                 self._total_rows -= len(evicted_rows)
                 evicted_ids.append(evicted_id)
 
-        # Write-through to Redis (pipelined — single round-trip)
+        # Immediate receipt persistence — standalone HSET before the pipeline
+        # so the receipt is durable even if the batch pipeline fails.
+        self._persist_receipt_immediate(key, receipt)
+
+        # Write-through to Redis (pipelined — single round-trip for all data)
         self._persist_ingest_batch(key, receipt, tagged, pipe_id, schema_record, drift, evicted_ids)
 
-        # Debounced disk write (coalesces rapid writes into one flush every 2s)
-        self._mark_disk_dirty()
+        # Disk write: immediate if Redis is unavailable (receipt has no durable
+        # backup), debounced otherwise (Redis is the durable buffer).
+        if not self._redis:
+            self._flush_to_disk()
+        else:
+            self._mark_disk_dirty()
         return receipt
 
     # --- Query helpers ---

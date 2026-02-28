@@ -90,6 +90,41 @@ def get_sor_reconciliation():
 
         result = reconcile_sor(bindings, metrics_list, entities_list, loaded_sources)
 
+        # --- AOD SOR pipeline coverage (Fix 10) ---
+        # Show which AOD-identified SORs have complete pipeline coverage
+        # (AOD → AAM → Farm → DCL). Uses sor_tagging from pipe definitions.
+        pipe_store = get_pipe_store()
+        ingest_store = get_ingest_store()
+        all_pipe_defs = pipe_store.get_all_definitions()
+        all_receipts = ingest_store.get_all_receipts()
+        receipt_pipe_ids = set(r.pipe_id for r in all_receipts)
+        loaded_canonical_set = set(loaded_sources)
+
+        aod_sor_coverage = []
+        for pipe_def in all_pipe_defs:
+            if not pipe_def.sor_tagging:
+                continue
+            # Parse sor_tagging to extract confidence
+            import json as _json
+            sor_confidence = "unknown"
+            try:
+                parsed = _json.loads(pipe_def.sor_tagging)
+                if isinstance(parsed, dict):
+                    sor_confidence = parsed.get("confidence", "unknown")
+            except (ValueError, TypeError):
+                sor_confidence = "tagged"  # legacy string format
+
+            aod_sor_coverage.append({
+                "pipe_id": pipe_def.pipe_id,
+                "vendor": pipe_def.vendor,
+                "category": pipe_def.category,
+                "aod_confidence": sor_confidence,
+                "aam_has_pipe": True,  # it's in the export, so AAM has it
+                "farm_has_receipt": pipe_def.pipe_id in receipt_pipe_ids,
+                "dcl_has_data": pipe_def.vendor.lower() in {s.lower() for s in loaded_canonical_set} if pipe_def.vendor else False,
+            })
+        result["aodSorCoverage"] = aod_sor_coverage
+
         sor_current_mode = get_current_mode()
         sor_snapshot_name = getattr(app.state, "aam_snapshot_name", None)
         if not sor_snapshot_name:
@@ -605,19 +640,31 @@ def get_cross_system_reconciliation():
     all_receipts = store.get_all_receipts()
     dispatches = store.get_dispatches()
 
-    # Use latest AAM dispatch if available, else latest Farm dispatch
-    aam_dispatches = [d for d in dispatches if d["dispatch_id"].startswith("aam_")]
-    target_dispatch = aam_dispatches[0] if aam_dispatches else (dispatches[0] if dispatches else None)
+    # Determine the snapshot to scope receipt counting
+    snapshot_name_filter = latest_export.snapshot_name if latest_export else None
 
-    content_pipes = 0
+    # Count unique receipt pipe_ids matching this snapshot across ALL dispatches.
+    # This is the ground truth — each receipt is proof DCL accepted and stored data
+    # for that pipe_id. The activity log accumulates across dispatches and overcounts.
+    receipt_pipe_id_set: set = set()
     content_rows = 0
     content_sources: List[str] = []
     dispatch_id = ""
-    if target_dispatch:
-        dispatch_id = target_dispatch["dispatch_id"]
-        content_pipes = target_dispatch["pipe_count"]
-        content_rows = target_dispatch["total_rows"]
-        content_sources = target_dispatch["unique_sources"]
+    for d in dispatches:
+        d_snapshot = d.get("snapshot_name", "")
+        # Match by snapshot if available, else include all
+        if snapshot_name_filter:
+            if isinstance(d_snapshot, str) and d_snapshot != snapshot_name_filter:
+                continue
+            if isinstance(d_snapshot, list) and snapshot_name_filter not in d_snapshot:
+                continue
+        for pid in d.get("pipe_ids", []):
+            receipt_pipe_id_set.add(pid)
+        content_rows += d["total_rows"]
+        content_sources.extend(d["unique_sources"])
+        if not dispatch_id:
+            dispatch_id = d["dispatch_id"]  # use first matching dispatch for identity
+    content_sources = sorted(set(content_sources))
 
     # --- Build per-system view ---
     # AAM numbers (from structure + dispatch activity)
@@ -626,9 +673,10 @@ def get_cross_system_reconciliation():
     aam_sors = structure_entry["sors"] if structure_entry else len(structure_vendors)
     aam_fabrics = structure_entry["fabrics"] if structure_entry else len(structure_fabrics)
 
-    # DCL numbers (from content activity + drops)
+    # DCL numbers — receipt-based count (ground truth), not activity log.
+    # Each unique pipe_id with a receipt = one pipe that DCL durably ingested.
     dcl_total = aam_total  # DCL received same total via export-pipes
-    dcl_ingested = content_entry["pipes"] if content_entry else content_pipes
+    dcl_ingested = len(receipt_pipe_id_set)
     dcl_sors = content_entry["sors"] if content_entry else 0
     dcl_tooling = content_entry.get("tooling_pipes", 0) if content_entry else 0
     dcl_fabrics = content_entry["fabrics"] if content_entry else 0
@@ -653,9 +701,10 @@ def get_cross_system_reconciliation():
             "right": f"Farm pushed {farm_pushed}",
             "delta": farm_failed,
             "explanation": (
-                f"{farm_failed} pipes were dispatched by AAM but never pushed by Farm. "
-                f"These failed during Farm's data generation phase (timeouts, "
-                f"connection errors, or synthetic data failures)."
+                f"{farm_failed} pipes were dispatched but have no DCL receipt. "
+                f"Causes: Farm generation failure, DCL push failure, or receipt "
+                f"lost before DCL persisted (process restart). "
+                f"See failed_pipes list below for per-pipe detail."
             ),
             "severity": "warning" if farm_failed > 0 else "info",
         })
@@ -725,6 +774,24 @@ def get_cross_system_reconciliation():
             "severity": "info",
         })
 
+    # --- Per-pipe failure list (Fix 2) ---
+    # Compute which pipe_ids from structure phase have no receipt across
+    # any dispatch. This gives operators exact visibility into failures.
+    structure_pipe_ids = set(latest_export.pipe_ids) if latest_export else set()
+    drop_pipe_id_set = set(unique_drop_pipes)
+
+    # Failed = defined in structure but neither receipted nor dropped
+    failed_pipe_ids = structure_pipe_ids - receipt_pipe_id_set - drop_pipe_id_set
+    failed_pipes: List[Dict[str, Any]] = []
+    for pid in sorted(failed_pipe_ids):
+        pipe_def = pipe_store.lookup(pid)
+        failed_pipes.append({
+            "pipe_id": pid,
+            "vendor": pipe_def.vendor if pipe_def else "unknown",
+            "category": pipe_def.category if pipe_def else "unknown",
+            "fabric_plane": pipe_def.fabric_plane if pipe_def else "unknown",
+        })
+
     # Snapshot identity
     snapshot_name = ""
     aod_run_id = ""
@@ -776,6 +843,7 @@ def get_cross_system_reconciliation():
         },
         "drops_by_error": drops_by_error,
         "deltas": deltas,
+        "failed_pipes": failed_pipes,
         "activity": {
             "structure": structure_entry,
             "dispatch": dispatch_entry,
