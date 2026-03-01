@@ -207,6 +207,7 @@ def _record_ingest_activity(
     rows: int,
     matched_schema: bool,
     now: str,
+    aod_sor_count: int = 0,
 ) -> None:
     """Record Path 3 (content) activity entries.
 
@@ -299,6 +300,8 @@ def _record_ingest_activity(
             store._content_other_pipes.setdefault(did, set()).add(pipe_id)
         sor_set = store._content_sor_pipes.get(did, set())
         other_set = store._content_other_pipes.get(did, set())
+        # entry.sors = AOD authority (same basis as structure phase).
+        # sor_pipes/other_pipes track per-pipe tagging for sub-row detail.
         store.record_activity(ActivityEntry(
             phase="content",
             source="Farm",
@@ -306,7 +309,7 @@ def _record_ingest_activity(
             run_id=run_id,
             timestamp=now,
             pipes=1,
-            sors=1 if is_sor else 0,
+            sors=aod_sor_count,
             tooling_pipes=1 if is_tooling else 0,
             fabrics=len(content_fabrics),
             mapped_pipes=0 if is_tooling else (1 if matched_schema else 0),
@@ -353,7 +356,7 @@ def _record_ingest_activity(
         with store._lock:
             for entry in reversed(store._activity_log):
                 if entry.phase == "content" and entry.dispatch_id == did:
-                    entry.sors = len(sor_set)  # AOD-authoritative: only pipes with sor_tagging
+                    entry.sors = aod_sor_count  # AOD authority — same basis as structure phase
                     entry.tooling_pipes = len(tooling_set)
                     entry.fabrics = len(fabrics_set)
                     entry.mapped_pipes = len(mapped_set)
@@ -376,7 +379,7 @@ def _record_ingest_activity(
             run_id=run_id,
             timestamp=now,
             pipes=1,
-            sors=1 if is_sor else 0,
+            sors=aod_sor_count,
             tooling_pipes=1 if is_tooling else 0,
             mapped_pipes=0 if is_tooling else (1 if matched_schema else 0),
             unmapped_pipes=0 if is_tooling or matched_schema else 1,
@@ -634,6 +637,7 @@ async def dcl_ingest(
     schema_fields = pipe_def.fields if pipe_def else []
 
     # --- Record Path 2 + Path 3 activity ---
+    aod_sor_count = len(getattr(request.app.state, "aod_systems_of_record", []))
     _record_ingest_activity(
         store=store,
         dispatch_id=dispatch_id,
@@ -644,6 +648,7 @@ async def dcl_ingest(
         rows=actual_rows,
         matched_schema=matched_schema,
         now=now,
+        aod_sor_count=aod_sor_count,
     )
 
     # --- Materialize metric data points (deferred to background thread) ---
