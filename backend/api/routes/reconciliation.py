@@ -10,7 +10,7 @@ Handles:
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
@@ -584,7 +584,7 @@ def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 @router.get("/api/dcl/reconciliation/cross-system")
-def get_cross_system_reconciliation():
+def get_cross_system_reconciliation(http_request: Request):
     """Cross-system stats reconciliation — read-only aggregation.
 
     Pulls numbers from:
@@ -592,6 +592,7 @@ def get_cross_system_reconciliation():
       - IngestStore activity log (3-phase entries)
       - IngestStore drop log (rejected pipes)
       - IngestStore receipts (content phase: ingested pipes)
+      - AOD-authoritative systems_of_record (from app.state, set by export-pipes)
 
     Returns a unified view with per-system stats, deltas, and explanations.
     No data is mutated — this is purely a read endpoint.
@@ -674,7 +675,7 @@ def get_cross_system_reconciliation():
     # AAM numbers (from structure + dispatch activity)
     aam_total = structure_entry["pipes"] if structure_entry else structure_pipes
     aam_dispatched = dispatch_entry["pipes"] if dispatch_entry else 0
-    aam_sors = structure_entry["sors"] if structure_entry else len(structure_vendors)
+    aam_sors = structure_entry["sors"] if structure_entry else 0
     aam_fabrics = structure_entry["fabrics"] if structure_entry else len(structure_fabrics)
 
     # DCL numbers — receipt-based count (ground truth), not activity log.
@@ -761,21 +762,55 @@ def get_cross_system_reconciliation():
             "severity": "info",
         })
 
-    # Delta: SOR counts (structure vs content)
-    if aam_sors != dcl_sors and aam_sors > 0:
+    # Delta: SOR counts — compare against AOD authority.
+    # Per RACI v6 rows 166-167, AOD owns SOR identification.
+    # Both structure and content phases now derive their SOR count from
+    # AOD's sor_tagging.  The old code compared vendor-count (structure)
+    # vs category-count (content), which was comparing two wrong numbers.
+    aod_systems_of_record = getattr(http_request.app.state, "aod_systems_of_record", [])
+    aod_sor_count = len(aod_systems_of_record)
+
+    if aod_sor_count > 0:
+        if aam_sors != aod_sor_count:
+            deltas.append({
+                "label": "Structure SOR count vs AOD authority",
+                "left": f"AOD: {aod_sor_count} SORs (authoritative)",
+                "right": f"Structure: {aam_sors} SORs (received)",
+                "delta": aod_sor_count - aam_sors,
+                "explanation": (
+                    f"AOD identified {aod_sor_count} authoritative Systems of Record. "
+                    f"Structure phase received {aam_sors}. These should match — "
+                    f"if they don't, check that AAM is forwarding systems_of_record "
+                    f"in the export-pipes payload."
+                ),
+                "severity": "warning",
+            })
+        if dcl_sors != aod_sor_count and dcl_sors >= 0:
+            deltas.append({
+                "label": "Content SOR count vs AOD authority",
+                "left": f"AOD: {aod_sor_count} SORs (authoritative)",
+                "right": f"Content: {dcl_sors} SORs (ingested)",
+                "delta": aod_sor_count - dcl_sors,
+                "explanation": (
+                    f"AOD identified {aod_sor_count} authoritative Systems of Record. "
+                    f"Content phase ingested data from {dcl_sors} SOR pipes. "
+                    f"Gap of {abs(aod_sor_count - dcl_sors)} — check failed_pipes "
+                    f"for SOR pipes that didn't push content."
+                ),
+                "severity": "warning" if dcl_sors < aod_sor_count else "info",
+            })
+    elif aam_sors > 0 or dcl_sors > 0:
         deltas.append({
-            "label": "SOR count discrepancy",
-            "left": f"Structure: {aam_sors} SORs (vendor-based)",
-            "right": f"Content: {dcl_sors} SORs (category-based)",
-            "delta": aam_sors - dcl_sors,
+            "label": "Missing AOD SOR authority",
+            "left": "AOD: 0 SORs (no systems_of_record received)",
+            "right": f"Structure: {aam_sors}, Content: {dcl_sors}",
+            "delta": 0,
             "explanation": (
-                f"Structure phase counts SORs as unique vendors ({aam_sors}). "
-                f"Content phase counts SORs as unique non-tooling source_systems ({dcl_sors}). "
-                f"This is a definition difference, not a counting error — AAM uses "
-                f"vendor names, DCL uses category-based classification "
-                f"(crm, erp, finops, infra, aod)."
+                "No AOD-authoritative systems_of_record in the export payload. "
+                "AAM may not be forwarding SOR declarations from the handoff. "
+                "SOR counts are unreliable without AOD authority."
             ),
-            "severity": "info",
+            "severity": "warning",
         })
 
     # --- Per-pipe failure list (Fix 2) ---
@@ -826,8 +861,8 @@ def get_cross_system_reconciliation():
             "dcl": {
                 "total_definitions": dcl_total,
                 "ingested": dcl_ingested,
-                "sors_category": dcl_sors,
-                "sors_governed": dcl_sor_pipes,
+                "sors": dcl_sors,
+                "sor_pipes": dcl_sor_pipes,
                 "tooling_pipes": dcl_tooling,
                 "fabrics_active": dcl_fabrics,
                 "fabrics_defined": aam_fabrics,
@@ -839,6 +874,10 @@ def get_cross_system_reconciliation():
                 "drops_unique_pipes": dcl_drops_unique,
                 "drop_pipe_ids": unique_drop_pipes,
             },
+        },
+        "aod_authority": {
+            "sor_count": aod_sor_count,
+            "systems_of_record": aod_systems_of_record,
         },
         "category_breakdown": category_counts,
         "governance": {

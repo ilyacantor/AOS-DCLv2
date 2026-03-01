@@ -14,6 +14,7 @@ Handles:
 """
 
 import asyncio
+import json
 import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -257,8 +258,21 @@ def _record_ingest_activity(
     pipe_fabric = pipe_def.fabric_plane if pipe_def.fabric_plane else None
     is_tooling = _is_tooling_pipe(pipe_def)
 
-    # Classify pipe as SOR (governed) or other based on governance_status
-    is_sor = getattr(pipe_def, "governance_status", None) == "governed"
+    # Classify pipe as SOR using AOD's sor_tagging (authoritative).
+    # Per RACI v6 rows 166-167, AOD owns SOR identification.
+    # The old code checked governance_status == "governed" which is a
+    # different dimension.  The even-older code treated every non-tooling
+    # pipe as a SOR.  Both are dead — only AOD's tagging counts.
+    is_sor = False
+    if pipe_def.sor_tagging:
+        try:
+            tagging = json.loads(pipe_def.sor_tagging)
+            is_sor = tagging.get("confidence") in ("high", "medium")
+        except (json.JSONDecodeError, TypeError):
+            logger.warning(
+                f"[Activity] pipe_id={pipe_id} has unparseable sor_tagging: "
+                f"{pipe_def.sor_tagging!r} — treating as non-SOR"
+            )
 
     if did and not store.has_phase(did, "content"):
         # First pipe for this dispatch — create the content entry
@@ -292,7 +306,7 @@ def _record_ingest_activity(
             run_id=run_id,
             timestamp=now,
             pipes=1,
-            sors=0 if is_tooling else 1,
+            sors=1 if is_sor else 0,
             tooling_pipes=1 if is_tooling else 0,
             fabrics=len(content_fabrics),
             mapped_pipes=0 if is_tooling else (1 if matched_schema else 0),
@@ -339,7 +353,7 @@ def _record_ingest_activity(
         with store._lock:
             for entry in reversed(store._activity_log):
                 if entry.phase == "content" and entry.dispatch_id == did:
-                    entry.sors = len(sources) - len(tooling_set)  # Exclude tooling from SOR count
+                    entry.sors = len(sor_set)  # AOD-authoritative: only pipes with sor_tagging
                     entry.tooling_pipes = len(tooling_set)
                     entry.fabrics = len(fabrics_set)
                     entry.mapped_pipes = len(mapped_set)
@@ -362,7 +376,7 @@ def _record_ingest_activity(
             run_id=run_id,
             timestamp=now,
             pipes=1,
-            sors=0 if is_tooling else 1,
+            sors=1 if is_sor else 0,
             tooling_pipes=1 if is_tooling else 0,
             mapped_pipes=0 if is_tooling else (1 if matched_schema else 0),
             unmapped_pipes=0 if is_tooling or matched_schema else 1,

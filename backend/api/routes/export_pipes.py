@@ -6,6 +6,8 @@ Handles:
   GET  /api/dcl/export-pipes   — list registered pipe definitions
 """
 
+import json
+
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -64,6 +66,20 @@ class SkippedConnection(BaseModel):
     discovered_at: Optional[str] = None
 
 
+class SORDeclarationSummary(BaseModel):
+    """AOD-authoritative SOR declaration, forwarded by AAM.
+
+    Per RACI v6 rows 166-167, AOD owns SOR identification.
+    This is the authoritative SOR list — DCL uses it for counting,
+    NOT vendor deduplication or category classification.
+    """
+    domain: str = ""
+    vendor: str = ""
+    category: str = ""
+    confidence: str = "high"
+    source: str = "farm"
+
+
 class ExportPipesRequest(BaseModel):
     """The DCLExportResponse schema from AAM."""
     aod_run_id: Optional[str] = None
@@ -74,6 +90,10 @@ class ExportPipesRequest(BaseModel):
     fabric_planes: List[ExportPipesFabricPlane] = Field(default_factory=list)
     skipped_connections: List[SkippedConnection] = Field(default_factory=list)
     skipped_count: int = 0
+    systems_of_record: List[SORDeclarationSummary] = Field(
+        default_factory=list,
+        description="AOD-authoritative Systems of Record",
+    )
 
 
 class ExportPipesResponse(BaseModel):
@@ -84,6 +104,7 @@ class ExportPipesResponse(BaseModel):
     canonical_sources: List[str]
     skipped_noted: int
     aod_run_id: Optional[str]
+    aod_sor_count: int = 0                # AOD-authoritative SOR count
     timestamp: str
 
 
@@ -207,7 +228,25 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
         )
 
     # --- Record Path 1 activity (Structure) ---
-    unique_sors = sorted(set(d.vendor for d in definitions if d.vendor))
+    # SOR count: AOD is the authority (RACI v6 rows 166-167).
+    # Use systems_of_record from the export payload — this is the AOD-
+    # authoritative list passed through AAM.  The old code counted every
+    # unique vendor as a SOR (giving 91 instead of 6).  That path is
+    # dead — if AOD didn't send SOR declarations, the count is 0.
+    aod_sor_count = len(request.systems_of_record)
+    if aod_sor_count > 0:
+        aod_sor_vendors = sorted(s.vendor for s in request.systems_of_record if s.vendor)
+        logger.info(
+            f"[ExportPipes] AOD-authoritative SORs ({aod_sor_count}): "
+            f"{aod_sor_vendors}"
+        )
+    else:
+        logger.warning(
+            "[ExportPipes] No systems_of_record in AAM export payload. "
+            "SOR count will be 0.  This means AAM did not forward AOD's "
+            "SOR declarations — check AAM's /export endpoint."
+        )
+
     unique_fabrics = sorted(set(d.fabric_plane for d in definitions if d.fabric_plane))
 
     if not request.aod_run_id:
@@ -216,6 +255,11 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
             "Activity log entry will use empty identifiers — this indicates "
             "an AAM integration issue."
         )
+
+    # Store AOD-authoritative SOR list on app state for reconciliation
+    http_request.app.state.aod_systems_of_record = [
+        s.model_dump() for s in request.systems_of_record
+    ]
 
     display_name = resolved_snapshot or request.aod_run_id or ""
     ingest_store = get_ingest_store()
@@ -228,7 +272,7 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
         run_id=request.aod_run_id or "",
         timestamp=now,
         pipes=len(definitions),
-        sors=len(unique_sors),
+        sors=aod_sor_count,
         fabrics=len(unique_fabrics),
         dispatch_id=f"aam_{request.aod_run_id[:20]}" if request.aod_run_id else "",
         aod_run_id=request.aod_run_id or "",
@@ -249,6 +293,7 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
         canonical_sources=canonical_sources,
         skipped_noted=skipped_noted,
         aod_run_id=request.aod_run_id,
+        aod_sor_count=aod_sor_count,
         timestamp=now,
     )
 
