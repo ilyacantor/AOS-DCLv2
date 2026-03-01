@@ -415,24 +415,7 @@ export function IngestionPanel() {
                                   {fmtDate(entry.timestamp)}
                                 </td>
                                 <td className="px-3 py-1.5 text-right font-mono text-foreground">
-                                  {entry.pipes > 0 ? (
-                                    <span>
-                                      {entry.pipes}
-                                      {entry.phase === 'content' && (entry.mapped_pipes > 0 || entry.unmapped_pipes > 0) && (
-                                        <span className="text-[10px] text-muted-foreground ml-1">
-                                          (<span className="text-emerald-400">{entry.mapped_pipes}</span>
-                                          /<span className="text-red-400">{entry.unmapped_pipes}</span>)
-                                        </span>
-                                      )}
-                                      {entry.phase === 'content' && (entry.sor_pipes > 0 || entry.other_pipes > 0) && (
-                                        <span className="text-[10px] text-muted-foreground ml-1" title={`${entry.sor_pipes} SOR (governed) / ${entry.other_pipes} other`}>
-                                          <span className="text-blue-400">{entry.sor_pipes} SOR</span>
-                                          {' / '}
-                                          <span className="text-slate-400">{entry.other_pipes} other</span>
-                                        </span>
-                                      )}
-                                    </span>
-                                  ) : (
+                                  {entry.pipes > 0 ? entry.pipes : (
                                     <span className="text-muted-foreground/40">-</span>
                                   )}
                                 </td>
