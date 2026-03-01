@@ -637,7 +637,9 @@ async def dcl_ingest(
     schema_fields = pipe_def.fields if pipe_def else []
 
     # --- Record Path 2 + Path 3 activity ---
-    aod_sor_count = len(getattr(request.app.state, "aod_systems_of_record", []))
+    # Read AOD SOR count from PipeStore (shared across workers via Redis).
+    # app.state is per-worker and won't survive multi-worker deployments.
+    aod_sor_count = len(get_pipe_store().get_aod_systems_of_record())
     _record_ingest_activity(
         store=store,
         dispatch_id=dispatch_id,

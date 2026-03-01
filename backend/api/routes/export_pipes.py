@@ -208,6 +208,7 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
         aod_run_id=request.aod_run_id,
         source=request.source,
         snapshot_name=resolved_snapshot,
+        systems_of_record=[s.model_dump() for s in request.systems_of_record],
     )
 
     # --- Diagnostic: log canonical sources derived from vendors ---

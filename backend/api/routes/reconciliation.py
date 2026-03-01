@@ -767,7 +767,8 @@ def get_cross_system_reconciliation(http_request: Request):
     # Both structure and content phases now derive their SOR count from
     # AOD's sor_tagging.  The old code compared vendor-count (structure)
     # vs category-count (content), which was comparing two wrong numbers.
-    aod_systems_of_record = getattr(http_request.app.state, "aod_systems_of_record", [])
+    # Read from PipeStore (shared across workers via Redis), not app.state (per-worker).
+    aod_systems_of_record = get_pipe_store().get_aod_systems_of_record()
     aod_sor_count = len(aod_systems_of_record)
 
     if aod_sor_count > 0:

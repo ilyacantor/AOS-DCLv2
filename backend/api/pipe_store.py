@@ -88,6 +88,7 @@ class ExportReceipt:
     pipe_ids: List[str]
     received_at: str
     snapshot_name: Optional[str] = None
+    systems_of_record: Optional[List[dict]] = None  # AOD-authoritative SOR list
 
 
 # ---------------------------------------------------------------------------
@@ -180,8 +181,8 @@ ON CONFLICT (pipe_id) DO UPDATE SET
 
 _INSERT_RECEIPT = """
 INSERT INTO pipe_export_receipts
-    (aod_run_id, source, total_connections, pipe_ids, received_at, snapshot_name)
-VALUES (%s, %s, %s, %s, %s, %s);
+    (aod_run_id, source, total_connections, pipe_ids, received_at, snapshot_name, systems_of_record)
+VALUES (%s, %s, %s, %s, %s, %s, %s);
 """
 
 
@@ -261,6 +262,16 @@ class PipeDefinitionStore:
                                 NULL;
                             END $$;
                         """)
+                    # Migrate: add systems_of_record JSONB to receipts
+                    cur.execute("""
+                        DO $$
+                        BEGIN
+                            ALTER TABLE pipe_export_receipts
+                                ADD COLUMN systems_of_record JSONB DEFAULT '[]'::jsonb;
+                        EXCEPTION WHEN duplicate_column THEN
+                            NULL;
+                        END $$;
+                    """)
                 conn.commit()
                 self._pg_available = True
                 logger.info("[PipeStore] Postgres tables ensured")
@@ -315,7 +326,7 @@ class PipeDefinitionStore:
                     # Load export receipts
                     cur.execute(
                         "SELECT aod_run_id, source, total_connections, pipe_ids, "
-                        "received_at, snapshot_name "
+                        "received_at, snapshot_name, systems_of_record "
                         "FROM pipe_export_receipts ORDER BY id"
                     )
                     for row in cur.fetchall():
@@ -326,6 +337,7 @@ class PipeDefinitionStore:
                             pipe_ids=row[3] if isinstance(row[3], list) else [],
                             received_at=str(row[4]) if row[4] else "",
                             snapshot_name=row[5],
+                            systems_of_record=row[6] if isinstance(row[6], list) else [],
                         ))
 
                 self._pg_available = True
@@ -424,6 +436,7 @@ class PipeDefinitionStore:
                         json.dumps(receipt.pipe_ids),
                         receipt.received_at,
                         receipt.snapshot_name,
+                        json.dumps(receipt.systems_of_record or []),
                     ))
                 conn.commit()
                 self._pg_available = True
@@ -632,6 +645,7 @@ class PipeDefinitionStore:
         aod_run_id: Optional[str] = None,
         source: str = "aam",
         snapshot_name: Optional[str] = None,
+        systems_of_record: Optional[List[dict]] = None,
     ) -> ExportReceipt:
         """Register multiple pipe definitions from an export-pipes call."""
         now = datetime.now(timezone.utc).isoformat()
@@ -653,6 +667,7 @@ class PipeDefinitionStore:
                 pipe_ids=pipe_ids,
                 received_at=now,
                 snapshot_name=snapshot_name,
+                systems_of_record=systems_of_record or [],
             )
             self._export_receipts.append(receipt)
             if len(self._export_receipts) > _MAX_EXPORT_RECEIPTS:
@@ -715,6 +730,18 @@ class PipeDefinitionStore:
         self._sync_from_redis()
         with self._lock:
             return list(self._export_receipts)
+
+    def get_aod_systems_of_record(self) -> List[dict]:
+        """Return the AOD-authoritative SOR list from the latest export receipt.
+
+        Multi-worker safe: syncs from Redis before reading, so Worker B
+        sees the SOR list that Worker A stored during /export-pipes.
+        """
+        receipts = self.get_export_receipts()
+        if not receipts:
+            return []
+        latest = receipts[-1]
+        return latest.systems_of_record or []
 
     def clear(self) -> None:
         """Clear all definitions (for testing)."""
