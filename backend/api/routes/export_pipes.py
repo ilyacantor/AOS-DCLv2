@@ -265,6 +265,14 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
     ingest_store = get_ingest_store()
     # New run starting — clear drops from previous run
     ingest_store.clear_drops()
+    did = f"aam_{request.aod_run_id[:20]}" if request.aod_run_id else ""
+    # Dedup: if this dispatch already has a structure entry, replace it
+    # (re-pushing the same run should update, not duplicate).
+    with ingest_store._lock:
+        ingest_store._activity_log = [
+            e for e in ingest_store._activity_log
+            if not (e.phase == "structure" and e.dispatch_id == did and did)
+        ]
     ingest_store.record_activity(ActivityEntry(
         phase="structure",
         source="AAM",
@@ -274,7 +282,7 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
         pipes=len(definitions),
         sors=aod_sor_count,
         fabrics=len(unique_fabrics),
-        dispatch_id=f"aam_{request.aod_run_id[:20]}" if request.aod_run_id else "",
+        dispatch_id=did,
         aod_run_id=request.aod_run_id or "",
     ))
 

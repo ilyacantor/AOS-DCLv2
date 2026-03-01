@@ -463,11 +463,11 @@ export function IngestionPanel() {
                                             <span className="text-red-400">{entry.unmapped_pipes}</span>
                                           </span>
                                           <span>
-                                            <span className="text-muted-foreground/60">SOR </span>
-                                            <span className="text-blue-400">{entry.sor_pipes}</span>
+                                            <span className="text-muted-foreground/60">SOR systems </span>
+                                            <span className="text-blue-400">{entry.sors}</span>
                                             <span className="text-muted-foreground/40"> / </span>
-                                            <span className="text-muted-foreground/60">other </span>
-                                            <span className="text-slate-400">{entry.other_pipes}</span>
+                                            <span className="text-muted-foreground/60">tooling </span>
+                                            <span className="text-amber-400">{entry.tooling_pipes}</span>
                                           </span>
                                         </>
                                       )}
