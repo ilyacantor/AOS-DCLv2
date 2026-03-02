@@ -106,6 +106,7 @@ class ExportPipesResponse(BaseModel):
     aod_run_id: Optional[str]
     aod_sor_count: int = 0                # AOD-authoritative SOR count
     timestamp: str
+    warnings: List[str] = Field(default_factory=list)
 
 
 # Re-export for local use — single source of truth in backend.api.ingest
@@ -234,6 +235,7 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
     # authoritative list passed through AAM.  The old code counted every
     # unique vendor as a SOR (giving 91 instead of 6).  That path is
     # dead — if AOD didn't send SOR declarations, the count is 0.
+    warnings: List[str] = []
     aod_sor_count = len(request.systems_of_record)
     if aod_sor_count > 0:
         aod_sor_vendors = sorted(s.vendor for s in request.systems_of_record if s.vendor)
@@ -242,11 +244,13 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
             f"{aod_sor_vendors}"
         )
     else:
-        logger.warning(
-            "[ExportPipes] No systems_of_record in AAM export payload. "
-            "SOR count will be 0.  This means AAM did not forward AOD's "
-            "SOR declarations — check AAM's /export endpoint."
+        _warn = (
+            "No AOD SOR declarations in payload — SOR count is 0. "
+            "AAM did not forward systems_of_record from AOD. "
+            "Check AAM's /export endpoint."
         )
+        logger.warning(f"[ExportPipes] {_warn}")
+        warnings.append(_warn)
 
     unique_fabrics = sorted(set(d.fabric_plane for d in definitions if d.fabric_plane))
 
@@ -256,11 +260,6 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
             "Activity log entry will use empty identifiers — this indicates "
             "an AAM integration issue."
         )
-
-    # Store AOD-authoritative SOR list on app state for reconciliation
-    http_request.app.state.aod_systems_of_record = [
-        s.model_dump() for s in request.systems_of_record
-    ]
 
     display_name = resolved_snapshot or request.aod_run_id or ""
     ingest_store = get_ingest_store()
@@ -304,6 +303,7 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
         aod_run_id=request.aod_run_id,
         aod_sor_count=aod_sor_count,
         timestamp=now,
+        warnings=warnings,
     )
 
 

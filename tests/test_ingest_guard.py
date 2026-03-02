@@ -158,12 +158,17 @@ def test_ingest_wrong_pipe_id_rejected(client):
 # ---------------------------------------------------------------------------
 
 def test_ingest_no_definitions_guard_bypassed(client):
-    """No export-pipes called → guard bypassed, ingest succeeds."""
+    """No export-pipes called → guard bypassed, ingest succeeds.
+
+    Uses farm_ run_id prefix to bypass the canonical source gate —
+    Farm self-directed pushes are the realistic scenario where no
+    export-pipes have been called yet.
+    """
     # No export-pipes call — store is empty
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
-        headers={"x-pipe-id": "any-pipe", "x-run-id": "test-run-003"},
+        headers={"x-pipe-id": "any-pipe", "x-run-id": "farm_test-run-003"},
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -325,6 +330,7 @@ def test_guard_activates_for_all_pipes(client):
                     {
                         "pipe_id": "sf-crm-001",
                         "source_name": "Salesforce",
+                        "vendor": "salesforce",
                         "fields": ["id"],
                         "health": "healthy",
                     },
@@ -332,7 +338,8 @@ def test_guard_activates_for_all_pipes(client):
             },
         ],
     }
-    client.post("/api/dcl/export-pipes", json=single_export)
+    resp = client.post("/api/dcl/export-pipes", json=single_export)
+    assert resp.status_code == 200, f"export-pipes failed: {resp.json()}"
 
     # sf-crm-001 should work
     resp = client.post(

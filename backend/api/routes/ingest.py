@@ -639,7 +639,23 @@ async def dcl_ingest(
     # --- Record Path 2 + Path 3 activity ---
     # Read AOD SOR count from PipeStore (shared across workers via Redis).
     # app.state is per-worker and won't survive multi-worker deployments.
-    aod_sor_count = len(get_pipe_store().get_aod_systems_of_record())
+    pipe_store_for_sor = get_pipe_store()
+    aod_sor_list = pipe_store_for_sor.get_aod_systems_of_record()
+    aod_sor_count = len(aod_sor_list)
+
+    # Surface warnings in the response body so callers (Farm) can log them
+    ingest_warnings: list[str] = []
+    if not pipe_store_for_sor.get_export_receipts():
+        ingest_warnings.append(
+            "Content received before structure — 3-phase sequence is broken. "
+            "AAM must push /export-pipes before Farm pushes /ingest."
+        )
+    elif aod_sor_count == 0:
+        ingest_warnings.append(
+            "No AOD SOR declarations found in latest export receipt. "
+            "SOR count is 0 — check that AAM forwards systems_of_record from AOD."
+        )
+
     _record_ingest_activity(
         store=store,
         dispatch_id=dispatch_id,
@@ -698,6 +714,7 @@ async def dcl_ingest(
         matched_schema=matched_schema,
         schema_fields=schema_fields,
         timestamp=now,
+        warnings=ingest_warnings,
     )
 
 
