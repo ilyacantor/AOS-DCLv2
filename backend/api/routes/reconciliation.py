@@ -493,6 +493,40 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
     return result
 
 
+def _diagnose_pipe_failure(
+    pipe_def,
+    pipe_id: str,
+    dispatch_entry: Optional[Dict[str, Any]],
+) -> str:
+    """Return a plain-English reason why this pipe has no content receipt."""
+    if pipe_def is None:
+        return (
+            f"Pipe '{pipe_id}' has no definition in DCL's pipe store — "
+            f"it was listed in the export but never registered. "
+            f"AAM may have sent a stale or malformed pipe ID."
+        )
+    if not pipe_def.vendor:
+        return (
+            f"Pipe definition exists but vendor is empty — "
+            f"Farm cannot identify which source system to generate data for."
+        )
+    if not pipe_def.category or pipe_def.category.lower() in ("", "unknown"):
+        return (
+            f"Pipe has vendor '{pipe_def.vendor}' but no category — "
+            f"Farm may have skipped it because the data type is unclassified."
+        )
+    if dispatch_entry is None:
+        return (
+            f"No dispatch activity recorded — AAM may not have dispatched "
+            f"work orders to Farm for this run."
+        )
+    return (
+        f"Dispatched to Farm (vendor: {pipe_def.vendor}, "
+        f"category: {pipe_def.category}) but no content received — "
+        f"Farm failed to generate or push data for this pipe."
+    )
+
+
 def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
     """Original AAM reconciliation — fetches from AAM fresh each time."""
     from backend.aam.client import get_aam_client
@@ -825,11 +859,13 @@ def get_cross_system_reconciliation(http_request: Request):
     failed_pipes: List[Dict[str, Any]] = []
     for pid in sorted(failed_pipe_ids):
         pipe_def = pipe_store.lookup(pid)
+        reason = _diagnose_pipe_failure(pipe_def, pid, dispatch_entry)
         failed_pipes.append({
             "pipe_id": pid,
             "vendor": pipe_def.vendor if pipe_def else "unknown",
             "category": pipe_def.category if pipe_def else "unknown",
             "fabric_plane": pipe_def.fabric_plane if pipe_def else "unknown",
+            "reason": reason,
         })
 
     # Snapshot identity
