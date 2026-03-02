@@ -309,6 +309,7 @@ function App() {
                 <button
                   onClick={handleRun}
                   disabled={isRunning}
+                  data-role="run-primary"
                   className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
                   {isRunning ? 'Running...' : 'Run'}

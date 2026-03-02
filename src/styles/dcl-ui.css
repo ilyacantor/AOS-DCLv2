@@ -1,0 +1,256 @@
+/* ============================================================
+   DCL UI Polish — src/styles/dcl-ui.css
+   Import once in main.tsx / index.tsx:
+     import './styles/dcl-ui.css'
+   No logic changes. Pure cosmetic layer over Tailwind.
+   ============================================================ */
+/* ── Scrollbars ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+/* ── Inputs / Selects ───────────────────────────────────── */
+select option { background: #0f172a; color: #e2e8f0; }
+input::placeholder { color: rgba(148,163,184,0.35) !important; font-size: 12px; }
+button, select, input { transition: all 0.15s ease !important; }
+/* ── Phase status dots (Ingest table) ───────────────────── */
+span.w-2.h-2.rounded-full {
+  width: 8px !important;
+  height: 8px !important;
+  box-shadow: 0 0 4px currentColor;
+}
+/* ── Live pulse animation (brand dot) ───────────────────── */
+@keyframes dcl-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+.dcl-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16,185,129,0.8);
+  display: inline-block;
+  flex-shrink: 0;
+  animation: dcl-pulse 2s infinite;
+}
+/* ── Navigation ─────────────────────────────────────────── */
+nav button.bg-primary.text-primary-foreground {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+  border-radius: 5px !important;
+}
+nav button:not(.bg-primary) {
+  background: transparent !important;
+  font-size: 11px !important;
+  padding: 4px 10px !important;
+  border-radius: 5px !important;
+}
+nav button:not(.bg-primary):not(:hover) {
+  color: rgba(148,163,184,0.6) !important;
+}
+nav button:not(.bg-primary):hover {
+  background: rgba(255,255,255,0.07) !important;
+  color: #e2e8f0 !important;
+}
+nav { gap: 2px !important; }
+/* ── Topbar RUN button ──────────────────────────────────── */
+/* Scoped to topbar only via data attribute set in component */
+button[data-role="run-primary"] {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: white !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  padding: 5px 18px !important;
+  border-radius: 6px !important;
+  border: none !important;
+  box-shadow: 0 0 14px rgba(16,185,129,0.35) !important;
+  cursor: pointer;
+}
+button[data-role="run-primary"]:hover {
+  box-shadow: 0 0 22px rgba(16,185,129,0.6) !important;
+  filter: brightness(1.08) !important;
+  transform: translateY(-1px);
+}
+/* ── Personas (5/5) button ──────────────────────────────── */
+button.flex.items-center.gap-1.rounded.border.bg-background {
+  border-color: rgba(139,92,246,0.4) !important;
+  background: rgba(139,92,246,0.08) !important;
+  color: #a78bfa !important;
+  font-size: 11px !important;
+  padding: 4px 10px !important;
+}
+button.flex.items-center.gap-1.rounded.border.bg-background:hover {
+  border-color: rgba(139,92,246,0.65) !important;
+  background: rgba(139,92,246,0.15) !important;
+}
+/* ── Dashboard — stat cards ─────────────────────────────── */
+.bg-card.rounded-lg.p-3.border.cursor-pointer {
+  background: rgba(255,255,255,0.03) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+  border-radius: 10px !important;
+  padding: 14px 16px !important;
+  transition: all 0.2s !important;
+}
+.bg-card.rounded-lg.p-3.border.cursor-pointer:hover {
+  border-color: rgba(16,185,129,0.4) !important;
+  background: rgba(16,185,129,0.05) !important;
+  transform: translateY(-1px);
+}
+/* ── Dashboard — mapping table rows ────────────────────── */
+.flex.items-center.gap-3.px-4.py-2\\.5.hover\\:bg-card\\/50 {
+  padding: 8px 16px !important;
+  border-left-width: 2px !important;
+}
+.bg-green-500\\/10.border-green-500\\/30.border-l-2 {
+  background: rgba(16,185,129,0.04) !important;
+  border-left-color: rgba(16,185,129,0.5) !important;
+}
+.bg-yellow-500\\/10.border-yellow-500\\/30.border-l-2,
+.border-yellow-500\\/30.border-l-2 {
+  background: rgba(234,179,8,0.03) !important;
+  border-left-color: rgba(234,179,8,0.35) !important;
+}
+.hover\\:bg-card\\/50:hover {
+  background: rgba(255,255,255,0.04) !important;
+}
+/* Source name column */
+.font-medium.text-primary.truncate {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  max-width: 130px !important;
+}
+/* Field name code pills */
+.bg-secondary\\/50.rounded-sm,
+.bg-secondary\\/30.rounded.px-1 {
+  background: rgba(99,102,241,0.12) !important;
+  border: 1px solid rgba(99,102,241,0.2) !important;
+  color: #a5b4fc !important;
+  border-radius: 4px !important;
+  font-size: 10px !important;
+  padding: 1px 6px !important;
+}
+/* Confidence percentages */
+.text-green-400.font-mono,
+.text-green-400.tabular-nums {
+  color: #10b981 !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+}
+.text-yellow-400.font-mono,
+.text-yellow-400.tabular-nums,
+.text-amber-400.font-mono {
+  color: #f59e0b !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+}
+/* Method badge (heuristic / ai) */
+.text-muted-foreground\\/50.text-\\[10px\\],
+.text-muted-foreground.text-\\[10px\\] {
+  font-size: 9px !important;
+  padding: 1px 6px !important;
+  border-radius: 999px !important;
+  background: rgba(148,163,184,0.08) !important;
+  border: 1px solid rgba(148,163,184,0.12) !important;
+}
+/* Table row separator */
+tbody tr { border-bottom-color: rgba(255,255,255,0.05) !important; }
+tbody tr:nth-child(even) { background: rgba(255,255,255,0.01) !important; }
+/* ── Graph panel — persona cards ────────────────────────── */
+.border-l-4.border-l-primary {
+  border-left-width: 3px !important;
+  border-left-color: #10b981 !important;
+  border-radius: 8px !important;
+  padding: 12px 14px !important;
+  background: rgba(255,255,255,0.03) !important;
+  box-shadow: none !important;
+}
+/* Persona card topic pills */
+.border-l-4.border-l-primary .text-\\[10px\\].border.rounded {
+  font-size: 9px !important;
+  padding: 1px 6px !important;
+  border-radius: 999px !important;
+  border-color: rgba(16,185,129,0.3) !important;
+  color: #6ee7b7 !important;
+  background: rgba(16,185,129,0.08) !important;
+}
+/* Stat cells inside persona cards */
+.grid.grid-cols-2.gap-2 .bg-secondary\\/30 {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 6px !important;
+  padding: 8px 10px !important;
+}
+.grid.grid-cols-2.gap-2 .text-lg.font-mono {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+}
+/* Expandable Data Sources / Ontologies buttons */
+button.w-full.flex.items-center.justify-between {
+  padding: 6px 8px !important;
+  border-radius: 6px !important;
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  font-size: 12px !important;
+}
+button.w-full.flex.items-center.justify-between:hover {
+  background: rgba(255,255,255,0.07) !important;
+}
+/* Count badges on expandable buttons */
+button.w-full .inline-flex.rounded-full {
+  background: rgba(16,185,129,0.12) !important;
+  border-color: rgba(16,185,129,0.25) !important;
+  color: #6ee7b7 !important;
+  height: 18px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  padding: 0 7px !important;
+}
+/* "Receiving data from N sources" banners */
+.bg-primary\\/10.rounded.p-2 {
+  background: rgba(16,185,129,0.08) !important;
+  border: 1px solid rgba(16,185,129,0.2) !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+  color: #6ee7b7 !important;
+}
+/* Panel collapse button */
+.absolute.left-0.top-1\\/2.-translate-y-1\\/2.-translate-x-1\\/2 {
+  background: rgba(15,23,42,0.9) !important;
+  border-color: rgba(16,185,129,0.3) !important;
+  border-radius: 6px !important;
+  width: 20px !important;
+  height: 48px !important;
+}
+.absolute.left-0.top-1\\/2.-translate-y-1\\/2.-translate-x-1\\/2:hover {
+  border-color: rgba(16,185,129,0.65) !important;
+}
+/* ── Recon — three-column data cards ────────────────────── */
+.grid.grid-cols-3.gap-1\\.5:not(.text-\\[11px\\]) > div {
+  border-radius: 10px !important;
+  padding: 14px !important;
+}
+/* ── Ingest — table headers ─────────────────────────────── */
+thead th {
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  color: rgba(148,163,184,0.4) !important;
+  padding: 8px 12px !important;
+  border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+}
+/* Snapshot names in Ingest table */
+.font-mono.font-semibold.text-foreground {
+  font-size: 12px !important;
+}
+/* Run IDs (de-emphasised) */
+.text-muted-foreground\\/50.text-\\[10px\\].font-mono.ml-auto {
+  font-size: 9px !important;
+  color: rgba(148,163,184,0.3) !important;
+}
