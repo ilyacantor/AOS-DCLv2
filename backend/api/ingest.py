@@ -151,6 +151,7 @@ class IngestResponse(BaseModel):
     schema_fields: List[str] = Field(default_factory=list)  # fields from export blueprint
     timestamp: str = ""                # ISO-8601 when DCL accepted
     message: Optional[str] = None
+    warnings: List[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -1351,34 +1352,9 @@ class IngestStore:
         for eid in evicted_ids:
             self._evict_from_redis(eid)
 
-        # --- Record activity entries so the Ingest tab shows AAM data ---
-        # Structure phase: AAM pipe schemas received (via pull)
-        if not self.has_phase(dispatch_id, "structure"):
-            self.record_activity(ActivityEntry(
-                phase="structure",
-                source="AAM",
-                snapshot_name=snapshot_name,
-                run_id=run_id,
-                timestamp=now,
-                pipes=pipe_count,
-                sors=len(unique_source_names),
-                fabrics=len(fabric_categories),
-                dispatch_id=dispatch_id,
-                aod_run_id=run_id,
-            ))
-
-        # Dispatch phase: AAM dispatch acknowledged
-        if not self.has_phase(dispatch_id, "dispatch"):
-            self.record_activity(ActivityEntry(
-                phase="dispatch",
-                source="AAM",
-                snapshot_name=snapshot_name,
-                run_id=run_id,
-                timestamp=now,
-                pipes=pipe_count,
-                dispatch_id=dispatch_id,
-                aod_run_id=run_id,
-            ))
+        # Activity recording removed — structure and dispatch activities are
+        # now recorded exclusively by the push endpoints (/export-pipes and
+        # /export-pipes/dispatch).  This function only creates the RunReceipt.
 
         self._save_to_disk()
         logger.info(
