@@ -28,6 +28,8 @@ function App() {
   const [mainView, setMainView] = useState<MainView>('graph');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const [personaDropdownOpen, setPersonaDropdownOpen] = useState(false);
+  const personaDropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -40,6 +42,25 @@ function App() {
 
     return () => clearInterval(interval);
   }, [isRunning]);
+
+  // Close persona dropdown on outside click or Escape
+  useEffect(() => {
+    if (!personaDropdownOpen) return;
+    const handleMouseDown = (e: MouseEvent) => {
+      if (personaDropdownRef.current && !personaDropdownRef.current.contains(e.target as Node)) {
+        setPersonaDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPersonaDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [personaDropdownOpen]);
 
   const generatePersonaViews = (graph: GraphSnapshot, personas: PersonaId[]) => {
     if (!graph || personas.length === 0) return [];
@@ -190,9 +211,9 @@ function App() {
   const navTabs: { id: MainView; label: string }[] = [
     { id: 'graph', label: 'Graph' },
     { id: 'dashboard', label: 'Dashboard' },
-    { id: 'guide', label: 'Guide' },
     { id: 'recon', label: 'Recon' },
     { id: 'ingest', label: 'Ingest' },
+    { id: 'guide', label: 'Guide' },
   ];
 
   return (
@@ -254,24 +275,33 @@ function App() {
                 </select>
               </div>
 
-              {/* Persona Selector */}
-              <div className="flex items-center gap-1 pl-2 border-l border-border">
-                <span className="text-xs text-muted-foreground">Personas:</span>
-                <div className="flex gap-1">
-                  {ALL_PERSONAS.map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => togglePersona(p)}
-                      className={`px-2 py-0.5 text-xs rounded transition-colors ${
-                        selectedPersonas.includes(p)
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-accent/50 text-muted-foreground hover:bg-accent'
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
+              {/* Persona Selector — Dropdown */}
+              <div className="relative pl-2 border-l border-border" ref={personaDropdownRef}>
+                <button
+                  onClick={() => setPersonaDropdownOpen(prev => !prev)}
+                  className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-border bg-background hover:bg-accent transition-colors"
+                >
+                  <span>Personas ({selectedPersonas.length}/{ALL_PERSONAS.length})</span>
+                  <svg className={`w-3 h-3 transition-transform ${personaDropdownOpen ? 'rotate-180' : ''}`} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 4.5l3 3 3-3" /></svg>
+                </button>
+                {personaDropdownOpen && (
+                  <div className="absolute top-full right-0 mt-1 z-50 min-w-[140px] rounded border border-border bg-background shadow-lg py-1">
+                    {ALL_PERSONAS.map((p) => (
+                      <label
+                        key={p}
+                        className="flex items-center gap-2 px-3 py-1 text-xs cursor-pointer hover:bg-accent transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedPersonas.includes(p)}
+                          onChange={() => togglePersona(p)}
+                          className="rounded border-border"
+                        />
+                        <span className={selectedPersonas.includes(p) ? 'text-foreground font-medium' : 'text-muted-foreground'}>{p}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Run Button & Timer */}

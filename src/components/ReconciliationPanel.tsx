@@ -161,7 +161,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
   if (xsysLoading) {
     return (
       <div className="h-full flex flex-col min-h-0">
-        <div className="shrink-0 flex items-center justify-between px-6 py-2 border-b border-border bg-card/50">
+        <div className="shrink-0 flex items-center justify-between px-4 py-1.5 border-b border-border bg-card/50">
           <h2 className="text-sm font-semibold">Reconciliation</h2>
         </div>
         <div className="flex-1 flex items-center justify-center">
@@ -174,7 +174,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
   if (xsysError) {
     return (
       <div className="h-full flex flex-col min-h-0">
-        <div className="shrink-0 flex items-center justify-between px-6 py-2 border-b border-border bg-card/50">
+        <div className="shrink-0 flex items-center justify-between px-4 py-1.5 border-b border-border bg-card/50">
           <h2 className="text-sm font-semibold">Reconciliation</h2>
         </div>
         <div className="flex-1 flex items-center justify-center">
@@ -205,7 +205,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
   return (
     <div className="h-full flex flex-col min-h-0">
       {/* Header */}
-      <div className="shrink-0 flex items-center justify-between px-6 py-2 border-b border-border bg-card/50">
+      <div className="shrink-0 flex items-center justify-between px-4 py-1.5 border-b border-border bg-card/50">
         <h2 className="text-sm font-semibold">Reconciliation</h2>
         <div className="flex items-center gap-2">
           <button
@@ -224,10 +224,10 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
+      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 min-h-0">
         {/* Snapshot identity bar */}
         {xsysData.snapshot_name && (
-          <div className="rounded border border-border bg-card/30 px-3 py-1.5">
+          <div className="rounded border border-border bg-card/30 px-2.5 py-1">
             <div className="flex items-center gap-4 text-[11px] font-mono">
               <span>
                 <span className="text-muted-foreground">Snapshot</span>{' '}
@@ -245,7 +245,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
         )}
 
         {/* Pipeline flow — 3-column system comparison (compact) */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           {/* AAM */}
           <div className="rounded border border-blue-500/30 bg-blue-500/5 px-2.5 py-2 space-y-1 text-[11px]">
             <div className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider">AAM</div>
@@ -334,7 +334,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                   ? 'text-amber-400'
                   : 'text-blue-400';
               return (
-                <div key={idx} className={`rounded border ${sev} px-2.5 py-2`}>
+                <div key={idx} className={`rounded border ${sev} px-2.5 py-1.5`}>
                   <div className="flex items-center gap-2 text-[11px]">
                     <span className="font-semibold text-foreground">{d.label}</span>
                     <span className={`font-mono font-bold ${sevColor}`}>
@@ -346,7 +346,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                       <span>{d.right}</span>
                     </span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground/70 mt-1 leading-relaxed">
+                  <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-snug">
                     {d.explanation}
                   </p>
                 </div>
@@ -417,8 +417,8 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
 
         {/* Category breakdown + governance (compact inline) */}
         {Object.keys(category_breakdown).length > 0 && (
-          <div className="rounded border border-border bg-card/30 px-2.5 py-2">
-            <div className="flex items-center justify-between mb-1.5">
+          <div className="rounded border border-border bg-card/30 px-2.5 py-1.5">
+            <div className="flex items-center justify-between mb-1">
               <h3 className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">
                 Pipe Categories
               </h3>
@@ -441,7 +441,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
 
         {/* Drop breakdown by error code (compact) */}
         {Object.keys(drops_by_error).length > 0 && (
-          <div className="rounded border border-red-500/20 bg-red-500/5 px-2.5 py-2">
+          <div className="rounded border border-red-500/20 bg-red-500/5 px-2.5 py-1.5">
             <h3 className="text-[10px] font-semibold uppercase text-red-400/80 tracking-wide mb-1">
               Drops by Error Code
             </h3>
@@ -462,11 +462,11 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
         )}
 
         {/* 3-phase activity (compact) */}
-        <div className="rounded border border-border bg-card/30 px-2.5 py-2">
-          <h3 className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide mb-1.5">
+        <div className="rounded border border-border bg-card/30 px-2.5 py-1.5">
+          <h3 className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide mb-1">
             3-Phase Activity
           </h3>
-          <div className="grid grid-cols-3 gap-2 text-[11px]">
+          <div className="grid grid-cols-3 gap-1.5 text-[11px]">
             {(['structure', 'dispatch', 'content'] as const).map((phase) => {
               const entry = xsysData.activity[phase];
               const colors = {
