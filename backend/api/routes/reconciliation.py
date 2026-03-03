@@ -696,7 +696,7 @@ def get_cross_system_reconciliation(http_request: Request):
     pipe_stats = pipe_store.get_stats()
     all_definitions = pipe_store.get_all_definitions()
     export_receipts = pipe_store.get_export_receipts()
-    latest_export = export_receipts[-1] if export_receipts else None
+    latest_export = max(export_receipts, key=lambda r: r.received_at) if export_receipts else None
 
     structure_pipes = pipe_stats["total_definitions"]
     structure_vendors = pipe_stats["vendors"]  # list of vendor names

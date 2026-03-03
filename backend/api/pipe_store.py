@@ -740,7 +740,7 @@ class PipeDefinitionStore:
         receipts = self.get_export_receipts()
         if not receipts:
             return []
-        latest = receipts[-1]
+        latest = max(receipts, key=lambda r: r.received_at)
         return latest.systems_of_record or []
 
     def clear(self) -> None:
