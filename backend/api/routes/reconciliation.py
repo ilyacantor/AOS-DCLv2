@@ -497,14 +497,46 @@ def _diagnose_pipe_failure(
     pipe_def,
     pipe_id: str,
     dispatch_entry: Optional[Dict[str, Any]],
+    all_receipt_pipe_ids: Optional[Dict[str, list]] = None,
+    drops_by_pipe: Optional[Dict[str, list]] = None,
+    current_snapshot: Optional[str] = None,
 ) -> str:
-    """Return a plain-English reason why this pipe has no content receipt."""
+    """Return a plain-English reason why this pipe has no content receipt.
+
+    Enhanced with cross-snapshot receipt lookup and drop log inspection
+    to distinguish between snapshot scoping, DCL rejection, and true
+    failures (never received).
+    """
+    # Check 1: Receipt exists under a DIFFERENT snapshot
+    if all_receipt_pipe_ids and pipe_id in all_receipt_pipe_ids:
+        receipt_snapshots = all_receipt_pipe_ids[pipe_id]
+        if current_snapshot and current_snapshot not in receipt_snapshots:
+            return (
+                f"Receipt EXISTS but under snapshot '{receipt_snapshots[0]}', "
+                f"not the current snapshot '{current_snapshot}'. "
+                f"This pipe was successfully pushed to DCL in a previous dispatch."
+            )
+        # Receipt exists under current snapshot but wasn't counted (shouldn't happen)
+        return f"Receipt exists under current snapshot — possible counting error."
+
+    # Check 2: Pipe was dropped by DCL (in drop log)
+    if drops_by_pipe and pipe_id in drops_by_pipe:
+        drop = drops_by_pipe[pipe_id][0]  # latest drop
+        return (
+            f"Rejected by DCL: {drop.get('error_code', 'UNKNOWN')} — "
+            f"{drop.get('reason', 'no reason recorded')}. "
+            f"Farm pushed this pipe but DCL's schema-on-write guard rejected it."
+        )
+
+    # Check 3: No definition at all
     if pipe_def is None:
         return (
             f"Pipe '{pipe_id}' has no definition in DCL's pipe store — "
             f"it was listed in the export but never registered. "
             f"AAM may have sent a stale or malformed pipe ID."
         )
+
+    # Check 4: Definition but missing required fields
     if not pipe_def.vendor:
         return (
             f"Pipe definition exists but vendor is empty — "
@@ -515,16 +547,41 @@ def _diagnose_pipe_failure(
             f"Pipe has vendor '{pipe_def.vendor}' but no category — "
             f"Farm may have skipped it because the data type is unclassified."
         )
+
+    # Check 5: No dispatch activity at all
     if dispatch_entry is None:
         return (
             f"No dispatch activity recorded — AAM may not have dispatched "
             f"work orders to Farm for this run."
         )
+
+    # Default: dispatched but never arrived at DCL
     return (
-        f"Dispatched to Farm (vendor: {pipe_def.vendor}, "
-        f"category: {pipe_def.category}) but no content received — "
-        f"Farm failed to generate or push data for this pipe."
+        f"No receipt and no drop recorded. Pipe was dispatched to Farm "
+        f"(vendor: {pipe_def.vendor}, category: {pipe_def.category}) "
+        f"but never reached DCL. Likely cause: Farm idempotency guard returned "
+        f"'completed' from a previous run without re-pushing to DCL."
     )
+
+
+def _classify_failure(
+    pipe_id: str,
+    all_receipt_pipe_ids: Optional[Dict[str, list]],
+    drops_by_pipe: Optional[Dict[str, list]],
+    current_snapshot: Optional[str] = None,
+    pipe_def=None,
+) -> str:
+    """Return a machine-readable classification for a pipe failure."""
+    if all_receipt_pipe_ids and pipe_id in all_receipt_pipe_ids:
+        receipt_snapshots = all_receipt_pipe_ids[pipe_id]
+        if current_snapshot and current_snapshot not in receipt_snapshots:
+            return "snapshot_mismatch"
+        return "snapshot_mismatch"  # exists somewhere
+    if drops_by_pipe and pipe_id in drops_by_pipe:
+        return "dcl_rejected"
+    if pipe_def is None:
+        return "no_definition"
+    return "never_received"
 
 
 def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
@@ -705,6 +762,26 @@ def get_cross_system_reconciliation(http_request: Request):
             dispatch_id = d["dispatch_id"]  # use first matching dispatch for identity
     content_sources = sorted(set(content_sources))
 
+    # --- Cross-snapshot receipt lookup (for per-pipe failure classification) ---
+    # Build pipe_id → list of snapshot_names across ALL receipts, not just
+    # the current snapshot. This lets us distinguish "receipt under different
+    # snapshot" (not a failure) from "never received" (real failure).
+    all_receipt_pipe_ids: Dict[str, list] = {}
+    for d in dispatches:
+        if d.get("dispatch_id", "").startswith("aam_"):
+            continue
+        d_snapshot = d.get("snapshot_name", "")
+        snap_label = d_snapshot if isinstance(d_snapshot, str) else str(d_snapshot)
+        for pid in d.get("pipe_ids", []):
+            all_receipt_pipe_ids.setdefault(pid, [])
+            if snap_label and snap_label not in all_receipt_pipe_ids[pid]:
+                all_receipt_pipe_ids[pid].append(snap_label)
+
+    # Build pipe_id → drop entries lookup
+    drops_by_pipe: Dict[str, list] = {}
+    for d_entry in drops:
+        drops_by_pipe.setdefault(d_entry["pipe_id"], []).append(d_entry)
+
     # --- Build per-system view ---
     # AAM numbers (from structure + dispatch activity)
     aam_total = structure_entry["pipes"] if structure_entry else structure_pipes
@@ -730,20 +807,20 @@ def get_cross_system_reconciliation(http_request: Request):
     # --- Deltas & explanations ---
     deltas: List[Dict[str, Any]] = []
 
-    # Delta: AAM dispatched vs DCL ingested
+    # Delta: AAM dispatched vs DCL ingested (current snapshot)
     farm_pushed = dcl_ingested + dcl_drops_unique  # best estimate of what Farm actually pushed
+    farm_failed = aam_dispatched - farm_pushed if aam_dispatched > farm_pushed else 0
     if aam_dispatched > 0 and aam_dispatched != farm_pushed:
-        farm_failed = aam_dispatched - farm_pushed
         deltas.append({
-            "label": "Farm execution failures",
+            "label": "Pipes without DCL receipt (current snapshot)",
             "left": f"AAM dispatched {aam_dispatched}",
-            "right": f"Farm pushed {farm_pushed}",
+            "right": f"DCL receipted {farm_pushed} (current snapshot '{snapshot_name_filter}')",
             "delta": farm_failed,
             "explanation": (
-                f"{farm_failed} pipes were dispatched but have no DCL receipt. "
-                f"Causes: Farm generation failure, DCL push failure, or receipt "
-                f"lost before DCL persisted (process restart). "
-                f"See failed_pipes list below for per-pipe detail."
+                f"{farm_failed} pipes dispatched by AAM have no DCL receipt for "
+                f"snapshot '{snapshot_name_filter}'. "
+                f"See failed_pipes list and pipeline_waterfall for per-pipe "
+                f"classification (snapshot mismatch, DCL rejected, never received)."
             ),
             "severity": "warning" if farm_failed > 0 else "info",
         })
@@ -848,25 +925,39 @@ def get_cross_system_reconciliation(http_request: Request):
             "severity": "warning",
         })
 
-    # --- Per-pipe failure list (Fix 2) ---
-    # Compute which pipe_ids from structure phase have no receipt across
-    # any dispatch. This gives operators exact visibility into failures.
+    # --- Per-pipe failure list ---
+    # Compute which pipe_ids from structure phase have no receipt in the
+    # CURRENT snapshot.  Uses enhanced classification to explain each gap.
     structure_pipe_ids = set(latest_export.pipe_ids) if latest_export else set()
     drop_pipe_id_set = set(unique_drop_pipes)
 
-    # Failed = defined in structure but neither receipted nor dropped
+    # Failed = defined in structure but neither receipted (current snapshot) nor dropped
     failed_pipe_ids = structure_pipe_ids - receipt_pipe_id_set - drop_pipe_id_set
     failed_pipes: List[Dict[str, Any]] = []
     for pid in sorted(failed_pipe_ids):
         pipe_def = pipe_store.lookup(pid)
-        reason = _diagnose_pipe_failure(pipe_def, pid, dispatch_entry)
+        reason = _diagnose_pipe_failure(
+            pipe_def, pid, dispatch_entry,
+            all_receipt_pipe_ids, drops_by_pipe, snapshot_name_filter,
+        )
+        classification = _classify_failure(
+            pid, all_receipt_pipe_ids, drops_by_pipe,
+            snapshot_name_filter, pipe_def,
+        )
         failed_pipes.append({
             "pipe_id": pid,
             "vendor": pipe_def.vendor if pipe_def else "unknown",
             "category": pipe_def.category if pipe_def else "unknown",
             "fabric_plane": pipe_def.fabric_plane if pipe_def else "unknown",
             "reason": reason,
+            "classification": classification,
         })
+
+    # Per-classification counts for the pipeline waterfall
+    snapshot_mismatch_count = sum(1 for p in failed_pipes if p["classification"] == "snapshot_mismatch")
+    dcl_rejected_count = sum(1 for p in failed_pipes if p["classification"] == "dcl_rejected")
+    never_received_count = sum(1 for p in failed_pipes if p["classification"] == "never_received")
+    no_definition_count = sum(1 for p in failed_pipes if p["classification"] == "no_definition")
 
     # Snapshot identity
     snapshot_name = ""
@@ -924,6 +1015,19 @@ def get_cross_system_reconciliation(http_request: Request):
         "drops_by_error": drops_by_error,
         "deltas": deltas,
         "failed_pipes": failed_pipes,
+        "pipeline_waterfall": {
+            "aam_dispatched": aam_dispatched,
+            "dcl_ingested_current_snapshot": dcl_ingested,
+            "dcl_ingested_all_snapshots": len(all_receipt_pipe_ids),
+            "dcl_drops": dcl_drops_unique,
+            "unaccounted": farm_failed,
+            "unaccounted_by_reason": {
+                "snapshot_mismatch": snapshot_mismatch_count,
+                "dcl_rejected": dcl_rejected_count,
+                "never_received": never_received_count,
+                "no_definition": no_definition_count,
+            },
+        },
         "activity": {
             "structure": structure_entry,
             "dispatch": dispatch_entry,
