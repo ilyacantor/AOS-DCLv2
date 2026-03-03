@@ -842,7 +842,7 @@ class IngestStore:
             logger.warning(f"[IngestStore] Redis persist drop log failed: {e}")
 
     def _evict_from_redis(self, storage_key: str) -> None:
-        """Remove evicted entry from Redis."""
+        """Remove evicted entry (receipt + rows) from Redis."""
         if not self._redis:
             return
         try:
@@ -852,6 +852,19 @@ class IngestStore:
         except Exception as e:
             logger.warning(f"[IngestStore] Redis evict failed: {e}")
 
+    def _evict_rows_from_redis(self, storage_key: str) -> None:
+        """Remove ONLY row data from Redis, preserving receipt metadata.
+
+        Used when row buffer exceeds _MAX_BUFFERED_ROWS — we shed row data
+        for memory but keep the receipt so recon still knows the data was received.
+        """
+        if not self._redis:
+            return
+        try:
+            self._redis.delete(f"{_REDIS_PREFIX}rows:{storage_key}")
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis row-only evict failed: {e}")
+
     def _persist_ingest_batch(
         self,
         key: str,
@@ -860,12 +873,19 @@ class IngestStore:
         pipe_id: str,
         schema_record: "SchemaRecord",
         drift: bool,
-        evicted_ids: List[str],
+        evicted_receipt_ids: List[str],
+        evicted_row_ids: List[str],
     ) -> None:
         """Batch all Redis writes for one ingest into a single pipeline round-trip.
 
         Replaces 8-10 sequential Redis calls with 1 pipelined batch (~5ms vs ~80ms on Render).
         Falls back to individual persist methods if pipeline fails.
+
+        Two eviction categories:
+          - evicted_receipt_ids: receipt cap exceeded — delete receipt metadata AND row data.
+          - evicted_row_ids: row buffer cap exceeded — delete ONLY row data, keep receipt
+            metadata so recon can still see that data was received (even though rows were
+            evicted for memory).
         """
         if not self._redis:
             return
@@ -895,10 +915,14 @@ class IngestStore:
                 )
                 pipe.expire(f"{_REDIS_PREFIX}drift_events", _REDIS_TTL)
 
-            # Evictions
-            for eid in evicted_ids:
+            # Full evictions (receipt cap exceeded) — delete both receipt and rows
+            for eid in evicted_receipt_ids:
                 pipe.hdel(f"{_REDIS_PREFIX}receipts", eid)
                 pipe.lrem(f"{_REDIS_PREFIX}receipt_order", 1, eid)
+                pipe.delete(f"{_REDIS_PREFIX}rows:{eid}")
+
+            # Row-only evictions (row buffer cap exceeded) — delete rows, keep receipt
+            for eid in evicted_row_ids:
                 pipe.delete(f"{_REDIS_PREFIX}rows:{eid}")
 
             pipe.execute()
@@ -913,8 +937,10 @@ class IngestStore:
             self._persist_schema(pipe_id, schema_record)
             if drift:
                 self._persist_drift_events()
-            for eid in evicted_ids:
+            for eid in evicted_receipt_ids:
                 self._evict_from_redis(eid)
+            for eid in evicted_row_ids:
+                self._evict_rows_from_redis(eid)
 
     # ------------------------------------------------------------------
     # Cross-worker sync — reload lightweight lists from Redis so all
@@ -1058,7 +1084,8 @@ class IngestStore:
 
         curr_field_set = set(field_names)
 
-        evicted_ids: List[str] = []
+        evicted_receipt_ids: List[str] = []
+        evicted_row_ids: List[str] = []
 
         with self._lock:
             drift = False
@@ -1110,25 +1137,30 @@ class IngestStore:
             key = _make_key(run_id, pipe_id)
             self._receipts[key] = receipt
 
+            # Receipt cap eviction: remove oldest receipt AND its row data.
+            # Both in-memory structures and Redis must be cleaned.
             while len(self._receipts) > _MAX_RUNS:
                 evicted_key, _ = self._receipts.popitem(last=False)
                 self._row_buffer.pop(evicted_key, None)
-                evicted_ids.append(evicted_key)
+                evicted_receipt_ids.append(evicted_key)
 
             self._row_buffer[key] = tagged
             self._total_rows += actual
 
+            # Row buffer cap eviction: shed row data only (memory pressure).
+            # Receipt metadata survives so recon knows data was received,
+            # even though the actual rows have been evicted.
             while self._total_rows > _MAX_BUFFERED_ROWS and self._row_buffer:
                 evicted_id, evicted_rows = self._row_buffer.popitem(last=False)
                 self._total_rows -= len(evicted_rows)
-                evicted_ids.append(evicted_id)
+                evicted_row_ids.append(evicted_id)
 
         # Immediate receipt persistence — standalone HSET before the pipeline
         # so the receipt is durable even if the batch pipeline fails.
         self._persist_receipt_immediate(key, receipt)
 
         # Write-through to Redis (pipelined — single round-trip for all data)
-        self._persist_ingest_batch(key, receipt, tagged, pipe_id, schema_record, drift, evicted_ids)
+        self._persist_ingest_batch(key, receipt, tagged, pipe_id, schema_record, drift, evicted_receipt_ids, evicted_row_ids)
 
         # Disk write: immediate if Redis is unavailable (receipt has no durable
         # backup), debounced otherwise (Redis is the durable buffer).

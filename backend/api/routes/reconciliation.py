@@ -966,8 +966,60 @@ def get_cross_system_reconciliation(http_request: Request):
         snapshot_name = latest_export.snapshot_name or ""
         aod_run_id = latest_export.aod_run_id or ""
 
+    # --- Snapshot provenance ---
+    # Build per-snapshot pipe counts across ALL dispatches so the caller can
+    # see which snapshots hold data and how many pipes each has.
+    snapshot_pipe_counts: Dict[str, int] = {}
+    for d in dispatches:
+        if d.get("dispatch_id", "").startswith("aam_"):
+            continue
+        d_snapshot = d.get("snapshot_name", "")
+        snap_label = d_snapshot if isinstance(d_snapshot, str) else str(d_snapshot)
+        if not snap_label:
+            snap_label = "(unnamed)"
+        pipe_count_in_dispatch = len(d.get("pipe_ids", []))
+        snapshot_pipe_counts[snap_label] = (
+            snapshot_pipe_counts.get(snap_label, 0) + pipe_count_in_dispatch
+        )
+
+    other_snapshots: List[Dict[str, Any]] = []
+    for snap, count in sorted(snapshot_pipe_counts.items()):
+        if snap == snapshot_name_filter:
+            continue
+        other_snapshots.append({"snapshot_name": snap, "pipe_count": count})
+
+    # --- Fabric names with content vs without ---
+    # Which fabric planes (from structure) actually have content receipts?
+    fabrics_with_content: set = set()
+    for pid in receipt_pipe_id_set:
+        pd = pipe_store.lookup(pid)
+        if pd and pd.fabric_plane:
+            fabrics_with_content.add(pd.fabric_plane)
+
+    fabrics_missing_content: List[str] = sorted(
+        f for f in structure_fabrics if f not in fabrics_with_content
+    )
+
+    # --- Farm failure summary ---
+    # Aggregate failure classifications into a summary dict and identify
+    # the dominant failure reason (most common classification across all
+    # failed pipes). This gives operators a single-glance answer to
+    # "why didn't all pipes make it through?"
+    farm_failure_summary: Dict[str, int] = {}
+    for fp in failed_pipes:
+        cls = fp["classification"]
+        farm_failure_summary[cls] = farm_failure_summary.get(cls, 0) + 1
+
+    farm_dominant_failure_reason: Optional[str] = None
+    if farm_failure_summary:
+        farm_dominant_failure_reason = max(
+            farm_failure_summary, key=farm_failure_summary.get  # type: ignore[arg-type]
+        )
+
     return {
         "snapshot_name": snapshot_name,
+        "snapshot_filter": snapshot_name_filter,
+        "other_snapshots": other_snapshots,
         "aod_run_id": aod_run_id,
         "dispatch_id": dispatch_id,
         "recon_at": now,
@@ -985,6 +1037,8 @@ def get_cross_system_reconciliation(http_request: Request):
                 "total_received": aam_dispatched,
                 "pushed_to_dcl": farm_pushed,
                 "failed_execution": aam_dispatched - farm_pushed if aam_dispatched > farm_pushed else 0,
+                "failure_summary": farm_failure_summary,
+                "dominant_failure_reason": farm_dominant_failure_reason,
             },
             "dcl": {
                 "total_definitions": dcl_total,
@@ -994,6 +1048,7 @@ def get_cross_system_reconciliation(http_request: Request):
                 "tooling_pipes": dcl_tooling,
                 "fabrics_active": dcl_fabrics,
                 "fabrics_defined": aam_fabrics,
+                "fabrics_missing_content": fabrics_missing_content,
                 "mapped_pipes": dcl_mapped,
                 "unmapped_pipes": dcl_unmapped,
                 "other_pipes": dcl_other_pipes,
