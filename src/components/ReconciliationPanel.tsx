@@ -55,7 +55,21 @@ interface CrossSystemData {
     category: string;
     fabric_plane: string;
     reason?: string;
+    classification?: string;
   }>;
+  pipeline_waterfall?: {
+    aam_dispatched: number;
+    dcl_ingested_current_snapshot: number;
+    dcl_ingested_all_snapshots: number;
+    dcl_drops: number;
+    unaccounted: number;
+    unaccounted_by_reason: {
+      snapshot_mismatch: number;
+      dcl_rejected: number;
+      never_received: number;
+      no_definition: number;
+    };
+  };
   activity: {
     structure: Record<string, unknown> | null;
     dispatch: Record<string, unknown> | null;
@@ -139,7 +153,8 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
       fp.vendor.toLowerCase().includes(q) ||
       fp.category.toLowerCase().includes(q) ||
       fp.fabric_plane.toLowerCase().includes(q) ||
-      (fp.reason ?? '').toLowerCase().includes(q)
+      (fp.reason ?? '').toLowerCase().includes(q) ||
+      (fp.classification ?? '').toLowerCase().includes(q)
     );
   }, [xsysData?.failed_pipes, failedFilter]);
 
@@ -355,7 +370,80 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
           </div>
         )}
 
-        {/* Failed pipes — collapsible, filterable */}
+        {/* Pipeline Waterfall — shows where pipes are lost */}
+        {xsysData.pipeline_waterfall && xsysData.pipeline_waterfall.aam_dispatched > 0 && (
+          <div className="rounded border border-border bg-card/30 px-2.5 py-2">
+            <h3 className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide mb-1.5">
+              Pipeline Waterfall
+            </h3>
+            {(() => {
+              const wf = xsysData.pipeline_waterfall!;
+              const stages = [
+                { label: 'AAM Dispatched', value: wf.aam_dispatched, color: 'bg-blue-500' },
+                { label: 'DCL Ingested (snapshot)', value: wf.dcl_ingested_current_snapshot, color: 'bg-emerald-500' },
+                { label: 'DCL Ingested (all)', value: wf.dcl_ingested_all_snapshots, color: 'bg-emerald-500/60' },
+                { label: 'DCL Drops', value: wf.dcl_drops, color: 'bg-red-500' },
+              ];
+              const maxVal = Math.max(...stages.map(s => s.value), 1);
+              const ur = wf.unaccounted_by_reason;
+              return (
+                <div className="space-y-1.5">
+                  {stages.map((s) => (
+                    <div key={s.label} className="flex items-center gap-2 text-[11px]">
+                      <span className="w-[120px] text-muted-foreground shrink-0 text-right">{s.label}</span>
+                      <div className="flex-1 h-3.5 bg-muted/20 rounded overflow-hidden">
+                        <div
+                          className={`h-full ${s.color} rounded transition-all`}
+                          style={{ width: `${Math.max((s.value / maxVal) * 100, s.value > 0 ? 2 : 0)}%` }}
+                        />
+                      </div>
+                      <span className="font-mono font-semibold w-8 text-right text-foreground">{s.value}</span>
+                    </div>
+                  ))}
+                  {wf.unaccounted > 0 && (
+                    <div className="mt-1.5 pt-1.5 border-t border-border">
+                      <div className="flex items-center gap-2 text-[11px] mb-1">
+                        <span className="text-amber-400 font-semibold">Unaccounted: {wf.unaccounted}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1 text-[10px]">
+                        {ur.snapshot_mismatch > 0 && (
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                            <span className="text-blue-400 font-mono">{ur.snapshot_mismatch}</span>
+                            <span className="text-muted-foreground/60 truncate">snapshot</span>
+                          </div>
+                        )}
+                        {ur.dcl_rejected > 0 && (
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                            <span className="text-red-400 font-mono">{ur.dcl_rejected}</span>
+                            <span className="text-muted-foreground/60 truncate">rejected</span>
+                          </div>
+                        )}
+                        {ur.never_received > 0 && (
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                            <span className="text-amber-400 font-mono">{ur.never_received}</span>
+                            <span className="text-muted-foreground/60 truncate">never rcvd</span>
+                          </div>
+                        )}
+                        {ur.no_definition > 0 && (
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-500/10 border border-zinc-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
+                            <span className="text-zinc-400 font-mono">{ur.no_definition}</span>
+                            <span className="text-muted-foreground/60 truncate">no def</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Failed pipes — collapsible, filterable, with classification badges */}
         {failedPipeCount > 0 && (
           <div className="space-y-1.5">
             <button
@@ -365,7 +453,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
               {failedOpen
                 ? <ChevronDown className="w-3.5 h-3.5 shrink-0" />
                 : <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
-              Failed Pipes ({failedPipeCount})
+              Unreceipted Pipes ({failedPipeCount})
             </button>
             {failedOpen && (
               <>
@@ -373,7 +461,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                   type="text"
                   value={failedFilter}
                   onChange={(e) => setFailedFilter(e.target.value)}
-                  placeholder="Filter by pipe ID, vendor, category, fabric, or reason..."
+                  placeholder="Filter by pipe ID, vendor, category, fabric, reason, or classification..."
                   className="w-full px-2 py-1 text-[11px] rounded border border-border bg-background text-foreground placeholder:text-muted-foreground/50"
                 />
                 <div className="rounded border border-red-500/20 bg-red-500/5 overflow-hidden">
@@ -383,7 +471,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                         <th className="text-left px-2 py-1.5 font-medium">Pipe ID</th>
                         <th className="text-left px-2 py-1.5 font-medium">Vendor</th>
                         <th className="text-left px-2 py-1.5 font-medium">Category</th>
-                        <th className="text-left px-2 py-1.5 font-medium">Fabric</th>
+                        <th className="text-left px-2 py-1.5 font-medium">Why</th>
                         <th className="text-left px-2 py-1.5 font-medium">Reason</th>
                       </tr>
                     </thead>
@@ -395,17 +483,36 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                           </td>
                         </tr>
                       ) : (
-                        filteredFailedPipes.map((fp) => (
-                          <tr key={fp.pipe_id} className="border-b border-red-500/5 last:border-0">
-                            <td className="px-2 py-1.5 font-mono text-red-400">{fp.pipe_id}</td>
-                            <td className="px-2 py-1.5 text-foreground">{fp.vendor}</td>
-                            <td className="px-2 py-1.5 text-muted-foreground">{fp.category}</td>
-                            <td className="px-2 py-1.5 text-muted-foreground">{fp.fabric_plane}</td>
-                            <td className="px-2 py-1.5 text-muted-foreground/70 max-w-xs">
-                              {fp.reason ?? 'Unknown'}
-                            </td>
-                          </tr>
-                        ))
+                        filteredFailedPipes.map((fp) => {
+                          const cls = fp.classification ?? 'unknown';
+                          const clsStyle = cls === 'snapshot_mismatch'
+                            ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                            : cls === 'dcl_rejected'
+                              ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                              : cls === 'never_received'
+                                ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                                : 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30';
+                          const clsLabel = cls === 'snapshot_mismatch' ? 'snapshot'
+                            : cls === 'dcl_rejected' ? 'rejected'
+                            : cls === 'never_received' ? 'never rcvd'
+                            : cls === 'no_definition' ? 'no def'
+                            : cls;
+                          return (
+                            <tr key={fp.pipe_id} className="border-b border-red-500/5 last:border-0">
+                              <td className="px-2 py-1.5 font-mono text-red-400">{fp.pipe_id}</td>
+                              <td className="px-2 py-1.5 text-foreground">{fp.vendor}</td>
+                              <td className="px-2 py-1.5 text-muted-foreground">{fp.category}</td>
+                              <td className="px-2 py-1.5">
+                                <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold border ${clsStyle}`}>
+                                  {clsLabel}
+                                </span>
+                              </td>
+                              <td className="px-2 py-1.5 text-muted-foreground/70 max-w-xs text-[10px]">
+                                {fp.reason ?? 'Unknown'}
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
