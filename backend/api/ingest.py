@@ -1156,6 +1156,7 @@ class IngestStore:
             return [r for r in self._receipts.values() if r.run_id == run_id]
 
     def get_all_receipts(self) -> List[RunReceipt]:
+        self._sync_from_redis()
         with self._lock:
             return list(self._receipts.values())
 
@@ -1195,6 +1196,7 @@ class IngestStore:
         If snapshot_name is provided, only return dispatches matching that
         Farm generation (e.g. 'cloudedge-a1b2').
         """
+        self._sync_from_redis()
         with self._lock:
             groups: Dict[str, List[RunReceipt]] = {}
             for r in self._receipts.values():
