@@ -30,33 +30,35 @@ class SemanticMapper:
         mode: Literal["heuristic", "full"] = "heuristic",
         clear_existing: bool = False,
         edge_index: Optional[EdgeIndex] = None,
+        ontology_concepts: Optional[list] = None,
     ) -> tuple[List[Mapping], dict]:
-        
-        ontology_concepts = []
-        try:
-            if self.persistence:
-                ontology_concepts = self.persistence.get_ontology_concepts()
-        except Exception as e:
-            logger.warning(f"Failed to load ontology from DB: {e}. Using local ontology.")
-        
-        if not ontology_concepts:
-            local_ontology = get_ontology()
-            ontology_concepts = [
-                {
-                    'id': c.id,
-                    'concept_id': c.concept_id,
-                    'name': c.name,
-                    'description': c.description,
-                    'domain': c.domain,
-                    'cluster': c.cluster,
-                    'example_fields': c.example_fields,
-                    'aliases': c.aliases,
-                    'expected_type': c.expected_type,
-                    'typical_source_systems': c.typical_source_systems,
-                    'persona_relevance': c.persona_relevance,
-                }
-                for c in local_ontology
-            ]
+
+        if ontology_concepts is None:
+            ontology_concepts = []
+            try:
+                if self.persistence:
+                    ontology_concepts = self.persistence.get_ontology_concepts()
+            except Exception as e:
+                logger.warning(f"Failed to load ontology from DB: {e}. Using local ontology.")
+
+            if not ontology_concepts:
+                local_ontology = get_ontology()
+                ontology_concepts = [
+                    {
+                        'id': c.id,
+                        'concept_id': c.concept_id,
+                        'name': c.name,
+                        'description': c.description,
+                        'domain': c.domain,
+                        'cluster': c.cluster,
+                        'example_fields': c.example_fields,
+                        'aliases': c.aliases,
+                        'expected_type': c.expected_type,
+                        'typical_source_systems': c.typical_source_systems,
+                        'persona_relevance': c.persona_relevance,
+                    }
+                    for c in local_ontology
+                ]
         
         stats = {
             'sources_processed': len(sources),

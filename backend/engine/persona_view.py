@@ -30,17 +30,19 @@ def _load_persona_concepts_from_yaml() -> Dict[str, List[str]]:
         return {}
 
 
-# Hardcoded fallback using actual ontology concept IDs
+# Hardcoded defaults matching deployed AOS-DCLv2 persona set (8 unique concepts)
 _HARDCODED_DEFAULTS = {
-    "CFO": ["revenue", "cost", "subscription", "account", "invoice", "date"],
+    "CFO": ["revenue", "cost", "account", "date"],
     "CRO": ["account", "opportunity", "revenue", "health", "date"],
-    "COO": ["usage", "health", "ticket", "employee", "account", "date"],
-    "CTO": ["aws_resource", "incident", "engineering_work", "usage", "cost", "health", "date"],
-    "CHRO": ["employee", "date"],
+    "COO": ["usage", "health", "account", "date"],
+    "CTO": ["aws_resource", "usage", "cost", "health", "date"],
+    "CHRO": ["date"],
 }
 
-# Try YAML first, fall back to hardcoded
-DEFAULT_PERSONA_CONCEPTS = _load_persona_concepts_from_yaml() or _HARDCODED_DEFAULTS
+# Use hardcoded defaults for Demo mode determinism.
+# YAML loader remains available for other consumers (NLQ, config sync).
+# DB path still takes priority when available (production).
+DEFAULT_PERSONA_CONCEPTS = _HARDCODED_DEFAULTS
 
 
 class PersonaView:

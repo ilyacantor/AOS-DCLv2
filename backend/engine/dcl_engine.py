@@ -78,13 +78,17 @@ class DCLEngine:
             )
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Farm sources")
         
-        if mode != "AAM":
+        if mode == "Farm":
             stream_sources = SchemaLoader.load_stream_sources(self.narration, run_id)
             if stream_sources:
                 sources.extend(stream_sources)
                 self.narration.add_message(run_id, "Engine", f"Loaded {len(stream_sources)} real-time stream sources")
         
-        ontology = get_ontology()
+        if mode == "Demo":
+            from backend.engine.ontology import get_demo_ontology
+            ontology = get_demo_ontology()
+        else:
+            ontology = get_ontology()
         self.narration.add_message(run_id, "Engine", f"Loaded {len(ontology)} ontology concepts")
 
         # --- Tier 0: Fetch AAM semantic edges ---
@@ -142,8 +146,14 @@ class DCLEngine:
                 run_id, "Engine", 
                 f"Running semantic mapper for {len(sources_needing_mappings)} sources without stored mappings: {[s.id for s in sources_needing_mappings]}"
             )
+            demo_concepts = [
+                {'id': c.id, 'name': c.name, 'description': c.description,
+                 'example_fields': c.example_fields}
+                for c in ontology
+            ] if mode == "Demo" else None
             new_mappings, stats = semantic_mapper.run_mapping(
-                sources_needing_mappings, mode="heuristic", clear_existing=False, edge_index=edge_index
+                sources_needing_mappings, mode="heuristic", clear_existing=False,
+                edge_index=edge_index, ontology_concepts=demo_concepts
             )
             stored_mappings.extend(new_mappings)
             metrics.aam_edge_hits = stats.get('aam_edge_hits', 0)
