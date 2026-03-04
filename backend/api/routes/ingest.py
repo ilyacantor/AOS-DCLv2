@@ -28,7 +28,6 @@ from backend.api.ingest import (
     DropEntry,
     IngestRequest,
     IngestResponse,
-    _REDIS_PREFIX,
     get_canonical_sources,
     get_ingest_store,
     compute_schema_hash,
@@ -990,10 +989,13 @@ def sample_rows(pipe_id: Optional[str] = None, limit: int = 3):
 async def flush_ingest_store():
     """Flush all ingest data AND pipe definitions.
 
-    Clears: IngestStore (memory + disk + Redis) and PipeStore (memory +
-    disk + Redis + Postgres).  After flush the schema-on-write guard is
+    Clears: IngestStore (memory + Redis + disk) and PipeStore (memory +
+    Redis + Postgres + disk).  After flush the schema-on-write guard is
     inactive (pipe count = 0), allowing the next Farm push through
     without pre-registered AAM blueprints.
+
+    Both reset() methods now handle their own Redis/Postgres/disk cleanup
+    internally — no duplicate cleanup needed here.
     """
     store = get_ingest_store()
     pipe_store = get_pipe_store()
@@ -1003,46 +1005,9 @@ async def flush_ingest_store():
     mat_before = store.get_materialized_stats()
     pipes_before = pipe_store.count()
 
-    # --- Ingest store: memory + disk ---
+    # reset() handles memory + Redis + disk for each store
     store.reset()
-
-    # --- Ingest store: ALL Redis keys (receipts, rows, schemas, activity) ---
-    if store._redis:
-        try:
-            ingest_keys = store._redis.keys(f"{_REDIS_PREFIX}*")
-            if ingest_keys:
-                store._redis.delete(*ingest_keys)
-                logger.info(f"[Flush] Deleted {len(ingest_keys)} Redis ingest keys")
-        except Exception as e:
-            logger.warning(f"[Flush] Redis ingest cleanup failed: {e}")
-
-    # --- Pipe store: memory + disk ---
-    pipe_store.reset()
-
-    # --- Pipe store: Redis ---
-    if store._redis:
-        try:
-            pipe_keys = store._redis.keys("dcl:pipes:*")
-            if pipe_keys:
-                store._redis.delete(*pipe_keys)
-                logger.info(f"[Flush] Deleted {len(pipe_keys)} Redis pipe keys")
-        except Exception as e:
-            logger.warning(f"[Flush] Redis pipe cleanup failed: {e}")
-
-    # --- Pipe store: Postgres (get_connection is a context manager) ---
-    try:
-        from backend.core.db import get_connection
-        with get_connection() as conn:
-            if conn:
-                with conn.cursor() as cur:
-                    cur.execute("DELETE FROM pipe_definitions")
-                    deleted_defs = cur.rowcount
-                    cur.execute("DELETE FROM pipe_export_receipts")
-                    deleted_rcpts = cur.rowcount
-                    conn.commit()
-                    logger.info(f"[Flush] Deleted {deleted_defs} pipe defs, {deleted_rcpts} receipts from Postgres")
-    except Exception as e:
-        logger.warning(f"[Flush] Postgres pipe cleanup failed: {e}")
+    pipe_store.reset()  # handles memory + Redis + Postgres + disk
 
     return {
         "status": "flushed",

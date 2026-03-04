@@ -503,13 +503,9 @@ async def seed_ingest(request: Request):
     return {"status": "seeded", "activity_added": added_activity, "drops_added": added_drops}
 
 
-@app.post("/api/dcl/ingest/reset")
-def reset_ingest():
-    """Clear all ingest data and pipe definitions."""
-    get_ingest_store().reset()
-    get_pipe_store().reset()
-    logger.info("[Reset] All ingest data and pipe definitions cleared via API")
-    return {"status": "reset", "message": "All ingest data and pipe definitions cleared"}
+## /api/dcl/ingest/reset removed — use /api/dcl/ingest/flush (the router
+## endpoint) which calls store.reset() + pipe_store.reset() and returns
+## before/after counts.  reset() now clears memory + Redis + Postgres + disk.
 
 
 @app.get("/api/dcl/narration/{run_id}")

@@ -31,7 +31,8 @@ from backend.core.db import get_connection as _pg_conn, close_pool as _close_sha
 logger = get_logger(__name__)
 
 _REDIS_PREFIX = "dcl:pipes:"
-_REDIS_TTL = 86400  # 24 hours
+## No Redis TTL — pipe definitions persist until the user explicitly resets.
+## Postgres is the source of truth; Redis mirrors it for fast reads.
 
 _CACHE_DIR = os.path.join("backend", "cache")
 _CACHE_FILE = os.path.join(_CACHE_DIR, "pipe_cache.json")
@@ -502,12 +503,41 @@ class PipeDefinitionStore:
         with self._lock:
             self._definitions.clear()
             self._export_receipts.clear()
+
+        # --- Redis: delete all dcl:pipes:* keys so data can't zombie back ---
+        if self._redis:
+            try:
+                keys = self._redis.keys(f"{_REDIS_PREFIX}*")
+                if keys:
+                    self._redis.delete(*keys)
+                    logger.info(f"[PipeStore] Deleted {len(keys)} Redis keys on reset")
+            except Exception as e:
+                logger.warning(f"[PipeStore] Redis cleanup on reset failed: {e}")
+
+        # --- Postgres: delete pipe definitions + export receipts ---
+        try:
+            with _pg_conn() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        cur.execute("DELETE FROM pipe_definitions")
+                        deleted_defs = cur.rowcount
+                        cur.execute("DELETE FROM pipe_export_receipts")
+                        deleted_rcpts = cur.rowcount
+                        conn.commit()
+                        logger.info(
+                            f"[PipeStore] Deleted {deleted_defs} pipe defs, "
+                            f"{deleted_rcpts} export receipts from Postgres on reset"
+                        )
+        except Exception as e:
+            logger.warning(f"[PipeStore] Postgres cleanup on reset failed: {e}")
+
+        # --- Disk cache ---
         try:
             if os.path.exists(_CACHE_FILE):
                 os.remove(_CACHE_FILE)
         except Exception as e:
             logger.warning(f"[PipeStore] Failed to delete cache file: {e}")
-        logger.info("[PipeStore] All state reset")
+        logger.info("[PipeStore] All state reset (memory + Redis + Postgres + disk)")
 
     # ------------------------------------------------------------------
     # Redis persistence
@@ -604,7 +634,6 @@ class PipeDefinitionStore:
                 pipe_id,
                 json.dumps(asdict(defn)),
             )
-            self._redis.expire(f"{_REDIS_PREFIX}definitions", _REDIS_TTL)
         except Exception as e:
             logger.warning(f"[PipeStore] Redis persist definition failed: {e}")
 
@@ -617,7 +646,6 @@ class PipeDefinitionStore:
                 f"{_REDIS_PREFIX}export_receipts",
                 json.dumps([asdict(r) for r in self._export_receipts]),
             )
-            self._redis.expire(f"{_REDIS_PREFIX}export_receipts", _REDIS_TTL)
         except Exception as e:
             logger.warning(f"[PipeStore] Redis persist receipts failed: {e}")
 

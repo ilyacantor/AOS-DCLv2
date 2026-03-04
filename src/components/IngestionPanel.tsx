@@ -118,7 +118,7 @@ export function IngestionPanel() {
     if (!window.confirm('Clear all ingest data and pipe definitions? This cannot be undone.')) return;
     setResetting(true);
     try {
-      await fetch('/api/dcl/ingest/reset', { method: 'POST' });
+      await fetch('/api/dcl/ingest/flush', { method: 'POST' });
       fetchAll();
     } catch (e) {
       console.error('[IngestionPanel] Reset failed:', e);

@@ -31,7 +31,9 @@ from backend.utils.log_utils import get_logger
 logger = get_logger(__name__)
 
 _REDIS_PREFIX = "dcl:ingest:"
-_REDIS_TTL = 86400  # 24 hours
+## No Redis TTL — ingest data persists until the user explicitly resets.
+## In-memory bounds (_MAX_RUNS, _MAX_BUFFERED_ROWS, _MAX_MATERIALIZED_POINTS)
+## prevent unbounded growth; Redis mirrors memory, not the other way around.
 
 _CACHE_DIR = os.path.join("backend", "cache")
 _CACHE_FILE = os.path.join(_CACHE_DIR, "ingest_cache.json")
@@ -526,12 +528,24 @@ class IngestStore:
             self._content_sor_pipes.clear()
             self._content_other_pipes.clear()
             self._total_rows = 0
+
+        # --- Redis: delete all dcl:ingest:* keys so data can't zombie back ---
+        if self._redis:
+            try:
+                keys = self._redis.keys(f"{_REDIS_PREFIX}*")
+                if keys:
+                    self._redis.delete(*keys)
+                    logger.info(f"[IngestStore] Deleted {len(keys)} Redis keys on reset")
+            except Exception as e:
+                logger.warning(f"[IngestStore] Redis cleanup on reset failed: {e}")
+
+        # --- Disk cache ---
         try:
             if os.path.exists(_CACHE_FILE):
                 os.remove(_CACHE_FILE)
         except Exception as e:
             logger.warning(f"[IngestStore] Failed to delete cache file: {e}")
-        logger.info("[IngestStore] All state reset")
+        logger.info("[IngestStore] All state reset (memory + Redis + disk)")
 
     def purge_non_canonical(self) -> Dict[str, int]:
         """Remove all receipts, rows, and materialized points from non-canonical sources.
@@ -732,8 +746,6 @@ class IngestStore:
             r = self._redis
             r.hset(f"{_REDIS_PREFIX}receipts", storage_key, json.dumps(asdict(receipt)))
             r.rpush(f"{_REDIS_PREFIX}receipt_order", storage_key)
-            r.expire(f"{_REDIS_PREFIX}receipts", _REDIS_TTL)
-            r.expire(f"{_REDIS_PREFIX}receipt_order", _REDIS_TTL)
         except Exception as e:
             logger.warning(f"[IngestStore] Redis persist receipt failed: {e}")
 
@@ -756,13 +768,12 @@ class IngestStore:
             logger.warning(f"[IngestStore] Immediate receipt persist failed: {e}")
 
     def _persist_rows(self, storage_key: str, rows: List[Dict[str, Any]]) -> None:
-        """Write rows to Redis with TTL."""
+        """Write rows to Redis."""
         if not self._redis:
             return
         try:
             key = f"{_REDIS_PREFIX}rows:{storage_key}"
             self._redis.set(key, json.dumps(rows, default=str))
-            self._redis.expire(key, _REDIS_TTL)
         except Exception as e:
             logger.warning(f"[IngestStore] Redis persist rows failed: {e}")
 
@@ -774,7 +785,6 @@ class IngestStore:
             self._redis.hset(
                 f"{_REDIS_PREFIX}schemas", pipe_id, json.dumps(asdict(record))
             )
-            self._redis.expire(f"{_REDIS_PREFIX}schemas", _REDIS_TTL)
         except Exception as e:
             logger.warning(f"[IngestStore] Redis persist schema failed: {e}")
 
@@ -787,7 +797,6 @@ class IngestStore:
                 f"{_REDIS_PREFIX}drift_events",
                 json.dumps([asdict(e) for e in self._drift_events]),
             )
-            self._redis.expire(f"{_REDIS_PREFIX}drift_events", _REDIS_TTL)
         except Exception as e:
             logger.warning(f"[IngestStore] Redis persist drift failed: {e}")
 
@@ -800,7 +809,6 @@ class IngestStore:
                 f"{_REDIS_PREFIX}activity_log",
                 json.dumps([asdict(e) for e in self._activity_log]),
             )
-            self._redis.expire(f"{_REDIS_PREFIX}activity_log", _REDIS_TTL)
         except Exception as e:
             logger.warning(f"[IngestStore] Redis persist activity log failed: {e}")
 
@@ -837,7 +845,6 @@ class IngestStore:
                 f"{_REDIS_PREFIX}drop_log",
                 json.dumps([asdict(e) for e in self._drop_log]),
             )
-            self._redis.expire(f"{_REDIS_PREFIX}drop_log", _REDIS_TTL)
         except Exception as e:
             logger.warning(f"[IngestStore] Redis persist drop log failed: {e}")
 
@@ -895,17 +902,13 @@ class IngestStore:
             # Receipt
             pipe.hset(f"{_REDIS_PREFIX}receipts", key, json.dumps(asdict(receipt)))
             pipe.rpush(f"{_REDIS_PREFIX}receipt_order", key)
-            pipe.expire(f"{_REDIS_PREFIX}receipts", _REDIS_TTL)
-            pipe.expire(f"{_REDIS_PREFIX}receipt_order", _REDIS_TTL)
 
             # Rows
             rows_key = f"{_REDIS_PREFIX}rows:{key}"
             pipe.set(rows_key, json.dumps(tagged_rows, default=str))
-            pipe.expire(rows_key, _REDIS_TTL)
 
             # Schema
             pipe.hset(f"{_REDIS_PREFIX}schemas", pipe_id, json.dumps(asdict(schema_record)))
-            pipe.expire(f"{_REDIS_PREFIX}schemas", _REDIS_TTL)
 
             # Drift events (only if drift occurred)
             if drift:
@@ -913,7 +916,6 @@ class IngestStore:
                     f"{_REDIS_PREFIX}drift_events",
                     json.dumps([asdict(e) for e in self._drift_events]),
                 )
-                pipe.expire(f"{_REDIS_PREFIX}drift_events", _REDIS_TTL)
 
             # Full evictions (receipt cap exceeded) — delete both receipt and rows
             for eid in evicted_receipt_ids:
@@ -1654,7 +1656,6 @@ class IngestStore:
         try:
             redis_key = f"{_REDIS_PREFIX}materialized:{key}"
             self._redis.set(redis_key, json.dumps(points, default=str))
-            self._redis.expire(redis_key, _REDIS_TTL)
         except Exception as e:
             logger.warning(f"[IngestStore] Redis persist materialized failed: {e}")
 
