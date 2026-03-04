@@ -301,7 +301,7 @@ def _record_ingest_activity(
         other_set = store._content_other_pipes.get(did, set())
         # entry.sors = AOD authority (same basis as structure phase).
         # sor_pipes/other_pipes track per-pipe tagging for sub-row detail.
-        store.record_activity(ActivityEntry(
+        created = store.record_activity(ActivityEntry(
             phase="content",
             source="Farm",
             snapshot_name=snap,
@@ -320,6 +320,10 @@ def _record_ingest_activity(
             dispatch_id=did,
             aod_run_id=export_run_id,
         ))
+        if not created:
+            # Another worker beat us — fall through to update so this
+            # pipe's data still gets counted in the existing entry.
+            store.update_content_activity(did, rows, pipe_id)
         store._content_sources.setdefault(did, set()).add(vendor_source)
     elif did:
         # Subsequent push — update the existing content entry

@@ -1717,16 +1717,29 @@ class IngestStore:
             self._content_other_pipes.pop(sid, None)
         self._seen_dispatch_ids = live_ids
 
-    def record_activity(self, entry: "ActivityEntry") -> None:
+    def record_activity(self, entry: "ActivityEntry") -> bool:
         """Append a discrete activity event and persist to Redis.
 
         Uses sync-before-write to pull in entries from other workers,
         then flushes to Redis immediately so the new entry is visible
         cross-worker without waiting for the debounce timer.
+
+        Returns False if a duplicate (dispatch_id, phase) was suppressed
+        — the caller should fall through to the update path.
         """
         # Pull in entries written by other workers before appending
         self._sync_from_redis(force=True)
         with self._lock:
+            # Dedup guard: if another worker created the same (dispatch_id, phase)
+            # between our has_phase check and now, suppress this append
+            if entry.dispatch_id and entry.phase:
+                for existing in self._activity_log:
+                    if existing.dispatch_id == entry.dispatch_id and existing.phase == entry.phase:
+                        logger.warning(
+                            f"[Activity] Suppressing duplicate {entry.phase} entry for "
+                            f"dispatch_id={entry.dispatch_id} — another worker created it first"
+                        )
+                        return False
             self._activity_log.append(entry)
             if entry.dispatch_id:
                 self._seen_dispatch_ids.add(entry.dispatch_id)
@@ -1741,16 +1754,17 @@ class IngestStore:
             f"[Activity] {entry.phase}|{entry.source}|{entry.snapshot_name} "
             f"pipes={entry.pipes} rows={entry.rows}"
         )
+        return True
 
     def has_dispatch_activity(self, dispatch_id: str) -> bool:
         """Check if we've already recorded a dispatch-phase entry for this id."""
-        self._sync_from_redis()
+        self._sync_from_redis(force=True)
         with self._lock:
             return dispatch_id in self._seen_dispatch_ids
 
     def has_phase(self, dispatch_id: str, phase: str) -> bool:
         """Check if a specific phase entry already exists for this dispatch."""
-        self._sync_from_redis()
+        self._sync_from_redis(force=True)
         with self._lock:
             for entry in self._activity_log:
                 if entry.dispatch_id == dispatch_id and entry.phase == phase:
