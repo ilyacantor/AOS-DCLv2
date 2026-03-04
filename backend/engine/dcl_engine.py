@@ -325,10 +325,12 @@ class DCLEngine:
                 concept_field_mappings[concept.id] = []
                 ontology_mapping_count[concept.id] = 0
 
-        # Decide aggregation strategy: fabric-level for AAM with 30+ pipes,
-        # individual nodes when under threshold for readability
+        # Decide aggregation strategy: fabric-level for 30+ pipes,
+        # individual nodes when under threshold for readability.
+        # Both AAM and Farm sources carry fabric_plane from pipe_store
+        # (populated by AAM's export-pipes). Demo mode never has fabric tags.
         use_fabric_aggregation = (
-            mode == "AAM"
+            mode in ("AAM", "Farm")
             and len(sources) >= 30
             and any(s.fabric_plane for s in sources)
         )
@@ -425,7 +427,7 @@ class DCLEngine:
                         })
 
         else:
-            # ── Individual source nodes: Demo / Farm mode ──
+            # ── Individual source nodes: <30 pipes or Demo mode ──
             source_mapping_count = {}
             for source in sources:
                 source_id = f"source_{source.id}"

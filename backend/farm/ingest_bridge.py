@@ -168,6 +168,7 @@ def build_sources_from_ingest(
             category = pipe_def.category or "unknown"
             trust_score = pipe_def.trust_score
             data_quality = pipe_def.data_quality_score
+            fabric_plane = pipe_def.fabric_plane or ""
         else:
             # All receipts in this group had pipe_defs (unregistered ones were skipped)
             # This branch only executes if the pipe_def was evicted between loops.
@@ -175,6 +176,7 @@ def build_sources_from_ingest(
             category = "unknown"
             trust_score = 0
             data_quality = 0
+            fabric_plane = ""
 
         # Build tables from each pipe's rows
         tables: List[TableSchema] = []
@@ -214,6 +216,7 @@ def build_sources_from_ingest(
             data_quality_score=data_quality,
             vendor=display_name,
             category=category,
+            fabric_plane=fabric_plane,
             entities=[],
         )
         sources.append(source)
