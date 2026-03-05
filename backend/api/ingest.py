@@ -1769,13 +1769,20 @@ class IngestStore:
 
     def has_dispatch_activity(self, dispatch_id: str) -> bool:
         """Check if we've already recorded a dispatch-phase entry for this id."""
-        self._sync_from_redis(force=True)
+        self._sync_from_redis()
         with self._lock:
             return dispatch_id in self._seen_dispatch_ids
 
     def has_phase(self, dispatch_id: str, phase: str) -> bool:
-        """Check if a specific phase entry already exists for this dispatch."""
-        self._sync_from_redis(force=True)
+        """Check if a specific phase entry already exists for this dispatch.
+
+        Uses throttled sync (250ms) — NOT force=True.  If this returns a
+        stale False, record_activity()'s own force-sync + dedup guard
+        (lines 1742-1753) catches the duplicate safely.  Forcing here
+        caused N full Redis syncs per dispatch (one per pipe), adding
+        ~20s on Render with accumulated receipt data.
+        """
+        self._sync_from_redis()
         with self._lock:
             for entry in self._activity_log:
                 if entry.dispatch_id == dispatch_id and entry.phase == phase:
