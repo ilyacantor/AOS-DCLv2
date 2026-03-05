@@ -61,6 +61,12 @@ interface CrossSystemData {
     aam_dispatched: number;
     dcl_ingested_current_snapshot: number;
     dcl_ingested_all_snapshots: number;
+    dcl_ingested_all_detail?: Array<{
+      pipe_id: string;
+      snapshots: string[];
+      snapshot_count: number;
+      in_current_snapshot: boolean;
+    }>;
     dcl_drops: number;
     unaccounted: number;
     unaccounted_by_reason: {
@@ -123,6 +129,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
 
   // Failed pipes state
   const [failedOpen, setFailedOpen] = useState(false);
+  const [ingestedAllOpen, setIngestedAllOpen] = useState(false);
   const [failedFilter, setFailedFilter] = useState('');
 
   const fetchXsysData = async () => {
@@ -379,25 +386,60 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
             {(() => {
               const wf = xsysData.pipeline_waterfall!;
               const stages = [
-                { label: 'AAM Dispatched', value: wf.aam_dispatched, color: 'bg-blue-500' },
-                { label: 'DCL Ingested (snapshot)', value: wf.dcl_ingested_current_snapshot, color: 'bg-emerald-500' },
-                { label: 'DCL Ingested (all)', value: wf.dcl_ingested_all_snapshots, color: 'bg-emerald-500/60' },
-                { label: 'DCL Drops', value: wf.dcl_drops, color: 'bg-red-500' },
+                { label: 'AAM Dispatched', value: wf.aam_dispatched, color: 'bg-blue-500', drillable: false },
+                { label: 'DCL Ingested (snapshot)', value: wf.dcl_ingested_current_snapshot, color: 'bg-emerald-500', drillable: false },
+                { label: 'DCL Ingested (lifetime)', value: wf.dcl_ingested_all_snapshots, color: 'bg-emerald-500/60', drillable: true },
+                { label: 'DCL Drops', value: wf.dcl_drops, color: 'bg-red-500', drillable: false },
               ];
               const maxVal = Math.max(...stages.map(s => s.value), 1);
               const ur = wf.unaccounted_by_reason;
+              const detail = wf.dcl_ingested_all_detail;
               return (
                 <div className="space-y-1.5">
                   {stages.map((s) => (
-                    <div key={s.label} className="flex items-center gap-2 text-[11px]">
-                      <span className="w-[120px] text-muted-foreground shrink-0 text-right">{s.label}</span>
-                      <div className="flex-1 h-3.5 bg-muted/20 rounded overflow-hidden">
-                        <div
-                          className={`h-full ${s.color} rounded transition-all`}
-                          style={{ width: `${Math.max((s.value / maxVal) * 100, s.value > 0 ? 2 : 0)}%` }}
-                        />
+                    <div key={s.label}>
+                      <div
+                        className={`flex items-center gap-2 text-[11px] ${s.drillable ? 'cursor-pointer hover:bg-muted/10 rounded -mx-1 px-1' : ''}`}
+                        onClick={s.drillable ? () => setIngestedAllOpen(prev => !prev) : undefined}
+                      >
+                        {s.drillable && (
+                          ingestedAllOpen
+                            ? <ChevronDown className="w-3 h-3 shrink-0 text-muted-foreground" />
+                            : <ChevronRight className="w-3 h-3 shrink-0 text-muted-foreground" />
+                        )}
+                        <span className={`${s.drillable ? 'w-[108px]' : 'w-[120px]'} text-muted-foreground shrink-0 text-right`}>{s.label}</span>
+                        <div className="flex-1 h-3.5 bg-muted/20 rounded overflow-hidden">
+                          <div
+                            className={`h-full ${s.color} rounded transition-all`}
+                            style={{ width: `${Math.max((s.value / maxVal) * 100, s.value > 0 ? 2 : 0)}%` }}
+                          />
+                        </div>
+                        <span className="font-mono font-semibold w-8 text-right text-foreground">{s.value}</span>
                       </div>
-                      <span className="font-mono font-semibold w-8 text-right text-foreground">{s.value}</span>
+                      {s.drillable && ingestedAllOpen && detail && (
+                        <div className="mt-1 mb-1 ml-[120px] max-h-[200px] overflow-y-auto rounded border border-border bg-card/50 text-[10px]">
+                          <table className="w-full">
+                            <thead className="sticky top-0 bg-card border-b border-border">
+                              <tr className="text-muted-foreground text-left">
+                                <th className="px-1.5 py-0.5 font-medium">pipe_id</th>
+                                <th className="px-1.5 py-0.5 font-medium text-center">snaps</th>
+                                <th className="px-1.5 py-0.5 font-medium">snapshots</th>
+                                <th className="px-1.5 py-0.5 font-medium text-center">current</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {detail.map((d) => (
+                                <tr key={d.pipe_id} className="border-t border-border/50 hover:bg-muted/10">
+                                  <td className="px-1.5 py-0.5 font-mono text-foreground">{d.pipe_id}</td>
+                                  <td className="px-1.5 py-0.5 font-mono text-center text-muted-foreground">{d.snapshot_count}</td>
+                                  <td className="px-1.5 py-0.5 text-muted-foreground truncate max-w-[200px]" title={d.snapshots.join(', ')}>{d.snapshots.join(', ')}</td>
+                                  <td className="px-1.5 py-0.5 text-center">{d.in_current_snapshot ? <span className="text-emerald-400">✓</span> : <span className="text-muted-foreground/40">✗</span>}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   ))}
                   {wf.unaccounted > 0 && (
