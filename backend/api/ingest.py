@@ -1508,6 +1508,13 @@ class IngestStore:
                 "redis_connected": self._redis is not None,
                 "activity_entries": len(self._activity_log),
                 "total_drops": len(self._drop_log),
+                "max_materialized_points": _MAX_MATERIALIZED_POINTS,
+                "max_drift_events": _MAX_DRIFT_EVENTS,
+                "max_schema_entries": _MAX_SCHEMA_ENTRIES,
+                "max_activity": _MAX_ACTIVITY,
+                "max_drops": _MAX_DROPS,
+                "max_content_dispatches": _MAX_CONTENT_DISPATCHES,
+                "content_dispatches": len(self._seen_dispatch_ids),
             }
 
     # ------------------------------------------------------------------
