@@ -1073,16 +1073,6 @@ def get_cross_system_reconciliation(http_request: Request):
         "pipeline_waterfall": {
             "aam_dispatched": aam_dispatched,
             "dcl_ingested_current_snapshot": dcl_ingested,
-            "dcl_ingested_all_snapshots": len(all_receipt_pipe_ids),
-            "dcl_ingested_all_detail": [
-                {
-                    "pipe_id": pid,
-                    "snapshots": snaps,
-                    "snapshot_count": len(snaps),
-                    "in_current_snapshot": pid in receipt_pipe_id_set,
-                }
-                for pid, snaps in sorted(all_receipt_pipe_ids.items())
-            ],
             "dcl_drops": dcl_drops_unique,
             "unaccounted": farm_failed,
             "unaccounted_by_reason": {

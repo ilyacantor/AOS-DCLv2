@@ -155,7 +155,7 @@ def _resolve_export_identity(pipe_store) -> tuple:
     this means Farm is pushing data before AAM sent /export-pipes, which
     is a sequencing violation.
     """
-    receipts = pipe_store.get_export_receipts()
+    receipts = pipe_store.get_export_receipts(force_sync=True)
     if not receipts:
         logger.error(
             "[Activity] No AAM export receipts found. Farm is pushing content "

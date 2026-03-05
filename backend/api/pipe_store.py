@@ -572,7 +572,7 @@ class PipeDefinitionStore:
         except Exception as e:
             logger.warning(f"[PipeStore] Redis rehydration failed: {e}")
 
-    def _sync_from_redis(self) -> None:
+    def _sync_from_redis(self, force: bool = False) -> None:
         """Reload definitions and export receipts from Redis written by another worker.
 
         With --workers 2, Worker A may register definitions via /export-pipes
@@ -588,7 +588,7 @@ class PipeDefinitionStore:
         if not self._redis:
             return
         now = time.monotonic()
-        if now - self._last_sync_time < 1.0:
+        if not force and now - self._last_sync_time < 1.0:
             return
         self._last_sync_time = now
         try:
@@ -748,14 +748,19 @@ class PipeDefinitionStore:
         with self._lock:
             return len(self._definitions)
 
-    def get_export_receipts(self) -> List[ExportReceipt]:
+    def get_export_receipts(self, force_sync: bool = False) -> List[ExportReceipt]:
         """Return all export receipt history.
 
         Syncs from Redis first so cross-worker reads always see the
         latest receipts (e.g. Worker B reading receipts written by
         Worker A via /export-pipes).
+
+        Args:
+            force_sync: When True, bypass the 1-second throttle on Redis sync.
+                Use this for critical lookups like dispatch_id resolution where
+                a stale cache causes duplicate snapshot entries.
         """
-        self._sync_from_redis()
+        self._sync_from_redis(force=force_sync)
         with self._lock:
             return list(self._export_receipts)
 
