@@ -22,15 +22,8 @@ extractions:
     value_concept: revenue
     measure_op: sum
     period_concept: date
-    filters:
-      - concept: win_loss
-        values: [true, "true", "Closed Won", "Won", "Closed-Won"]
-        optional: true
-    dimension_map:
-      territory: region
-      customer_segment: segment
-      product: product
-    unit_scale: 0.000001
+    value_field_hint: total_revenue
+    strict_hint: true
 
   - metric: arr
     value_concept: revenue
@@ -381,16 +374,10 @@ extractions:
 
   - metric: headcount
     value_concept: employee
-    measure_op: count
-    count_concept: employee
+    measure_op: avg
     period_concept: date
-    filters:
-      - concept: employee
-        field_hint: worker_status
-        values: ["Active", "active", true, "true"]
-        optional: true
-    dimension_map:
-      department: department
+    value_field_hint: total_headcount
+    strict_hint: true
 
   - metric: attrition_rate_pct
     value_concept: employee
