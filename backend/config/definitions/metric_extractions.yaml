@@ -166,6 +166,33 @@ extractions:
     value_field_hint: operating_expenses
     strict_hint: true
 
+  # ─── Balance Sheet / Cash ────────────────────────────────────────
+
+  - metric: cash
+    value_concept: revenue
+    measure_op: avg
+    period_concept: date
+    value_field_hint: cash
+    strict_hint: true
+
+  # ─── Pre-computed CTO metrics (from finsummary) ────────────────
+
+  - metric: p1_incidents
+    value_concept: incident
+    measure_op: avg
+    period_concept: date
+    value_field_hint: p1_incidents
+    strict_hint: true
+
+  # ─── Derived metrics (from finsummary) ─────────────────────────
+
+  - metric: revenue_per_employee
+    value_concept: revenue
+    measure_op: avg
+    period_concept: date
+    value_field_hint: revenue_per_employee
+    strict_hint: true
+
   - metric: ar_aging
     value_concept: accounts_receivable
     measure_op: sum
@@ -220,6 +247,13 @@ extractions:
     ratio_hint: attainment_pct
     dimension_map:
       territory: region
+
+  - metric: sales_cycle_days
+    value_concept: win_loss
+    measure_op: avg
+    period_concept: date
+    value_field_hint: sales_cycle_days
+    strict_hint: true
 
   - metric: churn_rate_pct
     value_concept: churn_event
@@ -299,6 +333,13 @@ extractions:
     period_concept: date
     dimension_map:
       it_service: service
+
+  - metric: deploy_frequency
+    value_concept: incident
+    measure_op: avg
+    period_concept: date
+    value_field_hint: deploy_count
+    strict_hint: true
 
   - metric: mttr
     value_concept: incident
