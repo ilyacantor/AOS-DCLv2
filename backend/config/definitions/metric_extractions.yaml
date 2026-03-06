@@ -37,10 +37,10 @@ extractions:
     measure_op: sum
     period_concept: date
     value_field_hint: arr
+    strict_hint: true
     dimension_map:
       customer_segment: segment
       territory: region
-    unit_scale: 0.000001
 
   - metric: mrr
     value_concept: subscription
@@ -78,6 +78,7 @@ extractions:
     measure_op: avg
     period_concept: date
     value_field_hint: days_outstanding
+    strict_hint: true
     dimension_map:
       customer_segment: segment
       territory: region
@@ -90,9 +91,80 @@ extractions:
       cost_center: cost_center
     unit_scale: 0.000001
 
-  # gross_margin_pct: extraction rule removed — ratio_hint partial-matches
-  # dollar-amount GL fields instead of a pre-computed ratio.  DCL falls back
-  # to fact_base (~65%) which is correct.
+  # ─── P&L / Margins (from Farm's financial_summary pipe) ──────────
+  # These use value_field_hint to match exact field names from the
+  # pre-computed P&L summary rows.  No unit_scale — values arrive
+  # in millions (dollar) or raw percentage (margin_pct) already.
+
+  - metric: gross_margin_pct
+    value_concept: revenue
+    measure_op: avg
+    period_concept: date
+    value_field_hint: gross_margin_pct
+    strict_hint: true
+
+  - metric: operating_margin_pct
+    value_concept: revenue
+    measure_op: avg
+    period_concept: date
+    value_field_hint: operating_margin_pct
+    strict_hint: true
+
+  - metric: net_margin_pct
+    value_concept: revenue
+    measure_op: avg
+    period_concept: date
+    value_field_hint: net_margin_pct
+    strict_hint: true
+
+  - metric: ebitda_margin_pct
+    value_concept: revenue
+    measure_op: avg
+    period_concept: date
+    value_field_hint: ebitda_margin_pct
+    strict_hint: true
+
+  - metric: ebitda
+    value_concept: revenue
+    measure_op: sum
+    period_concept: date
+    value_field_hint: ebitda
+    strict_hint: true
+
+  - metric: gross_profit
+    value_concept: revenue
+    measure_op: sum
+    period_concept: date
+    value_field_hint: gross_profit
+    strict_hint: true
+
+  - metric: operating_profit
+    value_concept: revenue
+    measure_op: sum
+    period_concept: date
+    value_field_hint: operating_profit
+    strict_hint: true
+
+  - metric: net_income
+    value_concept: revenue
+    measure_op: sum
+    period_concept: date
+    value_field_hint: net_income
+    strict_hint: true
+
+  - metric: cogs
+    value_concept: cost
+    measure_op: sum
+    period_concept: date
+    value_field_hint: cogs
+    strict_hint: true
+
+  - metric: opex
+    value_concept: cost
+    measure_op: sum
+    period_concept: date
+    value_field_hint: operating_expenses
+    strict_hint: true
 
   - metric: ar_aging
     value_concept: accounts_receivable
@@ -232,7 +304,7 @@ extractions:
     value_concept: incident
     measure_op: avg
     period_concept: date
-    value_field_hint: mttr
+    value_field_hint: time_to_resolve
     dimension_map:
       it_service: service
 
@@ -248,7 +320,7 @@ extractions:
     value_concept: incident
     measure_op: avg
     period_concept: date
-    value_field_hint: current_value
+    value_field_hint: error_budget_remaining
     dimension_map:
       it_service: service
 

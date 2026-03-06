@@ -372,6 +372,7 @@ class MetricMaterializer:
             period_concept = rule.get("period_concept", "date")
             count_concept = rule.get("count_concept")
             value_hint = rule.get("value_field_hint")
+            strict_hint = rule.get("strict_hint", False)
             filters = rule.get("filters", [])
             dim_map = rule.get("dimension_map", {})
             unit_scale = rule.get("unit_scale", 1.0)
@@ -435,10 +436,23 @@ class MetricMaterializer:
                     continue
 
                 # Standard value extraction (use partial for value fields)
-                value_field = self._resolve_field(
-                    row, value_concept, value_hint, partial=True,
-                    _keys_lower=keys_lower, _keys_normalized=keys_normalized,
-                )
+                if strict_hint and value_hint:
+                    # strict_hint: ONLY match the exact field name, no concept fallback.
+                    # Used for P&L metrics that must only come from rows with the
+                    # exact field (e.g. net_income, ebitda, cogs) — not from
+                    # transaction-level rows that happen to have revenue/cost concepts.
+                    hint_lower = value_hint.lower()
+                    if hint_lower in keys_lower:
+                        value_field = keys_lower[hint_lower]
+                    elif hint_lower in keys_normalized:
+                        value_field = keys_normalized[hint_lower]
+                    else:
+                        continue
+                else:
+                    value_field = self._resolve_field(
+                        row, value_concept, value_hint, partial=True,
+                        _keys_lower=keys_lower, _keys_normalized=keys_normalized,
+                    )
                 if value_field is None:
                     continue
 

@@ -443,7 +443,24 @@ class IngestStore:
             redis_loaded = bool(self._receipts)
 
             if not redis_loaded:
-                for k, v in data.get("receipts", {}).items():
+                # --- Filter to 3 most recent snapshots ---
+                _MAX_STARTUP_SNAPSHOTS = 3
+                raw_receipts = data.get("receipts", {})
+                snapshot_latest: dict[str, str] = {}
+                for v in raw_receipts.values():
+                    snap = v.get("snapshot_name", "")
+                    ts = v.get("received_at", "")
+                    if snap and (snap not in snapshot_latest or ts > snapshot_latest[snap]):
+                        snapshot_latest[snap] = ts
+                recent_snapshots = set(
+                    k for k, _ in sorted(snapshot_latest.items(), key=lambda x: x[1], reverse=True)[:_MAX_STARTUP_SNAPSHOTS]
+                )
+
+                disk_skipped = 0
+                for k, v in raw_receipts.items():
+                    if v.get("snapshot_name", "") not in recent_snapshots:
+                        disk_skipped += 1
+                        continue
                     self._receipts[k] = RunReceipt(**v)
 
                 for k, v in data.get("schema_registry", {}).items():
@@ -456,16 +473,18 @@ class IngestStore:
                 # row_buffer and materialized are no longer persisted to disk
                 # (they live in Redis).  Load legacy data if present for backward
                 # compat, but new caches won't have these keys.
+                # Only load data for receipts in the recent snapshot set.
                 for k, v in data.get("row_buffer", {}).items():
+                    if k not in self._receipts:
+                        continue
                     self._row_buffer[k] = v
-                self._total_rows = data.get("total_rows", sum(len(v) for v in self._row_buffer.values()))
+                self._total_rows = sum(len(v) for v in self._row_buffer.values())
 
                 for k, v in data.get("materialized", {}).items():
+                    if k not in self._receipts:
+                        continue
                     self._materialized[k] = v
-                self._materialized_total = data.get(
-                    "materialized_total",
-                    sum(len(v) for v in self._materialized.values()),
-                )
+                self._materialized_total = sum(len(v) for v in self._materialized.values())
 
                 # Enforce limits on legacy data
                 while self._total_rows > _MAX_BUFFERED_ROWS and self._row_buffer:
@@ -505,6 +524,7 @@ class IngestStore:
                 f"{self._materialized_total:,} materialized points, "
                 f"{len(self._schema_registry)} schemas, {len(self._activity_log)} activity entries"
                 + (", content tracking loaded separately" if redis_loaded else "")
+                + (f", skipped {disk_skipped} older receipts" if not redis_loaded and disk_skipped else "")
             )
         except Exception as e:
             logger.warning(f"[IngestStore] Failed to load from disk: {e}")
@@ -644,17 +664,40 @@ class IngestStore:
         try:
             r = self._redis
 
-            # Load receipt order (keys are composite: "run_id:pipe_id")
+            # Bulk-fetch all receipts in one call (avoids hundreds of HGET round-trips)
+            all_receipts_raw = r.hgetall(f"{_REDIS_PREFIX}receipts")
             order = r.lrange(f"{_REDIS_PREFIX}receipt_order", 0, -1)
             loaded_receipts = 0
             loaded_rows = 0
 
+            # --- Determine the 3 most recent snapshots ---
+            _MAX_STARTUP_SNAPSHOTS = 3
+            snapshot_latest: dict[str, str] = {}  # snapshot_name → latest received_at
+            for raw in all_receipts_raw.values():
+                d = json.loads(raw)
+                snap = d.get("snapshot_name", "")
+                ts = d.get("received_at", "")
+                if snap and (snap not in snapshot_latest or ts > snapshot_latest[snap]):
+                    snapshot_latest[snap] = ts
+
+            # Sort by latest timestamp descending, keep top N
+            recent_snapshots = set(
+                k for k, _ in sorted(snapshot_latest.items(), key=lambda x: x[1], reverse=True)[:_MAX_STARTUP_SNAPSHOTS]
+            )
+
+            # --- Filter receipts to recent snapshots ---
+            skipped = 0
+            keys_to_load_rows: list[str] = []
             for storage_key in order:
-                raw = r.hget(f"{_REDIS_PREFIX}receipts", storage_key)
+                raw = all_receipts_raw.get(storage_key)
                 if not raw:
                     continue
                 d = json.loads(raw)
                 receipt = RunReceipt(**d)
+
+                if receipt.snapshot_name not in recent_snapshots:
+                    skipped += 1
+                    continue
 
                 # Migrate old keys: if storage_key lacks ":" it's pre-fix data
                 if ":" not in storage_key:
@@ -663,20 +706,24 @@ class IngestStore:
                 self._receipts[storage_key] = receipt
                 loaded_receipts += 1
 
-                # Load rows — skip if already at memory limit
-                if self._total_rows >= _MAX_BUFFERED_ROWS:
-                    continue
-                rows_raw = r.get(f"{_REDIS_PREFIX}rows:{storage_key}")
-                if not rows_raw:
-                    rows_raw = r.get(f"{_REDIS_PREFIX}rows:{receipt.run_id}")
-                if rows_raw:
+                if self._total_rows < _MAX_BUFFERED_ROWS:
+                    keys_to_load_rows.append(storage_key)
+
+            # Batch-fetch rows via pipeline (avoids per-receipt GET round-trips)
+            if keys_to_load_rows:
+                pipe = r.pipeline(transaction=False)
+                for sk in keys_to_load_rows:
+                    pipe.get(f"{_REDIS_PREFIX}rows:{sk}")
+                row_results = pipe.execute()
+                for sk, rows_raw in zip(keys_to_load_rows, row_results):
+                    if not rows_raw:
+                        continue
                     # Rows may be zlib-compressed (new format) or plain JSON (legacy).
-                    # zlib data starts with bytes 0x78 (low compression) or 0x78 0x01/9C/DA.
                     if isinstance(rows_raw, bytes) and len(rows_raw) > 0 and rows_raw[0:1] == b'\x78':
                         rows = json.loads(zlib.decompress(rows_raw))
                     else:
                         rows = json.loads(rows_raw)
-                    self._row_buffer[storage_key] = rows
+                    self._row_buffer[sk] = rows
                     self._total_rows += len(rows)
                     loaded_rows += len(rows)
 
@@ -706,16 +753,21 @@ class IngestStore:
                 for d in json.loads(drop_raw):
                     self._drop_log.append(DropEntry(**d))
 
-            # Load materialized data points from Redis — skip once at limit
+            # Batch-fetch materialized data via pipeline — only for loaded receipts
             materialized_loaded = 0
-            for storage_key in order:
-                if materialized_loaded >= _MAX_MATERIALIZED_POINTS:
-                    break
-                mat_raw = r.get(f"{_REDIS_PREFIX}materialized:{storage_key}")
-                if mat_raw:
-                    points = json.loads(mat_raw)
-                    self._materialized[storage_key] = points
-                    materialized_loaded += len(points)
+            receipt_keys = list(self._receipts.keys())
+            if receipt_keys:
+                pipe = r.pipeline(transaction=False)
+                for sk in receipt_keys:
+                    pipe.get(f"{_REDIS_PREFIX}materialized:{sk}")
+                mat_results = pipe.execute()
+                for sk, mat_raw in zip(receipt_keys, mat_results):
+                    if materialized_loaded >= _MAX_MATERIALIZED_POINTS:
+                        break
+                    if mat_raw:
+                        points = json.loads(mat_raw)
+                        self._materialized[sk] = points
+                        materialized_loaded += len(points)
             self._materialized_total = materialized_loaded
 
             # Cap schema registry (loaded via hgetall above, may exceed limit)
@@ -733,12 +785,13 @@ class IngestStore:
                     )
                     backfilled += 1
 
-            if loaded_receipts > 0:
+            if loaded_receipts > 0 or skipped > 0:
                 logger.info(
-                    f"[IngestStore] Rehydrated from Redis: "
-                    f"{loaded_receipts} receipts, {loaded_rows:,} rows, "
-                    f"{len(self._schema_registry)} schemas"
+                    f"[IngestStore] Loaded {loaded_receipts} of {loaded_receipts + skipped} receipts "
+                    f"({_MAX_STARTUP_SNAPSHOTS} most recent snapshots), "
+                    f"{loaded_rows:,} rows, {len(self._schema_registry)} schemas"
                     + (f", backfilled {backfilled} dispatch_ids" if backfilled else "")
+                    + (f", skipped {skipped} older receipts" if skipped else "")
                 )
 
         except Exception as e:
@@ -1611,24 +1664,43 @@ class IngestStore:
                     "period_range": None,
                 }
 
-            metrics: Dict[str, int] = {}
+            metrics_raw: Dict[str, int] = {}
+            metrics_deduped: Dict[str, int] = {}
             sources: set = set()
             periods: set = set()
+            # Track unique (metric, period, source, pipe_id, dims) for dedup count
+            _seen: Dict[str, set] = {}
 
             for points in self._materialized.values():
                 for pt in points:
                     m = pt.get("metric", "unknown")
-                    metrics[m] = metrics.get(m, 0) + 1
+                    metrics_raw[m] = metrics_raw.get(m, 0) + 1
                     if pt.get("source_system"):
                         sources.add(pt["source_system"])
                     if pt.get("period"):
                         periods.add(pt["period"])
+                    # Dedup key: same logic as query.py deduplication
+                    dedup_key = (
+                        pt.get("period", "current"),
+                        pt.get("source_system", ""),
+                        pt.get("pipe_id", ""),
+                        tuple(sorted(pt.get("dimensions", {}).items())),
+                    )
+                    if m not in _seen:
+                        _seen[m] = set()
+                    _seen[m].add(dedup_key)
 
+            for m, keys in _seen.items():
+                metrics_deduped[m] = len(keys)
+
+            total_deduped = sum(metrics_deduped.values())
             sorted_periods = sorted(periods) if periods else []
             return {
-                "total_points": self._materialized_total,
+                "total_points": total_deduped,
+                "total_points_raw": self._materialized_total,
                 "total_keys": len(self._materialized),
-                "metrics": dict(sorted(metrics.items())),
+                "metrics": dict(sorted(metrics_deduped.items())),
+                "metrics_raw": dict(sorted(metrics_raw.items())),
                 "source_systems": sorted(sources),
                 "period_range": {
                     "earliest": sorted_periods[0],

@@ -490,6 +490,32 @@ def _query_ingest_store(
         ]
 
     if mat_points:
+        # --- Deduplicate across pipeline runs ---
+        # Multiple runs produce separate materialized keys (run_id:pipe_id).
+        # Without dedup, the same metric/period/source gets summed N times
+        # (once per run), inflating values by Nx.
+        #
+        # Dedup key: (metric, period, source_system, pipe_id, dim_key)
+        # If same key appears from multiple runs, keep the LATEST
+        # (by materialized_at timestamp).  Different sources for the same
+        # metric/period are kept — they represent different data (e.g.
+        # netsuite revenue + salesforce revenue).
+        _dedup: dict = {}
+        for pt in mat_points:
+            period = pt.get("period", "current")
+            src = pt.get("source_system", "")
+            pid = pt.get("pipe_id", "")
+            dim_key = tuple(sorted(pt.get("dimensions", {}).items()))
+            dedup_key = (period, src, pid, dim_key)
+            existing = _dedup.get(dedup_key)
+            if existing is None:
+                _dedup[dedup_key] = pt
+            else:
+                # Keep the point with the later materialized_at timestamp
+                if pt.get("materialized_at", "") > existing.get("materialized_at", ""):
+                    _dedup[dedup_key] = pt
+        mat_points = list(_dedup.values())
+
         # Aggregate across pipes: group by (period, dim_key).
         # Each pipe's materialization already aggregated its own rows;
         # this step combines the same metric from multiple source pipes.
@@ -635,9 +661,30 @@ def execute_query(request: QueryRequest) -> QueryResponse:
         data_points = ingested_points
 
     # ------------------------------------------------------------------
+    # Path A-live: live mode with no ingested data — fail loud
+    # Never silently fall back to fact_base.json in live mode.
+    # ------------------------------------------------------------------
+    if not data_points and use_live:
+        return QueryResponse(
+            metric=request.metric,
+            metric_name=metric_def.name,
+            dimensions=request.dimensions,
+            grain=grain,
+            unit=unit,
+            data=[],
+            metadata=QueryMetadata(
+                sources=["live"],
+                freshness=datetime.utcnow().isoformat() + "Z",
+                quality_score=0.0,
+                mode="Ingest",
+                record_count=0,
+                source="ingest_empty",
+            ),
+        )
+
+    # ------------------------------------------------------------------
     # Path A: fact_base.json
-    # Used when data_mode is "demo" (or absent), OR when data_mode is
-    # "live" but the ingest buffer had nothing for this metric.
+    # Used when data_mode is "demo" (or absent).
     # ------------------------------------------------------------------
     if not data_points:
         ingest_receipt = None   # no ingest provenance to carry
@@ -783,7 +830,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
 
     # Build enriched response fields
     # Provenance
-    provenance_info = None
+    provenance_info = []
     try:
         from backend.engine.provenance_service import get_provenance
         trace = get_provenance(request.metric)
