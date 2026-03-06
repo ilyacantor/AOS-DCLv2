@@ -278,6 +278,10 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
           {displayMode}
         </span>
       )}
+      <span className="absolute bottom-2 right-3 text-[10px] text-slate-500 font-mono pointer-events-none text-right">
+        {data.meta.snapshotName && <>{`snap: ${data.meta.snapshotName}`}<br /></>}
+        {`run: ${data.meta.aodRunId || data.meta.runId}`}
+      </span>
       </>
       )}
     </div>

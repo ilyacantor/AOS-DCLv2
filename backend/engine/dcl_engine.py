@@ -264,6 +264,8 @@ class DCLEngine:
             meta={
                 "mode": mode,
                 "run_id": run_id,
+                "snapshot_name": payload_kpis.get("snapshotName", "") if payload_kpis else "",
+                "aod_run_id": aod_run_id or "",
                 "generated_at": utc_now(),
                 "stats": {
                     "sources": len(sources),

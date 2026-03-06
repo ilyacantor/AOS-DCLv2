@@ -120,6 +120,8 @@ export interface GraphSnapshot {
   meta: {
     mode: 'Demo' | 'Farm' | 'AAM';
     runId: string;
+    snapshotName?: string;
+    aodRunId?: string;
     generatedAt: string;
     stats?: Record<string, unknown>;
     personaViews?: PersonaView[];
