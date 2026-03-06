@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon } from 'lucide-react';
+import TerminalIcon from 'lucide-react/dist/esm/icons/terminal';
 
 interface ApiNarrationMessage {
   id?: string;

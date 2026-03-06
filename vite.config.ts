@@ -14,7 +14,6 @@ export default defineConfig({
     port: 3004,
     strictPort: true,
     allowedHosts: true,
-    hmr: false,
     proxy: {
       '/api': {
         target: 'http://localhost:8004',

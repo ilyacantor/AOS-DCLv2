@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { GraphSnapshot, PersonaId } from '../types';
-import { Play, Activity, Database, Cpu, Clock, LayoutGrid, GitBranch, Menu, X } from 'lucide-react';
+import Play from 'lucide-react/dist/esm/icons/play';
+import Activity from 'lucide-react/dist/esm/icons/activity';
+import Database from 'lucide-react/dist/esm/icons/database';
+import Cpu from 'lucide-react/dist/esm/icons/cpu';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import LayoutGrid from 'lucide-react/dist/esm/icons/layout-grid';
+import GitBranch from 'lucide-react/dist/esm/icons/git-branch';
+import Menu from 'lucide-react/dist/esm/icons/menu';
+import X from 'lucide-react/dist/esm/icons/x';
 
 interface ControlsBarProps {
   runMode: 'Dev' | 'Prod';

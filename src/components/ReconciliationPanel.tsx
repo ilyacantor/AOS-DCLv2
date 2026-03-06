@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 
 interface CrossSystemData {
   snapshot_name: string;

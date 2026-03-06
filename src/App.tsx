@@ -8,7 +8,8 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './componen
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import { Toaster } from './components/ui/toaster';
 import { useToast } from './hooks/use-toast';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import { UserGuide } from './components/UserGuide';
 import { ReconciliationPanel } from './components/ReconciliationPanel';
 import { IngestionPanel } from './components/IngestionPanel';

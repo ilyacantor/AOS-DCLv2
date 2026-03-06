@@ -2,7 +2,22 @@ import { useState, useEffect } from 'react';
 import { GraphSnapshot, PersonaId } from '../types';
 import { Badge } from './Badge';
 import { MONITOR_CONFIDENCE } from '../constants';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, Info, Database, Zap, CheckCircle2, ChevronDown, ChevronRight, Layers, Server, Table2, FileText, X, ArrowRight } from 'lucide-react';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import TrendingDown from 'lucide-react/dist/esm/icons/trending-down';
+import Minus from 'lucide-react/dist/esm/icons/minus';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
+import Info from 'lucide-react/dist/esm/icons/info';
+import Database from 'lucide-react/dist/esm/icons/database';
+import Zap from 'lucide-react/dist/esm/icons/zap';
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import Layers from 'lucide-react/dist/esm/icons/layers';
+import Server from 'lucide-react/dist/esm/icons/server';
+import Table2 from 'lucide-react/dist/esm/icons/table-2';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import X from 'lucide-react/dist/esm/icons/x';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 
 interface MonitorPanelProps {
   data: GraphSnapshot | null;

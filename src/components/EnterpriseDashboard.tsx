@@ -1,21 +1,19 @@
 import { useState, useMemo } from 'react';
 import { GraphSnapshot, GraphLink } from '../types';
 import { CONFIDENCE } from '../constants';
-import {
-  Database,
-  ArrowRight,
-  CheckCircle2,
-  AlertCircle,
-  AlertTriangle,
-  Search,
-  Filter,
-  ChevronDown,
-  Layers,
-  GitBranch,
-  Shield,
-  HelpCircle,
-  Building2
-} from 'lucide-react';
+import Database from 'lucide-react/dist/esm/icons/database';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
+import Search from 'lucide-react/dist/esm/icons/search';
+import Filter from 'lucide-react/dist/esm/icons/filter';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import Layers from 'lucide-react/dist/esm/icons/layers';
+import GitBranch from 'lucide-react/dist/esm/icons/git-branch';
+import Shield from 'lucide-react/dist/esm/icons/shield';
+import HelpCircle from 'lucide-react/dist/esm/icons/help-circle';
+import Building2 from 'lucide-react/dist/esm/icons/building-2';
 
 interface EnterpriseDashboardProps {
   data: GraphSnapshot | null;
