@@ -166,8 +166,8 @@ def _validate_dimensions(
 
     # Normalize dimension aliases
     dim_aliases = {
-        "region": "geography",
-        "geo": "geography",
+        "geography": "region",
+        "geo": "region",
         "cost_center": "cost_center",
         "dept": "department",
     }

@@ -359,11 +359,17 @@ class MetricMaterializer:
         now = datetime.now(timezone.utc).isoformat()
         all_points: List[Dict[str, Any]] = []
 
-        # Pre-compute key indexes once — all rows in a pipe share the same keys.
-        # This eliminates ~50k redundant dict constructions per pipe.
-        sample = rows[0]
-        keys_lower = {k.lower(): k for k in sample.keys() if not k.startswith("_")}
-        keys_normalized = {_normalize_key(k): k for k in sample.keys() if not k.startswith("_")}
+        # Pre-compute key indexes from the union of all row keys.
+        # Rows in the same pipe may have different schemas (e.g. total rows
+        # without a region field vs regional rows with one), so we must
+        # include keys from every row to avoid silently dropping dimensions.
+        all_keys: Dict[str, str] = {}
+        for row in rows:
+            for k in row.keys():
+                if not k.startswith("_") and k not in all_keys:
+                    all_keys[k] = k
+        keys_lower = {k.lower(): k for k in all_keys}
+        keys_normalized = {_normalize_key(k): k for k in all_keys}
 
         for rule in self._rules:
             metric_id = rule["metric"]

@@ -37,9 +37,9 @@ _DEFAULT_CACHE_TTL = 300  # 5 minutes
 
 # Dimension aliases — common names that map to canonical dimension IDs
 _DIMENSION_ALIASES: dict[str, str] = {
-    "region": "geography",
-    "geo": "geography",
-    "location": "geography",
+    "geography": "region",
+    "geo": "region",
+    "location": "region",
     "team": "department",
     "business_unit": "division",
     "bu": "division",

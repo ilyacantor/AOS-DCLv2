@@ -179,6 +179,7 @@ metrics:
       - product
       - service_line
       - segment
+      - region
     allowed_grains:
       - month
       - quarter
@@ -1129,7 +1130,8 @@ metrics:
       - total expenses
     pack: cfo
     unit: usd_millions
-    allowed_dims: []
+    allowed_dims:
+      - region
     allowed_grains:
       - month
       - quarter
@@ -1147,7 +1149,8 @@ metrics:
       - cash operating income
     pack: cfo
     unit: usd_millions
-    allowed_dims: []
+    allowed_dims:
+      - region
     allowed_grains:
       - month
       - quarter
@@ -1163,7 +1166,8 @@ metrics:
       - operating margin before D&A
     pack: cfo
     unit: pct
-    allowed_dims: []
+    allowed_dims:
+      - region
     allowed_grains:
       - quarter
       - year
@@ -1195,7 +1199,8 @@ metrics:
       - EBIT
     pack: cfo
     unit: usd_millions
-    allowed_dims: []
+    allowed_dims:
+      - region
     allowed_grains:
       - quarter
       - year
@@ -1210,7 +1215,8 @@ metrics:
       - EBIT margin
     pack: cfo
     unit: pct
-    allowed_dims: []
+    allowed_dims:
+      - region
     allowed_grains:
       - quarter
       - year
@@ -1241,7 +1247,8 @@ metrics:
       - bottom line
     pack: cfo
     unit: usd_millions
-    allowed_dims: []
+    allowed_dims:
+      - region
     allowed_grains:
       - quarter
       - year
@@ -1256,7 +1263,8 @@ metrics:
       - net margin
     pack: cfo
     unit: pct
-    allowed_dims: []
+    allowed_dims:
+      - region
     allowed_grains:
       - quarter
       - year
@@ -1276,7 +1284,8 @@ metrics:
       - liquidity
     pack: cfo
     unit: usd_millions
-    allowed_dims: []
+    allowed_dims:
+      - region
     allowed_grains:
       - month
       - quarter

@@ -24,6 +24,8 @@ extractions:
     period_concept: date
     value_field_hint: total_revenue
     strict_hint: true
+    dimension_map:
+      territory: region
 
   - metric: arr
     value_concept: revenue
@@ -95,6 +97,8 @@ extractions:
     period_concept: date
     value_field_hint: gross_margin_pct
     strict_hint: true
+    dimension_map:
+      territory: region
 
   - metric: operating_margin_pct
     value_concept: revenue
@@ -102,6 +106,8 @@ extractions:
     period_concept: date
     value_field_hint: operating_margin_pct
     strict_hint: true
+    dimension_map:
+      territory: region
 
   - metric: net_margin_pct
     value_concept: revenue
@@ -109,6 +115,8 @@ extractions:
     period_concept: date
     value_field_hint: net_margin_pct
     strict_hint: true
+    dimension_map:
+      territory: region
 
   - metric: ebitda_margin_pct
     value_concept: revenue
@@ -116,6 +124,8 @@ extractions:
     period_concept: date
     value_field_hint: ebitda_margin_pct
     strict_hint: true
+    dimension_map:
+      territory: region
 
   - metric: ebitda
     value_concept: revenue
@@ -123,6 +133,8 @@ extractions:
     period_concept: date
     value_field_hint: ebitda
     strict_hint: true
+    dimension_map:
+      territory: region
 
   - metric: gross_profit
     value_concept: revenue
@@ -130,6 +142,8 @@ extractions:
     period_concept: date
     value_field_hint: gross_profit
     strict_hint: true
+    dimension_map:
+      territory: region
 
   - metric: operating_profit
     value_concept: revenue
@@ -137,6 +151,8 @@ extractions:
     period_concept: date
     value_field_hint: operating_profit
     strict_hint: true
+    dimension_map:
+      territory: region
 
   - metric: net_income
     value_concept: revenue
@@ -144,6 +160,8 @@ extractions:
     period_concept: date
     value_field_hint: net_income
     strict_hint: true
+    dimension_map:
+      territory: region
 
   - metric: cogs
     value_concept: cost
@@ -151,6 +169,8 @@ extractions:
     period_concept: date
     value_field_hint: cogs
     strict_hint: true
+    dimension_map:
+      territory: region
 
   - metric: opex
     value_concept: cost
@@ -158,6 +178,8 @@ extractions:
     period_concept: date
     value_field_hint: operating_expenses
     strict_hint: true
+    dimension_map:
+      territory: region
 
   # ─── Balance Sheet / Cash ────────────────────────────────────────
 
@@ -167,6 +189,8 @@ extractions:
     period_concept: date
     value_field_hint: cash
     strict_hint: true
+    dimension_map:
+      territory: region
 
   # ─── Pre-computed CTO metrics (from finsummary) ────────────────
 

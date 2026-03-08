@@ -1,4 +1,12 @@
 bindings:
+  - source_system: oracle
+    display_name: Oracle ERP
+    canonical_event: financial_summary_posted
+    quality_score: 0.95
+    freshness_score: 0.95
+    dims_coverage:
+      region: true
+
   - source_system: salesforce_crm
     display_name: Salesforce CRM
     canonical_event: deal_won
