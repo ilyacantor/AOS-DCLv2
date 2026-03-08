@@ -35,6 +35,7 @@ class QueryRequest(BaseModel):
     persona: Optional[str] = None
     entity: Optional[str] = None
     data_mode: Optional[str] = None
+    tenant_id: Optional[str] = None
 
 
 class QueryDataPoint(BaseModel):
@@ -450,6 +451,7 @@ def _query_ingest_store(
     dimensions: List[str],
     filters: Dict[str, Union[str, List[str]]],
     time_range: Optional[Dict[str, str]],
+    tenant_id: Optional[str] = None,
 ) -> Tuple[List[QueryDataPoint], Optional["RunReceipt"]]:
     """
     Query the materialized metric data points from the ingest buffer.
@@ -469,10 +471,29 @@ def _query_ingest_store(
     from backend.api.ingest import get_ingest_store, RunReceipt, get_canonical_sources
     from backend.aam.ingress import normalize_source_id as _norm_src
 
+    import logging as _log
+    _logger = _log.getLogger(__name__)
+
     store = get_ingest_store()
     all_receipts = store.get_all_receipts()
     if not all_receipts:
         return [], None
+
+    # --- Tenant isolation ---
+    if tenant_id and tenant_id != "default":
+        all_receipts = [r for r in all_receipts if r.tenant_id == tenant_id]
+        if not all_receipts:
+            return [], None
+    elif tenant_id == "default" or not tenant_id:
+        # Auto-select: if single tenant, use it with warning; if multiple, error
+        unique_tenants = list({r.tenant_id for r in all_receipts})
+        if len(unique_tenants) == 1:
+            _logger.warning(
+                f"tenant_id='default' with single tenant '{unique_tenants[0]}' — auto-selecting. "
+                f"Set tenant_id explicitly to suppress this warning."
+            )
+        elif len(unique_tenants) > 1:
+            return [], None  # caller gets empty result; handle_query can surface error
 
     # --- Primary path: materialized data points ---
     mat_points = store.get_materialized_points(
@@ -480,6 +501,7 @@ def _query_ingest_store(
         dimensions=dimensions if dimensions else None,
         filters=filters if filters else None,
         time_range=time_range,
+        tenant_id=tenant_id,
     )
 
     # Filter to canonical sources only — reject AAM demo data
@@ -657,6 +679,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
             dimensions=request.dimensions,
             filters=request.filters,
             time_range=request.time_range,
+            tenant_id=request.tenant_id,
         )
         data_points = ingested_points
 

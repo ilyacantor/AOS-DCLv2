@@ -12,6 +12,7 @@ Persistence:
 """
 
 import atexit
+import base64
 import hashlib
 import json
 import os
@@ -718,11 +719,14 @@ class IngestStore:
                 for sk, rows_raw in zip(keys_to_load_rows, row_results):
                     if not rows_raw:
                         continue
-                    # Rows may be zlib-compressed (new format) or plain JSON (legacy).
-                    if isinstance(rows_raw, bytes) and len(rows_raw) > 0 and rows_raw[0:1] == b'\x78':
-                        rows = json.loads(zlib.decompress(rows_raw))
+                    # Rows may be: base64(zlib) (current), raw zlib (legacy), or plain JSON.
+                    # With decode_responses=True, Redis returns strings, not bytes.
+                    rows_str = rows_raw if isinstance(rows_raw, str) else rows_raw.decode("utf-8", errors="replace")
+                    if rows_str.startswith("[") or rows_str.startswith("{"):
+                        rows = json.loads(rows_str)
                     else:
-                        rows = json.loads(rows_raw)
+                        # base64-encoded zlib — decode then decompress
+                        rows = json.loads(zlib.decompress(base64.b64decode(rows_str)))
                     self._row_buffer[sk] = rows
                     self._total_rows += len(rows)
                     loaded_rows += len(rows)
@@ -833,7 +837,8 @@ class IngestStore:
         try:
             key = f"{_REDIS_PREFIX}rows:{storage_key}"
             rows_json = json.dumps(rows, default=str).encode()
-            self._redis.set(key, zlib.compress(rows_json, level=1))
+            # Base64-encode compressed data so it survives decode_responses=True
+            self._redis.set(key, base64.b64encode(zlib.compress(rows_json, level=1)))
         except Exception as e:
             logger.warning(f"[IngestStore] Redis persist rows failed: {e}")
 
@@ -968,7 +973,8 @@ class IngestStore:
             # This cuts Redis network transfer from 5-20s to <1s on Render.
             rows_key = f"{_REDIS_PREFIX}rows:{key}"
             rows_json = json.dumps(tagged_rows, default=str).encode()
-            pipe.set(rows_key, zlib.compress(rows_json, level=1))
+            # Base64-encode compressed data so it survives decode_responses=True
+            pipe.set(rows_key, base64.b64encode(zlib.compress(rows_json, level=1)))
 
             # Schema
             pipe.hset(f"{_REDIS_PREFIX}schemas", pipe_id, json.dumps(asdict(schema_record)))
@@ -1138,6 +1144,7 @@ class IngestStore:
             row["_pipe_id"] = pipe_id
             row["_source_system"] = canonical_id
             row["_inserted_at"] = now
+            row["_tenant_id"] = request.tenant_id
         tagged = request.rows
 
         schema_record = SchemaRecord(
@@ -1258,15 +1265,20 @@ class IngestStore:
         with self._lock:
             return list(self._receipts.values())
 
-    def get_rows(self, run_id: str, pipe_id: str = None) -> List[Dict[str, Any]]:
+    def get_rows(self, run_id: str, pipe_id: str = None, tenant_id: str = None) -> List[Dict[str, Any]]:
         with self._lock:
             if pipe_id:
-                return list(self._row_buffer.get(_make_key(run_id, pipe_id), []))
-            # Search by run_id (returns first match)
-            for key, rows in self._row_buffer.items():
-                if key.startswith(f"{run_id}:") or key == run_id:
-                    return list(rows)
-            return []
+                rows = list(self._row_buffer.get(_make_key(run_id, pipe_id), []))
+            else:
+                rows = []
+                # Search by run_id (returns first match)
+                for key, buf_rows in self._row_buffer.items():
+                    if key.startswith(f"{run_id}:") or key == run_id:
+                        rows = list(buf_rows)
+                        break
+            if tenant_id and tenant_id != "default":
+                rows = [r for r in rows if r.get("_tenant_id") == tenant_id]
+            return rows
 
     def get_rows_by_source(self, source_system: str) -> List[Dict[str, Any]]:
         canonical = normalize_source_id(source_system)
@@ -1597,11 +1609,12 @@ class IngestStore:
         dimensions: Optional[List[str]] = None,
         filters: Optional[Dict] = None,
         time_range: Optional[Dict[str, str]] = None,
+        tenant_id: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Query materialized data points for a given metric.
 
         Returns points matching the metric, optionally filtered by
-        dimensions and time_range.
+        dimensions, time_range, and tenant_id.
         """
         results: List[Dict[str, Any]] = []
         with self._lock:
@@ -1613,6 +1626,11 @@ class IngestStore:
                 for pt in points:
                     if pt.get("metric") != metric:
                         continue
+
+                    # Tenant filter
+                    if tenant_id and tenant_id != "default":
+                        if pt.get("_tenant_id") and pt["_tenant_id"] != tenant_id:
+                            continue
 
                     period = pt.get("period", "current")
 
