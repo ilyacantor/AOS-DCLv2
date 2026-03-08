@@ -714,6 +714,7 @@ metrics:
       - L&D hours
       - learning hours
       - training
+      - training_hours_per_employee
     pack: chro
     unit: hours
     allowed_dims:
@@ -2182,3 +2183,271 @@ metrics:
     measure_op: sum
     default_grain: quarter
     best_direction: low
+
+  # ── Reconciliation-required metrics ──────────────────────────────────────
+
+  - id: bookings
+    name: Total Bookings
+    description: Total new and renewal contract bookings value
+    aliases:
+      - bookings
+      - total bookings
+    pack: cro
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: sum
+    default_grain: quarter
+
+  - id: sga
+    name: SG&A Expense
+    description: Total selling, general and administrative expenses
+    aliases:
+      - SG&A
+      - selling general and administrative
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: sum
+    default_grain: quarter
+
+  - id: qualified_pipeline
+    name: Qualified Pipeline
+    description: Total value of sales-qualified pipeline opportunities
+    aliases:
+      - qualified pipe
+      - sales qualified pipeline
+    pack: cro
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: reps_at_quota_pct
+    name: Reps at Quota
+    description: Percentage of sales reps achieving quota
+    aliases:
+      - reps at quota
+      - quota achievement rate
+    pack: cro
+    unit: percent
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+
+  - id: cost_per_employee
+    name: Cost Per Employee
+    description: Total cost divided by headcount
+    aliases:
+      - cost per head
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+
+  - id: cs_headcount
+    name: Customer Success Headcount
+    description: Number of customer success team members
+    aliases:
+      - CS headcount
+    pack: coo
+    unit: count
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: ga_headcount
+    name: G&A Headcount
+    description: Number of general and administrative staff
+    aliases:
+      - G&A headcount
+      - admin headcount
+    pack: cfo
+    unit: count
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: finance_headcount
+    name: Finance Headcount
+    description: Number of finance team members
+    aliases:
+      - finance team size
+    pack: cfo
+    unit: count
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: marketing_headcount
+    name: Marketing Headcount
+    description: Number of marketing team members
+    aliases:
+      - marketing team size
+    pack: cro
+    unit: count
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: product_headcount
+    name: Product Headcount
+    description: Number of product team members
+    aliases:
+      - product team size
+    pack: cto
+    unit: count
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: point_in_time_sum
+    default_grain: quarter
+
+  - id: critical_bugs
+    name: Critical Bugs
+    description: Number of P0/P1 bugs in the period
+    aliases:
+      - critical defects
+      - P1 bugs
+    pack: cto
+    unit: count
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low
+
+  - id: security_vulns
+    name: Security Vulnerabilities
+    description: Count of open security vulnerabilities
+    aliases:
+      - security vulnerabilities
+      - CVEs
+    pack: cto
+    unit: count
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: sum
+    default_grain: quarter
+    best_direction: low
+
+  - id: code_coverage_pct
+    name: Code Coverage
+    description: Percentage of codebase covered by automated tests
+    aliases:
+      - code coverage
+      - test coverage
+    pack: cto
+    unit: percent
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+    best_direction: high
+
+  - id: bug_escape_rate
+    name: Bug Escape Rate
+    description: Percentage of bugs found in production vs pre-release
+    aliases:
+      - bug escape
+      - production bug rate
+    pack: cto
+    unit: percent
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+    best_direction: low
+
+  - id: change_failure_rate
+    name: Change Failure Rate
+    description: Percentage of deployments causing incidents
+    aliases:
+      - CFR
+      - deploy failure rate
+    pack: cto
+    unit: percent
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+    best_direction: low
+
+  - id: deployment_success_pct
+    name: Deployment Success Rate
+    description: Percentage of successful deployments
+    aliases:
+      - deploy success rate
+    pack: cto
+    unit: percent
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+    best_direction: high
+
+  - id: lead_time_days
+    name: Lead Time
+    description: Average days from commit to production deployment
+    aliases:
+      - lead time
+      - DORA lead time
+    pack: cto
+    unit: days
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+    best_direction: low
+
+  - id: engineering_utilization
+    name: Engineering Utilization
+    description: Percentage of engineering time spent on product work
+    aliases:
+      - eng utilization
+    pack: cto
+    unit: percent
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: avg
+    default_grain: quarter
+
+  - id: api_requests_millions
+    name: API Requests
+    description: Total API requests processed in the period
+    aliases:
+      - API calls
+      - API volume
+    pack: cto
+    unit: millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+    measure_op: sum
+    default_grain: quarter

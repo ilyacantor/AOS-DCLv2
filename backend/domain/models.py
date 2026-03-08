@@ -80,6 +80,21 @@ class OntologyConcept(BaseModel):
     typical_source_systems: List[str] = Field(default_factory=list)
     persona_relevance: Dict[str, float] = Field(default_factory=dict)
 
+    recognition_basis: Optional[str] = None
+    # How the metric is recognized/triggered.
+
+    timing_semantics: Optional[str] = None
+    # Point-in-time vs period, when in the cycle.
+
+    scope_boundaries: Optional[str] = None
+    # What's included and excluded.
+
+    calculation_methodology: Optional[str] = None
+    # How it's computed.
+
+    comparability_rules: Optional[str] = None
+    # When two values from different sources are/aren't comparable.
+
 
 class SemanticEdge(BaseModel):
     """AAM-produced field-to-field mapping from real integration infrastructure."""

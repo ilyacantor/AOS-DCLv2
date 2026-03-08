@@ -195,7 +195,7 @@ PUBLISHED_METRICS: List[MetricDefinition] = _load_metrics()
 PUBLISHED_ENTITIES: List[EntityDefinition] = _load_entities()
 DEMO_BINDINGS: List[BindingSummary] = _load_bindings()
 DEFAULT_PERSONA_CONCEPTS: Dict[str, List[str]] = _load_persona_concepts()
-FARM_BINDINGS: List[BindingSummary] = []
+FARM_BINDINGS: List[BindingSummary] = _load_bindings()  # Same catalog; mode doesn't change bindings
 
 
 def build_metric_entity_matrix() -> Dict[str, List[str]]:

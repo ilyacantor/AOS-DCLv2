@@ -73,6 +73,7 @@ class SystemAuthority:
     dimension: str
     confidence: float
     source: Literal["contour_map", "inferred", "default"] = "default"
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -137,6 +138,7 @@ class DataQueryHint:
     join_keys: list[dict] = field(default_factory=list)
     filters: list[dict] = field(default_factory=list)
     description: str = ""
+    hierarchy_context: Optional[dict] = None
 
 
 @dataclass(slots=True)

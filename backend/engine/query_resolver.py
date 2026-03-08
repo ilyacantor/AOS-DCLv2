@@ -253,6 +253,31 @@ class QueryResolver:
                     confidence=0.0,
                     source="default",
                 )
+
+            # Enrich with hierarchy metadata from DimensionHierarchyStore
+            try:
+                from backend.engine.dimension_hierarchy import get_hierarchy_store
+                store = get_hierarchy_store()
+                dim_ids = store.get_dimension_ids()
+                if dim in dim_ids:
+                    max_depth = store.get_max_depth(dim)
+                    roots = store.get_roots(dim)
+                    authorities[dim].metadata["hierarchy_max_depth"] = max_depth
+                    authorities[dim].metadata["hierarchy_root_count"] = len(roots)
+            except RuntimeError:
+                logger.warning(
+                    f"[Resolver] DimensionHierarchyStore unavailable for "
+                    f"dimension metadata enrichment (dimension={dim}); "
+                    "continuing without hierarchy metadata"
+                )
+            except Exception:
+                logger.warning(
+                    f"[Resolver] DimensionHierarchyStore lookup failed for "
+                    f"dimension metadata enrichment (dimension={dim}); "
+                    "continuing without hierarchy metadata",
+                    exc_info=True,
+                )
+
         return authorities
 
     # ------------------------------------------------------------------
@@ -444,12 +469,24 @@ class QueryResolver:
                 "type": rf.resolution_type,
             })
 
+        # Build hierarchy_context if any filter used hierarchy expansion
+        hierarchy_context: dict | None = None
+        for rf in resolved_filters:
+            if rf.resolution_type == "hierarchy_expansion":
+                hierarchy_context = {
+                    "dimension_id": rf.dimension,
+                    "resolved_depth": len(rf.resolved_values),
+                    "rollup_from": rf.original_value,
+                }
+                break  # Use the first hierarchy-expanded filter
+
         data_query = DataQueryHint(
             primary_system=primary.system,
             tables=tables,
             join_keys=join_keys,
             filters=filter_dicts,
             description=provenance,
+            hierarchy_context=hierarchy_context,
         )
 
         # Low-confidence warning

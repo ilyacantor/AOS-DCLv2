@@ -400,10 +400,14 @@ class SemanticGraph:
         """Resolve a dimension value through hierarchy and management overlay.
 
         'Cloud' → ['Cloud East', 'Cloud West'] via REPORTS_AS edge.
+
+        Tries the DimensionHierarchyStore first for richer hierarchy
+        resolution (DB-backed roll-up to leaf values). Falls back to
+        in-memory graph traversal when the DB is unavailable.
         """
         val_id = f"dimval:{value}"
 
-        # Check REPORTS_AS (management overlay)
+        # Check REPORTS_AS (management overlay) — always in-memory
         overlay_targets: list[str] = []
         for edge in self._adjacency.get(val_id, []):
             if edge.type == "REPORTS_AS":
@@ -419,7 +423,41 @@ class SemanticGraph:
                 resolution_type="management_overlay",
             )
 
-        # Check HIERARCHY_PARENT — find children of this node
+        # Try DimensionHierarchyStore for hierarchy expansion
+        try:
+            from backend.engine.dimension_hierarchy import get_hierarchy_store
+            store = get_hierarchy_store()
+            rollup = store.get_rollup_values(dimension, value)
+            if rollup and rollup != [value]:
+                return ResolvedFilter(
+                    dimension=dimension,
+                    original_value=value,
+                    resolved_values=rollup,
+                    resolution_type="hierarchy_expansion",
+                )
+            if rollup:
+                # Store knows this value but it's a leaf — exact match
+                return ResolvedFilter(
+                    dimension=dimension,
+                    original_value=value,
+                    resolved_values=[value],
+                    resolution_type="exact",
+                )
+        except RuntimeError:
+            logger.warning(
+                "[SemanticGraph] DimensionHierarchyStore unavailable for "
+                f"filter resolution (dimension={dimension}, value={value}); "
+                "falling back to in-memory graph"
+            )
+        except Exception:
+            logger.warning(
+                "[SemanticGraph] DimensionHierarchyStore lookup failed for "
+                f"filter resolution (dimension={dimension}, value={value}); "
+                "falling back to in-memory graph",
+                exc_info=True,
+            )
+
+        # Fallback: Check HIERARCHY_PARENT in-memory — find children of this node
         children = self.resolve_hierarchy(dimension, value)
         if children:
             return ResolvedFilter(
@@ -438,7 +476,37 @@ class SemanticGraph:
         )
 
     def resolve_hierarchy(self, dimension: str, value: str) -> list[str]:
-        """Get all leaf values under a hierarchy node (children only)."""
+        """Get all leaf values under a hierarchy node.
+
+        Tries the DimensionHierarchyStore first for full descendant
+        roll-up. Falls back to in-memory graph (children only) when
+        the DB is unavailable.
+        """
+        # Try DimensionHierarchyStore for full descendant roll-up
+        try:
+            from backend.engine.dimension_hierarchy import get_hierarchy_store
+            store = get_hierarchy_store()
+            rollup = store.get_rollup_values(dimension, value)
+            if rollup and rollup != [value]:
+                return rollup
+            if rollup:
+                # Leaf node — no children
+                return []
+        except RuntimeError:
+            logger.warning(
+                "[SemanticGraph] DimensionHierarchyStore unavailable for "
+                f"hierarchy resolution (dimension={dimension}, value={value}); "
+                "falling back to in-memory graph"
+            )
+        except Exception:
+            logger.warning(
+                "[SemanticGraph] DimensionHierarchyStore lookup failed for "
+                f"hierarchy resolution (dimension={dimension}, value={value}); "
+                "falling back to in-memory graph",
+                exc_info=True,
+            )
+
+        # Fallback: in-memory graph (children only, not full descendants)
         val_id = f"dimval:{value}"
         children: list[str] = []
 

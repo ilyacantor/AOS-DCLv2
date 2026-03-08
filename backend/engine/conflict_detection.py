@@ -90,6 +90,7 @@ class ConflictDetectionStore:
         self._source_quality_scores: Dict[str, Dict[str, float]] = {}
         self._resolution_counts: Dict[str, Dict[str, int]] = {}  # source -> metric -> count
         self._scenario_conflicts = _load_scenario_conflicts()
+        self._concepts_cache: Optional[List] = None
 
     def _find_scenario_for_entity(self, entity_name: str, metric: str) -> Optional[Dict[str, Any]]:
         """Find a pre-defined conflict scenario matching an entity and metric."""
@@ -138,7 +139,7 @@ class ConflictDetectionStore:
         conflicts = []
         now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        comparable_fields = ["revenue", "amount", "headcount", "employee_count", "employees"]
+        comparable_fields = self._get_comparable_fields()
 
         field_values: Dict[str, List[Dict[str, Any]]] = {}
 
@@ -214,8 +215,8 @@ class ConflictDetectionStore:
     def _classify_root_cause(
         self, field: str, values: List[Dict[str, Any]]
     ) -> tuple:
-        """Classify root cause of a conflict using heuristics."""
-        # Check for stale data
+        """Classify root cause of a conflict using concept metadata, with heuristic fallback."""
+        # 1. Check for stale data (timestamp-based, no concept metadata needed)
         dates = []
         for v in values:
             updated = v.get("last_updated", "")
@@ -239,7 +240,35 @@ class ConflictDetectionStore:
                     f"Last updated: {oldest_date.strftime('%Y-%m-%d')}."
                 )
 
-        # Check for timing-based differences
+        # 2. Look up concept metadata from ontology
+        concept = self._find_concept_for_field(field)
+        if concept:
+            # Compare recognition_basis
+            if concept.recognition_basis:
+                return (
+                    "recognition_method",
+                    f"Concept '{concept.name}' recognition basis: {concept.recognition_basis}. "
+                    f"Systems may use different recognition methods for {field}."
+                )
+            # Compare timing_semantics
+            if concept.timing_semantics:
+                return (
+                    "timing",
+                    f"Concept '{concept.name}' timing: {concept.timing_semantics}. "
+                    f"Systems may record {field} at different points in the cycle."
+                )
+            # Compare scope_boundaries
+            if concept.scope_boundaries:
+                return (
+                    "scope",
+                    f"Concept '{concept.name}' scope: {concept.scope_boundaries}. "
+                    f"Systems may include/exclude different items in {field}."
+                )
+
+        # 3. Fall back to heuristic BUT log a warning
+        logger.warning(f"Concept metadata not found for field '{field}', using heuristic classification")
+
+        # Check for timing-based differences (heuristic)
         if field in ["revenue", "amount"]:
             numeric_values = [v["value"] for v in values if isinstance(v["value"], (int, float))]
             if len(numeric_values) >= 2:
@@ -269,6 +298,46 @@ class ConflictDetectionStore:
             f"Systems use different methods to calculate {field}. "
             "Values differ but no obvious timing or staleness issue detected."
         )
+
+    def _load_concepts(self) -> List:
+        """Load and cache ontology concepts from YAML configuration."""
+        if self._concepts_cache is not None:
+            return self._concepts_cache
+        config_path = Path(__file__).parent.parent.parent / "config" / "ontology_concepts.yaml"
+        if not config_path.exists():
+            logger.warning(f"Ontology concepts file not found at {config_path}")
+            self._concepts_cache = []
+            return self._concepts_cache
+        import yaml
+        from backend.domain.models import OntologyConcept
+        with open(config_path) as f:
+            data = yaml.safe_load(f)
+        self._concepts_cache = [OntologyConcept(**c) for c in data.get("concepts", [])]
+        return self._concepts_cache
+
+    def _find_concept_for_field(self, field: str):
+        """Find an OntologyConcept where field matches concept.id or is in concept.example_fields."""
+        concepts = self._load_concepts()
+        for concept in concepts:
+            if field == concept.id or field in concept.example_fields:
+                return concept
+        return None
+
+    def _get_comparable_fields(self) -> List[str]:
+        """Derive comparable fields from concept metadata."""
+        concepts = self._load_concepts()
+        comparable = set()
+        minimum = {"revenue", "amount", "headcount", "employee_count", "employees"}
+
+        for concept in concepts:
+            if concept.comparability_rules is not None and concept.expected_type in ("float", "int", "integer", "number"):
+                comparable.update(concept.example_fields)
+                comparable.add(concept.id)
+
+        if len(comparable) <= len(minimum):
+            logger.warning("No concepts with comparability_rules found. Using minimum comparable fields.")
+
+        return list(comparable | minimum)
 
     def _calculate_severity_label(self, field: str, values: List[Dict[str, Any]]) -> str:
         """Calculate severity label for a conflict."""

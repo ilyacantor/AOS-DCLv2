@@ -162,6 +162,12 @@ _FACTBASE_KEY_OVERRIDES: Dict[str, Optional[str]] = {
     "pipeline_value": "pipeline",
     "mttr": "mttr_p1_hours",
     "training_hours": "training_hours_per_employee",
+    "customers": "customer_count",
+    # Ground truth uses short names; fact_base uses suffixed names
+    "attrition_rate": "attrition_rate_pct",
+    "cfo": "cash_from_operations",
+    "quota_attainment": "quota_attainment_pct",
+    "win_rate": "win_rate_pct",
 }
 
 
@@ -430,8 +436,28 @@ def _get_value_key_for_metric(metric: str, dim_key: str) -> str:
         "uptime_by_service": "uptime",
         "cloud_spend_by_resource": "cloud_spend",
         "slo_attainment_by_service": "slo_attainment",
+        "quota_by_rep": "quota_attainment_pct",
+        "pipeline_by_rep": "pipeline",
+        "win_rate_by_rep": "win_rate",
     }
     return VALUE_KEY_MAP.get(dim_key, metric)
+
+
+# Dimension name → record field name for array-format fact_base data
+# (e.g., dimension "rep" → field "rep_name" in quota_by_rep records)
+_DIM_TO_RECORD_FIELD: Dict[str, str] = {
+    "rep": "rep_name",
+    "team": "team",
+    "stage": "stage",
+    "product": "product",
+    "segment": "segment",
+    "region": "region",
+}
+
+
+def _get_dim_field(dim: str) -> str:
+    """Get the record field name for a dimension."""
+    return _DIM_TO_RECORD_FIELD.get(dim, dim)
 
 
 def _extract_value(metric: str, dim_key: str, raw_value: Any) -> float:
@@ -660,6 +686,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
     if metric_def is None:
         raise ValueError(f"Metric '{request.metric}' not found")
 
+    resolved_id = metric_def.id  # canonical catalog ID after fuzzy resolution
     grain = request.grain or metric_def.default_grain or "quarter"
     unit = _resolve_unit(metric_def)
 
@@ -719,21 +746,24 @@ def execute_query(request: QueryRequest) -> QueryResponse:
             dim_key = None
             if dim in DIMENSION_TO_FACTBASE_KEY:
                 metric_dims = DIMENSION_TO_FACTBASE_KEY[dim]
-                if request.metric in metric_dims:
+                if resolved_id in metric_dims:
+                    dim_key = metric_dims[resolved_id]
+                elif request.metric in metric_dims:
                     dim_key = metric_dims[request.metric]
-                elif "revenue" in metric_dims and request.metric in ["arr", "mrr", "revenue"]:
+                elif "revenue" in metric_dims and resolved_id in ["arr", "mrr", "revenue"]:
                     dim_key = metric_dims["revenue"]
-                elif "pipeline" in metric_dims and request.metric == "pipeline":
+                elif "pipeline" in metric_dims and resolved_id == "pipeline":
                     dim_key = metric_dims["pipeline"]
 
             if dim_key and dim_key in fb:
                 dim_data = fb[dim_key]
                 if isinstance(dim_data, list):
                     value_key = _get_value_key_for_metric(request.metric, dim_key)
+                    dim_field = _get_dim_field(dim)
                     for record in dim_data:
                         if record.get("period") not in periods:
                             continue
-                        dim_value = record.get(dim)
+                        dim_value = record.get(dim_field)
                         value = record.get(value_key, record.get(request.metric))
                         if dim_value is not None and value is not None:
                             if request.filters:
@@ -749,9 +779,20 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                                 dimensions={dim: dim_value}
                             ))
                 else:
+                    value_key = _get_value_key_for_metric(request.metric, dim_key)
                     for period in periods:
-                        if period in dim_data:
-                            for dim_value, raw_value in dim_data[period].items():
+                        if period not in dim_data:
+                            continue
+                        period_data = dim_data[period]
+
+                        # Dict-of-lists: {period: [{dim: val, metric: val}, ...]}
+                        if isinstance(period_data, list):
+                            dim_field = _get_dim_field(dim)
+                            for record in period_data:
+                                dim_value = record.get(dim_field)
+                                value = record.get(value_key, record.get(request.metric))
+                                if dim_value is None or value is None:
+                                    continue
                                 if request.filters:
                                     filter_val = request.filters.get(dim)
                                     if filter_val:
@@ -759,14 +800,28 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                                             continue
                                         elif isinstance(filter_val, str) and dim_value != filter_val:
                                             continue
-
+                                data_points.append(QueryDataPoint(
+                                    period=period,
+                                    value=float(value),
+                                    dimensions={dim: dim_value}
+                                ))
+                        else:
+                            # Dict-of-dicts: {period: {dim_value: raw_value}}
+                            for dim_value, raw_value in period_data.items():
+                                if request.filters:
+                                    filter_val = request.filters.get(dim)
+                                    if filter_val:
+                                        if isinstance(filter_val, list) and dim_value not in filter_val:
+                                            continue
+                                        elif isinstance(filter_val, str) and dim_value != filter_val:
+                                            continue
                                 data_points.append(QueryDataPoint(
                                     period=period,
                                     value=_extract_value(request.metric, dim_key, raw_value),
                                     dimensions={dim: dim_value}
                                 ))
             else:
-                fb_key = METRIC_TO_FACTBASE_KEY.get(request.metric)
+                fb_key = METRIC_TO_FACTBASE_KEY.get(resolved_id)
                 for q in fb.get("quarterly", []):
                     if q["period"] in periods:
                         if fb_key and fb_key in q:
@@ -776,7 +831,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                                 dimensions={}
                             ))
         else:
-            fb_key = METRIC_TO_FACTBASE_KEY.get(request.metric)
+            fb_key = METRIC_TO_FACTBASE_KEY.get(resolved_id)
             for q in fb.get("quarterly", []):
                 if q["period"] in periods:
                     if fb_key and fb_key in q:
