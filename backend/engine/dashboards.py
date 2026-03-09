@@ -72,6 +72,7 @@ class _EngineCache:
     def __init__(self) -> None:
         self._cross_sell_pipeline: dict | None = None
         self._bridge: dict | None = None
+        self._qoe: dict | None = None
 
     def get_cross_sell_pipeline(self) -> dict:
         if self._cross_sell_pipeline is None:
@@ -89,6 +90,13 @@ class _EngineCache:
                 cross_sell_pipeline=self.get_cross_sell_pipeline()
             )
         return self._bridge
+
+    def get_qoe(self) -> dict:
+        if self._qoe is None:
+            from backend.engine.qoe import compute_qoe
+            logger.info("[dashboards] Computing QofE (cached)")
+            self._qoe = compute_qoe()
+        return self._qoe
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -253,6 +261,7 @@ def _build_cfo_dashboard(
 ) -> dict:
     """CFO — Financial overview."""
     bridge = cache.get_bridge()
+    qoe = cache.get_qoe()
     latest_key = _latest_quarter_key(combining)
     latest = combining[latest_key]
 
@@ -266,6 +275,11 @@ def _build_cfo_dashboard(
     pf = bridge["pro_forma_ebitda"]
     ev = bridge["ev_impact"]
 
+    # Working capital from QofE
+    wc = qoe.get("working_capital", {})
+    dso_current = wc["dso_trend"][-1]["value"] if wc.get("dso_trend") else None
+    dpo_current = wc["dpo_trend"][-1]["value"] if wc.get("dpo_trend") else None
+
     return {
         "persona": "cfo",
         "title": "CFO Dashboard — Financial Overview",
@@ -275,6 +289,7 @@ def _build_cfo_dashboard(
             "pro_forma_ebitda_year_1": pf["year_1"]["current"],
             "pro_forma_ebitda_steady_state": pf["steady_state"]["current"],
             "ev_at_current_multiple": ev["steady_state_ev"]["current"],
+            "qoe_sustainability_score": qoe["sustainability_score"]["overall"],
         },
         "revenue_trend": _extract_quarterly_revenue(combining),
         "ebitda_bridge_summary": {
@@ -285,6 +300,15 @@ def _build_cfo_dashboard(
         },
         "cost_synergy_breakdown": _top_cost_synergies(bridge),
         "integration_cost_estimate": _integration_cost_from_bridge(bridge),
+        "qoe_summary": {
+            "sustainability_score": qoe["sustainability_score"]["overall"],
+            "sustainability_grade": qoe["sustainability_score"]["grade"],
+            "adjustment_status": qoe["summary"],
+            "working_capital": {
+                "dso_current": dso_current,
+                "dpo_current": dpo_current,
+            },
+        },
     }
 
 
@@ -317,6 +341,16 @@ def _build_cro_dashboard(
             "m_to_c_candidates": summary["m_to_c_candidates"],
             "c_to_m_candidates": summary["c_to_m_candidates"],
             "customer_overlap_count": customer_overlap.get("total_overlapping", 0),
+            "high_confidence_pipeline_acv": summary["total_high_conf_acv"],
+        },
+        "cross_sell_conversion": {
+            "total_candidates": summary["total_candidates"],
+            "total_pipeline_acv": summary["total_pipeline_acv"],
+            "high_confidence_count": summary["m_to_c_high_conf_count"] + summary["c_to_m_high_conf_count"],
+            "high_confidence_acv": summary["total_high_conf_acv"],
+            "converted_count": 0,
+            "converted_acv": 0,
+            "conversion_rate_pct": 0,
         },
         "pipeline_by_direction": {
             "m_to_c": {

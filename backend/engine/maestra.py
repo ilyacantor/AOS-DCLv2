@@ -6,6 +6,9 @@ A rule-based state machine managing three phases of an M&A integration engagemen
   2. Execution  — Tracking workstream progress, flagging risks, surfacing synergy opportunities
   3. Ongoing    — Monitoring integration KPIs, managing run-rate tracking, governance
 
+Expanded in Phase 1 Part 2 to read from all engine outputs (EBITDA bridge, cross-sell,
+QofE, dashboards, entity overlap) and produce data-backed responses with portal navigation.
+
 No LLM calls.  No external API calls.  Purely deterministic.
 """
 
@@ -250,12 +253,42 @@ def process_message(engagement_id: str, message: str, state: dict) -> dict:
     actions_taken: list[str] = []
     suggestions: list[str] = []
     response_text: str
+    navigation: dict | None = None
+
+    # Engine-backed intents (check first — more specific)
+    ctx = _EngineContext()
+
+    # ----- Intent: overview / engagement status with engine data -----
+    if _matches(msg_lower, ["overview", "engagement", "good morning", "current status", "what's the status"]) and not msg_lower.startswith("workstream"):
+        response_text, actions_taken, suggestions, navigation = _handle_overview(state, ctx)
+
+    # ----- Intent: EBITDA bridge detail -----
+    elif _matches(msg_lower, ["bridge", "ebitda bridge", "ebitda", "adjustments"]) and not _matches(msg_lower, ["qoe", "quality of earnings"]):
+        response_text, actions_taken, suggestions, navigation = _handle_bridge_detail(state, ctx)
+
+    # ----- Intent: cross-sell / pipeline -----
+    elif _matches(msg_lower, ["cross-sell", "cross sell", "pipeline", "candidates"]) or ("client" in msg_lower and _matches(msg_lower, ["best", "practice", "service"])):
+        response_text, actions_taken, suggestions, navigation = _handle_cross_sell_detail(state, ctx, msg_lower)
+
+    # ----- Intent: QofE -----
+    elif _matches(msg_lower, ["qoe", "quality of earnings", "sustainability", "earnings quality"]):
+        response_text, actions_taken, suggestions, navigation = _handle_qoe_detail(state, ctx)
+
+    # ----- Intent: people / headcount / overlap (with function filtering) -----
+    elif _matches(msg_lower, ["people", "headcount", "head count", "talent", "retention"]):
+        response_text, actions_taken, suggestions, navigation = _handle_people_detail(state, ctx, msg_lower)
+
+    # ----- Intent: dashboard for a persona -----
+    elif _matches(msg_lower, ["dashboard", "cfo", "cro", "coo", "cto", "chro"]):
+        response_text, actions_taken, suggestions, navigation = _handle_dashboard_detail(state, ctx, msg_lower)
+
+    # ----- Original lifecycle intents below -----
 
     # ----- Intent: advance / next phase -----
-    if _matches(msg_lower, ["advance", "next phase"]):
+    elif _matches(msg_lower, ["advance", "next phase"]):
         response_text, actions_taken, suggestions = _handle_advance(state)
 
-    # ----- Intent: status / update -----
+    # ----- Intent: status / update (simple — no engine data) -----
     elif _matches(msg_lower, ["status", "update"]):
         response_text, actions_taken, suggestions = _handle_status(state)
 
@@ -298,12 +331,15 @@ def process_message(engagement_id: str, message: str, state: dict) -> dict:
         len(actions_taken),
     )
 
-    return {
+    result = {
         "response": response_text,
         "state": state,
         "actions_taken": actions_taken,
         "suggestions": suggestions,
     }
+    if navigation:
+        result["navigation"] = navigation
+    return result
 
 
 def get_engagement_status(state: dict) -> dict:
@@ -600,6 +636,322 @@ def _handle_milestone(state: dict) -> tuple[str, list[str], list[str]]:
     )
     text = f"Upcoming Milestones — Meridian-Cascadia Integration\n{lines}"
     return text, ["milestones_viewed"], _phase_suggestions(state["phase"])
+
+
+# ---------------------------------------------------------------------------
+# Engine context — loads all engine outputs for data-backed responses
+# ---------------------------------------------------------------------------
+
+
+class _EngineContext:
+    """Lazily loads and caches all engine outputs for a single request."""
+
+    def __init__(self) -> None:
+        self._bridge: dict | None = None
+        self._cross_sell: dict | None = None
+        self._qoe: dict | None = None
+        self._overlap: dict | None = None
+        self._combining: dict | None = None
+
+    def get_bridge(self) -> dict:
+        if self._bridge is None:
+            from backend.engine.ebitda_bridge import compute_ebitda_bridge
+            self._bridge = compute_ebitda_bridge(self.get_cross_sell())
+        return self._bridge
+
+    def get_cross_sell(self) -> dict:
+        if self._cross_sell is None:
+            from backend.engine.cross_sell import run_cross_sell_engine
+            self._cross_sell = run_cross_sell_engine().to_dict()
+        return self._cross_sell
+
+    def get_qoe(self) -> dict:
+        if self._qoe is None:
+            from backend.engine.qoe import compute_qoe
+            self._qoe = compute_qoe()
+        return self._qoe
+
+    def get_overlap(self) -> dict:
+        if self._overlap is None:
+            import json
+            from pathlib import Path
+            data_dir = Path(__file__).resolve().parent.parent.parent / "data"
+            with open(data_dir / "entity_overlap.json") as f:
+                self._overlap = json.load(f)
+        return self._overlap
+
+    def get_combining(self) -> dict:
+        if self._combining is None:
+            import json
+            from pathlib import Path
+            data_dir = Path(__file__).resolve().parent.parent.parent / "data"
+            with open(data_dir / "combining_statements.json") as f:
+                self._combining = json.load(f)
+        return self._combining
+
+
+def _fmt_m(dollars: float) -> str:
+    """Format dollars to $XM or $XB."""
+    if abs(dollars) >= 1_000_000_000:
+        return f"${dollars / 1_000_000_000:.1f}B"
+    return f"${dollars / 1_000_000:.1f}M"
+
+
+# ---------------------------------------------------------------------------
+# Expanded intent handlers (engine-backed)
+# ---------------------------------------------------------------------------
+
+
+def _handle_overview(state: dict, ctx: _EngineContext) -> tuple[str, list[str], list[str], dict | None]:
+    """Scene 1: Full engagement overview with exact numbers from all engines."""
+    overlap = ctx.get_overlap()
+    bridge = ctx.get_bridge()
+    cs = ctx.get_cross_sell()
+    qoe = ctx.get_qoe()
+    combining = ctx.get_combining()
+
+    co = overlap.get("customer_overlap", {})
+    vo = overlap.get("vendor_overlap", {})
+    po = overlap.get("people_overlap", {})
+
+    # Vendor savings
+    vendor_savings = sum(
+        m.get("consolidation_detail", {}).get("estimated_savings_M", 0)
+        for m in vo.get("matches", [])
+        if isinstance(m.get("consolidation_detail"), dict)
+    )
+
+    # Latest quarter revenue
+    periods = sorted([k for k in combining.keys() if not k.startswith("_")])
+    latest = combining[periods[-1]] if periods else {}
+    li_map = {li["line_item"]: li for li in latest.get("line_items", [])}
+    combined_rev_q = li_map.get("Total Revenue", {}).get("combined", 0)
+
+    # Bridge
+    pf = bridge["pro_forma_ebitda"]
+
+    cs_summary = cs.get("summary", {})
+
+    text = (
+        f"Good morning. Here's the current status of the Meridian-Cascadia engagement.\n\n"
+        f"All five reconciliation objects are complete:\n"
+        f"  ✓ Financial Statements — COFA unified, combining P&L operational\n"
+        f"  ✓ Customers — {co.get('total_overlapping', 0)} overlapping accounts identified, "
+        f"{cs_summary.get('total_candidates', 0)} cross-sell candidates scored\n"
+        f"  ✓ Vendors — {vo.get('total_overlapping', 0)} overlapping vendors, "
+        f"${vendor_savings:.0f}M consolidation opportunity\n"
+        f"  ✓ People — corporate overlap mapped across {len(po.get('functions', []))} functions\n"
+        f"  ✓ IT Landscape — SOR conflicts identified, redundant platforms flagged\n\n"
+        f"The combining P&L shows ${combined_rev_q * 4:.2f}B combined annualized revenue "
+        f"with {_fmt_m(bridge['reported_ebitda']['combined_reported'])} reported EBITDA.\n"
+        f"After adjustments, pro forma adjusted EBITDA is {_fmt_m(pf['year_1']['current'])} (Year 1) "
+        f"and {_fmt_m(pf['steady_state']['current'])} (Steady State).\n\n"
+        f"Quality of Earnings sustainability score: {qoe['sustainability_score']['overall']:.0f}/100 "
+        f"(Grade: {qoe['sustainability_score']['grade']}).\n\n"
+        f"Open risks: {sum(1 for r in state.get('risks', []) if r['status'] == 'open')}."
+    )
+
+    return text, ["overview_presented"], _phase_suggestions(state["phase"]), None
+
+
+def _handle_bridge_detail(state: dict, ctx: _EngineContext) -> tuple[str, list[str], list[str], dict | None]:
+    """EBITDA bridge detail with exact amounts."""
+    bridge = ctx.get_bridge()
+    rep = bridge["reported_ebitda"]
+    ea = bridge["entity_adjusted_ebitda"]
+    pf = bridge["pro_forma_ebitda"]
+
+    adj_lines = []
+    for adj in bridge.get("entity_adjustments", []):
+        adj_lines.append(f"  + {adj['name']}: {_fmt_m(adj['amount'])} ({adj['confidence']})")
+    syn_lines = []
+    for syn in bridge.get("combination_synergies", []):
+        prefix = "−" if syn.get("category") == "dis_synergy" else "+"
+        syn_lines.append(f"  {prefix} {syn['name']}: {_fmt_m(abs(syn['amount']))} ({syn['confidence']})")
+
+    text = (
+        f"EBITDA Bridge — Meridian-Cascadia\n\n"
+        f"Reported EBITDA (Combined): {_fmt_m(rep['combined_reported'])}\n"
+        f"  Meridian: {_fmt_m(rep['meridian'])} | Cascadia: {_fmt_m(rep['cascadia'])}\n\n"
+        f"Entity-Level Adjustments:\n" + "\n".join(adj_lines) + "\n\n"
+        f"Entity-Adjusted EBITDA: {_fmt_m(ea['combined'])}\n\n"
+        f"Combination Synergies:\n" + "\n".join(syn_lines) + "\n\n"
+        f"Pro Forma Year 1: {_fmt_m(pf['year_1']['current'])} "
+        f"(range: {_fmt_m(pf['year_1']['low'])} — {_fmt_m(pf['year_1']['high'])})\n"
+        f"Pro Forma Steady State: {_fmt_m(pf['steady_state']['current'])} "
+        f"(range: {_fmt_m(pf['steady_state']['low'])} — {_fmt_m(pf['steady_state']['high'])})"
+    )
+    return text, ["bridge_detail_presented"], _phase_suggestions(state["phase"]), {"tab": "bridge"}
+
+
+def _handle_cross_sell_detail(state: dict, ctx: _EngineContext, msg_lower: str) -> tuple[str, list[str], list[str], dict | None]:
+    """Cross-sell pipeline detail, optionally filtered by practice area."""
+    cs = ctx.get_cross_sell()
+    summary = cs.get("summary", {})
+    all_candidates = cs.get("m_to_c", []) + cs.get("c_to_m", [])
+
+    # Check for practice/service filter
+    filter_keywords = {
+        "risk": "Risk", "compliance": "Risk", "strategy": "Strategy",
+        "operations": "Operations", "tech": "Tech", "digital": "Digital",
+        "ai": "Digital", "f&a": "F&A", "outsourc": "F&A", "cx": "CX",
+        "data": "Data", "analytics": "Data", "bpo": "Industry",
+    }
+    service_filter = None
+    for kw, svc in filter_keywords.items():
+        if kw in msg_lower:
+            service_filter = svc
+            break
+
+    if service_filter:
+        filtered = [c for c in all_candidates if service_filter.lower() in c.get("recommended_service", "").lower()]
+        filtered.sort(key=lambda c: c["propensity_score"], reverse=True)
+        top = filtered[:5]
+        total_acv = sum(c["estimated_acv"] for c in filtered)
+
+        lines = []
+        for i, c in enumerate(top, 1):
+            lines.append(
+                f"  {i}. {c['customer_name']} — propensity {c['propensity_score']}%, "
+                f"est. {_fmt_m(c['estimated_acv'])} ACV. "
+                f"{c.get('industry', '')}, {_fmt_m(c.get('customer_engagement_M', 0) * 1_000_000)} existing contract."
+            )
+        text = (
+            f"{len(filtered)} candidates for {service_filter} services. Top {len(top)}:\n\n"
+            + "\n".join(lines) + "\n\n"
+            f"Total {service_filter} pipeline: {_fmt_m(total_acv)} ACV, "
+            f"{sum(1 for c in filtered if c['propensity_score'] > 80)} high-confidence."
+        )
+    else:
+        text = (
+            f"Cross-Sell Pipeline — Meridian-Cascadia\n\n"
+            f"Meridian → Cascadia (advisory clients → BPM services):\n"
+            f"  {summary.get('m_to_c_candidates', 0)} candidates, {_fmt_m(summary.get('m_to_c_total_acv', 0))} pipeline\n"
+            f"  {summary.get('m_to_c_high_conf_count', 0)} high-confidence ({_fmt_m(summary.get('m_to_c_high_conf_acv', 0))})\n\n"
+            f"Cascadia → Meridian (BPM clients → consulting services):\n"
+            f"  {summary.get('c_to_m_candidates', 0)} candidates, {_fmt_m(summary.get('c_to_m_total_acv', 0))} pipeline\n"
+            f"  {summary.get('c_to_m_high_conf_count', 0)} high-confidence ({_fmt_m(summary.get('c_to_m_high_conf_acv', 0))})\n\n"
+            f"Total pipeline: {summary.get('total_candidates', 0)} candidates, {_fmt_m(summary.get('total_pipeline_acv', 0))}\n"
+            f"High-confidence: {_fmt_m(summary.get('total_high_conf_acv', 0))}"
+        )
+    return text, ["cross_sell_presented"], _phase_suggestions(state["phase"]), {"tab": "crosssell"}
+
+
+def _handle_qoe_detail(state: dict, ctx: _EngineContext) -> tuple[str, list[str], list[str], dict | None]:
+    """Scene 4: QofE quarterly update with exact metrics."""
+    qoe = ctx.get_qoe()
+    summary = qoe["summary"]
+    sus = qoe["sustainability_score"]
+    rq = qoe["revenue_quality"]
+    wc = qoe["working_capital"]
+
+    # Adjustment status summary
+    status_lines = []
+    for row in qoe["ebitda_bridge"]:
+        if row["status"] == "resolved":
+            status_lines.append(f"  → RESOLVED: {row['name']} ({_fmt_m(row['current_amount'])})")
+        elif row["status"] == "new":
+            status_lines.append(f"  → NEW: {row['name']} ({_fmt_m(row['current_amount'])})")
+        elif row["status"] == "changed":
+            status_lines.append(
+                f"  → CHANGED: {row['name']} ({_fmt_m(row.get('prior_amount', 0) or 0)} → {_fmt_m(row['current_amount'])})"
+            )
+
+    adj_status_text = "\n".join(status_lines) if status_lines else "  All adjustments stable — no changes from prior period."
+
+    # DSO
+    dso_current = wc["dso_trend"][-1]["value"] if wc.get("dso_trend") else "N/A"
+
+    text = (
+        f"Quality of Earnings Report — {qoe['period']}\n\n"
+        f"Adjusted EBITDA: {_fmt_m(summary['entity_adjusted_ebitda'])}\n"
+        f"Pro Forma Year 1: {_fmt_m(summary['pro_forma_year_1'])}\n"
+        f"Pro Forma Steady State: {_fmt_m(summary['pro_forma_steady_state'])}\n\n"
+        f"Adjustment changes this period:\n{adj_status_text}\n\n"
+        f"Revenue quality: HHI={rq['customer_concentration']['hhi']:.0f}, "
+        f"top-10 concentration={rq['customer_concentration']['top_10_pct']:.1f}%, "
+        f"recurring revenue={rq['revenue_mix']['recurring_pct']:.1f}%.\n\n"
+        f"Cross-sell penetration: {rq['cross_sell_penetration']['total_candidates']} candidates, "
+        f"{rq['cross_sell_penetration']['converted_count']} converted.\n\n"
+        f"Earnings sustainability score: {sus['overall']:.0f}/100 (Grade: {sus['grade']})\n"
+        f"  Components: " + ", ".join(f"{c['name']}={c['score']:.0f}" for c in sus["components"]) + "\n\n"
+        f"Working capital: DSO={dso_current} days. "
+        f"{'No flags.' if isinstance(dso_current, (int, float)) and dso_current < 60 else 'Elevated — investigate.'}\n\n"
+        f"New items detected: {len(qoe['new_items'])}."
+    )
+    return text, ["qoe_presented"], _phase_suggestions(state["phase"]), {"tab": "qoe"}
+
+
+def _handle_people_detail(state: dict, ctx: _EngineContext, msg_lower: str) -> tuple[str, list[str], list[str], dict | None]:
+    """People overlap detail, optionally filtered by function."""
+    overlap = ctx.get_overlap()
+    po = overlap.get("people_overlap", {})
+    functions = po.get("functions", [])
+
+    # Check for function filter
+    func_filter = None
+    for fn in functions:
+        if fn["function"].lower() in msg_lower:
+            func_filter = fn
+            break
+
+    if func_filter:
+        fn = func_filter
+        role_lines = []
+        for rd in fn.get("role_detail", []):
+            role_lines.append(
+                f"  - {rd['title']}: M={rd['meridian_count']}, C={rd['cascadia_count']}, "
+                f"Combined={rd['combined_count']} [{rd.get('consolidation_action', 'N/A').upper()}]"
+            )
+        text = (
+            f"People Overlap — {fn['function']}\n\n"
+            f"Meridian: {fn['meridian_headcount']} | Cascadia: {fn['cascadia_headcount']} | "
+            f"Combined: {fn['combined_headcount']}\n\n"
+            f"Key roles: {', '.join(fn.get('role_overlap_examples', []))}\n\n"
+            f"Note: {fn.get('definitional_note', '')}\n\n"
+            f"Role detail:\n" + "\n".join(role_lines)
+        )
+    else:
+        fn_lines = []
+        for fn in functions:
+            fn_lines.append(
+                f"  - {fn['function']}: M={fn['meridian_headcount']}, C={fn['cascadia_headcount']}, "
+                f"Combined={fn['combined_headcount']}"
+            )
+        text = (
+            f"People Overlap — Meridian-Cascadia\n\n"
+            f"Total corporate: M={po.get('total_meridian_corporate', 0)}, "
+            f"C={po.get('total_cascadia_corporate', 0)}, "
+            f"Combined={po.get('total_combined_corporate', 0)}\n\n"
+            f"By function:\n" + "\n".join(fn_lines)
+        )
+    return text, ["people_detail_presented"], _phase_suggestions(state["phase"]), {"tab": "overlap"}
+
+
+def _handle_dashboard_detail(state: dict, ctx: _EngineContext, msg_lower: str) -> tuple[str, list[str], list[str], dict | None]:
+    """Dashboard summary for a specific persona."""
+    from backend.engine.dashboards import compute_dashboard
+
+    persona = "cfo"
+    for p in ("cfo", "cro", "coo", "cto", "chro"):
+        if p in msg_lower:
+            persona = p
+            break
+
+    dashboard = compute_dashboard(persona)
+    kpi_lines = []
+    for k, v in dashboard.get("kpis", {}).items():
+        label = k.replace("_", " ").title()
+        if isinstance(v, (int, float)) and abs(v) > 100_000:
+            kpi_lines.append(f"  {label}: {_fmt_m(v)}")
+        else:
+            kpi_lines.append(f"  {label}: {v:,.0f}" if isinstance(v, (int, float)) else f"  {label}: {v}")
+
+    text = (
+        f"{dashboard.get('title', persona.upper() + ' Dashboard')}\n\n"
+        f"Key metrics:\n" + "\n".join(kpi_lines)
+    )
+    return text, ["dashboard_presented"], _phase_suggestions(state["phase"]), {"tab": "dashboards"}
 
 
 def _handle_default(state: dict) -> tuple[str, list[str], list[str]]:
