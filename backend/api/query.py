@@ -36,6 +36,9 @@ class QueryRequest(BaseModel):
     entity: Optional[str] = None
     data_mode: Optional[str] = None
     tenant_id: Optional[str] = None
+    # WS1.3: Entity tagging across pipeline
+    entity_id: Optional[str] = None    # filter to a specific entity's data
+    consolidate: bool = False          # if True, sum across entities; if False (default), return per-entity
 
 
 class QueryDataPoint(BaseModel):
@@ -44,6 +47,7 @@ class QueryDataPoint(BaseModel):
     value: float
     dimensions: Dict[str, str] = Field(default_factory=dict)
     rank: Optional[int] = None
+    entity_id: Optional[str] = None  # WS1.3: entity provenance for this data point
 
 
 class ProvenanceInfo(BaseModel):
@@ -117,27 +121,78 @@ class QueryError(BaseModel):
 
 
 FACT_BASE_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "fact_base.json"
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 
 _fact_base_cache: Optional[Dict] = None
 _fact_base_loaded_at: Optional[datetime] = None
 
+# WS1.3: Per-entity fact_base caches
+_entity_fact_base_cache: Dict[str, Dict] = {}
+_entity_fact_base_loaded_at: Dict[str, datetime] = {}
 
-def load_fact_base() -> Dict[str, Any]:
-    """Load fact base with caching."""
-    global _fact_base_cache, _fact_base_loaded_at
-    
-    if _fact_base_cache is not None:
-        file_mtime = datetime.fromtimestamp(FACT_BASE_PATH.stat().st_mtime)
-        if _fact_base_loaded_at and file_mtime <= _fact_base_loaded_at:
-            return _fact_base_cache
-    
-    with open(FACT_BASE_PATH, "r") as f:
-        _fact_base_cache = json.load(f)
-    _fact_base_loaded_at = datetime.now()
-    
-    if _fact_base_cache is None:
-        return {}
-    return _fact_base_cache
+
+def load_fact_base(entity_id: Optional[str] = None) -> Dict[str, Any]:
+    """Load fact base with caching.
+
+    WS1.3 Entity-scoped loading:
+    - entity_id=None  → load default data/fact_base.json (backward compatible)
+    - entity_id="xyz" → load data/fact_base_xyz.json if it exists, else fall back
+                         to data/fact_base.json (single-entity default)
+
+    The default fact_base.json represents the single-entity Meridian data in demo mode.
+    Entity-specific files (fact_base_{entity_id}.json) are loaded when they exist.
+    """
+    if entity_id is None:
+        # Default path: original behavior, no entity scoping
+        global _fact_base_cache, _fact_base_loaded_at
+
+        if _fact_base_cache is not None:
+            file_mtime = datetime.fromtimestamp(FACT_BASE_PATH.stat().st_mtime)
+            if _fact_base_loaded_at and file_mtime <= _fact_base_loaded_at:
+                return _fact_base_cache
+
+        with open(FACT_BASE_PATH, "r") as f:
+            _fact_base_cache = json.load(f)
+        _fact_base_loaded_at = datetime.now()
+
+        if _fact_base_cache is None:
+            return {}
+        return _fact_base_cache
+
+    # WS1.3: Entity-specific fact_base loading
+    entity_path = DATA_DIR / f"fact_base_{entity_id}.json"
+    if not entity_path.exists():
+        # Fall back to default fact_base.json for single-entity case
+        return load_fact_base(entity_id=None)
+
+    cached = _entity_fact_base_cache.get(entity_id)
+    if cached is not None:
+        file_mtime = datetime.fromtimestamp(entity_path.stat().st_mtime)
+        loaded_at = _entity_fact_base_loaded_at.get(entity_id)
+        if loaded_at and file_mtime <= loaded_at:
+            return cached
+
+    with open(entity_path, "r") as f:
+        data = json.load(f)
+    _entity_fact_base_cache[entity_id] = data
+    _entity_fact_base_loaded_at[entity_id] = datetime.now()
+    return data if data else {}
+
+
+def get_all_entity_ids() -> List[str]:
+    """Return all available entity IDs by scanning for fact_base_{entity_id}.json files.
+
+    WS1.3: Used when consolidate=False and entity_id=None to discover all entities.
+    Returns empty list if only the default fact_base.json exists (single-entity mode).
+    """
+    entity_ids = []
+    for path in DATA_DIR.glob("fact_base_*.json"):
+        # Extract entity_id from fact_base_{entity_id}.json
+        stem = path.stem  # e.g. "fact_base_meridian"
+        entity_id = stem[len("fact_base_"):]
+        if entity_id:
+            entity_ids.append(entity_id)
+    return sorted(entity_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -478,6 +533,8 @@ def _query_ingest_store(
     filters: Dict[str, Union[str, List[str]]],
     time_range: Optional[Dict[str, str]],
     tenant_id: Optional[str] = None,
+    entity_id: Optional[str] = None,
+    consolidate: bool = False,
 ) -> Tuple[List[QueryDataPoint], Optional["RunReceipt"]]:
     """
     Query the materialized metric data points from the ingest buffer.
@@ -537,6 +594,14 @@ def _query_ingest_store(
             if _norm_src(pt.get("source_system", "")) in get_canonical_sources()
         ]
 
+    # WS1.3: Filter materialized points by entity_id when specified.
+    # When entity_id is None, all points pass through (backward compatible).
+    if mat_points and entity_id:
+        mat_points = [
+            pt for pt in mat_points
+            if pt.get("_entity_id") == entity_id or pt.get("_entity_id") is None
+        ]
+
     if mat_points:
         # --- Deduplicate across pipeline runs ---
         # Multiple runs produce separate materialized keys (run_id:pipe_id).
@@ -581,8 +646,17 @@ def _query_ingest_store(
             pass
         _is_additive = _metric_unit not in _NON_ADDITIVE_UNITS
 
+        # WS1.3: Determine unique entity IDs in the result set.
+        # When consolidate=False and multiple entities exist, group by entity.
+        # When consolidate=True or only one entity, aggregate across entities.
+        _unique_entities = {pt.get("_entity_id") for pt in mat_points}
+        _unique_entities.discard(None)
+        _multi_entity = len(_unique_entities) > 1
+        _group_by_entity = _multi_entity and not consolidate
+
         agg: dict = _dd(float)
         agg_count: dict = _dd(int)
+        agg_entity: dict = {}  # track entity_id per aggregation key
         for pt in mat_points:
             if dimensions:
                 # Only keep the requested dimensions in the grouping key
@@ -592,19 +666,34 @@ def _query_ingest_store(
                 # No dimensions requested → aggregate ALL into a single total per period
                 dim_vals = {}
             period = pt.get("period", "current")
-            key = (period, tuple(sorted(dim_vals.items())))
+            pt_entity = pt.get("_entity_id")
+
+            # WS1.3: Include entity_id in grouping key when not consolidating across entities
+            if _group_by_entity:
+                key = (period, tuple(sorted(dim_vals.items())), pt_entity)
+            else:
+                key = (period, tuple(sorted(dim_vals.items())), None)
             agg[key] += float(pt["value"])
             agg_count[key] += 1
+            # Track entity for single-entity results (carry provenance even when not grouping)
+            if pt_entity and key not in agg_entity:
+                agg_entity[key] = pt_entity
 
         if _is_additive:
             data_points = [
-                QueryDataPoint(period=k[0], value=round(v, 6), dimensions=dict(k[1]))
+                QueryDataPoint(
+                    period=k[0], value=round(v, 6), dimensions=dict(k[1]),
+                    entity_id=k[2] or agg_entity.get(k),
+                )
                 for k, v in sorted(agg.items())
             ]
         else:
             # Average for rate/percentage/score metrics
             data_points = [
-                QueryDataPoint(period=k[0], value=round(agg[k] / agg_count[k], 6), dimensions=dict(k[1]))
+                QueryDataPoint(
+                    period=k[0], value=round(agg[k] / agg_count[k], 6), dimensions=dict(k[1]),
+                    entity_id=k[2] or agg_entity.get(k),
+                )
                 for k in sorted(agg.keys())
             ]
 
@@ -632,6 +721,10 @@ def _query_ingest_store(
         rows = store.get_rows(receipt.run_id, receipt.pipe_id)
         for row in rows:
             if metric not in row:
+                continue
+
+            # WS1.3: entity_id filter in fallback path
+            if entity_id and row.get("_entity_id") != entity_id:
                 continue
 
             value = row[metric]
@@ -672,6 +765,7 @@ def _query_ingest_store(
                 period=period,
                 value=float(value),
                 dimensions=dim_vals,
+                entity_id=row.get("_entity_id"),  # WS1.3: carry entity provenance
             ))
             contributing_receipt = receipt
 
@@ -679,8 +773,16 @@ def _query_ingest_store(
 
 
 def execute_query(request: QueryRequest) -> QueryResponse:
-    """Execute a validated query against the fact base or ingest buffer."""
-    fb = load_fact_base()
+    """Execute a validated query against the fact base or ingest buffer.
+
+    WS1.3 Entity behavior:
+    - entity_id=None, single entity → identical to Phase 0 (backward compatible)
+    - entity_id="xyz" → load entity-specific fact_base, filter ingest by entity
+    - consolidate=False (default) → per-entity results when multiple entities exist
+    - consolidate=True → sum across entities (requires explicit opt-in)
+    """
+    # WS1.3: Load entity-scoped fact_base when entity_id is specified
+    fb = load_fact_base(entity_id=request.entity_id)
     metric_def = resolve_metric(request.metric)
 
     if metric_def is None:
@@ -707,6 +809,8 @@ def execute_query(request: QueryRequest) -> QueryResponse:
             filters=request.filters,
             time_range=request.time_range,
             tenant_id=request.tenant_id,
+            entity_id=request.entity_id,        # WS1.3
+            consolidate=request.consolidate,     # WS1.3
         )
         data_points = ingested_points
 
@@ -840,6 +944,15 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                             value=float(q[fb_key]),
                             dimensions={}
                         ))
+
+    # WS1.3: Stamp entity_id on fact_base data points.
+    # When entity_id is explicitly requested, all points from that entity's fact_base
+    # carry the entity tag. When entity_id is None (single-entity default), points
+    # carry no entity_id — identical to Phase 0 behavior.
+    if request.entity_id and not ingest_receipt:
+        for dp in data_points:
+            if dp.entity_id is None:
+                dp.entity_id = request.entity_id
 
     # Apply persona-contextual definitions
     persona_label = None

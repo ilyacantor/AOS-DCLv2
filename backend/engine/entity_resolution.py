@@ -25,9 +25,12 @@ from backend.utils.log_utils import get_logger
 logger = get_logger(__name__)
 
 
-ALLOWED_ENTITY_TYPES = {"company", "customer"}
+ALLOWED_ENTITY_TYPES = {"company", "customer", "vendor", "people"}
 
 SCENARIO_FILE = Path("data/entity_test_scenarios.json")
+
+
+CROSS_ENTITY_OVERLAP_FILE = Path("data/entity_overlap.json")
 
 
 class SourceRecord(BaseModel):
@@ -37,6 +40,7 @@ class SourceRecord(BaseModel):
     entity_type: str = "company"
     name: str
     field_values: Dict[str, Any] = Field(default_factory=dict)
+    entity_id: Optional[str] = None
 
 
 class CanonicalEntity(BaseModel):
@@ -93,7 +97,9 @@ class EntityResolutionStore:
         self._canonical_entities: Dict[str, CanonicalEntity] = {}
         self._match_candidates: Dict[str, MatchCandidate] = {}
         self._merge_history: List[MergeHistoryEntry] = []
+        self._cross_entity_matches: List[Dict[str, Any]] = []
         self._seed_from_scenarios()
+        self._seed_cross_entity_overlap()
 
     def _seed_from_scenarios(self):
         """Load source records from entity_test_scenarios.json."""
@@ -132,6 +138,219 @@ class EntityResolutionStore:
 
         logger.info(f"Loaded {len(self._source_records)} source records from scenarios")
 
+    def _seed_cross_entity_overlap(self):
+        """Load cross-entity overlap data from entity_overlap.json.
+
+        This populates pre-computed cross-entity matches (customer, vendor, people)
+        produced by Farm's EntityOverlapGenerator. These matches represent entities
+        that exist in both Meridian and Cascadia — they are pre-matched by Farm
+        using domain knowledge (exact names, fuzzy names, shared identifiers).
+        """
+        if not CROSS_ENTITY_OVERLAP_FILE.exists():
+            logger.info("No cross-entity overlap file found — skipping")
+            return
+
+        with open(CROSS_ENTITY_OVERLAP_FILE) as f:
+            data = json.load(f)
+
+        loaded = 0
+
+        # Customer overlaps → SourceRecords from each entity's CRM
+        for match in data.get("customer_overlap", {}).get("matches", []):
+            m_name = match.get("meridian_name", "")
+            c_name = match.get("cascadia_name", "")
+            canonical = match.get("canonical_name", m_name)
+            match_type = match.get("match_type", "exact")
+            confidence = match.get("confidence", 1.0)
+
+            rec_m = SourceRecord(
+                source_system="salesforce_crm",
+                record_id=f"meridian-cust-{loaded}",
+                entity_type="customer",
+                name=m_name,
+                entity_id="meridian",
+                field_values={
+                    "revenue": match.get("meridian_revenue_M", 0),
+                    "industry": match.get("industry", ""),
+                },
+            )
+            rec_c = SourceRecord(
+                source_system="oracle_erp",
+                record_id=f"cascadia-cust-{loaded}",
+                entity_type="customer",
+                name=c_name,
+                entity_id="cascadia",
+                field_values={
+                    "revenue": match.get("cascadia_revenue_M", 0),
+                    "industry": match.get("industry", ""),
+                },
+            )
+            self._source_records.extend([rec_m, rec_c])
+
+            # Pre-create match candidate
+            cand = MatchCandidate(
+                id=f"cross-cust-{loaded}",
+                record_a=rec_m,
+                record_b=rec_c,
+                match_type=match_type if match_type in ("exact", "fuzzy", "hard") else "fuzzy",
+                confidence=confidence,
+                shared_keys=["entity_overlap"],
+                status="confirmed" if confidence >= 0.9 else "pending",
+                dcl_global_id=f"cross-cust-global-{loaded}",
+                resolved_by="farm_overlap_engine" if confidence >= 0.9 else None,
+                resolved_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if confidence >= 0.9 else None,
+            )
+            self._match_candidates[cand.id] = cand
+
+            if confidence >= 0.9:
+                now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                entity = CanonicalEntity(
+                    dcl_global_id=cand.dcl_global_id,
+                    entity_type="customer",
+                    canonical_name=canonical,
+                    source_records=[rec_m, rec_c],
+                    golden_record={
+                        "canonical_name": canonical,
+                        "combined_revenue_M": match.get("combined_revenue_M", 0),
+                        "concentration_flag": match.get("concentration_flag", False),
+                    },
+                    created_at=now,
+                    updated_at=now,
+                )
+                self._canonical_entities[cand.dcl_global_id] = entity
+
+            loaded += 1
+
+        # Vendor overlaps
+        v_offset = loaded
+        for match in data.get("vendor_overlap", {}).get("matches", []):
+            m_name = match.get("meridian_name", "")
+            c_name = match.get("cascadia_name", "")
+            canonical = match.get("canonical_name", m_name)
+            confidence = match.get("confidence", 1.0)
+
+            rec_m = SourceRecord(
+                source_system="sap_erp",
+                record_id=f"meridian-vendor-{loaded}",
+                entity_type="vendor",
+                name=m_name,
+                entity_id="meridian",
+                field_values={
+                    "spend": match.get("meridian_spend_M", 0),
+                    "category": match.get("category", ""),
+                },
+            )
+            rec_c = SourceRecord(
+                source_system="oracle_erp",
+                record_id=f"cascadia-vendor-{loaded}",
+                entity_type="vendor",
+                name=c_name,
+                entity_id="cascadia",
+                field_values={
+                    "spend": match.get("cascadia_spend_M", 0),
+                    "category": match.get("category", ""),
+                },
+            )
+            self._source_records.extend([rec_m, rec_c])
+
+            cand = MatchCandidate(
+                id=f"cross-vendor-{loaded}",
+                record_a=rec_m,
+                record_b=rec_c,
+                match_type="deterministic" if confidence >= 0.95 else "fuzzy",
+                confidence=confidence,
+                shared_keys=["entity_overlap"],
+                status="confirmed" if confidence >= 0.9 else "pending",
+                dcl_global_id=f"cross-vendor-global-{loaded}",
+                resolved_by="farm_overlap_engine" if confidence >= 0.9 else None,
+                resolved_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if confidence >= 0.9 else None,
+            )
+            self._match_candidates[cand.id] = cand
+
+            if confidence >= 0.9:
+                now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                entity = CanonicalEntity(
+                    dcl_global_id=cand.dcl_global_id,
+                    entity_type="vendor",
+                    canonical_name=canonical,
+                    source_records=[rec_m, rec_c],
+                    golden_record={
+                        "canonical_name": canonical,
+                        "combined_spend_M": match.get("combined_spend_M", 0),
+                    },
+                    created_at=now,
+                    updated_at=now,
+                )
+                self._canonical_entities[cand.dcl_global_id] = entity
+
+            loaded += 1
+
+        # People overlaps (by function, not individual)
+        people_data = data.get("people_overlap", {})
+        people_matches = people_data.get("functions", people_data.get("matches", []))
+        for match in people_matches:
+            func = match.get("function", "Unknown")
+            rec_m = SourceRecord(
+                source_system="workday_hcm",
+                record_id=f"meridian-people-{loaded}",
+                entity_type="people",
+                name=f"Meridian {func} Team",
+                entity_id="meridian",
+                field_values={
+                    "function": func,
+                    "headcount": match.get("meridian_headcount", 0),
+                },
+            )
+            rec_c = SourceRecord(
+                source_system="bamboohr_hcm",
+                record_id=f"cascadia-people-{loaded}",
+                entity_type="people",
+                name=f"Cascadia {func} Team",
+                entity_id="cascadia",
+                field_values={
+                    "function": func,
+                    "headcount": match.get("cascadia_headcount", 0),
+                },
+            )
+            self._source_records.extend([rec_m, rec_c])
+
+            cand = MatchCandidate(
+                id=f"cross-people-{loaded}",
+                record_a=rec_m,
+                record_b=rec_c,
+                match_type="deterministic",
+                confidence=1.0,
+                shared_keys=["function"],
+                status="confirmed",
+                dcl_global_id=f"cross-people-global-{loaded}",
+                resolved_by="farm_overlap_engine",
+                resolved_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            )
+            self._match_candidates[cand.id] = cand
+
+            now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            entity = CanonicalEntity(
+                dcl_global_id=cand.dcl_global_id,
+                entity_type="people",
+                canonical_name=f"Combined {func}",
+                source_records=[rec_m, rec_c],
+                golden_record={
+                    "function": func,
+                    "meridian_headcount": match.get("meridian_headcount", 0),
+                    "cascadia_headcount": match.get("cascadia_headcount", 0),
+                    "combined_headcount": match.get("combined_headcount", 0),
+                },
+                created_at=now,
+                updated_at=now,
+            )
+            self._canonical_entities[cand.dcl_global_id] = entity
+            loaded += 1
+
+        logger.info(
+            f"Loaded {loaded - v_offset} vendor + people cross-entity overlaps, "
+            f"{v_offset} customer overlaps from entity_overlap.json"
+        )
+
     def add_source_record(self, record: SourceRecord):
         """Add a source record to the store."""
         self._source_records.append(record)
@@ -143,10 +362,13 @@ class EntityResolutionStore:
         Pass 1: Deterministic matching on shared keys
         Pass 2: Fuzzy matching on name similarity
         """
-        # Clear existing unconfirmed candidates
-        confirmed = {k: v for k, v in self._match_candidates.items() if v.status == "confirmed"}
-        rejected = {k: v for k, v in self._match_candidates.items() if v.status == "rejected"}
-        self._match_candidates = {**confirmed, **rejected}
+        # Clear existing unconfirmed candidates, but preserve cross-entity
+        # overlap candidates (loaded from Farm's entity_overlap.json at startup).
+        preserved = {
+            k: v for k, v in self._match_candidates.items()
+            if v.status in ("confirmed", "rejected") or k.startswith("cross-")
+        }
+        self._match_candidates = preserved
 
         records = [r for r in self._source_records if r.entity_type in ALLOWED_ENTITY_TYPES]
         new_candidates = []
@@ -155,6 +377,12 @@ class EntityResolutionStore:
         for i, rec_a in enumerate(records):
             for rec_b in records[i + 1:]:
                 if rec_a.source_system == rec_b.source_system:
+                    continue
+                # Only match records of the same entity_type
+                if rec_a.entity_type != rec_b.entity_type:
+                    continue
+                # Skip cross-entity records (handled by overlap engine)
+                if rec_a.entity_id and rec_b.entity_id and rec_a.entity_id != rec_b.entity_id:
                     continue
 
                 already_matched = self._already_matched(rec_a, rec_b)
@@ -170,6 +398,12 @@ class EntityResolutionStore:
         for i, rec_a in enumerate(records):
             for rec_b in records[i + 1:]:
                 if rec_a.source_system == rec_b.source_system:
+                    continue
+                # Only match records of the same entity_type
+                if rec_a.entity_type != rec_b.entity_type:
+                    continue
+                # Skip cross-entity records (handled by overlap engine)
+                if rec_a.entity_id and rec_b.entity_id and rec_a.entity_id != rec_b.entity_id:
                     continue
 
                 already_matched = self._already_matched(rec_a, rec_b)

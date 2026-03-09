@@ -139,6 +139,7 @@ class IngestRequest(BaseModel):
     row_count: int = Field(..., ge=0, description="Expected len(rows) — validated server-side")
     rows: List[Dict[str, Any]] = Field(..., description="Transformed records from Runner")
     runner_id: Optional[str] = None
+    entity_id: Optional[str] = None  # WS1.3: entity this data belongs to (e.g. "meridian", "aurora")
 
 
 class IngestResponse(BaseModel):
@@ -1145,6 +1146,7 @@ class IngestStore:
             row["_source_system"] = canonical_id
             row["_inserted_at"] = now
             row["_tenant_id"] = request.tenant_id
+            row["_entity_id"] = request.entity_id  # WS1.3: every materialized row carries entity provenance
         tagged = request.rows
 
         schema_record = SchemaRecord(

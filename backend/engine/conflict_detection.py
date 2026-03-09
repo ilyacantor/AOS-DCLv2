@@ -120,6 +120,12 @@ class ConflictDetectionStore:
             if len(entity.source_records) < 2:
                 continue
 
+            # Skip cross-entity overlap records (customer/vendor/people matches
+            # between Meridian and Cascadia). These are legitimate overlaps, not
+            # data conflicts — different entities report different revenue/spend.
+            if entity.dcl_global_id.startswith("cross-"):
+                continue
+
             entity_conflicts = self._detect_field_conflicts(entity)
             new_conflicts.extend(entity_conflicts)
 

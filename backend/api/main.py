@@ -42,6 +42,7 @@ from backend.api.query import (
     QueryError,
     handle_query,
     load_fact_base,
+    get_all_entity_ids,
 )
 from backend.engine.dimension_hierarchy import get_drill_through_store
 from backend.api.ingest import get_ingest_store, ActivityEntry, DropEntry
@@ -70,6 +71,7 @@ from backend.api.routes.deprecated import router as deprecated_router
 from backend.farm.routes import router as farm_router
 from backend.dcl.routes import router as dcl_router
 from backend.api.routes.graph_traversal import router as graph_traversal_router
+from backend.api.routes.reports import router as reports_router
 
 logger = get_logger(__name__)
 
@@ -308,6 +310,7 @@ app.include_router(deprecated_router)
 app.include_router(farm_router)
 app.include_router(dcl_router)
 app.include_router(graph_traversal_router)
+app.include_router(reports_router)
 
 
 # =============================================================================

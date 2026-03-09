@@ -42,8 +42,8 @@ def run_entity_resolution(entity_type: str = "company"):
             status_code=400,
             detail={
                 "error": "ENTITY_TYPE_NOT_SUPPORTED",
-                "message": f"Entity type '{entity_type}' is not supported in v1. Only company/customer entities are supported.",
-                "supported_types": ["company", "customer"],
+                "message": f"Entity type '{entity_type}' is not supported. Supported types: company, customer, vendor, people.",
+                "supported_types": ["company", "customer", "vendor", "people"],
             }
         )
 
@@ -52,6 +52,47 @@ def run_entity_resolution(entity_type: str = "company"):
         "status": "ok",
         "candidates": [c.model_dump() for c in candidates],
         "canonical_entities": [e.model_dump() for e in store.get_all_canonical_entities()],
+    }
+
+
+@router.get("/api/dcl/entities/cross-entity")
+def get_cross_entity_matches(entity_type: str = "customer"):
+    """Get cross-entity match candidates (matches between Meridian and Cascadia).
+
+    These are pre-computed by Farm's EntityOverlapGenerator and loaded at startup.
+    Supports customer, vendor, and people entity types.
+    """
+    store = get_entity_store()
+    if not store.is_entity_type_allowed(entity_type):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "ENTITY_TYPE_NOT_SUPPORTED",
+                "message": f"Entity type '{entity_type}' is not supported.",
+                "supported_types": ["company", "customer", "vendor", "people"],
+            }
+        )
+
+    # Filter candidates to cross-entity matches of the requested type
+    candidates = []
+    for c in store.get_match_candidates():
+        if not c.id.startswith("cross-"):
+            continue
+        if c.record_a.entity_type == entity_type:
+            candidates.append(c.model_dump())
+
+    canonical = []
+    for e in store.get_all_canonical_entities():
+        if e.entity_type == entity_type and e.dcl_global_id.startswith(f"cross-{entity_type[:4]}"):
+            canonical.append(e.model_dump())
+
+    return {
+        "entity_type": entity_type,
+        "candidates": candidates,
+        "canonical_entities": canonical,
+        "total_matches": len(candidates),
+        "confirmed": sum(1 for c in candidates if c.get("status") == "confirmed"),
+        "pending": sum(1 for c in candidates if c.get("status") == "pending"),
     }
 
 

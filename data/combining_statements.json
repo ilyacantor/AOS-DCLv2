@@ -1,0 +1,4836 @@
+{
+  "2024-Q1": {
+    "period": "2024-Q1",
+    "statement_type": "income_statement",
+    "line_items": [
+      {
+        "line_item": "Advisory & Consulting Revenue",
+        "meridian": 1250.0,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 1250.0,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Managed Services Revenue",
+        "meridian": 0.0,
+        "cascadia": 110.0,
+        "adjustments": 0.0,
+        "combined": 110.0,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-FTE Revenue",
+        "meridian": 0.0,
+        "cascadia": 92.5,
+        "adjustments": 0.0,
+        "combined": 92.5,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-Transaction Revenue",
+        "meridian": 0.0,
+        "cascadia": 47.5,
+        "adjustments": 0.0,
+        "combined": 47.5,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Revenue Gross-Up Adjustment",
+        "meridian": 0.0,
+        "cascadia": 0.0,
+        "adjustments": -12.5,
+        "combined": -12.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Total Revenue",
+        "meridian": 1250.0,
+        "cascadia": 250.0,
+        "adjustments": -12.5,
+        "combined": 1487.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Consultant / Delivery Staff Compensation",
+        "meridian": 472.75,
+        "cascadia": 134.72,
+        "adjustments": 0.0,
+        "combined": 607.47,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-002",
+            "description": "Benefits Loading: reclassify Cascadia benefits into delivery comp",
+            "metric": "COGS_reclassification",
+            "meridian_treatment": "Benefits bundled into consultant compensation (single COGS line)",
+            "cascadia_treatment": "Benefits separated as distinct COGS line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Reclassify Cascadia benefits_cost ($17.93M) into delivery staff comp for combining view. Net COGS impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Bench Costs",
+        "meridian": 203.59,
+        "cascadia": 17.04,
+        "adjustments": 0.0,
+        "combined": 220.63,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Subcontractor Costs",
+        "meridian": 62.53,
+        "cascadia": 10.83,
+        "adjustments": 0.0,
+        "combined": 73.36,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Travel",
+        "meridian": 23.64,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 23.64,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Delivery Center Operations",
+        "meridian": 0.0,
+        "cascadia": 14.91,
+        "adjustments": 0.0,
+        "combined": 14.91,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Total COGS",
+        "meridian": 762.5,
+        "cascadia": 177.5,
+        "adjustments": -12.5,
+        "combined": 927.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Gross Profit",
+        "meridian": 487.5,
+        "cascadia": 72.5,
+        "adjustments": 0.0,
+        "combined": 560.0,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Sales",
+        "meridian": 50.0,
+        "cascadia": 19.8,
+        "adjustments": 0.0,
+        "combined": 69.8,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($33.00M) into Sales ($19.80M) and Marketing ($13.20M)."
+          }
+        ]
+      },
+      {
+        "line_item": "Marketing",
+        "meridian": 31.25,
+        "cascadia": 13.2,
+        "adjustments": 0.0,
+        "combined": 44.45,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($33.00M) into Sales ($19.80M) and Marketing ($13.20M)."
+          }
+        ]
+      },
+      {
+        "line_item": "R&D / Technology",
+        "meridian": 18.75,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 18.75,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Technology & Automation",
+        "meridian": 0.0,
+        "cascadia": 20.0,
+        "adjustments": 3.0,
+        "combined": 23.0,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "G&A",
+        "meridian": 68.75,
+        "cascadia": 41.25,
+        "adjustments": 0.0,
+        "combined": 110.0,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Facilities",
+        "meridian": 6.25,
+        "cascadia": 13.75,
+        "adjustments": 0.0,
+        "combined": 20.0,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Recruiting",
+        "meridian": 12.5,
+        "cascadia": 0.0,
+        "adjustments": 2.0,
+        "combined": 14.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "Total OpEx",
+        "meridian": 187.5,
+        "cascadia": 103.0,
+        "adjustments": 5.0,
+        "combined": 295.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "EBITDA",
+        "meridian": 300.0,
+        "cascadia": -30.5,
+        "adjustments": -5.0,
+        "combined": 264.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "D&A",
+        "meridian": 25.0,
+        "cascadia": 13.12,
+        "adjustments": -4.37,
+        "combined": 33.75,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.37,
+            "adjustment_rationale": "Cascadia accelerated D&A = $13.12M. Straight-line equivalent = $8.75M. Adjustment = $-4.37M (reduces D&A by 1/3). Increases operating profit by $4.37M."
+          }
+        ]
+      },
+      {
+        "line_item": "Operating Profit",
+        "meridian": 275.0,
+        "cascadia": -43.62,
+        "adjustments": -0.63,
+        "combined": 230.75,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.37,
+            "adjustment_rationale": "Cascadia accelerated D&A = $13.12M. Straight-line equivalent = $8.75M. Adjustment = $-4.37M (reduces D&A by 1/3). Increases operating profit by $4.37M."
+          }
+        ]
+      },
+      {
+        "line_item": "Tax",
+        "meridian": 66.0,
+        "cascadia": 0.0,
+        "adjustments": -11.39,
+        "combined": 54.61,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Net Income",
+        "meridian": 209.0,
+        "cascadia": -43.62,
+        "adjustments": 10.76,
+        "combined": 176.14,
+        "adjustment_details": []
+      }
+    ]
+  },
+  "2024-Q2": {
+    "period": "2024-Q2",
+    "statement_type": "income_statement",
+    "line_items": [
+      {
+        "line_item": "Advisory & Consulting Revenue",
+        "meridian": 1268.34,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 1268.34,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Managed Services Revenue",
+        "meridian": 0.0,
+        "cascadia": 112.14,
+        "adjustments": 0.0,
+        "combined": 112.14,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-FTE Revenue",
+        "meridian": 0.0,
+        "cascadia": 94.3,
+        "adjustments": 0.0,
+        "combined": 94.3,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-Transaction Revenue",
+        "meridian": 0.0,
+        "cascadia": 48.42,
+        "adjustments": 0.0,
+        "combined": 48.42,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Revenue Gross-Up Adjustment",
+        "meridian": 0.0,
+        "cascadia": 0.0,
+        "adjustments": -12.5,
+        "combined": -12.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Total Revenue",
+        "meridian": 1268.34,
+        "cascadia": 254.86,
+        "adjustments": -12.5,
+        "combined": 1510.7,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Consultant / Delivery Staff Compensation",
+        "meridian": 479.1,
+        "cascadia": 137.1,
+        "adjustments": 0.0,
+        "combined": 616.2,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-002",
+            "description": "Benefits Loading: reclassify Cascadia benefits into delivery comp",
+            "metric": "COGS_reclassification",
+            "meridian_treatment": "Benefits bundled into consultant compensation (single COGS line)",
+            "cascadia_treatment": "Benefits separated as distinct COGS line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Reclassify Cascadia benefits_cost ($18.24M) into delivery staff comp for combining view. Net COGS impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Bench Costs",
+        "meridian": 206.32,
+        "cascadia": 17.34,
+        "adjustments": 0.0,
+        "combined": 223.66,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Subcontractor Costs",
+        "meridian": 63.36,
+        "cascadia": 11.02,
+        "adjustments": 0.0,
+        "combined": 74.38,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Travel",
+        "meridian": 23.95,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 23.95,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Delivery Center Operations",
+        "meridian": 0.0,
+        "cascadia": 15.17,
+        "adjustments": 0.0,
+        "combined": 15.17,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Total COGS",
+        "meridian": 772.74,
+        "cascadia": 180.63,
+        "adjustments": -12.5,
+        "combined": 940.87,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Gross Profit",
+        "meridian": 495.6,
+        "cascadia": 74.23,
+        "adjustments": 0.0,
+        "combined": 569.83,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Sales",
+        "meridian": 50.73,
+        "cascadia": 20.18,
+        "adjustments": 0.0,
+        "combined": 70.91,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($33.64M) into Sales ($20.18M) and Marketing ($13.46M)."
+          }
+        ]
+      },
+      {
+        "line_item": "Marketing",
+        "meridian": 31.71,
+        "cascadia": 13.46,
+        "adjustments": 0.0,
+        "combined": 45.17,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($33.64M) into Sales ($20.18M) and Marketing ($13.46M)."
+          }
+        ]
+      },
+      {
+        "line_item": "R&D / Technology",
+        "meridian": 19.03,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 19.03,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Technology & Automation",
+        "meridian": 0.0,
+        "cascadia": 20.39,
+        "adjustments": 3.0,
+        "combined": 23.39,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "G&A",
+        "meridian": 69.76,
+        "cascadia": 42.05,
+        "adjustments": 0.0,
+        "combined": 111.81,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Facilities",
+        "meridian": 6.34,
+        "cascadia": 14.02,
+        "adjustments": 0.0,
+        "combined": 20.36,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Recruiting",
+        "meridian": 12.68,
+        "cascadia": 0.0,
+        "adjustments": 2.0,
+        "combined": 14.68,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "Total OpEx",
+        "meridian": 190.25,
+        "cascadia": 105.1,
+        "adjustments": 5.0,
+        "combined": 300.35,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "EBITDA",
+        "meridian": 305.35,
+        "cascadia": -30.87,
+        "adjustments": -5.0,
+        "combined": 269.48,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "D&A",
+        "meridian": 25.37,
+        "cascadia": 13.38,
+        "adjustments": -4.46,
+        "combined": 34.29,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.46,
+            "adjustment_rationale": "Cascadia accelerated D&A = $13.38M. Straight-line equivalent = $8.92M. Adjustment = $-4.46M (reduces D&A by 1/3). Increases operating profit by $4.46M."
+          }
+        ]
+      },
+      {
+        "line_item": "Operating Profit",
+        "meridian": 279.98,
+        "cascadia": -44.25,
+        "adjustments": -0.54,
+        "combined": 235.19,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.46,
+            "adjustment_rationale": "Cascadia accelerated D&A = $13.38M. Straight-line equivalent = $8.92M. Adjustment = $-4.46M (reduces D&A by 1/3). Increases operating profit by $4.46M."
+          }
+        ]
+      },
+      {
+        "line_item": "Tax",
+        "meridian": 67.2,
+        "cascadia": 0.0,
+        "adjustments": -11.54,
+        "combined": 55.66,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Net Income",
+        "meridian": 212.78,
+        "cascadia": -44.25,
+        "adjustments": 11.0,
+        "combined": 179.53,
+        "adjustment_details": []
+      }
+    ]
+  },
+  "2024-Q3": {
+    "period": "2024-Q3",
+    "statement_type": "income_statement",
+    "line_items": [
+      {
+        "line_item": "Advisory & Consulting Revenue",
+        "meridian": 1286.95,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 1286.95,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Managed Services Revenue",
+        "meridian": 0.0,
+        "cascadia": 114.32,
+        "adjustments": 0.0,
+        "combined": 114.32,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-FTE Revenue",
+        "meridian": 0.0,
+        "cascadia": 96.13,
+        "adjustments": 0.0,
+        "combined": 96.13,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-Transaction Revenue",
+        "meridian": 0.0,
+        "cascadia": 49.36,
+        "adjustments": 0.0,
+        "combined": 49.36,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Revenue Gross-Up Adjustment",
+        "meridian": 0.0,
+        "cascadia": 0.0,
+        "adjustments": -12.5,
+        "combined": -12.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Total Revenue",
+        "meridian": 1286.95,
+        "cascadia": 259.81,
+        "adjustments": -12.5,
+        "combined": 1534.26,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Consultant / Delivery Staff Compensation",
+        "meridian": 485.53,
+        "cascadia": 139.52,
+        "adjustments": 0.0,
+        "combined": 625.05,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-002",
+            "description": "Benefits Loading: reclassify Cascadia benefits into delivery comp",
+            "metric": "COGS_reclassification",
+            "meridian_treatment": "Benefits bundled into consultant compensation (single COGS line)",
+            "cascadia_treatment": "Benefits separated as distinct COGS line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Reclassify Cascadia benefits_cost ($18.57M) into delivery staff comp for combining view. Net COGS impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Bench Costs",
+        "meridian": 209.09,
+        "cascadia": 17.65,
+        "adjustments": 0.0,
+        "combined": 226.74,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Subcontractor Costs",
+        "meridian": 64.22,
+        "cascadia": 11.21,
+        "adjustments": 0.0,
+        "combined": 75.43,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Travel",
+        "meridian": 24.28,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 24.28,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Delivery Center Operations",
+        "meridian": 0.0,
+        "cascadia": 15.44,
+        "adjustments": 0.0,
+        "combined": 15.44,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Total COGS",
+        "meridian": 783.11,
+        "cascadia": 183.82,
+        "adjustments": -12.5,
+        "combined": 954.43,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Gross Profit",
+        "meridian": 503.84,
+        "cascadia": 75.99,
+        "adjustments": 0.0,
+        "combined": 579.83,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Sales",
+        "meridian": 51.48,
+        "cascadia": 20.57,
+        "adjustments": 0.0,
+        "combined": 72.05,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($34.29M) into Sales ($20.57M) and Marketing ($13.72M)."
+          }
+        ]
+      },
+      {
+        "line_item": "Marketing",
+        "meridian": 32.17,
+        "cascadia": 13.72,
+        "adjustments": 0.0,
+        "combined": 45.89,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($34.29M) into Sales ($20.57M) and Marketing ($13.72M)."
+          }
+        ]
+      },
+      {
+        "line_item": "R&D / Technology",
+        "meridian": 19.3,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 19.3,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Technology & Automation",
+        "meridian": 0.0,
+        "cascadia": 20.78,
+        "adjustments": 3.0,
+        "combined": 23.78,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "G&A",
+        "meridian": 70.78,
+        "cascadia": 42.87,
+        "adjustments": 0.0,
+        "combined": 113.65,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Facilities",
+        "meridian": 6.43,
+        "cascadia": 14.29,
+        "adjustments": 0.0,
+        "combined": 20.72,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Recruiting",
+        "meridian": 12.87,
+        "cascadia": 0.0,
+        "adjustments": 2.0,
+        "combined": 14.87,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "Total OpEx",
+        "meridian": 193.03,
+        "cascadia": 107.23,
+        "adjustments": 5.0,
+        "combined": 305.26,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "EBITDA",
+        "meridian": 310.81,
+        "cascadia": -31.24,
+        "adjustments": -5.0,
+        "combined": 274.57,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "D&A",
+        "meridian": 25.74,
+        "cascadia": 13.64,
+        "adjustments": -4.55,
+        "combined": 34.83,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.55,
+            "adjustment_rationale": "Cascadia accelerated D&A = $13.64M. Straight-line equivalent = $9.09M. Adjustment = $-4.55M (reduces D&A by 1/3). Increases operating profit by $4.55M."
+          }
+        ]
+      },
+      {
+        "line_item": "Operating Profit",
+        "meridian": 285.07,
+        "cascadia": -44.88,
+        "adjustments": -0.45,
+        "combined": 239.74,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.55,
+            "adjustment_rationale": "Cascadia accelerated D&A = $13.64M. Straight-line equivalent = $9.09M. Adjustment = $-4.55M (reduces D&A by 1/3). Increases operating profit by $4.55M."
+          }
+        ]
+      },
+      {
+        "line_item": "Tax",
+        "meridian": 68.42,
+        "cascadia": 0.0,
+        "adjustments": -11.69,
+        "combined": 56.73,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Net Income",
+        "meridian": 216.65,
+        "cascadia": -44.88,
+        "adjustments": 11.24,
+        "combined": 183.01,
+        "adjustment_details": []
+      }
+    ]
+  },
+  "2024-Q4": {
+    "period": "2024-Q4",
+    "statement_type": "income_statement",
+    "line_items": [
+      {
+        "line_item": "Advisory & Consulting Revenue",
+        "meridian": 1305.83,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 1305.83,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Managed Services Revenue",
+        "meridian": 0.0,
+        "cascadia": 116.54,
+        "adjustments": 0.0,
+        "combined": 116.54,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-FTE Revenue",
+        "meridian": 0.0,
+        "cascadia": 98.0,
+        "adjustments": 0.0,
+        "combined": 98.0,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-Transaction Revenue",
+        "meridian": 0.0,
+        "cascadia": 50.32,
+        "adjustments": 0.0,
+        "combined": 50.32,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Revenue Gross-Up Adjustment",
+        "meridian": 0.0,
+        "cascadia": 0.0,
+        "adjustments": -12.5,
+        "combined": -12.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Total Revenue",
+        "meridian": 1305.83,
+        "cascadia": 264.86,
+        "adjustments": -12.5,
+        "combined": 1558.19,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Consultant / Delivery Staff Compensation",
+        "meridian": 492.04,
+        "cascadia": 141.98,
+        "adjustments": 0.0,
+        "combined": 634.02,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-002",
+            "description": "Benefits Loading: reclassify Cascadia benefits into delivery comp",
+            "metric": "COGS_reclassification",
+            "meridian_treatment": "Benefits bundled into consultant compensation (single COGS line)",
+            "cascadia_treatment": "Benefits separated as distinct COGS line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Reclassify Cascadia benefits_cost ($18.89M) into delivery staff comp for combining view. Net COGS impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Bench Costs",
+        "meridian": 211.9,
+        "cascadia": 17.96,
+        "adjustments": 0.0,
+        "combined": 229.86,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Subcontractor Costs",
+        "meridian": 65.08,
+        "cascadia": 11.41,
+        "adjustments": 0.0,
+        "combined": 76.49,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Travel",
+        "meridian": 24.6,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 24.6,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Delivery Center Operations",
+        "meridian": 0.0,
+        "cascadia": 15.71,
+        "adjustments": 0.0,
+        "combined": 15.71,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Total COGS",
+        "meridian": 793.62,
+        "cascadia": 187.06,
+        "adjustments": -12.5,
+        "combined": 968.18,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Gross Profit",
+        "meridian": 512.21,
+        "cascadia": 77.8,
+        "adjustments": 0.0,
+        "combined": 590.01,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Sales",
+        "meridian": 52.23,
+        "cascadia": 20.98,
+        "adjustments": 0.0,
+        "combined": 73.21,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($34.96M) into Sales ($20.98M) and Marketing ($13.98M)."
+          }
+        ]
+      },
+      {
+        "line_item": "Marketing",
+        "meridian": 32.65,
+        "cascadia": 13.98,
+        "adjustments": 0.0,
+        "combined": 46.63,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($34.96M) into Sales ($20.98M) and Marketing ($13.98M)."
+          }
+        ]
+      },
+      {
+        "line_item": "R&D / Technology",
+        "meridian": 19.59,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 19.59,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Technology & Automation",
+        "meridian": 0.0,
+        "cascadia": 21.19,
+        "adjustments": 3.0,
+        "combined": 24.19,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "G&A",
+        "meridian": 71.82,
+        "cascadia": 43.7,
+        "adjustments": 0.0,
+        "combined": 115.52,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Facilities",
+        "meridian": 6.53,
+        "cascadia": 14.57,
+        "adjustments": 0.0,
+        "combined": 21.1,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Recruiting",
+        "meridian": 13.06,
+        "cascadia": 0.0,
+        "adjustments": 2.0,
+        "combined": 15.06,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "Total OpEx",
+        "meridian": 195.88,
+        "cascadia": 109.42,
+        "adjustments": 5.0,
+        "combined": 310.3,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "EBITDA",
+        "meridian": 316.33,
+        "cascadia": -31.62,
+        "adjustments": -5.0,
+        "combined": 279.71,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "D&A",
+        "meridian": 26.12,
+        "cascadia": 13.91,
+        "adjustments": -4.64,
+        "combined": 35.39,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.64,
+            "adjustment_rationale": "Cascadia accelerated D&A = $13.91M. Straight-line equivalent = $9.27M. Adjustment = $-4.64M (reduces D&A by 1/3). Increases operating profit by $4.64M."
+          }
+        ]
+      },
+      {
+        "line_item": "Operating Profit",
+        "meridian": 290.21,
+        "cascadia": -45.53,
+        "adjustments": -0.36,
+        "combined": 244.32,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.64,
+            "adjustment_rationale": "Cascadia accelerated D&A = $13.91M. Straight-line equivalent = $9.27M. Adjustment = $-4.64M (reduces D&A by 1/3). Increases operating profit by $4.64M."
+          }
+        ]
+      },
+      {
+        "line_item": "Tax",
+        "meridian": 69.65,
+        "cascadia": 0.0,
+        "adjustments": -11.84,
+        "combined": 57.81,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Net Income",
+        "meridian": 220.56,
+        "cascadia": -45.53,
+        "adjustments": 11.48,
+        "combined": 186.51,
+        "adjustment_details": []
+      }
+    ]
+  },
+  "2025-Q1": {
+    "period": "2025-Q1",
+    "statement_type": "income_statement",
+    "line_items": [
+      {
+        "line_item": "Advisory & Consulting Revenue",
+        "meridian": 1323.43,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 1323.43,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Managed Services Revenue",
+        "meridian": 0.0,
+        "cascadia": 118.53,
+        "adjustments": 0.0,
+        "combined": 118.53,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-FTE Revenue",
+        "meridian": 0.0,
+        "cascadia": 99.67,
+        "adjustments": 0.0,
+        "combined": 99.67,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-Transaction Revenue",
+        "meridian": 0.0,
+        "cascadia": 51.18,
+        "adjustments": 0.0,
+        "combined": 51.18,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Revenue Gross-Up Adjustment",
+        "meridian": 0.0,
+        "cascadia": 0.0,
+        "adjustments": -12.5,
+        "combined": -12.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Total Revenue",
+        "meridian": 1323.43,
+        "cascadia": 269.38,
+        "adjustments": -12.5,
+        "combined": 1580.31,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Consultant / Delivery Staff Compensation",
+        "meridian": 498.06,
+        "cascadia": 144.14,
+        "adjustments": 0.0,
+        "combined": 642.2,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-002",
+            "description": "Benefits Loading: reclassify Cascadia benefits into delivery comp",
+            "metric": "COGS_reclassification",
+            "meridian_treatment": "Benefits bundled into consultant compensation (single COGS line)",
+            "cascadia_treatment": "Benefits separated as distinct COGS line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Reclassify Cascadia benefits_cost ($19.18M) into delivery staff comp for combining view. Net COGS impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Bench Costs",
+        "meridian": 214.49,
+        "cascadia": 18.23,
+        "adjustments": 0.0,
+        "combined": 232.72,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Subcontractor Costs",
+        "meridian": 65.87,
+        "cascadia": 11.58,
+        "adjustments": 0.0,
+        "combined": 77.45,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Travel",
+        "meridian": 24.9,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 24.9,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Delivery Center Operations",
+        "meridian": 0.0,
+        "cascadia": 15.95,
+        "adjustments": 0.0,
+        "combined": 15.95,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Total COGS",
+        "meridian": 803.32,
+        "cascadia": 189.91,
+        "adjustments": -12.5,
+        "combined": 980.73,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Gross Profit",
+        "meridian": 520.11,
+        "cascadia": 79.47,
+        "adjustments": 0.0,
+        "combined": 599.58,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Sales",
+        "meridian": 52.94,
+        "cascadia": 21.34,
+        "adjustments": 0.0,
+        "combined": 74.28,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($35.56M) into Sales ($21.34M) and Marketing ($14.22M)."
+          }
+        ]
+      },
+      {
+        "line_item": "Marketing",
+        "meridian": 33.09,
+        "cascadia": 14.22,
+        "adjustments": 0.0,
+        "combined": 47.31,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($35.56M) into Sales ($21.34M) and Marketing ($14.22M)."
+          }
+        ]
+      },
+      {
+        "line_item": "R&D / Technology",
+        "meridian": 19.85,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 19.85,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Technology & Automation",
+        "meridian": 0.0,
+        "cascadia": 21.55,
+        "adjustments": 3.0,
+        "combined": 24.55,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "G&A",
+        "meridian": 72.79,
+        "cascadia": 44.45,
+        "adjustments": 0.0,
+        "combined": 117.24,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Facilities",
+        "meridian": 6.62,
+        "cascadia": 14.82,
+        "adjustments": 0.0,
+        "combined": 21.44,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Recruiting",
+        "meridian": 13.23,
+        "cascadia": 0.0,
+        "adjustments": 2.0,
+        "combined": 15.23,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "Total OpEx",
+        "meridian": 198.52,
+        "cascadia": 111.38,
+        "adjustments": 5.0,
+        "combined": 314.9,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "EBITDA",
+        "meridian": 321.59,
+        "cascadia": -31.91,
+        "adjustments": -5.0,
+        "combined": 284.68,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "D&A",
+        "meridian": 26.47,
+        "cascadia": 14.14,
+        "adjustments": -4.71,
+        "combined": 35.9,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.71,
+            "adjustment_rationale": "Cascadia accelerated D&A = $14.14M. Straight-line equivalent = $9.43M. Adjustment = $-4.71M (reduces D&A by 1/3). Increases operating profit by $4.71M."
+          }
+        ]
+      },
+      {
+        "line_item": "Operating Profit",
+        "meridian": 295.12,
+        "cascadia": -46.05,
+        "adjustments": -0.29,
+        "combined": 248.78,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.71,
+            "adjustment_rationale": "Cascadia accelerated D&A = $14.14M. Straight-line equivalent = $9.43M. Adjustment = $-4.71M (reduces D&A by 1/3). Increases operating profit by $4.71M."
+          }
+        ]
+      },
+      {
+        "line_item": "Tax",
+        "meridian": 70.83,
+        "cascadia": 0.0,
+        "adjustments": -11.96,
+        "combined": 58.87,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Net Income",
+        "meridian": 224.29,
+        "cascadia": -46.05,
+        "adjustments": 11.67,
+        "combined": 189.91,
+        "adjustment_details": []
+      }
+    ]
+  },
+  "2025-Q2": {
+    "period": "2025-Q2",
+    "statement_type": "income_statement",
+    "line_items": [
+      {
+        "line_item": "Advisory & Consulting Revenue",
+        "meridian": 1341.26,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 1341.26,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Managed Services Revenue",
+        "meridian": 0.0,
+        "cascadia": 120.55,
+        "adjustments": 0.0,
+        "combined": 120.55,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-FTE Revenue",
+        "meridian": 0.0,
+        "cascadia": 101.37,
+        "adjustments": 0.0,
+        "combined": 101.37,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-Transaction Revenue",
+        "meridian": 0.0,
+        "cascadia": 52.06,
+        "adjustments": 0.0,
+        "combined": 52.06,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Revenue Gross-Up Adjustment",
+        "meridian": 0.0,
+        "cascadia": 0.0,
+        "adjustments": -12.5,
+        "combined": -12.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Total Revenue",
+        "meridian": 1341.26,
+        "cascadia": 273.98,
+        "adjustments": -12.5,
+        "combined": 1602.74,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Consultant / Delivery Staff Compensation",
+        "meridian": 504.15,
+        "cascadia": 146.34,
+        "adjustments": 0.0,
+        "combined": 650.49,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-002",
+            "description": "Benefits Loading: reclassify Cascadia benefits into delivery comp",
+            "metric": "COGS_reclassification",
+            "meridian_treatment": "Benefits bundled into consultant compensation (single COGS line)",
+            "cascadia_treatment": "Benefits separated as distinct COGS line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Reclassify Cascadia benefits_cost ($19.47M) into delivery staff comp for combining view. Net COGS impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Bench Costs",
+        "meridian": 217.11,
+        "cascadia": 18.51,
+        "adjustments": 0.0,
+        "combined": 235.62,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Subcontractor Costs",
+        "meridian": 66.68,
+        "cascadia": 11.76,
+        "adjustments": 0.0,
+        "combined": 78.44,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Travel",
+        "meridian": 25.21,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 25.21,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Delivery Center Operations",
+        "meridian": 0.0,
+        "cascadia": 16.2,
+        "adjustments": 0.0,
+        "combined": 16.2,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Total COGS",
+        "meridian": 813.14,
+        "cascadia": 192.81,
+        "adjustments": -12.5,
+        "combined": 993.45,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Gross Profit",
+        "meridian": 528.12,
+        "cascadia": 81.17,
+        "adjustments": 0.0,
+        "combined": 609.29,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Sales",
+        "meridian": 53.65,
+        "cascadia": 21.7,
+        "adjustments": 0.0,
+        "combined": 75.35,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($36.17M) into Sales ($21.70M) and Marketing ($14.47M)."
+          }
+        ]
+      },
+      {
+        "line_item": "Marketing",
+        "meridian": 33.53,
+        "cascadia": 14.47,
+        "adjustments": 0.0,
+        "combined": 48.0,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($36.17M) into Sales ($21.70M) and Marketing ($14.47M)."
+          }
+        ]
+      },
+      {
+        "line_item": "R&D / Technology",
+        "meridian": 20.12,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 20.12,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Technology & Automation",
+        "meridian": 0.0,
+        "cascadia": 21.92,
+        "adjustments": 3.0,
+        "combined": 24.92,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "G&A",
+        "meridian": 73.77,
+        "cascadia": 45.21,
+        "adjustments": 0.0,
+        "combined": 118.98,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Facilities",
+        "meridian": 6.71,
+        "cascadia": 15.07,
+        "adjustments": 0.0,
+        "combined": 21.78,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Recruiting",
+        "meridian": 13.41,
+        "cascadia": 0.0,
+        "adjustments": 2.0,
+        "combined": 15.41,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "Total OpEx",
+        "meridian": 201.19,
+        "cascadia": 113.37,
+        "adjustments": 5.0,
+        "combined": 319.56,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "EBITDA",
+        "meridian": 326.93,
+        "cascadia": -32.2,
+        "adjustments": -5.0,
+        "combined": 289.73,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "D&A",
+        "meridian": 26.83,
+        "cascadia": 14.38,
+        "adjustments": -4.79,
+        "combined": 36.42,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.79,
+            "adjustment_rationale": "Cascadia accelerated D&A = $14.38M. Straight-line equivalent = $9.59M. Adjustment = $-4.79M (reduces D&A by 1/3). Increases operating profit by $4.79M."
+          }
+        ]
+      },
+      {
+        "line_item": "Operating Profit",
+        "meridian": 300.1,
+        "cascadia": -46.58,
+        "adjustments": -0.21,
+        "combined": 253.31,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.79,
+            "adjustment_rationale": "Cascadia accelerated D&A = $14.38M. Straight-line equivalent = $9.59M. Adjustment = $-4.79M (reduces D&A by 1/3). Increases operating profit by $4.79M."
+          }
+        ]
+      },
+      {
+        "line_item": "Tax",
+        "meridian": 72.02,
+        "cascadia": 0.0,
+        "adjustments": -12.09,
+        "combined": 59.93,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Net Income",
+        "meridian": 228.08,
+        "cascadia": -46.58,
+        "adjustments": 11.88,
+        "combined": 193.38,
+        "adjustment_details": []
+      }
+    ]
+  },
+  "2025-Q3": {
+    "period": "2025-Q3",
+    "statement_type": "income_statement",
+    "line_items": [
+      {
+        "line_item": "Advisory & Consulting Revenue",
+        "meridian": 1359.33,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 1359.33,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Managed Services Revenue",
+        "meridian": 0.0,
+        "cascadia": 122.61,
+        "adjustments": 0.0,
+        "combined": 122.61,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-FTE Revenue",
+        "meridian": 0.0,
+        "cascadia": 103.1,
+        "adjustments": 0.0,
+        "combined": 103.1,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-Transaction Revenue",
+        "meridian": 0.0,
+        "cascadia": 52.94,
+        "adjustments": 0.0,
+        "combined": 52.94,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Revenue Gross-Up Adjustment",
+        "meridian": 0.0,
+        "cascadia": 0.0,
+        "adjustments": -12.5,
+        "combined": -12.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Total Revenue",
+        "meridian": 1359.33,
+        "cascadia": 278.65,
+        "adjustments": -12.5,
+        "combined": 1625.48,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Consultant / Delivery Staff Compensation",
+        "meridian": 510.3,
+        "cascadia": 148.57,
+        "adjustments": 0.0,
+        "combined": 658.87,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-002",
+            "description": "Benefits Loading: reclassify Cascadia benefits into delivery comp",
+            "metric": "COGS_reclassification",
+            "meridian_treatment": "Benefits bundled into consultant compensation (single COGS line)",
+            "cascadia_treatment": "Benefits separated as distinct COGS line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Reclassify Cascadia benefits_cost ($19.77M) into delivery staff comp for combining view. Net COGS impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Bench Costs",
+        "meridian": 219.76,
+        "cascadia": 18.79,
+        "adjustments": 0.0,
+        "combined": 238.55,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Subcontractor Costs",
+        "meridian": 67.49,
+        "cascadia": 11.94,
+        "adjustments": 0.0,
+        "combined": 79.43,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Travel",
+        "meridian": 25.52,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 25.52,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Delivery Center Operations",
+        "meridian": 0.0,
+        "cascadia": 16.44,
+        "adjustments": 0.0,
+        "combined": 16.44,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Total COGS",
+        "meridian": 823.07,
+        "cascadia": 195.75,
+        "adjustments": -12.5,
+        "combined": 1006.32,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Gross Profit",
+        "meridian": 536.26,
+        "cascadia": 82.9,
+        "adjustments": 0.0,
+        "combined": 619.16,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Sales",
+        "meridian": 54.37,
+        "cascadia": 22.07,
+        "adjustments": 0.0,
+        "combined": 76.44,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($36.78M) into Sales ($22.07M) and Marketing ($14.71M)."
+          }
+        ]
+      },
+      {
+        "line_item": "Marketing",
+        "meridian": 33.98,
+        "cascadia": 14.71,
+        "adjustments": 0.0,
+        "combined": 48.69,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($36.78M) into Sales ($22.07M) and Marketing ($14.71M)."
+          }
+        ]
+      },
+      {
+        "line_item": "R&D / Technology",
+        "meridian": 20.39,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 20.39,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Technology & Automation",
+        "meridian": 0.0,
+        "cascadia": 22.29,
+        "adjustments": 3.0,
+        "combined": 25.29,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "G&A",
+        "meridian": 74.76,
+        "cascadia": 45.98,
+        "adjustments": 0.0,
+        "combined": 120.74,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Facilities",
+        "meridian": 6.8,
+        "cascadia": 15.33,
+        "adjustments": 0.0,
+        "combined": 22.13,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Recruiting",
+        "meridian": 13.59,
+        "cascadia": 0.0,
+        "adjustments": 2.0,
+        "combined": 15.59,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "Total OpEx",
+        "meridian": 203.89,
+        "cascadia": 115.38,
+        "adjustments": 5.0,
+        "combined": 324.27,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "EBITDA",
+        "meridian": 332.37,
+        "cascadia": -32.48,
+        "adjustments": -5.0,
+        "combined": 294.89,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "D&A",
+        "meridian": 27.19,
+        "cascadia": 14.63,
+        "adjustments": -4.88,
+        "combined": 36.94,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.88,
+            "adjustment_rationale": "Cascadia accelerated D&A = $14.63M. Straight-line equivalent = $9.75M. Adjustment = $-4.88M (reduces D&A by 1/3). Increases operating profit by $4.88M."
+          }
+        ]
+      },
+      {
+        "line_item": "Operating Profit",
+        "meridian": 305.18,
+        "cascadia": -47.11,
+        "adjustments": -0.12,
+        "combined": 257.95,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.88,
+            "adjustment_rationale": "Cascadia accelerated D&A = $14.63M. Straight-line equivalent = $9.75M. Adjustment = $-4.88M (reduces D&A by 1/3). Increases operating profit by $4.88M."
+          }
+        ]
+      },
+      {
+        "line_item": "Tax",
+        "meridian": 73.24,
+        "cascadia": 0.0,
+        "adjustments": -12.21,
+        "combined": 61.03,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Net Income",
+        "meridian": 231.94,
+        "cascadia": -47.11,
+        "adjustments": 12.09,
+        "combined": 196.92,
+        "adjustment_details": []
+      }
+    ]
+  },
+  "2025-Q4": {
+    "period": "2025-Q4",
+    "statement_type": "income_statement",
+    "line_items": [
+      {
+        "line_item": "Advisory & Consulting Revenue",
+        "meridian": 1377.65,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 1377.65,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Managed Services Revenue",
+        "meridian": 0.0,
+        "cascadia": 124.7,
+        "adjustments": 0.0,
+        "combined": 124.7,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-FTE Revenue",
+        "meridian": 0.0,
+        "cascadia": 104.86,
+        "adjustments": 0.0,
+        "combined": 104.86,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-Transaction Revenue",
+        "meridian": 0.0,
+        "cascadia": 53.85,
+        "adjustments": 0.0,
+        "combined": 53.85,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Revenue Gross-Up Adjustment",
+        "meridian": 0.0,
+        "cascadia": 0.0,
+        "adjustments": -12.5,
+        "combined": -12.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Total Revenue",
+        "meridian": 1377.65,
+        "cascadia": 283.4,
+        "adjustments": -12.5,
+        "combined": 1648.55,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Consultant / Delivery Staff Compensation",
+        "meridian": 516.54,
+        "cascadia": 150.83,
+        "adjustments": 0.0,
+        "combined": 667.37,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-002",
+            "description": "Benefits Loading: reclassify Cascadia benefits into delivery comp",
+            "metric": "COGS_reclassification",
+            "meridian_treatment": "Benefits bundled into consultant compensation (single COGS line)",
+            "cascadia_treatment": "Benefits separated as distinct COGS line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Reclassify Cascadia benefits_cost ($20.07M) into delivery staff comp for combining view. Net COGS impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Bench Costs",
+        "meridian": 222.45,
+        "cascadia": 19.08,
+        "adjustments": 0.0,
+        "combined": 241.53,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Subcontractor Costs",
+        "meridian": 68.32,
+        "cascadia": 12.12,
+        "adjustments": 0.0,
+        "combined": 80.44,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Travel",
+        "meridian": 25.83,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 25.83,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Delivery Center Operations",
+        "meridian": 0.0,
+        "cascadia": 16.69,
+        "adjustments": 0.0,
+        "combined": 16.69,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Total COGS",
+        "meridian": 833.13,
+        "cascadia": 198.73,
+        "adjustments": -12.5,
+        "combined": 1019.36,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Gross Profit",
+        "meridian": 544.52,
+        "cascadia": 84.67,
+        "adjustments": 0.0,
+        "combined": 629.19,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Sales",
+        "meridian": 55.11,
+        "cascadia": 22.45,
+        "adjustments": 0.0,
+        "combined": 77.56,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($37.41M) into Sales ($22.45M) and Marketing ($14.96M)."
+          }
+        ]
+      },
+      {
+        "line_item": "Marketing",
+        "meridian": 34.44,
+        "cascadia": 14.96,
+        "adjustments": 0.0,
+        "combined": 49.4,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($37.41M) into Sales ($22.45M) and Marketing ($14.96M)."
+          }
+        ]
+      },
+      {
+        "line_item": "R&D / Technology",
+        "meridian": 20.66,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 20.66,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Technology & Automation",
+        "meridian": 0.0,
+        "cascadia": 22.67,
+        "adjustments": 3.0,
+        "combined": 25.67,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "G&A",
+        "meridian": 75.77,
+        "cascadia": 46.76,
+        "adjustments": 0.0,
+        "combined": 122.53,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Facilities",
+        "meridian": 6.89,
+        "cascadia": 15.59,
+        "adjustments": 0.0,
+        "combined": 22.48,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Recruiting",
+        "meridian": 13.78,
+        "cascadia": 0.0,
+        "adjustments": 2.0,
+        "combined": 15.78,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "Total OpEx",
+        "meridian": 206.65,
+        "cascadia": 117.43,
+        "adjustments": 5.0,
+        "combined": 329.08,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "EBITDA",
+        "meridian": 337.87,
+        "cascadia": -32.76,
+        "adjustments": -5.0,
+        "combined": 300.11,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "D&A",
+        "meridian": 27.55,
+        "cascadia": 14.88,
+        "adjustments": -4.96,
+        "combined": 37.47,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.96,
+            "adjustment_rationale": "Cascadia accelerated D&A = $14.88M. Straight-line equivalent = $9.92M. Adjustment = $-4.96M (reduces D&A by 1/3). Increases operating profit by $4.96M."
+          }
+        ]
+      },
+      {
+        "line_item": "Operating Profit",
+        "meridian": 310.32,
+        "cascadia": -47.64,
+        "adjustments": -0.04,
+        "combined": 262.64,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -4.96,
+            "adjustment_rationale": "Cascadia accelerated D&A = $14.88M. Straight-line equivalent = $9.92M. Adjustment = $-4.96M (reduces D&A by 1/3). Increases operating profit by $4.96M."
+          }
+        ]
+      },
+      {
+        "line_item": "Tax",
+        "meridian": 74.48,
+        "cascadia": 0.0,
+        "adjustments": -12.34,
+        "combined": 62.14,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Net Income",
+        "meridian": 235.84,
+        "cascadia": -47.64,
+        "adjustments": 12.3,
+        "combined": 200.5,
+        "adjustment_details": []
+      }
+    ]
+  },
+  "2026-Q1": {
+    "period": "2026-Q1",
+    "statement_type": "income_statement",
+    "line_items": [
+      {
+        "line_item": "Advisory & Consulting Revenue",
+        "meridian": 1394.56,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 1394.56,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Managed Services Revenue",
+        "meridian": 0.0,
+        "cascadia": 126.53,
+        "adjustments": 0.0,
+        "combined": 126.53,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-FTE Revenue",
+        "meridian": 0.0,
+        "cascadia": 106.4,
+        "adjustments": 0.0,
+        "combined": 106.4,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-Transaction Revenue",
+        "meridian": 0.0,
+        "cascadia": 54.64,
+        "adjustments": 0.0,
+        "combined": 54.64,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Revenue Gross-Up Adjustment",
+        "meridian": 0.0,
+        "cascadia": 0.0,
+        "adjustments": -12.5,
+        "combined": -12.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Total Revenue",
+        "meridian": 1394.56,
+        "cascadia": 287.56,
+        "adjustments": -12.5,
+        "combined": 1669.62,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Consultant / Delivery Staff Compensation",
+        "meridian": 522.23,
+        "cascadia": 152.78,
+        "adjustments": 0.0,
+        "combined": 675.01,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-002",
+            "description": "Benefits Loading: reclassify Cascadia benefits into delivery comp",
+            "metric": "COGS_reclassification",
+            "meridian_treatment": "Benefits bundled into consultant compensation (single COGS line)",
+            "cascadia_treatment": "Benefits separated as distinct COGS line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Reclassify Cascadia benefits_cost ($20.33M) into delivery staff comp for combining view. Net COGS impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Bench Costs",
+        "meridian": 224.9,
+        "cascadia": 19.32,
+        "adjustments": 0.0,
+        "combined": 244.22,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Subcontractor Costs",
+        "meridian": 69.07,
+        "cascadia": 12.28,
+        "adjustments": 0.0,
+        "combined": 81.35,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Travel",
+        "meridian": 26.11,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 26.11,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Delivery Center Operations",
+        "meridian": 0.0,
+        "cascadia": 16.91,
+        "adjustments": 0.0,
+        "combined": 16.91,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Total COGS",
+        "meridian": 842.31,
+        "cascadia": 201.29,
+        "adjustments": -12.5,
+        "combined": 1031.1,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Gross Profit",
+        "meridian": 552.25,
+        "cascadia": 86.27,
+        "adjustments": 0.0,
+        "combined": 638.52,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Sales",
+        "meridian": 55.78,
+        "cascadia": 22.78,
+        "adjustments": 0.0,
+        "combined": 78.56,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($37.96M) into Sales ($22.78M) and Marketing ($15.18M)."
+          }
+        ]
+      },
+      {
+        "line_item": "Marketing",
+        "meridian": 34.86,
+        "cascadia": 15.18,
+        "adjustments": 0.0,
+        "combined": 50.04,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($37.96M) into Sales ($22.78M) and Marketing ($15.18M)."
+          }
+        ]
+      },
+      {
+        "line_item": "R&D / Technology",
+        "meridian": 20.92,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 20.92,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Technology & Automation",
+        "meridian": 0.0,
+        "cascadia": 23.0,
+        "adjustments": 3.0,
+        "combined": 26.0,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "G&A",
+        "meridian": 76.7,
+        "cascadia": 47.45,
+        "adjustments": 0.0,
+        "combined": 124.15,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Facilities",
+        "meridian": 6.97,
+        "cascadia": 15.82,
+        "adjustments": 0.0,
+        "combined": 22.79,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Recruiting",
+        "meridian": 13.95,
+        "cascadia": 0.0,
+        "adjustments": 2.0,
+        "combined": 15.95,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "Total OpEx",
+        "meridian": 209.18,
+        "cascadia": 119.23,
+        "adjustments": 5.0,
+        "combined": 333.41,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "EBITDA",
+        "meridian": 343.07,
+        "cascadia": -32.96,
+        "adjustments": -5.0,
+        "combined": 305.11,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "D&A",
+        "meridian": 27.89,
+        "cascadia": 15.1,
+        "adjustments": -5.03,
+        "combined": 37.96,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -5.03,
+            "adjustment_rationale": "Cascadia accelerated D&A = $15.10M. Straight-line equivalent = $10.07M. Adjustment = $-5.03M (reduces D&A by 1/3). Increases operating profit by $5.03M."
+          }
+        ]
+      },
+      {
+        "line_item": "Operating Profit",
+        "meridian": 315.18,
+        "cascadia": -48.06,
+        "adjustments": 0.03,
+        "combined": 267.15,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -5.03,
+            "adjustment_rationale": "Cascadia accelerated D&A = $15.10M. Straight-line equivalent = $10.07M. Adjustment = $-5.03M (reduces D&A by 1/3). Increases operating profit by $5.03M."
+          }
+        ]
+      },
+      {
+        "line_item": "Tax",
+        "meridian": 75.64,
+        "cascadia": 0.0,
+        "adjustments": -12.44,
+        "combined": 63.2,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Net Income",
+        "meridian": 239.54,
+        "cascadia": -48.06,
+        "adjustments": 12.47,
+        "combined": 203.95,
+        "adjustment_details": []
+      }
+    ]
+  },
+  "2026-Q2": {
+    "period": "2026-Q2",
+    "statement_type": "income_statement",
+    "line_items": [
+      {
+        "line_item": "Advisory & Consulting Revenue",
+        "meridian": 1411.67,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 1411.67,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Managed Services Revenue",
+        "meridian": 0.0,
+        "cascadia": 128.38,
+        "adjustments": 0.0,
+        "combined": 128.38,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-FTE Revenue",
+        "meridian": 0.0,
+        "cascadia": 107.96,
+        "adjustments": 0.0,
+        "combined": 107.96,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-Transaction Revenue",
+        "meridian": 0.0,
+        "cascadia": 55.44,
+        "adjustments": 0.0,
+        "combined": 55.44,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Revenue Gross-Up Adjustment",
+        "meridian": 0.0,
+        "cascadia": 0.0,
+        "adjustments": -12.5,
+        "combined": -12.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Total Revenue",
+        "meridian": 1411.67,
+        "cascadia": 291.78,
+        "adjustments": -12.5,
+        "combined": 1690.95,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Consultant / Delivery Staff Compensation",
+        "meridian": 527.99,
+        "cascadia": 154.75,
+        "adjustments": 0.0,
+        "combined": 682.74,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-002",
+            "description": "Benefits Loading: reclassify Cascadia benefits into delivery comp",
+            "metric": "COGS_reclassification",
+            "meridian_treatment": "Benefits bundled into consultant compensation (single COGS line)",
+            "cascadia_treatment": "Benefits separated as distinct COGS line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Reclassify Cascadia benefits_cost ($20.59M) into delivery staff comp for combining view. Net COGS impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Bench Costs",
+        "meridian": 227.37,
+        "cascadia": 19.57,
+        "adjustments": 0.0,
+        "combined": 246.94,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Subcontractor Costs",
+        "meridian": 69.83,
+        "cascadia": 12.44,
+        "adjustments": 0.0,
+        "combined": 82.27,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Travel",
+        "meridian": 26.4,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 26.4,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Delivery Center Operations",
+        "meridian": 0.0,
+        "cascadia": 17.13,
+        "adjustments": 0.0,
+        "combined": 17.13,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Total COGS",
+        "meridian": 851.59,
+        "cascadia": 203.88,
+        "adjustments": -12.5,
+        "combined": 1042.97,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Gross Profit",
+        "meridian": 560.08,
+        "cascadia": 87.9,
+        "adjustments": 0.0,
+        "combined": 647.98,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Sales",
+        "meridian": 56.47,
+        "cascadia": 23.11,
+        "adjustments": 0.0,
+        "combined": 79.58,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($38.51M) into Sales ($23.11M) and Marketing ($15.40M)."
+          }
+        ]
+      },
+      {
+        "line_item": "Marketing",
+        "meridian": 35.29,
+        "cascadia": 15.4,
+        "adjustments": 0.0,
+        "combined": 50.69,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($38.51M) into Sales ($23.11M) and Marketing ($15.40M)."
+          }
+        ]
+      },
+      {
+        "line_item": "R&D / Technology",
+        "meridian": 21.18,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 21.18,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Technology & Automation",
+        "meridian": 0.0,
+        "cascadia": 23.34,
+        "adjustments": 3.0,
+        "combined": 26.34,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "G&A",
+        "meridian": 77.64,
+        "cascadia": 48.14,
+        "adjustments": 0.0,
+        "combined": 125.78,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Facilities",
+        "meridian": 7.06,
+        "cascadia": 16.05,
+        "adjustments": 0.0,
+        "combined": 23.11,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Recruiting",
+        "meridian": 14.12,
+        "cascadia": 0.0,
+        "adjustments": 2.0,
+        "combined": 16.12,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "Total OpEx",
+        "meridian": 211.76,
+        "cascadia": 121.04,
+        "adjustments": 5.0,
+        "combined": 337.8,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "EBITDA",
+        "meridian": 348.32,
+        "cascadia": -33.14,
+        "adjustments": -5.0,
+        "combined": 310.18,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "D&A",
+        "meridian": 28.23,
+        "cascadia": 15.32,
+        "adjustments": -5.11,
+        "combined": 38.44,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -5.11,
+            "adjustment_rationale": "Cascadia accelerated D&A = $15.32M. Straight-line equivalent = $10.21M. Adjustment = $-5.11M (reduces D&A by 1/3). Increases operating profit by $5.11M."
+          }
+        ]
+      },
+      {
+        "line_item": "Operating Profit",
+        "meridian": 320.09,
+        "cascadia": -48.46,
+        "adjustments": 0.11,
+        "combined": 271.74,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -5.11,
+            "adjustment_rationale": "Cascadia accelerated D&A = $15.32M. Straight-line equivalent = $10.21M. Adjustment = $-5.11M (reduces D&A by 1/3). Increases operating profit by $5.11M."
+          }
+        ]
+      },
+      {
+        "line_item": "Tax",
+        "meridian": 76.82,
+        "cascadia": 0.0,
+        "adjustments": -12.53,
+        "combined": 64.29,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Net Income",
+        "meridian": 243.27,
+        "cascadia": -48.46,
+        "adjustments": 12.64,
+        "combined": 207.45,
+        "adjustment_details": []
+      }
+    ]
+  },
+  "2026-Q3": {
+    "period": "2026-Q3",
+    "statement_type": "income_statement",
+    "line_items": [
+      {
+        "line_item": "Advisory & Consulting Revenue",
+        "meridian": 1428.99,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 1428.99,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Managed Services Revenue",
+        "meridian": 0.0,
+        "cascadia": 130.27,
+        "adjustments": 0.0,
+        "combined": 130.27,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-FTE Revenue",
+        "meridian": 0.0,
+        "cascadia": 109.54,
+        "adjustments": 0.0,
+        "combined": 109.54,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-Transaction Revenue",
+        "meridian": 0.0,
+        "cascadia": 56.25,
+        "adjustments": 0.0,
+        "combined": 56.25,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Revenue Gross-Up Adjustment",
+        "meridian": 0.0,
+        "cascadia": 0.0,
+        "adjustments": -12.5,
+        "combined": -12.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Total Revenue",
+        "meridian": 1428.99,
+        "cascadia": 296.06,
+        "adjustments": -12.5,
+        "combined": 1712.55,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Consultant / Delivery Staff Compensation",
+        "meridian": 533.8,
+        "cascadia": 156.73,
+        "adjustments": 0.0,
+        "combined": 690.53,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-002",
+            "description": "Benefits Loading: reclassify Cascadia benefits into delivery comp",
+            "metric": "COGS_reclassification",
+            "meridian_treatment": "Benefits bundled into consultant compensation (single COGS line)",
+            "cascadia_treatment": "Benefits separated as distinct COGS line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Reclassify Cascadia benefits_cost ($20.86M) into delivery staff comp for combining view. Net COGS impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Bench Costs",
+        "meridian": 229.88,
+        "cascadia": 19.82,
+        "adjustments": 0.0,
+        "combined": 249.7,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Subcontractor Costs",
+        "meridian": 70.6,
+        "cascadia": 12.6,
+        "adjustments": 0.0,
+        "combined": 83.2,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Travel",
+        "meridian": 26.69,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 26.69,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Delivery Center Operations",
+        "meridian": 0.0,
+        "cascadia": 17.35,
+        "adjustments": 0.0,
+        "combined": 17.35,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Total COGS",
+        "meridian": 860.97,
+        "cascadia": 206.5,
+        "adjustments": -12.5,
+        "combined": 1054.97,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Gross Profit",
+        "meridian": 568.02,
+        "cascadia": 89.56,
+        "adjustments": 0.0,
+        "combined": 657.58,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Sales",
+        "meridian": 57.16,
+        "cascadia": 23.45,
+        "adjustments": 0.0,
+        "combined": 80.61,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($39.08M) into Sales ($23.45M) and Marketing ($15.63M)."
+          }
+        ]
+      },
+      {
+        "line_item": "Marketing",
+        "meridian": 35.72,
+        "cascadia": 15.63,
+        "adjustments": 0.0,
+        "combined": 51.35,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($39.08M) into Sales ($23.45M) and Marketing ($15.63M)."
+          }
+        ]
+      },
+      {
+        "line_item": "R&D / Technology",
+        "meridian": 21.43,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 21.43,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Technology & Automation",
+        "meridian": 0.0,
+        "cascadia": 23.68,
+        "adjustments": 3.0,
+        "combined": 26.68,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "G&A",
+        "meridian": 78.59,
+        "cascadia": 48.85,
+        "adjustments": 0.0,
+        "combined": 127.44,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Facilities",
+        "meridian": 7.14,
+        "cascadia": 16.28,
+        "adjustments": 0.0,
+        "combined": 23.42,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Recruiting",
+        "meridian": 14.29,
+        "cascadia": 0.0,
+        "adjustments": 2.0,
+        "combined": 16.29,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "Total OpEx",
+        "meridian": 214.33,
+        "cascadia": 122.89,
+        "adjustments": 5.0,
+        "combined": 342.22,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "EBITDA",
+        "meridian": 353.69,
+        "cascadia": -33.33,
+        "adjustments": -5.0,
+        "combined": 315.36,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "D&A",
+        "meridian": 28.58,
+        "cascadia": 15.54,
+        "adjustments": -5.18,
+        "combined": 38.94,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -5.18,
+            "adjustment_rationale": "Cascadia accelerated D&A = $15.54M. Straight-line equivalent = $10.36M. Adjustment = $-5.18M (reduces D&A by 1/3). Increases operating profit by $5.18M."
+          }
+        ]
+      },
+      {
+        "line_item": "Operating Profit",
+        "meridian": 325.11,
+        "cascadia": -48.87,
+        "adjustments": 0.18,
+        "combined": 276.42,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -5.18,
+            "adjustment_rationale": "Cascadia accelerated D&A = $15.54M. Straight-line equivalent = $10.36M. Adjustment = $-5.18M (reduces D&A by 1/3). Increases operating profit by $5.18M."
+          }
+        ]
+      },
+      {
+        "line_item": "Tax",
+        "meridian": 78.03,
+        "cascadia": 0.0,
+        "adjustments": -12.64,
+        "combined": 65.39,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Net Income",
+        "meridian": 247.08,
+        "cascadia": -48.87,
+        "adjustments": 12.82,
+        "combined": 211.03,
+        "adjustment_details": []
+      }
+    ]
+  },
+  "2026-Q4": {
+    "period": "2026-Q4",
+    "statement_type": "income_statement",
+    "line_items": [
+      {
+        "line_item": "Advisory & Consulting Revenue",
+        "meridian": 1446.53,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 1446.53,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Managed Services Revenue",
+        "meridian": 0.0,
+        "cascadia": 132.18,
+        "adjustments": 0.0,
+        "combined": 132.18,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-FTE Revenue",
+        "meridian": 0.0,
+        "cascadia": 111.15,
+        "adjustments": 0.0,
+        "combined": 111.15,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Per-Transaction Revenue",
+        "meridian": 0.0,
+        "cascadia": 57.08,
+        "adjustments": 0.0,
+        "combined": 57.08,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Revenue Gross-Up Adjustment",
+        "meridian": 0.0,
+        "cascadia": 0.0,
+        "adjustments": -12.5,
+        "combined": -12.5,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Total Revenue",
+        "meridian": 1446.53,
+        "cascadia": 300.4,
+        "adjustments": -12.5,
+        "combined": 1734.43,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Consultant / Delivery Staff Compensation",
+        "meridian": 539.68,
+        "cascadia": 158.75,
+        "adjustments": 0.0,
+        "combined": 698.43,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-002",
+            "description": "Benefits Loading: reclassify Cascadia benefits into delivery comp",
+            "metric": "COGS_reclassification",
+            "meridian_treatment": "Benefits bundled into consultant compensation (single COGS line)",
+            "cascadia_treatment": "Benefits separated as distinct COGS line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Reclassify Cascadia benefits_cost ($21.12M) into delivery staff comp for combining view. Net COGS impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Bench Costs",
+        "meridian": 232.41,
+        "cascadia": 20.08,
+        "adjustments": 0.0,
+        "combined": 252.49,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Subcontractor Costs",
+        "meridian": 71.38,
+        "cascadia": 12.76,
+        "adjustments": 0.0,
+        "combined": 84.14,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Travel",
+        "meridian": 26.98,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 26.98,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Delivery Center Operations",
+        "meridian": 0.0,
+        "cascadia": 17.57,
+        "adjustments": 0.0,
+        "combined": 17.57,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Total COGS",
+        "meridian": 870.45,
+        "cascadia": 209.15,
+        "adjustments": -12.5,
+        "combined": 1067.1,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+            "metric": "Revenue",
+            "meridian_treatment": "Books contractor markup as revenue",
+            "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+          },
+          {
+            "conflict_id": "COFA-001",
+            "description": "Revenue Gross-Up: COGS offset for pass-through cost removal",
+            "metric": "COGS",
+            "meridian_treatment": "COGS excludes pass-through",
+            "cascadia_treatment": "COGS includes pass-through cost",
+            "adjustment_amount": -12.5,
+            "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia COGS, matching the revenue reduction. Net P&L impact: zero."
+          }
+        ]
+      },
+      {
+        "line_item": "Gross Profit",
+        "meridian": 576.08,
+        "cascadia": 91.25,
+        "adjustments": 0.0,
+        "combined": 667.33,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Sales",
+        "meridian": 57.86,
+        "cascadia": 23.79,
+        "adjustments": 0.0,
+        "combined": 81.65,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($39.65M) into Sales ($23.79M) and Marketing ($15.86M)."
+          }
+        ]
+      },
+      {
+        "line_item": "Marketing",
+        "meridian": 36.16,
+        "cascadia": 15.86,
+        "adjustments": 0.0,
+        "combined": 52.02,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-003",
+            "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+            "metric": "OpEx_reclassification",
+            "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+            "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+            "adjustment_amount": 0.0,
+            "adjustment_rationale": "Split Cascadia sm_combined_expense ($39.65M) into Sales ($23.79M) and Marketing ($15.86M)."
+          }
+        ]
+      },
+      {
+        "line_item": "R&D / Technology",
+        "meridian": 21.7,
+        "cascadia": 0.0,
+        "adjustments": 0.0,
+        "combined": 21.7,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Technology & Automation",
+        "meridian": 0.0,
+        "cascadia": 24.03,
+        "adjustments": 3.0,
+        "combined": 27.03,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "G&A",
+        "meridian": 79.56,
+        "cascadia": 49.57,
+        "adjustments": 0.0,
+        "combined": 129.13,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Facilities",
+        "meridian": 7.23,
+        "cascadia": 16.52,
+        "adjustments": 0.0,
+        "combined": 23.75,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Recruiting",
+        "meridian": 14.47,
+        "cascadia": 0.0,
+        "adjustments": 2.0,
+        "combined": 16.47,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "Total OpEx",
+        "meridian": 216.98,
+        "cascadia": 124.77,
+        "adjustments": 5.0,
+        "combined": 346.75,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "EBITDA",
+        "meridian": 359.1,
+        "cascadia": -33.52,
+        "adjustments": -5.0,
+        "combined": 320.58,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          }
+        ]
+      },
+      {
+        "line_item": "D&A",
+        "meridian": 28.93,
+        "cascadia": 15.77,
+        "adjustments": -5.26,
+        "combined": 39.44,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -5.26,
+            "adjustment_rationale": "Cascadia accelerated D&A = $15.77M. Straight-line equivalent = $10.51M. Adjustment = $-5.26M (reduces D&A by 1/3). Increases operating profit by $5.26M."
+          }
+        ]
+      },
+      {
+        "line_item": "Operating Profit",
+        "meridian": 330.17,
+        "cascadia": -49.29,
+        "adjustments": 0.26,
+        "combined": 281.14,
+        "adjustment_details": [
+          {
+            "conflict_id": "COFA-004",
+            "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+            "metric": "OpEx_recruiting",
+            "meridian_treatment": "All recruiting costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+            "adjustment_amount": 2.0,
+            "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-005",
+            "description": "Automation Capitalization: expense Cascadia capitalized automation",
+            "metric": "OpEx_technology",
+            "meridian_treatment": "All technology costs expensed immediately",
+            "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+            "adjustment_amount": 3.0,
+            "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+          },
+          {
+            "conflict_id": "COFA-006",
+            "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+            "metric": "D&A",
+            "meridian_treatment": "Straight-line depreciation over 5 years",
+            "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+            "adjustment_amount": -5.26,
+            "adjustment_rationale": "Cascadia accelerated D&A = $15.77M. Straight-line equivalent = $10.51M. Adjustment = $-5.26M (reduces D&A by 1/3). Increases operating profit by $5.26M."
+          }
+        ]
+      },
+      {
+        "line_item": "Tax",
+        "meridian": 79.24,
+        "cascadia": 0.0,
+        "adjustments": -12.73,
+        "combined": 66.51,
+        "adjustment_details": []
+      },
+      {
+        "line_item": "Net Income",
+        "meridian": 250.93,
+        "cascadia": -49.29,
+        "adjustments": 12.99,
+        "combined": 214.63,
+        "adjustment_details": []
+      }
+    ]
+  },
+  "_cofa_adjustments": [
+    {
+      "conflict_id": "COFA-001",
+      "description": "Revenue Gross-Up: Cascadia books full FTE rate; Meridian books markup only",
+      "metric": "Revenue",
+      "meridian_treatment": "Books contractor markup as revenue",
+      "cascadia_treatment": "Books full FTE rate as revenue (includes pass-through cost)",
+      "adjustment_amount": -12.5,
+      "adjustment_rationale": "Remove $12.5M/Q pass-through from Cascadia revenue. Corresponding COGS reduction nets to zero P&L impact."
+    },
+    {
+      "conflict_id": "COFA-002",
+      "description": "Benefits Loading: reclassify Cascadia benefits into delivery comp",
+      "metric": "COGS_reclassification",
+      "meridian_treatment": "Benefits bundled into consultant compensation (single COGS line)",
+      "cascadia_treatment": "Benefits separated as distinct COGS line",
+      "adjustment_amount": 0.0,
+      "adjustment_rationale": "Reclassify Cascadia benefits_cost ($17.93M) into delivery staff comp for combining view. Net COGS impact: zero."
+    },
+    {
+      "conflict_id": "COFA-003",
+      "description": "S&M Bundling: split Cascadia S&M into Sales (60%) and Marketing (40%)",
+      "metric": "OpEx_reclassification",
+      "meridian_treatment": "Separate Sales and Marketing OpEx lines",
+      "cascadia_treatment": "Bundled Sales & Marketing as single OpEx line",
+      "adjustment_amount": 0.0,
+      "adjustment_rationale": "Split Cascadia sm_combined_expense ($33.00M) into Sales ($19.80M) and Marketing ($13.20M)."
+    },
+    {
+      "conflict_id": "COFA-004",
+      "description": "Recruiting Capitalization: expense Cascadia capitalized recruiting",
+      "metric": "OpEx_recruiting",
+      "meridian_treatment": "All recruiting costs expensed immediately",
+      "cascadia_treatment": "Capitalizes $2.0M/Q recruiting to BS",
+      "adjustment_amount": 2.0,
+      "adjustment_rationale": "Add $2.0M/Q back to OpEx (recruiting). Reduces EBITDA by same amount. PP&E reduced correspondingly."
+    },
+    {
+      "conflict_id": "COFA-005",
+      "description": "Automation Capitalization: expense Cascadia capitalized automation",
+      "metric": "OpEx_technology",
+      "meridian_treatment": "All technology costs expensed immediately",
+      "cascadia_treatment": "Capitalizes $3.0M/Q automation dev to BS",
+      "adjustment_amount": 3.0,
+      "adjustment_rationale": "Add $3.0M/Q back to OpEx (technology). Reduces EBITDA by same amount. Intangibles reduced correspondingly."
+    },
+    {
+      "conflict_id": "COFA-006",
+      "description": "Depreciation Methods: restate Cascadia from accelerated to straight-line",
+      "metric": "D&A",
+      "meridian_treatment": "Straight-line depreciation over 5 years",
+      "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
+      "adjustment_amount": -4.37,
+      "adjustment_rationale": "Cascadia accelerated D&A = $13.12M. Straight-line equivalent = $8.75M. Adjustment = $-4.37M (reduces D&A by 1/3). Increases operating profit by $4.37M."
+    }
+  ],
+  "_periods": [
+    "2024-Q1",
+    "2024-Q2",
+    "2024-Q3",
+    "2024-Q4",
+    "2025-Q1",
+    "2025-Q2",
+    "2025-Q3",
+    "2025-Q4",
+    "2026-Q1",
+    "2026-Q2",
+    "2026-Q3",
+    "2026-Q4"
+  ]
+}
