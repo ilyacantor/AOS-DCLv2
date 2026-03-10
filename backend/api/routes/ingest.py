@@ -445,14 +445,21 @@ async def dcl_ingest(
     )
 
     try:
-        raw_body = await request.json()
-    except Exception as e:
+        # Read body bytes async, then offload JSON parse to thread pool.
+        # json.loads() on a 26MB payload takes 2-5s and blocks the event loop,
+        # starving health checks and queries during ingest bursts.
         raw_bytes = await request.body()
+        loop = asyncio.get_running_loop()
+        raw_body = await loop.run_in_executor(None, json.loads, raw_bytes)
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
         logger.error(
             f"[Ingest] JSON parse failed from {client_host}: {e} | "
             f"raw body ({len(raw_bytes)} bytes): {raw_bytes[:500]!r}"
         )
         raise HTTPException(status_code=400, detail=f"Invalid JSON body: {e}")
+    except Exception as e:
+        logger.error(f"[Ingest] Body read/parse failed from {client_host}: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid request body: {e}")
 
     logger.info(f"[Ingest] Received keys: {list(raw_body.keys()) if isinstance(raw_body, dict) else type(raw_body).__name__}")
 
@@ -588,6 +595,31 @@ async def dcl_ingest(
     run_id = x_run_id or str(uuid.uuid4())
     pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
 
+    # ── Dedup gate: skip reprocessing if (run_id, pipe_id) already ingested ──
+    store = get_ingest_store()
+    existing_receipt = store.get_receipt(run_id, pipe_id)
+    if existing_receipt is not None:
+        logger.info(
+            f"[Ingest] DEDUP: pipe_id={pipe_id} run_id={run_id} already ingested "
+            f"({existing_receipt.row_count} rows at {existing_receipt.received_at}). "
+            f"Returning cached receipt."
+        )
+        pipe_def = get_pipe_store().lookup(pipe_id)
+        return IngestResponse(
+            status="deduplicated",
+            dcl_run_id=run_id,
+            run_id=run_id,
+            dispatch_id=existing_receipt.dispatch_id,
+            pipe_id=pipe_id,
+            rows_accepted=existing_receipt.row_count,
+            schema_drift=existing_receipt.schema_drift,
+            drift_fields=existing_receipt.drift_fields,
+            matched_schema=pipe_def is not None,
+            schema_fields=pipe_def.fields if pipe_def else [],
+            timestamp=existing_receipt.received_at,
+            warnings=["Duplicate push detected — returning cached receipt"],
+        )
+
     if x_dispatch_id:
         dispatch_id = x_dispatch_id
     else:
@@ -616,13 +648,20 @@ async def dcl_ingest(
 
     store = get_ingest_store()
     try:
-        receipt = store.ingest(
-            run_id=run_id,
-            pipe_id=pipe_id,
-            schema_hash=schema_hash,
-            request=ingest_req,
-            dispatch_id=dispatch_id,
-            canonical_source_override=canonical_src,
+        # Offload store.ingest() to thread pool: it performs JSON serialization,
+        # zlib compression, and Redis I/O — all synchronous and CPU/IO-bound.
+        # A 44K-row payload blocks the event loop for 5-10s without this.
+        loop = asyncio.get_running_loop()
+        receipt = await loop.run_in_executor(
+            None,
+            lambda: store.ingest(
+                run_id=run_id,
+                pipe_id=pipe_id,
+                schema_hash=schema_hash,
+                request=ingest_req,
+                dispatch_id=dispatch_id,
+                canonical_source_override=canonical_src,
+            ),
         )
     except Exception as e:
         logger.error(f"[Ingest] Failed: {e}", exc_info=True)
