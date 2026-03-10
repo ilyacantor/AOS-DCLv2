@@ -139,7 +139,7 @@ def load_fact_base(entity_id: Optional[str] = None) -> Dict[str, Any]:
     - entity_id="xyz" → load data/fact_base_xyz.json if it exists, else fall back
                          to data/fact_base.json (single-entity default)
 
-    The default fact_base.json represents the single-entity Meridian data in demo mode.
+    The default fact_base.json represents the single-entity data in demo mode.
     Entity-specific files (fact_base_{entity_id}.json) are loaded when they exist.
     """
     if entity_id is None:
@@ -188,7 +188,7 @@ def get_all_entity_ids() -> List[str]:
     entity_ids = []
     for path in DATA_DIR.glob("fact_base_*.json"):
         # Extract entity_id from fact_base_{entity_id}.json
-        stem = path.stem  # e.g. "fact_base_meridian"
+        stem = path.stem  # e.g. "fact_base_entityname"
         entity_id = stem[len("fact_base_"):]
         if entity_id:
             entity_ids.append(entity_id)

@@ -6,11 +6,15 @@ Persona-Contextual Definitions - Same question, different correct answer dependi
 Definitions are stored in a dedicated table (separate from ontology_concepts).
 """
 
+import json
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
 from backend.utils.log_utils import get_logger
+
+_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 
 logger = get_logger(__name__)
 
@@ -35,81 +39,16 @@ class PersonaDefinitionStore:
 
     def __init__(self):
         self._definitions: Dict[str, List[PersonaDefinition]] = {}
-        self._seed_definitions()
+        self._load_definitions()
 
-    def _seed_definitions(self):
-        """Seed persona-specific definitions."""
-        definitions = [
-            # Customers: CFO sees billing entities, CRO sees active opportunities
-            PersonaDefinition(
-                id="pcd-customers-cfo",
-                metric_id="customers",
-                persona="CFO",
-                definition="Active billing entities with at least one paid invoice in the last 12 months",
-                calculation_method="COUNT(DISTINCT billing_entity_id) WHERE last_invoice_date > NOW() - INTERVAL '12 months'",
-                value_override=2400,
-            ),
-            PersonaDefinition(
-                id="pcd-customers-cro",
-                metric_id="customers",
-                persona="CRO",
-                definition="Active accounts with at least one open opportunity or active subscription",
-                calculation_method="COUNT(DISTINCT account_id) WHERE has_active_opportunity = true OR has_active_subscription = true",
-                value_override=8100,
-            ),
-            PersonaDefinition(
-                id="pcd-customers-coo",
-                metric_id="customers",
-                persona="COO",
-                definition="Accounts with active support contracts or SLA agreements",
-                calculation_method="COUNT(DISTINCT account_id) WHERE has_support_contract = true OR has_sla = true",
-                value_override=3200,
-            ),
-            PersonaDefinition(
-                id="pcd-customers-cto",
-                metric_id="customers",
-                persona="CTO",
-                definition="Accounts with active API integrations or platform connections",
-                calculation_method="COUNT(DISTINCT account_id) WHERE active_integrations > 0",
-                value_override=3800,
-            ),
-            # Revenue: Different recognition methods per persona
-            PersonaDefinition(
-                id="pcd-revenue-cfo",
-                metric_id="revenue",
-                persona="CFO",
-                definition="GAAP recognized revenue, net of returns and allowances",
-                calculation_method="SUM(recognized_amount) - SUM(returns) - SUM(allowances)",
-                value_override=200000000,
-            ),
-            PersonaDefinition(
-                id="pcd-revenue-cro",
-                metric_id="revenue",
-                persona="CRO",
-                definition="Booked revenue from closed-won deals including services",
-                calculation_method="SUM(amount) WHERE stage = 'Closed-Won'",
-                value_override=228000000,
-            ),
-            # Pipeline: Different scope per persona
-            PersonaDefinition(
-                id="pcd-pipeline-cro",
-                metric_id="pipeline",
-                persona="CRO",
-                definition="Total value of all open opportunities including new and expansion",
-                calculation_method="SUM(amount) WHERE stage NOT IN ('Closed-Won', 'Closed-Lost')",
-                value_multiplier=1.0,
-            ),
-            PersonaDefinition(
-                id="pcd-pipeline-cfo",
-                metric_id="pipeline",
-                persona="CFO",
-                definition="Weighted pipeline value using stage-probability forecasting",
-                calculation_method="SUM(amount * stage_probability) WHERE stage NOT IN ('Closed-Won', 'Closed-Lost')",
-                value_multiplier=0.65,
-            ),
-        ]
+    def _load_definitions(self):
+        """Load persona-specific definitions from JSON data file."""
+        json_path = _DATA_DIR / "persona_definitions.json"
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
 
-        for d in definitions:
+        for entry in data["definitions"]:
+            d = PersonaDefinition(**entry)
             if d.metric_id not in self._definitions:
                 self._definitions[d.metric_id] = []
             self._definitions[d.metric_id].append(d)

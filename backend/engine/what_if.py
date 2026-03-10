@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from backend.engine.engagement_config import get_engagement
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -24,10 +25,10 @@ _DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 # ─────────────────────────────────────────────────────────────────────
 
 DEFAULT_LEVERS: dict[str, float] = {
-    "m_utilization_rate": 78,
-    "m_bench_rate": 18,
-    "c_offshore_mix": 60,
-    "c_attrition_rate": 18,
+    "a_utilization_rate": 78,
+    "a_bench_rate": 18,
+    "b_offshore_mix": 60,
+    "b_attrition_rate": 18,
     "cross_sell_capture_rate": 50,
     "cross_sell_ramp_months": 18,
     "corporate_hc_reduction_pct": 20,
@@ -36,98 +37,105 @@ DEFAULT_LEVERS: dict[str, float] = {
     "ev_multiple": 12.5,
 }
 
-LEVER_DEFINITIONS: list[dict[str, Any]] = [
-    {
-        "name": "m_utilization_rate",
-        "label": "M Utilization Rate",
-        "min": 72,
-        "max": 85,
-        "default": 78,
-        "unit": "%",
-        "impact_per_point_M": 62,
-    },
-    {
-        "name": "m_bench_rate",
-        "label": "M Bench Rate",
-        "min": 10,
-        "max": 22,
-        "default": 18,
-        "unit": "%",
-        "impact_per_point_M": 18,
-    },
-    {
-        "name": "c_offshore_mix",
-        "label": "C Offshore Mix",
-        "min": 50,
-        "max": 80,
-        "default": 60,
-        "unit": "%",
-        "impact_per_point_M": 6,
-    },
-    {
-        "name": "c_attrition_rate",
-        "label": "C Attrition Rate",
-        "min": 10,
-        "max": 22,
-        "default": 18,
-        "unit": "%",
-        "impact_per_point_M": 4,
-    },
-    {
-        "name": "cross_sell_capture_rate",
-        "label": "Cross-Sell Capture Rate",
-        "min": 0,
-        "max": 100,
-        "default": 50,
-        "unit": "%",
-        "impact_per_point_M": None,
-    },
-    {
-        "name": "cross_sell_ramp_months",
-        "label": "Cross-Sell Ramp Months",
-        "min": 6,
-        "max": 36,
-        "default": 18,
-        "unit": "months",
-        "impact_per_point_M": None,
-    },
-    {
-        "name": "corporate_hc_reduction_pct",
-        "label": "Corporate HC Reduction %",
-        "min": 0,
-        "max": 40,
-        "default": 20,
-        "unit": "%",
-        "impact_per_point_M": None,
-    },
-    {
-        "name": "bench_cross_deploy_rate",
-        "label": "Bench Cross-Deploy Rate",
-        "min": 0,
-        "max": 50,
-        "default": 15,
-        "unit": "%",
-        "impact_per_point_M": None,
-    },
-    {
-        "name": "integration_cost_M",
-        "label": "Integration Cost ($M)",
-        "min": 50,
-        "max": 150,
-        "default": 100,
-        "unit": "$M",
-        "impact_per_point_M": 1,
-    },
-    {
-        "name": "ev_multiple",
-        "label": "EV Multiple",
-        "min": 8,
-        "max": 18,
-        "default": 12.5,
-        "unit": "x",
-        "impact_per_point_M": None,
-    },
-]
+
+def _build_lever_definitions() -> list[dict[str, Any]]:
+    """Build lever definitions with entity short names from engagement config."""
+    eng = get_engagement()
+    a_short = eng.entity_a.short_name
+    b_short = eng.entity_b.short_name
+
+    return [
+        {
+            "name": "a_utilization_rate",
+            "label": f"{a_short} Utilization Rate",
+            "min": 72,
+            "max": 85,
+            "default": 78,
+            "unit": "%",
+            "impact_per_point_M": 62,
+        },
+        {
+            "name": "a_bench_rate",
+            "label": f"{a_short} Bench Rate",
+            "min": 10,
+            "max": 22,
+            "default": 18,
+            "unit": "%",
+            "impact_per_point_M": 18,
+        },
+        {
+            "name": "b_offshore_mix",
+            "label": f"{b_short} Offshore Mix",
+            "min": 50,
+            "max": 80,
+            "default": 60,
+            "unit": "%",
+            "impact_per_point_M": 6,
+        },
+        {
+            "name": "b_attrition_rate",
+            "label": f"{b_short} Attrition Rate",
+            "min": 10,
+            "max": 22,
+            "default": 18,
+            "unit": "%",
+            "impact_per_point_M": 4,
+        },
+        {
+            "name": "cross_sell_capture_rate",
+            "label": "Cross-Sell Capture Rate",
+            "min": 0,
+            "max": 100,
+            "default": 50,
+            "unit": "%",
+            "impact_per_point_M": None,
+        },
+        {
+            "name": "cross_sell_ramp_months",
+            "label": "Cross-Sell Ramp Months",
+            "min": 6,
+            "max": 36,
+            "default": 18,
+            "unit": "months",
+            "impact_per_point_M": None,
+        },
+        {
+            "name": "corporate_hc_reduction_pct",
+            "label": "Corporate HC Reduction %",
+            "min": 0,
+            "max": 40,
+            "default": 20,
+            "unit": "%",
+            "impact_per_point_M": None,
+        },
+        {
+            "name": "bench_cross_deploy_rate",
+            "label": "Bench Cross-Deploy Rate",
+            "min": 0,
+            "max": 50,
+            "default": 15,
+            "unit": "%",
+            "impact_per_point_M": None,
+        },
+        {
+            "name": "integration_cost_M",
+            "label": "Integration Cost ($M)",
+            "min": 50,
+            "max": 150,
+            "default": 100,
+            "unit": "$M",
+            "impact_per_point_M": 1,
+        },
+        {
+            "name": "ev_multiple",
+            "label": "EV Multiple",
+            "min": 8,
+            "max": 18,
+            "default": 12.5,
+            "unit": "x",
+            "impact_per_point_M": None,
+        },
+    ]
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -137,10 +145,10 @@ LEVER_DEFINITIONS: list[dict[str, Any]] = [
 PRESETS: dict[str, dict[str, float]] = {
     "base": dict(DEFAULT_LEVERS),
     "conservative": {
-        "m_utilization_rate": 75,
-        "m_bench_rate": 20,
-        "c_offshore_mix": 55,
-        "c_attrition_rate": 20,
+        "a_utilization_rate": 75,
+        "a_bench_rate": 20,
+        "b_offshore_mix": 55,
+        "b_attrition_rate": 20,
         "cross_sell_capture_rate": 25,
         "cross_sell_ramp_months": 18,
         "corporate_hc_reduction_pct": 10,
@@ -149,10 +157,10 @@ PRESETS: dict[str, dict[str, float]] = {
         "ev_multiple": 10,
     },
     "aggressive": {
-        "m_utilization_rate": 82,
-        "m_bench_rate": 13,
-        "c_offshore_mix": 72,
-        "c_attrition_rate": 13,
+        "a_utilization_rate": 82,
+        "a_bench_rate": 13,
+        "b_offshore_mix": 72,
+        "b_attrition_rate": 13,
         "cross_sell_capture_rate": 85,
         "cross_sell_ramp_months": 18,
         "corporate_hc_reduction_pct": 35,
@@ -160,15 +168,15 @@ PRESETS: dict[str, dict[str, float]] = {
         "integration_cost_M": 65,
         "ev_multiple": 15,
     },
-    "harmonize_to_m": {
+    "harmonize_to_a": {
         **DEFAULT_LEVERS,
-        "c_offshore_mix": 78,
-        "c_attrition_rate": 15,
+        "b_offshore_mix": 78,
+        "b_attrition_rate": 15,
     },
-    "harmonize_to_c": {
+    "harmonize_to_b": {
         **DEFAULT_LEVERS,
-        "m_utilization_rate": 75,
-        "m_bench_rate": 20,
+        "a_utilization_rate": 75,
+        "a_bench_rate": 20,
     },
 }
 
@@ -180,8 +188,12 @@ PRESETS: dict[str, dict[str, float]] = {
 def _load_people_overlap_hc() -> int:
     """Load total overlapping headcount from entity_overlap.json.
 
-    Overlapping HC = sum of min(meridian_hc, cascadia_hc) per function.
+    Overlapping HC = sum of min(entity_a_hc, entity_b_hc) per function.
     """
+    eng = get_engagement()
+    hc_a = eng.overlap_keys.entity_a_headcount
+    hc_b = eng.overlap_keys.entity_b_headcount
+
     path = _DATA_DIR / "entity_overlap.json"
     if not path.exists():
         raise FileNotFoundError(
@@ -193,7 +205,7 @@ def _load_people_overlap_hc() -> int:
 
     total = 0
     for func in overlap.get("people_overlap", {}).get("functions", []):
-        total += min(func.get("meridian_headcount", 0), func.get("cascadia_headcount", 0))
+        total += min(func.get(hc_a, 0), func.get(hc_b, 0))
     return total
 
 
@@ -229,33 +241,34 @@ def _apply_levers(
 
     This is pure arithmetic — no I/O, no external calls.
     """
+    eng = get_engagement()
     avg_comp = 150_000
 
     # ── Entity-level adjustment deltas from levers ──
     # These represent CHANGES from the base entity adjustments in the bridge.
     # The bridge already includes base amounts for these; we compute the delta.
 
-    # m_utilization_rate: each point from 78 = ~$62M
-    util_delta = (levers["m_utilization_rate"] - 78) * 62_000_000
+    # a_utilization_rate: each point from 78 = ~$62M
+    util_delta = (levers["a_utilization_rate"] - 78) * 62_000_000
 
-    # m_bench_rate: each point below 18 = ~$18M savings
-    bench_rate_delta = (18 - levers["m_bench_rate"]) * 18_000_000
+    # a_bench_rate: each point below 18 = ~$18M savings
+    bench_rate_delta = (18 - levers["a_bench_rate"]) * 18_000_000
 
-    # c_offshore_mix: each point above 60 = ~$6M savings
-    offshore_delta = (levers["c_offshore_mix"] - 60) * 6_000_000
+    # b_offshore_mix: each point above 60 = ~$6M savings
+    offshore_delta = (levers["b_offshore_mix"] - 60) * 6_000_000
 
-    # c_attrition_rate: each point below 18 = ~$4M savings
-    attrition_delta = (18 - levers["c_attrition_rate"]) * 4_000_000
+    # b_attrition_rate: each point below 18 = ~$4M savings
+    attrition_delta = (18 - levers["b_attrition_rate"]) * 4_000_000
 
     # ── Recompute entity adjustments with lever impacts ──
     recomputed_adjustments = []
     for adj in bridge["entity_adjustments"]:
         entry = dict(adj)
-        if adj["lever"] == "m_utilization_rate":
+        if adj["lever"] == "a_utilization_rate":
             entry["amount"] = adj["amount"] + util_delta
-        elif adj["lever"] == "c_offshore_mix":
+        elif adj["lever"] == "b_offshore_mix":
             entry["amount"] = adj["amount"] + offshore_delta
-        elif adj["lever"] == "c_attrition_rate":
+        elif adj["lever"] == "b_attrition_rate":
             entry["amount"] = adj["amount"] + attrition_delta
         recomputed_adjustments.append(entry)
 
@@ -265,14 +278,14 @@ def _apply_levers(
         recomputed_adjustments.append({
             "name": "Bench rate impact (lever)",
             "category": "normalization",
-            "entity": "meridian",
+            "entity": eng.entity_a.id,
             "confidence": "medium",
             "amount": bench_rate_delta,
             "amount_low": bench_rate_delta,
             "amount_high": bench_rate_delta,
-            "lever": "m_bench_rate",
-            "support_reference": "What-if lever: M bench rate",
-            "rationale": f"Impact of M bench rate at {levers['m_bench_rate']:.0f}% vs. base 18%.",
+            "lever": "a_bench_rate",
+            "support_reference": f"What-if lever: {eng.entity_a.short_name} bench rate",
+            "rationale": f"Impact of {eng.entity_a.short_name} bench rate at {levers['a_bench_rate']:.0f}% vs. base 18%.",
         })
 
     # ── Recompute synergies with lever impacts ──
@@ -335,7 +348,7 @@ def _apply_levers(
 
     return {
         "levers": dict(levers),
-        "lever_definitions": LEVER_DEFINITIONS,
+        "lever_definitions": _build_lever_definitions(),
         "reported_ebitda": reported_ebitda,
         "entity_adjusted_ebitda": entity_adjusted_ebitda,
         "adjustments": recomputed_adjustments,
@@ -363,7 +376,7 @@ def compute_what_if(
     """Run the what-if sensitivity engine.
 
     Args:
-        levers: Dict of lever name → value. Missing levers use defaults.
+        levers: Dict of lever name -> value. Missing levers use defaults.
             If None, all defaults are used.
         bridge: Output of compute_ebitda_bridge(). If None, computes it.
 

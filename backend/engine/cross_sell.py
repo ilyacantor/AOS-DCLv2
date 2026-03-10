@@ -3,8 +3,8 @@ Cross-sell propensity engine.
 
 Scores non-overlapping customers of each entity against the other entity's
 service catalog.  Two directions:
-  M→C: Meridian advisory services → Cascadia's BPM clients
-  C→M: Cascadia BPM services → Meridian's consulting clients
+  A→B: entity_a services → entity_b's clients
+  B→A: entity_b services → entity_a's clients
 
 Scoring dimensions (0-100 total):
   - Industry match (0-25): customer industry vs product industry fit
@@ -18,6 +18,7 @@ Threshold: ≥40 = candidate.  >80 = high confidence.
 Depends on:
   - data/customer_profiles.json (from Farm via generate_combining_data.py)
   - data/entity_overlap.json (for overlap exclusion)
+  - engagement config for entity definitions and service catalog paths
 """
 
 import json
@@ -26,6 +27,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from backend.engine.engagement_config import get_engagement
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -50,101 +52,44 @@ class ServiceOffering:
     trigger_keywords: list[str]
 
 
-MERIDIAN_SERVICES: list[ServiceOffering] = [
-    ServiceOffering(
-        name="Strategy Consulting",
-        typical_buyer="CEO/CFO",
-        acv_low=250_000, acv_high=2_000_000,
-        sweet_spot_industries=["Financial Services", "Technology", "Healthcare", "Energy"],
-        adjacent_industries=["Manufacturing", "Retail", "Telecommunications", "Insurance"],
-        sweet_spot_employees_min=1000, sweet_spot_employees_max=100_000,
-        trigger_keywords=["M&A", "market shift", "board mandate"],
-    ),
-    ServiceOffering(
-        name="Operations Advisory",
-        typical_buyer="COO/VP Ops",
-        acv_low=300_000, acv_high=1_500_000,
-        sweet_spot_industries=["Manufacturing", "Healthcare", "Retail", "Financial Services"],
-        adjacent_industries=["Technology", "Insurance", "Energy", "Telecommunications"],
-        sweet_spot_employees_min=2000, sweet_spot_employees_max=150_000,
-        trigger_keywords=["post-merger", "process redesign", "cost reduction"],
-    ),
-    ServiceOffering(
-        name="Technology Transformation",
-        typical_buyer="CTO/CIO",
-        acv_low=200_000, acv_high=1_200_000,
-        sweet_spot_industries=["Financial Services", "Technology", "Insurance", "Healthcare"],
-        adjacent_industries=["Manufacturing", "Retail", "Telecommunications", "Energy"],
-        sweet_spot_employees_min=500, sweet_spot_employees_max=80_000,
-        trigger_keywords=["legacy modernization", "scaling pain", "cloud migration"],
-    ),
-    ServiceOffering(
-        name="Risk & Compliance",
-        typical_buyer="CRO/CCO",
-        acv_low=250_000, acv_high=2_500_000,
-        sweet_spot_industries=["Financial Services", "Insurance", "Healthcare", "Pharmaceuticals"],
-        adjacent_industries=["Energy", "Technology", "Manufacturing"],
-        sweet_spot_employees_min=1000, sweet_spot_employees_max=200_000,
-        trigger_keywords=["regulatory pressure", "audit findings", "compliance gap"],
-    ),
-    ServiceOffering(
-        name="Digital/AI Advisory",
-        typical_buyer="CDO/CTO",
-        acv_low=300_000, acv_high=2_000_000,
-        sweet_spot_industries=["Technology", "Financial Services", "Healthcare", "Retail"],
-        adjacent_industries=["Insurance", "Manufacturing", "Telecommunications"],
-        sweet_spot_employees_min=500, sweet_spot_employees_max=100_000,
-        trigger_keywords=["automation mandate", "data strategy", "AI adoption"],
-    ),
-    ServiceOffering(
-        name="Commercial Strategy",
-        typical_buyer="CRO/CMO",
-        acv_low=150_000, acv_high=800_000,
-        sweet_spot_industries=["Technology", "Retail", "Consumer Goods", "Telecommunications"],
-        adjacent_industries=["Financial Services", "Healthcare", "Manufacturing"],
-        sweet_spot_employees_min=200, sweet_spot_employees_max=50_000,
-        trigger_keywords=["GTM redesign", "channel expansion", "pricing optimization"],
-    ),
-]
+def _load_service_catalog(catalog_path: str) -> list[ServiceOffering]:
+    """Load service offerings from a service catalog JSON file.
 
-CASCADIA_SERVICES: list[ServiceOffering] = [
-    ServiceOffering(
-        name="F&A Outsourcing",
-        typical_buyer="CFO/VP Finance",
-        acv_low=500_000, acv_high=5_000_000,
-        sweet_spot_industries=["Financial Services", "Healthcare", "Insurance", "Manufacturing"],
-        adjacent_industries=["Technology", "Retail", "Energy", "Telecommunications"],
-        sweet_spot_employees_min=2000, sweet_spot_employees_max=200_000,
-        trigger_keywords=["post-transformation handoff", "cost reduction", "finance ops"],
-    ),
-    ServiceOffering(
-        name="CX Management",
-        typical_buyer="VP CX/VP Shared Services",
-        acv_low=800_000, acv_high=8_000_000,
-        sweet_spot_industries=["Telecommunications", "Financial Services", "Retail", "Insurance"],
-        adjacent_industries=["Healthcare", "Technology", "Manufacturing"],
-        sweet_spot_employees_min=5000, sweet_spot_employees_max=200_000,
-        trigger_keywords=["CX fragmentation", "multi-channel pain", "call center consolidation"],
-    ),
-    ServiceOffering(
-        name="Data & Analytics BPO",
-        typical_buyer="CDO/VP Analytics",
-        acv_low=300_000, acv_high=2_000_000,
-        sweet_spot_industries=["Financial Services", "Technology", "Healthcare", "Retail"],
-        adjacent_industries=["Insurance", "Manufacturing", "Telecommunications"],
-        sweet_spot_employees_min=1000, sweet_spot_employees_max=100_000,
-        trigger_keywords=["data ops gap", "reporting burden", "analytics backlog"],
-    ),
-    ServiceOffering(
-        name="Industry Process Solutions",
-        typical_buyer="COO/VP Ops",
-        acv_low=1_000_000, acv_high=10_000_000,
-        sweet_spot_industries=["Healthcare", "Insurance", "Financial Services", "Manufacturing"],
-        adjacent_industries=["Pharmaceuticals", "Energy", "Retail"],
-        sweet_spot_employees_min=5000, sweet_spot_employees_max=200_000,
-        trigger_keywords=["regulatory ops", "industry-specific complexity", "process automation"],
-    ),
-]
+    Args:
+        catalog_path: Path to the service catalog JSON file (relative to repo root
+                      or absolute).
+
+    Returns:
+        List of ServiceOffering dataclass instances.
+
+    Raises:
+        FileNotFoundError: If the catalog file does not exist.
+    """
+    path = Path(catalog_path)
+    if not path.is_absolute():
+        path = _DATA_DIR.parent / path
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Service catalog not found at {path}. "
+            f"Ensure the engagement config points to a valid service catalog file."
+        )
+    with open(path) as f:
+        raw = json.load(f)
+
+    services: list[ServiceOffering] = []
+    for s in raw.get("services", []):
+        services.append(ServiceOffering(
+            name=s["name"],
+            typical_buyer=s["typical_buyer"],
+            acv_low=s["acv_low"],
+            acv_high=s["acv_high"],
+            sweet_spot_industries=s.get("sweet_spot_industries", []),
+            adjacent_industries=s.get("adjacent_industries", []),
+            sweet_spot_employees_min=s.get("sweet_spot_employees_min", 0),
+            sweet_spot_employees_max=s.get("sweet_spot_employees_max", 999_999),
+            trigger_keywords=s.get("trigger_keywords", []),
+        ))
+    return services
 
 
 # =============================================================================
@@ -178,12 +123,12 @@ def _size_score(employees: int, service: ServiceOffering) -> int:
     return 0
 
 
-def _behavioral_score_m_to_c(customer: dict) -> int:
-    """Score 0-30 for M→C direction (advisory to BPM clients).
+def _behavioral_score_a_to_b(customer: dict) -> int:
+    """Score 0-30 for A→B direction (entity_a services → entity_b clients).
 
     Uses threshold-based scoring — only signals above baseline contribute.
-    Most BPM clients have moderate complexity; only the extreme ones are
-    strong advisory candidates.
+    Most entity_b clients have moderate complexity; only the extreme ones are
+    strong entity_a service candidates.
     """
     score = 0.0
     # process_complexity: only high values (>5) contribute meaningfully
@@ -209,10 +154,10 @@ def _behavioral_score_m_to_c(customer: dict) -> int:
     return min(int(round(score)), 30)
 
 
-def _behavioral_score_c_to_m(customer: dict) -> int:
-    """Score 0-30 for C→M direction (BPM to consulting clients).
+def _behavioral_score_b_to_a(customer: dict) -> int:
+    """Score 0-30 for B→A direction (entity_b services → entity_a clients).
 
-    Highly selective — most consulting clients do NOT need BPM.
+    Highly selective — most entity_a clients do NOT need entity_b services.
     Only customers with extreme process pain, high outsourcing readiness,
     AND recent transformation completion score well.
     """
@@ -241,14 +186,14 @@ def _behavioral_score_c_to_m(customer: dict) -> int:
     return min(int(round(score)), 30)
 
 
-def _engagement_fit_m_to_c(customer: dict, service: ServiceOffering) -> int:
-    """Score 0-15: engagement fit for M→C (advisory to BPM client)."""
+def _engagement_fit_a_to_b(customer: dict, service: ServiceOffering) -> int:
+    """Score 0-15: engagement fit for A→B (entity_a services → entity_b client)."""
     score = 0.0
     complexity = customer.get("process_complexity", 0)
     reg = customer.get("regulatory_burden", 0)
     engagement_val = customer.get("engagement_value_M", 0)
 
-    # High BPO engagement + complexity = advisory need (strict thresholds)
+    # High engagement + complexity = advisory need (strict thresholds)
     if engagement_val > 8 and complexity > 7:
         score += 8
     elif engagement_val > 4 and complexity > 5:
@@ -272,8 +217,8 @@ def _engagement_fit_m_to_c(customer: dict, service: ServiceOffering) -> int:
     return min(int(round(score)), 15)
 
 
-def _engagement_fit_c_to_m(customer: dict, service: ServiceOffering) -> int:
-    """Score 0-15: engagement fit for C→M (BPM to consulting client).
+def _engagement_fit_b_to_a(customer: dict, service: ServiceOffering) -> int:
+    """Score 0-15: engagement fit for B→A (entity_b services → entity_a client).
 
     Very selective — requires strong convergence of signals.
     """
@@ -400,8 +345,8 @@ def _find_comparable(
 ) -> list[str]:
     """Find 1-2 existing customers that look like this candidate.
 
-    For M→C: find Meridian clients in similar industry/size buying similar services.
-    For C→M: find Cascadia clients in similar industry/size buying similar services.
+    Finds clients in similar industry/size buying similar services from
+    the entity that owns the recommended service.
     """
     comparables = []
     industry = customer.get("industry", "")
@@ -420,8 +365,9 @@ def _find_comparable(
         if not ec_services:
             continue
         eng_val = ec.get("engagement_value_M", 0)
+        entity_id = ec.get("entity_id", "")
         comparables.append(
-            f"{ec['customer_name']} ({ec['entity_id']} client, ${eng_val:.1f}M engagement)"
+            f"{ec['customer_name']} ({entity_id} client, ${eng_val:.1f}M engagement)"
         )
         if len(comparables) >= 2:
             break
@@ -433,15 +379,15 @@ def _find_comparable(
 # Rationale generator
 # =============================================================================
 
-def _generate_rationale_m_to_c(customer: dict, service: ServiceOffering, scores: dict) -> str:
-    """Generate human-readable rationale for M→C recommendation."""
+def _generate_rationale_a_to_b(customer: dict, service: ServiceOffering, scores: dict) -> str:
+    """Generate human-readable rationale for A→B recommendation."""
     parts = []
     eng_val = customer.get("engagement_value_M", 0)
     services = customer.get("active_services", [])
     complexity = customer.get("process_complexity", 0)
     reg = customer.get("regulatory_burden", 0)
 
-    parts.append(f"BPM client with ${eng_val:.1f}M engagement across {len(services)} services.")
+    parts.append(f"Client with ${eng_val:.1f}M engagement across {len(services)} services.")
     if complexity > 7:
         parts.append(f"High process complexity ({complexity:.1f}/10) indicates advisory need.")
     if reg > 3:
@@ -454,8 +400,8 @@ def _generate_rationale_m_to_c(customer: dict, service: ServiceOffering, scores:
     return " ".join(parts)
 
 
-def _generate_rationale_c_to_m(customer: dict, service: ServiceOffering, scores: dict) -> str:
-    """Generate human-readable rationale for C→M recommendation."""
+def _generate_rationale_b_to_a(customer: dict, service: ServiceOffering, scores: dict) -> str:
+    """Generate human-readable rationale for B→A recommendation."""
     parts = []
     eng_val = customer.get("engagement_value_M", 0)
     mpc = customer.get("manual_process_count", 0)
@@ -463,7 +409,7 @@ def _generate_rationale_c_to_m(customer: dict, service: ServiceOffering, scores:
     maturity = customer.get("transformation_maturity", 0)
     last_end = customer.get("last_project_end")
 
-    parts.append(f"Consulting client with ${eng_val:.1f}M engagement and {customer.get('completed_projects', 0)} completed projects.")
+    parts.append(f"Client with ${eng_val:.1f}M engagement and {customer.get('completed_projects', 0)} completed projects.")
     if mpc > 20:
         parts.append(f"{mpc} manual processes identified — strong {service.name} candidate.")
     elif mpc > 10:
@@ -471,7 +417,7 @@ def _generate_rationale_c_to_m(customer: dict, service: ServiceOffering, scores:
     if readiness > 3:
         parts.append(f"High outsourcing readiness ({readiness:.1f}/5).")
     if maturity > 3 and last_end:
-        parts.append(f"Transformation maturity {maturity:.1f}/5; last project ended {last_end} — natural handoff to BPM.")
+        parts.append(f"Transformation maturity {maturity:.1f}/5; last project ended {last_end} — natural handoff.")
     if customer.get("expressed_interest", 0) > 3:
         parts.append("Has expressed interest in outsourcing/managed services.")
 
@@ -508,8 +454,8 @@ class CrossSellCandidate:
 @dataclass
 class CrossSellPipeline:
     """Full cross-sell analysis output."""
-    m_to_c: list[CrossSellCandidate]  # Meridian services → Cascadia's clients
-    c_to_m: list[CrossSellCandidate]  # Cascadia services → Meridian's clients
+    a_to_b: list[CrossSellCandidate]  # entity_a services → entity_b's clients
+    b_to_a: list[CrossSellCandidate]  # entity_b services → entity_a's clients
 
     def to_dict(self) -> dict:
         def _candidate_dict(c: CrossSellCandidate) -> dict:
@@ -534,45 +480,74 @@ class CrossSellPipeline:
                 "segment": c.segment,
             }
 
-        m_to_c_list = [_candidate_dict(c) for c in self.m_to_c]
-        c_to_m_list = [_candidate_dict(c) for c in self.c_to_m]
+        a_to_b_list = sorted(
+            [_candidate_dict(c) for c in self.a_to_b],
+            key=lambda x: x["propensity_score"], reverse=True,
+        )
+        b_to_a_list = sorted(
+            [_candidate_dict(c) for c in self.b_to_a],
+            key=lambda x: x["propensity_score"], reverse=True,
+        )
 
-        m_to_c_total_acv = sum(c.estimated_acv for c in self.m_to_c)
-        m_to_c_high = [c for c in self.m_to_c if c.propensity_score > 80]
-        c_to_m_total_acv = sum(c.estimated_acv for c in self.c_to_m)
-        c_to_m_high = [c for c in self.c_to_m if c.propensity_score > 80]
+        a_to_b_total_acv = sum(c.estimated_acv for c in self.a_to_b)
+        a_to_b_high = [c for c in self.a_to_b if c.propensity_score > 80]
+        b_to_a_total_acv = sum(c.estimated_acv for c in self.b_to_a)
+        b_to_a_high = [c for c in self.b_to_a if c.propensity_score > 80]
 
-        return {
-            "m_to_c": sorted(m_to_c_list, key=lambda x: x["propensity_score"], reverse=True),
-            "c_to_m": sorted(c_to_m_list, key=lambda x: x["propensity_score"], reverse=True),
+        result = {
+            # Entity-agnostic keys
+            "a_to_b": a_to_b_list,
+            "b_to_a": b_to_a_list,
+            # Backward-compatible keys (same data)
+            "m_to_c": a_to_b_list,
+            "c_to_m": b_to_a_list,
             "summary": {
-                "m_to_c_candidates": len(self.m_to_c),
-                "m_to_c_total_acv": round(m_to_c_total_acv),
-                "m_to_c_high_conf_count": len(m_to_c_high),
-                "m_to_c_high_conf_acv": round(sum(c.estimated_acv for c in m_to_c_high)),
-                "c_to_m_candidates": len(self.c_to_m),
-                "c_to_m_total_acv": round(c_to_m_total_acv),
-                "c_to_m_high_conf_count": len(c_to_m_high),
-                "c_to_m_high_conf_acv": round(sum(c.estimated_acv for c in c_to_m_high)),
-                "total_candidates": len(self.m_to_c) + len(self.c_to_m),
-                "total_pipeline_acv": round(m_to_c_total_acv + c_to_m_total_acv),
+                "a_to_b_candidates": len(self.a_to_b),
+                "a_to_b_total_acv": round(a_to_b_total_acv),
+                "a_to_b_high_conf_count": len(a_to_b_high),
+                "a_to_b_high_conf_acv": round(sum(c.estimated_acv for c in a_to_b_high)),
+                "b_to_a_candidates": len(self.b_to_a),
+                "b_to_a_total_acv": round(b_to_a_total_acv),
+                "b_to_a_high_conf_count": len(b_to_a_high),
+                "b_to_a_high_conf_acv": round(sum(c.estimated_acv for c in b_to_a_high)),
+                "total_candidates": len(self.a_to_b) + len(self.b_to_a),
+                "total_pipeline_acv": round(a_to_b_total_acv + b_to_a_total_acv),
                 "total_high_conf_acv": round(
-                    sum(c.estimated_acv for c in m_to_c_high) +
-                    sum(c.estimated_acv for c in c_to_m_high)
+                    sum(c.estimated_acv for c in a_to_b_high) +
+                    sum(c.estimated_acv for c in b_to_a_high)
                 ),
+                # Backward-compatible summary keys
+                "m_to_c_candidates": len(self.a_to_b),
+                "m_to_c_total_acv": round(a_to_b_total_acv),
+                "m_to_c_high_conf_count": len(a_to_b_high),
+                "m_to_c_high_conf_acv": round(sum(c.estimated_acv for c in a_to_b_high)),
+                "c_to_m_candidates": len(self.b_to_a),
+                "c_to_m_total_acv": round(b_to_a_total_acv),
+                "c_to_m_high_conf_count": len(b_to_a_high),
+                "c_to_m_high_conf_acv": round(sum(c.estimated_acv for c in b_to_a_high)),
             },
         }
+        return result
 
 
 def run_cross_sell_engine() -> CrossSellPipeline:
     """Run the cross-sell propensity engine using pre-generated customer profiles.
 
-    Loads customer_profiles.json and entity_overlap.json, scores every
+    Loads the engagement config to determine entity identities and service catalog
+    paths, then loads customer_profiles.json and entity_overlap.json, scores every
     non-overlapping customer against the other entity's service catalog,
-    and returns the pipeline of candidates scoring ≥40.
+    and returns the pipeline of candidates scoring >=60.
 
     Raises FileNotFoundError if data files are missing.
     """
+    engagement = get_engagement()
+    entity_a = engagement.entity_a
+    entity_b = engagement.entity_b
+
+    # Load service catalogs from engagement config paths
+    entity_a_services = _load_service_catalog(entity_a.service_catalog)
+    entity_b_services = _load_service_catalog(entity_b.service_catalog)
+
     # Load customer profiles
     profiles_path = _DATA_DIR / "customer_profiles.json"
     if not profiles_path.exists():
@@ -598,45 +573,49 @@ def run_cross_sell_engine() -> CrossSellPipeline:
         for m in overlap.get("customer_overlap", {}).get("matches", [])
     }
 
-    meridian_customers = profiles.get("meridian_customers", [])
-    cascadia_customers = profiles.get("cascadia_customers", [])
+    # Use overlap_keys from engagement config for customer list field names
+    entity_a_customers_key = engagement.overlap_keys.entity_a_customers
+    entity_b_customers_key = engagement.overlap_keys.entity_b_customers
+
+    entity_a_customers = profiles.get(entity_a_customers_key, [])
+    entity_b_customers = profiles.get(entity_b_customers_key, [])
 
     # Non-overlapping customers only
-    m_non_overlap = [c for c in meridian_customers if not c.get("is_overlap", False)]
-    c_non_overlap = [c for c in cascadia_customers if not c.get("is_overlap", False)]
+    a_non_overlap = [c for c in entity_a_customers if not c.get("is_overlap", False)]
+    b_non_overlap = [c for c in entity_b_customers if not c.get("is_overlap", False)]
 
     logger.info(
-        "[cross_sell] Scoring %d Meridian non-overlap customers against %d Cascadia services",
-        len(m_non_overlap), len(CASCADIA_SERVICES),
+        "[cross_sell] Scoring %d %s non-overlap customers against %d %s services",
+        len(a_non_overlap), entity_a.name, len(entity_b_services), entity_b.name,
     )
     logger.info(
-        "[cross_sell] Scoring %d Cascadia non-overlap customers against %d Meridian services",
-        len(c_non_overlap), len(MERIDIAN_SERVICES),
+        "[cross_sell] Scoring %d %s non-overlap customers against %d %s services",
+        len(b_non_overlap), entity_b.name, len(entity_a_services), entity_a.name,
     )
 
-    # ── M→C: Score Cascadia clients for Meridian advisory services ──
-    m_to_c_candidates: list[CrossSellCandidate] = []
-    for customer in c_non_overlap:
+    # -- A→B: Score entity_b clients for entity_a services --
+    a_to_b_candidates: list[CrossSellCandidate] = []
+    for customer in b_non_overlap:
         best_score = 0
         best_candidate: Optional[CrossSellCandidate] = None
-        for service in MERIDIAN_SERVICES:
+        for service in entity_a_services:
             ind = _industry_score(customer.get("industry", ""), service)
             siz = _size_score(customer.get("employees", 0), service)
-            beh = _behavioral_score_m_to_c(customer)
-            eng = _engagement_fit_m_to_c(customer, service)
+            beh = _behavioral_score_a_to_b(customer)
+            eng = _engagement_fit_a_to_b(customer, service)
             rel = _relationship_score(customer)
             total = ind + siz + beh + eng + rel
 
             if total >= 60 and total > best_score:
                 acv = _estimate_acv(service, customer, beh, total)
                 scores = {"industry": ind, "size": siz, "behavioral": beh, "engagement": eng, "relationship": rel}
-                rationale = _generate_rationale_m_to_c(customer, service, scores)
-                comparables = _find_comparable(customer, meridian_customers, service.name, "m_to_c")
+                rationale = _generate_rationale_a_to_b(customer, service, scores)
+                comparables = _find_comparable(customer, entity_a_customers, service.name, "a_to_b")
                 best_score = total
                 best_candidate = CrossSellCandidate(
                     customer_id=customer["customer_id"],
                     customer_name=customer["customer_name"],
-                    entity_id="cascadia",
+                    entity_id=entity_b.id,
                     recommended_service=service.name,
                     propensity_score=total,
                     estimated_acv=acv,
@@ -655,31 +634,31 @@ def run_cross_sell_engine() -> CrossSellPipeline:
                 )
 
         if best_candidate:
-            m_to_c_candidates.append(best_candidate)
+            a_to_b_candidates.append(best_candidate)
 
-    # ── C→M: Score Meridian clients for Cascadia BPM services ──
-    c_to_m_candidates: list[CrossSellCandidate] = []
-    for customer in m_non_overlap:
+    # -- B→A: Score entity_a clients for entity_b services --
+    b_to_a_candidates: list[CrossSellCandidate] = []
+    for customer in a_non_overlap:
         best_score = 0
         best_candidate: Optional[CrossSellCandidate] = None
-        for service in CASCADIA_SERVICES:
+        for service in entity_b_services:
             ind = _industry_score(customer.get("industry", ""), service)
             siz = _size_score(customer.get("employees", 0), service)
-            beh = _behavioral_score_c_to_m(customer)
-            eng = _engagement_fit_c_to_m(customer, service)
+            beh = _behavioral_score_b_to_a(customer)
+            eng = _engagement_fit_b_to_a(customer, service)
             rel = _relationship_score(customer)
             total = ind + siz + beh + eng + rel
 
             if total >= 60 and total > best_score:
                 acv = _estimate_acv(service, customer, beh, total)
                 scores = {"industry": ind, "size": siz, "behavioral": beh, "engagement": eng, "relationship": rel}
-                rationale = _generate_rationale_c_to_m(customer, service, scores)
-                comparables = _find_comparable(customer, cascadia_customers, service.name, "c_to_m")
+                rationale = _generate_rationale_b_to_a(customer, service, scores)
+                comparables = _find_comparable(customer, entity_b_customers, service.name, "b_to_a")
                 best_score = total
                 best_candidate = CrossSellCandidate(
                     customer_id=customer["customer_id"],
                     customer_name=customer["customer_name"],
-                    entity_id="meridian",
+                    entity_id=entity_a.id,
                     recommended_service=service.name,
                     propensity_score=total,
                     estimated_acv=acv,
@@ -698,10 +677,10 @@ def run_cross_sell_engine() -> CrossSellPipeline:
                 )
 
         if best_candidate:
-            c_to_m_candidates.append(best_candidate)
+            b_to_a_candidates.append(best_candidate)
 
     # Verify no overlap customers snuck in
-    for c in m_to_c_candidates + c_to_m_candidates:
+    for c in a_to_b_candidates + b_to_a_candidates:
         cname = c.customer_name.lower()
         if cname in overlap_canonical_names:
             raise RuntimeError(
@@ -709,15 +688,17 @@ def run_cross_sell_engine() -> CrossSellPipeline:
                 f"appeared as a cross-sell candidate. This should not happen."
             )
 
-    pipeline = CrossSellPipeline(m_to_c=m_to_c_candidates, c_to_m=c_to_m_candidates)
+    pipeline = CrossSellPipeline(a_to_b=a_to_b_candidates, b_to_a=b_to_a_candidates)
     summary = pipeline.to_dict()["summary"]
     logger.info(
-        "[cross_sell] Pipeline complete: M→C=%d candidates ($%dM), C→M=%d candidates ($%dM), "
+        "[cross_sell] Pipeline complete: %s→%s=%d candidates ($%dM), %s→%s=%d candidates ($%dM), "
         "Total pipeline=$%dM, High-conf=$%dM",
-        summary["m_to_c_candidates"],
-        summary["m_to_c_total_acv"] // 1_000_000,
-        summary["c_to_m_candidates"],
-        summary["c_to_m_total_acv"] // 1_000_000,
+        entity_a.name, entity_b.name,
+        summary["a_to_b_candidates"],
+        summary["a_to_b_total_acv"] // 1_000_000,
+        entity_b.name, entity_a.name,
+        summary["b_to_a_candidates"],
+        summary["b_to_a_total_acv"] // 1_000_000,
         summary["total_pipeline_acv"] // 1_000_000,
         summary["total_high_conf_acv"] // 1_000_000,
     )

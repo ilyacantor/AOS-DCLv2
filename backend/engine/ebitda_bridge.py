@@ -8,7 +8,9 @@ combination synergies.
 Data sources:
   - data/combining_statements.json  (reported EBITDA)
   - data/entity_overlap.json        (vendor + people overlap → synergy sizing)
+  - data/ebitda_adjustments.json    (adjustment definitions with template strings)
   - backend/engine/cross_sell.py    (pipeline ACV → revenue synergy)
+  - backend/engine/engagement_config.py  (entity-agnostic config)
 """
 
 import json
@@ -16,6 +18,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from backend.engine.engagement_config import EngagementConfig, get_engagement
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -41,7 +44,7 @@ _DEFAULT_HC_REDUCTION_PCT = 0.20  # 20% reduction
 class BridgeAdjustment:
     name: str
     category: str        # "normalization", "one_time", "run_rate", "cost_synergy", "revenue_synergy", "dis_synergy"
-    entity: str          # "meridian", "cascadia", "combined"
+    entity: str          # entity_a.id, entity_b.id, or "combined"
     confidence: str      # "high", "medium", "low"
     amount: float        # the default/expected amount ($)
     amount_low: float    # low end of range ($)
@@ -79,20 +82,64 @@ def _load_entity_overlap() -> dict:
         return json.load(f)
 
 
-def _get_reported_ebitda(combining: dict) -> dict[str, float]:
+def _load_adjustments_json() -> dict:
+    """Load ebitda_adjustments.json and return the full dict."""
+    path = _DATA_DIR / "ebitda_adjustments.json"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"EBITDA adjustments not found at {path}. "
+            f"Create from template in data/ebitda_adjustments.json."
+        )
+    with open(path) as f:
+        return json.load(f)
+
+
+def _resolve_template(value: str, engagement: EngagementConfig) -> str:
+    """Replace template placeholders in a string with actual entity names.
+
+    Supported placeholders:
+      {entity_a}       → entity_a.name
+      {entity_b}       → entity_b.name
+      {entity_a_short} → entity_a.short_name
+      {entity_b_short} → entity_b.short_name
+    """
+    if not isinstance(value, str):
+        return value
+    return (
+        value
+        .replace("{entity_a}", engagement.entity_a.name)
+        .replace("{entity_b}", engagement.entity_b.name)
+        .replace("{entity_a_short}", engagement.entity_a.short_name)
+        .replace("{entity_b_short}", engagement.entity_b.short_name)
+    )
+
+
+def _resolve_entity_field(entity_value: str, engagement: EngagementConfig) -> str:
+    """Map 'entity_a' / 'entity_b' / 'combined' to actual entity IDs."""
+    if entity_value == "entity_a":
+        return engagement.entity_a.id
+    elif entity_value == "entity_b":
+        return engagement.entity_b.id
+    return entity_value  # "combined" or anything else passes through
+
+
+def _get_reported_ebitda(combining: dict, engagement: EngagementConfig) -> dict[str, float]:
     """Extract reported EBITDA from the latest quarter and annualize (×4).
 
-    Returns dict with meridian, cascadia, adjustments, combined — all annualized in dollars.
+    Returns dict with entity_a.id, entity_b.id, adjustments, combined — all annualized in dollars.
     """
     quarter_data = combining.get(_LATEST_QUARTER)
     if quarter_data is None:
         raise ValueError(f"Quarter {_LATEST_QUARTER} not found in combining statements.")
 
+    col_a = engagement.column_keys.entity_a
+    col_b = engagement.column_keys.entity_b
+
     for item in quarter_data["line_items"]:
         if item["line_item"] == "EBITDA":
             return {
-                "meridian": item["meridian"] * 4 * 1_000_000,
-                "cascadia": item["cascadia"] * 4 * 1_000_000,
+                engagement.entity_a.id: item[col_a] * 4 * 1_000_000,
+                engagement.entity_b.id: item[col_b] * 4 * 1_000_000,
                 "adjustments": item["adjustments"] * 4 * 1_000_000,
                 "combined": item["combined"] * 4 * 1_000_000,
             }
@@ -113,19 +160,26 @@ def _compute_vendor_savings(overlap: dict) -> float:
     return total_savings
 
 
-def _compute_people_synergy(overlap: dict, reduction_pct: float = _DEFAULT_HC_REDUCTION_PCT) -> tuple[float, int]:
+def _compute_people_synergy(
+    overlap: dict,
+    engagement: EngagementConfig,
+    reduction_pct: float = _DEFAULT_HC_REDUCTION_PCT,
+) -> tuple[float, int]:
     """Compute corporate function consolidation synergy from people overlap.
 
-    For each function, the overlapping headcount is min(meridian_hc, cascadia_hc).
+    For each function, the overlapping headcount is min(entity_a_hc, entity_b_hc).
     Synergy = total_overlapping_hc × avg_comp × reduction_pct.
 
     Returns (synergy_dollars, total_overlapping_hc).
     """
+    hc_key_a = engagement.overlap_keys.entity_a_headcount
+    hc_key_b = engagement.overlap_keys.entity_b_headcount
+
     total_overlapping_hc = 0
     for func in overlap.get("people_overlap", {}).get("functions", []):
-        m_hc = func.get("meridian_headcount", 0)
-        c_hc = func.get("cascadia_headcount", 0)
-        total_overlapping_hc += min(m_hc, c_hc)
+        a_hc = func.get(hc_key_a, 0)
+        b_hc = func.get(hc_key_b, 0)
+        total_overlapping_hc += min(a_hc, b_hc)
 
     synergy = total_overlapping_hc * _AVG_CORPORATE_COMP * reduction_pct
     return synergy, total_overlapping_hc
@@ -146,266 +200,67 @@ def _compute_cross_sell_synergy(pipeline: dict) -> float:
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Bridge adjustments (static definitions)
+# Bridge adjustments (loaded from JSON + template resolution)
 # ─────────────────────────────────────────────────────────────────────
 
-def _build_entity_adjustments() -> list[BridgeAdjustment]:
-    """Build the list of entity-level adjustments (all static/hardcoded amounts)."""
-    return [
-        BridgeAdjustment(
-            name="Above-market exec compensation — Meridian",
-            category="normalization",
-            entity="meridian",
-            confidence="high",
-            amount=18_000_000,
-            amount_low=18_000_000,
-            amount_high=18_000_000,
-            lever=None,
-            support_reference="Executive compensation analysis vs. industry benchmarks",
-            rationale="Meridian CEO/CFO compensation $18M above market median for comparable firms.",
-        ),
-        BridgeAdjustment(
-            name="Above-market exec compensation — Cascadia",
-            category="normalization",
-            entity="cascadia",
-            confidence="high",
-            amount=8_000_000,
-            amount_low=8_000_000,
-            amount_high=8_000_000,
-            lever=None,
-            support_reference="Executive compensation analysis vs. industry benchmarks",
-            rationale="Cascadia founder/CEO compensation $8M above market median.",
-        ),
-        BridgeAdjustment(
-            name="Non-recurring: M litigation reserve",
-            category="one_time",
-            entity="meridian",
-            confidence="high",
-            amount=22_000_000,
-            amount_low=22_000_000,
-            amount_high=22_000_000,
-            lever=None,
-            support_reference="Meridian 10-K Note 14 — Litigation contingencies",
-            rationale="One-time litigation reserve for patent infringement case settled in Q3.",
-        ),
-        BridgeAdjustment(
-            name="Non-recurring: C delivery center closure",
-            category="one_time",
-            entity="cascadia",
-            confidence="high",
-            amount=35_000_000,
-            amount_low=35_000_000,
-            amount_high=35_000_000,
-            lever=None,
-            support_reference="Cascadia 10-K Note 8 — Restructuring charges",
-            rationale="One-time charge for Manila delivery center closure and staff transition.",
-        ),
-        BridgeAdjustment(
-            name="Transaction costs — this deal (Meridian)",
-            category="one_time",
-            entity="meridian",
-            confidence="high",
-            amount=15_000_000,
-            amount_low=15_000_000,
-            amount_high=15_000_000,
-            lever=None,
-            support_reference="Merger proxy statement — Transaction expenses",
-            rationale="Meridian-side investment banking, legal, and accounting fees for this transaction.",
-        ),
-        BridgeAdjustment(
-            name="Transaction costs — this deal (Cascadia)",
-            category="one_time",
-            entity="cascadia",
-            confidence="high",
-            amount=8_000_000,
-            amount_low=8_000_000,
-            amount_high=8_000_000,
-            lever=None,
-            support_reference="Merger proxy statement — Transaction expenses",
-            rationale="Cascadia-side advisory and legal fees for this transaction.",
-        ),
-        BridgeAdjustment(
-            name="Related-party leases — C founder properties",
-            category="normalization",
-            entity="cascadia",
-            confidence="high",
-            amount=4_000_000,
-            amount_low=4_000_000,
-            amount_high=4_000_000,
-            lever=None,
-            support_reference="Cascadia related-party transaction disclosures",
-            rationale="Cascadia leases 2 properties from founder entity at above-market rates; $4M annual excess.",
-        ),
-        BridgeAdjustment(
-            name="Run-rate: new contracts not at full revenue (Meridian)",
-            category="run_rate",
-            entity="meridian",
-            confidence="medium",
-            amount=28_000_000,
-            amount_low=28_000_000,
-            amount_high=28_000_000,
-            lever=None,
-            support_reference="Meridian backlog analysis — contracts signed but not fully ramped",
-            rationale="3 large contracts signed in Q3-Q4 not yet at full run-rate revenue.",
-        ),
-        BridgeAdjustment(
-            name="Run-rate: new contracts not at full revenue (Cascadia)",
-            category="run_rate",
-            entity="cascadia",
-            confidence="medium",
-            amount=15_000_000,
-            amount_low=15_000_000,
-            amount_high=15_000_000,
-            lever=None,
-            support_reference="Cascadia backlog analysis — contracts signed but not fully ramped",
-            rationale="2 BPM engagements ramping to full headcount in Q1-Q2 2026.",
-        ),
-        BridgeAdjustment(
-            name="Utilization normalization — M Q2-Q3 dip",
-            category="normalization",
-            entity="meridian",
-            confidence="medium",
-            amount=45_000_000,
-            amount_low=45_000_000,
-            amount_high=45_000_000,
-            lever="m_utilization_rate",
-            support_reference="Meridian utilization reports — Q2/Q3 2025 vs. trailing 8-quarter avg",
-            rationale="Q2-Q3 utilization dipped to 73% vs. normalized 78%; add-back for temporary bench buildup.",
-        ),
-        BridgeAdjustment(
-            name="Offshore labor mix shift — C in progress",
-            category="run_rate",
-            entity="cascadia",
-            confidence="medium",
-            amount=12_000_000,
-            amount_low=12_000_000,
-            amount_high=12_000_000,
-            lever="c_offshore_mix",
-            support_reference="Cascadia workforce planning — offshore migration program",
-            rationale="Cascadia migrating 15% of onshore delivery to offshore; $12M annualized savings at completion.",
-        ),
-        BridgeAdjustment(
-            name="C attrition normalization 18% → 15%",
-            category="normalization",
-            entity="cascadia",
-            confidence="low",
-            amount=18_000_000,
-            amount_low=18_000_000,
-            amount_high=18_000_000,
-            lever="c_attrition_rate",
-            support_reference="Cascadia HR metrics — attrition trending down from 18% to 15% target",
-            rationale="Cascadia attrition at 18% vs. 15% industry norm; excess recruiting/training cost add-back.",
-        ),
-    ]
+def _load_entity_adjustments(engagement: EngagementConfig) -> list[BridgeAdjustment]:
+    """Load entity-level adjustments from ebitda_adjustments.json and resolve templates."""
+    raw = _load_adjustments_json()
+    adjustments = []
+    for item in raw.get("entity_adjustments", []):
+        adjustments.append(BridgeAdjustment(
+            name=_resolve_template(item["name"], engagement),
+            category=item["category"],
+            entity=_resolve_entity_field(item["entity"], engagement),
+            confidence=item["confidence"],
+            amount=item["amount"],
+            amount_low=item["amount_low"],
+            amount_high=item["amount_high"],
+            lever=item.get("lever"),
+            support_reference=_resolve_template(item["support_reference"], engagement),
+            rationale=_resolve_template(item["rationale"], engagement),
+        ))
+    return adjustments
 
 
-def _build_combination_synergies(
+def _load_combination_synergies(
+    engagement: EngagementConfig,
     vendor_savings: float,
     people_synergy: float,
     cross_sell_synergy: float,
 ) -> list[BridgeAdjustment]:
-    """Build the list of combination synergy adjustments.
+    """Load combination synergy adjustments from ebitda_adjustments.json.
 
+    Resolves template strings and replaces __COMPUTED_* sentinels with actual values.
     vendor_savings, people_synergy, cross_sell_synergy are in dollars.
     """
-    return [
-        BridgeAdjustment(
-            name="Bench optimization — consulting",
-            category="cost_synergy",
-            entity="combined",
-            confidence="medium",
-            amount=100_000_000,
-            amount_low=80_000_000,
-            amount_high=120_000_000,
-            lever="bench_cross_deploy_rate",
-            support_reference="Bench utilization analysis — 4500 consultants × cross-deploy model",
-            rationale="Cross-deploying Meridian bench consultants onto Cascadia delivery engagements.",
-        ),
-        BridgeAdjustment(
-            name="Bench optimization — delivery",
-            category="cost_synergy",
-            entity="combined",
-            confidence="medium",
-            amount=35_000_000,
-            amount_low=25_000_000,
-            amount_high=45_000_000,
-            lever="bench_cross_deploy_rate",
-            support_reference="Delivery bench analysis — 4200 FTEs × cross-deploy model",
-            rationale="Redeploying idle Cascadia delivery FTEs onto Meridian project support roles.",
-        ),
-        BridgeAdjustment(
-            name="Corporate function consolidation",
-            category="cost_synergy",
-            entity="combined",
-            confidence="medium",
-            amount=people_synergy,
-            amount_low=45_000_000,
-            amount_high=70_000_000,
-            lever="corporate_hc_reduction_pct",
-            support_reference="People overlap analysis — Finance, HR, IT, Legal functions",
-            rationale="Consolidating overlapping corporate functions; reduction based on min(M,C) headcount per function.",
-        ),
-        BridgeAdjustment(
-            name="Vendor consolidation",
-            category="cost_synergy",
-            entity="combined",
-            confidence="high",
-            amount=vendor_savings,
-            amount_low=15_000_000,
-            amount_high=25_000_000,
-            lever=None,
-            support_reference="Vendor overlap analysis — 170 overlapping vendors with consolidation savings",
-            rationale="Consolidating overlapping vendor contracts for volume discounts and eliminated redundancy.",
-        ),
-        BridgeAdjustment(
-            name="Technology redundancy elimination",
-            category="cost_synergy",
-            entity="combined",
-            confidence="medium",
-            amount=10_000_000,
-            amount_low=8_000_000,
-            amount_high=12_000_000,
-            lever=None,
-            support_reference="Technology stack audit — overlapping SaaS, middleware, and dev tools",
-            rationale="Eliminating duplicate SaaS licenses, middleware, and internal tools post-combination.",
-        ),
-        BridgeAdjustment(
-            name="Cross-sell revenue contribution",
-            category="revenue_synergy",
-            entity="combined",
-            confidence="low",
-            amount=cross_sell_synergy,
-            amount_low=35_000_000,
-            amount_high=65_000_000,
-            lever="cross_sell_capture_rate",
-            support_reference="Cross-sell pipeline — high-confidence ACV × capture rate × margin × ramp",
-            rationale="EBITDA contribution from cross-selling services to the other entity's non-overlapping clients.",
-        ),
-        BridgeAdjustment(
-            name="Integration costs Year 1",
-            category="dis_synergy",
-            entity="combined",
-            confidence="high",
-            amount=-100_000_000,
-            amount_low=-120_000_000,
-            amount_high=-85_000_000,
-            lever="integration_cost_M",
-            support_reference="Integration management office budget — systems, people, branding",
-            rationale="Year 1 integration costs: IT system migration, org redesign, rebranding, change management.",
-        ),
-        BridgeAdjustment(
-            name="Retention packages",
-            category="dis_synergy",
-            entity="combined",
-            confidence="high",
-            amount=-25_000_000,
-            amount_low=-30_000_000,
-            amount_high=-20_000_000,
-            lever=None,
-            support_reference="Retention program — key talent across both entities",
-            rationale="Year 1 retention bonuses for critical leadership and top performers.",
-        ),
-    ]
+    sentinel_map = {
+        "__COMPUTED_PEOPLE_SYNERGY__": people_synergy,
+        "__COMPUTED_VENDOR_SAVINGS__": vendor_savings,
+        "__COMPUTED_CROSS_SELL__": cross_sell_synergy,
+    }
+
+    raw = _load_adjustments_json()
+    synergies = []
+    for item in raw.get("combination_synergies", []):
+        # Resolve computed amount sentinels
+        amount = item["amount"]
+        if isinstance(amount, str) and amount in sentinel_map:
+            amount = sentinel_map[amount]
+
+        synergies.append(BridgeAdjustment(
+            name=_resolve_template(item["name"], engagement),
+            category=item["category"],
+            entity=_resolve_entity_field(item["entity"], engagement),
+            confidence=item["confidence"],
+            amount=amount,
+            amount_low=item["amount_low"],
+            amount_high=item["amount_high"],
+            lever=item.get("lever"),
+            support_reference=_resolve_template(item["support_reference"], engagement),
+            rationale=_resolve_template(item["rationale"], engagement),
+        ))
+    return synergies
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -423,6 +278,11 @@ def compute_ebitda_bridge(cross_sell_pipeline: dict | None = None) -> dict:
         Dict with reported_ebitda, entity_adjustments, entity_adjusted_ebitda,
         combination_synergies, pro_forma_ebitda, and ev_impact.
     """
+    # ── Load engagement config ──
+    engagement = get_engagement()
+    ea_id = engagement.entity_a.id
+    eb_id = engagement.entity_b.id
+
     # ── Load data ──
     combining = _load_combining_statements()
     overlap = _load_entity_overlap()
@@ -433,18 +293,20 @@ def compute_ebitda_bridge(cross_sell_pipeline: dict | None = None) -> dict:
         cross_sell_pipeline = pipeline_obj.to_dict()
 
     # ── Reported EBITDA (annualized) ──
-    reported = _get_reported_ebitda(combining)
+    reported = _get_reported_ebitda(combining, engagement)
 
     logger.info(
-        "[ebitda_bridge] Reported EBITDA (annualized): M=$%.1fM, C=$%.1fM, Combined=$%.1fM",
-        reported["meridian"] / 1e6,
-        reported["cascadia"] / 1e6,
+        "[ebitda_bridge] Reported EBITDA (annualized): %s=$%.1fM, %s=$%.1fM, Combined=$%.1fM",
+        ea_id,
+        reported[ea_id] / 1e6,
+        eb_id,
+        reported[eb_id] / 1e6,
         reported["combined"] / 1e6,
     )
 
     # ── Derived synergy inputs ──
     vendor_savings = _compute_vendor_savings(overlap)
-    people_synergy, overlapping_hc = _compute_people_synergy(overlap)
+    people_synergy, overlapping_hc = _compute_people_synergy(overlap, engagement)
     cross_sell_synergy = _compute_cross_sell_synergy(cross_sell_pipeline)
 
     logger.info(
@@ -456,8 +318,9 @@ def compute_ebitda_bridge(cross_sell_pipeline: dict | None = None) -> dict:
     )
 
     # ── Build adjustments ──
-    entity_adjustments = _build_entity_adjustments()
-    combination_synergies = _build_combination_synergies(
+    entity_adjustments = _load_entity_adjustments(engagement)
+    combination_synergies = _load_combination_synergies(
+        engagement=engagement,
         vendor_savings=vendor_savings,
         people_synergy=people_synergy,
         cross_sell_synergy=cross_sell_synergy,
@@ -467,11 +330,11 @@ def compute_ebitda_bridge(cross_sell_pipeline: dict | None = None) -> dict:
     entity_adj_total = sum(a.amount for a in entity_adjustments)
 
     # Entity-adjusted EBITDA per entity
-    m_adj = sum(a.amount for a in entity_adjustments if a.entity == "meridian")
-    c_adj = sum(a.amount for a in entity_adjustments if a.entity == "cascadia")
+    a_adj = sum(a.amount for a in entity_adjustments if a.entity == ea_id)
+    b_adj = sum(a.amount for a in entity_adjustments if a.entity == eb_id)
     entity_adjusted = {
-        "meridian": reported["meridian"] + m_adj,
-        "cascadia": reported["cascadia"] + c_adj,
+        ea_id: reported[ea_id] + a_adj,
+        eb_id: reported[eb_id] + b_adj,
         "combined": reported["combined"] + entity_adj_total,
     }
 
@@ -528,8 +391,8 @@ def compute_ebitda_bridge(cross_sell_pipeline: dict | None = None) -> dict:
 
     return {
         "reported_ebitda": {
-            "meridian": reported["meridian"],
-            "cascadia": reported["cascadia"],
+            ea_id: reported[ea_id],
+            eb_id: reported[eb_id],
             "combined_reported": reported["combined"],
         },
         "entity_adjustments": [asdict(a) for a in entity_adjustments],

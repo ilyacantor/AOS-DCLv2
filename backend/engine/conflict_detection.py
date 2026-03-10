@@ -121,7 +121,7 @@ class ConflictDetectionStore:
                 continue
 
             # Skip cross-entity overlap records (customer/vendor/people matches
-            # between Meridian and Cascadia). These are legitimate overlaps, not
+            # between entity A and entity B). These are legitimate overlaps, not
             # data conflicts — different entities report different revenue/spend.
             if entity.dcl_global_id.startswith("cross-"):
                 continue

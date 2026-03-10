@@ -250,11 +250,11 @@ async def drill_cross_sell(customer_id: str):
         raise HTTPException(status_code=404, detail=str(e))
 
     result = pipeline.to_dict()
-    for candidate in result["m_to_c"] + result["c_to_m"]:
+    for candidate in result["a_to_b"] + result["b_to_a"]:
         if candidate["customer_id"] == customer_id:
             return candidate
 
-    all_ids = [c["customer_id"] for c in result["m_to_c"] + result["c_to_m"]]
+    all_ids = [c["customer_id"] for c in result["a_to_b"] + result["b_to_a"]]
     raise HTTPException(
         status_code=404,
         detail=(
@@ -288,7 +288,7 @@ async def run_what_if(body: dict = {}):
     Body JSON:
       levers — dict of lever_name → value (missing levers use defaults)
       preset — optional preset name ("base", "conservative", "aggressive",
-               "harmonize_to_m", "harmonize_to_c")
+               "harmonize_to_a", "harmonize_to_b")
 
     If preset is provided, it overrides individual levers.
     """
@@ -314,11 +314,11 @@ async def run_what_if(body: dict = {}):
 @router.get("/what-if/presets")
 async def get_what_if_presets():
     """Return available what-if presets and lever definitions."""
-    from backend.engine.what_if import PRESETS, LEVER_DEFINITIONS
+    from backend.engine.what_if import PRESETS, _build_lever_definitions
 
     return {
         "presets": PRESETS,
-        "lever_definitions": LEVER_DEFINITIONS,
+        "lever_definitions": _build_lever_definitions(),
     }
 
 
@@ -359,7 +359,7 @@ _engagements: dict[str, dict] = {}
 
 @router.post("/maestra/engage")
 async def create_maestra_engagement():
-    """Create a new Maestra engagement for the Meridian-Cascadia integration."""
+    """Create a new Maestra engagement for the current deal."""
     from backend.engine.maestra import create_engagement
 
     state = create_engagement()

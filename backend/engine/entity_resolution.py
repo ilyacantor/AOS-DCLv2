@@ -20,6 +20,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
+from backend.engine.engagement_config import get_engagement
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -143,8 +144,11 @@ class EntityResolutionStore:
 
         This populates pre-computed cross-entity matches (customer, vendor, people)
         produced by Farm's EntityOverlapGenerator. These matches represent entities
-        that exist in both Meridian and Cascadia — they are pre-matched by Farm
+        that exist in both entities — they are pre-matched by Farm
         using domain knowledge (exact names, fuzzy names, shared identifiers).
+
+        Field names are read from engagement_config.overlap_keys so that this
+        code is entity-agnostic (no hardcoded "meridian"/"cascadia").
         """
         if not CROSS_ENTITY_OVERLAP_FILE.exists():
             logger.info("No cross-entity overlap file found — skipping")
@@ -153,35 +157,40 @@ class EntityResolutionStore:
         with open(CROSS_ENTITY_OVERLAP_FILE) as f:
             data = json.load(f)
 
+        engagement = get_engagement()
+        ok = engagement.overlap_keys
+        entity_a = engagement.entity_a
+        entity_b = engagement.entity_b
+
         loaded = 0
 
         # Customer overlaps → SourceRecords from each entity's CRM
         for match in data.get("customer_overlap", {}).get("matches", []):
-            m_name = match.get("meridian_name", "")
-            c_name = match.get("cascadia_name", "")
+            m_name = match.get(ok.entity_a_name, "")
+            c_name = match.get(ok.entity_b_name, "")
             canonical = match.get("canonical_name", m_name)
             match_type = match.get("match_type", "exact")
             confidence = match.get("confidence", 1.0)
 
             rec_m = SourceRecord(
                 source_system="salesforce_crm",
-                record_id=f"meridian-cust-{loaded}",
+                record_id=f"{entity_a.id}-cust-{loaded}",
                 entity_type="customer",
                 name=m_name,
-                entity_id="meridian",
+                entity_id=entity_a.id,
                 field_values={
-                    "revenue": match.get("meridian_revenue_M", 0),
+                    "revenue": match.get(ok.entity_a_revenue, 0),
                     "industry": match.get("industry", ""),
                 },
             )
             rec_c = SourceRecord(
                 source_system="oracle_erp",
-                record_id=f"cascadia-cust-{loaded}",
+                record_id=f"{entity_b.id}-cust-{loaded}",
                 entity_type="customer",
                 name=c_name,
-                entity_id="cascadia",
+                entity_id=entity_b.id,
                 field_values={
-                    "revenue": match.get("cascadia_revenue_M", 0),
+                    "revenue": match.get(ok.entity_b_revenue, 0),
                     "industry": match.get("industry", ""),
                 },
             )
@@ -224,30 +233,30 @@ class EntityResolutionStore:
         # Vendor overlaps
         v_offset = loaded
         for match in data.get("vendor_overlap", {}).get("matches", []):
-            m_name = match.get("meridian_name", "")
-            c_name = match.get("cascadia_name", "")
+            m_name = match.get(ok.entity_a_name, "")
+            c_name = match.get(ok.entity_b_name, "")
             canonical = match.get("canonical_name", m_name)
             confidence = match.get("confidence", 1.0)
 
             rec_m = SourceRecord(
                 source_system="sap_erp",
-                record_id=f"meridian-vendor-{loaded}",
+                record_id=f"{entity_a.id}-vendor-{loaded}",
                 entity_type="vendor",
                 name=m_name,
-                entity_id="meridian",
+                entity_id=entity_a.id,
                 field_values={
-                    "spend": match.get("meridian_spend_M", 0),
+                    "spend": match.get(ok.entity_a_spend, 0),
                     "category": match.get("category", ""),
                 },
             )
             rec_c = SourceRecord(
                 source_system="oracle_erp",
-                record_id=f"cascadia-vendor-{loaded}",
+                record_id=f"{entity_b.id}-vendor-{loaded}",
                 entity_type="vendor",
                 name=c_name,
-                entity_id="cascadia",
+                entity_id=entity_b.id,
                 field_values={
-                    "spend": match.get("cascadia_spend_M", 0),
+                    "spend": match.get(ok.entity_b_spend, 0),
                     "category": match.get("category", ""),
                 },
             )
@@ -292,24 +301,24 @@ class EntityResolutionStore:
             func = match.get("function", "Unknown")
             rec_m = SourceRecord(
                 source_system="workday_hcm",
-                record_id=f"meridian-people-{loaded}",
+                record_id=f"{entity_a.id}-people-{loaded}",
                 entity_type="people",
-                name=f"Meridian {func} Team",
-                entity_id="meridian",
+                name=f"{entity_a.name} {func} Team",
+                entity_id=entity_a.id,
                 field_values={
                     "function": func,
-                    "headcount": match.get("meridian_headcount", 0),
+                    "headcount": match.get(ok.entity_a_headcount, 0),
                 },
             )
             rec_c = SourceRecord(
                 source_system="bamboohr_hcm",
-                record_id=f"cascadia-people-{loaded}",
+                record_id=f"{entity_b.id}-people-{loaded}",
                 entity_type="people",
-                name=f"Cascadia {func} Team",
-                entity_id="cascadia",
+                name=f"{entity_b.name} {func} Team",
+                entity_id=entity_b.id,
                 field_values={
                     "function": func,
-                    "headcount": match.get("cascadia_headcount", 0),
+                    "headcount": match.get(ok.entity_b_headcount, 0),
                 },
             )
             self._source_records.extend([rec_m, rec_c])
@@ -336,8 +345,8 @@ class EntityResolutionStore:
                 source_records=[rec_m, rec_c],
                 golden_record={
                     "function": func,
-                    "meridian_headcount": match.get("meridian_headcount", 0),
-                    "cascadia_headcount": match.get("cascadia_headcount", 0),
+                    f"{ok.entity_a_headcount}": match.get(ok.entity_a_headcount, 0),
+                    f"{ok.entity_b_headcount}": match.get(ok.entity_b_headcount, 0),
                     "combined_headcount": match.get("combined_headcount", 0),
                 },
                 created_at=now,

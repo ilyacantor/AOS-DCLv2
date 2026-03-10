@@ -316,7 +316,7 @@ def suite_what_if():
 
     # WI-005: Single lever change moves result
     t = test("WI-005", "Single lever change moves result vs base")
-    r_lever = api_post("/api/reports/what-if", json={"levers": {"m_utilization_rate": 82}})
+    r_lever = api_post("/api/reports/what-if", json={"levers": {"a_utilization_rate": 82}})
     if r_lever.status_code == 200:
         lever_y1 = r_lever.json().get("pro_forma_ebitda", {}).get("year_1", 0)
         if lever_y1 != base and lever_y1 > 0:
@@ -462,7 +462,7 @@ def run_harness():
     if not wait_for_backend():
         print(f"FATAL: Backend not responding at {BASE_URL}")
         print("Start the DCL backend and try again.")
-        sys.exit(1)
+        return -1  # Signal connection failure
 
     results = []
 
@@ -505,4 +505,4 @@ def run_harness():
 
 if __name__ == "__main__":
     failed = run_harness()
-    sys.exit(0 if failed == 0 else 1)
+    sys.exit(0 if failed == 0 else 1)  # -1 (connection failure) also exits 1

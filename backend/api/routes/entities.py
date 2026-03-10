@@ -57,7 +57,7 @@ def run_entity_resolution(entity_type: str = "company"):
 
 @router.get("/api/dcl/entities/cross-entity")
 def get_cross_entity_matches(entity_type: str = "customer"):
-    """Get cross-entity match candidates (matches between Meridian and Cascadia).
+    """Get cross-entity match candidates (matches between entity A and entity B).
 
     These are pre-computed by Farm's EntityOverlapGenerator and loaded at startup.
     Supports customer, vendor, and people entity types.

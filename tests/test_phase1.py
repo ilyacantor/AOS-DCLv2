@@ -538,7 +538,7 @@ def run_harness():
     if not wait_for_backend():
         print(f"FATAL: Backend not responding at {BASE_URL}")
         print("Start the DCL backend and try again.")
-        sys.exit(1)
+        return -1  # Signal connection failure
 
     results = []
 
@@ -607,4 +607,4 @@ def run_harness():
 
 if __name__ == "__main__":
     failed = run_harness()
-    sys.exit(0 if failed == 0 else 1)
+    sys.exit(0 if failed == 0 else 1)  # -1 (connection failure) also exits 1
