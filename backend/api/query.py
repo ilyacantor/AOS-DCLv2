@@ -89,6 +89,7 @@ class QueryMetadata(BaseModel):
     record_count: int
     source: str = "fact_base"
     run_id: Optional[str] = None
+    entity_id: Optional[str] = None
     tenant_id: str = "default"
     snapshot_name: Optional[str] = None
     run_timestamp: Optional[str] = None
@@ -628,10 +629,13 @@ def _query_ingest_store(
 
     # WS1.3: Filter materialized points by entity_id when specified.
     # When entity_id is None, all points pass through (backward compatible).
+    # When entity_id IS specified, only points with a matching _entity_id pass.
+    # Points with _entity_id=None are REJECTED — they lack provenance and
+    # cannot be attributed to any entity.
     if mat_points and entity_id:
         mat_points = [
             pt for pt in mat_points
-            if pt.get("_entity_id") == entity_id or pt.get("_entity_id") is None
+            if pt.get("_entity_id") == entity_id
         ]
 
     if mat_points:
@@ -872,6 +876,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                 mode=current_mode,
                 record_count=0,
                 source="no_data_error",
+                entity_id=request.entity_id,
                 error=error_msg,
             ),
         )
@@ -1158,6 +1163,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
             record_count=len(data_points),
             source=data_source_label,
             run_id=run_id,
+            entity_id=request.entity_id,
             tenant_id=tenant_id,
             snapshot_name=snapshot_name,
             run_timestamp=run_timestamp,

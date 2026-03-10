@@ -217,3 +217,19 @@
     - field: metadata.record_count
       op: greater_than
       value: 0
+
+# ─── Provenance ────────────────────────────────────────────────────────
+# Precondition: PI tests ran, global mode is Ingest.
+
+- id: PROV_001
+  category: provenance
+  description: "Meridian query metadata carries entity_id provenance"
+  method: post
+  path: /api/dcl/query
+  body:
+    metric: revenue
+    entity_id: meridian
+  assertions:
+    - field: metadata.entity_id
+      op: equals
+      value: meridian

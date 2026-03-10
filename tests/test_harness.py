@@ -1273,6 +1273,17 @@ def suite_fact_base_gating():
         _run_yaml_test(tc)
 
 
+def suite_provenance_yaml():
+    """Provenance tests from YAML. Must run AFTER suite_pipeline_ingest."""
+    print("\n=== SUITE: Provenance (YAML) ===")
+    all_tests = _load_yaml_tests()
+    prov_tests = [tc for tc in all_tests if tc.get("category") == "provenance"]
+    if not prov_tests:
+        return  # No provenance YAML tests defined yet — skip silently
+    for tc in prov_tests:
+        _run_yaml_test(tc)
+
+
 # ─── main ─────────────────────────────────────────────────────────────────
 def wait_for_backend(max_wait: int = 30):
     for i in range(max_wait):
@@ -1315,6 +1326,7 @@ def run_harness():
     suite_enriched_query()
     suite_pipeline_ingest()
     suite_fact_base_gating()
+    suite_provenance_yaml()
 
     total = len(results)
     passed = sum(1 for r in results if r.passed)

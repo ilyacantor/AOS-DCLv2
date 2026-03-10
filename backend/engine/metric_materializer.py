@@ -351,13 +351,20 @@ class MetricMaterializer:
         """Transform raw rows into canonical metric data points.
 
         Returns a list of dicts:
-            {metric, value, period, dimensions, source_system, pipe_id, materialized_at}
+            {metric, value, period, dimensions, source_system, pipe_id, materialized_at,
+             _entity_id, _tenant_id}
         """
         if not rows or not self._rules:
             return []
 
         now = datetime.now(timezone.utc).isoformat()
         all_points: List[Dict[str, Any]] = []
+
+        # Carry entity/tenant provenance from tagged ingest rows.
+        # All rows in a single materialize() call come from one ingest request,
+        # so _entity_id and _tenant_id are uniform across the batch.
+        _entity_id = rows[0].get("_entity_id") if rows else None
+        _tenant_id = rows[0].get("_tenant_id") if rows else None
 
         # Pre-compute key indexes from the union of all row keys.
         # Rows in the same pipe may have different schemas (e.g. total rows
@@ -483,6 +490,8 @@ class MetricMaterializer:
                         "pipe_id": pipe_id,
                         "dispatch_id": dispatch_id,
                         "materialized_at": now,
+                        "_entity_id": _entity_id,
+                        "_tenant_id": _tenant_id,
                     })
                 continue
 
@@ -514,6 +523,8 @@ class MetricMaterializer:
                     "pipe_id": pipe_id,
                     "dispatch_id": dispatch_id,
                     "materialized_at": now,
+                    "_entity_id": _entity_id,
+                    "_tenant_id": _tenant_id,
                 })
 
         if all_points:
