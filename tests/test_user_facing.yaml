@@ -1,0 +1,356 @@
+# User-Facing Test Suite
+# Every test hits NLQ — the same path the user uses.
+# If a test passes but the UI is broken, the test is wrong.
+
+# ─── Level 1: Chat ────────────────────────────────────────────────────
+
+- id: UF_001
+  name: "Chat: 'what is revenue' returns a number > $0"
+  level: chat
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "what is revenue for Q1 2025"
+    data_mode: "live"
+  assertions:
+    - field: value
+      operator: not_null
+    - field: value
+      operator: greater_than
+      expected: 0
+    - field: data_source
+      operator: equals
+      expected: "dcl"
+    - field: answer
+      operator: not_contains
+      expected: "stumped"
+    - field: answer
+      operator: not_contains
+      expected: "head-scratcher"
+    - field: answer
+      operator: not_contains
+      expected: "don't have"
+
+- id: UF_002
+  name: "Chat: 'what is revenue' returns Meridian-scale number (>$500M)"
+  level: chat
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "what is revenue for Q1 2025"
+    data_mode: "live"
+  assertions:
+    - field: value
+      operator: greater_than
+      expected: 500
+
+- id: UF_003
+  name: "Chat: 'revenue' routes to revenue metric, not ARR"
+  level: chat
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "what is revenue for Q1 2025"
+    data_mode: "live"
+  assertions:
+    - field: resolved_metric
+      operator: not_equals
+      expected: "arr"
+    - field: answer
+      operator: not_contains
+      expected: "ARR"
+
+- id: UF_004
+  name: "Chat: '2025 P&L' returns non-zero line items"
+  level: chat
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "2025 P&L"
+    data_mode: "live"
+  assertions:
+    - field: answer
+      operator: not_contains
+      expected: "$0M"
+    - field: answer
+      operator: not_contains
+      expected: "Revenue $0M"
+    - field: answer
+      operator: not_contains
+      expected: "stumped"
+    - field: answer
+      operator: not_contains
+      expected: "head-scratcher"
+
+- id: UF_005
+  name: "Chat: 'why did revenue increase' returns an explanation, not stumped"
+  level: chat
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "why did revenue increase"
+    data_mode: "live"
+  assertions:
+    - field: answer
+      operator: not_contains
+      expected: "stumped"
+    - field: answer
+      operator: not_contains
+      expected: "head-scratcher"
+    - field: answer
+      operator: not_contains
+      expected: "don't have"
+    - field: answer
+      operator: min_length
+      expected: 50
+
+- id: UF_006
+  name: "Chat: 'what are the margins' returns non-zero percentages"
+  level: chat
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "what are the margins"
+    data_mode: "live"
+  assertions:
+    - field: answer
+      operator: not_contains
+      expected: "stumped"
+    - field: answer
+      operator: not_contains
+      expected: "head-scratcher"
+    - field: answer
+      operator: not_contains
+      expected: "0.0%"
+    - field: answer
+      operator: contains_any
+      expected: ["margin", "Margin", "%"]
+
+- id: UF_007
+  name: "Chat: '2026 forecast' returns data or explains why not"
+  level: chat
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "2026 forecast"
+    data_mode: "live"
+  assertions:
+    - field: answer
+      operator: not_contains
+      expected: "stumped"
+    - field: answer
+      operator: not_contains
+      expected: "head-scratcher"
+    - field: answer
+      operator: min_length
+      expected: 20
+
+# ─── Level 2: Dashboard ──────────────────────────────────────────────
+
+- id: UF_010
+  name: "Dashboard: Revenue widget returns a number, not a tenant error"
+  level: dashboard
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "revenue"
+    entity_id: "meridian"
+    data_mode: "live"
+  assertions:
+    - field: value
+      operator: not_null
+    - field: value
+      operator: greater_than
+      expected: 0
+    - field: answer
+      operator: not_contains
+      expected: "Multiple tenants"
+    - field: answer
+      operator: not_contains
+      expected: "tenant_id"
+
+- id: UF_011
+  name: "Dashboard: Gross Margin widget returns data"
+  level: dashboard
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "gross margin"
+    entity_id: "meridian"
+    data_mode: "live"
+  assertions:
+    - field: value
+      operator: not_null
+    - field: answer
+      operator: not_contains
+      expected: "Multiple tenants"
+
+- id: UF_012
+  name: "Dashboard: EBITDA widget returns data"
+  level: dashboard
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "ebitda"
+    entity_id: "meridian"
+    data_mode: "live"
+  assertions:
+    - field: value
+      operator: not_null
+    - field: answer
+      operator: not_contains
+      expected: "Multiple tenants"
+
+- id: UF_013
+  name: "Dashboard: Net Income widget returns data"
+  level: dashboard
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "net income"
+    entity_id: "meridian"
+    data_mode: "live"
+  assertions:
+    - field: value
+      operator: not_null
+    - field: answer
+      operator: not_contains
+      expected: "Multiple tenants"
+
+# ─── Level 3: Report ─────────────────────────────────────────────────
+
+- id: UF_020
+  name: "Report: P&L query returns structured data, not errors"
+  level: report
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "Show me the P&L actual vs prior year"
+    entity_id: "meridian"
+    data_mode: "live"
+  assertions:
+    - field: answer
+      operator: not_contains
+      expected: "No data available"
+    - field: answer
+      operator: not_contains
+      expected: "$0M"
+    - field: answer
+      operator: not_contains
+      expected: "stumped"
+    - field: answer
+      operator: not_contains
+      expected: "head-scratcher"
+
+- id: UF_021
+  name: "Report: Income statement contains revenue line > $0"
+  level: report
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "Show me the income statement for Q1 2025"
+    entity_id: "meridian"
+    data_mode: "live"
+  assertions:
+    - field: answer
+      operator: contains_any
+      expected: ["Revenue", "revenue", "Total Revenue"]
+    - field: answer
+      operator: not_contains
+      expected: "Revenue $0"
+
+- id: UF_022
+  name: "Report: Balance Sheet returns data"
+  level: report
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "Show me the balance sheet for Q1 2025"
+    entity_id: "meridian"
+    data_mode: "live"
+  assertions:
+    - field: answer
+      operator: not_contains
+      expected: "No data"
+    - field: answer
+      operator: not_contains
+      expected: "stumped"
+    - field: answer
+      operator: not_contains
+      expected: "head-scratcher"
+
+# ─── Level 4: Cross-checks ──────────────────────────────────────────
+
+- id: UF_030
+  name: "Cross-check: Chat revenue matches DCL direct query"
+  level: cross_check
+  type: comparison
+  query_a:
+    method: POST
+    service: nlq
+    path: "/api/v1/query"
+    body:
+      question: "what is revenue for Q1 2025"
+      entity_id: "meridian"
+      data_mode: "live"
+    extract: "value"
+  query_b:
+    method: POST
+    service: dcl
+    path: "/api/dcl/query"
+    body:
+      metric: "revenue"
+      entity_id: "meridian"
+      time_range:
+        start: "2025-Q1"
+        end: "2025-Q1"
+    extract: "data.0.value"
+  assertions:
+    - operator: values_equal
+      tolerance: 0.01
+      description: "NLQ chat and DCL direct must return the same revenue"
+
+- id: UF_031
+  name: "Cross-check: NLQ source is 'dcl' in live mode"
+  level: cross_check
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "what is revenue"
+    data_mode: "live"
+  assertions:
+    - field: data_source
+      operator: equals
+      expected: "dcl"
+
+- id: UF_032
+  name: "Cross-check: No query returns source=Local in live mode"
+  level: cross_check
+  method: POST
+  service: nlq
+  path: "/api/v1/query"
+  body:
+    question: "2025 P&L"
+    data_mode: "live"
+  assertions:
+    - field: data_source
+      operator: not_equals
+      expected: "Local"
+    - field: data_source
+      operator: not_equals
+      expected: "local"
