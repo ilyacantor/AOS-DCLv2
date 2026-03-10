@@ -1239,6 +1239,8 @@ def _load_yaml_tests() -> List[Dict]:
 
 def suite_pipeline_ingest():
     """PI tests: push real data through the ingest endpoint."""
+    import uuid
+
     print("\n=== SUITE: Pipeline Ingest ===")
     all_tests = _load_yaml_tests()
     pi_tests = [tc for tc in all_tests if tc.get("category") == "pipeline_ingest"]
@@ -1246,7 +1248,15 @@ def suite_pipeline_ingest():
         t = test("PI_000", "test_cases.yaml has PI tests")
         t.fail("PI tests present", "none found")
         return
+
+    # Generate a unique run_id so the ingest endpoint doesn't dedup
+    unique_run_id = f"farm_fbg_test_{uuid.uuid4().hex[:8]}"
     for tc in pi_tests:
+        # Substitute unique run_id into ingest headers
+        if tc.get("headers") and "x-run-id" in tc["headers"]:
+            tc = dict(tc)
+            tc["headers"] = dict(tc["headers"])
+            tc["headers"]["x-run-id"] = unique_run_id
         _run_yaml_test(tc)
 
 

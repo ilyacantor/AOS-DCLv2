@@ -590,15 +590,25 @@ def _query_ingest_store(
         if not all_receipts:
             return [], None
     elif tenant_id == "default" or not tenant_id:
-        # Auto-select: if single tenant, use it with warning; if multiple, error
-        unique_tenants = list({r.tenant_id for r in all_receipts})
+        unique_tenants = sorted({r.tenant_id for r in all_receipts})
         if len(unique_tenants) == 1:
             _logger.warning(
                 f"tenant_id='default' with single tenant '{unique_tenants[0]}' — auto-selecting. "
                 f"Set tenant_id explicitly to suppress this warning."
             )
+        elif len(unique_tenants) > 1 and entity_id:
+            # entity_id provided — query across all tenants and let the
+            # entity_id filter (below) narrow the results.  The entity's
+            # rows carry _entity_id so they will self-select.
+            _logger.info(
+                f"Multiple tenants {unique_tenants} but entity_id='{entity_id}' — "
+                f"querying across all tenants; entity_id filter will narrow results."
+            )
         elif len(unique_tenants) > 1:
-            return [], None  # caller gets empty result; handle_query can surface error
+            raise ValueError(
+                f"Multiple tenants found: {unique_tenants}. "
+                f"Specify entity_id or tenant_id to select one."
+            )
 
     # --- Primary path: materialized data points ---
     mat_points = store.get_materialized_points(
@@ -1169,5 +1179,11 @@ def handle_query(request: QueryRequest) -> Union[QueryResponse, QueryError]:
     error = validate_query(request)
     if error:
         return error
-    
-    return execute_query(request)
+
+    try:
+        return execute_query(request)
+    except ValueError as exc:
+        return QueryError(
+            error=str(exc),
+            code="QUERY_ERROR",
+        )

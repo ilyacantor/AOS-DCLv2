@@ -78,15 +78,15 @@
 
 - id: FBG_002
   category: fact_base_gating
-  description: "Default query in Ingest mode blocks fact_base"
+  description: "No entity/tenant in multi-tenant Ingest mode returns error"
   method: post
   path: /api/dcl/query
   body:
     metric: revenue
   assertions:
-    - field: metadata.source
-      op: not_equals
-      value: fact_base
+    - field: status_code
+      op: equals
+      value: 400
 
 - id: FBG_003
   category: fact_base_gating
@@ -96,6 +96,7 @@
   body:
     metric: revenue
     data_mode: "live"
+    entity_id: meridian
   assertions:
     - field: metadata.source
       op: not_equals
@@ -151,22 +152,24 @@
 
 - id: FBG_008
   category: fact_base_gating
-  description: "Metadata source is never null"
+  description: "Meridian metadata source is never null"
   method: post
   path: /api/dcl/query
   body:
     metric: revenue
+    entity_id: meridian
   assertions:
     - field: metadata.source
       op: not_null
 
 - id: FBG_009
   category: fact_base_gating
-  description: "Source is ingest or no_data_error, never fact_base"
+  description: "Meridian source is ingest or no_data_error, never fact_base"
   method: post
   path: /api/dcl/query
   body:
     metric: revenue
+    entity_id: meridian
   assertions:
     - field: metadata.source
       op: in
@@ -174,11 +177,12 @@
 
 - id: FBG_010
   category: fact_base_gating
-  description: "Mode reported in metadata is not Demo"
+  description: "Meridian mode reported in metadata is not Demo"
   method: post
   path: /api/dcl/query
   body:
     metric: revenue
+    entity_id: meridian
   assertions:
     - field: metadata.mode
       op: not_equals
@@ -186,15 +190,17 @@
 
 - id: FBG_011
   category: fact_base_gating
-  description: "Ingest mode query has error or data, never silent empty"
+  description: "Multi-tenant error lists available tenants"
   method: post
   path: /api/dcl/query
   body:
     metric: revenue
   assertions:
-    - field: metadata.source
-      op: in
-      value: ["no_data_error", "ingest"]
+    - field: status_code
+      op: equals
+      value: 400
+    - field: detail.error
+      op: not_null
 
 - id: FBG_012
   category: fact_base_gating
