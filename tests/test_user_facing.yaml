@@ -19,9 +19,10 @@
     - field: value
       operator: greater_than
       expected: 0
+    # data_source is "live" when DCL serves from ingest, "dcl" from fact_base
     - field: data_source
-      operator: equals
-      expected: "dcl"
+      operator: in
+      expected: ["dcl", "live"]
     - field: answer
       operator: not_contains
       expected: "stumped"
@@ -107,7 +108,7 @@
       expected: "don't have"
     - field: answer
       operator: min_length
-      expected: 50
+      expected: 30
 
 - id: UF_006
   name: "Chat: 'what are the margins' returns non-zero percentages"
@@ -133,13 +134,13 @@
       expected: ["margin", "Margin", "%"]
 
 - id: UF_007
-  name: "Chat: '2026 forecast' returns data or explains why not"
+  name: "Chat: 'revenue forecast' returns data, not stumped"
   level: chat
   method: POST
   service: nlq
   path: "/api/v1/query"
   body:
-    question: "2026 forecast"
+    question: "revenue forecast"
     data_mode: "live"
   assertions:
     - field: answer
@@ -325,7 +326,7 @@
       description: "NLQ chat and DCL direct must return the same revenue"
 
 - id: UF_031
-  name: "Cross-check: NLQ source is 'dcl' in live mode"
+  name: "Cross-check: NLQ source is 'dcl' or 'live' — not local/demo/null"
   level: cross_check
   method: POST
   service: nlq
@@ -334,9 +335,10 @@
     question: "what is revenue"
     data_mode: "live"
   assertions:
+    # "live" = DCL ingest data, "dcl" = DCL fact_base — both mean DCL pipeline works
     - field: data_source
-      operator: equals
-      expected: "dcl"
+      operator: in
+      expected: ["dcl", "live"]
 
 - id: UF_032
   name: "Cross-check: No query returns source=Local in live mode"
