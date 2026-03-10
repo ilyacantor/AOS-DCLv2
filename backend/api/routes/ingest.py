@@ -412,6 +412,287 @@ def dcl_ingest_ping():
 # Data push (Path 3 — Content Path)
 # ---------------------------------------------------------------------------
 
+def _process_ingest_sync(
+    *,
+    raw_body: dict,
+    now: str,
+    x_run_id: str | None,
+    x_pipe_id: str | None,
+    x_dispatch_id: str | None,
+    x_schema_hash: str | None,
+    x_api_key: str | None,
+) -> IngestResponse:
+    """Synchronous ingest processing — runs in thread pool to keep event loop free.
+
+    All Pydantic validation, Redis lookups, schema hashing, zlib compression,
+    and store persistence happen here. HTTPException propagates back through
+    the executor to FastAPI's exception handler.
+    """
+    if isinstance(raw_body, dict):
+        try:
+            body = _normalize_ingest_body(raw_body)
+        except HTTPException as e:
+            pipe_id = x_pipe_id or raw_body.get("pipe_id", "unknown")
+            source = raw_body.get("source_system") or raw_body.get("source", "unknown")
+            tenant = raw_body.get("tenant_id") or raw_body.get("tenantId", "")
+            get_ingest_store().record_drop(DropEntry(
+                pipe_id=pipe_id,
+                reason=e.detail if isinstance(e.detail, str) else str(e.detail),
+                error_code="MISSING_SNAPSHOT",
+                source_system=source,
+                timestamp=now,
+                run_id=x_run_id or "",
+                tenant_id=tenant,
+            ))
+            raise
+    else:
+        body = raw_body
+
+    try:
+        ingest_req = IngestRequest(**body)
+    except Exception as e:
+        logger.error(f"[Ingest] Validation failed: {e} | keys={list(body.keys()) if isinstance(body, dict) else 'N/A'}")
+        pipe_id = x_pipe_id or (body.get("pipe_id", "unknown") if isinstance(body, dict) else "unknown")
+        source = (body.get("source_system", "unknown") if isinstance(body, dict) else "unknown")
+        snapshot = (body.get("snapshot_name", "") if isinstance(body, dict) else "")
+        tenant = (body.get("tenant_id", "") or body.get("tenantId", "")) if isinstance(body, dict) else ""
+        get_ingest_store().record_drop(DropEntry(
+            pipe_id=pipe_id,
+            reason=str(e),
+            error_code="VALIDATION_ERROR",
+            source_system=source,
+            timestamp=now,
+            run_id=x_run_id or "",
+            snapshot_name=snapshot,
+            tenant_id=tenant,
+        ))
+        raise HTTPException(status_code=422, detail=str(e))
+
+    # ── Farm self-directed bypass ──
+    _is_farm_push = (x_run_id or "").startswith("farm_")
+
+    # ── Source system allowlist gate ──
+    canonical_sources = get_canonical_sources()
+    if not canonical_sources and not _is_farm_push:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "DCL not initialized",
+                "action": "Run AAM /export-pipes to register pipe definitions before ingesting",
+            },
+        )
+
+    if not _is_farm_push:
+        pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
+        pipe_store = get_pipe_store()
+        pipe_def_for_src = pipe_store.lookup(pipe_id)
+        if pipe_def_for_src and pipe_def_for_src.vendor:
+            canonical_src = normalize_source_id(pipe_def_for_src.vendor)
+            if canonical_src != normalize_source_id(ingest_req.source_system):
+                logger.info(
+                    f"[Ingest] Source override: request said '{ingest_req.source_system}', "
+                    f"pipe_def vendor='{pipe_def_for_src.vendor}' → canonical='{canonical_src}' "
+                    f"(pipe_id={pipe_id})"
+                )
+        else:
+            canonical_src = normalize_source_id(ingest_req.source_system)
+
+        if canonical_src not in canonical_sources:
+            logger.warning(
+                f"[Ingest] REJECTED non-canonical source: '{ingest_req.source_system}' "
+                f"(canonical: '{canonical_src}') tenant={ingest_req.tenant_id} "
+                f"snapshot={ingest_req.snapshot_name} rows={ingest_req.row_count}"
+            )
+            get_ingest_store().record_drop(DropEntry(
+                pipe_id=pipe_id,
+                reason=f"Non-canonical source: '{ingest_req.source_system}' (canonical: '{canonical_src}')",
+                error_code="NON_CANONICAL_SOURCE",
+                source_system=ingest_req.source_system,
+                timestamp=now,
+                run_id=x_run_id or "",
+                snapshot_name=ingest_req.snapshot_name,
+                tenant_id=ingest_req.tenant_id,
+            ))
+            raise HTTPException(
+                status_code=422,
+                detail=f"Source '{ingest_req.source_system}' (canonical: '{canonical_src}') "
+                       f"is not in the canonical allowlist. "
+                       f"Allowed sources: {sorted(canonical_sources)}"
+            )
+    else:
+        canonical_src = normalize_source_id(ingest_req.source_system)
+        logger.info(
+            f"[Ingest] Farm self-directed push: skipping canonical source "
+            f"gate (run_id={x_run_id}, source={ingest_req.source_system})"
+        )
+
+    expected_key = os.environ.get("DCL_INGEST_KEY")
+    if expected_key and x_api_key != expected_key:
+        pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
+        get_ingest_store().record_drop(DropEntry(
+            pipe_id=pipe_id,
+            reason="Invalid or missing x-api-key",
+            error_code="AUTH_FAILED",
+            source_system=ingest_req.source_system,
+            timestamp=now,
+            run_id=x_run_id or "",
+            snapshot_name=ingest_req.snapshot_name,
+            tenant_id=ingest_req.tenant_id,
+        ))
+        raise HTTPException(status_code=401, detail="Invalid or missing x-api-key")
+
+    run_id = x_run_id or str(uuid.uuid4())
+    pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
+
+    # ── Dedup gate ──
+    store = get_ingest_store()
+    existing_receipt = store.get_receipt(run_id, pipe_id)
+    if existing_receipt is not None:
+        logger.info(
+            f"[Ingest] DEDUP: pipe_id={pipe_id} run_id={run_id} already ingested "
+            f"({existing_receipt.row_count} rows at {existing_receipt.received_at}). "
+            f"Returning cached receipt."
+        )
+        pipe_def = get_pipe_store().lookup(pipe_id)
+        return IngestResponse(
+            status="deduplicated",
+            dcl_run_id=run_id,
+            run_id=run_id,
+            dispatch_id=existing_receipt.dispatch_id,
+            pipe_id=pipe_id,
+            rows_accepted=existing_receipt.row_count,
+            schema_drift=existing_receipt.schema_drift,
+            drift_fields=existing_receipt.drift_fields,
+            matched_schema=pipe_def is not None,
+            schema_fields=pipe_def.fields if pipe_def else [],
+            timestamp=existing_receipt.received_at,
+            warnings=["Duplicate push detected — returning cached receipt"],
+        )
+
+    if x_dispatch_id:
+        dispatch_id = x_dispatch_id
+    else:
+        dispatch_id = _derive_dispatch_id(
+            ingest_req.run_timestamp, ingest_req.tenant_id, ingest_req.snapshot_name
+        )
+
+    # ── Schema-on-write gate ──
+    pipe_def, _guard_active = _validate_pipe_guard(
+        pipe_id, run_id, ingest_req.source_system, now,
+        tenant_id=ingest_req.tenant_id, snapshot_name=ingest_req.snapshot_name,
+    )
+
+    # ── Proceed with ingest ──
+    if x_schema_hash:
+        schema_hash = x_schema_hash
+    else:
+        schema_hash = compute_schema_hash(ingest_req.rows)
+
+    actual_rows = len(ingest_req.rows)
+    if actual_rows != ingest_req.row_count:
+        logger.warning(
+            f"[Ingest] Row count mismatch: declared={ingest_req.row_count} "
+            f"actual={actual_rows} pipe={pipe_id} run={run_id}"
+        )
+
+    try:
+        receipt = store.ingest(
+            run_id=run_id,
+            pipe_id=pipe_id,
+            schema_hash=schema_hash,
+            request=ingest_req,
+            dispatch_id=dispatch_id,
+            canonical_source_override=canonical_src,
+        )
+    except Exception as e:
+        logger.error(f"[Ingest] Failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+    # Auto-promote mode from Demo → Ingest when real data arrives.
+    if get_current_mode().data_mode == "Demo":
+        set_current_mode("Ingest", run_id=run_id)
+        logger.info(f"[Ingest] Mode auto-promoted: Demo → Ingest (run_id={run_id})")
+
+    matched_schema = pipe_def is not None
+    schema_fields = pipe_def.fields if pipe_def else []
+
+    pipe_store_for_sor = get_pipe_store()
+    aod_sor_list = pipe_store_for_sor.get_aod_systems_of_record()
+    aod_sor_count = len(aod_sor_list)
+
+    ingest_warnings: list[str] = []
+    if not pipe_store_for_sor.get_export_receipts():
+        ingest_warnings.append(
+            "Content received before structure — 3-phase sequence is broken. "
+            "AAM must push /export-pipes before Farm pushes /ingest."
+        )
+    elif aod_sor_count == 0:
+        ingest_warnings.append(
+            "No AOD SOR declarations found in latest export receipt. "
+            "SOR count is 0 — check that AAM forwards systems_of_record from AOD."
+        )
+
+    _record_ingest_activity(
+        store=store,
+        dispatch_id=dispatch_id,
+        snapshot_name=ingest_req.snapshot_name,
+        run_id=run_id,
+        pipe_id=pipe_id,
+        source_system=ingest_req.source_system,
+        rows=actual_rows,
+        matched_schema=matched_schema,
+        now=now,
+        aod_sor_count=aod_sor_count,
+    )
+
+    # Materialize metric data points (fire-and-forget in background thread)
+    def _materialize_sync():
+        try:
+            from backend.engine.metric_materializer import get_materializer
+            materializer = get_materializer()
+            mat_points = materializer.materialize(
+                pipe_id=pipe_id,
+                source_system=ingest_req.source_system,
+                rows=ingest_req.rows,
+                dispatch_id=dispatch_id,
+            )
+            if mat_points:
+                mat_key = f"{run_id}:{pipe_id}"
+                store.store_materialized(mat_key, mat_points)
+                logger.info(
+                    f"[Ingest] Materialized {len(mat_points)} data points "
+                    f"from {pipe_id} ({ingest_req.source_system})"
+                )
+        except Exception as e:
+            logger.error(
+                f"[Ingest] Materialization failed for pipe_id={pipe_id} "
+                f"source={ingest_req.source_system} run_id={run_id}: {e}"
+            )
+
+    _materialize_pool.submit(_materialize_sync)
+
+    logger.info(
+        f"[Ingest] Accepted {actual_rows} rows from {ingest_req.source_system} "
+        f"pipe={pipe_id} run={run_id} drift={receipt.schema_drift} "
+        f"matched_schema={matched_schema}"
+    )
+
+    return IngestResponse(
+        status="ingested",
+        dcl_run_id=run_id,
+        run_id=run_id,
+        dispatch_id=dispatch_id,
+        pipe_id=pipe_id,
+        rows_accepted=actual_rows,
+        schema_drift=receipt.schema_drift,
+        drift_fields=receipt.drift_fields,
+        matched_schema=matched_schema,
+        schema_fields=schema_fields,
+        timestamp=now,
+        warnings=ingest_warnings,
+    )
+
+
 @router.post("", response_model=IngestResponse)
 async def dcl_ingest(
     request: Request,
@@ -463,301 +744,24 @@ async def dcl_ingest(
 
     logger.info(f"[Ingest] Received keys: {list(raw_body.keys()) if isinstance(raw_body, dict) else type(raw_body).__name__}")
 
-    if isinstance(raw_body, dict):
-        try:
-            body = _normalize_ingest_body(raw_body)
-        except HTTPException as e:
-            # Missing snapshot_name — record drop before re-raising
-            pipe_id = x_pipe_id or raw_body.get("pipe_id", "unknown")
-            source = raw_body.get("source_system") or raw_body.get("source", "unknown")
-            tenant = raw_body.get("tenant_id") or raw_body.get("tenantId", "")
-            get_ingest_store().record_drop(DropEntry(
-                pipe_id=pipe_id,
-                reason=e.detail if isinstance(e.detail, str) else str(e.detail),
-                error_code="MISSING_SNAPSHOT",
-                source_system=source,
-                timestamp=now,
-                run_id=x_run_id or "",
-                tenant_id=tenant,
-            ))
-            raise
-    else:
-        body = raw_body
-
-    try:
-        ingest_req = IngestRequest(**body)
-    except Exception as e:
-        logger.error(f"[Ingest] Validation failed: {e} | keys={list(body.keys()) if isinstance(body, dict) else 'N/A'}")
-        pipe_id = x_pipe_id or (body.get("pipe_id", "unknown") if isinstance(body, dict) else "unknown")
-        source = (body.get("source_system", "unknown") if isinstance(body, dict) else "unknown")
-        snapshot = (body.get("snapshot_name", "") if isinstance(body, dict) else "")
-        tenant = (body.get("tenant_id", "") or body.get("tenantId", "")) if isinstance(body, dict) else ""
-        get_ingest_store().record_drop(DropEntry(
-            pipe_id=pipe_id,
-            reason=str(e),
-            error_code="VALIDATION_ERROR",
-            source_system=source,
-            timestamp=now,
-            run_id=x_run_id or "",
-            snapshot_name=snapshot,
-            tenant_id=tenant,
-        ))
-        raise HTTPException(status_code=422, detail=str(e))
-
-    # ── Farm self-directed bypass ──
-    # Farm generates its own pipe_ids without AOD discovery or AAM registration.
-    # It doesn't participate in the vendor-based identity chain.
-    # Skip canonical source checks entirely for Farm pushes.
-    _is_farm_push = (x_run_id or "").startswith("farm_")
-
-    # ── Source system allowlist gate ──
-    # The canonical source is determined by the pipe_def vendor (AOD authority),
-    # NOT by what Farm writes in the request body.  Farm may send
-    # source_system="farm" — that's its self-label, not a SOR identity.
-    #
-    # Flow: look up pipe_def → use vendor for canonical_src → check allowlist.
-    # If pipe_store is empty, DCL is not initialized — return 503.
-    canonical_sources = get_canonical_sources()
-    if not canonical_sources and not _is_farm_push:
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "error": "DCL not initialized",
-                "action": "Run AAM /export-pipes to register pipe definitions before ingesting",
-            },
-        )
-
-    if not _is_farm_push:
-        # Resolve canonical source from pipe_def vendor (the join key is pipe_id).
-        # Falls back to request.source_system only if pipe_def is missing.
-        pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
-        pipe_store = get_pipe_store()
-        pipe_def_for_src = pipe_store.lookup(pipe_id)
-        if pipe_def_for_src and pipe_def_for_src.vendor:
-            canonical_src = normalize_source_id(pipe_def_for_src.vendor)
-            if canonical_src != normalize_source_id(ingest_req.source_system):
-                logger.info(
-                    f"[Ingest] Source override: request said '{ingest_req.source_system}', "
-                    f"pipe_def vendor='{pipe_def_for_src.vendor}' → canonical='{canonical_src}' "
-                    f"(pipe_id={pipe_id})"
-                )
-        else:
-            canonical_src = normalize_source_id(ingest_req.source_system)
-
-        if canonical_src not in canonical_sources:
-            logger.warning(
-                f"[Ingest] REJECTED non-canonical source: '{ingest_req.source_system}' "
-                f"(canonical: '{canonical_src}') tenant={ingest_req.tenant_id} "
-                f"snapshot={ingest_req.snapshot_name} rows={ingest_req.row_count}"
-            )
-            get_ingest_store().record_drop(DropEntry(
-                pipe_id=pipe_id,
-                reason=f"Non-canonical source: '{ingest_req.source_system}' (canonical: '{canonical_src}')",
-                error_code="NON_CANONICAL_SOURCE",
-                source_system=ingest_req.source_system,
-                timestamp=now,
-                run_id=x_run_id or "",
-                snapshot_name=ingest_req.snapshot_name,
-                tenant_id=ingest_req.tenant_id,
-            ))
-            raise HTTPException(
-                status_code=422,
-                detail=f"Source '{ingest_req.source_system}' (canonical: '{canonical_src}') "
-                       f"is not in the canonical allowlist. "
-                       f"Allowed sources: {sorted(canonical_sources)}"
-            )
-    else:
-        # Farm sends real vendor names as source_system (salesforce, netsuite, etc.)
-        # Used as a label only — passed to store.ingest() as canonical_source_override
-        # (line 588), where it tags rows and the receipt. No downstream code validates
-        # it against canonical_sources.
-        canonical_src = normalize_source_id(ingest_req.source_system)
-        logger.info(
-            f"[Ingest] Farm self-directed push: skipping canonical source "
-            f"gate (run_id={x_run_id}, source={ingest_req.source_system})"
-        )
-
-    expected_key = os.environ.get("DCL_INGEST_KEY")
-    if expected_key and x_api_key != expected_key:
-        pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
-        get_ingest_store().record_drop(DropEntry(
-            pipe_id=pipe_id,
-            reason="Invalid or missing x-api-key",
-            error_code="AUTH_FAILED",
-            source_system=ingest_req.source_system,
-            timestamp=now,
-            run_id=x_run_id or "",
-            snapshot_name=ingest_req.snapshot_name,
-            tenant_id=ingest_req.tenant_id,
-        ))
-        raise HTTPException(status_code=401, detail="Invalid or missing x-api-key")
-
-    run_id = x_run_id or str(uuid.uuid4())
-    pipe_id = x_pipe_id or f"pipe_{ingest_req.source_system}"
-
-    # ── Dedup gate: skip reprocessing if (run_id, pipe_id) already ingested ──
-    store = get_ingest_store()
-    existing_receipt = store.get_receipt(run_id, pipe_id)
-    if existing_receipt is not None:
-        logger.info(
-            f"[Ingest] DEDUP: pipe_id={pipe_id} run_id={run_id} already ingested "
-            f"({existing_receipt.row_count} rows at {existing_receipt.received_at}). "
-            f"Returning cached receipt."
-        )
-        pipe_def = get_pipe_store().lookup(pipe_id)
-        return IngestResponse(
-            status="deduplicated",
-            dcl_run_id=run_id,
-            run_id=run_id,
-            dispatch_id=existing_receipt.dispatch_id,
-            pipe_id=pipe_id,
-            rows_accepted=existing_receipt.row_count,
-            schema_drift=existing_receipt.schema_drift,
-            drift_fields=existing_receipt.drift_fields,
-            matched_schema=pipe_def is not None,
-            schema_fields=pipe_def.fields if pipe_def else [],
-            timestamp=existing_receipt.received_at,
-            warnings=["Duplicate push detected — returning cached receipt"],
-        )
-
-    if x_dispatch_id:
-        dispatch_id = x_dispatch_id
-    else:
-        dispatch_id = _derive_dispatch_id(
-            ingest_req.run_timestamp, ingest_req.tenant_id, ingest_req.snapshot_name
-        )
-
-    # ── Schema-on-write gate ──
-    pipe_def, _guard_active = _validate_pipe_guard(
-        pipe_id, run_id, ingest_req.source_system, now,
-        tenant_id=ingest_req.tenant_id, snapshot_name=ingest_req.snapshot_name,
+    # ── Offload ALL sync-heavy processing to thread pool ──
+    # With 89 concurrent ingest requests, even small sync work per request
+    # (Pydantic validation, Redis lookups, schema hashing, zlib compression)
+    # starves the event loop and blocks health checks. A single executor call
+    # per request keeps the event loop free for health/query endpoints.
+    result = await loop.run_in_executor(
+        None,
+        lambda: _process_ingest_sync(
+            raw_body=raw_body,
+            now=now,
+            x_run_id=x_run_id,
+            x_pipe_id=x_pipe_id,
+            x_dispatch_id=x_dispatch_id,
+            x_schema_hash=x_schema_hash,
+            x_api_key=x_api_key,
+        ),
     )
-
-    # ── Proceed with ingest ──────────────────────────────────────────
-    if x_schema_hash:
-        schema_hash = x_schema_hash
-    else:
-        schema_hash = compute_schema_hash(ingest_req.rows)
-
-    actual_rows = len(ingest_req.rows)
-    if actual_rows != ingest_req.row_count:
-        logger.warning(
-            f"[Ingest] Row count mismatch: declared={ingest_req.row_count} "
-            f"actual={actual_rows} pipe={pipe_id} run={run_id}"
-        )
-
-    store = get_ingest_store()
-    try:
-        # Offload store.ingest() to thread pool: it performs JSON serialization,
-        # zlib compression, and Redis I/O — all synchronous and CPU/IO-bound.
-        # A 44K-row payload blocks the event loop for 5-10s without this.
-        loop = asyncio.get_running_loop()
-        receipt = await loop.run_in_executor(
-            None,
-            lambda: store.ingest(
-                run_id=run_id,
-                pipe_id=pipe_id,
-                schema_hash=schema_hash,
-                request=ingest_req,
-                dispatch_id=dispatch_id,
-                canonical_source_override=canonical_src,
-            ),
-        )
-    except Exception as e:
-        logger.error(f"[Ingest] Failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-    # Auto-promote mode from Demo → Ingest when real data arrives.
-    # This is the root-cause fix: the mode must reflect what data exists,
-    # not remain stuck at the boot-time default.
-    if get_current_mode().data_mode == "Demo":
-        set_current_mode("Ingest", run_id=run_id)
-        logger.info(f"[Ingest] Mode auto-promoted: Demo → Ingest (run_id={run_id})")
-
-    # Build enriched response with schema join confirmation
-    matched_schema = pipe_def is not None
-    schema_fields = pipe_def.fields if pipe_def else []
-
-    # --- Record Path 2 + Path 3 activity ---
-    # Read AOD SOR count from PipeStore (shared across workers via Redis).
-    # app.state is per-worker and won't survive multi-worker deployments.
-    pipe_store_for_sor = get_pipe_store()
-    aod_sor_list = pipe_store_for_sor.get_aod_systems_of_record()
-    aod_sor_count = len(aod_sor_list)
-
-    # Surface warnings in the response body so callers (Farm) can log them
-    ingest_warnings: list[str] = []
-    if not pipe_store_for_sor.get_export_receipts():
-        ingest_warnings.append(
-            "Content received before structure — 3-phase sequence is broken. "
-            "AAM must push /export-pipes before Farm pushes /ingest."
-        )
-    elif aod_sor_count == 0:
-        ingest_warnings.append(
-            "No AOD SOR declarations found in latest export receipt. "
-            "SOR count is 0 — check that AAM forwards systems_of_record from AOD."
-        )
-
-    _record_ingest_activity(
-        store=store,
-        dispatch_id=dispatch_id,
-        snapshot_name=ingest_req.snapshot_name,
-        run_id=run_id,
-        pipe_id=pipe_id,
-        source_system=ingest_req.source_system,
-        rows=actual_rows,
-        matched_schema=matched_schema,
-        now=now,
-        aod_sor_count=aod_sor_count,
-    )
-
-    # --- Materialize metric data points (deferred to background thread) ---
-    def _materialize_sync():
-        try:
-            from backend.engine.metric_materializer import get_materializer
-            materializer = get_materializer()
-            mat_points = materializer.materialize(
-                pipe_id=pipe_id,
-                source_system=ingest_req.source_system,
-                rows=ingest_req.rows,
-                dispatch_id=dispatch_id,
-            )
-            if mat_points:
-                mat_key = f"{run_id}:{pipe_id}"
-                store.store_materialized(mat_key, mat_points)
-                logger.info(
-                    f"[Ingest] Materialized {len(mat_points)} data points "
-                    f"from {pipe_id} ({ingest_req.source_system})"
-                )
-        except Exception as e:
-            logger.error(
-                f"[Ingest] Materialization failed for pipe_id={pipe_id} "
-                f"source={ingest_req.source_system} run_id={run_id}: {e}"
-            )
-
-    loop = asyncio.get_running_loop()
-    loop.run_in_executor(_materialize_pool, _materialize_sync)
-
-    logger.info(
-        f"[Ingest] Accepted {actual_rows} rows from {ingest_req.source_system} "
-        f"pipe={pipe_id} run={run_id} drift={receipt.schema_drift} "
-        f"matched_schema={matched_schema}"
-    )
-
-    return IngestResponse(
-        status="ingested",
-        dcl_run_id=run_id,
-        run_id=run_id,
-        dispatch_id=dispatch_id,
-        pipe_id=pipe_id,
-        rows_accepted=actual_rows,
-        schema_drift=receipt.schema_drift,
-        drift_fields=receipt.drift_fields,
-        matched_schema=matched_schema,
-        schema_fields=schema_fields,
-        timestamp=now,
-        warnings=ingest_warnings,
-    )
+    return result
 
 
 # ---------------------------------------------------------------------------
