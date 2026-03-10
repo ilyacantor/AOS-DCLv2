@@ -13,6 +13,7 @@ Data path priority:
 """
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -20,7 +21,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from pydantic import BaseModel, Field
 
 from backend.api.semantic_export import PUBLISHED_METRICS, resolve_metric
-from backend.core.mode_state import get_current_mode
+from backend.core.mode_state import get_current_mode, get_data_mode
 
 
 class QueryRequest(BaseModel):
@@ -96,6 +97,7 @@ class QueryMetadata(BaseModel):
     order: Optional[str] = None
     persona: Optional[str] = None
     persona_definition: Optional[str] = None
+    error: Optional[str] = None
 
 
 class QueryResponse(BaseModel):
@@ -130,6 +132,26 @@ _fact_base_loaded_at: Optional[datetime] = None
 _entity_fact_base_cache: Dict[str, Dict] = {}
 _entity_fact_base_loaded_at: Dict[str, datetime] = {}
 
+_query_logger = logging.getLogger(__name__)
+
+
+def _should_use_fact_base(request_data_mode: Optional[str]) -> bool:
+    """Determine if fact_base.json should be used for this query.
+
+    fact_base is ONLY served when:
+    1. Global mode is "Demo" AND no explicit data_mode override, OR
+    2. Caller explicitly requests data_mode="demo"
+
+    In ALL other cases (Ingest/Farm/AAM), fact_base is forbidden.
+    """
+    explicit = (request_data_mode or "").lower()
+    if explicit == "demo":
+        return True
+    if explicit == "live":
+        return False
+    # No explicit override — consult global mode
+    return get_data_mode() == "Demo"
+
 
 def load_fact_base(entity_id: Optional[str] = None) -> Dict[str, Any]:
     """Load fact base with caching.
@@ -162,7 +184,7 @@ def load_fact_base(entity_id: Optional[str] = None) -> Dict[str, Any]:
     # WS1.3: Entity-specific fact_base loading
     entity_path = DATA_DIR / f"fact_base_{entity_id}.json"
     if not entity_path.exists():
-        # Fall back to default fact_base.json for single-entity case
+        _query_logger.warning(f"fact_base_{entity_id}.json not found — falling back to default fact_base.json")
         return load_fact_base(entity_id=None)
 
     cached = _entity_fact_base_cache.get(entity_id)
@@ -781,8 +803,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
     - consolidate=False (default) → per-entity results when multiple entities exist
     - consolidate=True → sum across entities (requires explicit opt-in)
     """
-    # WS1.3: Load entity-scoped fact_base when entity_id is specified
-    fb = load_fact_base(entity_id=request.entity_id)
+    fb = None  # Only loaded when fact_base path is selected
     metric_def = resolve_metric(request.metric)
 
     if metric_def is None:
@@ -792,17 +813,17 @@ def execute_query(request: QueryRequest) -> QueryResponse:
     grain = request.grain or metric_def.default_grain or "quarter"
     unit = _resolve_unit(metric_def)
 
-    use_live = (request.data_mode or "").lower() == "live"
+    use_fact_base = _should_use_fact_base(request.data_mode)
 
     # ------------------------------------------------------------------
-    # Path B: ingest buffer (only when data_mode == "live")
+    # Path B: ingest buffer (when NOT in fact_base mode)
     # If Runners have pushed rows containing this metric, serve those
     # and tag the response with the Runner's provenance.
     # ------------------------------------------------------------------
     ingest_receipt = None
     data_points: List[QueryDataPoint] = []
 
-    if use_live:
+    if not use_fact_base:
         ingested_points, ingest_receipt = _query_ingest_store(
             metric=request.metric,
             dimensions=request.dimensions,
@@ -815,10 +836,18 @@ def execute_query(request: QueryRequest) -> QueryResponse:
         data_points = ingested_points
 
     # ------------------------------------------------------------------
-    # Path A-live: live mode with no ingested data — fail loud
-    # Never silently fall back to fact_base.json in live mode.
+    # Path B-empty: non-demo mode with no ingested data — fail loud
+    # Never silently fall back to fact_base.json outside Demo mode.
     # ------------------------------------------------------------------
-    if not data_points and use_live:
+    if not data_points and not use_fact_base:
+        current_mode = get_data_mode()
+        error_msg = (
+            f"No ingested data available for metric='{request.metric}', "
+            f"entity_id='{request.entity_id}'. "
+            f"Global mode is '{current_mode}' — fact_base.json is disabled outside Demo mode. "
+            f"Run the pipeline to ingest data, or set data_mode='demo' to use demo data."
+        )
+        _query_logger.warning(error_msg)
         return QueryResponse(
             metric=request.metric,
             metric_name=metric_def.name,
@@ -827,21 +856,24 @@ def execute_query(request: QueryRequest) -> QueryResponse:
             unit=unit,
             data=[],
             metadata=QueryMetadata(
-                sources=["live"],
+                sources=["ingest"],
                 freshness=datetime.utcnow().isoformat() + "Z",
                 quality_score=0.0,
-                mode="Ingest",
+                mode=current_mode,
                 record_count=0,
-                source="ingest_empty",
+                source="no_data_error",
+                error=error_msg,
             ),
         )
 
     # ------------------------------------------------------------------
     # Path A: fact_base.json
-    # Used when data_mode is "demo" (or absent).
+    # Only used when _should_use_fact_base() returns True (Demo mode
+    # or explicit data_mode="demo" override).
     # ------------------------------------------------------------------
     if not data_points:
         ingest_receipt = None   # no ingest provenance to carry
+        fb = load_fact_base(entity_id=request.entity_id)
         periods = filter_periods(fb, request.time_range)
 
         if request.dimensions:
@@ -993,7 +1025,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
         tenant_id = ingest_receipt.tenant_id
         source_label = ingest_receipt.source_system
     else:
-        fb_meta = fb.get("metadata", {})
+        fb_meta = fb.get("metadata", {}) if fb is not None else {}
         run_id = mode.last_run_id
         run_timestamp = mode.last_updated
         snapshot_name = f"{mode.data_mode}-v{fb_meta.get('version', 'unknown')}"
@@ -1108,11 +1140,11 @@ def execute_query(request: QueryRequest) -> QueryResponse:
         data=data_points,
         metadata=QueryMetadata(
             sources=[source_label] if source_label else (
-                ["demo"] if mode.data_mode == "Demo" else ["farm"]
+                ["demo"] if use_fact_base else ["farm"]
             ),
             freshness=datetime.utcnow().isoformat() + "Z",
             quality_score=1.0,
-            mode="Ingest" if ingest_receipt else mode.data_mode,
+            mode="Ingest" if ingest_receipt else ("Demo" if use_fact_base else mode.data_mode),
             record_count=len(data_points),
             source=data_source_label,
             run_id=run_id,

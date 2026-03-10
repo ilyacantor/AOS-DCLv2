@@ -759,6 +759,17 @@ def drill_through(
       parent  – required for rep/customer/project (region name, rep_id, customer_id)
       quarter – optional, e.g. '2025-Q3'. Defaults to latest available quarter.
     """
+    from backend.core.mode_state import get_data_mode
+
+    current_mode = get_data_mode()
+    if current_mode != "Demo":
+        raise HTTPException(
+            status_code=503,
+            detail=f"Drill-through is only available in Demo mode (fact_base.json). "
+                   f"Current mode is '{current_mode}' — fact_base is disabled. "
+                   f"Drill-through from ingested data is not yet implemented.",
+        )
+
     valid_levels = ("region", "rep", "customer", "project")
     if level not in valid_levels:
         raise HTTPException(

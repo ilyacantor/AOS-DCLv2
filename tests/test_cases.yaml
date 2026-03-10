@@ -1,0 +1,213 @@
+# DCL Pipeline Ingest (PI) + Fact-Base Gating (FBG) Test Cases
+# ============================================================
+#
+# PI tests push real data through the ingest endpoint, confirming the
+# pipeline works and the global mode auto-promotes from Demo to Ingest.
+# FBG tests run AFTER PI — they verify the fact_base gate holds against
+# real ingest state. No synthetic mode manipulation.
+#
+# Execution order matters: PI first, then FBG.
+
+# ─── Pipeline Ingest ─────────────────────────────────────────────────────
+
+- id: PI_001
+  category: pipeline_ingest
+  description: "Push revenue rows via ingest endpoint"
+  method: post
+  path: /api/dcl/ingest
+  headers:
+    x-run-id: "farm_fbg_test_run"
+    x-pipe-id: "pipe_fbg_test_src"
+  body:
+    source_system: fbg_test_src
+    tenant_id: fbg_test
+    snapshot_name: revenue_fbg
+    run_timestamp: "2026-03-10T00:00:00Z"
+    schema_version: "1.0"
+    entity_id: meridian
+    row_count: 2
+    rows:
+      - { metric: revenue, period: "2025-Q3", value: 42.5 }
+      - { metric: revenue, period: "2025-Q4", value: 44.1 }
+  assertions:
+    - field: status_code
+      op: equals
+      value: 200
+    - field: status
+      op: equals
+      value: ingested
+    - field: rows_accepted
+      op: greater_than
+      value: 0
+
+- id: PI_002
+  category: pipeline_ingest
+  description: "Global mode is Ingest after push"
+  method: get
+  path: /health
+  assertions:
+    - field: data_mode
+      op: equals
+      value: Ingest
+
+- id: PI_003
+  category: pipeline_ingest
+  description: "Ingest store has run history"
+  method: get
+  path: /api/dcl/ingest/stats
+  assertions:
+    - field: total_runs
+      op: greater_than
+      value: 0
+
+# ─── Fact-Base Gating ────────────────────────────────────────────────────
+# Precondition: PI tests ran, global mode is Ingest.
+
+- id: FBG_001
+  category: fact_base_gating
+  description: "Explicit demo override returns fact_base"
+  method: post
+  path: /api/dcl/query
+  body:
+    metric: revenue
+    data_mode: "demo"
+  assertions:
+    - field: metadata.source
+      op: equals
+      value: fact_base
+
+- id: FBG_002
+  category: fact_base_gating
+  description: "Default query in Ingest mode blocks fact_base"
+  method: post
+  path: /api/dcl/query
+  body:
+    metric: revenue
+  assertions:
+    - field: metadata.source
+      op: not_equals
+      value: fact_base
+
+- id: FBG_003
+  category: fact_base_gating
+  description: "Explicit live mode blocks fact_base"
+  method: post
+  path: /api/dcl/query
+  body:
+    metric: revenue
+    data_mode: "live"
+  assertions:
+    - field: metadata.source
+      op: not_equals
+      value: fact_base
+
+- id: FBG_004
+  category: fact_base_gating
+  description: "Unknown metric returns error, not fallback"
+  method: post
+  path: /api/dcl/query
+  body:
+    metric: nonexistent_metric_xyz
+  assertions:
+    - field: status_code
+      op: not_equals
+      value: 200
+
+- id: FBG_005
+  category: fact_base_gating
+  description: "Meridian query returns ingest data, not fact_base"
+  method: post
+  path: /api/dcl/query
+  body:
+    metric: revenue
+    entity_id: meridian
+  assertions:
+    - field: metadata.source
+      op: not_equals
+      value: fact_base
+
+- id: FBG_006
+  category: fact_base_gating
+  description: "Cascadia query returns ingest or error, not fact_base"
+  method: post
+  path: /api/dcl/query
+  body:
+    metric: revenue
+    entity_id: cascadia
+  assertions:
+    - field: metadata.source
+      op: not_equals
+      value: fact_base
+
+- id: FBG_007
+  category: fact_base_gating
+  description: "Drill-through returns 503 in Ingest mode"
+  method: get
+  path: /api/dcl/drill-through?level=region
+  assertions:
+    - field: status_code
+      op: equals
+      value: 503
+
+- id: FBG_008
+  category: fact_base_gating
+  description: "Metadata source is never null"
+  method: post
+  path: /api/dcl/query
+  body:
+    metric: revenue
+  assertions:
+    - field: metadata.source
+      op: not_null
+
+- id: FBG_009
+  category: fact_base_gating
+  description: "Source is ingest or no_data_error, never fact_base"
+  method: post
+  path: /api/dcl/query
+  body:
+    metric: revenue
+  assertions:
+    - field: metadata.source
+      op: in
+      value: ["no_data_error", "ingest"]
+
+- id: FBG_010
+  category: fact_base_gating
+  description: "Mode reported in metadata is not Demo"
+  method: post
+  path: /api/dcl/query
+  body:
+    metric: revenue
+  assertions:
+    - field: metadata.mode
+      op: not_equals
+      value: Demo
+
+- id: FBG_011
+  category: fact_base_gating
+  description: "Ingest mode query has error or data, never silent empty"
+  method: post
+  path: /api/dcl/query
+  body:
+    metric: revenue
+  assertions:
+    - field: metadata.source
+      op: in
+      value: ["no_data_error", "ingest"]
+
+- id: FBG_012
+  category: fact_base_gating
+  description: "Explicit demo override works even in Ingest mode"
+  method: post
+  path: /api/dcl/query
+  body:
+    metric: revenue
+    data_mode: "demo"
+  assertions:
+    - field: metadata.source
+      op: equals
+      value: fact_base
+    - field: metadata.record_count
+      op: greater_than
+      value: 0

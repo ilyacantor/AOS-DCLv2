@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
@@ -1142,6 +1143,126 @@ def suite_enriched_query():
         t.fail("200", str(r.status_code))
 
 
+# ─── YAML-driven test engine ──────────────────────────────────────────────
+def _resolve_field(data: Any, field_path: str) -> Any:
+    """Resolve a dotted field path like 'metadata.source' from a dict."""
+    parts = field_path.split(".")
+    current = data
+    for part in parts:
+        if isinstance(current, dict):
+            current = current.get(part)
+        else:
+            return None
+    return current
+
+
+def _check_assertion(assertion: Dict, response_data: Any, status_code: int) -> Tuple[bool, str]:
+    """Evaluate a single assertion. Returns (passed, message)."""
+    field = assertion["field"]
+    op = assertion["op"]
+    expected = assertion.get("value")
+
+    if field == "status_code":
+        actual = status_code
+    else:
+        actual = _resolve_field(response_data, field)
+
+    if op == "equals":
+        ok = actual == expected
+        return ok, f"{field}: expected {expected!r}, got {actual!r}"
+    elif op == "not_equals":
+        ok = actual != expected
+        return ok, f"{field}: expected NOT {expected!r}, got {actual!r}"
+    elif op == "not_null":
+        ok = actual is not None
+        return ok, f"{field}: expected not null, got {actual!r}"
+    elif op == "greater_than":
+        ok = actual is not None and actual > expected
+        return ok, f"{field}: expected > {expected!r}, got {actual!r}"
+    elif op == "in":
+        ok = actual in expected
+        return ok, f"{field}: expected one of {expected!r}, got {actual!r}"
+    else:
+        return False, f"Unknown assertion op: {op}"
+
+
+def _run_yaml_test(tc: Dict) -> None:
+    """Execute a single YAML test case using the global test() helper."""
+    t = test(tc["id"], tc["description"])
+
+    try:
+        method = tc["method"].lower()
+        req_fn = {"post": post, "get": get, "put": put, "delete": delete}[method]
+
+        kwargs: Dict[str, Any] = {}
+        if method in ("post", "put") and tc.get("body"):
+            kwargs["json"] = tc["body"]
+        if tc.get("headers"):
+            kwargs["headers"] = tc["headers"]
+
+        r = req_fn(tc["path"], **kwargs)
+
+        status_code = r.status_code
+        try:
+            response_data = r.json()
+        except Exception:
+            response_data = {}
+
+        all_passed = True
+        fail_msg = ""
+        for assertion in tc.get("assertions", []):
+            ok, msg = _check_assertion(assertion, response_data, status_code)
+            if not ok:
+                all_passed = False
+                fail_msg = msg
+                break
+
+        if all_passed:
+            t.pass_()
+        else:
+            t.fail("assertion", fail_msg)
+
+    except Exception as exc:
+        t.fail("no exception", str(exc))
+
+
+def _load_yaml_tests() -> List[Dict]:
+    """Load all test cases from test_cases.yaml."""
+    import yaml
+
+    yaml_path = Path(__file__).parent / "test_cases.yaml"
+    if not yaml_path.exists():
+        return []
+    with open(yaml_path, "r") as f:
+        return yaml.safe_load(f) or []
+
+
+def suite_pipeline_ingest():
+    """PI tests: push real data through the ingest endpoint."""
+    print("\n=== SUITE: Pipeline Ingest ===")
+    all_tests = _load_yaml_tests()
+    pi_tests = [tc for tc in all_tests if tc.get("category") == "pipeline_ingest"]
+    if not pi_tests:
+        t = test("PI_000", "test_cases.yaml has PI tests")
+        t.fail("PI tests present", "none found")
+        return
+    for tc in pi_tests:
+        _run_yaml_test(tc)
+
+
+def suite_fact_base_gating():
+    """FBG tests: verify fact_base is gated. Must run AFTER suite_pipeline_ingest."""
+    print("\n=== SUITE: Fact-Base Gating ===")
+    all_tests = _load_yaml_tests()
+    fbg_tests = [tc for tc in all_tests if tc.get("category") == "fact_base_gating"]
+    if not fbg_tests:
+        t = test("FBG_000", "test_cases.yaml has FBG tests")
+        t.fail("FBG tests present", "none found")
+        return
+    for tc in fbg_tests:
+        _run_yaml_test(tc)
+
+
 # ─── main ─────────────────────────────────────────────────────────────────
 def wait_for_backend(max_wait: int = 30):
     for i in range(max_wait):
@@ -1182,6 +1303,8 @@ def run_harness():
     suite_entity_resolution()
     suite_conflict_detection()
     suite_enriched_query()
+    suite_pipeline_ingest()
+    suite_fact_base_gating()
 
     total = len(results)
     passed = sum(1 for r in results if r.passed)
