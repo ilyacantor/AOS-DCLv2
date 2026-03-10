@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from backend.engine.engagement_config import get_engagement
+from backend.engine.engagement import get_active_engagement
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -144,11 +144,8 @@ class EntityResolutionStore:
 
         This populates pre-computed cross-entity matches (customer, vendor, people)
         produced by Farm's EntityOverlapGenerator. These matches represent entities
-        that exist in both entities — they are pre-matched by Farm
+        that exist in both engagement entities — they are pre-matched by Farm
         using domain knowledge (exact names, fuzzy names, shared identifiers).
-
-        Field names are read from engagement_config.overlap_keys so that this
-        code is entity-agnostic (no hardcoded "meridian"/"cascadia").
         """
         if not CROSS_ENTITY_OVERLAP_FILE.exists():
             logger.info("No cross-entity overlap file found — skipping")
@@ -157,50 +154,57 @@ class EntityResolutionStore:
         with open(CROSS_ENTITY_OVERLAP_FILE) as f:
             data = json.load(f)
 
-        engagement = get_engagement()
-        ok = engagement.overlap_keys
-        entity_a = engagement.entity_a
-        entity_b = engagement.entity_b
+        eng = get_active_engagement()
+        entity_a_id = eng.entity_a.id
+        entity_b_id = eng.entity_b.id
+        entity_a_display = eng.entity_a.display_name
+        entity_b_display = eng.entity_b.display_name
+        a_crm = eng.entity_a.source_systems.get("crm", "salesforce_crm")
+        b_crm = eng.entity_b.source_systems.get("crm", "oracle_erp")
+        a_erp = eng.entity_a.source_systems.get("erp", "sap_erp")
+        b_erp = eng.entity_b.source_systems.get("erp", "oracle_erp")
+        a_hcm = eng.entity_a.source_systems.get("hcm", "workday_hcm")
+        b_hcm = eng.entity_b.source_systems.get("hcm", "bamboohr_hcm")
 
         loaded = 0
 
         # Customer overlaps → SourceRecords from each entity's CRM
         for match in data.get("customer_overlap", {}).get("matches", []):
-            m_name = match.get(ok.entity_a_name, "")
-            c_name = match.get(ok.entity_b_name, "")
-            canonical = match.get("canonical_name", m_name)
+            a_name = match.get(f"{entity_a_id}_name", "")
+            b_name = match.get(f"{entity_b_id}_name", "")
+            canonical = match.get("canonical_name", a_name)
             match_type = match.get("match_type", "exact")
             confidence = match.get("confidence", 1.0)
 
-            rec_m = SourceRecord(
-                source_system="salesforce_crm",
-                record_id=f"{entity_a.id}-cust-{loaded}",
+            rec_a = SourceRecord(
+                source_system=a_crm,
+                record_id=f"{entity_a_id}-cust-{loaded}",
                 entity_type="customer",
-                name=m_name,
-                entity_id=entity_a.id,
+                name=a_name,
+                entity_id=entity_a_id,
                 field_values={
-                    "revenue": match.get(ok.entity_a_revenue, 0),
+                    "revenue": match.get(f"{entity_a_id}_revenue_M", 0),
                     "industry": match.get("industry", ""),
                 },
             )
-            rec_c = SourceRecord(
-                source_system="oracle_erp",
-                record_id=f"{entity_b.id}-cust-{loaded}",
+            rec_b = SourceRecord(
+                source_system=b_crm,
+                record_id=f"{entity_b_id}-cust-{loaded}",
                 entity_type="customer",
-                name=c_name,
-                entity_id=entity_b.id,
+                name=b_name,
+                entity_id=entity_b_id,
                 field_values={
-                    "revenue": match.get(ok.entity_b_revenue, 0),
+                    "revenue": match.get(f"{entity_b_id}_revenue_M", 0),
                     "industry": match.get("industry", ""),
                 },
             )
-            self._source_records.extend([rec_m, rec_c])
+            self._source_records.extend([rec_a, rec_b])
 
             # Pre-create match candidate
             cand = MatchCandidate(
                 id=f"cross-cust-{loaded}",
-                record_a=rec_m,
-                record_b=rec_c,
+                record_a=rec_a,
+                record_b=rec_b,
                 match_type=match_type if match_type in ("exact", "fuzzy", "hard") else "fuzzy",
                 confidence=confidence,
                 shared_keys=["entity_overlap"],
@@ -217,7 +221,7 @@ class EntityResolutionStore:
                     dcl_global_id=cand.dcl_global_id,
                     entity_type="customer",
                     canonical_name=canonical,
-                    source_records=[rec_m, rec_c],
+                    source_records=[rec_a, rec_b],
                     golden_record={
                         "canonical_name": canonical,
                         "combined_revenue_M": match.get("combined_revenue_M", 0),
@@ -233,39 +237,39 @@ class EntityResolutionStore:
         # Vendor overlaps
         v_offset = loaded
         for match in data.get("vendor_overlap", {}).get("matches", []):
-            m_name = match.get(ok.entity_a_name, "")
-            c_name = match.get(ok.entity_b_name, "")
-            canonical = match.get("canonical_name", m_name)
+            a_name = match.get(f"{entity_a_id}_name", "")
+            b_name = match.get(f"{entity_b_id}_name", "")
+            canonical = match.get("canonical_name", a_name)
             confidence = match.get("confidence", 1.0)
 
-            rec_m = SourceRecord(
-                source_system="sap_erp",
-                record_id=f"{entity_a.id}-vendor-{loaded}",
+            rec_a = SourceRecord(
+                source_system=a_erp,
+                record_id=f"{entity_a_id}-vendor-{loaded}",
                 entity_type="vendor",
-                name=m_name,
-                entity_id=entity_a.id,
+                name=a_name,
+                entity_id=entity_a_id,
                 field_values={
-                    "spend": match.get(ok.entity_a_spend, 0),
+                    "spend": match.get(f"{entity_a_id}_spend_M", 0),
                     "category": match.get("category", ""),
                 },
             )
-            rec_c = SourceRecord(
-                source_system="oracle_erp",
-                record_id=f"{entity_b.id}-vendor-{loaded}",
+            rec_b = SourceRecord(
+                source_system=b_erp,
+                record_id=f"{entity_b_id}-vendor-{loaded}",
                 entity_type="vendor",
-                name=c_name,
-                entity_id=entity_b.id,
+                name=b_name,
+                entity_id=entity_b_id,
                 field_values={
-                    "spend": match.get(ok.entity_b_spend, 0),
+                    "spend": match.get(f"{entity_b_id}_spend_M", 0),
                     "category": match.get("category", ""),
                 },
             )
-            self._source_records.extend([rec_m, rec_c])
+            self._source_records.extend([rec_a, rec_b])
 
             cand = MatchCandidate(
                 id=f"cross-vendor-{loaded}",
-                record_a=rec_m,
-                record_b=rec_c,
+                record_a=rec_a,
+                record_b=rec_b,
                 match_type="deterministic" if confidence >= 0.95 else "fuzzy",
                 confidence=confidence,
                 shared_keys=["entity_overlap"],
@@ -282,7 +286,7 @@ class EntityResolutionStore:
                     dcl_global_id=cand.dcl_global_id,
                     entity_type="vendor",
                     canonical_name=canonical,
-                    source_records=[rec_m, rec_c],
+                    source_records=[rec_a, rec_b],
                     golden_record={
                         "canonical_name": canonical,
                         "combined_spend_M": match.get("combined_spend_M", 0),
@@ -299,34 +303,34 @@ class EntityResolutionStore:
         people_matches = people_data.get("functions", people_data.get("matches", []))
         for match in people_matches:
             func = match.get("function", "Unknown")
-            rec_m = SourceRecord(
-                source_system="workday_hcm",
-                record_id=f"{entity_a.id}-people-{loaded}",
+            rec_a = SourceRecord(
+                source_system=a_hcm,
+                record_id=f"{entity_a_id}-people-{loaded}",
                 entity_type="people",
-                name=f"{entity_a.name} {func} Team",
-                entity_id=entity_a.id,
+                name=f"{entity_a_display} {func} Team",
+                entity_id=entity_a_id,
                 field_values={
                     "function": func,
-                    "headcount": match.get(ok.entity_a_headcount, 0),
+                    "headcount": match.get(f"{entity_a_id}_headcount", 0),
                 },
             )
-            rec_c = SourceRecord(
-                source_system="bamboohr_hcm",
-                record_id=f"{entity_b.id}-people-{loaded}",
+            rec_b = SourceRecord(
+                source_system=b_hcm,
+                record_id=f"{entity_b_id}-people-{loaded}",
                 entity_type="people",
-                name=f"{entity_b.name} {func} Team",
-                entity_id=entity_b.id,
+                name=f"{entity_b_display} {func} Team",
+                entity_id=entity_b_id,
                 field_values={
                     "function": func,
-                    "headcount": match.get(ok.entity_b_headcount, 0),
+                    "headcount": match.get(f"{entity_b_id}_headcount", 0),
                 },
             )
-            self._source_records.extend([rec_m, rec_c])
+            self._source_records.extend([rec_a, rec_b])
 
             cand = MatchCandidate(
                 id=f"cross-people-{loaded}",
-                record_a=rec_m,
-                record_b=rec_c,
+                record_a=rec_a,
+                record_b=rec_b,
                 match_type="deterministic",
                 confidence=1.0,
                 shared_keys=["function"],
@@ -342,11 +346,11 @@ class EntityResolutionStore:
                 dcl_global_id=cand.dcl_global_id,
                 entity_type="people",
                 canonical_name=f"Combined {func}",
-                source_records=[rec_m, rec_c],
+                source_records=[rec_a, rec_b],
                 golden_record={
                     "function": func,
-                    f"{ok.entity_a_headcount}": match.get(ok.entity_a_headcount, 0),
-                    f"{ok.entity_b_headcount}": match.get(ok.entity_b_headcount, 0),
+                    f"{entity_a_id}_headcount": match.get(f"{entity_a_id}_headcount", 0),
+                    f"{entity_b_id}_headcount": match.get(f"{entity_b_id}_headcount", 0),
                     "combined_headcount": match.get("combined_headcount", 0),
                 },
                 created_at=now,

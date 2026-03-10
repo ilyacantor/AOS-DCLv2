@@ -19,7 +19,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from backend.engine.engagement_config import get_engagement
+from backend.engine.engagement import get_active_engagement
 from backend.utils.log_utils import get_logger
 
 logger = get_logger("maestra")
@@ -30,100 +30,94 @@ logger = get_logger("maestra")
 
 PHASES = ("scoping", "execution", "ongoing")
 
+_DEFAULT_WORKSTREAMS: list[dict[str, Any]] = [
+    {
+        "name": "IT Systems Migration",
+        "owner": "",
+        "status": "not_started",
+        "progress_pct": 0,
+        "milestones": [
+            {"name": "System inventory complete", "target_date": "2026-08-15", "status": "pending"},
+            {"name": "Migration plan approved", "target_date": "2026-09-30", "status": "pending"},
+            {"name": "Data migration complete", "target_date": "2027-03-31", "status": "pending"},
+        ],
+    },
+    {
+        "name": "Organizational Design",
+        "owner": "",
+        "status": "not_started",
+        "progress_pct": 0,
+        "milestones": [
+            {"name": "Org assessment complete", "target_date": "2026-08-01", "status": "pending"},
+            {"name": "New org chart approved", "target_date": "2026-09-15", "status": "pending"},
+            {"name": "Roles fully mapped", "target_date": "2026-11-30", "status": "pending"},
+        ],
+    },
+    {
+        "name": "Client Retention",
+        "owner": "",
+        "status": "not_started",
+        "progress_pct": 0,
+        "milestones": [
+            {"name": "Top-50 client outreach complete", "target_date": "2026-07-31", "status": "pending"},
+            {"name": "Retention risk assessment", "target_date": "2026-08-31", "status": "pending"},
+            {"name": "Client migration plans finalized", "target_date": "2026-10-31", "status": "pending"},
+        ],
+    },
+    {
+        "name": "Vendor Consolidation",
+        "owner": "",
+        "status": "not_started",
+        "progress_pct": 0,
+        "milestones": [
+            {"name": "Vendor inventory complete", "target_date": "2026-08-15", "status": "pending"},
+            {"name": "Consolidation plan approved", "target_date": "2026-10-15", "status": "pending"},
+            {"name": "Vendor rationalization complete", "target_date": "2027-06-30", "status": "pending"},
+        ],
+    },
+    {
+        "name": "Culture Integration",
+        "owner": "",
+        "status": "not_started",
+        "progress_pct": 0,
+        "milestones": [
+            {"name": "Culture assessment survey", "target_date": "2026-07-31", "status": "pending"},
+            {"name": "Integration workshops complete", "target_date": "2026-09-30", "status": "pending"},
+            {"name": "Unified values rollout", "target_date": "2026-12-31", "status": "pending"},
+        ],
+    },
+    {
+        "name": "Financial Integration",
+        "owner": "",
+        "status": "not_started",
+        "progress_pct": 0,
+        "milestones": [
+            {"name": "Chart of accounts harmonized", "target_date": "2026-08-31", "status": "pending"},
+            {"name": "Consolidated reporting live", "target_date": "2026-10-31", "status": "pending"},
+            {"name": "Audit-ready close process", "target_date": "2027-03-31", "status": "pending"},
+        ],
+    },
+    {
+        "name": "Go-to-Market Unification",
+        "owner": "",
+        "status": "not_started",
+        "progress_pct": 0,
+        "milestones": [
+            {"name": "Unified brand strategy approved", "target_date": "2026-09-15", "status": "pending"},
+            {"name": "Combined sales playbook", "target_date": "2026-11-30", "status": "pending"},
+            {"name": "Joint pipeline operational", "target_date": "2027-03-31", "status": "pending"},
+        ],
+    },
+]
 
-def _default_workstreams() -> list[dict[str, Any]]:
-    """Return a fresh copy of default workstreams."""
-    return [
-        {
-            "name": "IT Systems Migration",
-            "owner": "",
-            "status": "not_started",
-            "progress_pct": 0,
-            "milestones": [
-                {"name": "System inventory complete", "target_date": "2026-08-15", "status": "pending"},
-                {"name": "Migration plan approved", "target_date": "2026-09-30", "status": "pending"},
-                {"name": "Data migration complete", "target_date": "2027-03-31", "status": "pending"},
-            ],
-        },
-        {
-            "name": "Organizational Design",
-            "owner": "",
-            "status": "not_started",
-            "progress_pct": 0,
-            "milestones": [
-                {"name": "Org assessment complete", "target_date": "2026-08-01", "status": "pending"},
-                {"name": "New org chart approved", "target_date": "2026-09-15", "status": "pending"},
-                {"name": "Roles fully mapped", "target_date": "2026-11-30", "status": "pending"},
-            ],
-        },
-        {
-            "name": "Client Retention",
-            "owner": "",
-            "status": "not_started",
-            "progress_pct": 0,
-            "milestones": [
-                {"name": "Top-50 client outreach complete", "target_date": "2026-07-31", "status": "pending"},
-                {"name": "Retention risk assessment", "target_date": "2026-08-31", "status": "pending"},
-                {"name": "Client migration plans finalized", "target_date": "2026-10-31", "status": "pending"},
-            ],
-        },
-        {
-            "name": "Vendor Consolidation",
-            "owner": "",
-            "status": "not_started",
-            "progress_pct": 0,
-            "milestones": [
-                {"name": "Vendor inventory complete", "target_date": "2026-08-15", "status": "pending"},
-                {"name": "Consolidation plan approved", "target_date": "2026-10-15", "status": "pending"},
-                {"name": "Vendor rationalization complete", "target_date": "2027-06-30", "status": "pending"},
-            ],
-        },
-        {
-            "name": "Culture Integration",
-            "owner": "",
-            "status": "not_started",
-            "progress_pct": 0,
-            "milestones": [
-                {"name": "Culture assessment survey", "target_date": "2026-07-31", "status": "pending"},
-                {"name": "Integration workshops complete", "target_date": "2026-09-30", "status": "pending"},
-                {"name": "Unified values rollout", "target_date": "2026-12-31", "status": "pending"},
-            ],
-        },
-        {
-            "name": "Financial Integration",
-            "owner": "",
-            "status": "not_started",
-            "progress_pct": 0,
-            "milestones": [
-                {"name": "Chart of accounts harmonized", "target_date": "2026-08-31", "status": "pending"},
-                {"name": "Consolidated reporting live", "target_date": "2026-10-31", "status": "pending"},
-                {"name": "Audit-ready close process", "target_date": "2027-03-31", "status": "pending"},
-            ],
-        },
-        {
-            "name": "Go-to-Market Unification",
-            "owner": "",
-            "status": "not_started",
-            "progress_pct": 0,
-            "milestones": [
-                {"name": "Unified brand strategy approved", "target_date": "2026-09-15", "status": "pending"},
-                {"name": "Combined sales playbook", "target_date": "2026-11-30", "status": "pending"},
-                {"name": "Joint pipeline operational", "target_date": "2027-03-31", "status": "pending"},
-            ],
-        },
-    ]
-
-
-def _default_risks() -> list[dict[str, Any]]:
-    """Return a fresh copy of default risks, using entity names from config."""
-    eng = get_engagement()
-    entity_a_name = eng.entity_a.name
-    entity_b_name = eng.entity_b.name
-
+def _build_default_risks(eng) -> list[dict[str, Any]]:
+    """Build default risk register with entity names from engagement config."""
+    target = eng.entity_b.display_name
+    acquirer = eng.entity_a.display_name
     return [
         {
             "id": "RSK-001",
-            "description": f"Key talent attrition during integration — critical {entity_b_name} engineers may leave before knowledge transfer completes",
+            "description": f"Key talent attrition during integration — critical {target} engineers may leave before knowledge transfer completes",
             "severity": "high",
             "mitigation": "Retention bonuses for top-30 critical roles; accelerated knowledge-transfer sprints",
             "status": "open",
@@ -137,7 +131,7 @@ def _default_risks() -> list[dict[str, Any]]:
         },
         {
             "id": "RSK-003",
-            "description": f"IT integration delays — legacy {entity_b_name} systems run on-prem Oracle stack incompatible with {entity_a_name} cloud-first architecture",
+            "description": f"IT integration delays — legacy {target} systems run on-prem Oracle stack incompatible with {acquirer} cloud-first architecture",
             "severity": "medium",
             "mitigation": "Parallel-run strategy with 90-day coexistence window; dedicated migration pod",
             "status": "open",
@@ -150,7 +144,6 @@ def _default_risks() -> list[dict[str, Any]]:
             "status": "open",
         },
     ]
-
 
 # ---------------------------------------------------------------------------
 # Phase-advance criteria
@@ -203,30 +196,32 @@ def _can_advance(state: dict) -> tuple[bool, str]:
 def create_engagement() -> dict:
     """Create a new integration engagement with default state from engagement config."""
 
-    eng = get_engagement()
+    import copy
+
+    eng = get_active_engagement()
     now = datetime.now(timezone.utc).isoformat()
     engagement_id = str(uuid.uuid4())
-
-    deal_name = eng.deal_name
+    dp = eng.deal_parameters
+    st = eng.synergy_targets
 
     state: dict[str, Any] = {
         "engagement_id": engagement_id,
         "phase": "scoping",
         "created_at": now,
-        "deal_name": deal_name,
+        "deal_name": eng.deal_name,
         "deal_parameters": {
-            "acquirer": eng.entity_a.name,
-            "target": eng.entity_b.name,
-            "deal_value_M": 3200.0,
-            "close_date": "2026-06-30",
-            "integration_timeline_months": 18,
+            "acquirer": eng.entity_a.display_name,
+            "target": eng.entity_b.display_name,
+            "deal_value_M": dp.get("deal_value_M", 0.0),
+            "close_date": dp.get("close_date", ""),
+            "integration_timeline_months": dp.get("integration_timeline_months", 0),
         },
-        "workstreams": _default_workstreams(),
-        "risks": _default_risks(),
+        "workstreams": copy.deepcopy(_DEFAULT_WORKSTREAMS),
+        "risks": _build_default_risks(eng),
         "synergy_tracker": {
-            "cost_synergies_target_M": 200.0,
+            "cost_synergies_target_M": st.get("cost_synergies_target_M", 0.0),
             "cost_synergies_realized_M": 0.0,
-            "revenue_synergies_target_M": 50.0,
+            "revenue_synergies_target_M": st.get("revenue_synergies_target_M", 0.0),
             "revenue_synergies_realized_M": 0.0,
         },
         "conversation_history": [],
@@ -442,17 +437,8 @@ def _find_workstream(name_fragment: str, state: dict) -> dict | None:
     return None
 
 
-def _deal_label(state: dict) -> str:
-    """Return the deal name from state, falling back to engagement config."""
-    deal_name = state.get("deal_name")
-    if deal_name:
-        return deal_name
-    eng = get_engagement()
-    return eng.deal_name
-
-
 def _handle_advance(state: dict) -> tuple[str, list[str], list[str]]:
-    deal_name = _deal_label(state)
+    eng = get_active_engagement()
     allowed, reason = _can_advance(state)
     if not allowed:
         return (
@@ -468,21 +454,21 @@ def _handle_advance(state: dict) -> tuple[str, list[str], list[str]]:
 
     return (
         f"Phase advanced from {old_phase} to {new_phase}. "
-        f"The {deal_name} integration now enters the {new_phase} phase.",
+        f"The {eng.deal_name} integration now enters the {new_phase} phase.",
         [f"phase_advanced:{old_phase}->{new_phase}"],
         _phase_suggestions(new_phase),
     )
 
 
 def _handle_status(state: dict) -> tuple[str, list[str], list[str]]:
-    deal_name = _deal_label(state)
+    eng = get_active_engagement()
     summary = get_engagement_status(state)
     ws_lines = "\n".join(
         f"  - {ws['name']}: {ws['status']} ({ws['progress_pct']}%)"
         for ws in summary["workstream_summary"]
     )
     text = (
-        f"{deal_name} — Status Report\n"
+        f"{eng.deal_name} — Status Report\n"
         f"Phase: {summary['phase'].title()}\n"
         f"Overall progress: {summary['overall_progress_pct']}%\n"
         f"Open risks: {summary['open_risks']}\n"
@@ -563,7 +549,6 @@ def _handle_progress(msg_lower: str, state: dict) -> tuple[str, list[str], list[
 
 
 def _handle_workstream(msg_lower: str, state: dict) -> tuple[str, list[str], list[str]]:
-    deal_name = _deal_label(state)
     ws_name = msg_lower.replace("workstream", "", 1).strip()
     if not ws_name:
         # Show all workstreams
@@ -572,7 +557,7 @@ def _handle_workstream(msg_lower: str, state: dict) -> tuple[str, list[str], lis
             for ws in state["workstreams"]
         )
         return (
-            f"All workstreams for {deal_name}:\n{lines}",
+            f"All workstreams for {get_active_engagement().deal_name}:\n{lines}",
             ["workstreams_listed"],
             _phase_suggestions(state["phase"]),
         )
@@ -599,11 +584,11 @@ def _handle_workstream(msg_lower: str, state: dict) -> tuple[str, list[str], lis
 
 
 def _handle_risk(state: dict) -> tuple[str, list[str], list[str]]:
-    deal_name = _deal_label(state)
+    eng = get_active_engagement()
     risks = state.get("risks", [])
     if not risks:
         return (
-            f"No risks currently tracked for the {deal_name} integration.",
+            f"No risks currently tracked for the {eng.deal_name} integration.",
             ["risks_viewed"],
             ["Add a risk by describing potential integration threats."],
         )
@@ -615,14 +600,13 @@ def _handle_risk(state: dict) -> tuple[str, list[str], list[str]]:
     )
     open_count = sum(1 for r in risks if r["status"] == "open")
     text = (
-        f"Risk Register — {deal_name}\n"
+        f"Risk Register — {eng.deal_name}\n"
         f"Total risks: {len(risks)} | Open: {open_count}\n\n{lines}"
     )
     return text, ["risks_viewed"], _phase_suggestions(state["phase"])
 
 
 def _handle_synergy(state: dict) -> tuple[str, list[str], list[str]]:
-    deal_name = _deal_label(state)
     s = state.get("synergy_tracker", {})
     cost_target = s.get("cost_synergies_target_M", 0)
     cost_realized = s.get("cost_synergies_realized_M", 0)
@@ -633,7 +617,7 @@ def _handle_synergy(state: dict) -> tuple[str, list[str], list[str]]:
     pct = round((total_realized / total_target) * 100, 1) if total_target > 0 else 0.0
 
     text = (
-        f"Synergy Tracker — {deal_name}\n"
+        f"Synergy Tracker — {get_active_engagement().deal_name}\n"
         f"Cost synergies:    ${cost_realized:.1f}M realized of ${cost_target:.1f}M target\n"
         f"Revenue synergies: ${rev_realized:.1f}M realized of ${rev_target:.1f}M target\n"
         f"Total realization:  {pct}% (${total_realized:.1f}M of ${total_target:.1f}M)"
@@ -642,7 +626,6 @@ def _handle_synergy(state: dict) -> tuple[str, list[str], list[str]]:
 
 
 def _handle_milestone(state: dict) -> tuple[str, list[str], list[str]]:
-    deal_name = _deal_label(state)
     milestones: list[tuple[str, dict]] = []
     for ws in state["workstreams"]:
         for ms in ws.get("milestones", []):
@@ -662,7 +645,7 @@ def _handle_milestone(state: dict) -> tuple[str, list[str], list[str]]:
         f"  - [{ms['target_date']}] {ws_name}: {ms['name']}"
         for ws_name, ms in milestones
     )
-    text = f"Upcoming Milestones — {deal_name}\n{lines}"
+    text = f"Upcoming Milestones — {get_active_engagement().deal_name}\n{lines}"
     return text, ["milestones_viewed"], _phase_suggestions(state["phase"])
 
 
@@ -672,50 +655,32 @@ def _handle_milestone(state: dict) -> tuple[str, list[str], list[str]]:
 
 
 class _EngineContext:
-    """Lazily loads and caches all engine outputs for a single request."""
+    """Accessor over the module-level engine cache.
 
-    def __init__(self) -> None:
-        self._bridge: dict | None = None
-        self._cross_sell: dict | None = None
-        self._qoe: dict | None = None
-        self._overlap: dict | None = None
-        self._combining: dict | None = None
+    All expensive computation is done once in _engine_cache and reused across
+    requests until source data files change on disk.  This class is a thin
+    wrapper — it holds no per-instance state.
+    """
 
     def get_bridge(self) -> dict:
-        if self._bridge is None:
-            from backend.engine.ebitda_bridge import compute_ebitda_bridge
-            self._bridge = compute_ebitda_bridge(self.get_cross_sell())
-        return self._bridge
+        from backend.engine import _engine_cache
+        return _engine_cache.get("bridge")
 
     def get_cross_sell(self) -> dict:
-        if self._cross_sell is None:
-            from backend.engine.cross_sell import run_cross_sell_engine
-            self._cross_sell = run_cross_sell_engine().to_dict()
-        return self._cross_sell
+        from backend.engine import _engine_cache
+        return _engine_cache.get("cross_sell")
 
     def get_qoe(self) -> dict:
-        if self._qoe is None:
-            from backend.engine.qoe import compute_qoe
-            self._qoe = compute_qoe()
-        return self._qoe
+        from backend.engine import _engine_cache
+        return _engine_cache.get("qoe")
 
     def get_overlap(self) -> dict:
-        if self._overlap is None:
-            import json
-            from pathlib import Path
-            data_dir = Path(__file__).resolve().parent.parent.parent / "data"
-            with open(data_dir / "entity_overlap.json") as f:
-                self._overlap = json.load(f)
-        return self._overlap
+        from backend.engine import _engine_cache
+        return _engine_cache.get("overlap")
 
     def get_combining(self) -> dict:
-        if self._combining is None:
-            import json
-            from pathlib import Path
-            data_dir = Path(__file__).resolve().parent.parent.parent / "data"
-            with open(data_dir / "combining_statements.json") as f:
-                self._combining = json.load(f)
-        return self._combining
+        from backend.engine import _engine_cache
+        return _engine_cache.get("combining")
 
 
 def _fmt_m(dollars: float) -> str:
@@ -761,7 +726,7 @@ def _handle_overview(state: dict, ctx: _EngineContext) -> tuple[str, list[str], 
     cs_summary = cs.get("summary", {})
 
     text = (
-        f"Good morning. Here's the current status of the Meridian-Cascadia engagement.\n\n"
+        f"Good morning. Here's the current status of the {get_active_engagement().deal_name} engagement.\n\n"
         f"All five reconciliation objects are complete:\n"
         f"  ✓ Financial Statements — COFA unified, combining P&L operational\n"
         f"  ✓ Customers — {co.get('total_overlapping', 0)} overlapping accounts identified, "
@@ -797,10 +762,11 @@ def _handle_bridge_detail(state: dict, ctx: _EngineContext) -> tuple[str, list[s
         prefix = "−" if syn.get("category") == "dis_synergy" else "+"
         syn_lines.append(f"  {prefix} {syn['name']}: {_fmt_m(abs(syn['amount']))} ({syn['confidence']})")
 
+    eng = get_active_engagement()
     text = (
-        f"EBITDA Bridge — Meridian-Cascadia\n\n"
+        f"EBITDA Bridge — {eng.deal_name}\n\n"
         f"Reported EBITDA (Combined): {_fmt_m(rep['combined_reported'])}\n"
-        f"  Meridian: {_fmt_m(rep['meridian'])} | Cascadia: {_fmt_m(rep['cascadia'])}\n\n"
+        f"  {eng.entity_a.display_name}: {_fmt_m(rep[eng.entity_a.id])} | {eng.entity_b.display_name}: {_fmt_m(rep[eng.entity_b.id])}\n\n"
         f"Entity-Level Adjustments:\n" + "\n".join(adj_lines) + "\n\n"
         f"Entity-Adjusted EBITDA: {_fmt_m(ea['combined'])}\n\n"
         f"Combination Synergies:\n" + "\n".join(syn_lines) + "\n\n"
@@ -851,12 +817,13 @@ def _handle_cross_sell_detail(state: dict, ctx: _EngineContext, msg_lower: str) 
             f"{sum(1 for c in filtered if c['propensity_score'] > 80)} high-confidence."
         )
     else:
+        eng = get_active_engagement()
         text = (
-            f"Cross-Sell Pipeline — Meridian-Cascadia\n\n"
-            f"Meridian → Cascadia (advisory clients → BPM services):\n"
+            f"Cross-Sell Pipeline — {eng.deal_name}\n\n"
+            f"{eng.entity_a.display_name} → {eng.entity_b.display_name} (advisory clients → BPM services):\n"
             f"  {summary.get('m_to_c_candidates', 0)} candidates, {_fmt_m(summary.get('m_to_c_total_acv', 0))} pipeline\n"
             f"  {summary.get('m_to_c_high_conf_count', 0)} high-confidence ({_fmt_m(summary.get('m_to_c_high_conf_acv', 0))})\n\n"
-            f"Cascadia → Meridian (BPM clients → consulting services):\n"
+            f"{eng.entity_b.display_name} → {eng.entity_a.display_name} (BPM clients → consulting services):\n"
             f"  {summary.get('c_to_m_candidates', 0)} candidates, {_fmt_m(summary.get('c_to_m_total_acv', 0))} pipeline\n"
             f"  {summary.get('c_to_m_high_conf_count', 0)} high-confidence ({_fmt_m(summary.get('c_to_m_high_conf_acv', 0))})\n\n"
             f"Total pipeline: {summary.get('total_candidates', 0)} candidates, {_fmt_m(summary.get('total_pipeline_acv', 0))}\n"
@@ -923,33 +890,39 @@ def _handle_people_detail(state: dict, ctx: _EngineContext, msg_lower: str) -> t
             func_filter = fn
             break
 
+    eng = get_active_engagement()
     if func_filter:
         fn = func_filter
         role_lines = []
+        a_id, b_id = eng.entity_a.id, eng.entity_b.id
         for rd in fn.get("role_detail", []):
             role_lines.append(
-                f"  - {rd['title']}: M={rd['meridian_count']}, C={rd['cascadia_count']}, "
+                f"  - {rd['title']}: {eng.entity_a.display_name}={rd.get(f'{a_id}_count', 0)}, "
+                f"{eng.entity_b.display_name}={rd.get(f'{b_id}_count', 0)}, "
                 f"Combined={rd['combined_count']} [{rd.get('consolidation_action', 'N/A').upper()}]"
             )
         text = (
             f"People Overlap — {fn['function']}\n\n"
-            f"Meridian: {fn['meridian_headcount']} | Cascadia: {fn['cascadia_headcount']} | "
+            f"{eng.entity_a.display_name}: {fn.get(f'{a_id}_headcount', 0)} | "
+            f"{eng.entity_b.display_name}: {fn.get(f'{b_id}_headcount', 0)} | "
             f"Combined: {fn['combined_headcount']}\n\n"
             f"Key roles: {', '.join(fn.get('role_overlap_examples', []))}\n\n"
             f"Note: {fn.get('definitional_note', '')}\n\n"
             f"Role detail:\n" + "\n".join(role_lines)
         )
     else:
+        a_id, b_id = eng.entity_a.id, eng.entity_b.id
         fn_lines = []
         for fn in functions:
             fn_lines.append(
-                f"  - {fn['function']}: M={fn['meridian_headcount']}, C={fn['cascadia_headcount']}, "
+                f"  - {fn['function']}: {eng.entity_a.display_name}={fn.get(f'{a_id}_headcount', 0)}, "
+                f"{eng.entity_b.display_name}={fn.get(f'{b_id}_headcount', 0)}, "
                 f"Combined={fn['combined_headcount']}"
             )
         text = (
-            f"People Overlap — Meridian-Cascadia\n\n"
-            f"Total corporate: M={po.get('total_meridian_corporate', 0)}, "
-            f"C={po.get('total_cascadia_corporate', 0)}, "
+            f"People Overlap — {eng.deal_name}\n\n"
+            f"Total corporate: {eng.entity_a.display_name}={po.get(f'total_{a_id}_corporate', 0)}, "
+            f"{eng.entity_b.display_name}={po.get(f'total_{b_id}_corporate', 0)}, "
             f"Combined={po.get('total_combined_corporate', 0)}\n\n"
             f"By function:\n" + "\n".join(fn_lines)
         )
@@ -983,24 +956,24 @@ def _handle_dashboard_detail(state: dict, ctx: _EngineContext, msg_lower: str) -
 
 
 def _handle_default(state: dict) -> tuple[str, list[str], list[str]]:
-    deal_name = _deal_label(state)
+    eng = get_active_engagement()
     phase = state["phase"]
     guidance = {
         "scoping": (
-            f"You are in the Scoping phase of the {deal_name} integration. "
+            f"You are in the Scoping phase of the {eng.deal_name} integration. "
             "Key activities: finalize deal parameters, assign workstream owners, "
             "validate synergy assumptions, and confirm the integration timeline. "
             "Use 'status' to see where things stand, or 'workstream <name>' to drill into a specific area."
         ),
         "execution": (
-            f"You are in the Execution phase of the {deal_name} integration. "
+            f"You are in the Execution phase of the {eng.deal_name} integration. "
             "Key activities: drive workstream progress, track milestones, manage risks, "
             "and begin realizing synergies. "
             "Use 'progress <workstream> <pct>' to update progress, 'risk' to review the risk register, "
             "or 'synergy' to check synergy realization."
         ),
         "ongoing": (
-            f"You are in the Ongoing Management phase of the {deal_name} integration. "
+            f"You are in the Ongoing Management phase of the {eng.deal_name} integration. "
             "Key activities: monitor integration KPIs, track run-rate synergy capture, "
             "manage governance cadence, and resolve residual integration items. "
             "Use 'synergy' to track realization, 'risk' to review open items, "

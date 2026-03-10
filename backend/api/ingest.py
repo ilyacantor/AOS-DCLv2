@@ -355,6 +355,10 @@ class IngestStore:
         # Throttled Redis sync: skip if called within last 250ms
         self._last_sync_time: float = 0.0
 
+        # Generation counter — increments on every state mutation.
+        # Used by downstream caches (recon, ingest stats) for invalidation.
+        self._generation: int = 0
+
         # Rehydrate from Redis on startup
         if self._redis:
             self._load_from_redis()
@@ -408,12 +412,22 @@ class IngestStore:
         except Exception as e:
             logger.warning(f"[IngestStore] Failed to save to disk: {e}")
 
+    @property
+    def generation(self) -> int:
+        """Monotonic counter incremented on every state mutation.
+
+        Downstream caches (recon endpoint, ingest stats) compare this value
+        against their cached generation to decide whether to recompute.
+        """
+        return self._generation
+
     def _mark_disk_dirty(self) -> None:
         """Schedule a debounced disk flush (2s delay).
 
         Multiple calls within the 2s window coalesce into a single write.
         Redis is the durable buffer — disk is a cold backup that can lag 2s.
         """
+        self._generation += 1
         with self._disk_timer_lock:
             self._disk_dirty = True
             if self._disk_timer is not None and self._disk_timer.is_alive():
@@ -884,6 +898,7 @@ class IngestStore:
         Multiple calls within the 1s window coalesce into a single write.
         The in-memory activity log is always up-to-date for reads.
         """
+        self._generation += 1
         with self._activity_timer_lock:
             self._activity_dirty = True
             if self._activity_timer is not None and self._activity_timer.is_alive():

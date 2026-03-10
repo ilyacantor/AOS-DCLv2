@@ -10,7 +10,7 @@ Handles:
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
@@ -674,8 +674,86 @@ def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
 # GET /api/dcl/reconciliation/cross-system
 # ---------------------------------------------------------------------------
 
+# Module-level cache for the cross-system endpoint.
+# Keyed by (generation, snapshot_param) so different snapshot views are cached independently.
+_xsys_cache: Dict[Optional[str], dict] = {}
+_xsys_cache_gen: int = -1
+
+
+def _get_revenue_2025(snapshot_name: Optional[str] = None) -> Optional[float]:
+    """Return 2025 annual revenue scoped to a specific snapshot.
+
+    Filters materialized revenue points to only those whose dispatch_id
+    matches a dispatch belonging to the given snapshot.  Each snapshot
+    represents a distinct pipeline run with its own set of pipes and
+    data — revenue varies by snapshot.
+
+    Deduplicates by (period, source_system, pipe_id), then sums Q1..Q4.
+    Returns None if no 2025 revenue data exists for the snapshot.
+    """
+    try:
+        store = get_ingest_store()
+
+        # Build the set of dispatch_ids for this snapshot
+        allowed_dispatch_ids: Optional[set] = None
+        if snapshot_name:
+            dispatches = store.get_dispatches()
+            allowed_dispatch_ids = set()
+            for d in dispatches:
+                d_snap = d.get("snapshot_name", "")
+                if d_snap == snapshot_name:
+                    allowed_dispatch_ids.add(d.get("dispatch_id", ""))
+
+        # Get all revenue points for 2025
+        all_points = store.get_materialized_points(
+            metric="revenue",
+            time_range={"start": "2025-Q1", "end": "2025-Q4"},
+        )
+        if not all_points:
+            return None
+
+        # Filter to snapshot's dispatch_ids if scoped
+        if allowed_dispatch_ids is not None:
+            points = [
+                pt for pt in all_points
+                if pt.get("dispatch_id", "") in allowed_dispatch_ids
+            ]
+        else:
+            points = all_points
+
+        if not points:
+            return None
+
+        # Deduplicate by (period, source_system, pipe_id) — keep latest
+        dedup: dict = {}
+        for pt in points:
+            period = pt.get("period", "")
+            if not period.startswith("2025"):
+                continue
+            key = (period, pt.get("source_system", ""), pt.get("pipe_id", ""))
+            existing = dedup.get(key)
+            if existing is None or pt.get("materialized_at", "") > existing.get("materialized_at", ""):
+                dedup[key] = pt
+
+        if not dedup:
+            return None
+
+        # Aggregate by period (sum across sources), then sum quarters
+        period_totals: Dict[str, float] = {}
+        for (period, _, _), pt in dedup.items():
+            period_totals[period] = period_totals.get(period, 0) + float(pt["value"])
+
+        total = sum(period_totals.values())
+        return round(total, 2) if total > 0 else None
+    except Exception:
+        return None
+
+
 @router.get("/api/dcl/reconciliation/cross-system")
-def get_cross_system_reconciliation(http_request: Request):
+def get_cross_system_reconciliation(
+    http_request: Request,
+    snapshot: Optional[str] = Query(None, description="Snapshot name to scope recon to (default: latest)"),
+):
     """Cross-system stats reconciliation — read-only aggregation.
 
     Pulls numbers from:
@@ -684,11 +762,21 @@ def get_cross_system_reconciliation(http_request: Request):
       - IngestStore drop log (rejected pipes)
       - IngestStore receipts (content phase: ingested pipes)
       - AOD-authoritative systems_of_record (from app.state, set by export-pipes)
+      - Materialized revenue data scoped to the selected snapshot
 
     Returns a unified view with per-system stats, deltas, and explanations.
     No data is mutated — this is purely a read endpoint.
+    Cached until IngestStore mutates (generation counter changes).
     """
+    global _xsys_cache, _xsys_cache_gen
     store = get_ingest_store()
+    current_gen = store.generation
+    if _xsys_cache_gen == current_gen and snapshot in _xsys_cache:
+        return _xsys_cache[snapshot]
+    # Generation changed — clear all cached snapshots
+    if _xsys_cache_gen != current_gen:
+        _xsys_cache = {}
+        _xsys_cache_gen = current_gen
     pipe_store = get_pipe_store()
     now = utc_now()
 
@@ -732,8 +820,9 @@ def get_cross_system_reconciliation(http_request: Request):
     all_receipts = store.get_all_receipts()
     dispatches = store.get_dispatches()
 
-    # Determine the snapshot to scope receipt counting
-    snapshot_name_filter = latest_export.snapshot_name if latest_export else None
+    # Determine the snapshot to scope receipt counting.
+    # If ?snapshot= query param is provided, use that instead of latest export.
+    snapshot_name_filter = snapshot if snapshot else (latest_export.snapshot_name if latest_export else None)
 
     # Count unique receipt pipe_ids matching this snapshot across Farm dispatches.
     # This is the ground truth — each receipt is proof DCL accepted and stored data
@@ -1016,10 +1105,14 @@ def get_cross_system_reconciliation(http_request: Request):
             farm_failure_summary, key=farm_failure_summary.get  # type: ignore[arg-type]
         )
 
-    return {
+    # --- 2025 FY Revenue (from snapshot's materialized data) ---
+    revenue_2025 = _get_revenue_2025(snapshot_name=snapshot_name_filter)
+
+    result = {
         "snapshot_name": snapshot_name,
         "snapshot_filter": snapshot_name_filter,
         "other_snapshots": other_snapshots,
+        "revenue_2025": revenue_2025,
         "aod_run_id": aod_run_id,
         "dispatch_id": dispatch_id,
         "recon_at": now,
@@ -1088,3 +1181,5 @@ def get_cross_system_reconciliation(http_request: Request):
             "content": content_entry,
         },
     }
+    _xsys_cache[snapshot] = result
+    return result

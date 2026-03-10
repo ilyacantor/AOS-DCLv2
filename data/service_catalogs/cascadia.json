@@ -1,51 +1,50 @@
 {
-    "entity_id": "cascadia",
-    "entity_name": "Cascadia Process Solutions",
-    "category": "BPM / Outsourcing",
-    "services": [
-        {
-            "name": "F&A Outsourcing",
-            "typical_buyer": "CFO/VP Finance",
-            "acv_low": 500000,
-            "acv_high": 5000000,
-            "sweet_spot_industries": ["Financial Services", "Healthcare", "Insurance", "Manufacturing"],
-            "adjacent_industries": ["Technology", "Retail", "Energy", "Telecommunications"],
-            "sweet_spot_employees_min": 2000,
-            "sweet_spot_employees_max": 200000,
-            "trigger_keywords": ["post-transformation handoff", "cost reduction", "finance ops"]
-        },
-        {
-            "name": "CX Management",
-            "typical_buyer": "VP CX/VP Shared Services",
-            "acv_low": 800000,
-            "acv_high": 8000000,
-            "sweet_spot_industries": ["Telecommunications", "Financial Services", "Retail", "Insurance"],
-            "adjacent_industries": ["Healthcare", "Technology", "Manufacturing"],
-            "sweet_spot_employees_min": 5000,
-            "sweet_spot_employees_max": 200000,
-            "trigger_keywords": ["CX fragmentation", "multi-channel pain", "call center consolidation"]
-        },
-        {
-            "name": "Data & Analytics BPO",
-            "typical_buyer": "CDO/VP Analytics",
-            "acv_low": 300000,
-            "acv_high": 2000000,
-            "sweet_spot_industries": ["Financial Services", "Technology", "Healthcare", "Retail"],
-            "adjacent_industries": ["Insurance", "Manufacturing", "Telecommunications"],
-            "sweet_spot_employees_min": 1000,
-            "sweet_spot_employees_max": 100000,
-            "trigger_keywords": ["data ops gap", "reporting burden", "analytics backlog"]
-        },
-        {
-            "name": "Industry Process Solutions",
-            "typical_buyer": "COO/VP Ops",
-            "acv_low": 1000000,
-            "acv_high": 10000000,
-            "sweet_spot_industries": ["Healthcare", "Insurance", "Financial Services", "Manufacturing"],
-            "adjacent_industries": ["Pharmaceuticals", "Energy", "Retail"],
-            "sweet_spot_employees_min": 5000,
-            "sweet_spot_employees_max": 200000,
-            "trigger_keywords": ["regulatory ops", "industry-specific complexity", "process automation"]
-        }
-    ]
+  "entity_id": "cascadia",
+  "entity_name": "Cascadia Process Solutions",
+  "services": [
+    {
+      "name": "F&A Outsourcing",
+      "typical_buyer": "CFO/VP Finance",
+      "acv_low": 500000,
+      "acv_high": 5000000,
+      "sweet_spot_industries": ["Financial Services", "Healthcare", "Insurance", "Manufacturing"],
+      "adjacent_industries": ["Technology", "Retail", "Energy", "Telecommunications"],
+      "sweet_spot_employees_min": 2000,
+      "sweet_spot_employees_max": 200000,
+      "trigger_keywords": ["post-transformation handoff", "cost reduction", "finance ops"]
+    },
+    {
+      "name": "CX Management",
+      "typical_buyer": "VP CX/VP Shared Services",
+      "acv_low": 800000,
+      "acv_high": 8000000,
+      "sweet_spot_industries": ["Telecommunications", "Financial Services", "Retail", "Insurance"],
+      "adjacent_industries": ["Healthcare", "Technology", "Manufacturing"],
+      "sweet_spot_employees_min": 5000,
+      "sweet_spot_employees_max": 200000,
+      "trigger_keywords": ["CX fragmentation", "multi-channel pain", "call center consolidation"]
+    },
+    {
+      "name": "Data & Analytics BPO",
+      "typical_buyer": "CDO/VP Analytics",
+      "acv_low": 300000,
+      "acv_high": 2000000,
+      "sweet_spot_industries": ["Financial Services", "Technology", "Healthcare", "Retail"],
+      "adjacent_industries": ["Insurance", "Manufacturing", "Telecommunications"],
+      "sweet_spot_employees_min": 1000,
+      "sweet_spot_employees_max": 100000,
+      "trigger_keywords": ["data ops gap", "reporting burden", "analytics backlog"]
+    },
+    {
+      "name": "Industry Process Solutions",
+      "typical_buyer": "COO/VP Ops",
+      "acv_low": 1000000,
+      "acv_high": 10000000,
+      "sweet_spot_industries": ["Healthcare", "Insurance", "Financial Services", "Manufacturing"],
+      "adjacent_industries": ["Pharmaceuticals", "Energy", "Retail"],
+      "sweet_spot_employees_min": 5000,
+      "sweet_spot_employees_max": 200000,
+      "trigger_keywords": ["regulatory ops", "industry-specific complexity", "process automation"]
+    }
+  ]
 }

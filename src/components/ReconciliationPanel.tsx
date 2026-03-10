@@ -4,6 +4,9 @@ import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 
 interface CrossSystemData {
   snapshot_name: string;
+  snapshot_filter: string | null;
+  other_snapshots: Array<{ snapshot_name: string; pipe_count: number }>;
+  revenue_2025: number | null;
   aod_run_id: string;
   dispatch_id: string;
   recon_at: string;
@@ -120,16 +123,21 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
   const [xsysData, setXsysData] = useState<CrossSystemData | null>(null);
   const [xsysLoading, setXsysLoading] = useState(true);
   const [xsysError, setXsysError] = useState<string | null>(null);
+  const [selectedSnapshot, setSelectedSnapshot] = useState<string>('');
 
   // Failed pipes state
   const [failedOpen, setFailedOpen] = useState(false);
   const [failedFilter, setFailedFilter] = useState('');
 
-  const fetchXsysData = async () => {
+  const fetchXsysData = async (snapshotOverride?: string) => {
     setXsysLoading(true);
     setXsysError(null);
     try {
-      const res = await fetch('/api/dcl/reconciliation/cross-system');
+      const snap = snapshotOverride ?? selectedSnapshot;
+      const url = snap
+        ? `/api/dcl/reconciliation/cross-system?snapshot=${encodeURIComponent(snap)}`
+        : '/api/dcl/reconciliation/cross-system';
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setXsysData(json);
@@ -143,6 +151,34 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
   useEffect(() => {
     fetchXsysData();
   }, [runId]);
+
+  const handleSnapshotChange = (snap: string) => {
+    setSelectedSnapshot(snap);
+    fetchXsysData(snap);
+  };
+
+  // Build snapshot options: current + other_snapshots from the API response
+  const snapshotOptions = useMemo(() => {
+    if (!xsysData) return [];
+    const opts: Array<{ label: string; value: string; pipes: number; current: boolean }> = [];
+    if (xsysData.snapshot_name) {
+      opts.push({
+        label: xsysData.snapshot_name,
+        value: xsysData.snapshot_name,
+        pipes: xsysData.systems.dcl.ingested,
+        current: true,
+      });
+    }
+    for (const s of (xsysData.other_snapshots ?? [])) {
+      opts.push({
+        label: s.snapshot_name,
+        value: s.snapshot_name,
+        pipes: s.pipe_count,
+        current: false,
+      });
+    }
+    return opts;
+  }, [xsysData]);
 
   const filteredFailedPipes = useMemo(() => {
     const pipes = xsysData?.failed_pipes ?? [];
@@ -196,7 +232,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
           <div className="text-center space-y-2">
             <div className="text-sm text-red-400">{xsysError}</div>
             <button
-              onClick={fetchXsysData}
+              onClick={() => fetchXsysData()}
               className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Retry
@@ -230,7 +266,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
             Download JSON
           </button>
           <button
-            onClick={fetchXsysData}
+            onClick={() => fetchXsysData()}
             className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"
           >
             Refresh
@@ -240,24 +276,45 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 min-h-0">
-        {/* Snapshot identity bar */}
-        {xsysData.snapshot_name && (
-          <div className="rounded border border-border bg-card/30 px-2.5 py-1">
-            <div className="flex items-center gap-4 text-[11px] font-mono">
+        {/* Snapshot identity bar with dropdown */}
+        <div className="rounded border border-border bg-card/30 px-2.5 py-1">
+          <div className="flex items-center gap-4 text-[11px] font-mono">
+            {snapshotOptions.length > 1 ? (
+              <span className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">Snapshot</span>
+                <select
+                  value={selectedSnapshot || xsysData.snapshot_name || ''}
+                  onChange={(e) => handleSnapshotChange(e.target.value)}
+                  className="bg-background border border-border rounded px-1.5 py-0.5 text-[11px] font-mono text-foreground font-semibold cursor-pointer hover:border-primary/50 focus:outline-none focus:border-primary"
+                >
+                  {snapshotOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label} ({opt.pipes} pipes){opt.current ? ' *' : ''}
+                    </option>
+                  ))}
+                </select>
+              </span>
+            ) : xsysData.snapshot_name ? (
               <span>
                 <span className="text-muted-foreground">Snapshot</span>{' '}
                 <span className="text-foreground font-semibold">{xsysData.snapshot_name}</span>
               </span>
-              {xsysData.aod_run_id && (
-                <span>
-                  <span className="text-muted-foreground">AOD</span>{' '}
-                  <span className="text-foreground/70">{xsysData.aod_run_id}</span>
-                </span>
-              )}
-              <span className="text-muted-foreground/50 ml-auto">{formatTimestamp(xsysData.recon_at)}</span>
-            </div>
+            ) : null}
+            {xsysData.aod_run_id && (
+              <span>
+                <span className="text-muted-foreground">AOD</span>{' '}
+                <span className="text-foreground/70">{xsysData.aod_run_id}</span>
+              </span>
+            )}
+            {xsysData.revenue_2025 != null && (
+              <span>
+                <span className="text-muted-foreground">2025 Rev</span>{' '}
+                <span className="text-emerald-400 font-semibold">${xsysData.revenue_2025.toFixed(2)}M</span>
+              </span>
+            )}
+            <span className="text-muted-foreground/50 ml-auto">{formatTimestamp(xsysData.recon_at)}</span>
           </div>
-        )}
+        </div>
 
         {/* Pipeline flow — 3-column system comparison (compact) */}
         <div className="grid grid-cols-3 gap-1.5">

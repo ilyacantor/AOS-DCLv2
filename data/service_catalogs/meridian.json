@@ -1,73 +1,72 @@
 {
-    "entity_id": "meridian",
-    "entity_name": "Meridian Partners",
-    "category": "Advisory / Consulting",
-    "services": [
-        {
-            "name": "Strategy Consulting",
-            "typical_buyer": "CEO/CFO",
-            "acv_low": 250000,
-            "acv_high": 2000000,
-            "sweet_spot_industries": ["Financial Services", "Technology", "Healthcare", "Energy"],
-            "adjacent_industries": ["Manufacturing", "Retail", "Telecommunications", "Insurance"],
-            "sweet_spot_employees_min": 1000,
-            "sweet_spot_employees_max": 100000,
-            "trigger_keywords": ["M&A", "market shift", "board mandate"]
-        },
-        {
-            "name": "Operations Advisory",
-            "typical_buyer": "COO/VP Ops",
-            "acv_low": 300000,
-            "acv_high": 1500000,
-            "sweet_spot_industries": ["Manufacturing", "Healthcare", "Retail", "Financial Services"],
-            "adjacent_industries": ["Technology", "Insurance", "Energy", "Telecommunications"],
-            "sweet_spot_employees_min": 2000,
-            "sweet_spot_employees_max": 150000,
-            "trigger_keywords": ["post-merger", "process redesign", "cost reduction"]
-        },
-        {
-            "name": "Technology Transformation",
-            "typical_buyer": "CTO/CIO",
-            "acv_low": 200000,
-            "acv_high": 1200000,
-            "sweet_spot_industries": ["Financial Services", "Technology", "Insurance", "Healthcare"],
-            "adjacent_industries": ["Manufacturing", "Retail", "Telecommunications", "Energy"],
-            "sweet_spot_employees_min": 500,
-            "sweet_spot_employees_max": 80000,
-            "trigger_keywords": ["legacy modernization", "scaling pain", "cloud migration"]
-        },
-        {
-            "name": "Risk & Compliance",
-            "typical_buyer": "CRO/CCO",
-            "acv_low": 250000,
-            "acv_high": 2500000,
-            "sweet_spot_industries": ["Financial Services", "Insurance", "Healthcare", "Pharmaceuticals"],
-            "adjacent_industries": ["Energy", "Technology", "Manufacturing"],
-            "sweet_spot_employees_min": 1000,
-            "sweet_spot_employees_max": 200000,
-            "trigger_keywords": ["regulatory pressure", "audit findings", "compliance gap"]
-        },
-        {
-            "name": "Digital/AI Advisory",
-            "typical_buyer": "CDO/CTO",
-            "acv_low": 300000,
-            "acv_high": 2000000,
-            "sweet_spot_industries": ["Technology", "Financial Services", "Healthcare", "Retail"],
-            "adjacent_industries": ["Insurance", "Manufacturing", "Telecommunications"],
-            "sweet_spot_employees_min": 500,
-            "sweet_spot_employees_max": 100000,
-            "trigger_keywords": ["automation mandate", "data strategy", "AI adoption"]
-        },
-        {
-            "name": "Commercial Strategy",
-            "typical_buyer": "CRO/CMO",
-            "acv_low": 150000,
-            "acv_high": 800000,
-            "sweet_spot_industries": ["Technology", "Retail", "Consumer Goods", "Telecommunications"],
-            "adjacent_industries": ["Financial Services", "Healthcare", "Manufacturing"],
-            "sweet_spot_employees_min": 200,
-            "sweet_spot_employees_max": 50000,
-            "trigger_keywords": ["GTM redesign", "channel expansion", "pricing optimization"]
-        }
-    ]
+  "entity_id": "meridian",
+  "entity_name": "Meridian Partners",
+  "services": [
+    {
+      "name": "Strategy Consulting",
+      "typical_buyer": "CEO/CFO",
+      "acv_low": 250000,
+      "acv_high": 2000000,
+      "sweet_spot_industries": ["Financial Services", "Technology", "Healthcare", "Energy"],
+      "adjacent_industries": ["Manufacturing", "Retail", "Telecommunications", "Insurance"],
+      "sweet_spot_employees_min": 1000,
+      "sweet_spot_employees_max": 100000,
+      "trigger_keywords": ["M&A", "market shift", "board mandate"]
+    },
+    {
+      "name": "Operations Advisory",
+      "typical_buyer": "COO/VP Ops",
+      "acv_low": 300000,
+      "acv_high": 1500000,
+      "sweet_spot_industries": ["Manufacturing", "Healthcare", "Retail", "Financial Services"],
+      "adjacent_industries": ["Technology", "Insurance", "Energy", "Telecommunications"],
+      "sweet_spot_employees_min": 2000,
+      "sweet_spot_employees_max": 150000,
+      "trigger_keywords": ["post-merger", "process redesign", "cost reduction"]
+    },
+    {
+      "name": "Technology Transformation",
+      "typical_buyer": "CTO/CIO",
+      "acv_low": 200000,
+      "acv_high": 1200000,
+      "sweet_spot_industries": ["Financial Services", "Technology", "Insurance", "Healthcare"],
+      "adjacent_industries": ["Manufacturing", "Retail", "Telecommunications", "Energy"],
+      "sweet_spot_employees_min": 500,
+      "sweet_spot_employees_max": 80000,
+      "trigger_keywords": ["legacy modernization", "scaling pain", "cloud migration"]
+    },
+    {
+      "name": "Risk & Compliance",
+      "typical_buyer": "CRO/CCO",
+      "acv_low": 250000,
+      "acv_high": 2500000,
+      "sweet_spot_industries": ["Financial Services", "Insurance", "Healthcare", "Pharmaceuticals"],
+      "adjacent_industries": ["Energy", "Technology", "Manufacturing"],
+      "sweet_spot_employees_min": 1000,
+      "sweet_spot_employees_max": 200000,
+      "trigger_keywords": ["regulatory pressure", "audit findings", "compliance gap"]
+    },
+    {
+      "name": "Digital/AI Advisory",
+      "typical_buyer": "CDO/CTO",
+      "acv_low": 300000,
+      "acv_high": 2000000,
+      "sweet_spot_industries": ["Technology", "Financial Services", "Healthcare", "Retail"],
+      "adjacent_industries": ["Insurance", "Manufacturing", "Telecommunications"],
+      "sweet_spot_employees_min": 500,
+      "sweet_spot_employees_max": 100000,
+      "trigger_keywords": ["automation mandate", "data strategy", "AI adoption"]
+    },
+    {
+      "name": "Commercial Strategy",
+      "typical_buyer": "CRO/CMO",
+      "acv_low": 150000,
+      "acv_high": 800000,
+      "sweet_spot_industries": ["Technology", "Retail", "Consumer Goods", "Telecommunications"],
+      "adjacent_industries": ["Financial Services", "Healthcare", "Manufacturing"],
+      "sweet_spot_employees_min": 200,
+      "sweet_spot_employees_max": 50000,
+      "trigger_keywords": ["GTM redesign", "channel expansion", "pricing optimization"]
+    }
+  ]
 }

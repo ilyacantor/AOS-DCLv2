@@ -7,10 +7,10 @@ combination synergies.
 
 Data sources:
   - data/combining_statements.json  (reported EBITDA)
+  - data/ebitda_adjustments.json    (entity-level adjustments)
   - data/entity_overlap.json        (vendor + people overlap → synergy sizing)
-  - data/ebitda_adjustments.json    (adjustment definitions with template strings)
   - backend/engine/cross_sell.py    (pipeline ACV → revenue synergy)
-  - backend/engine/engagement_config.py  (entity-agnostic config)
+  - backend/engine/engagement.py    (entity IDs and display names)
 """
 
 import json
@@ -18,7 +18,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from backend.engine.engagement_config import EngagementConfig, get_engagement
+from backend.engine.engagement import get_active_engagement
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -44,7 +44,7 @@ _DEFAULT_HC_REDUCTION_PCT = 0.20  # 20% reduction
 class BridgeAdjustment:
     name: str
     category: str        # "normalization", "one_time", "run_rate", "cost_synergy", "revenue_synergy", "dis_synergy"
-    entity: str          # entity_a.id, entity_b.id, or "combined"
+    entity: str          # entity_a_id, entity_b_id, or "combined"
     confidence: str      # "high", "medium", "low"
     amount: float        # the default/expected amount ($)
     amount_low: float    # low end of range ($)
@@ -82,64 +82,37 @@ def _load_entity_overlap() -> dict:
         return json.load(f)
 
 
-def _load_adjustments_json() -> dict:
-    """Load ebitda_adjustments.json and return the full dict."""
+def _load_ebitda_adjustments() -> list[dict]:
+    """Load entity-level adjustments from data/ebitda_adjustments.json.
+
+    Returns the list of adjustment dicts from the 'entity_adjustments' key.
+    Raises FileNotFoundError if the file is missing — no silent fallbacks.
+    """
     path = _DATA_DIR / "ebitda_adjustments.json"
     if not path.exists():
         raise FileNotFoundError(
-            f"EBITDA adjustments not found at {path}. "
-            f"Create from template in data/ebitda_adjustments.json."
+            f"EBITDA adjustments file not found at {path}. "
+            f"Expected data/ebitda_adjustments.json with 'entity_adjustments' array."
         )
     with open(path) as f:
-        return json.load(f)
+        data = json.load(f)
+    return data["entity_adjustments"]
 
 
-def _resolve_template(value: str, engagement: EngagementConfig) -> str:
-    """Replace template placeholders in a string with actual entity names.
+def _get_reported_ebitda(combining: dict, entity_a_id: str, entity_b_id: str) -> dict[str, float]:
+    """Extract reported EBITDA from the latest quarter and annualize (x4).
 
-    Supported placeholders:
-      {entity_a}       → entity_a.name
-      {entity_b}       → entity_b.name
-      {entity_a_short} → entity_a.short_name
-      {entity_b_short} → entity_b.short_name
-    """
-    if not isinstance(value, str):
-        return value
-    return (
-        value
-        .replace("{entity_a}", engagement.entity_a.name)
-        .replace("{entity_b}", engagement.entity_b.name)
-        .replace("{entity_a_short}", engagement.entity_a.short_name)
-        .replace("{entity_b_short}", engagement.entity_b.short_name)
-    )
-
-
-def _resolve_entity_field(entity_value: str, engagement: EngagementConfig) -> str:
-    """Map 'entity_a' / 'entity_b' / 'combined' to actual entity IDs."""
-    if entity_value == "entity_a":
-        return engagement.entity_a.id
-    elif entity_value == "entity_b":
-        return engagement.entity_b.id
-    return entity_value  # "combined" or anything else passes through
-
-
-def _get_reported_ebitda(combining: dict, engagement: EngagementConfig) -> dict[str, float]:
-    """Extract reported EBITDA from the latest quarter and annualize (×4).
-
-    Returns dict with entity_a.id, entity_b.id, adjustments, combined — all annualized in dollars.
+    Returns dict with entity_a_id, entity_b_id, "adjustments", "combined" — all annualized in dollars.
     """
     quarter_data = combining.get(_LATEST_QUARTER)
     if quarter_data is None:
         raise ValueError(f"Quarter {_LATEST_QUARTER} not found in combining statements.")
 
-    col_a = engagement.column_keys.entity_a
-    col_b = engagement.column_keys.entity_b
-
     for item in quarter_data["line_items"]:
         if item["line_item"] == "EBITDA":
             return {
-                engagement.entity_a.id: item[col_a] * 4 * 1_000_000,
-                engagement.entity_b.id: item[col_b] * 4 * 1_000_000,
+                entity_a_id: item[entity_a_id] * 4 * 1_000_000,
+                entity_b_id: item[entity_b_id] * 4 * 1_000_000,
                 "adjustments": item["adjustments"] * 4 * 1_000_000,
                 "combined": item["combined"] * 4 * 1_000_000,
             }
@@ -162,23 +135,21 @@ def _compute_vendor_savings(overlap: dict) -> float:
 
 def _compute_people_synergy(
     overlap: dict,
-    engagement: EngagementConfig,
+    entity_a_id: str,
+    entity_b_id: str,
     reduction_pct: float = _DEFAULT_HC_REDUCTION_PCT,
 ) -> tuple[float, int]:
     """Compute corporate function consolidation synergy from people overlap.
 
     For each function, the overlapping headcount is min(entity_a_hc, entity_b_hc).
-    Synergy = total_overlapping_hc × avg_comp × reduction_pct.
+    Synergy = total_overlapping_hc x avg_comp x reduction_pct.
 
     Returns (synergy_dollars, total_overlapping_hc).
     """
-    hc_key_a = engagement.overlap_keys.entity_a_headcount
-    hc_key_b = engagement.overlap_keys.entity_b_headcount
-
     total_overlapping_hc = 0
     for func in overlap.get("people_overlap", {}).get("functions", []):
-        a_hc = func.get(hc_key_a, 0)
-        b_hc = func.get(hc_key_b, 0)
+        a_hc = func.get(f"{entity_a_id}_headcount", 0)
+        b_hc = func.get(f"{entity_b_id}_headcount", 0)
         total_overlapping_hc += min(a_hc, b_hc)
 
     synergy = total_overlapping_hc * _AVG_CORPORATE_COMP * reduction_pct
@@ -188,7 +159,7 @@ def _compute_people_synergy(
 def _compute_cross_sell_synergy(pipeline: dict) -> float:
     """Compute revenue synergy from cross-sell pipeline.
 
-    Formula: pipeline_acv × 50% capture × 30% margin × (12/18) ramp.
+    Formula: pipeline_acv x 50% capture x 30% margin x (12/18) ramp.
     Returns synergy in dollars.
     """
     summary = pipeline.get("summary", {})
@@ -200,67 +171,141 @@ def _compute_cross_sell_synergy(pipeline: dict) -> float:
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Bridge adjustments (loaded from JSON + template resolution)
+# Bridge adjustments
 # ─────────────────────────────────────────────────────────────────────
 
-def _load_entity_adjustments(engagement: EngagementConfig) -> list[BridgeAdjustment]:
-    """Load entity-level adjustments from ebitda_adjustments.json and resolve templates."""
-    raw = _load_adjustments_json()
-    adjustments = []
-    for item in raw.get("entity_adjustments", []):
-        adjustments.append(BridgeAdjustment(
-            name=_resolve_template(item["name"], engagement),
-            category=item["category"],
-            entity=_resolve_entity_field(item["entity"], engagement),
-            confidence=item["confidence"],
-            amount=item["amount"],
-            amount_low=item["amount_low"],
-            amount_high=item["amount_high"],
-            lever=item.get("lever"),
-            support_reference=_resolve_template(item["support_reference"], engagement),
-            rationale=_resolve_template(item["rationale"], engagement),
-        ))
-    return adjustments
+def _build_entity_adjustments() -> list[BridgeAdjustment]:
+    """Load entity-level adjustments from data/ebitda_adjustments.json.
+
+    Each JSON entry is parsed into a BridgeAdjustment dataclass.
+    """
+    raw_adjustments = _load_ebitda_adjustments()
+    return [
+        BridgeAdjustment(
+            name=adj["name"],
+            category=adj["category"],
+            entity=adj["entity"],
+            confidence=adj["confidence"],
+            amount=adj["amount"],
+            amount_low=adj["amount_low"],
+            amount_high=adj["amount_high"],
+            lever=adj.get("lever"),
+            support_reference=adj["support_reference"],
+            rationale=adj["rationale"],
+        )
+        for adj in raw_adjustments
+    ]
 
 
-def _load_combination_synergies(
-    engagement: EngagementConfig,
+def _build_combination_synergies(
     vendor_savings: float,
     people_synergy: float,
     cross_sell_synergy: float,
+    entity_a_name: str = "",
+    entity_b_name: str = "",
 ) -> list[BridgeAdjustment]:
-    """Load combination synergy adjustments from ebitda_adjustments.json.
+    """Build the list of combination synergy adjustments.
 
-    Resolves template strings and replaces __COMPUTED_* sentinels with actual values.
     vendor_savings, people_synergy, cross_sell_synergy are in dollars.
     """
-    sentinel_map = {
-        "__COMPUTED_PEOPLE_SYNERGY__": people_synergy,
-        "__COMPUTED_VENDOR_SAVINGS__": vendor_savings,
-        "__COMPUTED_CROSS_SELL__": cross_sell_synergy,
-    }
-
-    raw = _load_adjustments_json()
-    synergies = []
-    for item in raw.get("combination_synergies", []):
-        # Resolve computed amount sentinels
-        amount = item["amount"]
-        if isinstance(amount, str) and amount in sentinel_map:
-            amount = sentinel_map[amount]
-
-        synergies.append(BridgeAdjustment(
-            name=_resolve_template(item["name"], engagement),
-            category=item["category"],
-            entity=_resolve_entity_field(item["entity"], engagement),
-            confidence=item["confidence"],
-            amount=amount,
-            amount_low=item["amount_low"],
-            amount_high=item["amount_high"],
-            lever=item.get("lever"),
-            support_reference=_resolve_template(item["support_reference"], engagement),
-            rationale=_resolve_template(item["rationale"], engagement),
-        ))
-    return synergies
+    return [
+        BridgeAdjustment(
+            name="Bench optimization — consulting",
+            category="cost_synergy",
+            entity="combined",
+            confidence="medium",
+            amount=100_000_000,
+            amount_low=80_000_000,
+            amount_high=120_000_000,
+            lever="bench_cross_deploy_rate",
+            support_reference="Bench utilization analysis — 4500 consultants × cross-deploy model",
+            rationale=f"Cross-deploying {entity_a_name} bench consultants onto {entity_b_name} delivery engagements.",
+        ),
+        BridgeAdjustment(
+            name="Bench optimization — delivery",
+            category="cost_synergy",
+            entity="combined",
+            confidence="medium",
+            amount=35_000_000,
+            amount_low=25_000_000,
+            amount_high=45_000_000,
+            lever="bench_cross_deploy_rate",
+            support_reference="Delivery bench analysis — 4200 FTEs × cross-deploy model",
+            rationale=f"Redeploying idle {entity_b_name} delivery FTEs onto {entity_a_name} project support roles.",
+        ),
+        BridgeAdjustment(
+            name="Corporate function consolidation",
+            category="cost_synergy",
+            entity="combined",
+            confidence="medium",
+            amount=people_synergy,
+            amount_low=45_000_000,
+            amount_high=70_000_000,
+            lever="corporate_hc_reduction_pct",
+            support_reference="People overlap analysis — Finance, HR, IT, Legal functions",
+            rationale="Consolidating overlapping corporate functions; reduction based on min(M,C) headcount per function.",
+        ),
+        BridgeAdjustment(
+            name="Vendor consolidation",
+            category="cost_synergy",
+            entity="combined",
+            confidence="high",
+            amount=vendor_savings,
+            amount_low=15_000_000,
+            amount_high=25_000_000,
+            lever=None,
+            support_reference="Vendor overlap analysis — 170 overlapping vendors with consolidation savings",
+            rationale="Consolidating overlapping vendor contracts for volume discounts and eliminated redundancy.",
+        ),
+        BridgeAdjustment(
+            name="Technology redundancy elimination",
+            category="cost_synergy",
+            entity="combined",
+            confidence="medium",
+            amount=10_000_000,
+            amount_low=8_000_000,
+            amount_high=12_000_000,
+            lever=None,
+            support_reference="Technology stack audit — overlapping SaaS, middleware, and dev tools",
+            rationale="Eliminating duplicate SaaS licenses, middleware, and internal tools post-combination.",
+        ),
+        BridgeAdjustment(
+            name="Cross-sell revenue contribution",
+            category="revenue_synergy",
+            entity="combined",
+            confidence="low",
+            amount=cross_sell_synergy,
+            amount_low=35_000_000,
+            amount_high=65_000_000,
+            lever="cross_sell_capture_rate",
+            support_reference="Cross-sell pipeline — high-confidence ACV × capture rate × margin × ramp",
+            rationale="EBITDA contribution from cross-selling services to the other entity's non-overlapping clients.",
+        ),
+        BridgeAdjustment(
+            name="Integration costs Year 1",
+            category="dis_synergy",
+            entity="combined",
+            confidence="high",
+            amount=-100_000_000,
+            amount_low=-120_000_000,
+            amount_high=-85_000_000,
+            lever="integration_cost_M",
+            support_reference="Integration management office budget — systems, people, branding",
+            rationale="Year 1 integration costs: IT system migration, org redesign, rebranding, change management.",
+        ),
+        BridgeAdjustment(
+            name="Retention packages",
+            category="dis_synergy",
+            entity="combined",
+            confidence="high",
+            amount=-25_000_000,
+            amount_low=-30_000_000,
+            amount_high=-20_000_000,
+            lever=None,
+            support_reference="Retention program — key talent across both entities",
+            rationale="Year 1 retention bonuses for critical leadership and top performers.",
+        ),
+    ]
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -278,10 +323,11 @@ def compute_ebitda_bridge(cross_sell_pipeline: dict | None = None) -> dict:
         Dict with reported_ebitda, entity_adjustments, entity_adjusted_ebitda,
         combination_synergies, pro_forma_ebitda, and ev_impact.
     """
-    # ── Load engagement config ──
-    engagement = get_engagement()
-    ea_id = engagement.entity_a.id
-    eb_id = engagement.entity_b.id
+    # ── Engagement config ──
+    engagement = get_active_engagement()
+    entity_a_id, entity_b_id = engagement.entity_ids()
+    entity_a_name = engagement.entity_a.display_name
+    entity_b_name = engagement.entity_b.display_name
 
     # ── Load data ──
     combining = _load_combining_statements()
@@ -293,20 +339,20 @@ def compute_ebitda_bridge(cross_sell_pipeline: dict | None = None) -> dict:
         cross_sell_pipeline = pipeline_obj.to_dict()
 
     # ── Reported EBITDA (annualized) ──
-    reported = _get_reported_ebitda(combining, engagement)
+    reported = _get_reported_ebitda(combining, entity_a_id, entity_b_id)
 
     logger.info(
         "[ebitda_bridge] Reported EBITDA (annualized): %s=$%.1fM, %s=$%.1fM, Combined=$%.1fM",
-        ea_id,
-        reported[ea_id] / 1e6,
-        eb_id,
-        reported[eb_id] / 1e6,
+        entity_a_name,
+        reported[entity_a_id] / 1e6,
+        entity_b_name,
+        reported[entity_b_id] / 1e6,
         reported["combined"] / 1e6,
     )
 
     # ── Derived synergy inputs ──
     vendor_savings = _compute_vendor_savings(overlap)
-    people_synergy, overlapping_hc = _compute_people_synergy(overlap, engagement)
+    people_synergy, overlapping_hc = _compute_people_synergy(overlap, entity_a_id, entity_b_id)
     cross_sell_synergy = _compute_cross_sell_synergy(cross_sell_pipeline)
 
     logger.info(
@@ -318,23 +364,24 @@ def compute_ebitda_bridge(cross_sell_pipeline: dict | None = None) -> dict:
     )
 
     # ── Build adjustments ──
-    entity_adjustments = _load_entity_adjustments(engagement)
-    combination_synergies = _load_combination_synergies(
-        engagement=engagement,
+    entity_adjustments = _build_entity_adjustments()
+    combination_synergies = _build_combination_synergies(
         vendor_savings=vendor_savings,
         people_synergy=people_synergy,
         cross_sell_synergy=cross_sell_synergy,
+        entity_a_name=entity_a_name,
+        entity_b_name=entity_b_name,
     )
 
     # ── Arithmetic ──
     entity_adj_total = sum(a.amount for a in entity_adjustments)
 
     # Entity-adjusted EBITDA per entity
-    a_adj = sum(a.amount for a in entity_adjustments if a.entity == ea_id)
-    b_adj = sum(a.amount for a in entity_adjustments if a.entity == eb_id)
+    a_adj = sum(a.amount for a in entity_adjustments if a.entity == entity_a_id)
+    b_adj = sum(a.amount for a in entity_adjustments if a.entity == entity_b_id)
     entity_adjusted = {
-        ea_id: reported[ea_id] + a_adj,
-        eb_id: reported[eb_id] + b_adj,
+        entity_a_id: reported[entity_a_id] + a_adj,
+        entity_b_id: reported[entity_b_id] + b_adj,
         "combined": reported["combined"] + entity_adj_total,
     }
 
@@ -391,8 +438,8 @@ def compute_ebitda_bridge(cross_sell_pipeline: dict | None = None) -> dict:
 
     return {
         "reported_ebitda": {
-            ea_id: reported[ea_id],
-            eb_id: reported[eb_id],
+            entity_a_id: reported[entity_a_id],
+            entity_b_id: reported[entity_b_id],
             "combined_reported": reported["combined"],
         },
         "entity_adjustments": [asdict(a) for a in entity_adjustments],

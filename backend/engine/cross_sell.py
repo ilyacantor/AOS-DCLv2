@@ -6,6 +6,9 @@ service catalog.  Two directions:
   A→B: entity_a services → entity_b's clients
   B→A: entity_b services → entity_a's clients
 
+Entity IDs and display names are loaded from the active engagement config.
+Service catalogs are loaded from data/service_catalogs/{entity_id}.json.
+
 Scoring dimensions (0-100 total):
   - Industry match (0-25): customer industry vs product industry fit
   - Size match (0-20): company size vs product sweet spot
@@ -18,7 +21,8 @@ Threshold: ≥40 = candidate.  >80 = high confidence.
 Depends on:
   - data/customer_profiles.json (from Farm via generate_combining_data.py)
   - data/entity_overlap.json (for overlap exclusion)
-  - engagement config for entity definitions and service catalog paths
+  - data/service_catalogs/{entity_id}.json (service offerings per entity)
+  - data/engagements/ (active engagement config)
 """
 
 import json
@@ -27,12 +31,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from backend.engine.engagement_config import get_engagement
+from backend.engine.engagement import get_active_engagement
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
 _DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+_SERVICE_CATALOGS_DIR = _DATA_DIR / "service_catalogs"
 
 
 # =============================================================================
@@ -52,43 +57,44 @@ class ServiceOffering:
     trigger_keywords: list[str]
 
 
-def _load_service_catalog(catalog_path: str) -> list[ServiceOffering]:
-    """Load service offerings from a service catalog JSON file.
+def _load_service_catalog(entity_id: str) -> list[ServiceOffering]:
+    """Load service catalog from data/service_catalogs/{entity_id}.json.
 
-    Args:
-        catalog_path: Path to the service catalog JSON file (relative to repo root
-                      or absolute).
+    Parses each entry into a ServiceOffering dataclass.
 
-    Returns:
-        List of ServiceOffering dataclass instances.
-
-    Raises:
-        FileNotFoundError: If the catalog file does not exist.
+    Raises FileNotFoundError with a clear message if the catalog file is missing.
     """
-    path = Path(catalog_path)
-    if not path.is_absolute():
-        path = _DATA_DIR.parent / path
-    if not path.exists():
+    catalog_path = _SERVICE_CATALOGS_DIR / f"{entity_id}.json"
+    if not catalog_path.exists():
         raise FileNotFoundError(
-            f"Service catalog not found at {path}. "
-            f"Ensure the engagement config points to a valid service catalog file."
+            f"Service catalog not found at {catalog_path}. "
+            f"Expected a JSON file at data/service_catalogs/{entity_id}.json "
+            f"with a 'services' array of service offerings."
         )
-    with open(path) as f:
+
+    with open(catalog_path) as f:
         raw = json.load(f)
 
-    services: list[ServiceOffering] = []
-    for s in raw.get("services", []):
+    services = []
+    for entry in raw.get("services", []):
         services.append(ServiceOffering(
-            name=s["name"],
-            typical_buyer=s["typical_buyer"],
-            acv_low=s["acv_low"],
-            acv_high=s["acv_high"],
-            sweet_spot_industries=s.get("sweet_spot_industries", []),
-            adjacent_industries=s.get("adjacent_industries", []),
-            sweet_spot_employees_min=s.get("sweet_spot_employees_min", 0),
-            sweet_spot_employees_max=s.get("sweet_spot_employees_max", 999_999),
-            trigger_keywords=s.get("trigger_keywords", []),
+            name=entry["name"],
+            typical_buyer=entry["typical_buyer"],
+            acv_low=entry["acv_low"],
+            acv_high=entry["acv_high"],
+            sweet_spot_industries=entry["sweet_spot_industries"],
+            adjacent_industries=entry["adjacent_industries"],
+            sweet_spot_employees_min=entry["sweet_spot_employees_min"],
+            sweet_spot_employees_max=entry["sweet_spot_employees_max"],
+            trigger_keywords=entry["trigger_keywords"],
         ))
+
+    if not services:
+        raise ValueError(
+            f"Service catalog at {catalog_path} contains no services. "
+            f"The 'services' array is empty or missing."
+        )
+
     return services
 
 
@@ -123,12 +129,12 @@ def _size_score(employees: int, service: ServiceOffering) -> int:
     return 0
 
 
-def _behavioral_score_a_to_b(customer: dict) -> int:
-    """Score 0-30 for A→B direction (entity_a services → entity_b clients).
+def _behavioral_score_m_to_c(customer: dict) -> int:
+    """Score 0-30 for entity_a→entity_b direction (entity_a services to entity_b clients).
 
     Uses threshold-based scoring — only signals above baseline contribute.
-    Most entity_b clients have moderate complexity; only the extreme ones are
-    strong entity_a service candidates.
+    Most BPM clients have moderate complexity; only the extreme ones are
+    strong advisory candidates.
     """
     score = 0.0
     # process_complexity: only high values (>5) contribute meaningfully
@@ -154,10 +160,10 @@ def _behavioral_score_a_to_b(customer: dict) -> int:
     return min(int(round(score)), 30)
 
 
-def _behavioral_score_b_to_a(customer: dict) -> int:
-    """Score 0-30 for B→A direction (entity_b services → entity_a clients).
+def _behavioral_score_c_to_m(customer: dict) -> int:
+    """Score 0-30 for entity_b→entity_a direction (entity_b services to entity_a clients).
 
-    Highly selective — most entity_a clients do NOT need entity_b services.
+    Highly selective — most consulting clients do NOT need BPM.
     Only customers with extreme process pain, high outsourcing readiness,
     AND recent transformation completion score well.
     """
@@ -186,14 +192,14 @@ def _behavioral_score_b_to_a(customer: dict) -> int:
     return min(int(round(score)), 30)
 
 
-def _engagement_fit_a_to_b(customer: dict, service: ServiceOffering) -> int:
-    """Score 0-15: engagement fit for A→B (entity_a services → entity_b client)."""
+def _engagement_fit_m_to_c(customer: dict, service: ServiceOffering) -> int:
+    """Score 0-15: engagement fit for entity_a→entity_b (entity_a services to entity_b client)."""
     score = 0.0
     complexity = customer.get("process_complexity", 0)
     reg = customer.get("regulatory_burden", 0)
     engagement_val = customer.get("engagement_value_M", 0)
 
-    # High engagement + complexity = advisory need (strict thresholds)
+    # High BPO engagement + complexity = advisory need (strict thresholds)
     if engagement_val > 8 and complexity > 7:
         score += 8
     elif engagement_val > 4 and complexity > 5:
@@ -217,8 +223,8 @@ def _engagement_fit_a_to_b(customer: dict, service: ServiceOffering) -> int:
     return min(int(round(score)), 15)
 
 
-def _engagement_fit_b_to_a(customer: dict, service: ServiceOffering) -> int:
-    """Score 0-15: engagement fit for B→A (entity_b services → entity_a client).
+def _engagement_fit_c_to_m(customer: dict, service: ServiceOffering) -> int:
+    """Score 0-15: engagement fit for entity_b→entity_a (entity_b services to entity_a client).
 
     Very selective — requires strong convergence of signals.
     """
@@ -345,8 +351,8 @@ def _find_comparable(
 ) -> list[str]:
     """Find 1-2 existing customers that look like this candidate.
 
-    Finds clients in similar industry/size buying similar services from
-    the entity that owns the recommended service.
+    For A→B: find entity_a clients in similar industry/size buying similar services.
+    For B→A: find entity_b clients in similar industry/size buying similar services.
     """
     comparables = []
     industry = customer.get("industry", "")
@@ -365,9 +371,8 @@ def _find_comparable(
         if not ec_services:
             continue
         eng_val = ec.get("engagement_value_M", 0)
-        entity_id = ec.get("entity_id", "")
         comparables.append(
-            f"{ec['customer_name']} ({entity_id} client, ${eng_val:.1f}M engagement)"
+            f"{ec['customer_name']} ({ec['entity_id']} client, ${eng_val:.1f}M engagement)"
         )
         if len(comparables) >= 2:
             break
@@ -379,15 +384,15 @@ def _find_comparable(
 # Rationale generator
 # =============================================================================
 
-def _generate_rationale_a_to_b(customer: dict, service: ServiceOffering, scores: dict) -> str:
-    """Generate human-readable rationale for A→B recommendation."""
+def _generate_rationale_m_to_c(customer: dict, service: ServiceOffering, scores: dict) -> str:
+    """Generate human-readable rationale for entity_a→entity_b recommendation."""
     parts = []
     eng_val = customer.get("engagement_value_M", 0)
     services = customer.get("active_services", [])
     complexity = customer.get("process_complexity", 0)
     reg = customer.get("regulatory_burden", 0)
 
-    parts.append(f"Client with ${eng_val:.1f}M engagement across {len(services)} services.")
+    parts.append(f"BPM client with ${eng_val:.1f}M engagement across {len(services)} services.")
     if complexity > 7:
         parts.append(f"High process complexity ({complexity:.1f}/10) indicates advisory need.")
     if reg > 3:
@@ -400,8 +405,8 @@ def _generate_rationale_a_to_b(customer: dict, service: ServiceOffering, scores:
     return " ".join(parts)
 
 
-def _generate_rationale_b_to_a(customer: dict, service: ServiceOffering, scores: dict) -> str:
-    """Generate human-readable rationale for B→A recommendation."""
+def _generate_rationale_c_to_m(customer: dict, service: ServiceOffering, scores: dict) -> str:
+    """Generate human-readable rationale for entity_b→entity_a recommendation."""
     parts = []
     eng_val = customer.get("engagement_value_M", 0)
     mpc = customer.get("manual_process_count", 0)
@@ -409,7 +414,7 @@ def _generate_rationale_b_to_a(customer: dict, service: ServiceOffering, scores:
     maturity = customer.get("transformation_maturity", 0)
     last_end = customer.get("last_project_end")
 
-    parts.append(f"Client with ${eng_val:.1f}M engagement and {customer.get('completed_projects', 0)} completed projects.")
+    parts.append(f"Consulting client with ${eng_val:.1f}M engagement and {customer.get('completed_projects', 0)} completed projects.")
     if mpc > 20:
         parts.append(f"{mpc} manual processes identified — strong {service.name} candidate.")
     elif mpc > 10:
@@ -417,7 +422,7 @@ def _generate_rationale_b_to_a(customer: dict, service: ServiceOffering, scores:
     if readiness > 3:
         parts.append(f"High outsourcing readiness ({readiness:.1f}/5).")
     if maturity > 3 and last_end:
-        parts.append(f"Transformation maturity {maturity:.1f}/5; last project ended {last_end} — natural handoff.")
+        parts.append(f"Transformation maturity {maturity:.1f}/5; last project ended {last_end} — natural handoff to BPM.")
     if customer.get("expressed_interest", 0) > 3:
         parts.append("Has expressed interest in outsourcing/managed services.")
 
@@ -454,8 +459,8 @@ class CrossSellCandidate:
 @dataclass
 class CrossSellPipeline:
     """Full cross-sell analysis output."""
-    a_to_b: list[CrossSellCandidate]  # entity_a services → entity_b's clients
-    b_to_a: list[CrossSellCandidate]  # entity_b services → entity_a's clients
+    m_to_c: list[CrossSellCandidate]  # entity_a services → entity_b's clients
+    c_to_m: list[CrossSellCandidate]  # entity_b services → entity_a's clients
 
     def to_dict(self) -> dict:
         def _candidate_dict(c: CrossSellCandidate) -> dict:
@@ -480,73 +485,52 @@ class CrossSellPipeline:
                 "segment": c.segment,
             }
 
-        a_to_b_list = sorted(
-            [_candidate_dict(c) for c in self.a_to_b],
-            key=lambda x: x["propensity_score"], reverse=True,
-        )
-        b_to_a_list = sorted(
-            [_candidate_dict(c) for c in self.b_to_a],
-            key=lambda x: x["propensity_score"], reverse=True,
-        )
+        m_to_c_list = [_candidate_dict(c) for c in self.m_to_c]
+        c_to_m_list = [_candidate_dict(c) for c in self.c_to_m]
 
-        a_to_b_total_acv = sum(c.estimated_acv for c in self.a_to_b)
-        a_to_b_high = [c for c in self.a_to_b if c.propensity_score > 80]
-        b_to_a_total_acv = sum(c.estimated_acv for c in self.b_to_a)
-        b_to_a_high = [c for c in self.b_to_a if c.propensity_score > 80]
+        m_to_c_total_acv = sum(c.estimated_acv for c in self.m_to_c)
+        m_to_c_high = [c for c in self.m_to_c if c.propensity_score > 80]
+        c_to_m_total_acv = sum(c.estimated_acv for c in self.c_to_m)
+        c_to_m_high = [c for c in self.c_to_m if c.propensity_score > 80]
 
-        result = {
-            # Entity-agnostic keys
-            "a_to_b": a_to_b_list,
-            "b_to_a": b_to_a_list,
-            # Backward-compatible keys (same data)
-            "m_to_c": a_to_b_list,
-            "c_to_m": b_to_a_list,
+        return {
+            "m_to_c": sorted(m_to_c_list, key=lambda x: x["propensity_score"], reverse=True),
+            "c_to_m": sorted(c_to_m_list, key=lambda x: x["propensity_score"], reverse=True),
             "summary": {
-                "a_to_b_candidates": len(self.a_to_b),
-                "a_to_b_total_acv": round(a_to_b_total_acv),
-                "a_to_b_high_conf_count": len(a_to_b_high),
-                "a_to_b_high_conf_acv": round(sum(c.estimated_acv for c in a_to_b_high)),
-                "b_to_a_candidates": len(self.b_to_a),
-                "b_to_a_total_acv": round(b_to_a_total_acv),
-                "b_to_a_high_conf_count": len(b_to_a_high),
-                "b_to_a_high_conf_acv": round(sum(c.estimated_acv for c in b_to_a_high)),
-                "total_candidates": len(self.a_to_b) + len(self.b_to_a),
-                "total_pipeline_acv": round(a_to_b_total_acv + b_to_a_total_acv),
+                "m_to_c_candidates": len(self.m_to_c),
+                "m_to_c_total_acv": round(m_to_c_total_acv),
+                "m_to_c_high_conf_count": len(m_to_c_high),
+                "m_to_c_high_conf_acv": round(sum(c.estimated_acv for c in m_to_c_high)),
+                "c_to_m_candidates": len(self.c_to_m),
+                "c_to_m_total_acv": round(c_to_m_total_acv),
+                "c_to_m_high_conf_count": len(c_to_m_high),
+                "c_to_m_high_conf_acv": round(sum(c.estimated_acv for c in c_to_m_high)),
+                "total_candidates": len(self.m_to_c) + len(self.c_to_m),
+                "total_pipeline_acv": round(m_to_c_total_acv + c_to_m_total_acv),
                 "total_high_conf_acv": round(
-                    sum(c.estimated_acv for c in a_to_b_high) +
-                    sum(c.estimated_acv for c in b_to_a_high)
+                    sum(c.estimated_acv for c in m_to_c_high) +
+                    sum(c.estimated_acv for c in c_to_m_high)
                 ),
-                # Backward-compatible summary keys
-                "m_to_c_candidates": len(self.a_to_b),
-                "m_to_c_total_acv": round(a_to_b_total_acv),
-                "m_to_c_high_conf_count": len(a_to_b_high),
-                "m_to_c_high_conf_acv": round(sum(c.estimated_acv for c in a_to_b_high)),
-                "c_to_m_candidates": len(self.b_to_a),
-                "c_to_m_total_acv": round(b_to_a_total_acv),
-                "c_to_m_high_conf_count": len(b_to_a_high),
-                "c_to_m_high_conf_acv": round(sum(c.estimated_acv for c in b_to_a_high)),
             },
         }
-        return result
 
 
 def run_cross_sell_engine() -> CrossSellPipeline:
     """Run the cross-sell propensity engine using pre-generated customer profiles.
 
-    Loads the engagement config to determine entity identities and service catalog
-    paths, then loads customer_profiles.json and entity_overlap.json, scores every
-    non-overlapping customer against the other entity's service catalog,
-    and returns the pipeline of candidates scoring >=60.
+    Loads engagement config, service catalogs, customer_profiles.json, and
+    entity_overlap.json.  Scores every non-overlapping customer against the
+    other entity's service catalog and returns the pipeline of candidates
+    scoring >=60.
 
-    Raises FileNotFoundError if data files are missing.
+    Raises FileNotFoundError if data files or service catalogs are missing.
     """
-    engagement = get_engagement()
-    entity_a = engagement.entity_a
-    entity_b = engagement.entity_b
+    # Load engagement config
+    eng = get_active_engagement()
 
-    # Load service catalogs from engagement config paths
-    entity_a_services = _load_service_catalog(entity_a.service_catalog)
-    entity_b_services = _load_service_catalog(entity_b.service_catalog)
+    # Load service catalogs from JSON files
+    a_services = _load_service_catalog(eng.entity_a.id)
+    b_services = _load_service_catalog(eng.entity_b.id)
 
     # Load customer profiles
     profiles_path = _DATA_DIR / "customer_profiles.json"
@@ -573,56 +557,54 @@ def run_cross_sell_engine() -> CrossSellPipeline:
         for m in overlap.get("customer_overlap", {}).get("matches", [])
     }
 
-    # Use overlap_keys from engagement config for customer list field names
-    entity_a_customers_key = engagement.overlap_keys.entity_a_customers
-    entity_b_customers_key = engagement.overlap_keys.entity_b_customers
-
-    entity_a_customers = profiles.get(entity_a_customers_key, [])
-    entity_b_customers = profiles.get(entity_b_customers_key, [])
+    a_customers = profiles.get(f"{eng.entity_a.id}_customers", [])
+    b_customers = profiles.get(f"{eng.entity_b.id}_customers", [])
 
     # Non-overlapping customers only
-    a_non_overlap = [c for c in entity_a_customers if not c.get("is_overlap", False)]
-    b_non_overlap = [c for c in entity_b_customers if not c.get("is_overlap", False)]
+    a_non_overlap = [c for c in a_customers if not c.get("is_overlap", False)]
+    b_non_overlap = [c for c in b_customers if not c.get("is_overlap", False)]
 
     logger.info(
         "[cross_sell] Scoring %d %s non-overlap customers against %d %s services",
-        len(a_non_overlap), entity_a.name, len(entity_b_services), entity_b.name,
+        len(a_non_overlap), eng.entity_a.display_name,
+        len(b_services), eng.entity_b.display_name,
     )
     logger.info(
         "[cross_sell] Scoring %d %s non-overlap customers against %d %s services",
-        len(b_non_overlap), entity_b.name, len(entity_a_services), entity_a.name,
+        len(b_non_overlap), eng.entity_b.display_name,
+        len(a_services), eng.entity_a.display_name,
     )
 
-    # -- A→B: Score entity_b clients for entity_a services --
-    a_to_b_candidates: list[CrossSellCandidate] = []
+    # ── M→C: Score entity_b clients for entity_a services ──
+    m_to_c_candidates: list[CrossSellCandidate] = []
     for customer in b_non_overlap:
         best_score = 0
         best_candidate: Optional[CrossSellCandidate] = None
-        for service in entity_a_services:
+        for service in a_services:
             ind = _industry_score(customer.get("industry", ""), service)
             siz = _size_score(customer.get("employees", 0), service)
-            beh = _behavioral_score_a_to_b(customer)
-            eng = _engagement_fit_a_to_b(customer, service)
+            beh = _behavioral_score_m_to_c(customer)
+            eng_fit = _engagement_fit_m_to_c(customer, service)
             rel = _relationship_score(customer)
-            total = ind + siz + beh + eng + rel
+            total = ind + siz + beh + eng_fit + rel
 
             if total >= 60 and total > best_score:
                 acv = _estimate_acv(service, customer, beh, total)
-                scores = {"industry": ind, "size": siz, "behavioral": beh, "engagement": eng, "relationship": rel}
-                rationale = _generate_rationale_a_to_b(customer, service, scores)
-                comparables = _find_comparable(customer, entity_a_customers, service.name, "a_to_b")
+                scores = {"industry": ind, "size": siz, "behavioral": beh, "engagement": eng_fit, "relationship": rel}
+                rationale = _generate_rationale_m_to_c(customer, service, scores)
+                comparables = _find_comparable(customer, a_customers, service.name, "m_to_c")
                 best_score = total
                 best_candidate = CrossSellCandidate(
                     customer_id=customer["customer_id"],
                     customer_name=customer["customer_name"],
-                    entity_id=entity_b.id,
+                    entity_id=eng.entity_b.id,
                     recommended_service=service.name,
                     propensity_score=total,
                     estimated_acv=acv,
                     industry_match=ind,
                     size_match=siz,
                     behavioral_score=beh,
-                    engagement_fit=eng,
+                    engagement_fit=eng_fit,
                     relationship_strength=rel,
                     rationale=rationale,
                     comparable_customers=comparables,
@@ -634,38 +616,38 @@ def run_cross_sell_engine() -> CrossSellPipeline:
                 )
 
         if best_candidate:
-            a_to_b_candidates.append(best_candidate)
+            m_to_c_candidates.append(best_candidate)
 
-    # -- B→A: Score entity_a clients for entity_b services --
-    b_to_a_candidates: list[CrossSellCandidate] = []
+    # ── C→M: Score entity_a clients for entity_b services ──
+    c_to_m_candidates: list[CrossSellCandidate] = []
     for customer in a_non_overlap:
         best_score = 0
         best_candidate: Optional[CrossSellCandidate] = None
-        for service in entity_b_services:
+        for service in b_services:
             ind = _industry_score(customer.get("industry", ""), service)
             siz = _size_score(customer.get("employees", 0), service)
-            beh = _behavioral_score_b_to_a(customer)
-            eng = _engagement_fit_b_to_a(customer, service)
+            beh = _behavioral_score_c_to_m(customer)
+            eng_fit = _engagement_fit_c_to_m(customer, service)
             rel = _relationship_score(customer)
-            total = ind + siz + beh + eng + rel
+            total = ind + siz + beh + eng_fit + rel
 
             if total >= 60 and total > best_score:
                 acv = _estimate_acv(service, customer, beh, total)
-                scores = {"industry": ind, "size": siz, "behavioral": beh, "engagement": eng, "relationship": rel}
-                rationale = _generate_rationale_b_to_a(customer, service, scores)
-                comparables = _find_comparable(customer, entity_b_customers, service.name, "b_to_a")
+                scores = {"industry": ind, "size": siz, "behavioral": beh, "engagement": eng_fit, "relationship": rel}
+                rationale = _generate_rationale_c_to_m(customer, service, scores)
+                comparables = _find_comparable(customer, b_customers, service.name, "c_to_m")
                 best_score = total
                 best_candidate = CrossSellCandidate(
                     customer_id=customer["customer_id"],
                     customer_name=customer["customer_name"],
-                    entity_id=entity_a.id,
+                    entity_id=eng.entity_a.id,
                     recommended_service=service.name,
                     propensity_score=total,
                     estimated_acv=acv,
                     industry_match=ind,
                     size_match=siz,
                     behavioral_score=beh,
-                    engagement_fit=eng,
+                    engagement_fit=eng_fit,
                     relationship_strength=rel,
                     rationale=rationale,
                     comparable_customers=comparables,
@@ -677,10 +659,10 @@ def run_cross_sell_engine() -> CrossSellPipeline:
                 )
 
         if best_candidate:
-            b_to_a_candidates.append(best_candidate)
+            c_to_m_candidates.append(best_candidate)
 
     # Verify no overlap customers snuck in
-    for c in a_to_b_candidates + b_to_a_candidates:
+    for c in m_to_c_candidates + c_to_m_candidates:
         cname = c.customer_name.lower()
         if cname in overlap_canonical_names:
             raise RuntimeError(
@@ -688,17 +670,17 @@ def run_cross_sell_engine() -> CrossSellPipeline:
                 f"appeared as a cross-sell candidate. This should not happen."
             )
 
-    pipeline = CrossSellPipeline(a_to_b=a_to_b_candidates, b_to_a=b_to_a_candidates)
+    pipeline = CrossSellPipeline(m_to_c=m_to_c_candidates, c_to_m=c_to_m_candidates)
     summary = pipeline.to_dict()["summary"]
     logger.info(
         "[cross_sell] Pipeline complete: %s→%s=%d candidates ($%dM), %s→%s=%d candidates ($%dM), "
         "Total pipeline=$%dM, High-conf=$%dM",
-        entity_a.name, entity_b.name,
-        summary["a_to_b_candidates"],
-        summary["a_to_b_total_acv"] // 1_000_000,
-        entity_b.name, entity_a.name,
-        summary["b_to_a_candidates"],
-        summary["b_to_a_total_acv"] // 1_000_000,
+        eng.entity_a.display_name, eng.entity_b.display_name,
+        summary["m_to_c_candidates"],
+        summary["m_to_c_total_acv"] // 1_000_000,
+        eng.entity_b.display_name, eng.entity_a.display_name,
+        summary["c_to_m_candidates"],
+        summary["c_to_m_total_acv"] // 1_000_000,
         summary["total_pipeline_acv"] // 1_000_000,
         summary["total_high_conf_acv"] // 1_000_000,
     )

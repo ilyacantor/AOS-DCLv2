@@ -1,47 +1,107 @@
-# AOS-DCLv2 Testing
+# DCL Testing Guide
 
 ## Prerequisites
-- Python 3.11+
-- Dependencies: pip install -r requirements.txt
-- For unit tests: no external services needed
-- For integration tests: DCL backend running on :8004
 
-## Run Unit Tests
-pytest tests/unit/ -v
+- **Python** >= 3.11
+- **venv** set up: `.venv/` at repo root
+- **httpx** installed (for live harness): `.venv/bin/pip install httpx`
+- **Farm data generated** (for integration tests that reference Farm pipe shapes)
 
-## Run All Integration Tests (Recommended)
+## Install
 
 ```bash
-# Run all phases (0, 1, 2) with a single command:
-python -m tests.run_all
-
-# Specify a custom backend URL:
-python -m tests.run_all --base-url http://localhost:9000
-
-# Run only a single phase:
-python -m tests.run_all --phase 0
-python -m tests.run_all --phase 1
-python -m tests.run_all --phase 2
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install pytest httpx
 ```
 
-Exit codes: 0 = all tests passed, 1 = failures or backend unreachable.
+## Running the Full Suite
 
-The runner checks backend connectivity upfront and prints a clear error if the
-backend is not reachable, so you don't have to wait for individual test timeouts.
+```bash
+pytest backend/tests/ -v
+```
 
-## Run Individual Test Files
-
-1. Start DCL backend: python run_backend.py
-2. Run: python -m tests.test_phase0_harness
-3. Run: python -m tests.test_phase1
-4. Run: python -m tests.test_phase2
+This discovers all `test_*.py` files under `backend/tests/`.
 
 ## Test Categories
-- Phase 0 (51 tests): concept schema, hierarchy, drill-through, conflict, reporting, reconciliation
-- Phase 1 (26 tests): dual entity, COFA, entity overlap, entity resolution, combining recon, backward compat
-- Phase 2 (28 tests): cross-sell, EBITDA bridge, what-if, dashboards, Maestra engagement
 
-## Notes
-- Tests use a custom harness runner (not pytest discovery)
-- Integration tests require the DCL backend running at http://localhost:8004
-- NLQ tests belong in the AOS-NLQ repo, not here
+### Unit Tests (no server, no external deps)
+
+| File | What it covers |
+|------|----------------|
+| `backend/tests/test_graph_traversal.py` | Semantic graph traversal engine — all 8 resolution steps (concept location, dimension validity, join path discovery, filter resolution, confidence scoring, response assembly), graceful degradation, path caching, GraphStats |
+
+Run unit tests only:
+
+```bash
+pytest backend/tests/test_graph_traversal.py -v
+```
+
+### Integration Tests (no server, synthetic data)
+
+| File | What it covers |
+|------|----------------|
+| `backend/tests/test_tier0_aam_edges.py` | Tier 0 AAM edge classification — high/low confidence edges, fallthrough to Tier 1, transformed edges, alias resolution, EdgeIndex coverage stats, backward compatibility |
+| `backend/tests/test_farm_v2_integration.py` | Farm v2 to DCL pipeline — ingests 20 synthetic pipes from 8 source systems, verifies IngestStore, ingest bridge, DCL engine graph build, ontology mapping coverage, persona filtering |
+
+Run integration tests only:
+
+```bash
+pytest backend/tests/test_tier0_aam_edges.py backend/tests/test_farm_v2_integration.py -v
+```
+
+These tests can also run standalone (outside pytest):
+
+```bash
+python backend/tests/test_tier0_aam_edges.py
+python backend/tests/test_farm_v2_integration.py
+```
+
+### Utilities (not tests)
+
+| File | What it does |
+|------|--------------|
+| `backend/tests/farm_ground_truth.py` | Farm ground truth client — used by other tests to fetch/validate Farm data shapes |
+
+### Live Harness (requires running DCL server)
+
+| File | What it covers |
+|------|----------------|
+| `tests/harness/dcl_harness.py` | HTTP-only endpoint validation — tests 9 DCL API endpoints (combining IS, entity overlap, cross-sell, EBITDA bridge, QoE, CFO dashboard, what-if, cross-entity matches, conflicts). Tracks latency per request with min/max/avg/p95 stats. |
+
+Run the live harness:
+
+```bash
+# Against local DCL (default http://localhost:8004)
+python tests/harness/dcl_harness.py
+
+# Against deployed DCL
+python tests/harness/dcl_harness.py --url https://aos-dcl.onrender.com
+
+# Verbose output (shows request details)
+python tests/harness/dcl_harness.py --verbose
+
+# Run a single test by ID
+python tests/harness/dcl_harness.py --test ebitda-bridge
+```
+
+Exit codes:
+- `0` — all tests passed
+- `1` — one or more tests failed
+- `2` — harness error (server unreachable, bad config)
+
+Available test IDs: `combining-is`, `entity-overlap`, `cross-sell`, `ebitda-bridge`, `qoe`, `dashboard-cfo`, `what-if`, `cross-entity`, `conflicts`
+
+## Running a Single Test File
+
+```bash
+pytest backend/tests/test_graph_traversal.py -v
+pytest backend/tests/test_graph_traversal.py::test_step2_concept_location -v
+```
+
+## Running a Single Test Function
+
+```bash
+pytest backend/tests/test_graph_traversal.py::test_spec_example_revenue_by_division_for_cloud -v
+```

@@ -214,7 +214,10 @@ class DimensionHierarchyStore:
                 raise
 
     def insert_batch(self, values: List[DimensionValue]) -> int:
-        """Insert multiple dimension values. Returns count of inserted rows."""
+        """Insert multiple dimension values in a single multi-row statement.
+
+        Returns count of inserted rows.
+        """
         if not values:
             return 0
         with get_connection() as conn:
@@ -225,27 +228,30 @@ class DimensionHierarchyStore:
                 )
             try:
                 with conn.cursor() as cur:
-                    for dv in values:
-                        cur.execute(
-                            """
-                            INSERT INTO dimension_values
-                                (dimension_id, value, value_code, parent_id, depth, path, entity_id, metadata)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (dimension_id, value) DO UPDATE SET
-                                value_code = EXCLUDED.value_code,
-                                parent_id = EXCLUDED.parent_id,
-                                depth = EXCLUDED.depth,
-                                path = EXCLUDED.path,
-                                entity_id = EXCLUDED.entity_id,
-                                metadata = EXCLUDED.metadata,
-                                updated_at = NOW()
-                            """,
-                            (
-                                dv.dimension_id, dv.value, dv.value_code,
-                                dv.parent_id, dv.depth, dv.path,
-                                dv.entity_id, json.dumps(dv.metadata),
-                            ),
+                    args = [
+                        (
+                            dv.dimension_id, dv.value, dv.value_code,
+                            dv.parent_id, dv.depth, dv.path,
+                            dv.entity_id, json.dumps(dv.metadata),
                         )
+                        for dv in values
+                    ]
+                    cur.executemany(
+                        """
+                        INSERT INTO dimension_values
+                            (dimension_id, value, value_code, parent_id, depth, path, entity_id, metadata)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (dimension_id, value) DO UPDATE SET
+                            value_code = EXCLUDED.value_code,
+                            parent_id = EXCLUDED.parent_id,
+                            depth = EXCLUDED.depth,
+                            path = EXCLUDED.path,
+                            entity_id = EXCLUDED.entity_id,
+                            metadata = EXCLUDED.metadata,
+                            updated_at = NOW()
+                        """,
+                        args,
+                    )
                 conn.commit()
                 return len(values)
             except Exception as e:
@@ -312,12 +318,26 @@ class DimensionHierarchyStore:
         parts = dv.path.split("/")
         if len(parts) <= 1:
             return [dv]
-        ancestors = []
-        for part in parts:
-            ancestor = self.get_value(dimension_id, part)
-            if ancestor:
-                ancestors.append(ancestor)
-        return ancestors
+        # Single query for all path components instead of N+1
+        with get_connection() as conn:
+            if conn is None:
+                raise RuntimeError("Database unavailable for dimension ancestor query")
+            with conn.cursor() as cur:
+                placeholders = ",".join(["%s"] * len(parts))
+                cur.execute(
+                    f"""
+                    SELECT dimension_id, value, value_code, parent_id,
+                           depth, path, entity_id, metadata
+                    FROM dimension_values
+                    WHERE dimension_id = %s AND value IN ({placeholders})
+                    ORDER BY depth, value
+                    """,
+                    (dimension_id, *parts),
+                )
+                rows = cur.fetchall()
+        # Re-order to match path order (root first, value last)
+        by_value = {self._row_to_dv(row).value: self._row_to_dv(row) for row in rows}
+        return [by_value[part] for part in parts if part in by_value]
 
     def get_descendants(self, dimension_id: str, value: str) -> List[DimensionValue]:
         """Get all descendants of a value using path prefix matching."""

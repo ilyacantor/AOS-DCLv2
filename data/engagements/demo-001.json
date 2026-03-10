@@ -1,46 +1,35 @@
 {
-    "engagement_id": "demo-001",
-    "deal_name": "Meridian-Cascadia Integration",
-    "entity_a": {
-        "id": "meridian",
-        "name": "Meridian Partners",
-        "short_name": "M",
-        "fact_base": "data/fact_base.json",
-        "service_catalog": "data/service_catalogs/meridian.json"
-    },
-    "entity_b": {
-        "id": "cascadia",
-        "name": "Cascadia Process Solutions",
-        "short_name": "C",
-        "fact_base": "data/fact_base.json",
-        "service_catalog": "data/service_catalogs/cascadia.json"
-    },
-    "combining_data": "data/combining_statements.json",
-    "overlap_data": "data/entity_overlap.json",
-    "customer_profiles": "data/customer_profiles.json",
-    "adjustments": "data/ebitda_adjustments.json",
-    "synergy_targets": {
-        "revenue": 215000000,
-        "cost": 180000000
-    },
-    "combining_column_keys": {
-        "entity_a": "meridian",
-        "entity_b": "cascadia",
-        "adjustments": "adjustments",
-        "combined": "combined"
-    },
-    "overlap_keys": {
-        "entity_a_customers": "meridian_customers",
-        "entity_b_customers": "cascadia_customers",
-        "entity_a_headcount": "meridian_headcount",
-        "entity_b_headcount": "cascadia_headcount",
-        "entity_a_spend": "meridian_spend_M",
-        "entity_b_spend": "cascadia_spend_M",
-        "entity_a_name": "meridian_name",
-        "entity_b_name": "cascadia_name",
-        "entity_a_revenue": "meridian_revenue_M",
-        "entity_b_revenue": "cascadia_revenue_M",
-        "overlap_pct_a": "overlap_pct_of_meridian",
-        "overlap_pct_b": "overlap_pct_of_cascadia"
+  "engagement_id": "demo-001",
+  "deal_name": "Meridian-Cascadia Integration",
+  "entity_a": {
+    "id": "meridian",
+    "display_name": "Meridian Partners",
+    "role": "acquirer",
+    "business_model": "consultancy",
+    "source_systems": {
+      "crm": "salesforce_crm",
+      "erp": "sap_erp",
+      "hcm": "workday_hcm"
     }
+  },
+  "entity_b": {
+    "id": "cascadia",
+    "display_name": "Cascadia Process Solutions",
+    "role": "target",
+    "business_model": "bpm",
+    "source_systems": {
+      "crm": "oracle_erp",
+      "erp": "oracle_erp",
+      "hcm": "bamboohr_hcm"
+    }
+  },
+  "deal_parameters": {
+    "deal_value_M": 3200.0,
+    "close_date": "2026-06-30",
+    "integration_timeline_months": 18
+  },
+  "synergy_targets": {
+    "cost_synergies_target_M": 200.0,
+    "revenue_synergies_target_M": 50.0
+  }
 }

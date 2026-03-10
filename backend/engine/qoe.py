@@ -22,6 +22,8 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any
 
+from backend.engine.engagement import get_active_engagement
+
 logger = logging.getLogger("dcl.backend.engine.qoe")
 
 _DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
@@ -217,7 +219,9 @@ def _compute_revenue_quality(
     """Revenue quality metrics: concentration, contract quality, mix, retention, cross-sell."""
 
     # --- Customer concentration ---
-    all_customers = customers.get("meridian_customers", []) + customers.get("cascadia_customers", [])
+    eng = get_active_engagement()
+    entity_a_id, entity_b_id = eng.entity_ids()
+    all_customers = customers.get(f"{entity_a_id}_customers", []) + customers.get(f"{entity_b_id}_customers", [])
     revenues = sorted([c["engagement_value_M"] for c in all_customers if c.get("engagement_value_M", 0) > 0], reverse=True)
     total_rev = sum(revenues)
     top_10_rev = sum(revenues[:10])

@@ -182,18 +182,18 @@ def _resolve_export_identity(pipe_store) -> tuple:
 
 
 def _is_tooling_pipe(pipe_def) -> bool:
-    """Check if a pipe is a tooling pipe (non-SOR category).
+    """Check if a pipe is a tooling/infrastructure pipe.
 
-    Tooling pipes are tracked separately and not counted in SOR totals.
-    Any pipe with category='tooling' or other non-SOR categories should
-    be classified as tooling.
+    A pipe is tooling only if its category explicitly indicates tooling,
+    test, or staging infrastructure.  All other pipes are business system
+    pipes — whether they are SOR or not is determined separately by AOD's
+    sor_tagging (line 261-275), not by this function.
     """
     if not pipe_def:
         return False
     category = (pipe_def.category or "").lower()
-    # Define SOR categories - anything else is tooling
-    SOR_CATEGORIES = {"crm", "erp", "finops", "infra", "aod", ""}
-    return category not in SOR_CATEGORIES
+    TOOLING_CATEGORIES = {"tooling", "test", "staging", "sandbox"}
+    return category in TOOLING_CATEGORIES
 
 
 def _record_ingest_activity(
@@ -810,11 +810,23 @@ def list_schema_drift():
     }
 
 
+# Module-level cache for ingest stats.
+_stats_cache: Optional[dict] = None
+_stats_cache_gen: int = -1
+
+
 @router.get("/stats")
 def get_ingest_stats():
     """Quick summary of what's in the ingest store."""
+    global _stats_cache, _stats_cache_gen
     store = get_ingest_store()
-    return store.get_stats()
+    current_gen = store.generation
+    if _stats_cache is not None and _stats_cache_gen == current_gen:
+        return _stats_cache
+    result = store.get_stats()
+    _stats_cache = result
+    _stats_cache_gen = current_gen
+    return result
 
 
 @router.get("/activity")

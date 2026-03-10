@@ -7,14 +7,17 @@ Writes:
 
 Usage:
   python scripts/generate_combining_data.py
+  python scripts/generate_combining_data.py --entity-a meridian --entity-b cascadia
 """
 
+import argparse
 import json
 import sys
 from pathlib import Path
 
 # Farm lives in a sibling repo — add it to the path.
-sys.path.insert(0, "/home/ilyac/code/farm")
+FARM_ROOT = "/home/ilyac/code/farm"
+sys.path.insert(0, FARM_ROOT)
 
 from src.generators.combining_statements import CombiningStatementEngine
 from src.generators.financial_model import FinancialModel, Assumptions
@@ -24,11 +27,15 @@ from src.generators.customer_profiles import CustomerProfileGenerator
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "data"
 
 
-def generate_combining_statements() -> None:
+def generate_combining_statements(entity_a: str, entity_b: str) -> None:
     """Generate combining income statement data from Farm's financial models."""
-    a_m = Assumptions.from_yaml("/home/ilyac/code/farm/farm_config_meridian.yaml")
+    config_a = f"{FARM_ROOT}/farm_config_{entity_a}.yaml"
+    config_b = f"{FARM_ROOT}/farm_config_{entity_b}.yaml"
+    print(f"Loading Farm configs: {config_a}, {config_b}")
+
+    a_m = Assumptions.from_yaml(config_a)
     qs_m = FinancialModel(assumptions=a_m).generate()
-    a_c = Assumptions.from_yaml("/home/ilyac/code/farm/farm_config_cascadia.yaml")
+    a_c = Assumptions.from_yaml(config_b)
     qs_c = FinancialModel(assumptions=a_c).generate()
 
     engine = CombiningStatementEngine(qs_m, qs_c)
@@ -117,7 +124,13 @@ def generate_customer_profiles() -> None:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Generate combining data from Farm.")
+    parser.add_argument("--entity-a", default="meridian", help="Entity A identifier (default: meridian)")
+    parser.add_argument("--entity-b", default="cascadia", help="Entity B identifier (default: cascadia)")
+    args = parser.parse_args()
+
+    print(f"Generating combining data for entities: {args.entity_a} (A) and {args.entity_b} (B)")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    generate_combining_statements()
+    generate_combining_statements(args.entity_a, args.entity_b)
     generate_entity_overlap()
     generate_customer_profiles()

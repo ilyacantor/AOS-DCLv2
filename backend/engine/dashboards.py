@@ -9,20 +9,18 @@ Produces aggregated data for 5 executive personas:
   - CHRO: People & talent, retention, headcount
 
 Each dashboard pulls from the combining P&L, entity overlap, cross-sell
-pipeline, and EBITDA bridge — computing the expensive engines once and
-reusing the results across personas.
+pipeline, and EBITDA bridge via the module-level engine cache, so the
+expensive computations happen once and are reused across personas and requests.
 """
 
-import json
-from pathlib import Path
+import time
 from typing import Any
 
-from backend.engine.engagement_config import get_engagement
+from backend.engine import _engine_cache
+from backend.engine.engagement import get_active_engagement
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
-
-_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 
 _VALID_PERSONAS = {"cfo", "cro", "coo", "cto", "chro"}
 
@@ -36,68 +34,26 @@ _TECH_VENDOR_CATEGORIES = {
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Data loaders
-# ─────────────────────────────────────────────────────────────────────
-
-def _load_json(filename: str) -> dict:
-    """Load a JSON file from the data directory. Raises FileNotFoundError if missing."""
-    path = _DATA_DIR / filename
-    if not path.exists():
-        raise FileNotFoundError(
-            f"Required data file not found at {path}. "
-            f"Run scripts/generate_combining_data.py first."
-        )
-    with open(path) as f:
-        return json.load(f)
-
-
-def _load_combining_statements() -> dict:
-    return _load_json("combining_statements.json")
-
-
-def _load_entity_overlap() -> dict:
-    return _load_json("entity_overlap.json")
-
-
-def _load_customer_profiles() -> dict:
-    return _load_json("customer_profiles.json")
-
-
-# ─────────────────────────────────────────────────────────────────────
-# Shared computation cache
+# Engine data access — backed by module-level cache
 # ─────────────────────────────────────────────────────────────────────
 
 class _EngineCache:
-    """Lazily computes and caches expensive engine results for one request cycle."""
+    """Thin accessor over the module-level engine cache.
 
-    def __init__(self) -> None:
-        self._cross_sell_pipeline: dict | None = None
-        self._bridge: dict | None = None
-        self._qoe: dict | None = None
+    All expensive computation (cross-sell, bridge, QofE) is done once in
+    _engine_cache and reused across requests until the source data files
+    change on disk.  This class is a convenience wrapper — it holds no
+    per-instance state and can be instantiated freely.
+    """
 
     def get_cross_sell_pipeline(self) -> dict:
-        if self._cross_sell_pipeline is None:
-            from backend.engine.cross_sell import run_cross_sell_engine
-            logger.info("[dashboards] Computing cross-sell pipeline (cached)")
-            pipeline = run_cross_sell_engine()
-            self._cross_sell_pipeline = pipeline.to_dict()
-        return self._cross_sell_pipeline
+        return _engine_cache.get("cross_sell")
 
     def get_bridge(self) -> dict:
-        if self._bridge is None:
-            from backend.engine.ebitda_bridge import compute_ebitda_bridge
-            logger.info("[dashboards] Computing EBITDA bridge (cached)")
-            self._bridge = compute_ebitda_bridge(
-                cross_sell_pipeline=self.get_cross_sell_pipeline()
-            )
-        return self._bridge
+        return _engine_cache.get("bridge")
 
     def get_qoe(self) -> dict:
-        if self._qoe is None:
-            from backend.engine.qoe import compute_qoe
-            logger.info("[dashboards] Computing QofE (cached)")
-            self._qoe = compute_qoe()
-        return self._qoe
+        return _engine_cache.get("qoe")
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -112,14 +68,8 @@ def _get_line_item(quarter_data: dict, line_item_name: str) -> dict | None:
     return None
 
 
-def _extract_quarterly_revenue(combining: dict) -> list[dict]:
+def _extract_quarterly_revenue(combining: dict, entity_a_id: str, entity_b_id: str) -> list[dict]:
     """Extract combined revenue for every quarter, sorted chronologically."""
-    eng = get_engagement()
-    col_a = eng.column_keys.entity_a
-    col_b = eng.column_keys.entity_b
-    entity_a_id = eng.entity_a.id
-    entity_b_id = eng.entity_b.id
-
     trend = []
     for period_key in sorted(k for k in combining.keys() if not k.startswith("_")):
         quarter_data = combining[period_key]
@@ -127,8 +77,8 @@ def _extract_quarterly_revenue(combining: dict) -> list[dict]:
         if rev is not None:
             trend.append({
                 "period": period_key,
-                entity_a_id: rev[col_a],
-                entity_b_id: rev[col_b],
+                entity_a_id: rev[entity_a_id],
+                entity_b_id: rev[entity_b_id],
                 "combined": rev["combined"],
             })
     return trend
@@ -177,40 +127,30 @@ def _total_vendor_savings(overlap: dict) -> float:
     return total
 
 
-def _people_overlap_by_function(overlap: dict) -> list[dict]:
+def _people_overlap_by_function(overlap: dict, entity_a_id: str, entity_b_id: str) -> list[dict]:
     """Return people overlap broken down by function."""
-    eng = get_engagement()
-    hc_a = eng.overlap_keys.entity_a_headcount
-    hc_b = eng.overlap_keys.entity_b_headcount
-    entity_a_id = eng.entity_a.id
-    entity_b_id = eng.entity_b.id
-
     results = []
     for func in overlap.get("people_overlap", {}).get("functions", []):
-        m_hc = func.get(hc_a, 0)
-        c_hc = func.get(hc_b, 0)
+        a_hc = func.get(f"{entity_a_id}_headcount", 0)
+        b_hc = func.get(f"{entity_b_id}_headcount", 0)
         results.append({
             "function": func["function"],
-            f"{entity_a_id}_headcount": m_hc,
-            f"{entity_b_id}_headcount": c_hc,
-            "combined_headcount": func.get("combined_headcount", m_hc + c_hc),
-            "overlapping_headcount": min(m_hc, c_hc),
+            f"{entity_a_id}_headcount": a_hc,
+            f"{entity_b_id}_headcount": b_hc,
+            "combined_headcount": func.get("combined_headcount", a_hc + b_hc),
+            "overlapping_headcount": min(a_hc, b_hc),
             "role_overlap_examples": func.get("role_overlap_examples", []),
         })
     return results
 
 
-def _total_people_overlap_hc(overlap: dict) -> int:
-    """Sum of min(entity_a, entity_b) headcount across all functions."""
-    eng = get_engagement()
-    hc_a = eng.overlap_keys.entity_a_headcount
-    hc_b = eng.overlap_keys.entity_b_headcount
-
+def _total_people_overlap_hc(overlap: dict, entity_a_id: str, entity_b_id: str) -> int:
+    """Sum of min(A, B) headcount across all functions."""
     total = 0
     for func in overlap.get("people_overlap", {}).get("functions", []):
         total += min(
-            func.get(hc_a, 0),
-            func.get(hc_b, 0),
+            func.get(f"{entity_a_id}_headcount", 0),
+            func.get(f"{entity_b_id}_headcount", 0),
         )
     return total
 
@@ -275,9 +215,10 @@ def _build_cfo_dashboard(
     combining: dict,
     overlap: dict,
     cache: _EngineCache,
+    entity_a_id: str,
+    entity_b_id: str,
 ) -> dict:
     """CFO — Financial overview."""
-    eng = get_engagement()
     bridge = cache.get_bridge()
     qoe = cache.get_qoe()
     latest_key = _latest_quarter_key(combining)
@@ -300,7 +241,7 @@ def _build_cfo_dashboard(
 
     return {
         "persona": "cfo",
-        "title": f"CFO Dashboard — Financial Overview ({eng.deal_name})",
+        "title": "CFO Dashboard — Financial Overview",
         "kpis": {
             "combined_revenue_annualized": _annualize(rev_item["combined"]),
             "combined_ebitda_annualized": _annualize(ebitda_item["combined"]),
@@ -309,7 +250,7 @@ def _build_cfo_dashboard(
             "ev_at_current_multiple": ev["steady_state_ev"]["current"],
             "qoe_sustainability_score": qoe["sustainability_score"]["overall"],
         },
-        "revenue_trend": _extract_quarterly_revenue(combining),
+        "revenue_trend": _extract_quarterly_revenue(combining, entity_a_id, entity_b_id),
         "ebitda_bridge_summary": {
             "reported_ebitda": bridge["reported_ebitda"],
             "entity_adjusted_ebitda": bridge["entity_adjusted_ebitda"],
@@ -334,15 +275,16 @@ def _build_cro_dashboard(
     combining: dict,
     overlap: dict,
     cache: _EngineCache,
+    entity_a_id: str,
+    entity_b_id: str,
 ) -> dict:
     """CRO — Revenue & pipeline."""
-    eng = get_engagement()
     pipeline = cache.get_cross_sell_pipeline()
     bridge = cache.get_bridge()
     summary = pipeline["summary"]
 
     # Top 10 cross-sell opportunities by ACV across both directions
-    all_candidates = pipeline["a_to_b"] + pipeline["b_to_a"]
+    all_candidates = pipeline["m_to_c"] + pipeline["c_to_m"]
     all_candidates.sort(key=lambda c: c["estimated_acv"], reverse=True)
     top_10 = all_candidates[:10]
 
@@ -353,12 +295,12 @@ def _build_cro_dashboard(
 
     return {
         "persona": "cro",
-        "title": f"CRO Dashboard — Revenue & Pipeline ({eng.deal_name})",
+        "title": "CRO Dashboard — Revenue & Pipeline",
         "kpis": {
             "total_cross_sell_candidates": summary["total_candidates"],
             "total_pipeline_acv": summary["total_pipeline_acv"],
-            "a_to_b_candidates": summary["a_to_b_candidates"],
-            "b_to_a_candidates": summary["b_to_a_candidates"],
+            "m_to_c_candidates": summary["m_to_c_candidates"],
+            "c_to_m_candidates": summary["c_to_m_candidates"],
             "customer_overlap_count": customer_overlap.get("total_overlapping", 0),
             "high_confidence_pipeline_acv": summary["total_high_conf_acv"],
         },
@@ -372,17 +314,17 @@ def _build_cro_dashboard(
             "conversion_rate_pct": 0,
         },
         "pipeline_by_direction": {
-            "a_to_b": {
-                "candidates": summary["a_to_b_candidates"],
-                "total_acv": summary["a_to_b_total_acv"],
-                "high_confidence_count": summary["a_to_b_high_conf_count"],
-                "high_confidence_acv": summary["a_to_b_high_conf_acv"],
+            "m_to_c": {
+                "candidates": summary["m_to_c_candidates"],
+                "total_acv": summary["m_to_c_total_acv"],
+                "high_confidence_count": summary["m_to_c_high_conf_count"],
+                "high_confidence_acv": summary["m_to_c_high_conf_acv"],
             },
-            "b_to_a": {
-                "candidates": summary["b_to_a_candidates"],
-                "total_acv": summary["b_to_a_total_acv"],
-                "high_confidence_count": summary["b_to_a_high_conf_count"],
-                "high_confidence_acv": summary["b_to_a_high_conf_acv"],
+            "c_to_m": {
+                "candidates": summary["c_to_m_candidates"],
+                "total_acv": summary["c_to_m_total_acv"],
+                "high_confidence_count": summary["c_to_m_high_conf_count"],
+                "high_confidence_acv": summary["c_to_m_high_conf_acv"],
             },
         },
         "top_10_cross_sell": [
@@ -400,8 +342,8 @@ def _build_cro_dashboard(
         "revenue_synergy": rev_synergy,
         "customer_overlap_summary": {
             "total_overlapping": customer_overlap.get("total_overlapping", 0),
-            eng.overlap_keys.overlap_pct_a: customer_overlap.get(eng.overlap_keys.overlap_pct_a, 0),
-            eng.overlap_keys.overlap_pct_b: customer_overlap.get(eng.overlap_keys.overlap_pct_b, 0),
+            f"overlap_pct_of_{entity_a_id}": customer_overlap.get(f"overlap_pct_of_{entity_a_id}", 0),
+            f"overlap_pct_of_{entity_b_id}": customer_overlap.get(f"overlap_pct_of_{entity_b_id}", 0),
         },
     }
 
@@ -410,9 +352,10 @@ def _build_coo_dashboard(
     combining: dict,
     overlap: dict,
     cache: _EngineCache,
+    entity_a_id: str,
+    entity_b_id: str,
 ) -> dict:
     """COO — Operations & integration."""
-    eng = get_engagement()
     bridge = cache.get_bridge()
 
     vendor_overlap_data = overlap.get("vendor_overlap", {})
@@ -420,8 +363,8 @@ def _build_coo_dashboard(
     vendors_with_opportunity = len(vendor_consol)
     total_savings = _total_vendor_savings(overlap)
 
-    people_hc = _total_people_overlap_hc(overlap)
-    people_by_func = _people_overlap_by_function(overlap)
+    people_hc = _total_people_overlap_hc(overlap, entity_a_id, entity_b_id)
+    people_by_func = _people_overlap_by_function(overlap, entity_a_id, entity_b_id)
 
     # Corporate HC reduction synergy from bridge
     corp_synergy = _bridge_synergy_by_name(bridge, "Corporate function consolidation")
@@ -434,7 +377,7 @@ def _build_coo_dashboard(
 
     return {
         "persona": "coo",
-        "title": f"COO Dashboard — Operations & Integration ({eng.deal_name})",
+        "title": "COO Dashboard — Operations & Integration",
         "kpis": {
             "vendor_overlap_count": vendor_overlap_data.get("total_overlapping", 0),
             "vendors_with_consolidation_opportunity": vendors_with_opportunity,
@@ -456,9 +399,10 @@ def _build_cto_dashboard(
     combining: dict,
     overlap: dict,
     cache: _EngineCache,
+    entity_a_id: str,
+    entity_b_id: str,
 ) -> dict:
     """CTO — Technology & systems."""
-    eng = get_engagement()
     bridge = cache.get_bridge()
 
     # Technology redundancy elimination from bridge
@@ -471,15 +415,12 @@ def _build_cto_dashboard(
         if v.get("category", "") in _TECH_VENDOR_CATEGORIES
     ]
 
-    spend_a_key = eng.overlap_keys.entity_a_spend
-    spend_b_key = eng.overlap_keys.entity_b_spend
-
     tech_vendors_with_consolidation = [
         {
             "vendor": v["canonical_name"],
             "category": v.get("category", "unknown"),
-            f"{eng.entity_a.id}_spend_M": v.get(spend_a_key, 0),
-            f"{eng.entity_b.id}_spend_M": v.get(spend_b_key, 0),
+            f"{entity_a_id}_spend_M": v.get(f"{entity_a_id}_spend_M", 0),
+            f"{entity_b_id}_spend_M": v.get(f"{entity_b_id}_spend_M", 0),
             "combined_spend_M": v.get("combined_spend_M", 0),
             "consolidation_opportunity": v.get("consolidation_opportunity", False),
             "estimated_savings_M": (
@@ -495,7 +436,7 @@ def _build_cto_dashboard(
 
     return {
         "persona": "cto",
-        "title": f"CTO Dashboard — Technology & Systems ({eng.deal_name})",
+        "title": "CTO Dashboard — Technology & Systems",
         "kpis": {
             "technology_redundancy_elimination": (
                 tech_redundancy["amount"] if tech_redundancy else 0
@@ -511,13 +452,14 @@ def _build_chro_dashboard(
     combining: dict,
     overlap: dict,
     cache: _EngineCache,
+    entity_a_id: str,
+    entity_b_id: str,
 ) -> dict:
     """CHRO — People & talent."""
-    eng = get_engagement()
     bridge = cache.get_bridge()
 
-    people_by_func = _people_overlap_by_function(overlap)
-    people_hc = _total_people_overlap_hc(overlap)
+    people_by_func = _people_overlap_by_function(overlap, entity_a_id, entity_b_id)
+    people_hc = _total_people_overlap_hc(overlap, entity_a_id, entity_b_id)
     combined_hc = _combined_headcount_estimate(overlap)
 
     # Corporate HC reduction synergy from bridge
@@ -531,14 +473,14 @@ def _build_chro_dashboard(
     b_attrition = None
     for adj in bridge.get("entity_adjustments", []):
         if "attrition" in adj["name"].lower():
-            if adj["entity"] == eng.entity_b.id:
+            if adj["entity"] == entity_b_id:
                 b_attrition = adj
-            elif adj["entity"] == eng.entity_a.id:
+            elif adj["entity"] == entity_a_id:
                 a_attrition = adj
 
     return {
         "persona": "chro",
-        "title": f"CHRO Dashboard — People & Talent ({eng.deal_name})",
+        "title": "CHRO Dashboard — People & Talent",
         "kpis": {
             "total_people_overlap_hc": people_hc,
             "functions_with_overlap": len(people_by_func),
@@ -548,8 +490,8 @@ def _build_chro_dashboard(
         },
         "people_overlap_by_function": people_by_func,
         "attrition_comparison": {
-            eng.entity_a.id: a_attrition,
-            eng.entity_b.id: b_attrition,
+            entity_a_id: a_attrition,
+            entity_b_id: b_attrition,
         },
         "retention_package_detail": retention,
     }
@@ -587,17 +529,20 @@ def compute_dashboard(persona: str) -> dict:
             f"Unknown persona '{persona}'. Must be one of: {sorted(_VALID_PERSONAS)}"
         )
 
+    t0 = time.monotonic()
     logger.info("[dashboards] Computing dashboard for persona=%s", persona)
 
-    # Load shared data
-    combining = _load_combining_statements()
-    overlap = _load_entity_overlap()
+    eng = get_active_engagement()
+    entity_a_id, entity_b_id = eng.entity_ids()
 
-    # Engine cache — computes cross-sell and bridge once, reuses across calls
+    # All data from module-level engine cache (mtime-invalidated)
+    combining = _engine_cache.get("combining")
+    overlap = _engine_cache.get("overlap")
     cache = _EngineCache()
 
     builder = _BUILDERS[persona]
-    result = builder(combining, overlap, cache)
+    result = builder(combining, overlap, cache, entity_a_id, entity_b_id)
 
-    logger.info("[dashboards] Dashboard for %s complete", persona)
+    elapsed_ms = (time.monotonic() - t0) * 1000
+    logger.info("[dashboards] Dashboard for %s complete in %.0fms", persona, elapsed_ms)
     return result
