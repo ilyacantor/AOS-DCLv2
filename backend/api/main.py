@@ -357,11 +357,16 @@ def health():
     from backend.engine.graph_store import get_semantic_graph
     mode = get_current_mode()
     graph = get_semantic_graph()
+    query_ready = (
+        _startup_phase in ("ready", "degraded")
+        and graph is not None
+    )
     return {
         "status": "DCL Engine API is running",
         "version": API_VERSION,
         "phase": _startup_phase,
         "graph_ready": graph is not None,
+        "query_ready": query_ready,
         "redis_available": is_redis_available(),
         "error": _startup_error,
         "data_mode": mode.data_mode,

@@ -383,6 +383,7 @@ class FarmV2TestHarness:
 
         self._test_ingest_all_pipes()
         self._test_ingest_summary()
+        self._test_materialize_backfill()
         self._test_ingest_bridge_sources()
         self._test_dcl_engine_farm_mode()
         self._test_ontology_mapping_coverage()
@@ -476,6 +477,49 @@ class FarmV2TestHarness:
                 f"Source '{src}' present",
                 f"found: {src in found_sources}"
             )
+
+    def _test_materialize_backfill(self):
+        """Test 2b: Run synchronous materialization backfill after ingest.
+
+        The HTTP ingest endpoint defers materialization to a background thread
+        pool, but this harness bypasses HTTP and writes to the store directly.
+        We must materialize explicitly before running graph/query tests,
+        otherwise metrics will be missing and downstream queries will fail.
+        """
+        print("\n[Test 2b] Materialize backfill (wait for ingest to settle)")
+
+        from backend.engine.metric_materializer import get_materializer
+
+        store = get_ingest_store()
+        materializer = get_materializer()
+
+        total_points = 0
+        total_keys = 0
+
+        for key in store.list_runs():
+            receipt = store.get_receipt(key)
+            if not receipt:
+                continue
+            rows = store.get_rows(key)
+            if not rows:
+                continue
+
+            points = materializer.materialize(
+                pipe_id=receipt.pipe_id,
+                source_system=receipt.source_system,
+                rows=rows,
+                dispatch_id=receipt.dispatch_id,
+            )
+            if points:
+                store.store_materialized(key, points)
+                total_points += len(points)
+                total_keys += 1
+
+        self._assert(
+            total_keys > 0,
+            "Materialization produced data",
+            f"{total_points} data points across {total_keys} pipe runs"
+        )
 
     def _test_ingest_bridge_sources(self):
         """Test 3: Verify ingest bridge builds 8 SourceSystem objects."""
