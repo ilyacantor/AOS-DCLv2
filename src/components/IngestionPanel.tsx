@@ -53,6 +53,22 @@ interface ActivityEntry {
   aod_run_id: string;
 }
 
+interface DispatchPipeDetail {
+  pipe_id: string;
+  source_system: string;
+  row_count: number;
+  schema_drift: boolean;
+  category: 'mapped' | 'unmapped' | 'tooling' | 'unknown';
+}
+
+interface DispatchDetail {
+  dispatch_id: string;
+  mapped_count: number;
+  unmapped_count: number;
+  tooling_count: number;
+  pipes: DispatchPipeDetail[];
+}
+
 const POLL_INTERVAL_MS = 5000;
 
 // Phase display config
@@ -76,6 +92,10 @@ export function IngestionPanel() {
   const [expandedSnap, setExpandedSnap] = useState<string | null>(null);
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
+  const [drillDispatchId, setDrillDispatchId] = useState<string | null>(null);
+  const [drillData, setDrillData] = useState<DispatchDetail | null>(null);
+  const [drillFilter, setDrillFilter] = useState<string | null>(null);
+  const [drillLoading, setDrillLoading] = useState(false);
 
   const fetchStats = async () => {
     try {
@@ -124,6 +144,30 @@ export function IngestionPanel() {
       console.error('[IngestionPanel] Reset failed:', e);
     } finally {
       setResetting(false);
+    }
+  };
+
+  const fetchDrillDown = async (dispatchId: string, filter?: string) => {
+    if (drillDispatchId === dispatchId && drillFilter === (filter ?? null)) {
+      // Toggle off
+      setDrillDispatchId(null);
+      setDrillData(null);
+      setDrillFilter(null);
+      return;
+    }
+    setDrillDispatchId(dispatchId);
+    setDrillFilter(filter ?? null);
+    setDrillLoading(true);
+    try {
+      const res = await fetch(`/api/dcl/ingest/dispatches/${dispatchId}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      setDrillData(json);
+    } catch (err) {
+      console.error('[IngestionPanel] Failed to fetch dispatch detail:', err);
+      setDrillData(null);
+    } finally {
+      setDrillLoading(false);
     }
   };
 
@@ -440,6 +484,73 @@ export function IngestionPanel() {
                                 </td>
                               </tr>
 
+                              {/* Drill-down table for mapped/unmapped/tooling */}
+                              {entry.phase === 'content' && drillDispatchId === entry.dispatch_id && drillData && (
+                                <tr className="border-b border-border/20 bg-card/5">
+                                  <td colSpan={9} className="px-3 py-3 pl-12">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                        Pipe Breakdown
+                                        {drillFilter && (
+                                          <span className="ml-2 normal-case tracking-normal">
+                                            — showing <span className={
+                                              drillFilter === 'mapped' ? 'text-emerald-400' :
+                                              drillFilter === 'unmapped' ? 'text-red-400' :
+                                              'text-amber-400'
+                                            }>{drillFilter}</span>
+                                          </span>
+                                        )}
+                                      </span>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setDrillDispatchId(null); setDrillData(null); setDrillFilter(null); }}
+                                        className="text-[10px] text-muted-foreground hover:text-foreground"
+                                      >
+                                        Collapse
+                                      </button>
+                                    </div>
+                                    {drillLoading ? (
+                                      <div className="text-[10px] text-muted-foreground">Loading...</div>
+                                    ) : (
+                                      <table className="w-full text-[10px]">
+                                        <thead>
+                                          <tr className="text-muted-foreground/60 uppercase tracking-wider">
+                                            <th className="text-left px-2 py-1 font-medium">Pipe ID</th>
+                                            <th className="text-left px-2 py-1 font-medium">Source</th>
+                                            <th className="text-right px-2 py-1 font-medium">Rows</th>
+                                            <th className="text-left px-2 py-1 font-medium">Category</th>
+                                            <th className="text-left px-2 py-1 font-medium">Drift</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {(drillData.pipes || [])
+                                            .filter((p) => !drillFilter || p.category === drillFilter)
+                                            .map((p, i) => (
+                                            <tr key={i} className="border-t border-border/10 hover:bg-card/10">
+                                              <td className="px-2 py-1 font-mono text-foreground/80">{p.pipe_id}</td>
+                                              <td className="px-2 py-1 text-muted-foreground">{p.source_system}</td>
+                                              <td className="px-2 py-1 text-right font-mono text-foreground/80">{fmtRows(p.row_count)}</td>
+                                              <td className="px-2 py-1">
+                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold border ${
+                                                  p.category === 'mapped' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                                  p.category === 'unmapped' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                                  p.category === 'tooling' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                                  'bg-muted/20 text-muted-foreground border-muted/30'
+                                                }`}>
+                                                  {p.category}
+                                                </span>
+                                              </td>
+                                              <td className="px-2 py-1 text-muted-foreground">
+                                                {p.schema_drift ? <span className="text-amber-400">yes</span> : '-'}
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    )}
+                                  </td>
+                                </tr>
+                              )}
+
                               {/* Phase detail sub-row */}
                               {isPhaseExpanded && (
                                 <tr className="border-b border-border/20 bg-card/5">
@@ -457,17 +568,26 @@ export function IngestionPanel() {
                                         <>
                                           <span>
                                             <span className="text-muted-foreground/60">mapped </span>
-                                            <span className="text-emerald-400">{entry.mapped_pipes}</span>
+                                            <span
+                                              className="text-emerald-400 cursor-pointer underline decoration-dotted hover:decoration-solid"
+                                              onClick={(e) => { e.stopPropagation(); fetchDrillDown(entry.dispatch_id, 'mapped'); }}
+                                            >{entry.mapped_pipes}</span>
                                             <span className="text-muted-foreground/40"> / </span>
                                             <span className="text-muted-foreground/60">unmapped </span>
-                                            <span className="text-red-400">{entry.unmapped_pipes}</span>
+                                            <span
+                                              className="text-red-400 cursor-pointer underline decoration-dotted hover:decoration-solid"
+                                              onClick={(e) => { e.stopPropagation(); fetchDrillDown(entry.dispatch_id, 'unmapped'); }}
+                                            >{entry.unmapped_pipes}</span>
                                           </span>
                                           <span>
                                             <span className="text-muted-foreground/60">SOR systems </span>
                                             <span className="text-blue-400">{entry.sors}</span>
                                             <span className="text-muted-foreground/40"> / </span>
                                             <span className="text-muted-foreground/60">tooling </span>
-                                            <span className="text-amber-400">{entry.tooling_pipes}</span>
+                                            <span
+                                              className="text-amber-400 cursor-pointer underline decoration-dotted hover:decoration-solid"
+                                              onClick={(e) => { e.stopPropagation(); fetchDrillDown(entry.dispatch_id, 'tooling'); }}
+                                            >{entry.tooling_pipes}</span>
                                           </span>
                                         </>
                                       )}

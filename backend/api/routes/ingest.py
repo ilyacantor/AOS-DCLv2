@@ -94,7 +94,7 @@ def _validate_pipe_guard(pipe_id: str, run_id: str, source_system: str, now: str
     AAM-dispatched pushes are still validated against registered blueprints.
     """
     pipe_store = get_pipe_store()
-    pipe_def = pipe_store.lookup(pipe_id)
+    pipe_def = pipe_store.lookup_from_store(pipe_id)
     guard_active = pipe_store.count() > 0
 
     if guard_active and pipe_def is None:
@@ -235,44 +235,42 @@ def _record_ingest_activity(
     # --- Path 3: Content activity ---
     # Use has_phase("content") so a prior structure entry with the same
     # dispatch_id doesn't shadow content creation.
-    # Resolve fabric plane and category for this pipe from the pipe definition store
-    pipe_def = pipe_store.lookup(pipe_id)
+    # Resolve fabric plane and category for this pipe from the pipe definition store.
+    # lookup_from_store() reads Postgres directly — immune to per-worker cache staleness.
+    pipe_def = pipe_store.lookup_from_store(pipe_id)
 
     if pipe_def is None:
-        logger.error(
-            f"[Activity] pipe_def missing for pipe_id={pipe_id} "
+        logger.warning(
+            f"[Activity] pipe_def not found for pipe_id={pipe_id} "
             f"(source_system={source_system}, dispatch_id={did}). "
-            f"Skipping SOR attribution — no fallback."
+            f"Counting as unmapped with source_system attribution."
         )
-        return
-
-    # Use pipe_def.vendor as the canonical source for attribution
-    vendor_source = pipe_def.vendor or ""
-    if not vendor_source:
-        logger.error(
-            f"[Activity] pipe_def for pipe_id={pipe_id} has empty vendor. "
-            f"Skipping SOR attribution — no fallback."
-        )
-        return
-
-    pipe_fabric = pipe_def.fabric_plane if pipe_def.fabric_plane else None
-    is_tooling = _is_tooling_pipe(pipe_def)
-
-    # Classify pipe as SOR using AOD's sor_tagging (authoritative).
-    # Per RACI v6 rows 166-167, AOD owns SOR identification.
-    # The old code checked governance_status == "governed" which is a
-    # different dimension.  The even-older code treated every non-tooling
-    # pipe as a SOR.  Both are dead — only AOD's tagging counts.
-    is_sor = False
-    if pipe_def.sor_tagging:
-        try:
-            tagging = json.loads(pipe_def.sor_tagging)
-            is_sor = tagging.get("confidence") in ("high", "medium")
-        except (json.JSONDecodeError, TypeError):
+        vendor_source = source_system
+        pipe_fabric = None
+        is_tooling = False
+        is_sor = False
+    else:
+        vendor_source = pipe_def.vendor or source_system
+        if not pipe_def.vendor:
             logger.warning(
-                f"[Activity] pipe_id={pipe_id} has unparseable sor_tagging: "
-                f"{pipe_def.sor_tagging!r} — treating as non-SOR"
+                f"[Activity] pipe_def for pipe_id={pipe_id} has empty vendor. "
+                f"Using source_system={source_system} for attribution."
             )
+        pipe_fabric = pipe_def.fabric_plane if pipe_def.fabric_plane else None
+        is_tooling = _is_tooling_pipe(pipe_def)
+
+        # Classify pipe as SOR using AOD's sor_tagging (authoritative).
+        # Per RACI v6 rows 166-167, AOD owns SOR identification.
+        is_sor = False
+        if pipe_def.sor_tagging:
+            try:
+                tagging = json.loads(pipe_def.sor_tagging)
+                is_sor = tagging.get("confidence") in ("high", "medium")
+            except (json.JSONDecodeError, TypeError):
+                logger.warning(
+                    f"[Activity] pipe_id={pipe_id} has unparseable sor_tagging: "
+                    f"{pipe_def.sor_tagging!r} -- treating as non-SOR"
+                )
 
     if did and not store.has_phase(did, "content"):
         # First pipe for this dispatch — create the content entry

@@ -1420,6 +1420,22 @@ class IngestStore:
                     "run_id": r.run_id,
                 })
 
+            # Enrich each pipe entry with its category (mapped/unmapped/tooling/unknown)
+            mapped_set = self._content_mapped.get(dispatch_id, set())
+            unmapped_set = self._content_unmapped.get(dispatch_id, set())
+            tooling_set = self._content_tooling.get(dispatch_id, set())
+
+            for pipe_entry in pipes_detail:
+                pid = pipe_entry["pipe_id"]
+                if pid in tooling_set:
+                    pipe_entry["category"] = "tooling"
+                elif pid in mapped_set:
+                    pipe_entry["category"] = "mapped"
+                elif pid in unmapped_set:
+                    pipe_entry["category"] = "unmapped"
+                else:
+                    pipe_entry["category"] = "unknown"
+
             snapshots = sorted(set(r.snapshot_name for r in receipts))
             tenants = sorted(set(r.tenant_id for r in receipts))
 
@@ -1437,6 +1453,12 @@ class IngestStore:
                 "run_ids": sorted(set(r.run_id for r in receipts)),
                 "sources_breakdown": sources_breakdown,
                 "pipes": pipes_detail,
+                "mapped_count": len(mapped_set),
+                "unmapped_count": len(unmapped_set),
+                "tooling_count": len(tooling_set),
+                "mapped_pipes": sorted(mapped_set),
+                "unmapped_pipes": sorted(unmapped_set),
+                "tooling_pipes": sorted(tooling_set),
             }
 
     def record_aam_pull(self, run_id: str, source_names: list, source_ids: list, kpis: dict, fabric_planes: list = None) -> tuple:

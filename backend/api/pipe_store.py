@@ -718,6 +718,91 @@ class PipeDefinitionStore:
         )
         return receipt
 
+    def lookup_from_store(self, pipe_id: str) -> Optional[PipeDefinition]:
+        """Look up a pipe definition from the shared persistent store.
+
+        Unlike lookup(), this bypasses the per-worker in-memory cache
+        and reads directly from Postgres (source of truth). Use this
+        on the ingest path where cross-worker consistency is critical.
+        """
+        # 1. Try Postgres (source of truth)
+        defn = self._lookup_from_postgres(pipe_id)
+        if defn is not None:
+            # Backfill in-memory cache for subsequent reads
+            with self._lock:
+                self._definitions[pipe_id] = defn
+            return defn
+
+        # 2. Try Redis (write-through cache)
+        defn = self._lookup_from_redis(pipe_id)
+        if defn is not None:
+            with self._lock:
+                self._definitions[pipe_id] = defn
+            return defn
+
+        return None
+
+    def _lookup_from_postgres(self, pipe_id: str) -> Optional[PipeDefinition]:
+        """Single-row lookup from Postgres by primary key."""
+        with _pg_conn() as conn:
+            if conn is None:
+                return None
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT pipe_id, candidate_id, source_name, vendor, category, "
+                        "governance_status, fields, entity_scope, identity_keys, "
+                        "transport_kind, modality, change_semantics, health, "
+                        "last_sync, asset_key, aod_asset_id, fabric_plane, "
+                        "trust_score, data_quality_score, received_at "
+                        "FROM pipe_definitions WHERE pipe_id = %s",
+                        (pipe_id,),
+                    )
+                    row = cur.fetchone()
+                    if row is None:
+                        return None
+                    return PipeDefinition(
+                        pipe_id=row[0],
+                        candidate_id=row[1] or "",
+                        source_name=row[2] or "",
+                        vendor=row[3] or "",
+                        category=row[4] or "",
+                        governance_status=row[5],
+                        fields=row[6] if isinstance(row[6], list) else [],
+                        entity_scope=row[7],
+                        identity_keys=row[8] if isinstance(row[8], list) else [],
+                        transport_kind=row[9],
+                        modality=row[10],
+                        change_semantics=row[11],
+                        health=row[12] or "unknown",
+                        last_sync=row[13],
+                        asset_key=row[14] or "",
+                        aod_asset_id=row[15],
+                        fabric_plane=(row[16] or "").lower(),
+                        trust_score=row[17] or 0,
+                        data_quality_score=row[18] or 0,
+                        received_at=str(row[19]) if row[19] else "",
+                    )
+            except Exception as e:
+                logger.warning(f"[PipeStore] Postgres single-row lookup failed for {pipe_id}: {e}")
+                return None
+
+    def _lookup_from_redis(self, pipe_id: str) -> Optional[PipeDefinition]:
+        """Single-field lookup from Redis definitions hash."""
+        if not self._redis:
+            return None
+        try:
+            raw = self._redis.hget(f"{_REDIS_PREFIX}definitions", pipe_id)
+            if raw is None:
+                return None
+            defn = PipeDefinition(**json.loads(raw))
+            if defn.fabric_plane:
+                defn.fabric_plane = defn.fabric_plane.lower()
+            return defn
+        except Exception as e:
+            logger.warning(f"[PipeStore] Redis single-key lookup failed for {pipe_id}: {e}")
+            return None
+
     def lookup(self, pipe_id: str) -> Optional[PipeDefinition]:
         """Look up a pipe definition by pipe_id (the JOIN key).
 
