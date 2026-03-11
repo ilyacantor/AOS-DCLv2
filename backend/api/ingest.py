@@ -286,7 +286,7 @@ def _get_redis():
 # ---------------------------------------------------------------------------
 
 _MAX_RUNS = 500          # keep last N run receipts
-_MAX_BUFFERED_ROWS = 100_000   # total rows across all runs (must exceed single multi-entity Farm run ~60k)
+_MAX_BUFFERED_ROWS = 300_000   # total rows across accumulated runs (~5 AAM dispatches × 52K rows each)
 _MAX_DRIFT_EVENTS = 1000
 _MAX_MATERIALIZED_POINTS = 50_000   # evict oldest keys when exceeded
 _MAX_SCHEMA_ENTRIES = 5_000         # evict oldest schemas when exceeded
