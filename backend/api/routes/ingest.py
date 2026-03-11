@@ -274,6 +274,9 @@ def _record_ingest_activity(
 
     if did and not store.has_phase(did, "content"):
         # First pipe for this dispatch — create the content entry
+        # Sync from Redis before mutating so we merge any pipes tracked by other workers
+        store._sync_content_sets(did)
+
         store._content_pipes.setdefault(did, set()).add(pipe_id)
 
         # Track tooling pipes separately
@@ -286,15 +289,19 @@ def _record_ingest_activity(
             else:
                 store._content_unmapped.setdefault(did, set()).add(pipe_id)
 
-        content_fabrics = set()
+        content_fabrics = store._content_fabrics.setdefault(did, set())
         if pipe_fabric:
             content_fabrics.add(pipe_fabric)
-        store._content_fabrics[did] = content_fabrics
         # Track SOR vs other
         if is_sor:
             store._content_sor_pipes.setdefault(did, set()).add(pipe_id)
         else:
             store._content_other_pipes.setdefault(did, set()).add(pipe_id)
+        store._content_sources.setdefault(did, set()).add(vendor_source)
+
+        # Persist to Redis AFTER mutation so other workers see updated sets
+        store._persist_content_sets(did)
+
         sor_set = store._content_sor_pipes.get(did, set())
         other_set = store._content_other_pipes.get(did, set())
         # entry.sors = AOD authority (same basis as structure phase).
@@ -322,9 +329,11 @@ def _record_ingest_activity(
             # Another worker beat us — fall through to update so this
             # pipe's data still gets counted in the existing entry.
             store.update_content_activity(did, rows, pipe_id)
-        store._content_sources.setdefault(did, set()).add(vendor_source)
     elif did:
         # Subsequent push — update the existing content entry
+        # Sync from Redis BEFORE reading counts to get other worker's pipes
+        store._sync_content_sets(did)
+
         store.update_content_activity(did, rows, pipe_id)
 
         # Track tooling pipes separately
@@ -349,6 +358,11 @@ def _record_ingest_activity(
         # Track sources (using pipe_def vendor, not raw source_system)
         sources = store._content_sources.setdefault(did, set())
         sources.add(vendor_source)
+
+        # Persist to Redis AFTER mutation so other workers see updated sets
+        store._persist_content_sets(did)
+
+        # Read counts AFTER sync+mutate — reflects the union of all workers
         mapped_set = store._content_mapped.get(did, set())
         unmapped_set = store._content_unmapped.get(did, set())
         tooling_set = store._content_tooling.get(did, set())

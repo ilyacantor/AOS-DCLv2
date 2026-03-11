@@ -782,6 +782,9 @@ class IngestStore:
                 for d in json.loads(drop_raw):
                     self._drop_log.append(DropEntry(**d))
 
+            # Content tracking sets — rehydrate from Redis on startup
+            self._sync_all_content_sets()
+
             # Batch-fetch materialized data via pipeline — only for loaded receipts
             materialized_loaded = 0
             receipt_keys = list(self._receipts.keys())
@@ -1040,6 +1043,82 @@ class IngestStore:
                 self._evict_rows_from_redis(eid)
 
     # ------------------------------------------------------------------
+    # Content tracking sets — Redis persistence for multi-worker sync
+    # ------------------------------------------------------------------
+
+    def _persist_content_sets(self, dispatch_id: str) -> None:
+        """Write content tracking sets for one dispatch to Redis."""
+        if not self._redis:
+            return
+        try:
+            data = {
+                "pipes": sorted(self._content_pipes.get(dispatch_id, set())),
+                "mapped": sorted(self._content_mapped.get(dispatch_id, set())),
+                "unmapped": sorted(self._content_unmapped.get(dispatch_id, set())),
+                "tooling": sorted(self._content_tooling.get(dispatch_id, set())),
+                "fabrics": sorted(self._content_fabrics.get(dispatch_id, set())),
+                "sor_pipes": sorted(self._content_sor_pipes.get(dispatch_id, set())),
+                "other_pipes": sorted(self._content_other_pipes.get(dispatch_id, set())),
+                "sources": sorted(self._content_sources.get(dispatch_id, set())),
+            }
+            self._redis.hset(
+                f"{_REDIS_PREFIX}content_sets",
+                dispatch_id,
+                json.dumps(data),
+            )
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis persist content sets failed: {e}")
+
+    def _sync_content_sets(self, dispatch_id: str) -> None:
+        """Merge content tracking sets from Redis into in-memory for one dispatch.
+
+        Uses set UNION so pipes tracked by either worker are included.
+        """
+        if not self._redis:
+            return
+        try:
+            raw = self._redis.hget(f"{_REDIS_PREFIX}content_sets", dispatch_id)
+            if not raw:
+                return
+            data = json.loads(raw)
+            # Union — not replace — so we combine both workers' knowledge
+            self._content_pipes.setdefault(dispatch_id, set()).update(data.get("pipes", []))
+            self._content_mapped.setdefault(dispatch_id, set()).update(data.get("mapped", []))
+            self._content_unmapped.setdefault(dispatch_id, set()).update(data.get("unmapped", []))
+            self._content_tooling.setdefault(dispatch_id, set()).update(data.get("tooling", []))
+            self._content_fabrics.setdefault(dispatch_id, set()).update(data.get("fabrics", []))
+            self._content_sor_pipes.setdefault(dispatch_id, set()).update(data.get("sor_pipes", []))
+            self._content_other_pipes.setdefault(dispatch_id, set()).update(data.get("other_pipes", []))
+            self._content_sources.setdefault(dispatch_id, set()).update(data.get("sources", []))
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis sync content sets failed: {e}")
+
+    def _sync_all_content_sets(self) -> None:
+        """Bulk-load all content tracking sets from Redis.
+
+        Called during _sync_from_redis() and _load_from_redis() to ensure
+        all workers see the union of all tracked pipes across dispatches.
+        """
+        if not self._redis:
+            return
+        try:
+            all_raw = self._redis.hgetall(f"{_REDIS_PREFIX}content_sets")
+            if not all_raw:
+                return
+            for dispatch_id, raw in all_raw.items():
+                data = json.loads(raw)
+                self._content_pipes.setdefault(dispatch_id, set()).update(data.get("pipes", []))
+                self._content_mapped.setdefault(dispatch_id, set()).update(data.get("mapped", []))
+                self._content_unmapped.setdefault(dispatch_id, set()).update(data.get("unmapped", []))
+                self._content_tooling.setdefault(dispatch_id, set()).update(data.get("tooling", []))
+                self._content_fabrics.setdefault(dispatch_id, set()).update(data.get("fabrics", []))
+                self._content_sor_pipes.setdefault(dispatch_id, set()).update(data.get("sor_pipes", []))
+                self._content_other_pipes.setdefault(dispatch_id, set()).update(data.get("other_pipes", []))
+                self._content_sources.setdefault(dispatch_id, set()).update(data.get("sources", []))
+        except Exception as e:
+            logger.warning(f"[IngestStore] Redis bulk sync content sets failed: {e}")
+
+    # ------------------------------------------------------------------
     # Cross-worker sync — reload lightweight lists from Redis so all
     # workers see the same state.  Called before read endpoints.
     # ------------------------------------------------------------------
@@ -1118,6 +1197,10 @@ class IngestStore:
 
                 with self._lock:
                     self._receipts = ordered_receipts
+
+            # Content tracking sets — merge from Redis so both workers
+            # see the union of all tracked pipes.
+            self._sync_all_content_sets()
 
         except Exception as e:
             logger.warning(f"[IngestStore] Redis sync failed: {e}")
@@ -1397,6 +1480,9 @@ class IngestStore:
 
     def get_dispatch_summary(self, dispatch_id: str) -> Optional[Dict[str, Any]]:
         """Detailed summary for one dispatch, including per-source breakdown."""
+        # Merge content sets from Redis before reading — ensures we see
+        # pipes tracked by all workers, not just this one.
+        self._sync_content_sets(dispatch_id)
         with self._lock:
             receipts = [r for r in self._receipts.values() if r.dispatch_id == dispatch_id]
             if not receipts:
@@ -1887,6 +1973,12 @@ class IngestStore:
             self._content_tooling.pop(sid, None)
             self._content_sor_pipes.pop(sid, None)
             self._content_other_pipes.pop(sid, None)
+            # Remove from Redis too so evicted dispatches don't zombie back
+            if self._redis:
+                try:
+                    self._redis.hdel(f"{_REDIS_PREFIX}content_sets", sid)
+                except Exception:
+                    pass
         self._seen_dispatch_ids = live_ids
 
     def record_activity(self, entry: "ActivityEntry") -> bool:
