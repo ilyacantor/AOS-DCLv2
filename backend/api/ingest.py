@@ -285,7 +285,7 @@ def _get_redis():
 # Ingest Store with Redis write-through
 # ---------------------------------------------------------------------------
 
-_MAX_RUNS = 500          # keep last N run receipts
+_MAX_RUNS = 2000         # keep last N run receipts (each AAM dispatch = ~90 receipts)
 _MAX_BUFFERED_ROWS = 300_000   # total rows across accumulated runs (~5 AAM dispatches × 52K rows each)
 _MAX_DRIFT_EVENTS = 1000
 _MAX_MATERIALIZED_POINTS = 50_000   # evict oldest keys when exceeded
