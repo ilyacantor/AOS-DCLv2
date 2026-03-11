@@ -331,6 +331,10 @@ class IngestStore:
         self._content_sor_pipes: Dict[str, set] = {}    # dispatch_id → governed pipe_ids
         self._content_other_pipes: Dict[str, set] = {}  # dispatch_id → non-governed pipe_ids
 
+        # Reverse index: pipe_id → latest storage key (run_id:pipe_id)
+        # Used to evict stale receipts when the same pipe is re-pushed under a new run_id.
+        self._pipe_latest_key: Dict[str, str] = {}
+
         # Row buffer
         self._row_buffer: OrderedDict[str, List[Dict[str, Any]]] = OrderedDict()
         self._total_rows = 0
@@ -460,7 +464,7 @@ class IngestStore:
 
             if not redis_loaded:
                 # --- Filter to 3 most recent snapshots ---
-                _MAX_STARTUP_SNAPSHOTS = 3
+                _MAX_STARTUP_SNAPSHOTS = 10
                 raw_receipts = data.get("receipts", {})
                 snapshot_latest: dict[str, str] = {}
                 for v in raw_receipts.values():
@@ -478,6 +482,8 @@ class IngestStore:
                         disk_skipped += 1
                         continue
                     self._receipts[k] = RunReceipt(**v)
+                    # Populate pipe dedup index (later keys overwrite earlier)
+                    self._pipe_latest_key[self._receipts[k].pipe_id] = k
 
                 for k, v in data.get("schema_registry", {}).items():
                     self._schema_registry[k] = SchemaRecord(**v)
@@ -686,8 +692,8 @@ class IngestStore:
             loaded_receipts = 0
             loaded_rows = 0
 
-            # --- Determine the 3 most recent snapshots ---
-            _MAX_STARTUP_SNAPSHOTS = 3
+            # --- Determine the N most recent snapshots ---
+            _MAX_STARTUP_SNAPSHOTS = 10
             snapshot_latest: dict[str, str] = {}  # snapshot_name → latest received_at
             for raw in all_receipts_raw.values():
                 d = json.loads(raw)
@@ -721,6 +727,10 @@ class IngestStore:
 
                 self._receipts[storage_key] = receipt
                 loaded_receipts += 1
+
+                # Populate pipe dedup index; later keys overwrite earlier
+                # (order list is chronological), so we keep the latest.
+                self._pipe_latest_key[receipt.pipe_id] = storage_key
 
                 if self._total_rows < _MAX_BUFFERED_ROWS:
                     keys_to_load_rows.append(storage_key)
@@ -1225,6 +1235,21 @@ class IngestStore:
                 runner_id=request.runner_id,
             )
             key = _make_key(run_id, pipe_id)
+
+            # Pipe-level dedup: if this pipe_id was already pushed under a
+            # different run_id, evict the old receipt and its rows so repeated
+            # Farm dispatches don't crowd out the one-time discovery run.
+            prev_key = self._pipe_latest_key.get(pipe_id)
+            if prev_key and prev_key != key and prev_key in self._receipts:
+                del self._receipts[prev_key]
+                old_rows = self._row_buffer.pop(prev_key, None)
+                if old_rows is not None:
+                    self._total_rows -= len(old_rows)
+                evicted_receipt_ids.append(prev_key)
+                # Also evict old materialized points for this pipe
+                self._materialized.pop(prev_key, None)
+            self._pipe_latest_key[pipe_id] = key
+
             self._receipts[key] = receipt
 
             # Receipt cap eviction: remove oldest receipt AND its row data.
