@@ -26,6 +26,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      account: customer
 
   - metric: arr
     value_concept: revenue
@@ -181,6 +182,51 @@ extractions:
     dimension_map:
       territory: region
 
+  - metric: sm_expense
+    value_concept: cost
+    measure_op: sum
+    period_concept: date
+    value_field_hint: sm_expense
+    strict_hint: true
+    dimension_map:
+      territory: region
+
+  - metric: rd_expense
+    value_concept: cost
+    measure_op: sum
+    period_concept: date
+    value_field_hint: rd_expense
+    strict_hint: true
+    dimension_map:
+      territory: region
+
+  - metric: ga_expense
+    value_concept: cost
+    measure_op: sum
+    period_concept: date
+    value_field_hint: ga_expense
+    strict_hint: true
+    dimension_map:
+      territory: region
+
+  - metric: da_expense
+    value_concept: cost
+    measure_op: sum
+    period_concept: date
+    value_field_hint: da_expense
+    strict_hint: true
+    dimension_map:
+      territory: region
+
+  - metric: tax_expense
+    value_concept: cost
+    measure_op: sum
+    period_concept: date
+    value_field_hint: tax_expense
+    strict_hint: true
+    dimension_map:
+      territory: region
+
   # ─── Balance Sheet / Cash ────────────────────────────────────────
 
   - metric: cash
@@ -222,15 +268,10 @@ extractions:
     value_concept: revenue
     measure_op: sum
     period_concept: date
-    filters:
-      - concept: pipeline_stage
-        exclude_values: ["Closed Won", "Closed-Won", "Closed Lost", "Closed-Lost"]
-        optional: true
+    value_field_hint: pipeline_value
+    strict_hint: true
     dimension_map:
       territory: region
-      customer_segment: segment
-      pipeline_stage: stage
-    unit_scale: 0.000001
 
   # ─── CRO Pack ─────────────────────────────────────────────
 
@@ -238,15 +279,10 @@ extractions:
     value_concept: revenue
     measure_op: sum
     period_concept: date
-    filters:
-      - concept: pipeline_stage
-        exclude_values: ["Closed Won", "Closed-Won", "Closed Lost", "Closed-Lost"]
-        optional: true
+    value_field_hint: pipeline_value
+    strict_hint: true
     dimension_map:
       territory: region
-      customer_segment: segment
-      pipeline_stage: stage
-    unit_scale: 0.000001
 
   - metric: win_rate_pct
     value_concept: win_loss

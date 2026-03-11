@@ -487,6 +487,7 @@ concepts:
       - account_name
       - company
       - customer_id
+      - customer
       - client_id
     aliases:
       - customer

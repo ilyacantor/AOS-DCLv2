@@ -649,18 +649,20 @@ def _query_ingest_store(
         # Without dedup, the same metric/period/source gets summed N times
         # (once per run), inflating values by Nx.
         #
-        # Dedup key: (metric, period, source_system, pipe_id, dim_key)
-        # If same key appears from multiple runs, keep the LATEST
-        # (by materialized_at timestamp).  Different sources for the same
-        # metric/period are kept — they represent different data (e.g.
-        # netsuite revenue + salesforce revenue).
+        # Dedup key: (period, source_system, dim_key)
+        # If same key appears from multiple runs or pipes, keep the LATEST
+        # (by materialized_at timestamp).  Different source_systems for the
+        # same metric/period are kept — they represent genuinely different
+        # data (e.g. netsuite revenue + salesforce revenue).
+        # pipe_id is intentionally excluded: multiple pipes from the same
+        # source_system for the same metric/period are duplicates (e.g.,
+        # two financial_summary pushes under different pipe_ids).
         _dedup: dict = {}
         for pt in mat_points:
             period = pt.get("period", "current")
             src = pt.get("source_system", "")
-            pid = pt.get("pipe_id", "")
             dim_key = tuple(sorted(pt.get("dimensions", {}).items()))
-            dedup_key = (period, src, pid, dim_key)
+            dedup_key = (period, src, dim_key)
             existing = _dedup.get(dedup_key)
             if existing is None:
                 _dedup[dedup_key] = pt
@@ -694,6 +696,34 @@ def _query_ingest_store(
         _unique_entities.discard(None)
         _multi_entity = len(_unique_entities) > 1
         _group_by_entity = _multi_entity and not consolidate
+
+        # ── Prevent total+regional double-counting ──────────────────
+        # Farm's financial_summary pipe pushes a total row (no dimensions)
+        # plus regional rows (with territory dimension) per period.  When
+        # the query requests no dimensions, both kinds collapse to the same
+        # aggregation key and get summed → 2× the real value.
+        #
+        # Fix: when no dimensions are requested, prefer undimensioned
+        # (pre-aggregated total) points.  Only fall through to dimensioned
+        # points if no totals exist for a given period.
+        if not dimensions:
+            _has_total: set = set()   # periods that have an undimensioned point
+            _has_detail: set = set()  # periods that have dimensioned points
+            for pt in mat_points:
+                period = pt.get("period", "current")
+                if pt.get("dimensions"):
+                    _has_detail.add(period)
+                else:
+                    _has_total.add(period)
+            # For periods where BOTH exist, drop the dimensioned rows
+            _overlapping = _has_total & _has_detail
+            if _overlapping:
+                mat_points = [
+                    pt for pt in mat_points
+                    if pt.get("dimensions") is None
+                    or not pt.get("dimensions")
+                    or pt.get("period", "current") not in _overlapping
+                ]
 
         agg: dict = _dd(float)
         agg_count: dict = _dd(int)

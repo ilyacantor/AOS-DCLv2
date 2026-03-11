@@ -5589,16 +5589,307 @@
   "people_overlap": {
     "functions": [
       {
+        "function": "Consulting / Delivery",
+        "meridian_headcount": 25000,
+        "cascadia_headcount": 6500,
+        "combined_headcount": 31500,
+        "role_overlap_examples": [
+          "Partner",
+          "Principal",
+          "Senior Manager",
+          "Manager",
+          "Senior Consultant",
+          "Consultant",
+          "Analyst"
+        ],
+        "definitional_note": "Meridian counts all consultants including contractors. Cascadia counts W-2 delivery staff only \u2014 COFA conflict.",
+        "role_detail": [
+          {
+            "title": "Partner",
+            "meridian_count": 750,
+            "cascadia_count": 130,
+            "combined_count": 880,
+            "consolidation_action": "retain_both",
+            "reporting_line": "Practice Lead"
+          },
+          {
+            "title": "Principal",
+            "meridian_count": 1500,
+            "cascadia_count": 325,
+            "combined_count": 1825,
+            "consolidation_action": "consolidate",
+            "reporting_line": "Practice Lead"
+          },
+          {
+            "title": "Senior Manager",
+            "meridian_count": 2500,
+            "cascadia_count": 650,
+            "combined_count": 3150,
+            "consolidation_action": "consolidate",
+            "reporting_line": "Practice Lead"
+          },
+          {
+            "title": "Manager",
+            "meridian_count": 3750,
+            "cascadia_count": 845,
+            "combined_count": 4595,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Practice Lead"
+          },
+          {
+            "title": "Senior Consultant",
+            "meridian_count": 5500,
+            "cascadia_count": 1300,
+            "combined_count": 6800,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Practice Lead"
+          },
+          {
+            "title": "Consultant",
+            "meridian_count": 6250,
+            "cascadia_count": 1625,
+            "combined_count": 7875,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Practice Lead"
+          },
+          {
+            "title": "Analyst",
+            "meridian_count": 4750,
+            "cascadia_count": 1625,
+            "combined_count": 6375,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Practice Lead"
+          }
+        ],
+        "geo_distribution": {
+          "meridian": {
+            "AMER": 0.45,
+            "EMEA": 0.3,
+            "APAC": 0.18,
+            "LATAM": 0.07
+          },
+          "cascadia": {
+            "India": 0.4,
+            "Philippines": 0.25,
+            "Costa Rica": 0.1,
+            "Poland": 0.1,
+            "United States": 0.1,
+            "United Kingdom": 0.05
+          }
+        }
+      },
+      {
+        "function": "Sales",
+        "meridian_headcount": 1000,
+        "cascadia_headcount": 0,
+        "combined_headcount": 1000,
+        "role_overlap_examples": [
+          "CRO",
+          "VP Sales",
+          "Regional Sales Director",
+          "Account Director",
+          "Business Development Manager",
+          "Sales Executive"
+        ],
+        "definitional_note": "Meridian reports Sales separately. Cascadia bundles Sales & Marketing \u2014 COFA conflict.",
+        "role_detail": [
+          {
+            "title": "CRO",
+            "meridian_count": 1,
+            "cascadia_count": 0,
+            "combined_count": 1,
+            "consolidation_action": "retain_both",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "VP Sales",
+            "meridian_count": 200,
+            "cascadia_count": 0,
+            "combined_count": 200,
+            "consolidation_action": "consolidate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Regional Sales Director",
+            "meridian_count": 200,
+            "cascadia_count": 0,
+            "combined_count": 200,
+            "consolidation_action": "consolidate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Account Director",
+            "meridian_count": 200,
+            "cascadia_count": 0,
+            "combined_count": 200,
+            "consolidation_action": "consolidate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Business Development Manager",
+            "meridian_count": 200,
+            "cascadia_count": 0,
+            "combined_count": 200,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Sales Executive",
+            "meridian_count": 199,
+            "cascadia_count": 0,
+            "combined_count": 199,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          }
+        ],
+        "geo_distribution": {
+          "meridian": {
+            "AMER": 0.5,
+            "EMEA": 0.28,
+            "APAC": 0.15,
+            "LATAM": 0.07
+          }
+        }
+      },
+      {
+        "function": "Marketing",
+        "meridian_headcount": 500,
+        "cascadia_headcount": 0,
+        "combined_headcount": 500,
+        "role_overlap_examples": [
+          "CMO",
+          "VP Marketing",
+          "Brand Director",
+          "Demand Gen Manager",
+          "Digital Marketing Lead",
+          "Content Strategist"
+        ],
+        "definitional_note": "Meridian reports Marketing separately. Cascadia bundles into Sales & Marketing.",
+        "role_detail": [
+          {
+            "title": "CMO",
+            "meridian_count": 1,
+            "cascadia_count": 0,
+            "combined_count": 1,
+            "consolidation_action": "retain_both",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "VP Marketing",
+            "meridian_count": 100,
+            "cascadia_count": 0,
+            "combined_count": 100,
+            "consolidation_action": "consolidate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Brand Director",
+            "meridian_count": 100,
+            "cascadia_count": 0,
+            "combined_count": 100,
+            "consolidation_action": "consolidate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Demand Gen Manager",
+            "meridian_count": 100,
+            "cascadia_count": 0,
+            "combined_count": 100,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Digital Marketing Lead",
+            "meridian_count": 100,
+            "cascadia_count": 0,
+            "combined_count": 100,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Content Strategist",
+            "meridian_count": 99,
+            "cascadia_count": 0,
+            "combined_count": 99,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          }
+        ],
+        "geo_distribution": {
+          "meridian": {
+            "AMER": 0.55,
+            "EMEA": 0.25,
+            "APAC": 0.2
+          }
+        }
+      },
+      {
+        "function": "Sales & Marketing",
+        "meridian_headcount": 0,
+        "cascadia_headcount": 250,
+        "combined_headcount": 250,
+        "role_overlap_examples": [
+          "VP Sales & Marketing",
+          "Account Manager",
+          "Marketing Coordinator",
+          "Sales Representative"
+        ],
+        "definitional_note": "Cascadia bundles S&M into one department. Meridian separates them \u2014 COFA conflict.",
+        "role_detail": [
+          {
+            "title": "VP Sales & Marketing",
+            "meridian_count": 0,
+            "cascadia_count": 1,
+            "combined_count": 1,
+            "consolidation_action": "consolidate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Account Manager",
+            "meridian_count": 0,
+            "cascadia_count": 83,
+            "combined_count": 83,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Marketing Coordinator",
+            "meridian_count": 0,
+            "cascadia_count": 83,
+            "combined_count": 83,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Sales Representative",
+            "meridian_count": 0,
+            "cascadia_count": 83,
+            "combined_count": 83,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          }
+        ],
+        "geo_distribution": {
+          "cascadia": {
+            "United States": 0.6,
+            "United Kingdom": 0.25,
+            "India": 0.15
+          }
+        }
+      },
+      {
         "function": "Finance",
         "meridian_headcount": 400,
-        "cascadia_headcount": 350,
-        "combined_headcount": 750,
+        "cascadia_headcount": 175,
+        "combined_headcount": 575,
         "role_overlap_examples": [
           "CFO",
           "VP Finance",
           "Controller",
           "FP&A Director",
-          "Treasury Manager"
+          "Treasury Manager",
+          "Senior Accountant",
+          "Financial Analyst"
         ],
         "definitional_note": "Meridian includes finance contractors in headcount. Cascadia counts W-2 only.",
         "role_detail": [
@@ -5612,48 +5903,78 @@
           },
           {
             "title": "VP Finance",
-            "meridian_count": 100,
-            "cascadia_count": 87,
-            "combined_count": 187,
+            "meridian_count": 66,
+            "cascadia_count": 29,
+            "combined_count": 95,
             "consolidation_action": "consolidate",
             "reporting_line": "CFO"
           },
           {
             "title": "Controller",
-            "meridian_count": 100,
-            "cascadia_count": 87,
-            "combined_count": 187,
+            "meridian_count": 66,
+            "cascadia_count": 29,
+            "combined_count": 95,
             "consolidation_action": "evaluate",
             "reporting_line": "CFO"
           },
           {
             "title": "FP&A Director",
-            "meridian_count": 100,
-            "cascadia_count": 87,
-            "combined_count": 187,
+            "meridian_count": 66,
+            "cascadia_count": 29,
+            "combined_count": 95,
             "consolidation_action": "consolidate",
             "reporting_line": "VP Finance"
           },
           {
             "title": "Treasury Manager",
-            "meridian_count": 99,
-            "cascadia_count": 88,
-            "combined_count": 187,
+            "meridian_count": 66,
+            "cascadia_count": 29,
+            "combined_count": 95,
             "consolidation_action": "evaluate",
             "reporting_line": "VP Finance"
+          },
+          {
+            "title": "Senior Accountant",
+            "meridian_count": 66,
+            "cascadia_count": 29,
+            "combined_count": 95,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Financial Analyst",
+            "meridian_count": 69,
+            "cascadia_count": 29,
+            "combined_count": 98,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
           }
-        ]
+        ],
+        "geo_distribution": {
+          "meridian": {
+            "AMER": 0.5,
+            "EMEA": 0.3,
+            "APAC": 0.2
+          },
+          "cascadia": {
+            "United States": 0.55,
+            "India": 0.3,
+            "United Kingdom": 0.15
+          }
+        }
       },
       {
         "function": "HR",
         "meridian_headcount": 250,
-        "cascadia_headcount": 200,
-        "combined_headcount": 450,
+        "cascadia_headcount": 100,
+        "combined_headcount": 350,
         "role_overlap_examples": [
           "CHRO",
           "VP People",
           "Talent Acquisition Director",
-          "Benefits Manager"
+          "HRBP Manager",
+          "Benefits Manager",
+          "HR Coordinator"
         ],
         "definitional_note": "Meridian HR manages both W-2 and contractor onboarding. Cascadia HR is W-2 only.",
         "role_detail": [
@@ -5667,41 +5988,71 @@
           },
           {
             "title": "VP People",
-            "meridian_count": 83,
-            "cascadia_count": 66,
-            "combined_count": 149,
+            "meridian_count": 50,
+            "cascadia_count": 20,
+            "combined_count": 70,
             "consolidation_action": "consolidate",
             "reporting_line": "CHRO"
           },
           {
             "title": "Talent Acquisition Director",
-            "meridian_count": 83,
-            "cascadia_count": 66,
-            "combined_count": 149,
+            "meridian_count": 50,
+            "cascadia_count": 20,
+            "combined_count": 70,
             "consolidation_action": "consolidate",
             "reporting_line": "VP People"
           },
           {
+            "title": "HRBP Manager",
+            "meridian_count": 50,
+            "cascadia_count": 20,
+            "combined_count": 70,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          },
+          {
             "title": "Benefits Manager",
-            "meridian_count": 83,
-            "cascadia_count": 67,
-            "combined_count": 150,
+            "meridian_count": 50,
+            "cascadia_count": 20,
+            "combined_count": 70,
             "consolidation_action": "evaluate",
             "reporting_line": "VP People"
+          },
+          {
+            "title": "HR Coordinator",
+            "meridian_count": 49,
+            "cascadia_count": 19,
+            "combined_count": 68,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
           }
-        ]
+        ],
+        "geo_distribution": {
+          "meridian": {
+            "AMER": 0.45,
+            "EMEA": 0.3,
+            "APAC": 0.25
+          },
+          "cascadia": {
+            "United States": 0.5,
+            "India": 0.35,
+            "Philippines": 0.15
+          }
+        }
       },
       {
         "function": "IT",
         "meridian_headcount": 600,
-        "cascadia_headcount": 280,
-        "combined_headcount": 880,
+        "cascadia_headcount": 140,
+        "combined_headcount": 740,
         "role_overlap_examples": [
           "CTO",
           "VP Infrastructure",
           "CISO",
           "Enterprise Architect",
-          "DevOps Lead"
+          "DevOps Lead",
+          "Systems Administrator",
+          "IT Support Analyst"
         ],
         "definitional_note": "Meridian IT includes managed service provider staff. Cascadia IT is internal only.",
         "role_detail": [
@@ -5715,48 +6066,152 @@
           },
           {
             "title": "VP Infrastructure",
-            "meridian_count": 150,
-            "cascadia_count": 70,
-            "combined_count": 220,
+            "meridian_count": 100,
+            "cascadia_count": 23,
+            "combined_count": 123,
             "consolidation_action": "consolidate",
             "reporting_line": "CTO"
           },
           {
             "title": "CISO",
-            "meridian_count": 150,
-            "cascadia_count": 70,
-            "combined_count": 220,
+            "meridian_count": 100,
+            "cascadia_count": 23,
+            "combined_count": 123,
             "consolidation_action": "retain_both",
             "reporting_line": "CTO"
           },
           {
             "title": "Enterprise Architect",
-            "meridian_count": 150,
-            "cascadia_count": 70,
-            "combined_count": 220,
+            "meridian_count": 100,
+            "cascadia_count": 23,
+            "combined_count": 123,
             "consolidation_action": "evaluate",
             "reporting_line": "CTO"
           },
           {
             "title": "DevOps Lead",
-            "meridian_count": 149,
-            "cascadia_count": 69,
-            "combined_count": 218,
+            "meridian_count": 100,
+            "cascadia_count": 23,
+            "combined_count": 123,
             "consolidation_action": "evaluate",
             "reporting_line": "VP Infrastructure"
+          },
+          {
+            "title": "Systems Administrator",
+            "meridian_count": 100,
+            "cascadia_count": 23,
+            "combined_count": 123,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "IT Support Analyst",
+            "meridian_count": 99,
+            "cascadia_count": 24,
+            "combined_count": 123,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
           }
-        ]
+        ],
+        "geo_distribution": {
+          "meridian": {
+            "AMER": 0.4,
+            "EMEA": 0.25,
+            "APAC": 0.35
+          },
+          "cascadia": {
+            "United States": 0.4,
+            "India": 0.4,
+            "Poland": 0.2
+          }
+        }
+      },
+      {
+        "function": "Operations",
+        "meridian_headcount": 0,
+        "cascadia_headcount": 300,
+        "combined_headcount": 300,
+        "role_overlap_examples": [
+          "COO",
+          "VP Operations",
+          "Delivery Center Manager",
+          "Quality Director",
+          "Process Improvement Manager",
+          "Operations Analyst"
+        ],
+        "definitional_note": "Cascadia has dedicated Operations department for delivery centers. Meridian folds ops into G&A.",
+        "role_detail": [
+          {
+            "title": "COO",
+            "meridian_count": 0,
+            "cascadia_count": 1,
+            "combined_count": 1,
+            "consolidation_action": "retain_both",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "VP Operations",
+            "meridian_count": 0,
+            "cascadia_count": 60,
+            "combined_count": 60,
+            "consolidation_action": "consolidate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Delivery Center Manager",
+            "meridian_count": 0,
+            "cascadia_count": 60,
+            "combined_count": 60,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Quality Director",
+            "meridian_count": 0,
+            "cascadia_count": 60,
+            "combined_count": 60,
+            "consolidation_action": "consolidate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Process Improvement Manager",
+            "meridian_count": 0,
+            "cascadia_count": 60,
+            "combined_count": 60,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Operations Analyst",
+            "meridian_count": 0,
+            "cascadia_count": 59,
+            "combined_count": 59,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          }
+        ],
+        "geo_distribution": {
+          "cascadia": {
+            "India": 0.35,
+            "Philippines": 0.25,
+            "United States": 0.2,
+            "Costa Rica": 0.1,
+            "Poland": 0.1
+          }
+        }
       },
       {
         "function": "Legal",
         "meridian_headcount": 120,
-        "cascadia_headcount": 80,
-        "combined_headcount": 200,
+        "cascadia_headcount": 40,
+        "combined_headcount": 160,
         "role_overlap_examples": [
           "General Counsel",
           "VP Legal",
           "Corporate Secretary",
-          "Compliance Director"
+          "Compliance Director",
+          "Senior Counsel",
+          "Legal Analyst"
         ],
         "definitional_note": "Both count only internal legal staff. Neither includes outside counsel.",
         "role_detail": [
@@ -5770,33 +6225,139 @@
           },
           {
             "title": "VP Legal",
-            "meridian_count": 40,
-            "cascadia_count": 26,
-            "combined_count": 66,
+            "meridian_count": 24,
+            "cascadia_count": 8,
+            "combined_count": 32,
             "consolidation_action": "consolidate",
             "reporting_line": "General Counsel"
           },
           {
             "title": "Corporate Secretary",
-            "meridian_count": 40,
-            "cascadia_count": 26,
-            "combined_count": 66,
+            "meridian_count": 24,
+            "cascadia_count": 8,
+            "combined_count": 32,
             "consolidation_action": "evaluate",
             "reporting_line": "General Counsel"
           },
           {
             "title": "Compliance Director",
-            "meridian_count": 39,
-            "cascadia_count": 27,
-            "combined_count": 66,
+            "meridian_count": 24,
+            "cascadia_count": 8,
+            "combined_count": 32,
             "consolidation_action": "consolidate",
             "reporting_line": "General Counsel"
+          },
+          {
+            "title": "Senior Counsel",
+            "meridian_count": 24,
+            "cascadia_count": 8,
+            "combined_count": 32,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Legal Analyst",
+            "meridian_count": 23,
+            "cascadia_count": 7,
+            "combined_count": 30,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
           }
-        ]
+        ],
+        "geo_distribution": {
+          "meridian": {
+            "AMER": 0.6,
+            "EMEA": 0.25,
+            "APAC": 0.15
+          },
+          "cascadia": {
+            "United States": 0.7,
+            "United Kingdom": 0.3
+          }
+        }
+      },
+      {
+        "function": "G&A",
+        "meridian_headcount": 2030,
+        "cascadia_headcount": 495,
+        "combined_headcount": 2525,
+        "role_overlap_examples": [
+          "CEO",
+          "CAO",
+          "VP Strategy",
+          "Executive Assistant",
+          "Facilities Manager",
+          "Administrative Coordinator"
+        ],
+        "definitional_note": "Meridian absorbs Operations into G&A. Cascadia reports Operations separately.",
+        "role_detail": [
+          {
+            "title": "CEO",
+            "meridian_count": 1,
+            "cascadia_count": 1,
+            "combined_count": 2,
+            "consolidation_action": "retain_both",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "CAO",
+            "meridian_count": 406,
+            "cascadia_count": 99,
+            "combined_count": 505,
+            "consolidation_action": "retain_both",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "VP Strategy",
+            "meridian_count": 406,
+            "cascadia_count": 99,
+            "combined_count": 505,
+            "consolidation_action": "consolidate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Executive Assistant",
+            "meridian_count": 406,
+            "cascadia_count": 99,
+            "combined_count": 505,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Facilities Manager",
+            "meridian_count": 406,
+            "cascadia_count": 99,
+            "combined_count": 505,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          },
+          {
+            "title": "Administrative Coordinator",
+            "meridian_count": 405,
+            "cascadia_count": 98,
+            "combined_count": 503,
+            "consolidation_action": "evaluate",
+            "reporting_line": "Department Head"
+          }
+        ],
+        "geo_distribution": {
+          "meridian": {
+            "AMER": 0.5,
+            "EMEA": 0.25,
+            "APAC": 0.15,
+            "LATAM": 0.1
+          },
+          "cascadia": {
+            "United States": 0.55,
+            "India": 0.25,
+            "Philippines": 0.1,
+            "United Kingdom": 0.1
+          }
+        }
       }
     ],
-    "total_meridian_corporate": 1370,
-    "total_cascadia_corporate": 910,
-    "total_combined_corporate": 2280
+    "total_meridian_corporate": 29900,
+    "total_cascadia_corporate": 8000,
+    "total_combined_corporate": 37900
   }
 }
