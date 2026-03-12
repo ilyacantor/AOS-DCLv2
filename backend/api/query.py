@@ -629,19 +629,14 @@ def _query_ingest_store(
 
     # WS1.3: Filter materialized points by entity_id when specified.
     # When entity_id is None, all points pass through (backward compatible).
-    # When entity_id IS specified:
-    #   - If ANY points have _entity_id set: strict filter (only matching).
-    #     Points with _entity_id=None are rejected to prevent cross-entity contamination.
-    #   - If ALL points are unscoped (_entity_id=None): pass all through.
-    #     This handles legacy/AAM data that predates entity tagging.
+    # When entity_id IS specified: strict filter — only points tagged with
+    # that entity_id pass. Unscoped data (_entity_id=None) is rejected to
+    # prevent cross-entity contamination.
     if mat_points and entity_id:
-        has_entity_scoped = any(pt.get("_entity_id") is not None for pt in mat_points)
-        if has_entity_scoped:
-            mat_points = [
-                pt for pt in mat_points
-                if pt.get("_entity_id") == entity_id
-            ]
-        # else: all points are unscoped — pass through as-is
+        mat_points = [
+            pt for pt in mat_points
+            if pt.get("_entity_id") == entity_id
+        ]
 
     if mat_points:
         # --- Deduplicate across pipeline runs ---
