@@ -869,7 +869,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
 
     if not use_fact_base:
         ingested_points, ingest_receipt = _query_ingest_store(
-            metric=request.metric,
+            metric=resolved_id,
             dimensions=request.dimensions,
             filters=request.filters,
             time_range=request.time_range,

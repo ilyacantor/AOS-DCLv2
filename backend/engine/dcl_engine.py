@@ -77,7 +77,18 @@ class DCLEngine:
                 narration=self.narration, dcl_run_id=run_id
             )
             self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Farm sources")
-        
+
+        # Auto-discover AOD run ID and snapshot name from PipeStore if not provided
+        receipt_snapshot_name = None
+        if not aod_run_id and mode in ("AAM", "Farm"):
+            from backend.api.pipe_store import get_pipe_store
+            receipts = get_pipe_store().get_export_receipts()
+            for r in reversed(receipts):
+                if r.aod_run_id:
+                    aod_run_id = r.aod_run_id
+                    receipt_snapshot_name = r.snapshot_name
+                    break
+
         if mode == "Farm":
             stream_sources = SchemaLoader.load_stream_sources(self.narration, run_id)
             if stream_sources:
@@ -264,7 +275,7 @@ class DCLEngine:
             meta={
                 "mode": mode,
                 "runId": aod_run_id or run_id,
-                "snapshotName": payload_kpis.get("snapshotName", "") if payload_kpis else "",
+                "snapshotName": payload_kpis.get("snapshotName", "") if payload_kpis else (receipt_snapshot_name or ""),
                 "aodRunId": aod_run_id or "",
                 "generatedAt": utc_now(),
                 "stats": {
