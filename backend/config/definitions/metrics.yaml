@@ -1043,6 +1043,7 @@ metrics:
     unit: usd_millions
     allowed_dims:
       - region
+      - segment
     allowed_grains:
       - month
       - quarter
@@ -1078,7 +1079,9 @@ metrics:
       - sales expense
     pack: cfo
     unit: usd_millions
-    allowed_dims: []
+    allowed_dims:
+      - region
+      - segment
     allowed_grains:
       - month
       - quarter
@@ -1096,7 +1099,9 @@ metrics:
       - engineering expense
     pack: cfo
     unit: usd_millions
-    allowed_dims: []
+    allowed_dims:
+      - region
+      - segment
     allowed_grains:
       - month
       - quarter
@@ -1113,7 +1118,9 @@ metrics:
       - admin expense
     pack: cfo
     unit: usd_millions
-    allowed_dims: []
+    allowed_dims:
+      - region
+      - segment
     allowed_grains:
       - month
       - quarter
@@ -1133,6 +1140,7 @@ metrics:
     unit: usd_millions
     allowed_dims:
       - region
+      - segment
     allowed_grains:
       - month
       - quarter
@@ -1152,6 +1160,7 @@ metrics:
     unit: usd_millions
     allowed_dims:
       - region
+      - segment
     allowed_grains:
       - month
       - quarter
@@ -1169,6 +1178,7 @@ metrics:
     unit: pct
     allowed_dims:
       - region
+      - segment
     allowed_grains:
       - quarter
       - year
@@ -1184,7 +1194,9 @@ metrics:
       - amortization
     pack: cfo
     unit: usd_millions
-    allowed_dims: []
+    allowed_dims:
+      - region
+      - segment
     allowed_grains:
       - month
       - quarter
@@ -1202,6 +1214,7 @@ metrics:
     unit: usd_millions
     allowed_dims:
       - region
+      - segment
     allowed_grains:
       - quarter
       - year
@@ -1218,6 +1231,7 @@ metrics:
     unit: pct
     allowed_dims:
       - region
+      - segment
     allowed_grains:
       - quarter
       - year
@@ -1232,7 +1246,9 @@ metrics:
       - tax provision
     pack: cfo
     unit: usd_millions
-    allowed_dims: []
+    allowed_dims:
+      - region
+      - segment
     allowed_grains:
       - quarter
       - year
@@ -1250,6 +1266,7 @@ metrics:
     unit: usd_millions
     allowed_dims:
       - region
+      - segment
     allowed_grains:
       - quarter
       - year
@@ -1266,6 +1283,7 @@ metrics:
     unit: pct
     allowed_dims:
       - region
+      - segment
     allowed_grains:
       - quarter
       - year
