@@ -42,12 +42,14 @@ _CACHE_FILE = os.path.join(_CACHE_DIR, "ingest_cache.json")
 os.makedirs(_CACHE_DIR, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Bootstrap source allowlist — migration reference only, NOT used in live paths.
-# Live code uses get_canonical_sources() which reads from pipe_store.
+# Bootstrap source allowlist — canonical enterprise vendor IDs.
+# get_canonical_sources() prefers pipe_store definitions when available,
+# but falls back to this set when pipe_store is empty.
 # ---------------------------------------------------------------------------
 _BOOTSTRAP_SOURCES: frozenset = frozenset({
     "salesforce", "salesforce_crm",
     "netsuite", "netsuite_erp",
+    "oracle",  # Farm financial_summary consolidation uses source_system="oracle"
     "chargebee",
     "workday",
     "zendesk",
@@ -82,7 +84,7 @@ _BOOTSTRAP_SOURCES: frozenset = frozenset({
 })
 
 # CANONICAL_SOURCES alias removed — all live code uses get_canonical_sources().
-# _BOOTSTRAP_SOURCES is retained as a reference set only.
+# _BOOTSTRAP_SOURCES is the fallback when pipe_store is empty.
 
 # Internal service names that must never appear as a canonical source.
 # Shared across get_canonical_sources() and the AAM pull path.
@@ -116,8 +118,16 @@ def get_canonical_sources() -> frozenset:
                 source_ids.add(vid)
         return frozenset(source_ids)
 
-    # pipe_store is empty — return empty so the ingest route returns 503
-    return frozenset()
+    # pipe_store is empty — fall back to bootstrap set so legitimate vendor
+    # data still passes the query filter (query.py lines 623-628).
+    # The ingest route checks pipe_store separately and returns 503 when empty.
+    # Without this fallback, get_canonical_sources() returns frozenset() and
+    # the query filter silently drops ALL data — including Farm-pushed data.
+    logger.info(
+        "pipe_store empty — using _BOOTSTRAP_SOURCES as canonical source allowlist "
+        f"({len(_BOOTSTRAP_SOURCES)} vendors)"
+    )
+    return _BOOTSTRAP_SOURCES
 
 
 # ---------------------------------------------------------------------------
