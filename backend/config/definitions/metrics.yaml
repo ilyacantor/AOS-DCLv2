@@ -1551,6 +1551,51 @@ metrics:
     measure_op: sum
     default_grain: quarter
 
+  - id: change_in_ar
+    name: Change in Accounts Receivable
+    description: Period-over-period change in accounts receivable
+    aliases:
+      - AR change
+      - delta AR
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: change_in_ap
+    name: Change in Accounts Payable
+    description: Period-over-period change in accounts payable
+    aliases:
+      - AP change
+      - delta AP
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
+  - id: change_in_deferred_rev
+    name: Change in Deferred Revenue
+    description: Period-over-period change in deferred revenue
+    aliases:
+      - deferred revenue change
+      - delta deferred revenue
+    pack: cfo
+    unit: usd_millions
+    allowed_dims: []
+    allowed_grains:
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: quarter
+
   # ─────────────────────────────────────────────────────────────────────
   # SaaS Efficiency Metrics (source: computed, chargebee, salesforce)
   # ─────────────────────────────────────────────────────────────────────

@@ -27,6 +27,7 @@ extractions:
     dimension_map:
       territory: region
       account: customer
+      customer_segment: segment
 
   - metric: arr
     value_concept: revenue
@@ -61,14 +62,6 @@ extractions:
       territory: region
     unit_scale: 0.000001
 
-  - metric: ar
-    value_concept: accounts_receivable
-    measure_op: sum
-    period_concept: date
-    dimension_map:
-      customer_segment: segment
-    unit_scale: 0.000001
-
   - metric: dso
     value_concept: accounts_receivable
     measure_op: avg
@@ -100,6 +93,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
   - metric: operating_margin_pct
     value_concept: revenue
@@ -109,6 +103,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
   - metric: net_margin_pct
     value_concept: revenue
@@ -118,6 +113,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
   - metric: ebitda_margin_pct
     value_concept: revenue
@@ -127,6 +123,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
   - metric: ebitda
     value_concept: revenue
@@ -136,6 +133,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
   - metric: gross_profit
     value_concept: revenue
@@ -145,6 +143,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
   - metric: operating_profit
     value_concept: revenue
@@ -154,6 +153,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
   - metric: net_income
     value_concept: revenue
@@ -163,6 +163,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
   - metric: cogs
     value_concept: cost
@@ -172,6 +173,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
   - metric: opex
     value_concept: cost
@@ -181,6 +183,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
   - metric: sm_expense
     value_concept: cost
@@ -190,6 +193,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
   - metric: rd_expense
     value_concept: cost
@@ -199,6 +203,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
   - metric: ga_expense
     value_concept: cost
@@ -208,6 +213,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
   - metric: da_expense
     value_concept: cost
@@ -217,6 +223,7 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
   - metric: tax_expense
     value_concept: cost
@@ -226,8 +233,11 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
 
-  # ─── Balance Sheet / Cash ────────────────────────────────────────
+  # ─── Balance Sheet (from Farm's financial_summary pipe) ──────────
+  # Point-in-time values in millions USD.  Use avg to deduplicate
+  # when multiple rows exist for the same period.
 
   - metric: cash
     value_concept: revenue
@@ -237,6 +247,148 @@ extractions:
     strict_hint: true
     dimension_map:
       territory: region
+      customer_segment: segment
+
+  - metric: ar
+    value_concept: revenue
+    measure_op: avg
+    period_concept: date
+    value_field_hint: ar
+    strict_hint: true
+    dimension_map:
+      territory: region
+      customer_segment: segment
+
+  - metric: ap
+    value_concept: cost
+    measure_op: avg
+    period_concept: date
+    value_field_hint: ap
+    strict_hint: true
+    dimension_map:
+      territory: region
+
+  - metric: unbilled_revenue
+    value_concept: revenue
+    measure_op: avg
+    period_concept: date
+    value_field_hint: unbilled_revenue
+    strict_hint: true
+
+  - metric: prepaid_expenses
+    value_concept: cost
+    measure_op: avg
+    period_concept: date
+    value_field_hint: prepaid_expenses
+    strict_hint: true
+
+  - metric: pp_e
+    value_concept: cost
+    measure_op: avg
+    period_concept: date
+    value_field_hint: pp_e
+    strict_hint: true
+
+  - metric: intangibles
+    value_concept: cost
+    measure_op: avg
+    period_concept: date
+    value_field_hint: intangibles
+    strict_hint: true
+
+  - metric: goodwill
+    value_concept: cost
+    measure_op: avg
+    period_concept: date
+    value_field_hint: goodwill
+    strict_hint: true
+
+  - metric: total_assets
+    value_concept: revenue
+    measure_op: avg
+    period_concept: date
+    value_field_hint: total_assets
+    strict_hint: true
+
+  - metric: accrued_expenses
+    value_concept: cost
+    measure_op: avg
+    period_concept: date
+    value_field_hint: accrued_expenses
+    strict_hint: true
+
+  - metric: deferred_revenue
+    value_concept: revenue
+    measure_op: avg
+    period_concept: date
+    value_field_hint: deferred_revenue
+    strict_hint: true
+
+  - metric: total_liabilities
+    value_concept: cost
+    measure_op: avg
+    period_concept: date
+    value_field_hint: total_liabilities
+    strict_hint: true
+
+  - metric: retained_earnings
+    value_concept: revenue
+    measure_op: avg
+    period_concept: date
+    value_field_hint: retained_earnings
+    strict_hint: true
+
+  - metric: stockholders_equity
+    value_concept: revenue
+    measure_op: avg
+    period_concept: date
+    value_field_hint: stockholders_equity
+    strict_hint: true
+
+  # ─── Cash Flow Statement (from Farm's financial_summary pipe) ───
+  # Flow values in millions USD.
+
+  - metric: cash_from_operations
+    value_concept: revenue
+    measure_op: sum
+    period_concept: date
+    value_field_hint: cfo
+    strict_hint: true
+
+  - metric: capex
+    value_concept: cost
+    measure_op: sum
+    period_concept: date
+    value_field_hint: capex
+    strict_hint: true
+
+  - metric: fcf
+    value_concept: revenue
+    measure_op: sum
+    period_concept: date
+    value_field_hint: fcf
+    strict_hint: true
+
+  - metric: change_in_ar
+    value_concept: revenue
+    measure_op: sum
+    period_concept: date
+    value_field_hint: change_in_ar
+    strict_hint: true
+
+  - metric: change_in_ap
+    value_concept: cost
+    measure_op: sum
+    period_concept: date
+    value_field_hint: change_in_ap
+    strict_hint: true
+
+  - metric: change_in_deferred_rev
+    value_concept: revenue
+    measure_op: sum
+    period_concept: date
+    value_field_hint: change_in_deferred_rev
+    strict_hint: true
 
   # ─── Pre-computed CTO metrics (from finsummary) ────────────────
 
