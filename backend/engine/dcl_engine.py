@@ -263,19 +263,19 @@ class DCLEngine:
             links=graph["links"],
             meta={
                 "mode": mode,
-                "run_id": run_id,
-                "snapshot_name": payload_kpis.get("snapshotName", "") if payload_kpis else "",
-                "aod_run_id": aod_run_id or "",
-                "generated_at": utc_now(),
+                "runId": aod_run_id or run_id,
+                "snapshotName": payload_kpis.get("snapshotName", "") if payload_kpis else "",
+                "aodRunId": aod_run_id or "",
+                "generatedAt": utc_now(),
                 "stats": {
                     "sources": len(sources),
                     "ontology_concepts": len(ontology),
                     "mappings": len(mappings),
                     "personas": [p.value for p in personas]
                 },
-                "source_canonical_ids": [s.id for s in sources],
-                "source_names": [s.name for s in sources],
-                "source_fabric_planes": sorted(set(
+                "sourceCanonicalIds": [s.id for s in sources],
+                "sourceNames": [s.name for s in sources],
+                "sourceFabricPlanes": sorted(set(
                     f"{s.fabric_plane}:{s.vendor}"
                     for s in sources
                     if getattr(s, 'fabric_plane', None)

@@ -355,12 +355,23 @@ def _invalidate_aam_caches():
 def health():
     from backend.core.mode_state import get_current_mode
     from backend.engine.graph_store import get_semantic_graph
+    from backend.core.db import get_connection as _pg_health_conn
+
     mode = get_current_mode()
     graph = get_semantic_graph()
     query_ready = (
         _startup_phase in ("ready", "degraded")
         and graph is not None
     )
+
+    # Quick Postgres connectivity check
+    pg_ok = False
+    try:
+        with _pg_health_conn() as conn:
+            pg_ok = conn is not None
+    except Exception:
+        pass
+
     return {
         "status": "DCL Engine API is running",
         "version": API_VERSION,
@@ -368,6 +379,7 @@ def health():
         "graph_ready": graph is not None,
         "query_ready": query_ready,
         "redis_available": is_redis_available(),
+        "postgres_available": pg_ok,
         "error": _startup_error,
         "data_mode": mode.data_mode,
         "last_run_id": mode.last_run_id,
@@ -433,15 +445,15 @@ async def run_dcl(request: RunRequest):
         logger.error(f"DCL run failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-    app.state.loaded_sources = snapshot.meta.get("source_names", [])
-    app.state.loaded_source_ids = snapshot.meta.get("source_canonical_ids", [])
+    app.state.loaded_sources = snapshot.meta.get("sourceNames", [])
+    app.state.loaded_source_ids = snapshot.meta.get("sourceCanonicalIds", [])
 
     if request.mode == "AAM":
         try:
             store = get_ingest_store()
-            source_names = snapshot.meta.get("source_names", [])
-            source_ids = snapshot.meta.get("source_canonical_ids", [])
-            fabric_planes = snapshot.meta.get("source_fabric_planes", [])
+            source_names = snapshot.meta.get("sourceNames", [])
+            source_ids = snapshot.meta.get("sourceCanonicalIds", [])
+            fabric_planes = snapshot.meta.get("sourceFabricPlanes", [])
             aam_kpis = metrics.payload_kpis if metrics.payload_kpis else {}
             aam_count, aam_snap = store.record_aam_pull(
                 run_id=run_id,
