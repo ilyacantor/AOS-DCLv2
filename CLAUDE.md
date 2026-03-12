@@ -34,37 +34,6 @@ AutonomOS is an AI-native enterprise operating system that sits on top of existi
 
 ---
 
-## CURRENT PRIORITIES (Feb 2026)
-
-### P1 — NLQ Demo Stability & UX
-The AOD→AAM→Farm→DCL flow is stable. NLQ is now the critical path. It must work reliably in demo mode without human hand-holding.
-
-Known issues (fix these before anything else in NLQ):
-- KPI boxes are too large — reduce size, tighten layout
-- Clicking EBITDA KPI should trigger a trend/revenue chart — this is broken or unreliable
-- Dashboard auto-generation from "build me a CFO dashboard" must be consistent
-- Tier 1 free cache hit rate target: 60-70% — if below this, something is wrong
-
-### P2 — DCL→NLQ E2E Throughput
-Goal: Complete the real data pipeline handoff — currently clunky and manual.
-- DCL and NLQ are 90% connected; the last 10% is the blocking issue
-- Pushing/pulling metadata dumps manually is not acceptable — must be automated pipeline
-- When this works, it's the demo-worthy moment: real data, real semantics, real query
-
-### P3 — DCL Semantic Catalog
-Goal: Expand the ontology to cover real enterprise data elements with proper depth.
-- MCP integration in progress — DCL must expose semantic catalog via MCP tools: `concept_lookup`, `semantic_export`, `query`, `provenance`
-- Current 3-tier normalization funnel must not degrade under load
-- Target: any MCP-compatible agent can query DCL without custom integration
-
-### P4 — Consolidated Demo UX
-Goal: Single AOS demo file housing all modules via iframes + AOA panel.
-- Currently modules demo independently — investor/customer demo requires switching between tabs
-- MEI/Convergence demo is credible once AOS demo works — don't build separately yet
-- AOA governance panel must be integrated into the consolidated view
-
----
-
 ## WHAT "DONE" MEANS
 Every completed task must satisfy ALL four:
 1. **Semantics preserved** — behavior matches real-world meaning
@@ -164,10 +133,3 @@ Silent fallbacks are the most dangerous failure mode in this codebase. They make
 
 ---
 
-## MEI / CONVERGENCE NOTE
-MEI (Multi-Entity Intelligence) = Convergence product. Lives under AOS umbrella.
-- ~90% AOS technology reused
-- Primary use case: M&A post-close semantic reconciliation across heterogeneous systems
-- The insight: reconciling two companies' systems is architecturally identical to reconciling multiple ERP instances — which AOS already solves
-- Do NOT build a separate MEI demo until the core AOS demo (P4) is working
-- MEI demo will be a product extension narrative on top of AOS, not a separate stack
