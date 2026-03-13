@@ -657,7 +657,12 @@ def _query_ingest_store(
             period = pt.get("period", "current")
             src = pt.get("source_system", "")
             dim_key = tuple(sorted(pt.get("dimensions", {}).items()))
-            dedup_key = (period, src, dim_key)
+            # Include _tenant_id in dedup key to prevent cross-tenant overwrites.
+            # Without this, data from different tenants for the same entity_id
+            # would dedup by timestamp, letting stale AAM pipe data overwrite
+            # correct Farm multi-entity data.
+            tid = pt.get("_tenant_id", "")
+            dedup_key = (period, src, dim_key, tid)
             existing = _dedup.get(dedup_key)
             if existing is None:
                 _dedup[dedup_key] = pt
