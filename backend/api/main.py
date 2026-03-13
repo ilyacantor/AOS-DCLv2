@@ -72,6 +72,7 @@ from backend.farm.routes import router as farm_router
 from backend.dcl.routes import router as dcl_router
 from backend.api.routes.graph_traversal import router as graph_traversal_router
 from backend.api.routes.reports import router as reports_router
+from backend.api.routes.maestra import router as maestra_router
 
 logger = get_logger(__name__)
 
@@ -311,6 +312,7 @@ app.include_router(farm_router)
 app.include_router(dcl_router)
 app.include_router(graph_traversal_router)
 app.include_router(reports_router)
+app.include_router(maestra_router)
 
 
 # =============================================================================
