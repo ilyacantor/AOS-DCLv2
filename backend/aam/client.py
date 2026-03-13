@@ -15,6 +15,11 @@ from backend.utils.log_utils import get_logger
 logger = get_logger(__name__)
 
 
+class AAMEdgeFetchError(Exception):
+    """Raised when fetching semantic edges from AAM fails."""
+    pass
+
+
 class AAMClient:
     """Client for AAM's DCL export endpoints."""
     
@@ -134,7 +139,7 @@ class AAMClient:
         Fetch semantic edges from AAM's topology endpoint.
 
         Returns cached results if within AAM_EDGE_CACHE_TTL.
-        On failure: logs warning, returns empty list (graceful degradation).
+        Raises AAMEdgeFetchError on failure — callers decide how to handle degraded mode.
         """
         now = time.monotonic()
         if (
@@ -163,8 +168,10 @@ class AAMClient:
             logger.info(f"[AAMClient] Fetched {len(edges)} semantic edges")
             return edges
         except Exception as e:
-            logger.warning(f"[AAMClient] Semantic edges fetch failed: {e}")
-            return []
+            logger.error(f"[AAMClient] Semantic edges fetch failed from {url}: {e}", exc_info=True)
+            raise AAMEdgeFetchError(
+                f"AAM semantic edges fetch failed from {url} — {type(e).__name__}: {e}"
+            ) from e
 
     def health_check(self) -> Dict[str, Any]:
         """Check AAM API health."""

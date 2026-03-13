@@ -105,7 +105,7 @@ class DCLEngine:
         # --- Tier 0: Fetch AAM semantic edges ---
         edge_index = EdgeIndex([])
         try:
-            from backend.aam.client import get_aam_client
+            from backend.aam.client import get_aam_client, AAMEdgeFetchError
             aam_client = get_aam_client()
             edges = aam_client.get_semantic_edges()
             if edges:
@@ -122,7 +122,7 @@ class DCLEngine:
             # AAM_URL not configured — expected in standalone DCL deployments
             self.narration.add_message(run_id, "AAM", "AAM not configured (AAM_URL not set) — Tier 0 skipped")
             metrics.aam_unavailable = True
-        except Exception as e:
+        except AAMEdgeFetchError as e:
             logger.warning(f"AAM edge fetch failed: {e}")
             self.narration.add_message(run_id, "AAM", f"AAM unavailable: {e} — Tier 0 skipped")
             metrics.aam_unavailable = True

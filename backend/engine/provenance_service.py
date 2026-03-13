@@ -461,7 +461,14 @@ def get_provenance(metric_id: str) -> Optional[ProvenanceTrace]:
 
 
 def _build_from_bindings(metric_id: str) -> List[Dict[str, Any]]:
-    """Fallback: build provenance from demo bindings."""
+    """Build provenance from demo bindings.
+
+    This is demo-only seed data — not derived from real system connections.
+    Only called when no scenario or catalog provenance exists for a metric.
+    """
+    if not DEMO_BINDINGS:
+        logger.warning(f"[provenance] No demo bindings available for metric={metric_id}")
+        return []
     sources = []
     for binding in DEMO_BINDINGS:
         sources.append({
@@ -472,4 +479,4 @@ def _build_from_bindings(metric_id: str) -> List[Dict[str, Any]]:
             "freshness": "2026-02-07T00:00:00Z",
             "quality_score": binding.quality_score,
         })
-    return sources[:2]  # Limit to top 2 for generic fallback
+    return sources[:2]

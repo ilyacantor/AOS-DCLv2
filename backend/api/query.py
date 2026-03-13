@@ -18,6 +18,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+logger = logging.getLogger(__name__)
+
 from pydantic import BaseModel, Field
 
 from backend.api.semantic_export import PUBLISHED_METRICS, resolve_metric
@@ -114,6 +116,7 @@ class QueryResponse(BaseModel):
     entity: Optional[EntityInfo] = None
     conflicts: Optional[List[ConflictInfo]] = None
     temporal_warning: Optional[TemporalWarningInfo] = None
+    enrichment_errors: Optional[Dict[str, str]] = None
 
 
 class QueryError(BaseModel):
@@ -681,12 +684,14 @@ def _query_ingest_store(
         from collections import defaultdict as _dd
         _NON_ADDITIVE_UNITS = {"percent", "pct", "ratio", "score", "days", "hours", "months", "index"}
         _metric_unit = None
+        _metric_unit_error = None
         try:
             _mdef = resolve_metric(metric)
             if _mdef and _mdef.unit:
                 _metric_unit = _mdef.unit.lower()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[query] Metric unit resolution failed for metric={metric}: {e}", exc_info=True)
+            _metric_unit_error = "Unit detection unavailable"
         _is_additive = _metric_unit not in _NON_ADDITIVE_UNITS
 
         # WS1.3: Determine unique entity IDs in the result set.
@@ -853,6 +858,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
     - consolidate=True → sum across entities (requires explicit opt-in)
     """
     fb = None  # Only loaded when fact_base path is selected
+    _metric_unit_error = None  # Set inside mat_points block if unit resolution fails
     metric_def = resolve_metric(request.metric)
 
     if metric_def is None:
@@ -1102,22 +1108,30 @@ def execute_query(request: QueryRequest) -> QueryResponse:
             data_points = data_points[:request.limit]
 
     # Build enriched response fields
-    # Provenance
+    enrichment_errors: Dict[str, str] = {}
+    if _metric_unit_error:
+        enrichment_errors["metric_unit"] = _metric_unit_error
+
+    # Provenance — static provenance data is only served in Demo mode.
+    # In non-Demo modes (Ingest/AAM/Farm), provenance must come from real
+    # pipeline metadata, not a hardcoded lookup table.
     provenance_info = []
-    try:
-        from backend.engine.provenance_service import get_provenance
-        trace = get_provenance(request.metric)
-        if trace and trace.sources:
-            provenance_info = [
-                ProvenanceInfo(
-                    source_system=s.source_system,
-                    freshness=s.freshness,
-                    quality_score=s.quality_score,
-                )
-                for s in trace.sources
-            ]
-    except Exception:
-        pass
+    if use_fact_base:
+        try:
+            from backend.engine.provenance_service import get_provenance
+            trace = get_provenance(request.metric)
+            if trace and trace.sources:
+                provenance_info = [
+                    ProvenanceInfo(
+                        source_system=s.source_system,
+                        freshness=s.freshness,
+                        quality_score=s.quality_score,
+                    )
+                    for s in trace.sources
+                ]
+        except Exception as e:
+            logger.warning(f"[query] Provenance resolution failed for metric={request.metric}: {e}", exc_info=True)
+            enrichment_errors["provenance"] = "Source tracking unavailable"
 
     # Entity resolution
     entity_info = None
@@ -1134,8 +1148,9 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                     confidence=confirmed[0].get("confidence", 1.0) if confirmed else results[0].get("confidence", 0.5),
                     match_type="confirmed" if confirmed else "candidate",
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[query] Entity resolution failed for entity={request.entity}: {e}", exc_info=True)
+            enrichment_errors["entity"] = "Entity context unavailable"
 
     # Conflict info
     conflicts_info = None
@@ -1160,8 +1175,9 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                     )
                     for c in entity_conflicts
                 ]
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[query] Conflict detection failed for entity={request.entity}, metric={request.metric}: {e}", exc_info=True)
+            enrichment_errors["conflicts"] = "Conflict detection unavailable"
 
     # Temporal warning
     temporal_warning = None
@@ -1178,8 +1194,9 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                     new_definition=warning.new_definition,
                     message=warning.message,
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[query] Temporal warning check failed for metric={request.metric}: {e}", exc_info=True)
+            enrichment_errors["temporal"] = "Temporal analysis unavailable"
 
     return QueryResponse(
         metric=request.metric,
@@ -1212,6 +1229,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
         entity=entity_info,
         conflicts=conflicts_info,
         temporal_warning=temporal_warning,
+        enrichment_errors=enrichment_errors or None,
     )
 
 

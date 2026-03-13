@@ -91,7 +91,7 @@ def rebuild_graph() -> None:
 
     # 4. AAM semantic edges
     try:
-        from backend.aam.client import get_aam_client
+        from backend.aam.client import get_aam_client, AAMEdgeFetchError
         client = get_aam_client()
         edges = client.get_semantic_edges()
         if edges:
@@ -99,7 +99,7 @@ def rebuild_graph() -> None:
             logger.info(f"[GraphStore] Loaded {len(edges)} AAM edges")
     except ValueError:
         logger.info("[GraphStore] AAM not configured — skipping AAM edges")
-    except Exception as e:
+    except AAMEdgeFetchError as e:
         logger.warning(f"[GraphStore] Could not load AAM edges: {e}")
 
     set_semantic_graph(graph)
