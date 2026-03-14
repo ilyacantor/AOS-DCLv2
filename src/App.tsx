@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { GraphSnapshot, PersonaId } from './types';
 import { MonitorPanel } from './components/MonitorPanel';
-import { NarrationPanel } from './components/NarrationPanel';
+import { SnapshotPanel } from './components/SnapshotPanel';
 import { SankeyGraph } from './components/SankeyGraph';
 import { EnterpriseDashboard } from './components/EnterpriseDashboard';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/resizable';
@@ -21,7 +21,7 @@ const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO', 'CHRO'];
 function App() {
   const [graphData, setGraphData] = useState<GraphSnapshot | null>(null);
   const [runMode, setRunMode] = useState<'Dev' | 'Prod'>('Dev');
-  const [dataMode, setDataMode] = useState<'Demo' | 'Farm' | 'AAM'>('Demo');
+  const [dataMode, setDataMode] = useState<'Demo' | 'Farm' | 'AAM'>('AAM');
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>(['CFO', 'CRO', 'COO', 'CTO', 'CHRO']);
   const [runId, setRunId] = useState<string | undefined>(undefined);
   const [isRunning, setIsRunning] = useState(false);
@@ -30,6 +30,7 @@ function App() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [personaDropdownOpen, setPersonaDropdownOpen] = useState(false);
+  const [selectedSnapshotName, setSelectedSnapshotName] = useState<string | undefined>(undefined);
   const personaDropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -121,14 +122,25 @@ function App() {
   useEffect(() => {
     if (autoLoadedRef.current) return;
     autoLoadedRef.current = true;
+    setIsRunning(true);
+    setElapsedTime(0);
     fetch('/api/dcl/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: 'Demo', run_mode: 'Dev', personas: ALL_PERSONAS }),
+      body: JSON.stringify({ mode: 'AAM', run_mode: 'Dev', personas: ALL_PERSONAS }),
     })
-      .then(r => r.ok ? r.json() : null)
+      .then(async (r) => {
+        if (!r.ok) {
+          const errBody = await r.json().catch(() => null);
+          const detail = errBody?.detail || `HTTP ${r.status}`;
+          throw new Error(`DCL Engine returned ${r.status}: ${detail}`);
+        }
+        return r.json();
+      })
       .then(data => {
-        if (!data?.graph) return;
+        if (!data?.graph) {
+          throw new Error('DCL Engine returned OK but response contained no graph data');
+        }
         const gv = {
           ...data.graph,
           meta: {
@@ -139,10 +151,12 @@ function App() {
         };
         setGraphData(prev => prev || gv);
         setRunId(prev => prev || data.run_id);
+        setIsRunning(false);
       })
       .catch((err) => {
         console.error('[App] Auto-load failed:', err);
-        setLoadError('Could not connect to DCL Engine. Start the backend and click Run.');
+        setLoadError(`Auto-load failed: ${err instanceof Error ? err.message : 'Could not connect to DCL Engine'}. Start the backend and click Run.`);
+        setIsRunning(false);
       });
   }, []);
 
@@ -160,6 +174,7 @@ function App() {
           run_mode: runMode,
           personas: selectedPersonas.length > 0 ? selectedPersonas : undefined,
           force_refresh: true,
+          snapshot_name: selectedSnapshotName,
         }),
       });
 
@@ -350,7 +365,12 @@ function App() {
 
             <ResizablePanel defaultSize={25} minSize={15}>
               <div className="h-full border-l bg-sidebar">
-                <NarrationPanel runId={runId} />
+                <SnapshotPanel
+                currentSnapshotName={graphData?.meta?.snapshotName}
+                runMetrics={graphData?.meta?.runMetrics}
+                aodRunId={graphData?.meta?.aodRunId}
+                onSnapshotSelect={setSelectedSnapshotName}
+              />
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>
@@ -390,7 +410,7 @@ function App() {
                    <div className="border-b px-4 pt-2 shrink-0">
                      <TabsList className="w-full">
                        <TabsTrigger value="monitor" className="flex-1">Monitor</TabsTrigger>
-                       <TabsTrigger value="narration" className="flex-1">Narration</TabsTrigger>
+                       <TabsTrigger value="snapshot" className="flex-1">Snapshot</TabsTrigger>
                      </TabsList>
                    </div>
 
@@ -398,8 +418,13 @@ function App() {
                      <TabsContent value="monitor" className="flex-1 flex flex-col mt-0 min-h-0">
                        <MonitorPanel data={graphData} selectedPersonas={selectedPersonas} runId={runId} />
                      </TabsContent>
-                     <TabsContent value="narration" className="flex-1 flex flex-col mt-0 min-h-0">
-                       <NarrationPanel runId={runId} />
+                     <TabsContent value="snapshot" className="flex-1 flex flex-col mt-0 min-h-0">
+                       <SnapshotPanel
+                         currentSnapshotName={graphData?.meta?.snapshotName}
+                         runMetrics={graphData?.meta?.runMetrics}
+                         aodRunId={graphData?.meta?.aodRunId}
+                         onSnapshotSelect={setSelectedSnapshotName}
+                       />
                      </TabsContent>
                    </div>
                 </Tabs>

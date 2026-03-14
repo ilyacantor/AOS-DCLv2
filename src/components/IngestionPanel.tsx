@@ -214,12 +214,12 @@ export function IngestionPanel() {
     return (
       <div className="h-full flex flex-col min-h-0">
         <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b border-border bg-card/50">
-          <h2 className="text-sm font-semibold">Ingest Activity</h2>
+          <h2 className="text-base font-semibold">Ingest Activity</h2>
         </div>
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm">Loading ingestion data...</span>
+            <span className="text-base">Loading ingestion data...</span>
           </div>
         </div>
       </div>
@@ -231,21 +231,21 @@ export function IngestionPanel() {
       {/* Header */}
       <div className="shrink-0 px-6 py-3 border-b border-border bg-card/50">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Ingest Activity</h2>
+          <h2 className="text-base font-semibold">Ingest Activity</h2>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-sm text-muted-foreground">
               Auto-refresh {POLL_INTERVAL_MS / 1000}s
             </span>
             <button
               onClick={handleReset}
               disabled={resetting}
-              className="px-3 py-1 text-xs rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 disabled:opacity-50"
+              className="px-3 py-1 text-sm rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 disabled:opacity-50"
             >
               {resetting ? 'Resetting...' : 'Reset'}
             </button>
             <button
               onClick={fetchAll}
-              className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"
+              className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Refresh
             </button>
@@ -256,8 +256,8 @@ export function IngestionPanel() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
         {error && (
           <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-center">
-            <span className="text-sm text-red-400">{error}</span>
-            <button onClick={fetchAll} className="ml-3 px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90">
+            <span className="text-base text-red-400">{error}</span>
+            <button onClick={fetchAll} className="ml-3 px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90">
               Retry
             </button>
           </div>
@@ -266,7 +266,7 @@ export function IngestionPanel() {
         {/* Summary bar */}
         {stats && (stats.total_runs > 0 || activity.length > 0) && (
           <div className="rounded-lg border border-border bg-card/30 px-4 py-2.5">
-            <div className="flex items-center gap-6 text-xs font-mono">
+            <div className="flex items-center gap-6 text-sm font-mono">
               <span><span className="text-foreground font-semibold">{runOrder.length}</span> <span className="text-muted-foreground">runs</span></span>
               <span><span className="text-foreground font-semibold">{activity.length}</span> <span className="text-muted-foreground">events</span></span>
               <span><span className="text-foreground font-semibold">{stats.total_runs}</span> <span className="text-muted-foreground">receipts</span></span>
@@ -286,7 +286,7 @@ export function IngestionPanel() {
           <div className="rounded-lg border border-red-500/30 bg-red-500/5 overflow-hidden">
             <button
               onClick={() => setDropsOpen(!dropsOpen)}
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-xs hover:bg-red-500/10 transition-colors"
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-red-500/10 transition-colors"
             >
               <svg
                 className={`w-2.5 h-2.5 shrink-0 transition-transform duration-150 text-red-400 ${dropsOpen ? 'rotate-90' : ''}`}
@@ -298,9 +298,9 @@ export function IngestionPanel() {
               <span className="text-red-400/70 font-mono">{drops.length}</span>
             </button>
             {dropsOpen && (
-              <table className="w-full text-xs">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-t border-red-500/20 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <tr className="border-t border-red-500/20 text-sm uppercase tracking-wider text-muted-foreground">
                     <th className="text-left px-3 py-2 font-medium">Source</th>
                     <th className="text-left px-3 py-2 font-medium">Tenant</th>
                     <th className="text-left px-3 py-2 font-medium">Error</th>
@@ -318,7 +318,7 @@ export function IngestionPanel() {
                         {drop.tenant_id || '-'}
                       </td>
                       <td className="px-3 py-1.5">
-                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-500/20 text-red-400 border border-red-500/30">
+                        <span className="inline-block px-1.5 py-0.5 rounded text-sm font-semibold bg-red-500/20 text-red-400 border border-red-500/30">
                           {drop.error_code}
                         </span>
                       </td>
@@ -340,16 +340,16 @@ export function IngestionPanel() {
         <div>
           {activity.length === 0 ? (
             <div className="rounded-lg border border-border bg-card/30 p-6 text-center">
-              <div className="text-muted-foreground text-sm">No ingestion activity yet</div>
-              <div className="text-muted-foreground text-xs mt-1">
+              <div className="text-muted-foreground text-base">No ingestion activity yet</div>
+              <div className="text-muted-foreground text-sm mt-1">
                 Waiting for AAM to push structure, dispatch manifest, and Farm to push content...
               </div>
             </div>
           ) : (
             <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
-              <table className="w-full text-xs">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <tr className="border-b border-border text-sm uppercase tracking-wider text-muted-foreground">
                     <th className="text-left px-3 py-2 font-medium">Snapshot</th>
                     <th className="text-left px-3 py-2 font-medium">AOD Run</th>
                     <th className="text-left px-3 py-2 font-medium">Phase</th>
@@ -388,7 +388,7 @@ export function IngestionPanel() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                               </svg>
                               <span className="font-mono font-semibold text-foreground">{snapName}</span>
-                              <span className="text-muted-foreground/60 text-[10px] ml-2">
+                              <span className="text-muted-foreground/60 text-sm ml-2">
                                 {sorted.length} phase{sorted.length !== 1 ? 's' : ''}
                               </span>
                               {/* Phase dots */}
@@ -405,7 +405,7 @@ export function IngestionPanel() {
                                 })}
                               </div>
                               {sorted[0]?.aod_run_id && (
-                                <span className="text-muted-foreground/50 text-[10px] font-mono ml-auto">
+                                <span className="text-muted-foreground/50 text-sm font-mono ml-auto">
                                   {sorted[0].aod_run_id}
                                 </span>
                               )}
@@ -430,7 +430,7 @@ export function IngestionPanel() {
                                 onClick={() => setExpandedPhase(isPhaseExpanded ? null : phaseKey)}
                                 className="border-b border-border/30 hover:bg-card/20 cursor-pointer transition-colors"
                               >
-                                <td className="px-3 py-1.5 pl-8 font-mono text-[10px] text-foreground/70">
+                                <td className="px-3 py-1.5 pl-8 font-mono text-sm text-foreground/70">
                                   <div className="flex items-center gap-1.5">
                                     <svg
                                       className={`w-2 h-2 shrink-0 transition-transform duration-150 text-muted-foreground/50 ${isPhaseExpanded ? 'rotate-90' : ''}`}
@@ -441,12 +441,12 @@ export function IngestionPanel() {
                                     {entry.snapshot_name || '-'}
                                   </div>
                                 </td>
-                                <td className="px-3 py-1.5 font-mono text-[10px] text-muted-foreground/60">
+                                <td className="px-3 py-1.5 font-mono text-sm text-muted-foreground/60">
                                   {entry.aod_run_id || '-'}
                                 </td>
                                 <td className="px-3 py-1.5">
                                   <span className={`inline-flex items-center gap-1 font-semibold ${cfg.color}`}>
-                                    <span className="w-4 h-4 rounded-full bg-current/10 border border-current/30 flex items-center justify-center text-[9px]">
+                                    <span className="w-4 h-4 rounded-full bg-current/10 border border-current/30 flex items-center justify-center text-[11px]">
                                       {cfg.icon}
                                     </span>
                                     {cfg.label}
@@ -489,7 +489,7 @@ export function IngestionPanel() {
                                 <tr className="border-b border-border/20 bg-card/5">
                                   <td colSpan={9} className="px-3 py-3 pl-12">
                                     <div className="flex items-center justify-between mb-2">
-                                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                      <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                                         Pipe Breakdown
                                         {drillFilter && (
                                           <span className="ml-2 normal-case tracking-normal">
@@ -503,15 +503,15 @@ export function IngestionPanel() {
                                       </span>
                                       <button
                                         onClick={(e) => { e.stopPropagation(); setDrillDispatchId(null); setDrillData(null); setDrillFilter(null); }}
-                                        className="text-[10px] text-muted-foreground hover:text-foreground"
+                                        className="text-sm text-muted-foreground hover:text-foreground"
                                       >
                                         Collapse
                                       </button>
                                     </div>
                                     {drillLoading ? (
-                                      <div className="text-[10px] text-muted-foreground">Loading...</div>
+                                      <div className="text-sm text-muted-foreground">Loading...</div>
                                     ) : (
-                                      <table className="w-full text-[10px]">
+                                      <table className="w-full text-sm">
                                         <thead>
                                           <tr className="text-muted-foreground/60 uppercase tracking-wider">
                                             <th className="text-left px-2 py-1 font-medium">Pipe ID</th>
@@ -530,7 +530,7 @@ export function IngestionPanel() {
                                               <td className="px-2 py-1 text-muted-foreground">{p.source_system}</td>
                                               <td className="px-2 py-1 text-right font-mono text-foreground/80">{fmtRows(p.row_count)}</td>
                                               <td className="px-2 py-1">
-                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold border ${
+                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold border ${
                                                   p.category === 'mapped' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
                                                   p.category === 'unmapped' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
                                                   p.category === 'tooling' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
@@ -555,7 +555,7 @@ export function IngestionPanel() {
                               {isPhaseExpanded && (
                                 <tr className="border-b border-border/20 bg-card/5">
                                   <td colSpan={9} className="px-3 py-2 pl-12">
-                                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-[10px] font-mono">
+                                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm font-mono">
                                       <span>
                                         <span className="text-muted-foreground/60">dispatch_id </span>
                                         <span className="text-foreground/80">{entry.dispatch_id || '-'}</span>

@@ -213,10 +213,10 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
     return (
       <div className="h-full flex flex-col min-h-0">
         <div className="shrink-0 flex items-center justify-between px-4 py-1.5 border-b border-border bg-card/50">
-          <h2 className="text-sm font-semibold">Reconciliation</h2>
+          <h2 className="text-base font-semibold">Reconciliation</h2>
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">Loading reconciliation data...</div>
+          <div className="text-base text-muted-foreground">Loading reconciliation data...</div>
         </div>
       </div>
     );
@@ -226,14 +226,14 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
     return (
       <div className="h-full flex flex-col min-h-0">
         <div className="shrink-0 flex items-center justify-between px-4 py-1.5 border-b border-border bg-card/50">
-          <h2 className="text-sm font-semibold">Reconciliation</h2>
+          <h2 className="text-base font-semibold">Reconciliation</h2>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-2">
-            <div className="text-sm text-red-400">{xsysError}</div>
+            <div className="text-base text-red-400">{xsysError}</div>
             <button
               onClick={() => fetchXsysData()}
-              className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"
+              className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Retry
             </button>
@@ -257,17 +257,17 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
     <div className="h-full flex flex-col min-h-0">
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between px-4 py-1.5 border-b border-border bg-card/50">
-        <h2 className="text-sm font-semibold">Reconciliation</h2>
+        <h2 className="text-base font-semibold">Reconciliation</h2>
         <div className="flex items-center gap-2">
           <button
             onClick={handleDownload}
-            className="px-3 py-1 text-xs rounded bg-secondary text-secondary-foreground hover:bg-secondary/80"
+            className="px-3 py-1 text-sm rounded bg-secondary text-secondary-foreground hover:bg-secondary/80"
           >
             Download JSON
           </button>
           <button
             onClick={() => fetchXsysData()}
-            className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"
+            className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90"
           >
             Refresh
           </button>
@@ -278,14 +278,14 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 min-h-0">
         {/* Snapshot identity bar with dropdown */}
         <div className="rounded border border-border bg-card/30 px-2.5 py-1">
-          <div className="flex items-center gap-4 text-[11px] font-mono">
+          <div className="flex items-center gap-4 text-[13px] font-mono">
             {snapshotOptions.length > 1 ? (
               <span className="flex items-center gap-1.5">
                 <span className="text-muted-foreground">Snapshot</span>
                 <select
                   value={selectedSnapshot || xsysData.snapshot_name || ''}
                   onChange={(e) => handleSnapshotChange(e.target.value)}
-                  className="bg-background border border-border rounded px-1.5 py-0.5 text-[11px] font-mono text-foreground font-semibold cursor-pointer hover:border-primary/50 focus:outline-none focus:border-primary"
+                  className="bg-background border border-border rounded px-1.5 py-0.5 text-[13px] font-mono text-foreground font-semibold cursor-pointer hover:border-primary/50 focus:outline-none focus:border-primary"
                 >
                   {snapshotOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -316,82 +316,190 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
           </div>
         </div>
 
-        {/* Pipeline flow — 3-column system comparison (compact) */}
-        <div className="grid grid-cols-3 gap-1.5">
-          {/* AAM */}
-          <div className="rounded border border-blue-500/30 bg-blue-500/5 px-2.5 py-2 space-y-1 text-[11px]">
-            <div className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider">AAM</div>
-            <StatRow label="Total pipes" value={aam.total_pipes} />
-            <StatRow label="Dispatched" value={aam.dispatched} color="text-emerald-400" />
-            {aam.failed_pre_dispatch > 0 && (
-              <StatRow label="Failed (pre)" value={aam.failed_pre_dispatch} color="text-red-400" />
-            )}
-            <div className="border-t border-blue-500/20 pt-1 mt-1" />
-            <StatRow label="SORs" value={aam.sors} title="Unique vendor names from AAM pipe definitions" />
-            <StatRow label="Fabrics" value={aam.fabrics} />
-            {aam.fabric_names.length > 0 && (
-              <div className="text-[9px] text-muted-foreground/50 font-mono truncate">
-                {aam.fabric_names.join(', ')}
-              </div>
-            )}
-          </div>
-
-          {/* Farm */}
-          <div className="rounded border border-emerald-500/30 bg-emerald-500/5 px-2.5 py-2 space-y-1 text-[11px]">
-            <div className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">Farm</div>
-            <StatRow label="Received" value={farm.total_received} />
-            <StatRow label="Pushed to DCL" value={farm.pushed_to_dcl} color="text-emerald-400" />
-            {farm.failed_execution > 0 && (
-              <StatRow label="Failed" value={farm.failed_execution} color="text-red-400" />
-            )}
-          </div>
-
-          {/* DCL */}
-          <div className="rounded border border-amber-500/30 bg-amber-500/5 px-2.5 py-2 space-y-1 text-[11px]">
-            <div className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider">DCL</div>
-            <StatRow label="Definitions" value={dcl.total_definitions} />
-            <StatRow label="Ingested" value={dcl.ingested} color="text-emerald-400" />
-            <div className="border-t border-amber-500/20 pt-1 mt-1" />
-            <StatRow label="SORs (cat)" value={dcl.sors_category} title="Category-based SOR count" />
-            <StatRow label="SORs (gov)" value={dcl.sors_governed} title="Governance-based SOR count" />
-            <StatRow label="Tooling" value={dcl.tooling_pipes} color="text-amber-400" />
-            <StatRow
-              label={
-                <>
-                  Fabrics
-                  {dcl.fabrics_active < dcl.fabrics_defined && (
-                    <span className="text-[9px] text-muted-foreground/40 ml-0.5">/{dcl.fabrics_defined}</span>
+        {/* Top row: Waterfall (1/4) + 3-Phase Activity (3/4) */}
+        <div className="flex gap-2">
+          {/* Pipeline Waterfall — left column, 1/4 width */}
+          <div className="w-1/4 shrink-0 rounded border border-border bg-card/30 px-3 py-2">
+            <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wide mb-2">
+              Pipeline Waterfall
+            </h3>
+            {xsysData.pipeline_waterfall && xsysData.pipeline_waterfall.aam_dispatched > 0 ? (() => {
+              const wf = xsysData.pipeline_waterfall!;
+              const stages = [
+                { label: 'AAM Dispatched', value: wf.aam_dispatched, color: 'bg-blue-500' },
+                { label: 'DCL Ingested', value: wf.dcl_ingested_current_snapshot, color: 'bg-emerald-500' },
+                { label: 'DCL Drops', value: wf.dcl_drops, color: 'bg-red-500' },
+              ];
+              const maxVal = Math.max(...stages.map(s => s.value), 1);
+              const ur = wf.unaccounted_by_reason;
+              return (
+                <div className="space-y-2">
+                  {stages.map((s) => (
+                    <div key={s.label}>
+                      <div className="flex items-center justify-between text-[13px] mb-0.5">
+                        <span className="text-muted-foreground">{s.label}</span>
+                        <span className="font-mono font-semibold text-foreground">{s.value}</span>
+                      </div>
+                      <div className="h-4 bg-muted/20 rounded overflow-hidden">
+                        <div
+                          className={`h-full ${s.color} rounded transition-all`}
+                          style={{ width: `${Math.max((s.value / maxVal) * 100, s.value > 0 ? 2 : 0)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  {wf.unaccounted > 0 && (
+                    <div className="pt-2 border-t border-border">
+                      <div className="text-[13px] mb-1.5">
+                        <span className="text-amber-400 font-semibold">Unaccounted: {wf.unaccounted}</span>
+                      </div>
+                      <div className="space-y-1">
+                        {ur.snapshot_mismatch > 0 && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-sm">
+                            <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
+                            <span className="text-blue-400 font-mono">{ur.snapshot_mismatch}</span>
+                            <span className="text-muted-foreground/60">snapshot</span>
+                          </div>
+                        )}
+                        {ur.dcl_rejected > 0 && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/10 border border-red-500/20 text-sm">
+                            <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
+                            <span className="text-red-400 font-mono">{ur.dcl_rejected}</span>
+                            <span className="text-muted-foreground/60">rejected</span>
+                          </div>
+                        )}
+                        {ur.never_received > 0 && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-sm">
+                            <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                            <span className="text-amber-400 font-mono">{ur.never_received}</span>
+                            <span className="text-muted-foreground/60">never rcvd</span>
+                          </div>
+                        )}
+                        {ur.no_definition > 0 && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-zinc-500/10 border border-zinc-500/20 text-sm">
+                            <span className="w-2 h-2 rounded-full bg-zinc-400 shrink-0" />
+                            <span className="text-zinc-400 font-mono">{ur.no_definition}</span>
+                            <span className="text-muted-foreground/60">no def</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
-                </>
-              }
-              value={dcl.fabrics_active}
-              title={`${dcl.fabrics_active} active of ${dcl.fabrics_defined} defined`}
-            />
-            <StatRow
-              label="Mapped / Unmapped"
-              value={
-                <>
-                  <span className="text-emerald-400">{dcl.mapped_pipes}</span>
-                  <span className="text-muted-foreground/40"> / </span>
-                  <span className="text-red-400">{dcl.unmapped_pipes}</span>
-                </>
-              }
-            />
-            <StatRow label="Rows" value={dcl.rows.toLocaleString()} />
-            {dcl.drops_unique_pipes > 0 && (
-              <>
-                <div className="border-t border-red-500/20 pt-1 mt-1" />
-                <StatRow label="Drops (pipes)" value={dcl.drops_unique_pipes} color="text-red-400" />
-                <StatRow label="Drop events" value={dcl.drops_total} color="text-muted-foreground" />
-              </>
+                </div>
+              );
+            })() : (
+              <div className="text-sm text-muted-foreground/40">No waterfall data</div>
             )}
+          </div>
+
+          {/* 3-Phase Activity — right column, 3/4 width */}
+          <div className="flex-1 grid grid-cols-3 gap-2">
+            {(['structure', 'dispatch', 'content'] as const).map((phase) => {
+              const entry = xsysData.activity[phase];
+              const colors = {
+                structure: { border: 'border-blue-500/30', text: 'text-blue-400', bg: 'bg-blue-500/10' },
+                dispatch: { border: 'border-amber-500/30', text: 'text-amber-400', bg: 'bg-amber-500/10' },
+                content: { border: 'border-emerald-500/30', text: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+              };
+              const c = colors[phase];
+              return (
+                <div key={phase} className={`rounded border ${c.border} ${c.bg} px-3 py-2 flex flex-col`}>
+                  <div className={`font-semibold ${c.text} uppercase text-sm tracking-wider mb-1.5`}>
+                    {phase}
+                  </div>
+                  {entry ? (
+                    <div className="space-y-0.5 font-mono text-[13px]">
+                      <div className="text-muted-foreground/60 truncate">
+                        {(entry as any).source} &middot; {formatTimestamp((entry as any).timestamp)}
+                      </div>
+                      <div>Pipes: <span className="text-foreground font-semibold">{(entry as any).pipes}</span></div>
+                      {(entry as any).sors > 0 && <div>SORs: {(entry as any).sors}</div>}
+                      {(entry as any).fabrics > 0 && <div>Fabrics: {(entry as any).fabrics}</div>}
+                      {(entry as any).tooling_pipes > 0 && <div>Tooling: {(entry as any).tooling_pipes}</div>}
+                      {(entry as any).rows > 0 && <div>Rows: {((entry as any).rows as number).toLocaleString()}</div>}
+                    </div>
+                  ) : (
+                    <div className="text-muted-foreground/40 text-sm">Not received</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Deltas — gap explanations (compact) */}
+        {/* System comparison — unified container */}
+        <div className="rounded border border-border bg-card/30 px-3 py-2">
+          <div className="grid grid-cols-3 gap-4 text-[13px]">
+            {/* AAM */}
+            <div className="space-y-1">
+              <div className="text-sm font-semibold text-blue-400 uppercase tracking-wider border-b border-blue-500/20 pb-1 mb-1">AAM</div>
+              <StatRow label="Total pipes" value={aam.total_pipes} />
+              <StatRow label="Dispatched" value={aam.dispatched} color="text-emerald-400" />
+              {aam.failed_pre_dispatch > 0 && (
+                <StatRow label="Failed (pre)" value={aam.failed_pre_dispatch} color="text-red-400" />
+              )}
+              <StatRow label="SORs" value={aam.sors} title="Unique vendor names from AAM pipe definitions" />
+              <StatRow label="Fabrics" value={aam.fabrics} />
+              {aam.fabric_names.length > 0 && (
+                <div className="text-[11px] text-muted-foreground/50 font-mono truncate">
+                  {aam.fabric_names.join(', ')}
+                </div>
+              )}
+            </div>
+
+            {/* Farm */}
+            <div className="space-y-1 border-l border-border pl-4">
+              <div className="text-sm font-semibold text-emerald-400 uppercase tracking-wider border-b border-emerald-500/20 pb-1 mb-1">Farm</div>
+              <StatRow label="Received" value={farm.total_received} />
+              <StatRow label="Pushed to DCL" value={farm.pushed_to_dcl} color="text-emerald-400" />
+              {farm.failed_execution > 0 && (
+                <StatRow label="Failed" value={farm.failed_execution} color="text-red-400" />
+              )}
+            </div>
+
+            {/* DCL */}
+            <div className="space-y-1 border-l border-border pl-4">
+              <div className="text-sm font-semibold text-amber-400 uppercase tracking-wider border-b border-amber-500/20 pb-1 mb-1">DCL</div>
+              <StatRow label="Definitions" value={dcl.total_definitions} />
+              <StatRow label="Ingested" value={dcl.ingested} color="text-emerald-400" />
+              <StatRow label="Tooling" value={dcl.tooling_pipes} color="text-amber-400" />
+              <StatRow
+                label={
+                  <>
+                    Fabrics
+                    {dcl.fabrics_active < dcl.fabrics_defined && (
+                      <span className="text-[11px] text-muted-foreground/40 ml-0.5">/{dcl.fabrics_defined}</span>
+                    )}
+                  </>
+                }
+                value={dcl.fabrics_active}
+                title={`${dcl.fabrics_active} active of ${dcl.fabrics_defined} defined`}
+              />
+              <StatRow
+                label="Mapped / Unmapped"
+                value={
+                  <>
+                    <span className="text-emerald-400">{dcl.mapped_pipes}</span>
+                    <span className="text-muted-foreground/40"> / </span>
+                    <span className="text-red-400">{dcl.unmapped_pipes}</span>
+                  </>
+                }
+              />
+              <StatRow label="Rows" value={dcl.rows.toLocaleString()} />
+              {dcl.drops_unique_pipes > 0 && (
+                <>
+                  <StatRow label="Drops (pipes)" value={dcl.drops_unique_pipes} color="text-red-400" />
+                  <StatRow label="Drop events" value={dcl.drops_total} color="text-muted-foreground" />
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Deltas — gap explanations */}
         {deltas.length > 0 && (
           <div className="space-y-1.5">
-            <h3 className="text-[11px] font-semibold uppercase text-muted-foreground tracking-wide">
+            <h3 className="text-[13px] font-semibold uppercase text-muted-foreground tracking-wide">
               Gap Analysis ({deltas.length})
             </h3>
             {deltas.map((d, idx) => {
@@ -407,18 +515,18 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                   : 'text-blue-400';
               return (
                 <div key={idx} className={`rounded border ${sev} px-2.5 py-1.5`}>
-                  <div className="flex items-center gap-2 text-[11px]">
+                  <div className="flex items-center gap-2 text-[13px]">
                     <span className="font-semibold text-foreground">{d.label}</span>
                     <span className={`font-mono font-bold ${sevColor}`}>
                       {d.delta > 0 ? `+${d.delta}` : d.delta}
                     </span>
-                    <span className="flex items-center gap-1 ml-auto text-[10px] font-mono text-muted-foreground">
+                    <span className="flex items-center gap-1 ml-auto text-sm font-mono text-muted-foreground">
                       <span>{d.left}</span>
                       <span className="text-muted-foreground/40">&rarr;</span>
                       <span>{d.right}</span>
                     </span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-snug">
+                  <p className="text-sm text-muted-foreground/70 mt-0.5 leading-snug">
                     {d.explanation}
                   </p>
                 </div>
@@ -427,86 +535,12 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
           </div>
         )}
 
-        {/* Pipeline Waterfall — shows where pipes are lost */}
-        {xsysData.pipeline_waterfall && xsysData.pipeline_waterfall.aam_dispatched > 0 && (
-          <div className="rounded border border-border bg-card/30 px-2.5 py-2">
-            <h3 className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide mb-1.5">
-              Pipeline Waterfall
-            </h3>
-            {(() => {
-              const wf = xsysData.pipeline_waterfall!;
-              const stages = [
-                { label: 'AAM Dispatched', value: wf.aam_dispatched, color: 'bg-blue-500' },
-                { label: 'DCL Ingested (snapshot)', value: wf.dcl_ingested_current_snapshot, color: 'bg-emerald-500' },
-                { label: 'DCL Drops', value: wf.dcl_drops, color: 'bg-red-500' },
-              ];
-              const maxVal = Math.max(...stages.map(s => s.value), 1);
-              const ur = wf.unaccounted_by_reason;
-              return (
-                <div className="space-y-1.5">
-                  {stages.map((s) => (
-                    <div key={s.label}>
-                      <div className="flex items-center gap-2 text-[11px]">
-                        <span className="w-[120px] text-muted-foreground shrink-0 text-right">{s.label}</span>
-                        <div className="flex-1 h-3.5 bg-muted/20 rounded overflow-hidden">
-                          <div
-                            className={`h-full ${s.color} rounded transition-all`}
-                            style={{ width: `${Math.max((s.value / maxVal) * 100, s.value > 0 ? 2 : 0)}%` }}
-                          />
-                        </div>
-                        <span className="font-mono font-semibold w-8 text-right text-foreground">{s.value}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {wf.unaccounted > 0 && (
-                    <div className="mt-1.5 pt-1.5 border-t border-border">
-                      <div className="flex items-center gap-2 text-[11px] mb-1">
-                        <span className="text-amber-400 font-semibold">Unaccounted: {wf.unaccounted}</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-1 text-[10px]">
-                        {ur.snapshot_mismatch > 0 && (
-                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                            <span className="text-blue-400 font-mono">{ur.snapshot_mismatch}</span>
-                            <span className="text-muted-foreground/60 truncate">snapshot</span>
-                          </div>
-                        )}
-                        {ur.dcl_rejected > 0 && (
-                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                            <span className="text-red-400 font-mono">{ur.dcl_rejected}</span>
-                            <span className="text-muted-foreground/60 truncate">rejected</span>
-                          </div>
-                        )}
-                        {ur.never_received > 0 && (
-                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                            <span className="text-amber-400 font-mono">{ur.never_received}</span>
-                            <span className="text-muted-foreground/60 truncate">never rcvd</span>
-                          </div>
-                        )}
-                        {ur.no_definition > 0 && (
-                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-500/10 border border-zinc-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                            <span className="text-zinc-400 font-mono">{ur.no_definition}</span>
-                            <span className="text-muted-foreground/60 truncate">no def</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-          </div>
-        )}
-
         {/* Failed pipes — collapsible, filterable, with classification badges */}
         {failedPipeCount > 0 && (
           <div className="space-y-1.5">
             <button
               onClick={() => setFailedOpen(prev => !prev)}
-              className="flex items-center gap-1.5 text-[11px] font-semibold uppercase text-red-400/80 tracking-wide hover:text-red-400 transition-colors w-full text-left"
+              className="flex items-center gap-1.5 text-[13px] font-semibold uppercase text-red-400/80 tracking-wide hover:text-red-400 transition-colors w-full text-left"
             >
               {failedOpen
                 ? <ChevronDown className="w-3.5 h-3.5 shrink-0" />
@@ -520,10 +554,10 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                   value={failedFilter}
                   onChange={(e) => setFailedFilter(e.target.value)}
                   placeholder="Filter by pipe ID, vendor, category, fabric, reason, or classification..."
-                  className="w-full px-2 py-1 text-[11px] rounded border border-border bg-background text-foreground placeholder:text-muted-foreground/50"
+                  className="w-full px-2 py-1 text-[13px] rounded border border-border bg-background text-foreground placeholder:text-muted-foreground/50"
                 />
                 <div className="rounded border border-red-500/20 bg-red-500/5 overflow-hidden">
-                  <table className="w-full text-[11px]">
+                  <table className="w-full text-[13px]">
                     <thead>
                       <tr className="border-b border-red-500/10 text-muted-foreground">
                         <th className="text-left px-2 py-1.5 font-medium">Pipe ID</th>
@@ -561,11 +595,11 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
                               <td className="px-2 py-1.5 text-foreground">{fp.vendor}</td>
                               <td className="px-2 py-1.5 text-muted-foreground">{fp.category}</td>
                               <td className="px-2 py-1.5">
-                                <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold border ${clsStyle}`}>
+                                <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-mono font-semibold border ${clsStyle}`}>
                                   {clsLabel}
                                 </span>
                               </td>
-                              <td className="px-2 py-1.5 text-muted-foreground/70 max-w-xs text-[10px]">
+                              <td className="px-2 py-1.5 text-muted-foreground/70 max-w-xs text-sm">
                                 {fp.reason ?? 'Unknown'}
                               </td>
                             </tr>
@@ -580,14 +614,14 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
           </div>
         )}
 
-        {/* Category breakdown + governance (compact inline) */}
+        {/* Category breakdown + governance */}
         {Object.keys(category_breakdown).length > 0 && (
           <div className="rounded border border-border bg-card/30 px-2.5 py-1.5">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">
+              <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wide">
                 Pipe Categories
               </h3>
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-sm text-muted-foreground">
                 Gov <span className="text-emerald-400 font-semibold">{governance.governed}</span>
                 {' / '}
                 Ungov <span className="text-muted-foreground/50">{governance.ungoverned}</span>
@@ -595,7 +629,7 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
             </div>
             <div className="grid grid-cols-4 gap-1">
               {Object.entries(category_breakdown).sort((a, b) => b[1] - a[1]).map(([cat, count]) => (
-                <div key={cat} className="flex justify-between text-[11px] px-1.5 py-0.5 rounded bg-card/50">
+                <div key={cat} className="flex justify-between text-[13px] px-1.5 py-0.5 rounded bg-card/50">
                   <span className="text-muted-foreground font-mono">{cat}</span>
                   <span className="font-mono font-semibold text-foreground">{count}</span>
                 </div>
@@ -604,66 +638,27 @@ export function ReconciliationPanel({ runId }: ReconciliationPanelProps) {
           </div>
         )}
 
-        {/* Drop breakdown by error code (compact) */}
+        {/* Drop breakdown by error code */}
         {Object.keys(drops_by_error).length > 0 && (
           <div className="rounded border border-red-500/20 bg-red-500/5 px-2.5 py-1.5">
-            <h3 className="text-[10px] font-semibold uppercase text-red-400/80 tracking-wide mb-1">
+            <h3 className="text-sm font-semibold uppercase text-red-400/80 tracking-wide mb-1">
               Drops by Error Code
             </h3>
             <div className="space-y-0.5">
               {Object.entries(drops_by_error).sort((a, b) => b[1] - a[1]).map(([code, count]) => (
-                <div key={code} className="flex justify-between text-[11px] px-1.5 py-0.5 rounded bg-red-500/5">
+                <div key={code} className="flex justify-between text-[13px] px-1.5 py-0.5 rounded bg-red-500/5">
                   <span className="font-mono text-red-400/80">{code}</span>
                   <span className="font-mono font-semibold text-red-400">{count}</span>
                 </div>
               ))}
             </div>
             {dcl.drop_pipe_ids.length > 0 && dcl.drop_pipe_ids.length <= 20 && (
-              <div className="mt-1 text-[9px] text-muted-foreground/50 font-mono">
+              <div className="mt-1 text-[11px] text-muted-foreground/50 font-mono">
                 {dcl.drop_pipe_ids.join(', ')}
               </div>
             )}
           </div>
         )}
-
-        {/* 3-phase activity (compact) */}
-        <div className="rounded border border-border bg-card/30 px-2.5 py-1.5">
-          <h3 className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide mb-1">
-            3-Phase Activity
-          </h3>
-          <div className="grid grid-cols-3 gap-1.5 text-[11px]">
-            {(['structure', 'dispatch', 'content'] as const).map((phase) => {
-              const entry = xsysData.activity[phase];
-              const colors = {
-                structure: { border: 'border-blue-500/30', text: 'text-blue-400', bg: 'bg-blue-500/10' },
-                dispatch: { border: 'border-amber-500/30', text: 'text-amber-400', bg: 'bg-amber-500/10' },
-                content: { border: 'border-emerald-500/30', text: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-              };
-              const c = colors[phase];
-              return (
-                <div key={phase} className={`rounded border ${c.border} ${c.bg} px-2 py-1.5`}>
-                  <div className={`font-semibold ${c.text} uppercase text-[9px] tracking-wider mb-0.5`}>
-                    {phase}
-                  </div>
-                  {entry ? (
-                    <div className="space-y-0 font-mono text-[10px]">
-                      <div className="text-muted-foreground/60 truncate">
-                        {(entry as any).source} &middot; {formatTimestamp((entry as any).timestamp)}
-                      </div>
-                      <div>Pipes: <span className="text-foreground font-semibold">{(entry as any).pipes}</span></div>
-                      {(entry as any).sors > 0 && <div>SORs: {(entry as any).sors}</div>}
-                      {(entry as any).fabrics > 0 && <div>Fabrics: {(entry as any).fabrics}</div>}
-                      {(entry as any).tooling_pipes > 0 && <div>Tooling: {(entry as any).tooling_pipes}</div>}
-                      {(entry as any).rows > 0 && <div>Rows: {((entry as any).rows as number).toLocaleString()}</div>}
-                    </div>
-                  ) : (
-                    <div className="text-muted-foreground/40 text-[10px]">Not received</div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </div>
     </div>
   );
