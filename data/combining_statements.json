@@ -327,9 +327,9 @@
       {
         "line_item": "D&A",
         "meridian": 25.0,
-        "cascadia": 13.12,
-        "adjustments": -4.37,
-        "combined": 33.75,
+        "cascadia": 7.5,
+        "adjustments": -2.5,
+        "combined": 30.0,
         "adjustment_details": [
           {
             "conflict_id": "COFA-006",
@@ -337,17 +337,17 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.37,
-            "adjustment_rationale": "Cascadia accelerated D&A = $13.12M. Straight-line equivalent = $8.75M. Adjustment = $-4.37M (reduces D&A by 1/3). Increases operating profit by $4.37M."
+            "adjustment_amount": -2.5,
+            "adjustment_rationale": "Cascadia accelerated D&A = $7.50M. Straight-line equivalent = $5.00M. Adjustment = $-2.50M (reduces D&A by 1/3). Increases operating profit by $2.50M."
           }
         ]
       },
       {
         "line_item": "Operating Profit",
         "meridian": 275.0,
-        "cascadia": -43.62,
-        "adjustments": -0.63,
-        "combined": 230.75,
+        "cascadia": -38.0,
+        "adjustments": -2.5,
+        "combined": 234.5,
         "adjustment_details": [
           {
             "conflict_id": "COFA-004",
@@ -373,8 +373,8 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.37,
-            "adjustment_rationale": "Cascadia accelerated D&A = $13.12M. Straight-line equivalent = $8.75M. Adjustment = $-4.37M (reduces D&A by 1/3). Increases operating profit by $4.37M."
+            "adjustment_amount": -2.5,
+            "adjustment_rationale": "Cascadia accelerated D&A = $7.50M. Straight-line equivalent = $5.00M. Adjustment = $-2.50M (reduces D&A by 1/3). Increases operating profit by $2.50M."
           }
         ]
       },
@@ -382,16 +382,16 @@
         "line_item": "Tax",
         "meridian": 66.0,
         "cascadia": 0.0,
-        "adjustments": -11.39,
-        "combined": 54.61,
+        "adjustments": -10.5,
+        "combined": 55.5,
         "adjustment_details": []
       },
       {
         "line_item": "Net Income",
         "meridian": 209.0,
-        "cascadia": -43.62,
-        "adjustments": 10.76,
-        "combined": 176.14,
+        "cascadia": -38.0,
+        "adjustments": 8.0,
+        "combined": 179.0,
         "adjustment_details": []
       }
     ]
@@ -724,9 +724,9 @@
       {
         "line_item": "D&A",
         "meridian": 25.37,
-        "cascadia": 13.38,
-        "adjustments": -4.46,
-        "combined": 34.29,
+        "cascadia": 7.65,
+        "adjustments": -2.55,
+        "combined": 30.47,
         "adjustment_details": [
           {
             "conflict_id": "COFA-006",
@@ -734,17 +734,17 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.46,
-            "adjustment_rationale": "Cascadia accelerated D&A = $13.38M. Straight-line equivalent = $8.92M. Adjustment = $-4.46M (reduces D&A by 1/3). Increases operating profit by $4.46M."
+            "adjustment_amount": -2.55,
+            "adjustment_rationale": "Cascadia accelerated D&A = $7.65M. Straight-line equivalent = $5.10M. Adjustment = $-2.55M (reduces D&A by 1/3). Increases operating profit by $2.55M."
           }
         ]
       },
       {
         "line_item": "Operating Profit",
         "meridian": 279.98,
-        "cascadia": -44.25,
-        "adjustments": -0.54,
-        "combined": 235.19,
+        "cascadia": -38.52,
+        "adjustments": -2.45,
+        "combined": 239.01,
         "adjustment_details": [
           {
             "conflict_id": "COFA-004",
@@ -770,8 +770,8 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.46,
-            "adjustment_rationale": "Cascadia accelerated D&A = $13.38M. Straight-line equivalent = $8.92M. Adjustment = $-4.46M (reduces D&A by 1/3). Increases operating profit by $4.46M."
+            "adjustment_amount": -2.55,
+            "adjustment_rationale": "Cascadia accelerated D&A = $7.65M. Straight-line equivalent = $5.10M. Adjustment = $-2.55M (reduces D&A by 1/3). Increases operating profit by $2.55M."
           }
         ]
       },
@@ -779,16 +779,16 @@
         "line_item": "Tax",
         "meridian": 67.2,
         "cascadia": 0.0,
-        "adjustments": -11.54,
-        "combined": 55.66,
+        "adjustments": -10.63,
+        "combined": 56.57,
         "adjustment_details": []
       },
       {
         "line_item": "Net Income",
         "meridian": 212.78,
-        "cascadia": -44.25,
-        "adjustments": 11.0,
-        "combined": 179.53,
+        "cascadia": -38.52,
+        "adjustments": 8.18,
+        "combined": 182.44,
         "adjustment_details": []
       }
     ]
@@ -1121,9 +1121,9 @@
       {
         "line_item": "D&A",
         "meridian": 25.74,
-        "cascadia": 13.64,
-        "adjustments": -4.55,
-        "combined": 34.83,
+        "cascadia": 7.79,
+        "adjustments": -2.6,
+        "combined": 30.93,
         "adjustment_details": [
           {
             "conflict_id": "COFA-006",
@@ -1131,17 +1131,17 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.55,
-            "adjustment_rationale": "Cascadia accelerated D&A = $13.64M. Straight-line equivalent = $9.09M. Adjustment = $-4.55M (reduces D&A by 1/3). Increases operating profit by $4.55M."
+            "adjustment_amount": -2.6,
+            "adjustment_rationale": "Cascadia accelerated D&A = $7.79M. Straight-line equivalent = $5.19M. Adjustment = $-2.60M (reduces D&A by 1/3). Increases operating profit by $2.60M."
           }
         ]
       },
       {
         "line_item": "Operating Profit",
         "meridian": 285.07,
-        "cascadia": -44.88,
-        "adjustments": -0.45,
-        "combined": 239.74,
+        "cascadia": -39.03,
+        "adjustments": -2.4,
+        "combined": 243.64,
         "adjustment_details": [
           {
             "conflict_id": "COFA-004",
@@ -1167,8 +1167,8 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.55,
-            "adjustment_rationale": "Cascadia accelerated D&A = $13.64M. Straight-line equivalent = $9.09M. Adjustment = $-4.55M (reduces D&A by 1/3). Increases operating profit by $4.55M."
+            "adjustment_amount": -2.6,
+            "adjustment_rationale": "Cascadia accelerated D&A = $7.79M. Straight-line equivalent = $5.19M. Adjustment = $-2.60M (reduces D&A by 1/3). Increases operating profit by $2.60M."
           }
         ]
       },
@@ -1176,16 +1176,16 @@
         "line_item": "Tax",
         "meridian": 68.42,
         "cascadia": 0.0,
-        "adjustments": -11.69,
-        "combined": 56.73,
+        "adjustments": -10.76,
+        "combined": 57.66,
         "adjustment_details": []
       },
       {
         "line_item": "Net Income",
         "meridian": 216.65,
-        "cascadia": -44.88,
-        "adjustments": 11.24,
-        "combined": 183.01,
+        "cascadia": -39.03,
+        "adjustments": 8.36,
+        "combined": 185.98,
         "adjustment_details": []
       }
     ]
@@ -1518,9 +1518,9 @@
       {
         "line_item": "D&A",
         "meridian": 26.12,
-        "cascadia": 13.91,
-        "adjustments": -4.64,
-        "combined": 35.39,
+        "cascadia": 7.95,
+        "adjustments": -2.65,
+        "combined": 31.42,
         "adjustment_details": [
           {
             "conflict_id": "COFA-006",
@@ -1528,17 +1528,17 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.64,
-            "adjustment_rationale": "Cascadia accelerated D&A = $13.91M. Straight-line equivalent = $9.27M. Adjustment = $-4.64M (reduces D&A by 1/3). Increases operating profit by $4.64M."
+            "adjustment_amount": -2.65,
+            "adjustment_rationale": "Cascadia accelerated D&A = $7.95M. Straight-line equivalent = $5.30M. Adjustment = $-2.65M (reduces D&A by 1/3). Increases operating profit by $2.65M."
           }
         ]
       },
       {
         "line_item": "Operating Profit",
         "meridian": 290.21,
-        "cascadia": -45.53,
-        "adjustments": -0.36,
-        "combined": 244.32,
+        "cascadia": -39.57,
+        "adjustments": -2.35,
+        "combined": 248.29,
         "adjustment_details": [
           {
             "conflict_id": "COFA-004",
@@ -1564,8 +1564,8 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.64,
-            "adjustment_rationale": "Cascadia accelerated D&A = $13.91M. Straight-line equivalent = $9.27M. Adjustment = $-4.64M (reduces D&A by 1/3). Increases operating profit by $4.64M."
+            "adjustment_amount": -2.65,
+            "adjustment_rationale": "Cascadia accelerated D&A = $7.95M. Straight-line equivalent = $5.30M. Adjustment = $-2.65M (reduces D&A by 1/3). Increases operating profit by $2.65M."
           }
         ]
       },
@@ -1573,16 +1573,16 @@
         "line_item": "Tax",
         "meridian": 69.65,
         "cascadia": 0.0,
-        "adjustments": -11.84,
-        "combined": 57.81,
+        "adjustments": -10.9,
+        "combined": 58.75,
         "adjustment_details": []
       },
       {
         "line_item": "Net Income",
         "meridian": 220.56,
-        "cascadia": -45.53,
-        "adjustments": 11.48,
-        "combined": 186.51,
+        "cascadia": -39.57,
+        "adjustments": 8.55,
+        "combined": 189.54,
         "adjustment_details": []
       }
     ]
@@ -1915,9 +1915,9 @@
       {
         "line_item": "D&A",
         "meridian": 26.47,
-        "cascadia": 14.14,
-        "adjustments": -4.71,
-        "combined": 35.9,
+        "cascadia": 8.08,
+        "adjustments": -2.69,
+        "combined": 31.86,
         "adjustment_details": [
           {
             "conflict_id": "COFA-006",
@@ -1925,17 +1925,17 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.71,
-            "adjustment_rationale": "Cascadia accelerated D&A = $14.14M. Straight-line equivalent = $9.43M. Adjustment = $-4.71M (reduces D&A by 1/3). Increases operating profit by $4.71M."
+            "adjustment_amount": -2.69,
+            "adjustment_rationale": "Cascadia accelerated D&A = $8.08M. Straight-line equivalent = $5.39M. Adjustment = $-2.69M (reduces D&A by 1/3). Increases operating profit by $2.69M."
           }
         ]
       },
       {
         "line_item": "Operating Profit",
         "meridian": 295.12,
-        "cascadia": -46.05,
-        "adjustments": -0.29,
-        "combined": 248.78,
+        "cascadia": -39.99,
+        "adjustments": -2.31,
+        "combined": 252.82,
         "adjustment_details": [
           {
             "conflict_id": "COFA-004",
@@ -1961,8 +1961,8 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.71,
-            "adjustment_rationale": "Cascadia accelerated D&A = $14.14M. Straight-line equivalent = $9.43M. Adjustment = $-4.71M (reduces D&A by 1/3). Increases operating profit by $4.71M."
+            "adjustment_amount": -2.69,
+            "adjustment_rationale": "Cascadia accelerated D&A = $8.08M. Straight-line equivalent = $5.39M. Adjustment = $-2.69M (reduces D&A by 1/3). Increases operating profit by $2.69M."
           }
         ]
       },
@@ -1970,16 +1970,16 @@
         "line_item": "Tax",
         "meridian": 70.83,
         "cascadia": 0.0,
-        "adjustments": -11.96,
-        "combined": 58.87,
+        "adjustments": -11.01,
+        "combined": 59.82,
         "adjustment_details": []
       },
       {
         "line_item": "Net Income",
         "meridian": 224.29,
-        "cascadia": -46.05,
-        "adjustments": 11.67,
-        "combined": 189.91,
+        "cascadia": -39.99,
+        "adjustments": 8.7,
+        "combined": 193.0,
         "adjustment_details": []
       }
     ]
@@ -2312,9 +2312,9 @@
       {
         "line_item": "D&A",
         "meridian": 26.83,
-        "cascadia": 14.38,
-        "adjustments": -4.79,
-        "combined": 36.42,
+        "cascadia": 8.22,
+        "adjustments": -2.74,
+        "combined": 32.31,
         "adjustment_details": [
           {
             "conflict_id": "COFA-006",
@@ -2322,17 +2322,17 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.79,
-            "adjustment_rationale": "Cascadia accelerated D&A = $14.38M. Straight-line equivalent = $9.59M. Adjustment = $-4.79M (reduces D&A by 1/3). Increases operating profit by $4.79M."
+            "adjustment_amount": -2.74,
+            "adjustment_rationale": "Cascadia accelerated D&A = $8.22M. Straight-line equivalent = $5.48M. Adjustment = $-2.74M (reduces D&A by 1/3). Increases operating profit by $2.74M."
           }
         ]
       },
       {
         "line_item": "Operating Profit",
         "meridian": 300.1,
-        "cascadia": -46.58,
-        "adjustments": -0.21,
-        "combined": 253.31,
+        "cascadia": -40.42,
+        "adjustments": -2.26,
+        "combined": 257.42,
         "adjustment_details": [
           {
             "conflict_id": "COFA-004",
@@ -2358,8 +2358,8 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.79,
-            "adjustment_rationale": "Cascadia accelerated D&A = $14.38M. Straight-line equivalent = $9.59M. Adjustment = $-4.79M (reduces D&A by 1/3). Increases operating profit by $4.79M."
+            "adjustment_amount": -2.74,
+            "adjustment_rationale": "Cascadia accelerated D&A = $8.22M. Straight-line equivalent = $5.48M. Adjustment = $-2.74M (reduces D&A by 1/3). Increases operating profit by $2.74M."
           }
         ]
       },
@@ -2367,16 +2367,16 @@
         "line_item": "Tax",
         "meridian": 72.02,
         "cascadia": 0.0,
-        "adjustments": -12.09,
-        "combined": 59.93,
+        "adjustments": -11.12,
+        "combined": 60.9,
         "adjustment_details": []
       },
       {
         "line_item": "Net Income",
         "meridian": 228.08,
-        "cascadia": -46.58,
-        "adjustments": 11.88,
-        "combined": 193.38,
+        "cascadia": -40.42,
+        "adjustments": 8.86,
+        "combined": 196.52,
         "adjustment_details": []
       }
     ]
@@ -2709,9 +2709,9 @@
       {
         "line_item": "D&A",
         "meridian": 27.19,
-        "cascadia": 14.63,
-        "adjustments": -4.88,
-        "combined": 36.94,
+        "cascadia": 8.36,
+        "adjustments": -2.79,
+        "combined": 32.76,
         "adjustment_details": [
           {
             "conflict_id": "COFA-006",
@@ -2719,17 +2719,17 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.88,
-            "adjustment_rationale": "Cascadia accelerated D&A = $14.63M. Straight-line equivalent = $9.75M. Adjustment = $-4.88M (reduces D&A by 1/3). Increases operating profit by $4.88M."
+            "adjustment_amount": -2.79,
+            "adjustment_rationale": "Cascadia accelerated D&A = $8.36M. Straight-line equivalent = $5.57M. Adjustment = $-2.79M (reduces D&A by 1/3). Increases operating profit by $2.79M."
           }
         ]
       },
       {
         "line_item": "Operating Profit",
         "meridian": 305.18,
-        "cascadia": -47.11,
-        "adjustments": -0.12,
-        "combined": 257.95,
+        "cascadia": -40.84,
+        "adjustments": -2.21,
+        "combined": 262.13,
         "adjustment_details": [
           {
             "conflict_id": "COFA-004",
@@ -2755,8 +2755,8 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.88,
-            "adjustment_rationale": "Cascadia accelerated D&A = $14.63M. Straight-line equivalent = $9.75M. Adjustment = $-4.88M (reduces D&A by 1/3). Increases operating profit by $4.88M."
+            "adjustment_amount": -2.79,
+            "adjustment_rationale": "Cascadia accelerated D&A = $8.36M. Straight-line equivalent = $5.57M. Adjustment = $-2.79M (reduces D&A by 1/3). Increases operating profit by $2.79M."
           }
         ]
       },
@@ -2764,16 +2764,16 @@
         "line_item": "Tax",
         "meridian": 73.24,
         "cascadia": 0.0,
-        "adjustments": -12.21,
-        "combined": 61.03,
+        "adjustments": -11.22,
+        "combined": 62.02,
         "adjustment_details": []
       },
       {
         "line_item": "Net Income",
         "meridian": 231.94,
-        "cascadia": -47.11,
-        "adjustments": 12.09,
-        "combined": 196.92,
+        "cascadia": -40.84,
+        "adjustments": 9.01,
+        "combined": 200.11,
         "adjustment_details": []
       }
     ]
@@ -3106,9 +3106,9 @@
       {
         "line_item": "D&A",
         "meridian": 27.55,
-        "cascadia": 14.88,
-        "adjustments": -4.96,
-        "combined": 37.47,
+        "cascadia": 8.5,
+        "adjustments": -2.83,
+        "combined": 33.22,
         "adjustment_details": [
           {
             "conflict_id": "COFA-006",
@@ -3116,17 +3116,17 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.96,
-            "adjustment_rationale": "Cascadia accelerated D&A = $14.88M. Straight-line equivalent = $9.92M. Adjustment = $-4.96M (reduces D&A by 1/3). Increases operating profit by $4.96M."
+            "adjustment_amount": -2.83,
+            "adjustment_rationale": "Cascadia accelerated D&A = $8.50M. Straight-line equivalent = $5.67M. Adjustment = $-2.83M (reduces D&A by 1/3). Increases operating profit by $2.83M."
           }
         ]
       },
       {
         "line_item": "Operating Profit",
         "meridian": 310.32,
-        "cascadia": -47.64,
-        "adjustments": -0.04,
-        "combined": 262.64,
+        "cascadia": -41.26,
+        "adjustments": -2.17,
+        "combined": 266.89,
         "adjustment_details": [
           {
             "conflict_id": "COFA-004",
@@ -3152,8 +3152,8 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -4.96,
-            "adjustment_rationale": "Cascadia accelerated D&A = $14.88M. Straight-line equivalent = $9.92M. Adjustment = $-4.96M (reduces D&A by 1/3). Increases operating profit by $4.96M."
+            "adjustment_amount": -2.83,
+            "adjustment_rationale": "Cascadia accelerated D&A = $8.50M. Straight-line equivalent = $5.67M. Adjustment = $-2.83M (reduces D&A by 1/3). Increases operating profit by $2.83M."
           }
         ]
       },
@@ -3161,16 +3161,16 @@
         "line_item": "Tax",
         "meridian": 74.48,
         "cascadia": 0.0,
-        "adjustments": -12.34,
-        "combined": 62.14,
+        "adjustments": -11.33,
+        "combined": 63.15,
         "adjustment_details": []
       },
       {
         "line_item": "Net Income",
         "meridian": 235.84,
-        "cascadia": -47.64,
-        "adjustments": 12.3,
-        "combined": 200.5,
+        "cascadia": -41.26,
+        "adjustments": 9.16,
+        "combined": 203.74,
         "adjustment_details": []
       }
     ]
@@ -3503,9 +3503,9 @@
       {
         "line_item": "D&A",
         "meridian": 27.89,
-        "cascadia": 15.1,
-        "adjustments": -5.03,
-        "combined": 37.96,
+        "cascadia": 8.63,
+        "adjustments": -2.88,
+        "combined": 33.64,
         "adjustment_details": [
           {
             "conflict_id": "COFA-006",
@@ -3513,17 +3513,17 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -5.03,
-            "adjustment_rationale": "Cascadia accelerated D&A = $15.10M. Straight-line equivalent = $10.07M. Adjustment = $-5.03M (reduces D&A by 1/3). Increases operating profit by $5.03M."
+            "adjustment_amount": -2.88,
+            "adjustment_rationale": "Cascadia accelerated D&A = $8.63M. Straight-line equivalent = $5.75M. Adjustment = $-2.88M (reduces D&A by 1/3). Increases operating profit by $2.88M."
           }
         ]
       },
       {
         "line_item": "Operating Profit",
         "meridian": 315.18,
-        "cascadia": -48.06,
-        "adjustments": 0.03,
-        "combined": 267.15,
+        "cascadia": -41.59,
+        "adjustments": -2.12,
+        "combined": 271.47,
         "adjustment_details": [
           {
             "conflict_id": "COFA-004",
@@ -3549,8 +3549,8 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -5.03,
-            "adjustment_rationale": "Cascadia accelerated D&A = $15.10M. Straight-line equivalent = $10.07M. Adjustment = $-5.03M (reduces D&A by 1/3). Increases operating profit by $5.03M."
+            "adjustment_amount": -2.88,
+            "adjustment_rationale": "Cascadia accelerated D&A = $8.63M. Straight-line equivalent = $5.75M. Adjustment = $-2.88M (reduces D&A by 1/3). Increases operating profit by $2.88M."
           }
         ]
       },
@@ -3558,16 +3558,16 @@
         "line_item": "Tax",
         "meridian": 75.64,
         "cascadia": 0.0,
-        "adjustments": -12.44,
-        "combined": 63.2,
+        "adjustments": -11.42,
+        "combined": 64.22,
         "adjustment_details": []
       },
       {
         "line_item": "Net Income",
         "meridian": 239.54,
-        "cascadia": -48.06,
-        "adjustments": 12.47,
-        "combined": 203.95,
+        "cascadia": -41.59,
+        "adjustments": 9.3,
+        "combined": 207.25,
         "adjustment_details": []
       }
     ]
@@ -3900,9 +3900,9 @@
       {
         "line_item": "D&A",
         "meridian": 28.23,
-        "cascadia": 15.32,
-        "adjustments": -5.11,
-        "combined": 38.44,
+        "cascadia": 8.75,
+        "adjustments": -2.92,
+        "combined": 34.06,
         "adjustment_details": [
           {
             "conflict_id": "COFA-006",
@@ -3910,17 +3910,17 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -5.11,
-            "adjustment_rationale": "Cascadia accelerated D&A = $15.32M. Straight-line equivalent = $10.21M. Adjustment = $-5.11M (reduces D&A by 1/3). Increases operating profit by $5.11M."
+            "adjustment_amount": -2.92,
+            "adjustment_rationale": "Cascadia accelerated D&A = $8.75M. Straight-line equivalent = $5.83M. Adjustment = $-2.92M (reduces D&A by 1/3). Increases operating profit by $2.92M."
           }
         ]
       },
       {
         "line_item": "Operating Profit",
         "meridian": 320.09,
-        "cascadia": -48.46,
-        "adjustments": 0.11,
-        "combined": 271.74,
+        "cascadia": -41.89,
+        "adjustments": -2.08,
+        "combined": 276.12,
         "adjustment_details": [
           {
             "conflict_id": "COFA-004",
@@ -3946,8 +3946,8 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -5.11,
-            "adjustment_rationale": "Cascadia accelerated D&A = $15.32M. Straight-line equivalent = $10.21M. Adjustment = $-5.11M (reduces D&A by 1/3). Increases operating profit by $5.11M."
+            "adjustment_amount": -2.92,
+            "adjustment_rationale": "Cascadia accelerated D&A = $8.75M. Straight-line equivalent = $5.83M. Adjustment = $-2.92M (reduces D&A by 1/3). Increases operating profit by $2.92M."
           }
         ]
       },
@@ -3955,16 +3955,16 @@
         "line_item": "Tax",
         "meridian": 76.82,
         "cascadia": 0.0,
-        "adjustments": -12.53,
-        "combined": 64.29,
+        "adjustments": -11.5,
+        "combined": 65.32,
         "adjustment_details": []
       },
       {
         "line_item": "Net Income",
         "meridian": 243.27,
-        "cascadia": -48.46,
-        "adjustments": 12.64,
-        "combined": 207.45,
+        "cascadia": -41.89,
+        "adjustments": 9.42,
+        "combined": 210.8,
         "adjustment_details": []
       }
     ]
@@ -4297,9 +4297,9 @@
       {
         "line_item": "D&A",
         "meridian": 28.58,
-        "cascadia": 15.54,
-        "adjustments": -5.18,
-        "combined": 38.94,
+        "cascadia": 8.88,
+        "adjustments": -2.96,
+        "combined": 34.5,
         "adjustment_details": [
           {
             "conflict_id": "COFA-006",
@@ -4307,17 +4307,17 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -5.18,
-            "adjustment_rationale": "Cascadia accelerated D&A = $15.54M. Straight-line equivalent = $10.36M. Adjustment = $-5.18M (reduces D&A by 1/3). Increases operating profit by $5.18M."
+            "adjustment_amount": -2.96,
+            "adjustment_rationale": "Cascadia accelerated D&A = $8.88M. Straight-line equivalent = $5.92M. Adjustment = $-2.96M (reduces D&A by 1/3). Increases operating profit by $2.96M."
           }
         ]
       },
       {
         "line_item": "Operating Profit",
         "meridian": 325.11,
-        "cascadia": -48.87,
-        "adjustments": 0.18,
-        "combined": 276.42,
+        "cascadia": -42.21,
+        "adjustments": -2.04,
+        "combined": 280.86,
         "adjustment_details": [
           {
             "conflict_id": "COFA-004",
@@ -4343,8 +4343,8 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -5.18,
-            "adjustment_rationale": "Cascadia accelerated D&A = $15.54M. Straight-line equivalent = $10.36M. Adjustment = $-5.18M (reduces D&A by 1/3). Increases operating profit by $5.18M."
+            "adjustment_amount": -2.96,
+            "adjustment_rationale": "Cascadia accelerated D&A = $8.88M. Straight-line equivalent = $5.92M. Adjustment = $-2.96M (reduces D&A by 1/3). Increases operating profit by $2.96M."
           }
         ]
       },
@@ -4352,16 +4352,16 @@
         "line_item": "Tax",
         "meridian": 78.03,
         "cascadia": 0.0,
-        "adjustments": -12.64,
-        "combined": 65.39,
+        "adjustments": -11.59,
+        "combined": 66.44,
         "adjustment_details": []
       },
       {
         "line_item": "Net Income",
         "meridian": 247.08,
-        "cascadia": -48.87,
-        "adjustments": 12.82,
-        "combined": 211.03,
+        "cascadia": -42.21,
+        "adjustments": 9.55,
+        "combined": 214.42,
         "adjustment_details": []
       }
     ]
@@ -4694,9 +4694,9 @@
       {
         "line_item": "D&A",
         "meridian": 28.93,
-        "cascadia": 15.77,
-        "adjustments": -5.26,
-        "combined": 39.44,
+        "cascadia": 9.01,
+        "adjustments": -3.0,
+        "combined": 34.94,
         "adjustment_details": [
           {
             "conflict_id": "COFA-006",
@@ -4704,17 +4704,17 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -5.26,
-            "adjustment_rationale": "Cascadia accelerated D&A = $15.77M. Straight-line equivalent = $10.51M. Adjustment = $-5.26M (reduces D&A by 1/3). Increases operating profit by $5.26M."
+            "adjustment_amount": -3.0,
+            "adjustment_rationale": "Cascadia accelerated D&A = $9.01M. Straight-line equivalent = $6.01M. Adjustment = $-3.00M (reduces D&A by 1/3). Increases operating profit by $3.00M."
           }
         ]
       },
       {
         "line_item": "Operating Profit",
         "meridian": 330.17,
-        "cascadia": -49.29,
-        "adjustments": 0.26,
-        "combined": 281.14,
+        "cascadia": -42.53,
+        "adjustments": -2.0,
+        "combined": 285.64,
         "adjustment_details": [
           {
             "conflict_id": "COFA-004",
@@ -4740,8 +4740,8 @@
             "metric": "D&A",
             "meridian_treatment": "Straight-line depreciation over 5 years",
             "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-            "adjustment_amount": -5.26,
-            "adjustment_rationale": "Cascadia accelerated D&A = $15.77M. Straight-line equivalent = $10.51M. Adjustment = $-5.26M (reduces D&A by 1/3). Increases operating profit by $5.26M."
+            "adjustment_amount": -3.0,
+            "adjustment_rationale": "Cascadia accelerated D&A = $9.01M. Straight-line equivalent = $6.01M. Adjustment = $-3.00M (reduces D&A by 1/3). Increases operating profit by $3.00M."
           }
         ]
       },
@@ -4749,16 +4749,16 @@
         "line_item": "Tax",
         "meridian": 79.24,
         "cascadia": 0.0,
-        "adjustments": -12.73,
-        "combined": 66.51,
+        "adjustments": -11.67,
+        "combined": 67.57,
         "adjustment_details": []
       },
       {
         "line_item": "Net Income",
         "meridian": 250.93,
-        "cascadia": -49.29,
-        "adjustments": 12.99,
-        "combined": 214.63,
+        "cascadia": -42.53,
+        "adjustments": 9.67,
+        "combined": 218.07,
         "adjustment_details": []
       }
     ]
@@ -4815,8 +4815,8 @@
       "metric": "D&A",
       "meridian_treatment": "Straight-line depreciation over 5 years",
       "cascadia_treatment": "Accelerated depreciation over 3 years (1.5x multiplier)",
-      "adjustment_amount": -4.37,
-      "adjustment_rationale": "Cascadia accelerated D&A = $13.12M. Straight-line equivalent = $8.75M. Adjustment = $-4.37M (reduces D&A by 1/3). Increases operating profit by $4.37M."
+      "adjustment_amount": -2.5,
+      "adjustment_rationale": "Cascadia accelerated D&A = $7.50M. Straight-line equivalent = $5.00M. Adjustment = $-2.50M (reduces D&A by 1/3). Increases operating profit by $2.50M."
     }
   ],
   "_periods": [
