@@ -216,9 +216,7 @@ def ingest_triples(req: IngestRequest, replace: bool = Query(False)):
     # Build triple dicts for insertion
     rows = []
     for t in req.triples:
-        val = t.value
-        if not isinstance(val, str):
-            val = json.dumps(val)
+        val = json.dumps(t.value)
         rows.append({
             "tenant_id": req.tenant_id,
             "entity_id": t.entity_id,

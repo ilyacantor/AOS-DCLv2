@@ -3450,6 +3450,91 @@ concepts:
     calculation_methodology: "Total Assets - Total Liabilities = Total Equity. Or sum of all equity component accounts."
     comparability_rules: "Equity comparison requires consistent consolidation scope. Share buybacks, dividend policies, and AOCI items affect period-over-period comparability."
 
+  - id: cogs
+    concept_id: FIN-035
+    name: Cost of Goods Sold
+    description: "Direct costs attributable to production of goods or delivery of services sold by the entity"
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - cogs
+      - cost_of_revenue
+      - cost_of_sales
+      - direct_cost
+      - cost_of_goods_sold
+    aliases:
+      - cost_of_revenue
+      - cost_of_sales
+      - direct_costs
+      - cos
+    expected_type: float
+    typical_source_systems: [netsuite, sap, quickbooks]
+    persona_relevance:
+      cfo: 1.0
+      coo: 0.8
+    recognition_basis: "Recognized in the same period as the related revenue under the matching principle. Includes direct labor, direct materials, and allocated overhead."
+    timing_semantics: "Period-based, matched to revenue recognition period. Cumulative for the reporting period."
+    scope_boundaries: "Includes direct costs of production or service delivery — labor, materials, subcontractor costs, allocated overhead. Excludes SG&A, R&D, and other operating expenses."
+    calculation_methodology: "Sum of all GL accounts classified as cost of goods sold or cost of revenue for the reporting entity."
+    comparability_rules: "Comparable only when cost allocation methodology is consistent. Different overhead allocation methods (activity-based vs traditional) affect comparability."
+
+  - id: opex
+    concept_id: FIN-036
+    name: Operating Expenses
+    description: "Expenses incurred through normal business operations — SG&A, R&D, and other operating costs excluding COGS"
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - opex
+      - operating_expenses
+      - sga
+      - selling_general_admin
+      - research_development
+    aliases:
+      - operating_expenses
+      - sga
+      - overhead
+      - operating_costs
+    expected_type: float
+    typical_source_systems: [netsuite, sap, workday]
+    persona_relevance:
+      cfo: 1.0
+      coo: 0.9
+    recognition_basis: "Recognized as incurred in the period. Includes all operating costs not classified as COGS — sales, marketing, G&A, R&D."
+    timing_semantics: "Period-based. Recognized in the period incurred regardless of cash payment timing."
+    scope_boundaries: "Includes SG&A, R&D, depreciation & amortization of operating assets, and other operating expenses. Excludes COGS, interest expense, and income taxes."
+    calculation_methodology: "Sum of all GL accounts classified as operating expenses for the reporting entity, excluding COGS."
+    comparability_rules: "Comparable when expense classification rules match. R&D capitalization policies and stock-based compensation treatment affect comparability."
+
+  - id: pnl
+    concept_id: FIN-037
+    name: Profit and Loss
+    description: "Income statement summary metrics — EBITDA, operating income, net income, and derived P&L aggregates"
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - ebitda
+      - operating_income
+      - net_income
+      - gross_profit
+      - gross_margin
+    aliases:
+      - income_statement
+      - profit_loss
+      - earnings
+      - p_and_l
+    expected_type: float
+    typical_source_systems: [netsuite, sap, quickbooks]
+    persona_relevance:
+      cfo: 1.0
+      cro: 0.7
+      coo: 0.8
+    recognition_basis: "Derived from revenue, COGS, and operating expense recognition. EBITDA = Revenue - COGS - OpEx. Period-based aggregate."
+    timing_semantics: "Period-based summary. Represents cumulative results for the reporting period."
+    scope_boundaries: "Covers the full P&L from revenue through net income. Individual line items (EBITDA, gross profit, etc.) are sub-concepts."
+    calculation_methodology: "EBITDA = Revenue - COGS - OpEx. Gross Profit = Revenue - COGS. Operating Income = Gross Profit - OpEx."
+    comparability_rules: "P&L comparisons require consistent revenue recognition, cost classification, and expense categorization. EBITDA adjustments must be disclosed."
+
   - id: customer
     concept_id: SALES-014
     name: Customer

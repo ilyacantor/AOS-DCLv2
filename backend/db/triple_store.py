@@ -39,9 +39,7 @@ class TripleStore:
             with conn.cursor() as cur:
                 rows = []
                 for t in triples:
-                    val = t["value"]
-                    if not isinstance(val, str):
-                        val = json.dumps(val)
+                    val = json.dumps(t["value"])
                     rows.append(tuple(
                         val if c == "value" else t.get(c)
                         for c in cols
