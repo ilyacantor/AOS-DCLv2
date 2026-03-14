@@ -281,12 +281,18 @@ def _score_match(query: str, item: Union[MetricDefinition, EntityDefinition]) ->
 
 
 def resolve_metric(query: str) -> Optional[MetricDefinition]:
-    """Resolve a query string to a canonical metric using fuzzy matching.
+    """Resolve a query string to a canonical metric.
 
-    Resolution order:
-    1. Exact match on id or aliases (backward-compatible)
-    2. Substring match on name, description, aliases
-    3. Word-overlap scoring with threshold
+    Resolution tiers (from _score_match):
+      100 — exact id match
+       90 — exact alias match
+       70 — query is a substring of name
+       60 — query is a substring of description or alias  (REJECTED)
+       0-50 — word-overlap ratio                          (REJECTED)
+
+    Threshold 65 rejects the dangerous 60-tier where short aliases
+    (e.g. "ar") accidentally match inside longer query strings
+    (e.g. "gross_margin" contains "ar").
     """
     best_score = 0.0
     best_match: Optional[MetricDefinition] = None
@@ -299,19 +305,16 @@ def resolve_metric(query: str) -> Optional[MetricDefinition]:
             best_score = score
             best_match = metric
 
-    if best_score >= 10.0:
+    if best_score >= 65.0:
         return best_match
 
     return None
 
 
 def resolve_entity(query: str) -> Optional[EntityDefinition]:
-    """Resolve a query string to a canonical entity using fuzzy matching.
+    """Resolve a query string to a canonical entity.
 
-    Resolution order:
-    1. Exact match on id or aliases (backward-compatible)
-    2. Substring match on name, description, aliases
-    3. Word-overlap scoring with threshold
+    Same threshold logic as resolve_metric — see docstring there.
     """
     best_score = 0.0
     best_match: Optional[EntityDefinition] = None
@@ -324,7 +327,7 @@ def resolve_entity(query: str) -> Optional[EntityDefinition]:
             best_score = score
             best_match = entity
 
-    if best_score >= 10.0:
+    if best_score >= 65.0:
         return best_match
 
     return None

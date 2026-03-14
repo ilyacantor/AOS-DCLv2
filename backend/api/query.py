@@ -148,11 +148,30 @@ def validate_query(request: QueryRequest) -> Optional[QueryError]:
     """Validate query against semantic catalog."""
     metric_def = resolve_metric(request.metric)
     if metric_def is None:
-        available = [m.id for m in PUBLISHED_METRICS]
+        from backend.api.semantic_export import _score_match, PUBLISHED_METRICS as _all_metrics
+        scored = []
+        for m in _all_metrics:
+            s = _score_match(request.metric, m)
+            if s > 0:
+                # Secondary sort: longest common prefix between query and metric ID
+                q_low = request.metric.lower().strip()
+                prefix_len = 0
+                for a, b in zip(q_low, m.id):
+                    if a == b:
+                        prefix_len += 1
+                    else:
+                        break
+                scored.append((s, prefix_len, m.id))
+        scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
+        details: Dict[str, Any] = {}
+        if scored:
+            details["closest_match"] = scored[0][2]
+            details["closest_score"] = scored[0][0]
+            details["message"] = f"No exact metric found. Did you mean '{scored[0][2]}'?"
         return QueryError(
             error=f"Metric '{request.metric}' not found",
             code="METRIC_NOT_FOUND",
-            details={"available_metrics": available}
+            details=details or None,
         )
     
     for dim in request.dimensions:
