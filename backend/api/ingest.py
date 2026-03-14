@@ -1582,12 +1582,19 @@ class IngestStore:
         raw_fabrics = fabric_planes or []
         fabric_categories = sorted(set(f.split(":")[0] for f in raw_fabrics if ":" in f)) if raw_fabrics else []
 
+        # Pull SOR vendor names from pipe store (AOD-authoritative, stored during /export-pipes)
+        from backend.api.pipe_store import get_pipe_store
+        sor_list = get_pipe_store().get_aod_systems_of_record()
+        sor_vendors = sorted(set(s.get("vendor", "") for s in sor_list if s.get("vendor")))
+
         aam_meta = json.dumps({
             "pipes": pipe_count,
             "sources": len(unique_source_names),
             "source_names": unique_source_names,
             "fabrics": fabric_categories,
             "fabric_details": raw_fabrics,
+            "sors": len(sor_vendors),
+            "sor_vendors": sor_vendors,
             "loaded": kpis.get("loadedSources", len(source_names)),
             "snapshot_name": snapshot_name,
         })
@@ -1700,6 +1707,16 @@ class IngestStore:
                     base["total_rows"] = 0
                     if meta.get("fabrics"):
                         base["source_list"] = meta["fabrics"]
+                    # Enrich with SOR data from pipe store if not already present
+                    if "sor_vendors" not in meta:
+                        from backend.api.pipe_store import get_pipe_store
+                        sor_list = get_pipe_store().get_aod_systems_of_record()
+                        sor_vendors = sorted(set(
+                            s.get("vendor", "") for s in sor_list if s.get("vendor")
+                        ))
+                        meta["sors"] = len(sor_vendors)
+                        meta["sor_vendors"] = sor_vendors
+                        base["aam_meta"] = meta
                     break
                 except (json.JSONDecodeError, TypeError):
                     pass
