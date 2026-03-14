@@ -41,10 +41,7 @@ from backend.api.query import (
     QueryRequest,
     QueryError,
     handle_query,
-    load_fact_base,
-    get_all_entity_ids,
 )
-from backend.engine.dimension_hierarchy import get_drill_through_store
 from backend.api.ingest import get_ingest_store, ActivityEntry, DropEntry
 from backend.api.pipe_store import get_pipe_store
 from backend.api.mcp_server import (
@@ -236,7 +233,7 @@ def _sync_check_ingest_mode():
     if buffered > 0:
         set_current_mode("Ingest", run_mode="Dev")
         logger.info(
-            f"[Startup] Mode auto-promoted: Demo → Ingest "
+            f"[Startup] Mode auto-promoted: Empty → Ingest "
             f"({buffered} buffered rows, {stats.get('unique_sources', 0)} sources)"
         )
 
@@ -700,7 +697,7 @@ def search_semantic_catalog(q: str, limit: int = 5):
 
 @app.post("/api/dcl/query")
 def execute_dcl_query(request: QueryRequest):
-    """Execute a data query against DCL's fact base."""
+    """Execute a data query against DCL's ingest store."""
     result = handle_query(request)
 
     if isinstance(result, QueryError):
@@ -717,329 +714,18 @@ def execute_dcl_query(request: QueryRequest):
 # Drill-through
 # =============================================================================
 
-# Map DCL geo dimension names → fact_base revenue_by_region keys
-_DCL_TO_FACTBASE_REGION = {"NA": "AMER", "EMEA": "EMEA", "APAC": "APAC"}
-
-
-def _get_revenue_by_region(quarter: Optional[str] = None) -> Dict[str, float]:
-    """Return {region_name: revenue} from fact_base for the given quarter.
-
-    If quarter is None, uses the latest actual quarter (highest period key).
-    Region names are returned using DCL geo names (NA/EMEA/APAC).
-    """
-    fb = load_fact_base()
-    rbr = fb.get("revenue_by_region")
-    if not rbr:
-        raise HTTPException(
-            status_code=500,
-            detail="fact_base.json has no 'revenue_by_region' data — cannot compute drill-through revenue.",
-        )
-
-    # Collect valid quarter keys (skip non-quarter keys like "source")
-    quarter_keys = sorted(k for k in rbr if k[0:2] == "20" and "-Q" in k)
-    if not quarter_keys:
-        raise HTTPException(
-            status_code=500,
-            detail="revenue_by_region contains no quarter data.",
-        )
-
-    if quarter:
-        if quarter not in rbr:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Quarter '{quarter}' not found in revenue_by_region. "
-                       f"Available: {quarter_keys}",
-            )
-        selected = quarter
-    else:
-        selected = quarter_keys[-1]
-
-    raw: Dict[str, float] = rbr[selected]
-    # Invert the mapping: fact_base key → DCL region name
-    fb_to_dcl = {v: k for k, v in _DCL_TO_FACTBASE_REGION.items()}
-    return {fb_to_dcl.get(k, k): v for k, v in raw.items()}
-
-
 @app.get("/api/dcl/drill-through")
 def drill_through(
     level: str,
     parent: Optional[str] = None,
     quarter: Optional[str] = None,
 ):
-    """Revenue drill-through: Region → Rep → Customer → Project.
-
-    Query params:
-      level   – one of region, rep, customer, project
-      parent  – required for rep/customer/project (region name, rep_id, customer_id)
-      quarter – optional, e.g. '2025-Q3'. Defaults to latest available quarter.
-    """
-    from backend.core.mode_state import get_data_mode
-
-    current_mode = get_data_mode()
-    if current_mode != "Demo":
-        raise HTTPException(
-            status_code=503,
-            detail=f"Drill-through is only available in Demo mode (fact_base.json). "
-                   f"Current mode is '{current_mode}' — fact_base is disabled. "
-                   f"Drill-through from ingested data is not yet implemented.",
-        )
-
-    valid_levels = ("region", "rep", "customer", "project")
-    if level not in valid_levels:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid level '{level}'. Must be one of: {', '.join(valid_levels)}",
-        )
-
-    if level != "region" and not parent:
-        raise HTTPException(
-            status_code=400,
-            detail=f"'parent' query parameter is required for level='{level}'.",
-        )
-
-    store = get_drill_through_store()
-    region_revenue = _get_revenue_by_region(quarter)
-
-    if level == "region":
-        return _drill_region(store, region_revenue)
-    elif level == "rep":
-        return _drill_rep(store, region_revenue, parent)
-    elif level == "customer":
-        return _drill_customer(store, region_revenue, parent)
-    elif level == "project":
-        return _drill_project(store, region_revenue, parent)
-
-
-def _drill_region(store, region_revenue: Dict[str, float]) -> List[Dict[str, Any]]:
-    """Level=region: return all regions with rep/customer/project counts."""
-    from backend.core.db import get_connection
-
-    with get_connection() as conn:
-        if conn is None:
-            raise HTTPException(
-                status_code=503,
-                detail="Database unavailable — cannot serve drill-through data. "
-                       "Check DATABASE_URL configuration.",
-            )
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT
-                    r.region,
-                    COUNT(DISTINCT r.rep_id)       AS rep_count,
-                    COUNT(DISTINCT c.customer_id)  AS customer_count,
-                    COUNT(DISTINCT p.project_id)   AS project_count
-                FROM rep_assignments r
-                LEFT JOIN customer_rep_map c ON c.rep_id = r.rep_id
-                LEFT JOIN project_customer_map p ON p.customer_id = c.customer_id
-                GROUP BY r.region
-                ORDER BY r.region
-            """)
-            rows = cur.fetchall()
-
-    results = []
-    for region, rep_count, customer_count, project_count in rows:
-        results.append({
-            "name": region,
-            "revenue": region_revenue.get(region, 0.0),
-            "children": True,
-            "reps": rep_count,
-            "customers": customer_count,
-            "projects": project_count,
-        })
-    return results
-
-
-def _drill_rep(store, region_revenue: Dict[str, float], region: str) -> List[Dict[str, Any]]:
-    """Level=rep: return reps in a region with proportional revenue."""
-    from backend.core.db import get_connection
-
-    with get_connection() as conn:
-        if conn is None:
-            raise HTTPException(
-                status_code=503,
-                detail="Database unavailable — cannot serve drill-through data.",
-            )
-        with conn.cursor() as cur:
-            # Get reps in region with their customer and project counts
-            cur.execute("""
-                SELECT
-                    r.rep_id,
-                    r.rep_name,
-                    COUNT(DISTINCT c.customer_id) AS customer_count,
-                    COUNT(DISTINCT p.project_id)  AS project_count
-                FROM rep_assignments r
-                LEFT JOIN customer_rep_map c ON c.rep_id = r.rep_id
-                LEFT JOIN project_customer_map p ON p.customer_id = c.customer_id
-                WHERE r.region = %s
-                GROUP BY r.rep_id, r.rep_name
-                ORDER BY r.rep_name
-            """, (region,))
-            reps = cur.fetchall()
-
-            # Total projects in this region (for proportional revenue allocation)
-            cur.execute("""
-                SELECT COUNT(DISTINCT p.project_id)
-                FROM rep_assignments r
-                JOIN customer_rep_map c ON c.rep_id = r.rep_id
-                JOIN project_customer_map p ON p.customer_id = c.customer_id
-                WHERE r.region = %s
-            """, (region,))
-            total_projects = cur.fetchone()[0] or 1
-
-    total_revenue = region_revenue.get(region, 0.0)
-
-    results = []
-    for rep_id, rep_name, customer_count, project_count in reps:
-        share = project_count / total_projects if total_projects > 0 else 0
-        results.append({
-            "name": rep_name,
-            "revenue": round(total_revenue * share, 2),
-            "children": True,
-            "customers": customer_count,
-            "projects": project_count,
-        })
-    return results
-
-
-def _drill_customer(store, region_revenue: Dict[str, float], rep_identifier: str) -> List[Dict[str, Any]]:
-    """Level=customer: return customers for a rep with proportional revenue.
-
-    rep_identifier can be a rep_id (REP-001) or a rep_name (James Smith).
-    """
-    from backend.core.db import get_connection
-
-    with get_connection() as conn:
-        if conn is None:
-            raise HTTPException(
-                status_code=503,
-                detail="Database unavailable — cannot serve drill-through data.",
-            )
-        with conn.cursor() as cur:
-            # Resolve rep_identifier: try by rep_id first, then by rep_name
-            cur.execute(
-                "SELECT rep_id, region FROM rep_assignments WHERE rep_id = %s", (rep_identifier,)
-            )
-            row = cur.fetchone()
-            if row is None:
-                cur.execute(
-                    "SELECT rep_id, region FROM rep_assignments WHERE rep_name = %s", (rep_identifier,)
-                )
-                row = cur.fetchone()
-            if row is None:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Rep '{rep_identifier}' not found in rep_assignments (tried both rep_id and rep_name).",
-                )
-            rep_id = row[0]
-            region = row[1]
-
-            # Total projects in the region (for proportional revenue)
-            cur.execute("""
-                SELECT COUNT(DISTINCT p.project_id)
-                FROM rep_assignments r
-                JOIN customer_rep_map c ON c.rep_id = r.rep_id
-                JOIN project_customer_map p ON p.customer_id = c.customer_id
-                WHERE r.region = %s
-            """, (region,))
-            total_region_projects = cur.fetchone()[0] or 1
-
-            # Customers for this rep with project counts
-            cur.execute("""
-                SELECT
-                    c.customer_id,
-                    c.customer_name,
-                    COUNT(DISTINCT p.project_id) AS project_count
-                FROM customer_rep_map c
-                LEFT JOIN project_customer_map p ON p.customer_id = c.customer_id
-                WHERE c.rep_id = %s
-                GROUP BY c.customer_id, c.customer_name
-                ORDER BY c.customer_name
-            """, (rep_id,))
-            customers = cur.fetchall()
-
-    total_revenue = region_revenue.get(region, 0.0)
-
-    results = []
-    for customer_id, customer_name, project_count in customers:
-        share = project_count / total_region_projects if total_region_projects > 0 else 0
-        results.append({
-            "name": customer_name,
-            "revenue": round(total_revenue * share, 2),
-            "children": True,
-            "projects": project_count,
-        })
-    return results
-
-
-def _drill_project(store, region_revenue: Dict[str, float], customer_identifier: str) -> List[Dict[str, Any]]:
-    """Level=project: return projects for a customer with proportional revenue.
-
-    customer_identifier can be a customer_id (CUST-001) or a customer_name.
-    """
-    from backend.core.db import get_connection
-
-    with get_connection() as conn:
-        if conn is None:
-            raise HTTPException(
-                status_code=503,
-                detail="Database unavailable — cannot serve drill-through data.",
-            )
-        with conn.cursor() as cur:
-            # Resolve customer: try by customer_id first, then by customer_name
-            cur.execute("""
-                SELECT c.customer_id, c.rep_id, r.region
-                FROM customer_rep_map c
-                JOIN rep_assignments r ON r.rep_id = c.rep_id
-                WHERE c.customer_id = %s
-            """, (customer_identifier,))
-            row = cur.fetchone()
-            if row is None:
-                cur.execute("""
-                    SELECT c.customer_id, c.rep_id, r.region
-                    FROM customer_rep_map c
-                    JOIN rep_assignments r ON r.rep_id = c.rep_id
-                    WHERE c.customer_name = %s
-                """, (customer_identifier,))
-                row = cur.fetchone()
-            if row is None:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Customer '{customer_identifier}' not found in customer_rep_map (tried both customer_id and customer_name).",
-                )
-            customer_id = row[0]
-            _rep_id = row[1]
-            region = row[2]
-
-            # Total projects in the region (for proportional revenue)
-            cur.execute("""
-                SELECT COUNT(DISTINCT p.project_id)
-                FROM rep_assignments r
-                JOIN customer_rep_map c ON c.rep_id = r.rep_id
-                JOIN project_customer_map p ON p.customer_id = c.customer_id
-                WHERE r.region = %s
-            """, (region,))
-            total_region_projects = cur.fetchone()[0] or 1
-
-            # Projects for this customer
-            cur.execute("""
-                SELECT project_id, project_name
-                FROM project_customer_map
-                WHERE customer_id = %s
-                ORDER BY project_name
-            """, (customer_id,))
-            projects = cur.fetchall()
-
-    total_revenue = region_revenue.get(region, 0.0)
-    per_project_revenue = total_revenue / total_region_projects if total_region_projects > 0 else 0.0
-
-    results = []
-    for project_id, project_name in projects:
-        results.append({
-            "name": project_name,
-            "revenue": round(per_project_revenue, 2),
-            "children": False,
-        })
-    return results
+    """Revenue drill-through — not yet implemented for ingested data."""
+    raise HTTPException(
+        status_code=501,
+        detail="Drill-through is not yet implemented for ingested data. "
+               "This feature previously relied on fact_base.json which has been removed.",
+    )
 
 
 # =============================================================================

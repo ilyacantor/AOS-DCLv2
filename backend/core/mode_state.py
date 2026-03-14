@@ -25,12 +25,12 @@ class ModeState(BaseModel):
     """Current DCL mode state.
 
     data_mode values:
-      "Demo"    — no live data; serving from static fact_base.json
+      "Empty"   — no live data; ingest buffer is empty
       "Farm"    — triggered via POST /api/dcl/run with mode=Farm
       "AAM"     — triggered via POST /api/dcl/run with mode=AAM
-      "Ingest"  — live data exists in the ingest buffer (auto-promoted from Demo)
+      "Ingest"  — live data exists in the ingest buffer (auto-promoted from Empty)
     """
-    data_mode: Literal["Demo", "Farm", "AAM", "Ingest"] = "Demo"
+    data_mode: Literal["Empty", "Farm", "AAM", "Ingest"] = "Empty"
     run_mode: Literal["Dev", "Prod"] = "Dev"
     last_updated: Optional[str] = None
     last_run_id: Optional[str] = None
@@ -57,14 +57,20 @@ def get_current_mode() -> ModeState:
         try:
             raw = r.get(_REDIS_KEY)
             if raw:
-                _current_state = ModeState.model_validate_json(raw)
+                # Migrate stale "Demo" → "Empty" from pre-removal Redis state
+                raw_str = raw if isinstance(raw, str) else raw.decode("utf-8")
+                if '"Demo"' in raw_str:
+                    raw_str = raw_str.replace('"Demo"', '"Empty"')
+                    r.set(_REDIS_KEY, raw_str)
+                    logger.info("[ModeState] Migrated stale 'Demo' → 'Empty' in Redis")
+                _current_state = ModeState.model_validate_json(raw_str)
         except Exception as e:
             logger.warning(f"[ModeState] Redis read failed, using in-memory: {e}")
     return _current_state
 
 
 def set_current_mode(
-    data_mode: Literal["Demo", "Farm", "AAM", "Ingest"],
+    data_mode: Literal["Empty", "Farm", "AAM", "Ingest"],
     run_mode: Literal["Dev", "Prod"] = "Dev",
     run_id: Optional[str] = None
 ) -> ModeState:
@@ -88,6 +94,6 @@ def set_current_mode(
     return _current_state
 
 
-def get_data_mode() -> Literal["Demo", "Farm", "AAM", "Ingest"]:
+def get_data_mode() -> Literal["Empty", "Farm", "AAM", "Ingest"]:
     """Get just the current data mode."""
     return get_current_mode().data_mode

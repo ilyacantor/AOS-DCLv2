@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from backend.api.semantic_export import (
-    DEMO_BINDINGS,
+    BINDINGS,
     PUBLISHED_METRICS,
     resolve_metric,
 )
@@ -466,11 +466,11 @@ def _build_from_bindings(metric_id: str) -> List[Dict[str, Any]]:
     This is demo-only seed data — not derived from real system connections.
     Only called when no scenario or catalog provenance exists for a metric.
     """
-    if not DEMO_BINDINGS:
+    if not BINDINGS:
         logger.warning(f"[provenance] No demo bindings available for metric={metric_id}")
         return []
     sources = []
-    for binding in DEMO_BINDINGS:
+    for binding in BINDINGS:
         sources.append({
             "source_system": binding.source_system,
             "table_or_collection": binding.canonical_event,

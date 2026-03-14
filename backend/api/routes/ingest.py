@@ -620,10 +620,10 @@ def _process_ingest_sync(
         logger.error(f"[Ingest] Failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-    # Auto-promote mode from Demo → Ingest when real data arrives.
-    if get_current_mode().data_mode == "Demo":
+    # Auto-promote mode from Empty → Ingest when real data arrives.
+    if get_current_mode().data_mode == "Empty":
         set_current_mode("Ingest", run_id=run_id)
-        logger.info(f"[Ingest] Mode auto-promoted: Demo → Ingest (run_id={run_id})")
+        logger.info(f"[Ingest] Mode auto-promoted: Empty → Ingest (run_id={run_id})")
 
     matched_schema = pipe_def is not None
     schema_fields = pipe_def.fields if pipe_def else []
@@ -723,7 +723,7 @@ async def dcl_ingest(
 
     If no pipe definitions have been registered at all (export-pipes
     not yet called), the guard is bypassed with a WARNING log so
-    existing Demo/Farm self-directed flows continue working.
+    existing Farm self-directed flows continue working.
     """
     now = utc_now()
 
@@ -1080,8 +1080,13 @@ async def flush_ingest_store():
     store.reset()
     pipe_store.reset()  # handles memory + Redis + Postgres + disk
 
+    # Reset mode to Empty — no data in memory
+    set_current_mode("Empty")
+
     return {
         "status": "flushed",
+        "mode": "Empty",
+        "message": "No data in memory. Run a new snapshot or initiate an enterprise scan.",
         "before": {
             "total_runs": stats_before.get("total_runs", 0),
             "total_rows": stats_before.get("total_rows_buffered", 0),

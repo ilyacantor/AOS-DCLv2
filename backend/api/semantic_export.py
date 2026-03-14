@@ -85,7 +85,7 @@ class BindingSummary(BaseModel):
 
 class ModeInfo(BaseModel):
     """Current DCL mode information."""
-    data_mode: str  # "Demo", "Farm", "AAM", or "Ingest"
+    data_mode: str  # "Empty", "Farm", "AAM", or "Ingest"
     run_mode: str   # "Dev" or "Prod"
     last_updated: Optional[str] = None
 
@@ -193,9 +193,8 @@ def _load_persona_concepts() -> Dict[str, List[str]]:
 
 PUBLISHED_METRICS: List[MetricDefinition] = _load_metrics()
 PUBLISHED_ENTITIES: List[EntityDefinition] = _load_entities()
-DEMO_BINDINGS: List[BindingSummary] = _load_bindings()
+BINDINGS: List[BindingSummary] = _load_bindings()
 DEFAULT_PERSONA_CONCEPTS: Dict[str, List[str]] = _load_persona_concepts()
-FARM_BINDINGS: List[BindingSummary] = _load_bindings()  # Same catalog; mode doesn't change bindings
 
 
 def build_metric_entity_matrix() -> Dict[str, List[str]]:
@@ -204,11 +203,8 @@ def build_metric_entity_matrix() -> Dict[str, List[str]]:
 
 
 def get_bindings_for_mode(data_mode: str) -> List[BindingSummary]:
-    """Get bindings appropriate for the current mode."""
-    if data_mode == "Demo":
-        return DEMO_BINDINGS
-    else:
-        return FARM_BINDINGS
+    """Get bindings (mode-independent — single catalog)."""
+    return BINDINGS
 
 
 _STOP_WORDS = frozenset({
