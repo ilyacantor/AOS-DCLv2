@@ -16,6 +16,7 @@ RACI: This is DCL's job — semantic catalog, ontology, schema-on-write validati
 
 import re
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -58,29 +59,106 @@ def _normalize_key(name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Field → Concept reverse index
+# Field → Concept reverse index  (with confidence metadata)
 # ---------------------------------------------------------------------------
 
 
-def _build_field_concept_index() -> Dict[str, str]:
-    """Build a reverse index mapping lowercase field names to concept IDs.
+@dataclass(frozen=True)
+class FieldMappingMeta:
+    """Metadata for a field→concept mapping, propagated to materialized points."""
+    confidence_score: float
+    mapping_source: str   # "pg" | "ontology"
+    mapping_method: str   # PG: heuristic method; ontology: "example_field" or "alias"
 
-    Uses example_fields and aliases from the ontology. If a field name
-    appears in multiple concepts, the first concept wins (order is stable
-    from the YAML).
+    @property
+    def confidence_tier(self) -> str:
+        if self.confidence_score >= 0.9:
+            return "exact"
+        if self.confidence_score >= 0.7:
+            return "high"
+        if self.confidence_score >= 0.5:
+            return "medium"
+        return "low"
+
+    @property
+    def mapping_status(self) -> str:
+        return "mapped"
+
+
+# Default metadata for resolution paths that bypass the index
+_HINT_META = FieldMappingMeta(confidence_score=1.0, mapping_source="extraction_rule", mapping_method="field_hint")
+_ONTOLOGY_DIRECT_META = FieldMappingMeta(confidence_score=1.0, mapping_source="ontology", mapping_method="example_field")
+_PARTIAL_META = FieldMappingMeta(confidence_score=0.5, mapping_source="heuristic", mapping_method="partial_match")
+
+
+def _build_field_concept_index() -> Tuple[Dict[str, str], Dict[str, FieldMappingMeta]]:
+    """Build a reverse index mapping lowercase field names to concept IDs,
+    plus a parallel metadata index for confidence propagation.
+
+    Primary source: PostgreSQL ``field_concept_mappings`` table, which
+    contains source-specific, confidence-ranked mappings produced by the
+    semantic mapper.  Mappings are ordered by confidence DESC so the
+    highest-confidence mapping wins when a field name appears in multiple
+    concepts.
+
+    Augmented with ontology example_fields/aliases for any field names NOT
+    already covered by PG mappings (the ontology is the canonical concept
+    registry, so its hints are always valid).
+
+    If the PG table is unreachable, raises — the materializer must not
+    silently degrade to a less-accurate index.
+
+    Returns:
+        (concept_index, metadata_index) — both keyed by lowercase field name.
     """
+    from backend.semantic_mapper.persist_mappings import MappingPersistence
+
+    persistence = MappingPersistence()
+    mappings = persistence.load_mappings()  # ordered by confidence DESC
+
     index: Dict[str, str] = {}
+    meta_index: Dict[str, FieldMappingMeta] = {}
+
+    # Primary: PG mappings (source-specific, confidence-ranked)
+    for m in mappings:
+        key = m.source_field.lower()
+        if key not in index:
+            index[key] = m.ontology_concept
+            meta_index[key] = FieldMappingMeta(
+                confidence_score=m.confidence,
+                mapping_source="pg",
+                mapping_method=m.method or "heuristic",
+            )
+
+    pg_count = len(index)
+
+    # Augment: ontology example_fields and aliases fill gaps for fields
+    # not yet seen by the mapper (e.g. new sources, first-time ingest).
     for concept in get_ontology():
         cid = concept.id
         for field in concept.example_fields:
             key = field.lower()
             if key not in index:
                 index[key] = cid
+                meta_index[key] = FieldMappingMeta(
+                    confidence_score=0.9, mapping_source="ontology",
+                    mapping_method="example_field",
+                )
         for alias in concept.aliases:
             key = alias.lower()
             if key not in index:
                 index[key] = cid
-    return index
+                meta_index[key] = FieldMappingMeta(
+                    confidence_score=0.85, mapping_source="ontology",
+                    mapping_method="alias",
+                )
+
+    ontology_extra = len(index) - pg_count
+    logger.info(
+        f"[Materializer] Field→concept index: {pg_count} from PG mappings, "
+        f"{ontology_extra} augmented from ontology ({len(index)} total)"
+    )
+    return index, meta_index
 
 
 # ---------------------------------------------------------------------------
@@ -161,7 +239,7 @@ class MetricMaterializer:
 
     def __init__(self) -> None:
         self._rules = _load_extraction_rules()
-        self._field_index = _build_field_concept_index()
+        self._field_index, self._field_meta = _build_field_concept_index()
         self._concept_by_id = {c.id: c for c in get_ontology()}
 
     def _resolve_field(
@@ -264,6 +342,45 @@ class MetricMaterializer:
             except (ValueError, TypeError):
                 return None
         return None
+
+    def _get_mapping_meta(
+        self, resolved_field: Optional[str], field_hint: Optional[str],
+        strict_hint: bool, concept_id: str,
+    ) -> FieldMappingMeta:
+        """Determine the mapping metadata for a resolved field.
+
+        Mirrors the priority logic of ``_resolve_field`` to attribute
+        *how* the field was matched so confidence can be propagated.
+        """
+        if resolved_field is None:
+            # No field resolved — return a zero-confidence sentinel.
+            # The caller should not emit a point in this case.
+            return FieldMappingMeta(confidence_score=0.0, mapping_source="none", mapping_method="unresolved")
+
+        key_lower = resolved_field.lower()
+        key_norm = _normalize_key(resolved_field)
+
+        # Priority 1: strict field_hint — came from extraction rule YAML
+        if strict_hint and field_hint and key_lower == field_hint.lower():
+            return _HINT_META
+        if field_hint and key_lower == field_hint.lower():
+            return _HINT_META
+
+        # Priority 2: concept.example_fields — direct ontology match
+        concept = self._concept_by_id.get(concept_id)
+        if concept:
+            ef_set = {ef.lower() for ef in concept.example_fields}
+            if key_lower in ef_set or key_norm in ef_set:
+                return _ONTOLOGY_DIRECT_META
+
+        # Priority 3: reverse index — check metadata index
+        if key_lower in self._field_meta:
+            return self._field_meta[key_lower]
+        if key_norm in self._field_meta:
+            return self._field_meta[key_norm]
+
+        # Priority 4: partial/substring match
+        return _PARTIAL_META
 
     def _check_filters(
         self, row: Dict[str, Any], filters: List[Dict[str, Any]],
@@ -398,6 +515,9 @@ class MetricMaterializer:
             groups: Dict[Tuple, List[float]] = defaultdict(list)
             count_groups: Dict[Tuple, int] = defaultdict(int)
 
+            # Track mapping metadata for the value field (set on first successful resolution)
+            rule_mapping_meta: Optional[FieldMappingMeta] = None
+
             for row in rows:
                 # Step 1: Check filters
                 if filters and not self._check_filters(
@@ -434,6 +554,10 @@ class MetricMaterializer:
                     )
                     if count_field is not None:
                         count_groups[group_key] += 1
+                        if rule_mapping_meta is None:
+                            rule_mapping_meta = self._get_mapping_meta(
+                                count_field, None, False, count_concept,
+                            )
                     continue
 
                 if measure_op == "ratio" and ratio_hint:
@@ -446,6 +570,10 @@ class MetricMaterializer:
                         val = self._extract_numeric(row, ratio_field)
                         if val is not None:
                             groups[group_key].append(val)
+                            if rule_mapping_meta is None:
+                                rule_mapping_meta = self._get_mapping_meta(
+                                    ratio_field, ratio_hint, False, value_concept,
+                                )
                     continue
 
                 # Standard value extraction (use partial for value fields)
@@ -473,10 +601,18 @@ class MetricMaterializer:
                 if val is None:
                     continue
 
+                if rule_mapping_meta is None:
+                    rule_mapping_meta = self._get_mapping_meta(
+                        value_field, value_hint, strict_hint, value_concept,
+                    )
+
                 groups[group_key].append(val)
 
             # Step 5: Aggregate
             result_groups = groups if measure_op != "count" else {}
+
+            # Fallback mapping metadata if no rows matched (shouldn't emit, but be safe)
+            _meta = rule_mapping_meta or _HINT_META
 
             if measure_op == "count" and count_concept:
                 for group_key, count in count_groups.items():
@@ -492,6 +628,10 @@ class MetricMaterializer:
                         "materialized_at": now,
                         "_entity_id": _entity_id,
                         "_tenant_id": _tenant_id,
+                        "confidence_score": _meta.confidence_score,
+                        "confidence_tier": _meta.confidence_tier,
+                        "mapping_source": _meta.mapping_source,
+                        "mapping_status": _meta.mapping_status,
                     })
                 continue
 
@@ -525,6 +665,10 @@ class MetricMaterializer:
                     "materialized_at": now,
                     "_entity_id": _entity_id,
                     "_tenant_id": _tenant_id,
+                    "confidence_score": _meta.confidence_score,
+                    "confidence_tier": _meta.confidence_tier,
+                    "mapping_source": _meta.mapping_source,
+                    "mapping_status": _meta.mapping_status,
                 })
 
         if all_points:

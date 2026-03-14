@@ -46,6 +46,10 @@ class QueryDataPoint(BaseModel):
     dimensions: Dict[str, str] = Field(default_factory=dict)
     rank: Optional[int] = None
     entity_id: Optional[str] = None  # WS1.3: entity provenance for this data point
+    confidence_score: Optional[float] = None
+    confidence_tier: Optional[str] = None
+    mapping_source: Optional[str] = None
+    mapping_status: Optional[str] = None
 
 
 class ProvenanceInfo(BaseModel):
@@ -405,6 +409,8 @@ def _query_ingest_store(
         agg: dict = _dd(float)
         agg_count: dict = _dd(int)
         agg_entity: dict = {}  # track entity_id per aggregation key
+        # Track mapping metadata per aggregation key (use min confidence across merged points)
+        agg_confidence: dict = {}  # key → (score, tier, source, status)
         for pt in mat_points:
             if dimensions:
                 # Only keep the requested dimensions in the grouping key
@@ -427,21 +433,38 @@ def _query_ingest_store(
             if pt_entity and key not in agg_entity:
                 agg_entity[key] = pt_entity
 
+            # Propagate mapping metadata — use min confidence when merging
+            pt_conf = pt.get("confidence_score")
+            if pt_conf is not None:
+                existing = agg_confidence.get(key)
+                if existing is None or pt_conf < existing[0]:
+                    agg_confidence[key] = (
+                        pt_conf,
+                        pt.get("confidence_tier"),
+                        pt.get("mapping_source"),
+                        pt.get("mapping_status"),
+                    )
+
+        def _build_point(k, value):
+            conf = agg_confidence.get(k)
+            return QueryDataPoint(
+                period=k[0], value=round(value, 6), dimensions=dict(k[1]),
+                entity_id=k[2] or agg_entity.get(k),
+                confidence_score=conf[0] if conf else None,
+                confidence_tier=conf[1] if conf else None,
+                mapping_source=conf[2] if conf else None,
+                mapping_status=conf[3] if conf else None,
+            )
+
         if _is_additive:
             data_points = [
-                QueryDataPoint(
-                    period=k[0], value=round(v, 6), dimensions=dict(k[1]),
-                    entity_id=k[2] or agg_entity.get(k),
-                )
+                _build_point(k, v)
                 for k, v in sorted(agg.items())
             ]
         else:
             # Average for rate/percentage/score metrics
             data_points = [
-                QueryDataPoint(
-                    period=k[0], value=round(agg[k] / agg_count[k], 6), dimensions=dict(k[1]),
-                    entity_id=k[2] or agg_entity.get(k),
-                )
+                _build_point(k, agg[k] / agg_count[k])
                 for k in sorted(agg.keys())
             ]
 
