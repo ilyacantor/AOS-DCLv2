@@ -3259,6 +3259,257 @@ concepts:
     calculation_methodology: null
     comparability_rules: "Retention period comparison requires matching data category. Regulatory minimums differ by jurisdiction and data type. Policy compliance rate depends on enforcement mechanism (automated vs manual)."
 
+  # ─── Semantic Triple Store Concepts ─────────────────────
+  - id: cofa
+    concept_id: FIN-029
+    name: COFA Adjustment
+    description: "Cost of Fulfillment Adjustment — reclassification entries that move costs between categories for accurate profitability measurement"
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - cofa_amount
+      - cofa_adjustment
+      - fulfillment_adjustment
+      - cost_reclassification
+    aliases:
+      - cost_of_fulfillment
+      - fulfillment_cost
+      - cofa
+    expected_type: float
+    typical_source_systems: [netsuite, sap]
+    persona_relevance:
+      cfo: 1.0
+      coo: 0.7
+    recognition_basis: "Created when cost reclassification entries are posted to adjust fulfillment costs between reporting periods or cost categories."
+    timing_semantics: "Period-based adjustment. Applied at month or quarter close. Retroactive adjustments reference the original period."
+    scope_boundaries: "Includes all cost reclassification entries related to service fulfillment. Excludes revenue adjustments and non-operating reclassifications."
+    calculation_methodology: "Sum of reclassification journal entries tagged as COFA within the period."
+    comparability_rules: "Comparable across periods only when COFA classification rules are consistent. Changes in cost allocation methodology break period-over-period comparability."
+
+  - id: ebitda_adjustment
+    concept_id: FIN-030
+    name: EBITDA Adjustment
+    description: "Normalization adjustments applied to EBITDA for M&A, valuation, or management reporting"
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - ebitda_adj
+      - normalization_amount
+      - ebitda_addback
+      - one_time_adjustment
+    aliases:
+      - ebitda_addback
+      - ebitda_normalization
+      - adjusted_ebitda_item
+    expected_type: float
+    typical_source_systems: [netsuite, sap, excel]
+    persona_relevance:
+      cfo: 1.0
+      coo: 0.5
+    recognition_basis: "Created when management or advisors identify non-recurring, non-operational, or owner-related expenses to normalize earnings."
+    timing_semantics: "Period-based. Applied during quarterly or annual financial review. May be retroactively applied during due diligence."
+    scope_boundaries: "Includes one-time charges, owner compensation adjustments, non-recurring legal/professional fees, and other normalization items. Excludes standard operating expenses."
+    calculation_methodology: "Individual adjustment line items summed by category. Adjusted EBITDA = Reported EBITDA + sum of addbacks - sum of deductions."
+    comparability_rules: "EBITDA adjustments are subjective and vary by preparer. Comparable only when adjustment categories and criteria are consistently defined."
+
+  - id: service
+    concept_id: OPS-010
+    name: Service
+    description: "Service catalog entry representing a deliverable service offering"
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - service_id
+      - service_name
+      - service_type
+      - service_category
+      - offering_name
+    aliases:
+      - service_offering
+      - service_line
+      - deliverable
+      - engagement_type
+    expected_type: string
+    typical_source_systems: [servicenow, salesforce, netsuite]
+    persona_relevance:
+      coo: 0.9
+      cfo: 0.6
+      cro: 0.7
+    recognition_basis: "Created when a service offering is defined in the service catalog. Active when associated with customer engagements or revenue recognition."
+    timing_semantics: "Point-in-time entity. Service definition changes are versioned. Service delivery has temporal scope (start/end dates)."
+    scope_boundaries: "Includes all defined service offerings whether active or retired. Excludes internal-only support functions not sold to customers."
+    calculation_methodology: null
+    comparability_rules: "Service comparison requires matching service taxonomy. Different organizations may define service granularity differently (managed services vs individual service components)."
+
+  - id: cash_flow
+    concept_id: FIN-031
+    name: Cash Flow
+    description: "Cash flow statement line item — operating, investing, or financing activity"
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - cash_flow_amount
+      - operating_cash_flow
+      - investing_cash_flow
+      - financing_cash_flow
+      - free_cash_flow
+      - net_cash
+    aliases:
+      - cash_movement
+      - funds_flow
+      - cash_activity
+    expected_type: float
+    typical_source_systems: [netsuite, sap, quickbooks]
+    persona_relevance:
+      cfo: 1.0
+      coo: 0.5
+    recognition_basis: "Derived from changes in balance sheet accounts and income statement items between periods. Classified by activity type (operating/investing/financing)."
+    timing_semantics: "Period-based flow metric. Represents cash movement during a defined period. Not a point-in-time balance."
+    scope_boundaries: "Includes all cash and cash equivalent movements. Non-cash transactions (depreciation, stock comp) appear as adjustments in operating activities."
+    calculation_methodology: "Direct method: sum of cash receipts and payments. Indirect method: net income adjusted for non-cash items and working capital changes."
+    comparability_rules: "Cash flow comparison requires consistent classification methodology (direct vs indirect). Currency conversion timing affects cross-entity comparability."
+
+  - id: asset
+    concept_id: FIN-032
+    name: Asset
+    description: "Balance sheet asset — current or non-current resource owned or controlled by the entity"
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - asset_value
+      - total_assets
+      - current_assets
+      - fixed_assets
+      - intangible_assets
+    aliases:
+      - balance_sheet_asset
+      - resource
+      - owned_asset
+    expected_type: float
+    typical_source_systems: [netsuite, sap, quickbooks]
+    persona_relevance:
+      cfo: 1.0
+      coo: 0.4
+    recognition_basis: "Recognized when an entity obtains control of a resource with future economic benefit. Measured at cost, fair value, or amortized cost depending on classification."
+    timing_semantics: "Point-in-time balance. Reported as of a specific date. Changes between periods reflect acquisitions, disposals, depreciation, and impairment."
+    scope_boundaries: "Includes all assets on the balance sheet — cash, receivables, inventory, PP&E, intangibles, goodwill. Excludes off-balance-sheet items unless consolidation rules apply."
+    calculation_methodology: "Sum of all asset accounts in the chart of accounts classified as assets."
+    comparability_rules: "Asset comparison requires consistent valuation methodology (historical cost vs fair value). Different depreciation methods affect comparability of fixed asset balances."
+
+  - id: liability
+    concept_id: FIN-033
+    name: Liability
+    description: "Balance sheet liability — current or non-current obligation of the entity"
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - liability_amount
+      - total_liabilities
+      - current_liabilities
+      - long_term_debt
+      - accounts_payable_balance
+    aliases:
+      - obligation
+      - debt
+      - payable
+    expected_type: float
+    typical_source_systems: [netsuite, sap, quickbooks]
+    persona_relevance:
+      cfo: 1.0
+      coo: 0.3
+    recognition_basis: "Recognized when the entity has a present obligation arising from a past event, the settlement of which is expected to result in an outflow of resources."
+    timing_semantics: "Point-in-time balance. Reported as of a specific date. Changes reflect new obligations, payments, and reclassifications."
+    scope_boundaries: "Includes all liabilities on the balance sheet — payables, accruals, debt, deferred revenue, lease obligations. Excludes contingent liabilities unless probable and estimable."
+    calculation_methodology: "Sum of all liability accounts in the chart of accounts classified as liabilities."
+    comparability_rules: "Liability comparison requires consistent recognition criteria. Lease accounting standards (ASC 842 vs old rules) significantly affect comparability."
+
+  - id: equity
+    concept_id: FIN-034
+    name: Equity
+    description: "Balance sheet equity — residual interest in assets after deducting liabilities"
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - equity_amount
+      - total_equity
+      - retained_earnings
+      - shareholders_equity
+      - common_stock
+    aliases:
+      - shareholders_equity
+      - net_assets
+      - owners_equity
+      - book_value
+    expected_type: float
+    typical_source_systems: [netsuite, sap, quickbooks]
+    persona_relevance:
+      cfo: 1.0
+    recognition_basis: "Residual: Total Assets minus Total Liabilities. Components include contributed capital, retained earnings, and accumulated other comprehensive income."
+    timing_semantics: "Point-in-time balance. Changes reflect net income, dividends, share issuance/buyback, and OCI items."
+    scope_boundaries: "Includes all equity accounts — common stock, additional paid-in capital, retained earnings, treasury stock, AOCI. Excludes minority interest in separate line items for consolidated entities."
+    calculation_methodology: "Total Assets - Total Liabilities = Total Equity. Or sum of all equity component accounts."
+    comparability_rules: "Equity comparison requires consistent consolidation scope. Share buybacks, dividend policies, and AOCI items affect period-over-period comparability."
+
+  - id: customer
+    concept_id: SALES-014
+    name: Customer
+    description: "Customer entity — a business or individual that purchases goods or services"
+    domain: sales
+    cluster: Sales
+    example_fields:
+      - customer_id
+      - customer_name
+      - client_id
+      - client_name
+      - account_name
+      - buyer_id
+    aliases:
+      - client
+      - buyer
+      - account
+      - purchaser
+    expected_type: string
+    typical_source_systems: [salesforce, netsuite, hubspot]
+    persona_relevance:
+      cro: 1.0
+      cfo: 0.7
+      coo: 0.6
+    recognition_basis: "Created when a prospect converts to a paying customer or when a customer record is established in the CRM/ERP."
+    timing_semantics: "Point-in-time entity. Customer status (active, churned, prospect) changes are event-driven."
+    scope_boundaries: "Includes all entities with a commercial relationship. Excludes prospects that have not converted and internal entities."
+    calculation_methodology: null
+    comparability_rules: "Customer counts depend on definition scope (active vs all-time). Parent-subsidiary relationships may inflate counts. Cross-entity comparison requires deduplication."
+
+  - id: bench
+    concept_id: OPS-011
+    name: Bench Utilization
+    description: "Bench time and utilization metrics — employees available but not assigned to billable engagements"
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - bench_hours
+      - bench_count
+      - bench_rate
+      - utilization_rate
+      - idle_time
+      - available_capacity
+    aliases:
+      - idle_capacity
+      - available_bench
+      - unassigned_resources
+      - bench_strength
+    expected_type: float
+    typical_source_systems: [workday, netsuite, custom_psa]
+    persona_relevance:
+      coo: 1.0
+      cfo: 0.8
+      chro: 0.6
+    recognition_basis: "Measured when billable employees are not assigned to revenue-generating engagements. Calculated from timesheet and project assignment data."
+    timing_semantics: "Period-based metric. Measured weekly or monthly. Point-in-time snapshots represent current bench state."
+    scope_boundaries: "Includes all billable/client-facing employees. Excludes support staff, management, and employees on PTO. Definition of 'bench' varies by firm."
+    calculation_methodology: "Bench Rate = (Available Hours - Billable Hours) / Available Hours. Bench Count = employees with 0 billable hours in period."
+    comparability_rules: "Bench comparison requires consistent definition of billable vs non-billable roles. Different firms include/exclude different role categories."
+
   # ─── Cross-cutting ───────────────────────────────────────
   - id: date
     concept_id: SYS-001
