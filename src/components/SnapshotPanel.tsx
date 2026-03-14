@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import Database from 'lucide-react/dist/esm/icons/database';
 import Server from 'lucide-react/dist/esm/icons/server';
 import Layers from 'lucide-react/dist/esm/icons/layers';
-import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
 import Clock from 'lucide-react/dist/esm/icons/clock';
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
@@ -27,6 +26,7 @@ interface BatchSummary {
     pipes?: number;
     fabrics?: string[];
     fabric_details?: string[];
+    fabric_plane_vendors?: string[];
     source_names?: string[];
     sors?: number;
     sor_vendors?: string[];
@@ -94,21 +94,22 @@ export function SnapshotPanel({ currentSnapshotName, runMetrics, aodRunId, onSna
 
   const uniqueSnapshots = [...new Set(batches.map((b) => b.snapshot_name))];
 
-  // Fabric vendor names (Workato, Snowflake, etc. parsed from "iPaaS:Workato")
-  const fabricVendors = profile?.aamMeta?.fabric_details
-    ? profile.aamMeta.fabric_details.map((fd) => {
-        const colonIdx = fd.indexOf(':');
-        return colonIdx >= 0 ? fd.substring(colonIdx + 1) : fd;
-      })
-    : [];
-  const fabricCount = fabricVendors.length || (profile?.aamMeta?.fabrics?.length ?? 0);
+  // Fabric plane vendors: "ipaas:workato" → { type: "iPaaS", vendor: "Workato" }
+  const fabricPlaneVendors = (profile?.aamMeta?.fabric_plane_vendors ?? []).map((fpv) => {
+    const colonIdx = fpv.indexOf(':');
+    const planeType = colonIdx >= 0 ? fpv.substring(0, colonIdx) : fpv;
+    const vendor = colonIdx >= 0 ? fpv.substring(colonIdx + 1) : '';
+    return { type: formatPlaneType(planeType), vendor: capitalize(vendor) };
+  });
+  const fabricCount = fabricPlaneVendors.length || (profile?.aamMeta?.fabrics?.length ?? 0);
 
-  // Pipe vendor names (the source_names from aam_meta)
-  const pipeVendorNames = profile?.aamMeta?.source_names ?? [];
-
-  // SOR vendor names (salesforce, sap, etc.)
+  // SOR vendor names (Salesforce, SAP, etc.)
   const sorVendors = profile?.aamMeta?.sor_vendors ?? [];
   const sorCount = profile?.aamMeta?.sors ?? sorVendors.length;
+
+  // Pipe source names (individual connection names)
+  const pipeSourceNames = profile?.aamMeta?.source_names ?? [];
+  const pipeCount = profile?.aamMeta?.pipes ?? 0;
 
   return (
     <div className="h-full flex flex-col">
@@ -173,20 +174,36 @@ export function SnapshotPanel({ currentSnapshotName, runMetrics, aodRunId, onSna
               )}
             </ProfileSection>
 
-            {/* Scale — drillable */}
+            {/* Scale — 3 drillable KPI boxes */}
             <ProfileSection title="Scale">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
                 <DrillableStatCard
                   icon={<Layers className="w-3.5 h-3.5" />}
                   label="Fabrics"
-                  value={fabricCount || profile.uniqueSources}
+                  value={fabricCount}
                   expanded={!!expandedStats['fabrics']}
                   onToggle={() => toggleStat('fabrics')}
                 >
                   <div className="flex flex-wrap gap-1 mt-1.5">
-                    {fabricVendors.map((vendor) => (
-                      <span key={vendor} className="px-1.5 py-0.5 text-[10px] rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                        {vendor}
+                    {fabricPlaneVendors.map((fp) => (
+                      <span key={fp.type} className="px-1.5 py-0.5 text-[10px] rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        {fp.type} ({fp.vendor})
+                      </span>
+                    ))}
+                  </div>
+                </DrillableStatCard>
+
+                <DrillableStatCard
+                  icon={<Database className="w-3.5 h-3.5" />}
+                  label="SORs"
+                  value={sorCount}
+                  expanded={!!expandedStats['sors']}
+                  onToggle={() => toggleStat('sors')}
+                >
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {sorVendors.map((vendor) => (
+                      <span key={vendor} className="px-1.5 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">
+                        {capitalize(vendor)}
                       </span>
                     ))}
                   </div>
@@ -195,66 +212,18 @@ export function SnapshotPanel({ currentSnapshotName, runMetrics, aodRunId, onSna
                 <DrillableStatCard
                   icon={<Server className="w-3.5 h-3.5" />}
                   label="Pipes"
-                  value={profile.aamMeta?.pipes ?? profile.runCount}
+                  value={pipeCount}
                   expanded={!!expandedStats['pipes']}
                   onToggle={() => toggleStat('pipes')}
                 >
                   <div className="flex flex-wrap gap-1 mt-1.5">
-                    {pipeVendorNames.length > 0
-                      ? pipeVendorNames.map((name) => (
-                          <span key={name} className="px-1.5 py-0.5 text-[10px] rounded bg-muted text-muted-foreground">
-                            {name}
-                          </span>
-                        ))
-                      : (
-                          <span className="text-[10px] text-muted-foreground">
-                            {profile.runCount} batch{profile.runCount !== 1 ? 'es' : ''} ingested
-                          </span>
-                        )
-                    }
+                    {pipeSourceNames.map((name) => (
+                      <span key={name} className="px-1.5 py-0.5 text-[10px] rounded bg-muted text-muted-foreground">
+                        {name}
+                      </span>
+                    ))}
                   </div>
                 </DrillableStatCard>
-
-                {sorCount > 0 && (
-                  <DrillableStatCard
-                    icon={<Database className="w-3.5 h-3.5" />}
-                    label="SORs"
-                    value={sorCount}
-                    expanded={!!expandedStats['sors']}
-                    onToggle={() => toggleStat('sors')}
-                  >
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {sorVendors.map((vendor) => (
-                        <span key={vendor} className="px-1.5 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">
-                          {vendor}
-                        </span>
-                      ))}
-                    </div>
-                  </DrillableStatCard>
-                )}
-
-                {profile.totalRows > 0 && (
-                  <DrillableStatCard
-                    icon={<Database className="w-3.5 h-3.5" />}
-                    label="Rows"
-                    value={formatNumber(profile.totalRows)}
-                    expanded={!!expandedStats['rows']}
-                    onToggle={() => toggleStat('rows')}
-                  >
-                    <div className="text-[10px] text-muted-foreground mt-1.5">
-                      {profile.totalRows.toLocaleString()} total rows
-                    </div>
-                  </DrillableStatCard>
-                )}
-
-                {profile.driftCount > 0 && (
-                  <StatCard
-                    icon={<AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />}
-                    label="Drift"
-                    value={profile.driftCount}
-                    warn
-                  />
-                )}
               </div>
             </ProfileSection>
 
@@ -336,10 +305,22 @@ function aggregateProfile(batches: BatchSummary[]): SnapshotProfile {
   };
 }
 
-function formatNumber(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
+const PLANE_TYPE_LABELS: Record<string, string> = {
+  ipaas: 'iPaaS',
+  warehouse: 'Warehouse',
+  api_gateway: 'API Gateway',
+  stream: 'Stream',
+  crm: 'CRM',
+  erp: 'ERP',
+  hcm: 'HCM',
+};
+
+function formatPlaneType(raw: string): string {
+  return PLANE_TYPE_LABELS[raw.toLowerCase()] ?? capitalize(raw.replace(/_/g, ' '));
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function formatTimestamp(iso: string): string {
@@ -375,22 +356,6 @@ function ProfileRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StatCard({
-  icon, label, value, warn,
-}: { icon: React.ReactNode; label: string; value: string | number; warn?: boolean }) {
-  return (
-    <div className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border ${
-      warn ? 'border-yellow-500/30 bg-yellow-500/5' : 'bg-card/50'
-    }`}>
-      <div className="text-muted-foreground">{icon}</div>
-      <div>
-        <div className={`text-sm font-semibold ${warn ? 'text-yellow-500' : ''}`}>{value}</div>
-        <div className="text-[10px] text-muted-foreground">{label}</div>
-      </div>
-    </div>
-  );
-}
-
 function DrillableStatCard({
   icon, label, value, warn, expanded, onToggle, children,
 }: {
@@ -406,7 +371,7 @@ function DrillableStatCard({
     <div
       className={`px-2.5 py-2 rounded-lg border cursor-pointer transition-colors hover:bg-accent/50 ${
         warn ? 'border-yellow-500/30 bg-yellow-500/5' : 'bg-card/50'
-      } ${expanded ? 'col-span-2' : ''}`}
+      }`}
       onClick={onToggle}
     >
       <div className="flex items-center gap-2">

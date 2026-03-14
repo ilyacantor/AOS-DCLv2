@@ -1587,12 +1587,17 @@ class IngestStore:
         sor_list = get_pipe_store().get_aod_systems_of_record()
         sor_vendors = sorted(set(s.get("vendor", "") for s in sor_list if s.get("vendor")))
 
+        # fabricPlaneVendors = plane-level vendors: ["ipaas:workato", "warehouse:snowflake", ...]
+        # These are the FABRIC infrastructure vendors, NOT the source/SOR vendors.
+        fabric_plane_vendors = kpis.get("fabricPlaneVendors", [])
+
         aam_meta = json.dumps({
             "pipes": pipe_count,
             "sources": len(unique_source_names),
             "source_names": unique_source_names,
             "fabrics": fabric_categories,
             "fabric_details": raw_fabrics,
+            "fabric_plane_vendors": fabric_plane_vendors,
             "sors": len(sor_vendors),
             "sor_vendors": sor_vendors,
             "loaded": kpis.get("loadedSources", len(source_names)),
