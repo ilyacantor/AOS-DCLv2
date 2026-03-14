@@ -21,7 +21,6 @@ const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO', 'CHRO'];
 function App() {
   const [graphData, setGraphData] = useState<GraphSnapshot | null>(null);
   const [runMode, setRunMode] = useState<'Dev' | 'Prod'>('Dev');
-  const [dataMode, setDataMode] = useState<'Demo' | 'Farm' | 'AAM'>('AAM');
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>(['CFO', 'CRO', 'COO', 'CTO', 'CHRO']);
   const [runId, setRunId] = useState<string | undefined>(undefined);
   const [isRunning, setIsRunning] = useState(false);
@@ -127,7 +126,7 @@ function App() {
     fetch('/api/dcl/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: 'AAM', run_mode: 'Dev', personas: ALL_PERSONAS }),
+      body: JSON.stringify({ mode: 'Farm', run_mode: 'Dev', personas: ALL_PERSONAS }),
     })
       .then(async (r) => {
         if (!r.ok) {
@@ -160,17 +159,29 @@ function App() {
       });
   }, []);
 
+  // Auto re-render when snapshot selection changes
+  const snapshotInitRef = useRef(true);
+  useEffect(() => {
+    if (snapshotInitRef.current) {
+      snapshotInitRef.current = false;
+      return;
+    }
+    if (selectedSnapshotName) {
+      handleRun();
+    }
+  }, [selectedSnapshotName]);
+
   const handleRun = async () => {
     setIsRunning(true);
     setElapsedTime(0);
-    toast({ title: 'Pipeline Started', description: `Running in ${runMode} mode on ${dataMode} data...` });
+    toast({ title: 'Pipeline Started', description: `Running in ${runMode} mode...` });
 
     try {
       const res = await fetch('/api/dcl/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          mode: dataMode,
+          mode: 'Farm',
           run_mode: runMode,
           personas: selectedPersonas.length > 0 ? selectedPersonas : undefined,
           force_refresh: true,
@@ -187,7 +198,7 @@ function App() {
       console.log('[handleRun] Received data:', {
         nodes: data.graph?.nodes?.length,
         links: data.graph?.links?.length,
-        mode: dataMode,
+        mode: 'Farm',
         personas: selectedPersonas,
         runMetrics: data.run_metrics
       });
@@ -264,20 +275,6 @@ function App() {
 
           {/* Controls for graph/dashboard views */}
           <div className="flex items-center gap-3 text-sm">
-              {/* Data Mode */}
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-muted-foreground">Data:</span>
-                <select
-                  value={dataMode}
-                  onChange={(e) => setDataMode(e.target.value as 'Demo' | 'Farm' | 'AAM')}
-                  className="px-2 py-1 text-xs rounded border border-border bg-background"
-                >
-                  <option value="Demo">Demo</option>
-                  <option value="Farm">Farm</option>
-                  <option value="AAM">AAM</option>
-                </select>
-              </div>
-
               {/* Run Mode */}
               <div className="flex items-center gap-1">
                 <span className="text-xs text-muted-foreground">Mode:</span>

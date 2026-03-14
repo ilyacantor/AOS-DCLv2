@@ -387,7 +387,7 @@ def health():
 
 
 class RunRequest(BaseModel):
-    mode: Literal["Demo", "Farm", "AAM"] = "Demo"
+    mode: Literal["Farm", "AAM"] = "Farm"
     run_mode: Literal["Dev", "Prod"] = "Dev"
     personas: Optional[List[Persona]] = None
     source_limit: Optional[int] = 1000
@@ -411,7 +411,7 @@ async def run_dcl(request: RunRequest):
         run_id=run_id,
     )
 
-    if request.mode == "AAM" and request.force_refresh:
+    if request.force_refresh:
         _invalidate_aam_caches()
 
     personas = request.personas or [Persona.CFO, Persona.CRO, Persona.COO, Persona.CTO]
@@ -447,7 +447,7 @@ async def run_dcl(request: RunRequest):
     app.state.loaded_sources = snapshot.meta.get("sourceNames", [])
     app.state.loaded_source_ids = snapshot.meta.get("sourceCanonicalIds", [])
 
-    if request.mode == "AAM":
+    if request.mode in ("AAM", "Farm"):
         try:
             store = get_ingest_store()
             source_names = snapshot.meta.get("sourceNames", [])
@@ -462,9 +462,9 @@ async def run_dcl(request: RunRequest):
                 fabric_planes=fabric_planes,
             )
             app.state.aam_snapshot_name = aam_snap
-            logger.info(f"[AAM] Recorded {aam_count} AAM pull receipts as '{aam_snap}'")
+            logger.info(f"[{request.mode}] Recorded {aam_count} AAM pull receipts as '{aam_snap}'")
         except Exception as e:
-            logger.warning(f"[AAM] Failed to record AAM pull in IngestStore: {e}")
+            logger.warning(f"[{request.mode}] Failed to record AAM pull in IngestStore: {e}")
 
     # build_graph_snapshot already builds and sets the graph via set_semantic_graph().
     # No redundant rebuild_graph() call — that would double DB queries and AAM calls.
@@ -554,7 +554,7 @@ def get_monitor(run_id: str):
 
 
 class MappingRequest(BaseModel):
-    mode: Literal["Demo", "Farm"] = "Demo"
+    mode: Literal["Farm"] = "Farm"
     mapping_mode: Literal["heuristic", "full"] = "heuristic"
     clear_existing: bool = False
 
@@ -569,10 +569,7 @@ class MappingResponse(BaseModel):
 @app.post("/api/dcl/batch-mapping", response_model=MappingResponse)
 def run_batch_mapping(request: MappingRequest):
     try:
-        if request.mode == "Demo":
-            sources = SchemaLoader.load_demo_schemas()
-        else:
-            sources = SchemaLoader.load_farm_schemas(engine.narration, str(uuid.uuid4()))
+        sources = SchemaLoader.load_farm_schemas(engine.narration, str(uuid.uuid4()))
 
         semantic_mapper = SemanticMapper()
         mappings, stats = semantic_mapper.run_mapping(

@@ -118,7 +118,7 @@ export interface GraphSnapshot {
   nodes: GraphNode[];
   links: GraphLink[];
   meta: {
-    mode: 'Demo' | 'Farm' | 'AAM';
+    mode: string;
     runId: string;
     snapshotName?: string;
     aodRunId?: string;

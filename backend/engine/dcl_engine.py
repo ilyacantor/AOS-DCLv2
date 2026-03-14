@@ -29,58 +29,29 @@ class DCLEngine:
     
     def build_graph_snapshot(
         self,
-        mode: Literal["Demo", "Farm", "AAM"],
+        mode: Literal["Farm", "AAM"],
         run_mode: Literal["Dev", "Prod"],
         personas: List[Persona],
         run_id: str,
         source_limit: int = 1000,
         aod_run_id: Optional[str] = None
     ) -> tuple[GraphSnapshot, RunMetrics]:
-        
+
         start_time = time.time()
         metrics = RunMetrics()
-        
+
         self.narration.add_message(run_id, "Engine", f"Starting DCL engine in {mode} mode, {run_mode} run mode")
-        
+
         payload_kpis: Optional[Dict[str, Any]] = None
-        
-        if mode == "Demo":
-            sources = SchemaLoader.load_demo_schemas(self.narration, run_id)
-            self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Demo sources")
-        elif mode == "AAM":
-            sources, payload_kpis = SchemaLoader.load_aam_schemas(self.narration, run_id, source_limit=source_limit, aod_run_id=aod_run_id)
-            self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} AAM sources (source_limit={source_limit})")
-        else:
-            # Farm mode: Farm pushes data to DCL via POST /api/dcl/ingest.
-            # DCL reads from IngestStore. No fallbacks — if empty, say so.
-            from backend.farm.ingest_bridge import build_sources_from_ingest, get_ingest_summary
-            ingest_summary = get_ingest_summary()
 
-            if ingest_summary["pipe_count"] == 0:
-                self.narration.add_message(
-                    run_id, "Engine",
-                    "Farm mode: No data. Farm has not pushed to POST /api/dcl/ingest yet."
-                )
-                raise ValueError(
-                    "Farm mode requires Farm to push data first. "
-                    "No pipes found in IngestStore. "
-                    "Farm pushes to POST {DCL_INGEST_URL}/api/dcl/ingest with x-run-id header."
-                )
-
-            self.narration.add_message(
-                run_id, "Engine",
-                f"Farm: {ingest_summary['pipe_count']} pipes from "
-                f"{ingest_summary['source_count']} sources "
-                f"({ingest_summary['total_records']:,} records)"
-            )
-            sources = build_sources_from_ingest(
-                narration=self.narration, dcl_run_id=run_id
-            )
-            self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} Farm sources")
+        # Single schema source: AAM pipe exports. AAM is the authority for
+        # pipe schemas. "Farm" and "AAM" are treated identically.
+        sources, payload_kpis = SchemaLoader.load_aam_schemas(self.narration, run_id, source_limit=source_limit, aod_run_id=aod_run_id)
+        self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} sources (source_limit={source_limit})")
 
         # Auto-discover AOD run ID and snapshot name from PipeStore if not provided
         receipt_snapshot_name = None
-        if not aod_run_id and mode in ("AAM", "Farm"):
+        if not aod_run_id:
             from backend.api.pipe_store import get_pipe_store
             receipts = get_pipe_store().get_export_receipts()
             for r in reversed(receipts):
@@ -89,17 +60,7 @@ class DCLEngine:
                     receipt_snapshot_name = r.snapshot_name
                     break
 
-        if mode == "Farm":
-            stream_sources = SchemaLoader.load_stream_sources(self.narration, run_id)
-            if stream_sources:
-                sources.extend(stream_sources)
-                self.narration.add_message(run_id, "Engine", f"Loaded {len(stream_sources)} real-time stream sources")
-        
-        if mode == "Demo":
-            from backend.engine.ontology import get_demo_ontology
-            ontology = get_demo_ontology()
-        else:
-            ontology = get_ontology()
+        ontology = get_ontology()
         self.narration.add_message(run_id, "Engine", f"Loaded {len(ontology)} ontology concepts")
 
         # --- Tier 0: Fetch AAM semantic edges ---
