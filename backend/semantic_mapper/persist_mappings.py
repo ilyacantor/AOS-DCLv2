@@ -171,19 +171,25 @@ class MappingPersistence:
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    SELECT id, name, description, cluster, metadata
+                    SELECT id, name, description, cluster, metadata,
+                           synonyms, example_fields
                     FROM ontology_concepts
                     ORDER BY cluster, name
                 """)
 
                 concepts = []
                 for row in cursor.fetchall():
+                    metadata = row[4] or {}
+                    synonyms = row[5] or []
+                    example_fields = row[6] or []
                     concepts.append({
                         'id': row[0],
                         'name': row[1],
                         'description': row[2],
                         'cluster': row[3],
-                        'metadata': row[4]
+                        'metadata': metadata,
+                        'aliases': synonyms,
+                        'example_fields': example_fields,
                     })
 
                 MappingPersistence._ontology_cache = concepts
