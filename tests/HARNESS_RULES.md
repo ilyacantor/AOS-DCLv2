@@ -164,3 +164,15 @@ All rules in Sections A through D are non-negotiable. Violations are bugs.
 7. Were any new features introduced that weren't requested?
 
 If any answer is wrong, the harness result is invalid.
+
+
+## Rule 17: Pre-Commit Hook
+
+A pre-commit hook is installed in this repo at `.git/hooks/pre-commit`. It blocks commits containing:
+- Bare `except: pass` or `except: continue`
+- Except blocks that return literal defaults (0, [], {}, None, False, "")
+- Hardcoded entity names ("meridian", "cascadia") in application code
+- Hardcoded seed UUIDs (400aa910, 6754a9d7)
+- References to fact_base.json
+
+The hook runs automatically on every `git commit`. If your commit is blocked, fix the flagged code. Do not use `git commit --no-verify` to bypass the hook. Bypassing the hook violates HARNESS_RULES and will be caught in audit.
