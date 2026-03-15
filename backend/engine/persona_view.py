@@ -51,7 +51,9 @@ def _load_persona_domains() -> Dict[str, List[str]]:
     return result
 
 
-PERSONA_DOMAIN_MAPPING: Dict[str, List[str]] = _load_persona_domains()
+def get_persona_domain_mapping() -> Dict[str, List[str]]:
+    """Return persona→domain mapping, reloading from YAML each call."""
+    return _load_persona_domains()
 
 
 class PersonaView:
@@ -131,7 +133,7 @@ class PersonaView:
     ) -> Dict[str, List[str]]:
         result = {}
         for persona in personas:
-            concepts = PERSONA_DOMAIN_MAPPING.get(persona.value, [])
+            concepts = get_persona_domain_mapping().get(persona.value, [])
             if available_concepts is not None:
                 concepts = [c for c in concepts if c in available_concepts]
             result[persona.value] = concepts
@@ -148,7 +150,7 @@ class PersonaView:
         result = {}
         for persona in personas:
             concepts = PersonaView._concepts_cache.get(persona.value, 
-                       PERSONA_DOMAIN_MAPPING.get(persona.value, []))
+                       get_persona_domain_mapping().get(persona.value, []))
             if available_concepts is not None:
                 concepts = [c for c in concepts if c in available_concepts]
             result[persona.value] = list(concepts)
@@ -175,7 +177,7 @@ class PersonaView:
     ) -> float:
 
         if self._use_defaults:
-            concepts = PERSONA_DOMAIN_MAPPING.get(persona.value, [])
+            concepts = get_persona_domain_mapping().get(persona.value, [])
             return 0.8 if concept_id in concepts else 0.0
         
         if PersonaView._concepts_cache is not None:
@@ -197,7 +199,7 @@ class PersonaView:
                     return row[0] if row else 0.0
         except Exception as e:
             logger.warning(f"Failed to get relevance score: {e}")
-            concepts = PERSONA_DOMAIN_MAPPING.get(persona.value, [])
+            concepts = get_persona_domain_mapping().get(persona.value, [])
             return 0.8 if concept_id in concepts else 0.0
     
     @classmethod

@@ -18,6 +18,7 @@ personas:
       - equity
       - cash_flow
       - ebitda_adjustment
+      - cofa
   CRO:
     display_name: Chief Revenue Officer
     domains:
