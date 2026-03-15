@@ -181,7 +181,7 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
           <span className="text-sm">No data connections found</span>
           <span className="text-xs text-slate-500">External source may be unreachable — try running again</span>
         </div>
-      ) : isLoading ? (
+      ) : isLoading || !graphData ? (
         <div className="w-full h-full flex items-center justify-center">
           <div className="w-5 h-5 border-2 border-slate-600 border-t-slate-400 rounded-full animate-spin" />
         </div>
