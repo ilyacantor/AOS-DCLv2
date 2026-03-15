@@ -45,25 +45,17 @@ class DCLEngine:
 
         # ── Farm mode: build graph directly from semantic_triples in PG ──
         if mode == "Farm":
-            triple_result = self._try_build_from_triples(
+            return self._build_from_triples_or_empty(
                 run_id=run_id,
                 run_mode=run_mode,
                 personas=personas,
                 start_time=start_time,
                 metrics=metrics,
             )
-            if triple_result is not None:
-                return triple_result
-
-            # No triples found — fall through to AAM path as last resort
-            self.narration.add_message(
-                run_id, "Engine",
-                "No semantic triples in PG — falling through to AAM schema path"
-            )
 
         payload_kpis: Optional[Dict[str, Any]] = None
 
-        # AAM pipe exports — used when mode=AAM or when Farm has no triples
+        # AAM pipe exports — used only when mode=AAM
         sources, payload_kpis = SchemaLoader.load_aam_schemas(self.narration, run_id, source_limit=source_limit, aod_run_id=aod_run_id)
         self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} sources (source_limit={source_limit})")
 
@@ -278,32 +270,76 @@ class DCLEngine:
         
         return snapshot, metrics
     
-    def _try_build_from_triples(
+    def _build_from_triples_or_empty(
         self,
         run_id: str,
         run_mode: str,
         personas: List[Persona],
         start_time: float,
         metrics: RunMetrics,
-    ) -> Optional[tuple[GraphSnapshot, RunMetrics]]:
-        """Attempt to build the Sankey graph from semantic_triples in PG.
+    ) -> tuple[GraphSnapshot, RunMetrics]:
+        """Build the Sankey graph from semantic_triples in PG.
 
-        Returns (snapshot, metrics) if triples exist, None otherwise.
+        If triples exist, builds the full 4-layer graph.
+        If no triples exist, returns a diagnostic empty-state snapshot
+        (no silent fallback to AAM or any other data path).
         """
         triple_store = TripleStore()
 
+        # Check for active triples
         try:
             triple_count = triple_store.count_active()
         except Exception as e:
-            logger.warning(f"Triple count check failed: {e}")
-            self.narration.add_message(
-                run_id, "Engine",
-                f"Could not check semantic_triples: {e}"
-            )
-            return None
+            logger.error(f"Triple count check failed: {e}", exc_info=True)
+            raise RuntimeError(
+                f"DCL could not query semantic_triples table: {e}. "
+                f"Check DATABASE_URL and Supabase connectivity."
+            ) from e
 
         if triple_count == 0:
-            return None
+            self.narration.add_message(
+                run_id, "Engine",
+                "No semantic triples in PG. "
+                "Run Farm enterprise generator and ingest triples via POST /api/dcl/ingest-triples."
+            )
+            processing_time = (time.time() - start_time) * 1000
+            metrics.processing_ms = processing_time
+            metrics.total_mappings = 0
+
+            # Return empty-state graph with diagnostic metadata — no nodes, no links,
+            # no spinner, no fallback. The frontend shows "No data ingested" message.
+            snapshot = GraphSnapshot(
+                nodes=[],
+                links=[],
+                meta={
+                    "mode": "Farm",
+                    "runId": run_id,
+                    "snapshotName": "",
+                    "aodRunId": "",
+                    "generatedAt": utc_now(),
+                    "status": "no_data",
+                    "diagnostics": {
+                        "triple_count": 0,
+                        "message": (
+                            "No semantic triples in PG. "
+                            "Run Farm enterprise generator and ingest triples "
+                            "via POST /api/dcl/ingest-triples."
+                        ),
+                    },
+                    "stats": {
+                        "sources": 0,
+                        "ontology_concepts": 0,
+                        "mappings": 0,
+                        "triple_count": 0,
+                        "personas": [p.value for p in personas],
+                        "entities": [],
+                    },
+                    "sourceCanonicalIds": [],
+                    "sourceNames": [],
+                    "sourceFabricPlanes": [],
+                }
+            )
+            return snapshot, metrics
 
         self.narration.add_message(
             run_id, "Engine",
@@ -320,8 +356,11 @@ class DCLEngine:
             ) from e
 
         if not sankey_rows:
-            self.narration.add_message(run_id, "Engine", "Sankey aggregation returned 0 rows")
-            return None
+            # count_active returned >0 but aggregation is empty — data inconsistency
+            raise RuntimeError(
+                f"DCL found {triple_count} active triples but Sankey aggregation returned 0 rows. "
+                f"Possible data inconsistency in semantic_triples table."
+            )
 
         graph = self._build_graph_from_triples(sankey_rows, personas, run_id)
 
