@@ -233,6 +233,102 @@ class TripleStore:
                 cur.execute(sql, params)
                 return cur.fetchone()[0]
 
+    def get_source_run_ids(self) -> list[dict]:
+        """Return distinct run_ids from active triples, most recent first.
+
+        Each row: {run_id: str, created_at: datetime, triple_count: int}
+        """
+        sql = (
+            "SELECT run_id, MIN(created_at) AS created_at, COUNT(*) AS triple_count "
+            "FROM semantic_triples WHERE is_active = true "
+            "GROUP BY run_id ORDER BY MIN(created_at) DESC"
+        )
+        with get_connection() as conn:
+            if conn is None:
+                raise RuntimeError(
+                    "TripleStore.get_source_run_ids failed: database connection unavailable. "
+                    "Check DATABASE_URL and Supabase connectivity."
+                )
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                columns = [desc[0] for desc in cur.description]
+                return [dict(zip(columns, row)) for row in cur.fetchall()]
+
+    def get_persona_domain_stats(self, persona_domains: dict[str, list[str]]) -> dict:
+        """Compute per-persona stats from active triples by domain mapping.
+
+        Args:
+            persona_domains: mapping of persona key to list of triple domains.
+                e.g. {"CFO": ["revenue", "cogs", ...], "CRO": [...]}
+
+        Returns:
+            dict keyed by persona, each with data_sources, domains, triple_count, domain_list.
+        """
+        # Single query: get per-domain stats (source count + triple count)
+        sql = (
+            "SELECT split_part(concept, '.', 1) AS domain, "
+            "COUNT(DISTINCT source_system) AS source_count, "
+            "COUNT(*) AS triple_count "
+            "FROM semantic_triples WHERE is_active = true "
+            "GROUP BY domain"
+        )
+        with get_connection() as conn:
+            if conn is None:
+                raise RuntimeError(
+                    "TripleStore.get_persona_domain_stats failed: database connection unavailable. "
+                    "Check DATABASE_URL and Supabase connectivity."
+                )
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                domain_stats: dict[str, dict] = {}
+                for row in cur.fetchall():
+                    domain_stats[row[0]] = {
+                        "source_count": row[1],
+                        "triple_count": row[2],
+                    }
+
+        result = {}
+        for persona, domains in persona_domains.items():
+            matched_domains = []
+            total_sources: set[str] = set()
+            total_triples = 0
+
+            for d in domains:
+                if d in domain_stats:
+                    matched_domains.append(d)
+
+            # Need distinct source_system across all matched domains
+            if matched_domains:
+                placeholders = ", ".join(["%s"] * len(matched_domains))
+                src_sql = (
+                    f"SELECT COUNT(DISTINCT source_system) "
+                    f"FROM semantic_triples WHERE is_active = true "
+                    f"AND split_part(concept, '.', 1) IN ({placeholders})"
+                )
+                with get_connection() as conn2:
+                    if conn2 is None:
+                        raise RuntimeError(
+                            "TripleStore.get_persona_domain_stats failed: "
+                            "database connection unavailable on source count query."
+                        )
+                    with conn2.cursor() as cur2:
+                        cur2.execute(src_sql, matched_domains)
+                        data_sources = cur2.fetchone()[0]
+            else:
+                data_sources = 0
+
+            for d in matched_domains:
+                total_triples += domain_stats[d]["triple_count"]
+
+            result[persona] = {
+                "data_sources": data_sources,
+                "domains": len(matched_domains),
+                "triple_count": total_triples,
+                "domain_list": matched_domains,
+            }
+
+        return result
+
     def get_sankey_aggregation(self, tenant_id: str | None = None) -> list[dict]:
         """Aggregate triples for Sankey visualization.
 

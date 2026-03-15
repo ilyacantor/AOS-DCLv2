@@ -1,0 +1,41 @@
+# Persona → triple domain mapping
+# Maps each executive persona to the semantic triple domains they care about.
+# Domains correspond to the root segment of concept names in semantic_triples
+# (e.g., "revenue" from "revenue.net_revenue").
+#
+# Used by: /api/dcl/triples/persona-stats endpoint and the persona sidebar panel.
+
+personas:
+  CFO:
+    display_name: Chief Financial Officer
+    domains:
+      - revenue
+      - cogs
+      - opex
+      - pnl
+      - asset
+      - liability
+      - equity
+      - cash_flow
+      - ebitda_adjustment
+  CRO:
+    display_name: Chief Revenue Officer
+    domains:
+      - revenue
+      - customer
+      - service
+  COO:
+    display_name: Chief Operating Officer
+    domains:
+      - employee
+      - vendor
+      - bench
+  CTO:
+    display_name: Chief Technology Officer
+    domains:
+      - service
+      - vendor
+  CHRO:
+    display_name: Chief Human Resources Officer
+    domains:
+      - employee

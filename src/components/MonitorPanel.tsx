@@ -371,7 +371,7 @@ export function MonitorPanel({ data, selectedPersonas, runId }: MonitorPanelProp
                   <Badge className="font-mono text-xs">{view.personaId}</Badge>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {view.metrics.map(metric => (
                     <div key={metric.id} className="bg-secondary/30 rounded p-2 flex flex-col">
                       <span className="text-[10px] text-muted-foreground uppercase truncate">{metric.label}</span>

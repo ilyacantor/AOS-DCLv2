@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { GraphSnapshot, PersonaId } from './types';
+import { GraphSnapshot, PersonaId, PersonaStats } from './types';
 import { MonitorPanel } from './components/MonitorPanel';
 import { SnapshotPanel } from './components/SnapshotPanel';
 import { SankeyGraph } from './components/SankeyGraph';
@@ -64,58 +64,64 @@ function App() {
     };
   }, [personaDropdownOpen]);
 
-  const generatePersonaViews = (graph: GraphSnapshot, personas: PersonaId[]) => {
-    if (!graph || personas.length === 0) return [];
+  const personaTitles: Record<PersonaId, string> = {
+    CFO: 'Chief Financial Officer',
+    CRO: 'Chief Revenue Officer',
+    COO: 'Chief Operating Officer',
+    CTO: 'Chief Technology Officer',
+    CHRO: 'Chief Human Resources Officer',
+  };
 
-    const personaTitles: Record<PersonaId, string> = {
-      CFO: 'Chief Financial Officer',
-      CRO: 'Chief Revenue Officer',
-      COO: 'Chief Operating Officer',
-      CTO: 'Chief Technology Officer',
-      CHRO: 'Chief Human Resources Officer',
-    };
+  const formatDomainLabel = (domain: string): string =>
+    domain.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
-    const personaFocusAreas: Record<PersonaId, string[]> = {
-      CFO: ['Revenue', 'Cost', 'Budget'],
-      CRO: ['Pipeline', 'Revenue', 'Accounts'],
-      COO: ['Operations', 'Health', 'Usage'],
-      CTO: ['Infrastructure', 'Resources', 'Cost'],
-      CHRO: ['Headcount', 'Retention', 'Workforce'],
-    };
-
-    const personaOntologies: Record<PersonaId, string[]> = {
-      CFO: ['revenue', 'cost'],
-      CRO: ['account', 'opportunity', 'revenue'],
-      COO: ['usage', 'health'],
-      CTO: ['aws_resource', 'usage', 'cost'],
-      CHRO: ['employee', 'health'],
-    };
+  const generatePersonaViews = (personas: PersonaId[], stats: Record<string, PersonaStats>) => {
+    if (personas.length === 0) return [];
 
     return personas.map((persona) => {
-      const ontologies = personaOntologies[persona];
-      const ontologyNodes = graph.nodes.filter(n =>
-        n.level === 'L2' && ontologies.some(ont => n.id.includes(ont))
-      );
-
-      const sourceConnections = graph.links.filter(l =>
-        ontologyNodes.some(n => l.target === n.id)
-      );
+      const ps = stats[persona];
+      if (!ps) {
+        return {
+          personaId: persona,
+          title: personaTitles[persona],
+          focusAreas: [],
+          keyEntities: [],
+          metrics: [
+            { id: 'm1', label: 'Data Sources', value: 0, unit: '', trend: 'flat' as const },
+            { id: 'm2', label: 'Domains', value: 0, unit: '', trend: 'flat' as const },
+          ],
+          insights: [
+            { id: 'i1', severity: 'info' as const, message: 'No matching triples found' },
+          ],
+          alerts: [],
+        };
+      }
 
       return {
         personaId: persona,
         title: personaTitles[persona],
-        focusAreas: personaFocusAreas[persona],
-        keyEntities: ontologyNodes.map(n => n.label),
+        focusAreas: ps.domain_list.map(formatDomainLabel),
+        keyEntities: ps.domain_list,
         metrics: [
-          { id: 'm1', label: 'Data Sources', value: sourceConnections.length, unit: '', trend: 'up' as const },
-          { id: 'm2', label: 'Ontologies', value: ontologyNodes.length, unit: '', trend: 'flat' as const },
+          { id: 'm1', label: 'Data Sources', value: ps.data_sources, unit: '', trend: ps.data_sources > 0 ? 'up' as const : 'flat' as const },
+          { id: 'm2', label: 'Domains', value: ps.domains, unit: '', trend: 'flat' as const },
+          { id: 'm3', label: 'Triples', value: ps.triple_count, unit: '', trend: ps.triple_count > 0 ? 'up' as const : 'flat' as const },
         ],
         insights: [
-          { id: 'i1', severity: 'info' as const, message: `Receiving data from ${sourceConnections.length} sources` },
+          { id: 'i1', severity: 'info' as const, message: `${ps.triple_count.toLocaleString()} triples across ${ps.data_sources} source${ps.data_sources !== 1 ? 's' : ''}` },
         ],
         alerts: [],
       };
     });
+  };
+
+  const fetchPersonaStats = async (): Promise<Record<string, PersonaStats>> => {
+    const res = await fetch('/api/dcl/triples/persona-stats');
+    if (!res.ok) {
+      console.warn(`[App] persona-stats returned ${res.status}`);
+      return {};
+    }
+    return res.json();
   };
 
   const autoLoadedRef = useRef(false);
@@ -124,20 +130,22 @@ function App() {
     autoLoadedRef.current = true;
     setIsRunning(true);
     setElapsedTime(0);
-    fetch('/api/dcl/run', {
+
+    const runPromise = fetch('/api/dcl/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode: 'Farm', run_mode: 'Dev', personas: ALL_PERSONAS }),
-    })
-      .then(async (r) => {
-        if (!r.ok) {
-          const errBody = await r.json().catch(() => null);
-          const detail = errBody?.detail || `HTTP ${r.status}`;
-          throw new Error(`DCL Engine returned ${r.status}: ${detail}`);
-        }
-        return r.json();
-      })
-      .then(data => {
+    }).then(async (r) => {
+      if (!r.ok) {
+        const errBody = await r.json().catch(() => null);
+        const detail = errBody?.detail || `HTTP ${r.status}`;
+        throw new Error(`DCL Engine returned ${r.status}: ${detail}`);
+      }
+      return r.json();
+    });
+
+    Promise.all([runPromise, fetchPersonaStats()])
+      .then(([data, personaStats]) => {
         if (!data?.graph) {
           throw new Error('DCL Engine returned OK but response contained no graph data');
         }
@@ -145,7 +153,7 @@ function App() {
           ...data.graph,
           meta: {
             ...(data.graph.meta ?? {}),
-            personaViews: generatePersonaViews(data.graph, ALL_PERSONAS),
+            personaViews: generatePersonaViews(ALL_PERSONAS, personaStats),
             runMetrics: data.run_metrics,
           },
         };
@@ -178,17 +186,20 @@ function App() {
     toast({ title: 'Pipeline Started', description: `Running in ${runMode} mode...` });
 
     try {
-      const res = await fetch('/api/dcl/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'Farm',
-          run_mode: runMode,
-          personas: selectedPersonas.length > 0 ? selectedPersonas : undefined,
-          force_refresh: true,
-          snapshot_name: selectedSnapshotName,
+      const [res, personaStats] = await Promise.all([
+        fetch('/api/dcl/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: 'Farm',
+            run_mode: runMode,
+            personas: selectedPersonas.length > 0 ? selectedPersonas : undefined,
+            force_refresh: true,
+            snapshot_name: selectedSnapshotName,
+          }),
         }),
-      });
+        fetchPersonaStats(),
+      ]);
 
       if (!res.ok) {
         const errBody = await res.json().catch(() => null);
@@ -203,12 +214,12 @@ function App() {
         personas: selectedPersonas,
         runMetrics: data.run_metrics
       });
-      
+
       const graphWithViews = {
         ...data.graph,
         meta: {
           ...(data.graph.meta ?? {}),
-          personaViews: generatePersonaViews(data.graph, selectedPersonas),
+          personaViews: generatePersonaViews(selectedPersonas, personaStats),
           runMetrics: data.run_metrics,
         },
       };

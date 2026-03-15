@@ -373,12 +373,22 @@ class DCLEngine:
         domains = sorted({r["domain"] for r in sankey_rows})
         entities = sorted({r["entity_id"] for r in sankey_rows if r.get("entity_id")})
 
+        # Resolve the Farm source run_id from semantic_triples for provenance
+        source_run_ids = triple_store.get_source_run_ids()
+        if len(source_run_ids) == 1:
+            source_run_id = str(source_run_ids[0]["run_id"])
+        elif len(source_run_ids) > 1:
+            source_run_id = str(source_run_ids[0]["run_id"])  # most recent
+        else:
+            source_run_id = ""
+
         snapshot = GraphSnapshot(
             nodes=graph["nodes"],
             links=graph["links"],
             meta={
                 "mode": "Farm",
                 "runId": run_id,
+                "sourceRunId": source_run_id,
                 "snapshotName": "",
                 "aodRunId": "",
                 "generatedAt": utc_now(),

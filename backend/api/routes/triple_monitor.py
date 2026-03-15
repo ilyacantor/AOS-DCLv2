@@ -7,13 +7,16 @@ GET /api/dcl/triples/identity-checks  — accounting identity verification
 GET /api/dcl/triples/browse           — paginated triple browser
 GET /api/dcl/triples/engagement       — engagement state
 GET /api/dcl/triples/resolution-summary — resolution workspace stats
+GET /api/dcl/triples/persona-stats    — per-persona stats from triples
 POST /api/dcl/triples/deactivate-run  — deactivate a run
 """
 
 import json
 from datetime import datetime, timezone
 from decimal import Decimal
+from pathlib import Path
 
+import yaml
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 
@@ -194,6 +197,28 @@ def triples_runs():
 # GET /api/dcl/triples/identity-checks
 # ---------------------------------------------------------------------------
 
+def _coerce_to_float(raw) -> float | None:
+    """Coerce a JSONB-stored value to float.
+
+    Returns None for values that cannot be represented as a number
+    (dicts, unparseable strings, etc.). This is not a silent fallback —
+    None means "this triple value is not numeric" and callers skip
+    the identity check for that entity/period combination.
+    """
+    if isinstance(raw, (int, float, Decimal)):
+        return float(raw)
+    if isinstance(raw, str):
+        parsed = json.loads(raw) if raw else raw
+        if isinstance(parsed, (int, float)):
+            return float(parsed)
+        return None  # non-numeric string (e.g. "N/A", label text)
+    if isinstance(raw, dict):
+        return None  # structured JSONB object, not a scalar
+    if hasattr(raw, '__float__'):
+        return float(raw)
+    return None  # unknown type, not coercible
+
+
 def _get_triple_value(
     cur, entity_id: str, concept_prefix: str, period: str,
 ) -> float | None:
@@ -210,20 +235,7 @@ def _get_triple_value(
     if row is None:
         return None
     raw = row[0]
-    # value is stored as JSONB — could be a number directly or a JSON string
-    if isinstance(raw, (int, float, Decimal)):
-        return float(raw)
-    if isinstance(raw, str):
-        try:
-            return float(json.loads(raw))
-        except (json.JSONDecodeError, TypeError, ValueError):
-            return None
-    if isinstance(raw, dict):
-        return None
-    try:
-        return float(raw)
-    except (TypeError, ValueError):
-        return None
+    return _coerce_to_float(raw)
 
 
 def _sum_triple_values(
@@ -593,6 +605,47 @@ def triples_resolution_summary():
         "by_type": {},
         "recent_decisions": [],
     }
+
+
+# ---------------------------------------------------------------------------
+# GET /api/dcl/triples/persona-stats
+# ---------------------------------------------------------------------------
+
+def _load_persona_domains() -> dict[str, list[str]]:
+    """Load persona→domain mapping from config/persona_domains.yaml."""
+    config_path = Path(__file__).resolve().parents[3] / "config" / "persona_domains.yaml"
+    if not config_path.exists():
+        raise RuntimeError(
+            f"Persona domain config not found at {config_path}. "
+            f"This file is required for persona-stats."
+        )
+    with open(config_path) as f:
+        data = yaml.safe_load(f)
+    personas = data.get("personas", {})
+    return {key: entry["domains"] for key, entry in personas.items()}
+
+
+@router.get("/api/dcl/triples/persona-stats")
+def triples_persona_stats():
+    """Per-persona statistics derived from the semantic triple store.
+
+    Returns data_sources, domain count, triple count, and matched domain list
+    for each persona based on persona→domain mapping in config/persona_domains.yaml.
+    """
+    try:
+        persona_domains = _load_persona_domains()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load persona domain config: {e}",
+        )
+
+    try:
+        stats = _triple_store.get_persona_domain_stats(persona_domains)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+    return stats
 
 
 # ---------------------------------------------------------------------------

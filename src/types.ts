@@ -94,6 +94,13 @@ export interface PersonaView {
   alerts: PersonaAlert[];
 }
 
+export interface PersonaStats {
+  data_sources: number;
+  domains: number;
+  triple_count: number;
+  domain_list: string[];
+}
+
 export interface PayloadKpis {
   fabrics: number;
   pipes: number;
@@ -120,6 +127,7 @@ export interface GraphSnapshot {
   meta: {
     mode: string;
     runId: string;
+    sourceRunId?: string;
     snapshotName?: string;
     aodRunId?: string;
     generatedAt: string;
