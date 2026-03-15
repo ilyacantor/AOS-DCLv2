@@ -41,14 +41,48 @@ class COFACompletionGate:
                            "FAIL: N account(s) not mapped — see orphaned_accounts"
             }
         """
+        # Reject empty source — a gate with nothing to validate is not a PASS
+        if not source_coa:
+            return {
+                "complete": False,
+                "source_count": 0,
+                "mapped_count": 0,
+                "orphaned_accounts": [],
+                "message": "FAIL: source_coa is empty — nothing to validate",
+            }
+
         # Extract account identifiers from source CoA
         source_accounts = set()
         source_lookup: dict[str, dict] = {}
         for acct in source_coa:
-            key = str(acct.get(source_key, "")).strip()
+            if source_key not in acct:
+                return {
+                    "complete": False,
+                    "source_count": len(source_coa),
+                    "mapped_count": 0,
+                    "orphaned_accounts": [],
+                    "message": (
+                        f"FAIL: account missing expected field '{source_key}': "
+                        f"{acct}"
+                    ),
+                }
+            key = str(acct[source_key]).strip()
             if key:
                 source_accounts.add(key)
                 source_lookup[key] = acct
+
+        # Guard: non-empty input but zero extraction means misconfigured key
+        if not source_accounts:
+            return {
+                "complete": False,
+                "source_count": 0,
+                "mapped_count": 0,
+                "orphaned_accounts": [],
+                "message": (
+                    f"FAIL: source_key '{source_key}' extracted zero non-empty "
+                    f"values from {len(source_coa)} input rows"
+                ),
+            }
 
         # Extract mapped account identifiers from mapping entries
         mapped_accounts = set()

@@ -42,7 +42,7 @@ def make_mappings_from_coa(
 gate = COFACompletionGate()
 passed = 0
 failed = 0
-total = 5
+total = 7
 
 
 def check(name: str, condition: bool, detail: str = ""):
@@ -109,14 +109,39 @@ check(
 )
 
 # -----------------------------------------------------------------------
-# Test 5: Empty source passes
+# Test 5: Empty source rejects (zero-account bypass prevention)
 # -----------------------------------------------------------------------
-print("\nTest 5: Empty source passes (0 source, 0 mapped)")
+print("\nTest 5: Empty source rejects (0 source, 0 mapped)")
 result = gate.validate_mapping_completeness([], [])
 check(
-    "complete=true",
-    result["complete"] is True,
-    f"got complete={result['complete']}",
+    "complete=false, message mentions empty",
+    result["complete"] is False and "empty" in result["message"].lower(),
+    f"got complete={result['complete']}, message={result['message']}",
+)
+
+# -----------------------------------------------------------------------
+# Test 6: Misconfigured source_key rejects
+# -----------------------------------------------------------------------
+print("\nTest 6: Misconfigured source_key rejects (key typo)")
+source = make_source_coa(10)
+mappings = make_mappings_from_coa(source)
+result = gate.validate_mapping_completeness(source, mappings, source_key="acct_num")
+check(
+    "complete=false, message cites missing field",
+    result["complete"] is False and "acct_num" in result["message"],
+    f"got complete={result['complete']}, message={result['message']}",
+)
+
+# -----------------------------------------------------------------------
+# Test 7: Accounts with empty-string key values reject
+# -----------------------------------------------------------------------
+print("\nTest 7: All-blank account_number values reject")
+blank_source = [{"account_number": "", "account_name": "Blank"} for _ in range(5)]
+result = gate.validate_mapping_completeness(blank_source, [])
+check(
+    "complete=false, message mentions zero extraction",
+    result["complete"] is False and "zero" in result["message"].lower(),
+    f"got complete={result['complete']}, message={result['message']}",
 )
 
 # -----------------------------------------------------------------------
