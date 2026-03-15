@@ -69,6 +69,7 @@ from backend.farm.routes import router as farm_router
 from backend.dcl.routes import router as dcl_router
 from backend.api.routes.graph_traversal import router as graph_traversal_router
 from backend.api.routes.reports import router as reports_router
+from backend.api.routes.compat import router as compat_router
 from backend.api.routes.maestra import router as maestra_router
 from backend.api.routes.ingest_triples import router as ingest_triples_router
 from backend.api.routes.resolution_v2 import router as resolution_v2_router
@@ -314,7 +315,12 @@ app.include_router(deprecated_router)
 app.include_router(farm_router)
 app.include_router(dcl_router)
 app.include_router(graph_traversal_router)
-app.include_router(reports_router)
+if os.environ.get("LEGACY_JSON_LOAD", "").lower() in ("true", "1", "yes"):
+    app.include_router(reports_router)
+    logger.info("[main] LEGACY_JSON_LOAD=true — old /api/reports/* routes active (JSON-backed)")
+else:
+    app.include_router(compat_router)
+    logger.info("[main] /api/reports/* routes serving v2 engine data via compat layer")
 app.include_router(maestra_router)
 app.include_router(ingest_triples_router)
 app.include_router(resolution_v2_router)
