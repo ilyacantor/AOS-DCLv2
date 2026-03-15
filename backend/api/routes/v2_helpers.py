@@ -7,8 +7,7 @@ No hardcoded UUIDs anywhere in route handlers.
 Resolution order:
 1. Explicit query parameter (?tenant_id=...)
 2. Active engagement from engagement_state table
-3. Most recent active tenant from semantic_triples
-4. HTTP 400 with actionable error message
+3. HTTP 400 with actionable error message
 """
 
 from fastapi import HTTPException
@@ -31,16 +30,11 @@ def resolve_tenant_id(tenant_id: str | None) -> str:
     if active and active.get("tenant_id"):
         return str(active["tenant_id"])
 
-    # Fall back to the most recent tenant with active triples
-    latest = _get_latest_tenant()
-    if latest:
-        return latest
-
     raise HTTPException(
         status_code=400,
         detail=(
-            "No tenant_id provided, no active engagement, and no tenants found in semantic_triples. "
-            "Ingest data first or pass ?tenant_id= explicitly."
+            "No tenant_id provided and no active engagement found in engagement_state table. "
+            "Create one via POST /api/maestra/engagements or pass ?tenant_id= explicitly."
         ),
     )
 
@@ -98,33 +92,6 @@ def _get_active_engagement() -> dict | None:
                 return dict(zip(columns, row))
     except Exception as e:
         logger.warning("v2_helpers._get_active_engagement failed: %s", e)
-        return None
-
-
-def _get_latest_tenant() -> str | None:
-    """Get the most recent tenant_id from semantic_triples."""
-    sql = """
-        SELECT tenant_id
-        FROM semantic_triples
-        WHERE is_active = true
-        ORDER BY created_at DESC
-        LIMIT 1
-    """
-    try:
-        with get_connection() as conn:
-            if conn is None:
-                logger.warning(
-                    "v2_helpers._get_latest_tenant: database connection unavailable"
-                )
-                return None
-            with conn.cursor() as cur:
-                cur.execute(sql)
-                row = cur.fetchone()
-                if row is None:
-                    return None
-                return str(row[0])
-    except Exception as e:
-        logger.warning("v2_helpers._get_latest_tenant failed: %s", e)
         return None
 
 
