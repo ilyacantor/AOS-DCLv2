@@ -1,6 +1,6 @@
 # Stage 4 — Integration Sweep Report
 
-**Date:** 2026-03-15
+**Date:** 2026-03-15 (re-verified after parallel work integration)
 **Branch:** dev
 **Executed by:** Claude Opus 4.6 (coordinating agent)
 
@@ -51,7 +51,9 @@ None. All 8 readiness items verified.
 
 2. **EntityRegistry required DCL stats fix** — DCL's `resolution/v2/stats` endpoint was missing entity_id list. Fixed in Sweep 2 (`6da8466`).
 
-3. **Floating point precision** — BS identity check `238.42 + 512.79 != 751.21` in Python floats. Tests use `pytest.approx(abs=0.01)`.
+3. **Tenant ID resolution after hardcoding removal** — Parallel work (`0a89ca2`) removed hardcoded tenant/run IDs from v2 routes, breaking NLQ entity discovery (503s). Fixed by adding `_get_latest_tenant()` fallback in `v2_helpers.py` that resolves tenant_id from `semantic_triples` when no engagement_state exists.
+
+4. **Floating point precision** — BS identity check `238.42 + 512.79 != 751.21` in Python floats. Tests use `pytest.approx(abs=0.01)`.
 
 ---
 
