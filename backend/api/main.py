@@ -77,6 +77,7 @@ from backend.api.routes.reports_combining_v2 import router as reports_combining_
 from backend.api.routes.reports_overlap_v2 import router as reports_overlap_v2_router
 from backend.api.routes.reports_bridge_v2 import router as reports_bridge_v2_router
 from backend.api.routes.reports_whatif_v2 import router as reports_whatif_v2_router
+from backend.api.routes.triple_monitor import router as triple_monitor_router
 
 logger = get_logger(__name__)
 
@@ -328,6 +329,7 @@ app.include_router(reports_combining_v2_router)
 app.include_router(reports_overlap_v2_router)
 app.include_router(reports_bridge_v2_router)
 app.include_router(reports_whatif_v2_router)
+app.include_router(triple_monitor_router)
 
 
 # =============================================================================

@@ -13,8 +13,9 @@ import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import { UserGuide } from './components/UserGuide';
 import { ReconciliationPanel } from './components/ReconciliationPanel';
 import { IngestionPanel } from './components/IngestionPanel';
+import { TriplesPanel } from './components/TriplesPanel';
 
-type MainView = 'graph' | 'dashboard' | 'guide' | 'recon' | 'ingest';
+type MainView = 'graph' | 'dashboard' | 'triples' | 'guide' | 'recon' | 'ingest';
 
 const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO', 'CHRO'];
 
@@ -238,9 +239,9 @@ function App() {
   const navTabs: { id: MainView; label: string }[] = [
     { id: 'graph', label: 'Graph' },
     { id: 'dashboard', label: 'Dashboard' },
+    { id: 'triples', label: 'Triples' },
     { id: 'recon', label: 'Recon' },
     { id: 'ingest', label: 'Ingest' },
-    { id: 'guide', label: 'Guide' },
   ];
 
   return (
@@ -272,6 +273,19 @@ function App() {
 
           {/* Spacer */}
           <div className="flex-1" />
+
+          {/* Guide button — far right */}
+          <button
+            onClick={() => setMainView('guide')}
+            className={`px-2.5 py-1.5 text-sm rounded transition-colors ${
+              mainView === 'guide'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+            }`}
+            title="Guide"
+          >
+            ?
+          </button>
 
           {/* Controls for graph/dashboard views */}
           <div className="flex items-center gap-3 text-sm">
@@ -344,7 +358,9 @@ function App() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        {mainView === 'ingest' ? (
+        {mainView === 'triples' ? (
+          <TriplesPanel />
+        ) : mainView === 'ingest' ? (
           <IngestionPanel />
         ) : mainView === 'recon' ? (
           <ReconciliationPanel runId={runId} />
