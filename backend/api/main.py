@@ -71,6 +71,11 @@ from backend.api.routes.graph_traversal import router as graph_traversal_router
 from backend.api.routes.reports import router as reports_router
 from backend.api.routes.maestra import router as maestra_router
 from backend.api.routes.ingest_triples import router as ingest_triples_router
+from backend.api.routes.resolution_v2 import router as resolution_v2_router
+from backend.api.routes.reports_combining_v2 import router as reports_combining_v2_router
+from backend.api.routes.reports_overlap_v2 import router as reports_overlap_v2_router
+from backend.api.routes.reports_bridge_v2 import router as reports_bridge_v2_router
+from backend.api.routes.reports_whatif_v2 import router as reports_whatif_v2_router
 
 logger = get_logger(__name__)
 
@@ -312,6 +317,11 @@ app.include_router(graph_traversal_router)
 app.include_router(reports_router)
 app.include_router(maestra_router)
 app.include_router(ingest_triples_router)
+app.include_router(resolution_v2_router)
+app.include_router(reports_combining_v2_router)
+app.include_router(reports_overlap_v2_router)
+app.include_router(reports_bridge_v2_router)
+app.include_router(reports_whatif_v2_router)
 
 
 # =============================================================================
