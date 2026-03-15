@@ -215,6 +215,56 @@ class TripleStore:
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
+    def count_active(self, tenant_id: str | None = None) -> int:
+        """Count all active triples, optionally filtered by tenant."""
+        if tenant_id:
+            sql = "SELECT COUNT(*) FROM semantic_triples WHERE is_active = true AND tenant_id = %s"
+            params: tuple = (tenant_id,)
+        else:
+            sql = "SELECT COUNT(*) FROM semantic_triples WHERE is_active = true"
+            params = ()
+
+        with get_connection() as conn:
+            if conn is None:
+                raise RuntimeError(
+                    "TripleStore.count_active failed: database connection unavailable."
+                )
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                return cur.fetchone()[0]
+
+    def get_sankey_aggregation(self, tenant_id: str | None = None) -> list[dict]:
+        """Aggregate triples for Sankey visualization.
+
+        Returns rows of {source_system, domain, entity_id, triple_count}
+        grouped by source_system × root concept domain × entity_id.
+        """
+        clauses = ["is_active = true"]
+        params: list = []
+        if tenant_id:
+            clauses.append("tenant_id = %s")
+            params.append(tenant_id)
+
+        where = " AND ".join(clauses)
+        sql = (
+            f"SELECT source_system, split_part(concept, '.', 1) AS domain, "
+            f"entity_id, COUNT(*) AS triple_count "
+            f"FROM semantic_triples WHERE {where} "
+            f"GROUP BY source_system, split_part(concept, '.', 1), entity_id "
+            f"ORDER BY triple_count DESC"
+        )
+
+        with get_connection() as conn:
+            if conn is None:
+                raise RuntimeError(
+                    "TripleStore.get_sankey_aggregation failed: database connection unavailable. "
+                    "Check DATABASE_URL and Supabase connectivity."
+                )
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                columns = [desc[0] for desc in cur.description]
+                return [dict(zip(columns, row)) for row in cur.fetchall()]
+
     def delete_by_run(self, run_id: str) -> int:
         """Hard-delete all triples for a run (test cleanup only)."""
         sql = "DELETE FROM semantic_triples WHERE run_id = %s"

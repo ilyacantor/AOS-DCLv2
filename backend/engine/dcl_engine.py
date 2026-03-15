@@ -15,6 +15,7 @@ from backend.engine.persona_view import PersonaView
 from backend.engine.edge_index import EdgeIndex
 from backend.semantic_mapper import SemanticMapper
 from backend.eval.mapping_evaluator import MappingEvaluator
+from backend.db.triple_store import TripleStore
 from backend.utils.log_utils import get_logger
 from backend.core.constants import utc_now
 
@@ -42,10 +43,27 @@ class DCLEngine:
 
         self.narration.add_message(run_id, "Engine", f"Starting DCL engine in {mode} mode, {run_mode} run mode")
 
+        # ── Farm mode: build graph directly from semantic_triples in PG ──
+        if mode == "Farm":
+            triple_result = self._try_build_from_triples(
+                run_id=run_id,
+                run_mode=run_mode,
+                personas=personas,
+                start_time=start_time,
+                metrics=metrics,
+            )
+            if triple_result is not None:
+                return triple_result
+
+            # No triples found — fall through to AAM path as last resort
+            self.narration.add_message(
+                run_id, "Engine",
+                "No semantic triples in PG — falling through to AAM schema path"
+            )
+
         payload_kpis: Optional[Dict[str, Any]] = None
 
-        # Single schema source: AAM pipe exports. AAM is the authority for
-        # pipe schemas. "Farm" and "AAM" are treated identically.
+        # AAM pipe exports — used when mode=AAM or when Farm has no triples
         sources, payload_kpis = SchemaLoader.load_aam_schemas(self.narration, run_id, source_limit=source_limit, aod_run_id=aod_run_id)
         self.narration.add_message(run_id, "Engine", f"Loaded {len(sources)} sources (source_limit={source_limit})")
 
@@ -118,14 +136,9 @@ class DCLEngine:
                 run_id, "Engine", 
                 f"Running semantic mapper for {len(sources_needing_mappings)} sources without stored mappings: {[s.id for s in sources_needing_mappings]}"
             )
-            demo_concepts = [
-                {'id': c.id, 'name': c.name, 'description': c.description,
-                 'example_fields': c.example_fields}
-                for c in ontology
-            ] if mode == "Demo" else None
             new_mappings, stats = semantic_mapper.run_mapping(
                 sources_needing_mappings, mode="heuristic", clear_existing=False,
-                edge_index=edge_index, ontology_concepts=demo_concepts
+                edge_index=edge_index,
             )
             stored_mappings.extend(new_mappings)
             metrics.aam_edge_hits = stats.get('aam_edge_hits', 0)
@@ -265,6 +278,234 @@ class DCLEngine:
         
         return snapshot, metrics
     
+    def _try_build_from_triples(
+        self,
+        run_id: str,
+        run_mode: str,
+        personas: List[Persona],
+        start_time: float,
+        metrics: RunMetrics,
+    ) -> Optional[tuple[GraphSnapshot, RunMetrics]]:
+        """Attempt to build the Sankey graph from semantic_triples in PG.
+
+        Returns (snapshot, metrics) if triples exist, None otherwise.
+        """
+        triple_store = TripleStore()
+
+        try:
+            triple_count = triple_store.count_active()
+        except Exception as e:
+            logger.warning(f"Triple count check failed: {e}")
+            self.narration.add_message(
+                run_id, "Engine",
+                f"Could not check semantic_triples: {e}"
+            )
+            return None
+
+        if triple_count == 0:
+            return None
+
+        self.narration.add_message(
+            run_id, "Engine",
+            f"Found {triple_count:,} active semantic triples in PG — building Sankey from triple data"
+        )
+
+        try:
+            sankey_rows = triple_store.get_sankey_aggregation()
+        except Exception as e:
+            logger.error(f"Sankey aggregation query failed: {e}", exc_info=True)
+            raise RuntimeError(
+                f"DCL could not query semantic_triples for Sankey aggregation: {e}. "
+                f"Check DATABASE_URL and Supabase connectivity."
+            ) from e
+
+        if not sankey_rows:
+            self.narration.add_message(run_id, "Engine", "Sankey aggregation returned 0 rows")
+            return None
+
+        graph = self._build_graph_from_triples(sankey_rows, personas, run_id)
+
+        processing_time = (time.time() - start_time) * 1000
+        metrics.processing_ms = processing_time
+        metrics.total_mappings = len(sankey_rows)
+
+        # Collect distinct sources and domains for meta
+        source_names = sorted({r["source_system"] for r in sankey_rows})
+        domains = sorted({r["domain"] for r in sankey_rows})
+        entities = sorted({r["entity_id"] for r in sankey_rows if r.get("entity_id")})
+
+        snapshot = GraphSnapshot(
+            nodes=graph["nodes"],
+            links=graph["links"],
+            meta={
+                "mode": "Farm",
+                "runId": run_id,
+                "snapshotName": "",
+                "aodRunId": "",
+                "generatedAt": utc_now(),
+                "stats": {
+                    "sources": len(source_names),
+                    "ontology_concepts": len(domains),
+                    "mappings": len(sankey_rows),
+                    "triple_count": triple_count,
+                    "personas": [p.value for p in personas],
+                    "entities": entities,
+                },
+                "sourceCanonicalIds": source_names,
+                "sourceNames": source_names,
+                "sourceFabricPlanes": [],
+            }
+        )
+
+        self.narration.add_message(
+            run_id, "Engine",
+            f"Graph built from triples: {len(graph['nodes'])} nodes, "
+            f"{len(graph['links'])} links, {len(source_names)} sources, "
+            f"{len(domains)} domains, {len(entities)} entities "
+            f"in {processing_time:.0f}ms"
+        )
+
+        return snapshot, metrics
+
+    def _build_graph_from_triples(
+        self,
+        sankey_rows: List[Dict[str, Any]],
+        personas: List[Persona],
+        run_id: str,
+    ) -> Dict[str, List]:
+        """Build the 4-layer Sankey graph from pre-aggregated triple data.
+
+        Each sankey_row has: source_system, domain, entity_id, triple_count.
+        """
+        nodes: List[GraphNode] = []
+        links: List[GraphLink] = []
+
+        # ── L0: Pipeline root ──
+        pipe_id = "pipe_farm"
+        source_systems: Dict[str, int] = {}  # source → total triple count
+        domains: Dict[str, int] = {}          # domain → total triple count
+        for row in sankey_rows:
+            src = row["source_system"]
+            dom = row["domain"]
+            cnt = row["triple_count"]
+            source_systems[src] = source_systems.get(src, 0) + cnt
+            domains[dom] = domains.get(dom, 0) + cnt
+
+        nodes.append(GraphNode(
+            id=pipe_id,
+            label="Farm Pipeline",
+            level="L0",
+            kind="pipe",
+            group="Farm",
+            status="ok",
+            metrics={"source_count": len(source_systems)}
+        ))
+
+        # ── L1: Source system nodes ──
+        for src, total_count in sorted(source_systems.items()):
+            source_id = f"source_{src}"
+            nodes.append(GraphNode(
+                id=source_id,
+                label=src,
+                level="L1",
+                kind="source",
+                group="Farm",
+                status="ok",
+                metrics={
+                    "triple_count": total_count,
+                    "tables": 0,
+                    "fields": 0,
+                }
+            ))
+            links.append(GraphLink(
+                id=f"link_pipe_{src}",
+                source=pipe_id,
+                target=source_id,
+                value=float(total_count),
+                flow_type="schema",
+                info_summary=f"{total_count:,} triples from {src}",
+            ))
+
+        # ── L1→L2: Source→Domain mapping links ──
+        # Aggregate by (source_system, domain) across entities
+        source_domain_agg: Dict[tuple, int] = {}
+        for row in sankey_rows:
+            key = (row["source_system"], row["domain"])
+            source_domain_agg[key] = source_domain_agg.get(key, 0) + row["triple_count"]
+
+        for (src, dom), count in source_domain_agg.items():
+            source_id = f"source_{src}"
+            concept_id = f"ontology_{dom}"
+            link_id = f"link_{src}_{dom}_{uuid.uuid4().hex[:8]}"
+            links.append(GraphLink(
+                id=link_id,
+                source=source_id,
+                target=concept_id,
+                value=float(count),
+                confidence=1.0,
+                flow_type="mapping",
+                info_summary=f"{src} → {dom} ({count:,} triples)",
+            ))
+
+        # ── L2: Concept domain nodes ──
+        for dom, total_count in sorted(domains.items()):
+            concept_id = f"ontology_{dom}"
+            # Collect source hierarchy for this domain
+            source_hierarchy: Dict[str, Dict] = {}
+            for row in sankey_rows:
+                if row["domain"] == dom:
+                    src = row["source_system"]
+                    if src not in source_hierarchy:
+                        source_hierarchy[src] = {}
+                    eid = row.get("entity_id", "unknown")
+                    source_hierarchy[src][eid] = row["triple_count"]
+
+            nodes.append(GraphNode(
+                id=concept_id,
+                label=dom.replace("_", " ").title(),
+                level="L2",
+                kind="ontology",
+                group="Ontology",
+                status="ok",
+                metrics={
+                    "description": f"Semantic domain: {dom}",
+                    "input_count": total_count,
+                    "explanation": f"Derived from {total_count:,} triples",
+                    "contributing_fields": [],
+                    "source_hierarchy": source_hierarchy,
+                }
+            ))
+
+        # ── L3: Persona nodes + L2→L3 consumption links ──
+        persona_concepts = self.persona_view.get_relevant_concepts(personas)
+
+        for persona in personas:
+            bll_id = f"bll_{persona.value.lower()}"
+            nodes.append(GraphNode(
+                id=bll_id,
+                label=f"BLL {persona.value}",
+                level="L3",
+                kind="bll",
+                group="Business Logic",
+                status="ok",
+                metrics={"persona": persona.value}
+            ))
+
+            relevant_concepts = persona_concepts.get(persona.value, [])
+            for concept_id in relevant_concepts:
+                if concept_id in domains:
+                    link_id = f"link_{concept_id}_{persona.value}_{uuid.uuid4().hex[:8]}"
+                    links.append(GraphLink(
+                        id=link_id,
+                        source=f"ontology_{concept_id}",
+                        target=bll_id,
+                        value=float(domains[concept_id]),
+                        flow_type="consumption",
+                        info_summary=f"{concept_id} consumed by {persona.value} BLL",
+                    ))
+
+        return {"nodes": nodes, "links": links}
+
     def _build_graph(
         self,
         mode: str,
@@ -302,7 +543,7 @@ class DCLEngine:
         # Decide aggregation strategy: fabric-level for 30+ pipes,
         # individual nodes when under threshold for readability.
         # Both AAM and Farm sources carry fabric_plane from pipe_store
-        # (populated by AAM's export-pipes). Demo mode never has fabric tags.
+        # (populated by AAM's export-pipes).
         use_fabric_aggregation = (
             mode in ("AAM", "Farm")
             and len(sources) >= 30
@@ -401,7 +642,7 @@ class DCLEngine:
                         })
 
         else:
-            # ── Individual source nodes: <30 pipes or Demo mode ──
+            # ── Individual source nodes: <30 pipes ──
             source_mapping_count = {}
             for source in sources:
                 source_id = f"source_{source.id}"

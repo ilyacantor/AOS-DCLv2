@@ -55,7 +55,7 @@ export function UserGuide() {
             <div className="flex items-start gap-3">
               <span className="w-24 shrink-0 font-medium text-muted-foreground">L0 - Pipeline</span>
               <span className="text-foreground/80">
-                Entry point showing which data mode is active (Demo or Farm)
+                Entry point showing which data mode is active (Farm or AAM)
               </span>
             </div>
             <div className="flex items-start gap-3">
@@ -140,8 +140,8 @@ export function UserGuide() {
             <div className="bg-card border border-border rounded-lg p-4">
               <h3 className="font-medium text-foreground mb-2">Data Mode</h3>
               <ul className="text-foreground/80 space-y-1 list-disc list-inside">
-                <li><strong>Demo</strong> — Pre-configured schemas from CSV files (training/demos)</li>
-                <li><strong>Farm</strong> — Live schemas from AOS-Farm API (production discovery)</li>
+                <li><strong>Farm</strong> — Semantic triples from Farm-ingested data in PG (default)</li>
+                <li><strong>AAM</strong> — Live pipe schemas from AAM export</li>
               </ul>
             </div>
             <div className="bg-card border border-border rounded-lg p-4">
