@@ -6,43 +6,52 @@ from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
-def _load_persona_concepts_from_yaml() -> Dict[str, List[str]]:
-    """Load persona→concept mappings from config/persona_profiles.yaml."""
+
+def _load_persona_domains() -> Dict[str, List[str]]:
+    """Load persona→domain mappings from config/persona_domains.yaml.
+
+    This is the single source of truth for which triple domains each
+    persona cares about.  Raises RuntimeError if the file is missing
+    or unparseable — no silent fallback.
+    """
     import yaml
     yaml_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-        "config", "persona_profiles.yaml"
+        "config", "persona_domains.yaml",
     )
     try:
         with open(yaml_path, "r") as f:
             data = yaml.safe_load(f)
-        result: Dict[str, List[str]] = {}
-        for persona in data.get("personas", []):
-            key = persona.get("persona_key", "")
-            concepts = [
-                cr["concept_id"]
-                for cr in persona.get("concept_relevance", [])
-            ]
-            result[key] = concepts
-        return result
+    except FileNotFoundError:
+        raise RuntimeError(
+            f"persona_domains.yaml not found at {yaml_path} — "
+            "cannot determine persona→domain mapping"
+        )
     except Exception as e:
-        logger.warning(f"Failed to load persona_profiles.yaml: {e}")
-        return {}
+        raise RuntimeError(
+            f"Failed to parse persona_domains.yaml at {yaml_path}: {e}"
+        )
+
+    personas_block = data.get("personas")
+    if not personas_block or not isinstance(personas_block, dict):
+        raise RuntimeError(
+            f"persona_domains.yaml at {yaml_path} has no valid 'personas' mapping"
+        )
+
+    result: Dict[str, List[str]] = {}
+    for persona_key, cfg in personas_block.items():
+        domains = cfg.get("domains", [])
+        if not isinstance(domains, list) or not domains:
+            raise RuntimeError(
+                f"persona_domains.yaml: persona '{persona_key}' has no domains list"
+            )
+        result[persona_key] = domains
+
+    logger.info(f"Loaded persona domain mapping for {len(result)} personas from {yaml_path}")
+    return result
 
 
-# Hardcoded defaults matching deployed AOS-DCLv2 persona set (8 unique concepts)
-_HARDCODED_DEFAULTS = {
-    "CFO": ["revenue", "cost", "account", "date"],
-    "CRO": ["account", "opportunity", "revenue", "health", "date"],
-    "COO": ["usage", "health", "account", "date"],
-    "CTO": ["aws_resource", "usage", "cost", "health", "date"],
-    "CHRO": ["date"],
-}
-
-# Use hardcoded defaults for Demo mode determinism.
-# YAML loader remains available for other consumers (NLQ, config sync).
-# DB path still takes priority when available (production).
-DEFAULT_PERSONA_CONCEPTS = _HARDCODED_DEFAULTS
+PERSONA_DOMAIN_MAPPING: Dict[str, List[str]] = _load_persona_domains()
 
 
 class PersonaView:
@@ -60,13 +69,14 @@ class PersonaView:
             self._use_defaults = False
     
     def _get_pool(self):
+        from backend.semantic_mapper.persist_mappings import MappingPersistence
         try:
-            from backend.semantic_mapper.persist_mappings import MappingPersistence
             persistence = MappingPersistence()
             return persistence
         except Exception as e:
-            logger.warning(f"Failed to get connection pool: {e}")
-            return None
+            raise RuntimeError(
+                f"PersonaView failed to create MappingPersistence connection pool: {e}"
+            ) from e
 
     def get_relevant_concepts(
         self,
@@ -84,11 +94,8 @@ class PersonaView:
         if PersonaView._concepts_cache is not None and (now - PersonaView._cache_time) < self.CACHE_TTL:
             return self._filter_cached_concepts(personas, available_concepts)
 
-        pool = self._get_pool()
-        if pool is None:
-            return self._get_defaults(personas, available_concepts)
-        
         try:
+            pool = self._get_pool()
             with pool._get_connection() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute("""
@@ -97,22 +104,22 @@ class PersonaView:
                         JOIN persona_concept_relevance pcr ON pp.id = pcr.persona_id
                         ORDER BY pp.persona_key, pcr.relevance DESC
                     """)
-                    
+
                     all_concepts: Dict[str, List[str]] = {}
                     for row in cursor.fetchall():
                         persona_key = row[0]
                         concept_id = row[1]
-                        
+
                         if persona_key not in all_concepts:
                             all_concepts[persona_key] = []
                         all_concepts[persona_key].append(concept_id)
-                    
+
                     PersonaView._concepts_cache = all_concepts
                     PersonaView._cache_time = time.time()
                     logger.info(f"Cached persona concepts for {len(all_concepts)} personas")
-                    
+
                     return self._filter_cached_concepts(personas, available_concepts)
-                    
+
         except Exception as e:
             logger.warning(f"Failed to load persona concepts from DB: {e}. Using defaults.")
             return self._get_defaults(personas, available_concepts)
@@ -124,7 +131,7 @@ class PersonaView:
     ) -> Dict[str, List[str]]:
         result = {}
         for persona in personas:
-            concepts = DEFAULT_PERSONA_CONCEPTS.get(persona.value, [])
+            concepts = PERSONA_DOMAIN_MAPPING.get(persona.value, [])
             if available_concepts is not None:
                 concepts = [c for c in concepts if c in available_concepts]
             result[persona.value] = concepts
@@ -141,7 +148,7 @@ class PersonaView:
         result = {}
         for persona in personas:
             concepts = PersonaView._concepts_cache.get(persona.value, 
-                       DEFAULT_PERSONA_CONCEPTS.get(persona.value, []))
+                       PERSONA_DOMAIN_MAPPING.get(persona.value, []))
             if available_concepts is not None:
                 concepts = [c for c in concepts if c in available_concepts]
             result[persona.value] = list(concepts)
@@ -168,19 +175,15 @@ class PersonaView:
     ) -> float:
 
         if self._use_defaults:
-            concepts = DEFAULT_PERSONA_CONCEPTS.get(persona.value, [])
+            concepts = PERSONA_DOMAIN_MAPPING.get(persona.value, [])
             return 0.8 if concept_id in concepts else 0.0
         
         if PersonaView._concepts_cache is not None:
             concepts = PersonaView._concepts_cache.get(persona.value, [])
             return 0.8 if concept_id in concepts else 0.0
 
-        pool = self._get_pool()
-        if pool is None:
-            concepts = DEFAULT_PERSONA_CONCEPTS.get(persona.value, [])
-            return 0.8 if concept_id in concepts else 0.0
-        
         try:
+            pool = self._get_pool()
             with pool._get_connection() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute("""
@@ -194,7 +197,7 @@ class PersonaView:
                     return row[0] if row else 0.0
         except Exception as e:
             logger.warning(f"Failed to get relevance score: {e}")
-            concepts = DEFAULT_PERSONA_CONCEPTS.get(persona.value, [])
+            concepts = PERSONA_DOMAIN_MAPPING.get(persona.value, [])
             return 0.8 if concept_id in concepts else 0.0
     
     @classmethod
