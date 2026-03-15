@@ -336,6 +336,17 @@ class EntityResolutionV2:
 
         total = sum(status_counts.values())
 
+        # Distinct entity_ids from triples (for NLQ EntityRegistry discovery)
+        sql_entities = """
+            SELECT DISTINCT entity_id
+            FROM semantic_triples
+            WHERE tenant_id = %s AND run_id = %s AND is_active = true
+              AND entity_id IS NOT NULL
+            ORDER BY entity_id
+        """
+        entity_rows = self._query(sql_entities, [self.tenant_id, self.run_id])
+        entities = [r["entity_id"] for r in entity_rows]
+
         return {
             "total": total,
             "pending": status_counts.get("pending", 0),
@@ -343,6 +354,7 @@ class EntityResolutionV2:
             "rejected": status_counts.get("rejected", 0),
             "escalated": status_counts.get("escalated", 0),
             "by_domain": by_domain,
+            "entities": entities,
         }
 
     def _set_canonical_on_triples(self, concept: str, canonical_id: str) -> int:
