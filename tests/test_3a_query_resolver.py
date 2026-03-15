@@ -7,9 +7,8 @@ import pytest
 from backend.engine.query_resolver_v2 import TripleQueryResolver
 from backend.engine.materialized_views import MaterializedViews
 
-# === SEED CONSTANTS ===
-TENANT_ID = "400aa910-a6b4-5d44-ab9f-e6aecde37721"
-RUN_ID = "6754a9d7-387a-553f-8c4c-978bfbbfca13"
+# === SEED CONSTANTS (from seed_manifest.json via conftest) ===
+from tests.conftest import TENANT_ID, RUN_ID
 
 # === GROUND TRUTH — exact values from PG ===
 # Revenue

@@ -10,8 +10,9 @@ Mounts at /api/dcl/reports/v2:
 
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
+from backend.api.routes.v2_helpers import resolve_tenant_and_run
 from backend.engine.combining_v2 import CombiningEngineV2
 from backend.utils.log_utils import get_logger
 
@@ -19,19 +20,17 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/dcl/reports/v2", tags=["Reports V2"])
 
-_TENANT_ID = "400aa910-a6b4-5d44-ab9f-e6aecde37721"
-_RUN_ID = "6754a9d7-387a-553f-8c4c-978bfbbfca13"
-
-
-def _get_engine() -> CombiningEngineV2:
-    return CombiningEngineV2(_TENANT_ID, _RUN_ID)
-
 
 @router.get("/combining/income-statement")
-async def get_combining_income_statement_v2(period: str = "2025-Q1"):
+async def get_combining_income_statement_v2(
+    period: str = "2025-Q1",
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+):
     """Four-column combining income statement from semantic_triples."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
-        engine = _get_engine()
+        engine = CombiningEngineV2(tid, rid)
         return engine.get_combining_income_statement(period)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -40,10 +39,15 @@ async def get_combining_income_statement_v2(period: str = "2025-Q1"):
 
 
 @router.get("/combining/balance-sheet")
-async def get_combining_balance_sheet_v2(period: str = "2025-Q1"):
+async def get_combining_balance_sheet_v2(
+    period: str = "2025-Q1",
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+):
     """Four-column combining balance sheet from semantic_triples."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
-        engine = _get_engine()
+        engine = CombiningEngineV2(tid, rid)
         return engine.get_combining_balance_sheet(period)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -52,10 +56,15 @@ async def get_combining_balance_sheet_v2(period: str = "2025-Q1"):
 
 
 @router.get("/combining/cash-flow")
-async def get_combining_cash_flow_v2(period: str = "2025-Q1"):
+async def get_combining_cash_flow_v2(
+    period: str = "2025-Q1",
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+):
     """Four-column combining cash flow from semantic_triples."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
-        engine = _get_engine()
+        engine = CombiningEngineV2(tid, rid)
         return engine.get_combining_cash_flow(period)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -64,10 +73,15 @@ async def get_combining_cash_flow_v2(period: str = "2025-Q1"):
 
 
 @router.get("/cofa-adjustments")
-async def get_cofa_adjustments_v2(period: Optional[str] = None):
+async def get_cofa_adjustments_v2(
+    period: Optional[str] = None,
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+):
     """Get all COFA adjustments from semantic_triples."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
-        engine = _get_engine()
+        engine = CombiningEngineV2(tid, rid)
         return engine.get_cofa_adjustments(period=period)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

@@ -14,12 +14,14 @@ from backend.utils.log_utils import get_logger
 logger = get_logger(__name__)
 
 
-def _to_float(value) -> float:
-    """Convert a JSONB value to float."""
+def _to_float(value, context: str = "") -> float:
+    """Convert a JSONB value to float. Raises on failure — financial data must not silently become zero."""
+    if value is None:
+        raise ValueError(f"Null numeric value{' in ' + context if context else ''}")
     try:
         return float(value)
-    except (TypeError, ValueError):
-        return 0.0
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"Cannot convert {value!r} to numeric{' in ' + context if context else ''}: {e}")
 
 
 class CrossSellEngineV2:
@@ -79,7 +81,7 @@ class CrossSellEngineV2:
         for concept, props in sorted(services.items()):
             result.append({
                 "concept": concept,
-                "typical_acv": _to_float(props.get("typical_acv", 0)),
+                "typical_acv": _to_float(props.get("typical_acv", 0), context=f"service {concept} typical_acv"),
                 "description": str(props.get("description", "")),
             })
         return result

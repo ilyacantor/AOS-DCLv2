@@ -14,6 +14,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from backend.api.routes.v2_helpers import resolve_tenant_and_run
 from backend.engine.combining_v2 import CombiningEngineV2
 from backend.engine.overlap_v2 import OverlapEngineV2
 from backend.engine.cross_sell_v2 import CrossSellEngineV2
@@ -27,14 +28,6 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/reports", tags=["Reports (Compat → V2)"])
 
-# Seed defaults — same as v2 routes
-_DEFAULT_TENANT_ID = "400aa910-a6b4-5d44-ab9f-e6aecde37721"
-_DEFAULT_RUN_ID = "6754a9d7-387a-553f-8c4c-978bfbbfca13"
-
-
-def _tid_rid(tenant_id: str | None = None, run_id: str | None = None):
-    return tenant_id or _DEFAULT_TENANT_ID, run_id or _DEFAULT_RUN_ID
-
 
 # ---------------------------------------------------------------------------
 # Combining IS  (old: GET /api/reports/combining-is)
@@ -46,7 +39,7 @@ def combining_income_statement(
     run_id: Optional[str] = Query(None),
 ):
     """Compat: combining income statement via v2 engine."""
-    tid, rid = _tid_rid(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
         engine = CombiningEngineV2(tid, rid)
         return engine.get_combining_income_statement(period)
@@ -63,7 +56,7 @@ def entity_overlap(
     run_id: Optional[str] = Query(None),
 ):
     """Compat: overlap summary via v2 engine."""
-    tid, rid = _tid_rid(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
         engine = OverlapEngineV2(tid, rid)
         return engine.get_overlap_summary()
@@ -80,7 +73,7 @@ def cross_sell(
     run_id: Optional[str] = Query(None),
 ):
     """Compat: cross-sell summary via v2 engine."""
-    tid, rid = _tid_rid(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
         engine = CrossSellEngineV2(tid, rid)
         return engine.get_cross_sell_summary()
@@ -98,7 +91,7 @@ def ebitda_bridge(
     run_id: Optional[str] = Query(None),
 ):
     """Compat: EBITDA bridge via v2 engine."""
-    tid, rid = _tid_rid(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
         engine = EBITDABridgeV2(tid, rid)
         return engine.get_bridge(entity_id=entity_id)
@@ -116,7 +109,7 @@ def quality_of_earnings(
     run_id: Optional[str] = Query(None),
 ):
     """Compat: QoE summary via v2 engine."""
-    tid, rid = _tid_rid(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
         engine = QualityOfEarningsV2(tid, rid)
         return engine.get_qoe_summary(entity_id)
@@ -141,7 +134,7 @@ def what_if(
     run_id: Optional[str] = Query(None),
 ):
     """Compat: what-if scenario via v2 engine. Accepts 'levers' or 'adjustments'."""
-    tid, rid = _tid_rid(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     # Support both old 'levers' and new 'adjustments' field names
     adjustments = request.adjustments or request.levers or []
     try:
@@ -164,7 +157,7 @@ def dashboard(
     run_id: Optional[str] = Query(None),
 ):
     """Compat: persona dashboard via v2 engine resolver."""
-    tid, rid = _tid_rid(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
         resolver = TripleQueryResolver(tid, rid)
         entities = resolver._get_entities()

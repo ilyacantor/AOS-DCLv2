@@ -6,8 +6,7 @@ import pytest
 from backend.engine.ebitda_bridge_v2 import EBITDABridgeV2
 from backend.engine.qoe_v2 import QualityOfEarningsV2
 
-TENANT_ID = "400aa910-a6b4-5d44-ab9f-e6aecde37721"
-RUN_ID = "6754a9d7-387a-553f-8c4c-978bfbbfca13"
+from tests.conftest import TENANT_ID, RUN_ID
 
 M_ADJ_TOTAL = 143.25
 C_ADJ_TOTAL = 15.66

@@ -15,9 +15,10 @@ Mounts at /api/dcl/reports/v2:
 
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from backend.api.routes.v2_helpers import resolve_tenant_and_run
 from backend.engine.what_if_v2 import WhatIfEngineV2
 from backend.engine.revenue_bridge import RevenueBridgeV2
 from backend.utils.log_utils import get_logger
@@ -25,17 +26,6 @@ from backend.utils.log_utils import get_logger
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/dcl/reports/v2", tags=["Reports V2 - What-If & Revenue Bridge"])
-
-_TENANT_ID = "400aa910-a6b4-5d44-ab9f-e6aecde37721"
-_RUN_ID = "6754a9d7-387a-553f-8c4c-978bfbbfca13"
-
-
-def _get_whatif() -> WhatIfEngineV2:
-    return WhatIfEngineV2(_TENANT_ID, _RUN_ID)
-
-
-def _get_bridge() -> RevenueBridgeV2:
-    return RevenueBridgeV2(_TENANT_ID, _RUN_ID)
 
 
 # ---------------------------------------------------------------------------
@@ -74,10 +64,15 @@ class SaveScenarioRequest(BaseModel):
 
 
 @router.post("/whatif/scenario")
-async def apply_scenario(request: ScenarioRequest):
+async def apply_scenario(
+    request: ScenarioRequest,
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+):
     """Apply what-if adjustments to a baseline and compute impacts."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
-        engine = _get_whatif()
+        engine = WhatIfEngineV2(tid, rid)
         adjustments = [a.model_dump() for a in request.adjustments]
         return engine.apply_scenario(request.entity_id, request.period, adjustments)
     except ValueError as e:
@@ -87,10 +82,15 @@ async def apply_scenario(request: ScenarioRequest):
 
 
 @router.post("/whatif/compare")
-async def compare_scenarios(request: CompareRequest):
+async def compare_scenarios(
+    request: CompareRequest,
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+):
     """Compare multiple named scenarios side by side."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
-        engine = _get_whatif()
+        engine = WhatIfEngineV2(tid, rid)
         scenarios = {
             name: [a.model_dump() for a in adjs]
             for name, adjs in request.scenarios.items()
@@ -109,10 +109,13 @@ async def sensitivity_analysis(
     concept: str = "revenue.total",
     range_pct: float = 20.0,
     steps: int = 5,
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
 ):
     """Vary a single concept and show impact on EBITDA/net income."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
-        engine = _get_whatif()
+        engine = WhatIfEngineV2(tid, rid)
         return engine.sensitivity_analysis(entity_id, period, concept, range_pct, steps)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -121,10 +124,15 @@ async def sensitivity_analysis(
 
 
 @router.post("/whatif/save")
-async def save_scenario(request: SaveScenarioRequest):
+async def save_scenario(
+    request: SaveScenarioRequest,
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+):
     """Persist a scenario to the database."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
-        engine = _get_whatif()
+        engine = WhatIfEngineV2(tid, rid)
         adjustments = [a.model_dump() for a in request.adjustments]
         scenario_id = engine.save_scenario(
             request.name, request.entity_id, request.period, adjustments,
@@ -137,20 +145,29 @@ async def save_scenario(request: SaveScenarioRequest):
 
 
 @router.get("/whatif/scenarios")
-async def list_scenarios():
+async def list_scenarios(
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+):
     """List all saved scenarios."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
-        engine = _get_whatif()
+        engine = WhatIfEngineV2(tid, rid)
         return engine.list_scenarios()
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
 
 @router.get("/whatif/scenarios/{scenario_id}")
-async def load_scenario(scenario_id: str):
+async def load_scenario(
+    scenario_id: str,
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+):
     """Load a saved scenario and re-apply against current baselines."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
-        engine = _get_whatif()
+        engine = WhatIfEngineV2(tid, rid)
         return engine.load_scenario(scenario_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -168,10 +185,13 @@ async def get_revenue_bridge(
     entity_id: str = "meridian",
     period_from: Optional[str] = None,
     period_to: Optional[str] = None,
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
 ):
     """Revenue bridge between two periods."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
-        bridge = _get_bridge()
+        bridge = RevenueBridgeV2(tid, rid)
         if period_from is None or period_to is None:
             raise ValueError(
                 "Revenue bridge requires 'period_from' and 'period_to' query parameters. "
@@ -188,10 +208,13 @@ async def get_revenue_bridge(
 async def get_yoy_bridge(
     entity_id: str = "meridian",
     period: str = "2025-Q1",
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
 ):
     """Year-over-year revenue bridge."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
-        bridge = _get_bridge()
+        bridge = RevenueBridgeV2(tid, rid)
         return bridge.get_yoy_bridge(entity_id, period)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -203,10 +226,13 @@ async def get_yoy_bridge(
 async def get_combined_revenue_bridge(
     period_from: Optional[str] = None,
     period_to: Optional[str] = None,
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
 ):
     """Combined (all entities) revenue bridge."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
     try:
-        bridge = _get_bridge()
+        bridge = RevenueBridgeV2(tid, rid)
         if period_from is None or period_to is None:
             raise ValueError(
                 "Combined revenue bridge requires 'period_from' and 'period_to' query parameters."

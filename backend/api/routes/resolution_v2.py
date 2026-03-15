@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
 
+from backend.api.routes.v2_helpers import resolve_tenant_and_run
 from backend.engine.entity_resolution_v2 import EntityResolutionV2
 from backend.utils.log_utils import get_logger
 
@@ -15,17 +16,10 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/dcl/resolution/v2", tags=["Resolution V2"])
 
-# Seed constants — these match the 3B harness
-_DEFAULT_TENANT_ID = "400aa910-a6b4-5d44-ab9f-e6aecde37721"
-_DEFAULT_RUN_ID = "6754a9d7-387a-553f-8c4c-978bfbbfca13"
 
-
-def _get_resolver(tenant_id: str | None = None, run_id: str | None = None) -> EntityResolutionV2:
-    """Build a resolver from query params or defaults."""
-    return EntityResolutionV2(
-        tenant_id=tenant_id or _DEFAULT_TENANT_ID,
-        run_id=run_id or _DEFAULT_RUN_ID,
-    )
+def _get_resolver(tenant_id: str, run_id: str) -> EntityResolutionV2:
+    """Build a resolver from already-resolved tenant/run IDs."""
+    return EntityResolutionV2(tenant_id=tenant_id, run_id=run_id)
 
 
 class CreateWorkspacesRequest(BaseModel):
@@ -50,7 +44,8 @@ class DecisionRequest(BaseModel):
 @router.post("/create-workspaces")
 def create_workspaces(request: CreateWorkspacesRequest = CreateWorkspacesRequest()):
     """Create resolution workspaces from triple overlap."""
-    resolver = _get_resolver(request.tenant_id, request.run_id)
+    tid, rid = resolve_tenant_and_run(request.tenant_id, request.run_id)
+    resolver = _get_resolver(tid, rid)
     result = resolver.create_workspaces_from_overlap()
     return {"status": "ok", **result}
 
@@ -63,7 +58,8 @@ def list_workspaces(
     run_id: Optional[str] = Query(None),
 ):
     """List resolution workspaces with optional filters."""
-    resolver = _get_resolver(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    resolver = _get_resolver(tid, rid)
     workspaces = resolver.list_workspaces(domain=domain, status=status)
     return {"workspaces": workspaces, "count": len(workspaces)}
 
@@ -75,7 +71,8 @@ def get_workspace(
     run_id: Optional[str] = Query(None),
 ):
     """Get a single workspace by ID."""
-    resolver = _get_resolver(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    resolver = _get_resolver(tid, rid)
     try:
         ws = resolver.get_workspace(workspace_id)
         return ws
@@ -91,7 +88,8 @@ def confirm_match(
     run_id: Optional[str] = Query(None),
 ):
     """Confirm that overlapping concepts are the same real-world entity."""
-    resolver = _get_resolver(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    resolver = _get_resolver(tid, rid)
     try:
         ws = resolver.confirm_match(
             workspace_id, request.canonical_id, request.decided_by
@@ -109,7 +107,8 @@ def reject_match(
     run_id: Optional[str] = Query(None),
 ):
     """Reject the match — concepts are different entities."""
-    resolver = _get_resolver(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    resolver = _get_resolver(tid, rid)
     try:
         ws = resolver.reject_match(workspace_id, request.decided_by)
         return ws
@@ -125,7 +124,8 @@ def escalate(
     run_id: Optional[str] = Query(None),
 ):
     """Escalate for human review."""
-    resolver = _get_resolver(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    resolver = _get_resolver(tid, rid)
     try:
         ws = resolver.escalate(
             workspace_id, request.reason, request.decided_by
@@ -142,7 +142,8 @@ def undo_decision(
     run_id: Optional[str] = Query(None),
 ):
     """Undo a decision — reset to pending."""
-    resolver = _get_resolver(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    resolver = _get_resolver(tid, rid)
     try:
         ws = resolver.undo_decision(workspace_id)
         return ws
@@ -156,5 +157,6 @@ def get_stats(
     run_id: Optional[str] = Query(None),
 ):
     """Get resolution statistics."""
-    resolver = _get_resolver(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    resolver = _get_resolver(tid, rid)
     return resolver.get_resolution_stats()

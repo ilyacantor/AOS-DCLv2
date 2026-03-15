@@ -7,8 +7,7 @@ import uuid
 from backend.engine.entity_resolution_v2 import EntityResolutionV2
 from backend.core.db import get_connection
 
-TENANT_ID = "400aa910-a6b4-5d44-ab9f-e6aecde37721"
-RUN_ID = "6754a9d7-387a-553f-8c4c-978bfbbfca13"
+from tests.conftest import TENANT_ID, RUN_ID
 
 CUSTOMER_OVERLAP = 34
 VENDOR_OVERLAP = 170

@@ -143,14 +143,20 @@ class CombiningEngineV2:
                 return [(r[0], r[1], r[2]) for r in cur.fetchall()]
 
     def _compute_depreciation_adjustment(self, period: str) -> float:
-        """Compute depreciation adjustment from Cascadia's D&A for a period.
+        """Compute depreciation adjustment from entity B's D&A for a period.
 
-        Formula: -(cascadia_da / 3) rounded to 2 decimals.
+        Formula: -(entity_b_da / 3) rounded to 2 decimals.
         This matches the seed data where accelerated depreciation (3-year)
         is restated to straight-line (5-year) by removing 1/3 of the amount.
         """
         entities = self._resolver._get_entities()
-        entity_b = entities[1] if len(entities) >= 2 else "cascadia"
+        if len(entities) < 2:
+            raise ValueError(
+                f"Depreciation adjustment requires two entities. "
+                f"Found {len(entities)}: {entities} for "
+                f"tenant_id='{self.tenant_id}', run_id='{self.run_id}'"
+            )
+        entity_b = entities[1]
 
         da = self._resolver.get_metric(
             "pnl.depreciation_amortization", entity_b, period
