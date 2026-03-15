@@ -8,7 +8,7 @@ interface OverviewData {
   total_triples: number;
   active_triples: number;
   entities: { entity_id: string; triple_count: number; display_name: string }[];
-  domains: { domain: string; count: number }[];
+  domains: { domain: string; count: number; by_entity: Record<string, number> }[];
   periods: string[];
   last_ingest: { run_id: string; timestamp: string; triple_count: number } | null;
 }
@@ -474,7 +474,9 @@ export function TriplesPanel() {
                     <td className="px-3 py-1.5 font-mono font-semibold text-foreground">{d.domain}</td>
                     <td className="px-3 py-1.5 text-right font-mono text-foreground">{fmtNum(d.count)}</td>
                     {overview.entities.map((e) => (
-                      <td key={e.entity_id} className="px-3 py-1.5 text-right font-mono text-muted-foreground">-</td>
+                      <td key={e.entity_id} className="px-3 py-1.5 text-right font-mono text-muted-foreground">
+                        {d.by_entity[e.entity_id] != null ? fmtNum(d.by_entity[e.entity_id]) : '0'}
+                      </td>
                     ))}
                     <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">
                       {pct(d.count, overview.total_triples)}

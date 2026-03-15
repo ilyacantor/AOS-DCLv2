@@ -69,9 +69,9 @@ def triples_overview():
         "GROUP BY entity_id ORDER BY triple_count DESC"
     )
     sql_domains = (
-        "SELECT split_part(concept, '.', 1) AS domain, COUNT(*) AS cnt "
+        "SELECT split_part(concept, '.', 1) AS domain, entity_id, COUNT(*) AS cnt "
         "FROM semantic_triples WHERE is_active = true "
-        "GROUP BY domain ORDER BY cnt DESC"
+        "GROUP BY domain, entity_id ORDER BY domain, entity_id"
     )
     sql_periods = (
         "SELECT DISTINCT period FROM semantic_triples "
@@ -106,7 +106,15 @@ def triples_overview():
                 })
 
             cur.execute(sql_domains)
-            domains = [{"domain": r[0], "count": r[1]} for r in cur.fetchall()]
+            # Pivot per-entity counts into {domain, count, by_entity}
+            domain_map: dict[str, dict] = {}
+            for r in cur.fetchall():
+                domain, entity_id, cnt = r[0], r[1], r[2]
+                if domain not in domain_map:
+                    domain_map[domain] = {"domain": domain, "count": 0, "by_entity": {}}
+                domain_map[domain]["count"] += cnt
+                domain_map[domain]["by_entity"][entity_id] = cnt
+            domains = sorted(domain_map.values(), key=lambda d: d["count"], reverse=True)
 
             cur.execute(sql_periods)
             periods = [r[0] for r in cur.fetchall()]
@@ -354,9 +362,9 @@ def triples_identity_checks():
             pnl_fail = 0
             for eid in entity_ids:
                 for period in periods:
-                    revenue = _get_triple_value(cur, eid, "revenue", period)
-                    cogs_val = _get_triple_value(cur, eid, "cogs", period)
-                    opex_val = _get_triple_value(cur, eid, "opex", period)
+                    revenue = _get_triple_value(cur, eid, "revenue.total", period)
+                    cogs_val = _get_triple_value(cur, eid, "cogs.total", period)
+                    opex_val = _get_triple_value(cur, eid, "opex.total", period)
                     ebitda = _get_triple_value(cur, eid, "pnl.ebitda", period)
                     if any(v is None for v in [revenue, cogs_val, opex_val, ebitda]):
                         continue
@@ -393,9 +401,9 @@ def triples_identity_checks():
                 for i in range(len(sorted_periods) - 1):
                     p_curr = sorted_periods[i]
                     p_next = sorted_periods[i + 1]
-                    cash_curr = _get_triple_value(cur, eid, "cash_flow.ending_cash", p_curr)
+                    cash_curr = _get_triple_value(cur, eid, "asset.current.cash", p_curr)
                     net_change_next = _get_triple_value(cur, eid, "cash_flow.net_change", p_next)
-                    cash_next = _get_triple_value(cur, eid, "cash_flow.ending_cash", p_next)
+                    cash_next = _get_triple_value(cur, eid, "asset.current.cash", p_next)
                     if any(v is None for v in [cash_curr, net_change_next, cash_next]):
                         continue
                     lhs = cash_curr + net_change_next
