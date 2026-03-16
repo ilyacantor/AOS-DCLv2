@@ -112,9 +112,31 @@ export function MergePanel() {
   const [mergeStatus, setMergeStatus] = useState<string | null>(null);
   const [mergeError, setMergeError] = useState<string | null>(null);
   const [mergeCollapsedResponse, setMergeCollapsedResponse] = useState<string | null>(null);
+  const [mergeElapsed, setMergeElapsed] = useState(0);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mergeStartRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Live elapsed-seconds counter while merge is running
+  useEffect(() => {
+    if (mergeRunning) {
+      setMergeElapsed(0);
+      timerRef.current = setInterval(() => {
+        if (mergeStartRef.current > 0) {
+          setMergeElapsed(Math.floor((Date.now() - mergeStartRef.current) / 1000));
+        }
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [mergeRunning]);
 
   // --- Data fetching ---
 
@@ -191,6 +213,7 @@ export function MergePanel() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          session_id: `merge-${data.engagement_id || 'default'}`,
           engagement_id: data.engagement_id,
           message:
             "Perform COFA unification for this engagement. Read both entities' charts of accounts " +
@@ -451,10 +474,11 @@ export function MergePanel() {
         </div>
 
         {/* Progress / error bar */}
-        {mergeRunning && mergeStatus && (
+        {mergeRunning && (
           <div className="mt-2 flex items-center gap-2 text-sm text-amber-400">
             <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin shrink-0" />
-            <span>{mergeStatus}</span>
+            <span className="tabular-nums font-mono">{mergeElapsed}s</span>
+            {mergeStatus && <span>{mergeStatus}</span>}
           </div>
         )}
         {mergeError && (
