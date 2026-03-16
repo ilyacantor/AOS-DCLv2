@@ -46,21 +46,54 @@ def _serialize_value(val):
 # Entity resolution: query params → engagement_state → COFA distinct entities
 # ---------------------------------------------------------------------------
 
+def _get_cofa_entity_ids(cur) -> list[str]:
+    """Return distinct entity_ids that have active COFA triples, ordered alphabetically."""
+    cur.execute(
+        "SELECT DISTINCT entity_id FROM semantic_triples "
+        "WHERE is_active = true AND split_part(concept, '.', 1) = 'cofa' "
+        "ORDER BY entity_id"
+    )
+    return [r[0] for r in cur.fetchall()]
+
+
 def _resolve_entities(cur, acquirer_id: Optional[str], target_id: Optional[str]) -> tuple[str, str]:
     """Resolve acquirer and target entity IDs.
 
     Priority:
-    1. Explicit query params
-    2. engagement_state table (entity_a_id = acquirer, entity_b_id = target)
+    1. Explicit query params (validated against triple store)
+    2. engagement_state table, mapped to actual COFA entity_ids
     3. Distinct entities from COFA triples (alphabetical)
 
-    Raises HTTPException if fewer than 2 entities are available.
+    Raises HTTPException if fewer than 2 entities have COFA triples.
     """
-    # 1. Explicit params
+    cofa_entities = _get_cofa_entity_ids(cur)
+
+    if len(cofa_entities) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Need at least 2 entities with COFA triples to show merge view. "
+                f"Found {len(cofa_entities)}: {cofa_entities}. "
+                f"Ingest COFA data for both entities first, or set an engagement via the engagement API."
+            ),
+        )
+
+    # 1. Explicit params — validate they exist in triple store
     if acquirer_id and target_id:
+        missing = [eid for eid in (acquirer_id, target_id) if eid not in cofa_entities]
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Requested entity IDs {missing} have no COFA triples in the triple store. "
+                    f"Available COFA entities: {cofa_entities}. "
+                    f"Check entity_id values — they must match what was ingested."
+                ),
+            )
         return acquirer_id, target_id
 
-    # 2. Engagement state
+    # 2. Engagement state — map to actual COFA entity_ids
+    engagement_a, engagement_b = None, None
     try:
         cur.execute(
             "SELECT entity_a_id, entity_b_id FROM engagement_state "
@@ -68,27 +101,36 @@ def _resolve_entities(cur, acquirer_id: Optional[str], target_id: Optional[str])
         )
         row = cur.fetchone()
         if row and row[0] and row[1]:
-            return row[0], row[1]
+            engagement_a, engagement_b = row[0], row[1]
     except Exception as e:
         logger.debug(f"[merge] engagement_state lookup failed (non-fatal): {e}")
 
-    # 3. Distinct COFA entities
-    cur.execute(
-        "SELECT DISTINCT entity_id FROM semantic_triples "
-        "WHERE is_active = true AND split_part(concept, '.', 1) = 'cofa' "
-        "ORDER BY entity_id"
-    )
-    entities = [r[0] for r in cur.fetchall()]
-    if len(entities) < 2:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Need at least 2 entities with COFA triples to show merge view. "
-                f"Found {len(entities)}: {entities}. "
-                f"Ingest COFA data for both entities first, or set an engagement via the engagement API."
-            ),
+    if engagement_a and engagement_b:
+        # Direct match — engagement IDs exist in triple store
+        if engagement_a in cofa_entities and engagement_b in cofa_entities:
+            return engagement_a, engagement_b
+
+        # Case-insensitive match — engagement may use different casing
+        cofa_lower = {e.lower(): e for e in cofa_entities}
+        mapped_a = cofa_lower.get(engagement_a.lower())
+        mapped_b = cofa_lower.get(engagement_b.lower())
+        if mapped_a and mapped_b and mapped_a != mapped_b:
+            logger.info(
+                f"[merge] Mapped engagement entity IDs to COFA triple store: "
+                f"'{engagement_a}' → '{mapped_a}', '{engagement_b}' → '{mapped_b}'"
+            )
+            return mapped_a, mapped_b
+
+        # Engagement IDs don't match triple store — log clearly and fall through
+        logger.warning(
+            f"[merge] engagement_state entity IDs ('{engagement_a}', '{engagement_b}') "
+            f"do not match any COFA entity_ids in the triple store: {cofa_entities}. "
+            f"Falling through to COFA entity discovery. "
+            f"Fix: ensure engagement entity IDs match the entity_id values used during Farm ingestion."
         )
-    return entities[0], entities[1]
+
+    # 3. First two COFA entities alphabetically
+    return cofa_entities[0], cofa_entities[1]
 
 
 # ---------------------------------------------------------------------------
