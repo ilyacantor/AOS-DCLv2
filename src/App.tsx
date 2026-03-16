@@ -14,8 +14,9 @@ import { UserGuide } from './components/UserGuide';
 import { ReconciliationPanel } from './components/ReconciliationPanel';
 import { IngestionPanel } from './components/IngestionPanel';
 import { TriplesPanel } from './components/TriplesPanel';
+import { MergePanel } from './components/MergePanel';
 
-type MainView = 'graph' | 'dashboard' | 'triples' | 'guide' | 'recon' | 'ingest';
+type MainView = 'graph' | 'dashboard' | 'triples' | 'guide' | 'recon' | 'ingest' | 'merge';
 
 const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO', 'CHRO'];
 
@@ -253,6 +254,7 @@ function App() {
     { id: 'triples', label: 'Triples' },
     { id: 'recon', label: 'Recon' },
     { id: 'ingest', label: 'Ingest' },
+    { id: 'merge', label: 'Merge' },
   ];
 
   return (
@@ -369,7 +371,9 @@ function App() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        {mainView === 'triples' ? (
+        {mainView === 'merge' ? (
+          <MergePanel />
+        ) : mainView === 'triples' ? (
           <TriplesPanel />
         ) : mainView === 'ingest' ? (
           <IngestionPanel />
