@@ -203,8 +203,13 @@ export function MergePanel() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        const detail = typeof body.detail === 'string'
+          ? body.detail
+          : Array.isArray(body.detail)
+            ? body.detail.map((e: any) => e.msg || JSON.stringify(e)).join('; ')
+            : body.detail ? JSON.stringify(body.detail) : null;
         throw new Error(
-          body.detail || body.error || `Maestra returned HTTP ${res.status}: ${res.statusText}`
+          detail || body.error || `Maestra returned HTTP ${res.status}: ${res.statusText}`
         );
       }
 
