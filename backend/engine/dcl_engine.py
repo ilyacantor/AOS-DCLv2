@@ -382,6 +382,9 @@ class DCLEngine:
         else:
             source_run_id = ""
 
+        # Build a human-readable snapshot label from entity names
+        snapshot_label = " / ".join(entities) if entities else ""
+
         snapshot = GraphSnapshot(
             nodes=graph["nodes"],
             links=graph["links"],
@@ -389,7 +392,7 @@ class DCLEngine:
                 "mode": "Farm",
                 "runId": run_id,
                 "sourceRunId": source_run_id,
-                "snapshotName": "",
+                "snapshotName": snapshot_label,
                 "aodRunId": "",
                 "generatedAt": utc_now(),
                 "stats": {

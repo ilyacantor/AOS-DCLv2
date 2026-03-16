@@ -319,8 +319,7 @@ export function TriplesPanel() {
                 <span className="text-muted-foreground ml-1">triples</span>
               </span>
               <span>
-                <span className="text-foreground font-semibold">{overview.entities.length}</span>
-                <span className="text-muted-foreground ml-1">entities</span>
+                <span className="text-foreground font-semibold">{overview.entities.map(e => e.display_name).join(' / ')}</span>
               </span>
               <span>
                 <span className="text-foreground font-semibold">{overview.domains.length}</span>
@@ -509,6 +508,7 @@ export function TriplesPanel() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-t border-border text-sm uppercase tracking-wider text-muted-foreground">
+                  <th className="text-left px-3 py-2 font-medium">Tenant</th>
                   <th className="text-left px-3 py-2 font-medium">Run ID</th>
                   <th className="text-left px-3 py-2 font-medium">Timestamp</th>
                   <th className="text-right px-3 py-2 font-medium">Triples</th>
@@ -526,6 +526,7 @@ export function TriplesPanel() {
                         className="border-t border-border/30 hover:bg-card/20 cursor-pointer transition-colors"
                         onClick={() => setExpandedRun(isExpanded ? null : run.run_id)}
                       >
+                        <td className="px-3 py-1.5 text-foreground font-medium">{Object.keys(run.entity_summary).join(' / ') || '-'}</td>
                         <td className="px-3 py-1.5 font-mono text-foreground/80">{shortId(run.run_id)}</td>
                         <td className="px-3 py-1.5 text-muted-foreground">{run.timestamp ? fmtDate(run.timestamp) : '-'}</td>
                         <td className="px-3 py-1.5 text-right font-mono text-foreground">{fmtNum(run.triple_count)}</td>

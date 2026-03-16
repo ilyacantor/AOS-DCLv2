@@ -28,6 +28,22 @@ from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
+
+def _entity_display_name(entity_id: str) -> str:
+    """Human-readable display name from entity_id.
+
+    Pipeline tenants already carry a readable name like "BlueFlow-8XHJ" —
+    preserve those as-is.  Only apply the underscore→space→title transform
+    to generic ids like "company_a" that lack uppercase or hyphens.
+    """
+    if not entity_id:
+        return entity_id
+    # If the id already has mixed case or hyphens, it's a readable name
+    if any(c.isupper() for c in entity_id) or "-" in entity_id:
+        return entity_id
+    return entity_id.replace("_", " ").title()
+
+
 router = APIRouter(tags=["Triple Monitor"])
 
 _triple_store = TripleStore()
@@ -102,7 +118,7 @@ def triples_overview():
                 entities.append({
                     "entity_id": entity_id,
                     "triple_count": row[1],
-                    "display_name": entity_id.replace("_", " ").title(),
+                    "display_name": _entity_display_name(entity_id),
                 })
 
             cur.execute(sql_domains)
@@ -534,11 +550,11 @@ def triples_engagement():
         "engagement_id": eng.get("engagement_id"),
         "entity_a": {
             "id": eng.get("entity_a_id"),
-            "display_name": (eng.get("entity_a_id") or "").replace("_", " ").title(),
+            "display_name": _entity_display_name(eng.get("entity_a_id") or ""),
         },
         "entity_b": {
             "id": eng.get("entity_b_id"),
-            "display_name": (eng.get("entity_b_id") or "").replace("_", " ").title(),
+            "display_name": _entity_display_name(eng.get("entity_b_id") or ""),
         } if eng.get("entity_b_id") else None,
         "status": eng.get("status"),
         "created_at": eng["created_at"].isoformat() if eng.get("created_at") else None,

@@ -290,8 +290,8 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
         </span>
       )}
       <span className="absolute bottom-2 right-3 text-[10px] text-slate-500 font-mono pointer-events-none text-right">
-        {data.meta.snapshotName && <>{`snap: ${data.meta.snapshotName}`}<br /></>}
-        {`run: ${data.meta.sourceRunId || data.meta.aodRunId || data.meta.runId}`}
+        {data.meta.snapshotName && <>{data.meta.snapshotName}<br /></>}
+        {`run: ${(data.meta.sourceRunId || data.meta.aodRunId || data.meta.runId || '').slice(0, 8)}`}
       </span>
       </>
       )}
