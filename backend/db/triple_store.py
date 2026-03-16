@@ -5,6 +5,7 @@ Sync psycopg2, parameterized queries, no business logic.
 """
 
 import json
+from psycopg2.extras import execute_values
 from backend.core.db import get_connection
 from backend.utils.log_utils import get_logger
 
@@ -44,7 +45,12 @@ class TripleStore:
                         val if c == "value" else t.get(c)
                         for c in cols
                     ))
-                cur.executemany(sql, rows)
+                # execute_values sends a single multi-row INSERT instead of
+                # N individual INSERTs — typically 10-50x faster over network.
+                template = "(" + ", ".join(["%s"] * len(cols)) + ")"
+                execute_values(cur, sql.replace(
+                    f"VALUES ({placeholders})", "VALUES %s"
+                ), rows, template=template, page_size=1000)
                 conn.commit()
                 return len(rows)
 
