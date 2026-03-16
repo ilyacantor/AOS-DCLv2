@@ -1,5 +1,5 @@
 persona_concepts:
-  cfo:
+  CFO:
     - arr
     - mrr
     - revenue
@@ -9,7 +9,7 @@ persona_concepts:
     - burn_rate
     - gross_margin_pct
     - ar_aging
-  cro:
+  CRO:
     - pipeline
     - win_rate_pct
     - quota_attainment_pct
@@ -21,17 +21,17 @@ persona_concepts:
     - churn_risk
     - nrr_by_cohort
     - customer_count
-  coo:
+  COO:
     - throughput
     - cycle_time
     - sla_compliance_pct
-  cto:
+  CTO:
     - deploy_frequency
     - mttr
     - uptime_pct
     - slo_attainment_pct
     - cloud_spend
-  chro:
+  CHRO:
     - headcount
     - attrition_rate_pct
     - time_to_fill
