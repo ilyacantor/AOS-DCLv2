@@ -119,6 +119,22 @@ async def lifespan(app: FastAPI):
     global _startup_phase, _startup_error, _startup_ready
 
     # ---- Fast startup (sync, <100ms) ----
+    logger.info("=== DCL Database Migration Check ===")
+    try:
+        import subprocess, sys
+        result = subprocess.run(
+            [sys.executable, "migrations/run_migration.py"],
+            capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr.strip() or result.stdout.strip())
+        logger.info("[Migration] All migrations applied successfully")
+    except Exception as e:
+        if os.getenv("DCL_ENV", "dev").lower() == "production":
+            logger.error(f"[Migration] FAILED in production: {e}")
+            raise
+        logger.warning(f"[Migration] Failed (non-prod, continuing): {e}")
+
     logger.info("=== DCL Zero-Trust Security Check ===")
 
     try:
