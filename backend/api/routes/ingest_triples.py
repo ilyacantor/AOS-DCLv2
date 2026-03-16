@@ -172,13 +172,20 @@ def _validate_triple(t: TriplePayload, index: int) -> None:
 # ---------------------------------------------------------------------------
 
 @router.post("/api/dcl/ingest-triples", status_code=201, response_model=IngestResponse)
-def ingest_triples(req: IngestRequest, replace: bool = Query(False)):
+def ingest_triples(
+    req: IngestRequest,
+    replace: bool = Query(False),
+    append: bool = Query(False),
+):
     """
     Batch ingest semantic triples.
 
     - Validates all triples before inserting any (atomic batch).
-    - If run_id already exists: returns 409 unless ?replace=true.
+    - If run_id already exists: returns 409 unless ?replace=true or ?append=true.
     - With ?replace=true: deactivates old triples, inserts new ones.
+    - With ?append=true: skips idempotency check, adds triples to existing run.
+      Use this for multi-batch ingestion where the caller sends the same run_id
+      across multiple requests (e.g. Farm pushing 18K triples in 1K batches).
     """
     _validate_uuid(req.tenant_id, "tenant_id")
     _validate_uuid(req.run_id, "run_id")
@@ -196,15 +203,16 @@ def ingest_triples(req: IngestRequest, replace: bool = Query(False)):
     for i, t in enumerate(req.triples):
         _validate_triple(t, i)
 
-    # Idempotency check
+    # Idempotency check — skipped when append=true (multi-batch ingestion)
     run_exists = _triple_store.run_exists(req.run_id)
-    if run_exists and not replace:
+    if run_exists and not replace and not append:
         raise HTTPException(
             status_code=409,
             detail={
                 "error": "RUN_ALREADY_EXISTS",
                 "message": f"run_id {req.run_id} already has triples in the store. "
-                           "Use ?replace=true to deactivate old triples and re-ingest.",
+                           "Use ?replace=true to deactivate old triples and re-ingest, "
+                           "or ?append=true to add more triples to this run.",
                 "run_id": req.run_id,
             },
         )
