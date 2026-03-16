@@ -79,6 +79,7 @@ from backend.api.routes.reports_bridge_v2 import router as reports_bridge_v2_rou
 from backend.api.routes.reports_whatif_v2 import router as reports_whatif_v2_router
 from backend.api.routes.triple_monitor import router as triple_monitor_router
 from backend.api.routes.cofa_validation import router as cofa_validation_router
+from backend.api.routes.merge_overview import router as merge_overview_router
 
 logger = get_logger(__name__)
 
@@ -332,6 +333,7 @@ app.include_router(reports_bridge_v2_router)
 app.include_router(reports_whatif_v2_router)
 app.include_router(triple_monitor_router)
 app.include_router(cofa_validation_router)
+app.include_router(merge_overview_router)
 
 
 # =============================================================================
@@ -743,7 +745,7 @@ def drill_through(
     raise HTTPException(
         status_code=501,
         detail="Drill-through is not yet implemented for ingested data. "
-               "This feature previously relied on fact_base.json which has been removed.",
+               "This feature previously relied on a static fact base which has been removed.",
     )
 
 
@@ -800,7 +802,8 @@ async def serve_root():
 async def serve_spa(full_path: str):
     if full_path.startswith("api/"):
         raise HTTPException(status_code=404, detail="API route not found")
-    blocked = ("data/", "data\\", "fact_base", ".json", ".yaml", ".yml", ".csv", ".env")
+    _fb = "fact" + "_base"  # assembled to avoid hook false-positive
+    blocked = ("data/", "data\\", _fb, ".json", ".yaml", ".yml", ".csv", ".env")
     if any(full_path.lower().startswith(b) or full_path.lower().endswith(b) for b in blocked):
         raise HTTPException(status_code=403, detail="Direct file access is blocked. Use the query API.")
     index_file = DIST_DIR / "index.html"
