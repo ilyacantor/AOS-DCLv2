@@ -43,6 +43,8 @@ def combining_income_statement(
     try:
         engine = CombiningEngineV2(tid, rid)
         return engine.get_combining_income_statement(period)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -60,6 +62,8 @@ def entity_overlap(
     try:
         engine = OverlapEngineV2(tid, rid)
         return engine.get_overlap_summary()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -77,6 +81,8 @@ def cross_sell(
     try:
         engine = CrossSellEngineV2(tid, rid)
         return engine.get_cross_sell_summary()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -95,6 +101,8 @@ def ebitda_bridge(
     try:
         engine = EBITDABridgeV2(tid, rid)
         return engine.get_bridge(entity_id=entity_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -104,7 +112,7 @@ def ebitda_bridge(
 # ---------------------------------------------------------------------------
 @router.get("/qoe")
 def quality_of_earnings(
-    entity_id: str = "meridian",
+    entity_id: Optional[str] = Query(None),
     tenant_id: Optional[str] = Query(None),
     run_id: Optional[str] = Query(None),
 ):
@@ -113,6 +121,8 @@ def quality_of_earnings(
     try:
         engine = QualityOfEarningsV2(tid, rid)
         return engine.get_qoe_summary(entity_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -121,7 +131,7 @@ def quality_of_earnings(
 # What-if  (old: POST /api/reports/what-if)
 # ---------------------------------------------------------------------------
 class WhatIfCompatRequest(BaseModel):
-    entity_id: str = "meridian"
+    entity_id: Optional[str] = None
     period: str = "2025-Q1"
     levers: list[dict] | None = None
     adjustments: list[dict] | None = None
@@ -178,5 +188,7 @@ def dashboard(
             "balance_sheet": bs,
             "source": "v2_engine",
         }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))

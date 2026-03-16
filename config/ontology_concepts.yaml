@@ -3286,6 +3286,27 @@ concepts:
     calculation_methodology: "Sum of reclassification journal entries tagged as COFA within the period."
     comparability_rules: "Comparable across periods only when COFA classification rules are consistent. Changes in cost allocation methodology break period-over-period comparability."
 
+  - id: cofa_mapping
+    name: COFA Mapping
+    domain: cofa
+    description: "Chart of accounts mapping between entities produced by Maestra"
+    data_type: text
+    comparable: false
+
+  - id: cofa_conflict
+    name: COFA Conflict
+    domain: cofa
+    description: "Identified accounting policy conflicts between entities"
+    data_type: text
+    comparable: false
+
+  - id: cofa_unified
+    name: COFA Unified Account
+    domain: cofa
+    description: "Unified chart of accounts structure for combined entity"
+    data_type: text
+    comparable: false
+
   - id: ebitda_adjustment
     concept_id: FIN-030
     name: EBITDA Adjustment
