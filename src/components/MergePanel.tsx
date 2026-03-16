@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Fragment } from 'react';
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -30,6 +30,7 @@ interface MatchRow {
 }
 
 interface MergeData {
+  engagement_id: string | null;
   acquirer: EntityInfo;
   target: EntityInfo;
   overview: {
@@ -106,6 +107,15 @@ export function MergePanel() {
   // Expanded triple in browse
   const [expandedTriple, setExpandedTriple] = useState<string | null>(null);
 
+  // COFA merge action state
+  const [mergeRunning, setMergeRunning] = useState(false);
+  const [mergeStatus, setMergeStatus] = useState<string | null>(null);
+  const [mergeError, setMergeError] = useState<string | null>(null);
+  const [mergeCollapsedResponse, setMergeCollapsedResponse] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mergeStartRef = useRef<number>(0);
+
   // --- Data fetching ---
 
   const fetchMerge = useCallback(async () => {
@@ -144,6 +154,146 @@ export function MergePanel() {
       setBrowseLoading(false);
     }
   }, [browseEntity, browsePeriod]);
+
+  // Cleanup poll on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearTimeout(pollRef.current);
+    };
+  }, []);
+
+  // Auto-dismiss toast after 8 seconds
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 8000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const runCofaMerge = useCallback(async () => {
+    if (!data?.engagement_id) {
+      setMergeError(
+        'No engagement found in engagement_state table. ' +
+        'Create an engagement first so Maestra knows which entities to unify.'
+      );
+      return;
+    }
+
+    setMergeRunning(true);
+    setMergeError(null);
+    setMergeCollapsedResponse(null);
+    setMergeStatus('Sending to Maestra...');
+    mergeStartRef.current = Date.now();
+
+    // Step 1: POST to Maestra chat
+    let maestraOk = false;
+    try {
+      const res = await fetch('/api/platform/maestra/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          engagement_id: data.engagement_id,
+          message:
+            "Perform COFA unification for this engagement. Read both entities' charts of accounts " +
+            "from DCL, produce a complete mapping table with confidence scores for every GL account, " +
+            "identify all conflicts with type and severity, build the unified account structure, and " +
+            "write the results using the write_cofa_mapping tool. Every account from both entities " +
+            "must appear in the mapping — no orphans.",
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(
+          body.detail || body.error || `Maestra returned HTTP ${res.status}: ${res.statusText}`
+        );
+      }
+
+      const responseData = await res.json();
+      maestraOk = true;
+
+      // Check if Maestra actually invoked the tool (response may be text-only)
+      const responseText = responseData?.response || responseData?.message || '';
+      if (
+        responseText &&
+        !responseData?.tool_calls?.length &&
+        !responseText.includes('write_cofa_mapping') &&
+        !responseText.includes('mapping')
+      ) {
+        // Maestra responded but may not have written results
+        setMergeCollapsedResponse(responseText);
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ERR_CONNECTION_REFUSED')) {
+        setMergeError(
+          'Cannot reach Maestra (Platform service). Is it running on port 8006?'
+        );
+      } else {
+        setMergeError(msg);
+      }
+      setMergeRunning(false);
+      setMergeStatus(null);
+      return;
+    }
+
+    if (!maestraOk) return;
+
+    // Step 2: Poll merge overview for results
+    setMergeStatus('Maestra is analyzing charts of accounts...');
+    const pollForResults = () => {
+      pollRef.current = setTimeout(async () => {
+        const elapsed = Date.now() - mergeStartRef.current;
+
+        // Update status message based on elapsed time
+        if (elapsed > 60000) {
+          setMergeStatus(
+            'Still working — COFA unification typically takes 30-90 seconds for two entities.'
+          );
+        } else if (elapsed > 30000) {
+          setMergeStatus('Writing mapping to DCL...');
+        } else if (elapsed > 10000) {
+          setMergeStatus('Maestra is analyzing charts of accounts...');
+        }
+
+        try {
+          const res = await fetch('/api/dcl/merge/overview');
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const freshData: MergeData = await res.json();
+
+          if (freshData.matches.has_matches) {
+            // Success — matches found
+            if (pollRef.current) clearTimeout(pollRef.current);
+            setData(freshData);
+            setMergeRunning(false);
+            setMergeStatus(null);
+
+            const accountCount = freshData.matches.rows.length;
+            const conflictCount =
+              freshData.orphans.acquirer_unmatched.length +
+              freshData.orphans.target_unmatched.length;
+            setToast({
+              message: `COFA merge complete — ${accountCount} accounts mapped, ${conflictCount} conflicts identified.`,
+              type: 'success',
+            });
+            return;
+          }
+        } catch (e) {
+          // Network error during polling
+          if (pollRef.current) clearTimeout(pollRef.current);
+          setMergeError(
+            'Lost connection while waiting for results. Check services and try again.'
+          );
+          setMergeRunning(false);
+          setMergeStatus(null);
+          return;
+        }
+
+        // Keep polling — no results yet
+        pollForResults();
+      }, 3000);
+    };
+    pollForResults();
+  }, [data]);
 
   useEffect(() => {
     fetchMerge();
@@ -235,17 +385,94 @@ export function MergePanel() {
 
   return (
     <div className="h-full flex flex-col min-h-0">
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg border shadow-lg max-w-md animate-[fadeIn_0.2s_ease-out] ${
+          toast.type === 'success'
+            ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+            : 'bg-red-500/15 border-red-500/30 text-red-400'
+        }`}>
+          <div className="flex items-start gap-2">
+            <span className="text-sm">{toast.message}</span>
+            <button
+              onClick={() => setToast(null)}
+              className="shrink-0 text-muted-foreground hover:text-foreground ml-2"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="shrink-0 px-6 py-3 border-b border-border bg-card/50">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold">COFA Merge</h2>
-          <button
-            onClick={fetchMerge}
-            className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Run COFA Merge button — visible when two entities have COFA data */}
+            {data && data.overview.entities.length >= 2 && (
+              <button
+                onClick={runCofaMerge}
+                disabled={mergeRunning || !data.engagement_id}
+                className={`px-3 py-1 text-sm rounded font-medium transition-colors ${
+                  mergeRunning
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 cursor-wait'
+                    : data.matches.has_matches
+                      ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30'
+                      : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30'
+                } disabled:opacity-40 disabled:cursor-not-allowed`}
+                title={
+                  !data.engagement_id
+                    ? 'No engagement found — create one first'
+                    : data.matches.has_matches
+                      ? 'Re-run will replace existing mappings'
+                      : 'Trigger Maestra to unify COFA accounts'
+                }
+              >
+                {mergeRunning
+                  ? 'Running COFA Merge...'
+                  : data.matches.has_matches
+                    ? 'Re-run COFA Merge'
+                    : 'Run COFA Merge'}
+              </button>
+            )}
+            <button
+              onClick={fetchMerge}
+              className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
+
+        {/* Progress / error bar */}
+        {mergeRunning && mergeStatus && (
+          <div className="mt-2 flex items-center gap-2 text-sm text-amber-400">
+            <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin shrink-0" />
+            <span>{mergeStatus}</span>
+          </div>
+        )}
+        {mergeError && (
+          <div className="mt-2 rounded border border-red-500/20 bg-red-500/10 px-3 py-2">
+            <span className="text-sm text-red-400">{mergeError}</span>
+            <button
+              onClick={() => { setMergeError(null); runCofaMerge(); }}
+              className="ml-3 px-2 py-0.5 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        {mergeCollapsedResponse && !mergeRunning && (
+          <details className="mt-2 rounded border border-amber-500/20 bg-amber-500/10 px-3 py-2">
+            <summary className="text-sm text-amber-400 cursor-pointer">
+              Maestra completed analysis but did not write results. This may require a follow-up message.
+            </summary>
+            <pre className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap max-h-40 overflow-y-auto">
+              {mergeCollapsedResponse}
+            </pre>
+          </details>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">

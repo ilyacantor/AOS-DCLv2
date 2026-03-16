@@ -19,6 +19,11 @@ span.w-2.h-2.rounded-full {
   height: 8px !important;
   box-shadow: 0 0 4px currentColor;
 }
+/* ── Toast fade-in ─────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 /* ── Live pulse animation (brand dot) ───────────────────── */
 @keyframes dcl-pulse {
   0%, 100% { opacity: 1; }

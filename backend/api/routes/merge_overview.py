@@ -56,13 +56,16 @@ def _get_cofa_entity_ids(cur) -> list[str]:
     return [r[0] for r in cur.fetchall()]
 
 
-def _resolve_entities(cur, acquirer_id: Optional[str], target_id: Optional[str]) -> tuple[str, str]:
-    """Resolve acquirer and target entity IDs.
+def _resolve_entities(cur, acquirer_id: Optional[str], target_id: Optional[str]) -> tuple[str, str, Optional[str]]:
+    """Resolve acquirer and target entity IDs plus engagement_id.
 
     Priority:
     1. Explicit query params (validated against triple store)
     2. engagement_state table, mapped to actual COFA entity_ids
     3. Distinct entities from COFA triples (alphabetical)
+
+    Returns (acquirer_id, target_id, engagement_id).
+    engagement_id is None when entities were resolved without engagement_state.
 
     Raises HTTPException if fewer than 2 entities have COFA triples.
     """
@@ -78,6 +81,19 @@ def _resolve_entities(cur, acquirer_id: Optional[str], target_id: Optional[str])
             ),
         )
 
+    # Look up engagement_state regardless — we need the engagement_id
+    eng_id, engagement_a, engagement_b = None, None, None
+    try:
+        cur.execute(
+            "SELECT engagement_id, entity_a_id, entity_b_id FROM engagement_state "
+            "ORDER BY created_at DESC LIMIT 1"
+        )
+        row = cur.fetchone()
+        if row and row[1] and row[2]:
+            eng_id, engagement_a, engagement_b = row[0], row[1], row[2]
+    except Exception as e:
+        logger.debug(f"[merge] engagement_state lookup failed (non-fatal): {e}")
+
     # 1. Explicit params — validate they exist in triple store
     if acquirer_id and target_id:
         missing = [eid for eid in (acquirer_id, target_id) if eid not in cofa_entities]
@@ -90,25 +106,13 @@ def _resolve_entities(cur, acquirer_id: Optional[str], target_id: Optional[str])
                     f"Check entity_id values — they must match what was ingested."
                 ),
             )
-        return acquirer_id, target_id
+        return acquirer_id, target_id, eng_id
 
     # 2. Engagement state — map to actual COFA entity_ids
-    engagement_a, engagement_b = None, None
-    try:
-        cur.execute(
-            "SELECT entity_a_id, entity_b_id FROM engagement_state "
-            "ORDER BY created_at DESC LIMIT 1"
-        )
-        row = cur.fetchone()
-        if row and row[0] and row[1]:
-            engagement_a, engagement_b = row[0], row[1]
-    except Exception as e:
-        logger.debug(f"[merge] engagement_state lookup failed (non-fatal): {e}")
-
     if engagement_a and engagement_b:
         # Direct match — engagement IDs exist in triple store
         if engagement_a in cofa_entities and engagement_b in cofa_entities:
-            return engagement_a, engagement_b
+            return engagement_a, engagement_b, eng_id
 
         # Case-insensitive match — engagement may use different casing
         cofa_lower = {e.lower(): e for e in cofa_entities}
@@ -119,7 +123,7 @@ def _resolve_entities(cur, acquirer_id: Optional[str], target_id: Optional[str])
                 f"[merge] Mapped engagement entity IDs to COFA triple store: "
                 f"'{engagement_a}' → '{mapped_a}', '{engagement_b}' → '{mapped_b}'"
             )
-            return mapped_a, mapped_b
+            return mapped_a, mapped_b, eng_id
 
         # Engagement IDs don't match triple store — log clearly and fall through
         logger.warning(
@@ -130,7 +134,7 @@ def _resolve_entities(cur, acquirer_id: Optional[str], target_id: Optional[str])
         )
 
     # 3. First two COFA entities alphabetically
-    return cofa_entities[0], cofa_entities[1]
+    return cofa_entities[0], cofa_entities[1], eng_id
 
 
 # ---------------------------------------------------------------------------
@@ -154,7 +158,7 @@ def merge_overview(
             )
         with conn.cursor() as cur:
             # --- Entity resolution ---
-            acq_id, tgt_id = _resolve_entities(cur, acquirer_id, target_id)
+            acq_id, tgt_id, eng_id = _resolve_entities(cur, acquirer_id, target_id)
 
             # --- Section 1: Overview stats ---
             cur.execute(
@@ -293,6 +297,7 @@ def merge_overview(
                 }
 
     return {
+        "engagement_id": eng_id,
         "acquirer": {"entity_id": acq_id, "display_name": _entity_display_name(acq_id)},
         "target": {"entity_id": tgt_id, "display_name": _entity_display_name(tgt_id)},
         "overview": overview,

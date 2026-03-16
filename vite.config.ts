@@ -15,6 +15,11 @@ export default defineConfig({
     strictPort: true,
     allowedHosts: true,
     proxy: {
+      '/api/platform': {
+        target: process.env.VITE_PLATFORM_URL || 'http://localhost:8006',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/api\/platform/, '/api'),
+      },
       '/api': {
         target: 'http://localhost:8004',
         changeOrigin: true,
