@@ -3556,6 +3556,58 @@ concepts:
     calculation_methodology: "EBITDA = Revenue - COGS - OpEx. Gross Profit = Revenue - COGS. Operating Income = Gross Profit - OpEx."
     comparability_rules: "P&L comparisons require consistent revenue recognition, cost classification, and expense categorization. EBITDA adjustments must be disclosed."
 
+  - id: gl
+    concept_id: FIN-038
+    name: General Ledger Entry
+    description: "Monthly general ledger entries — atomic double-entry data layer with debit, credit, and ending_balance per account per period"
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - debit
+      - credit
+      - ending_balance
+      - transaction_count
+    aliases:
+      - general_ledger_entry
+      - gl_entry
+    expected_type: float
+    typical_source_systems: [netsuite, sap, quickbooks, xero]
+    persona_relevance:
+      cfo: 1.0
+      coo: 0.4
+    recognition_basis: "Recorded when journal entries are posted. Each entry has balanced debits and credits."
+    timing_semantics: "Monthly period granularity. Ending balances are cumulative for BS accounts, periodic for IS accounts."
+    scope_boundaries: "Covers all GL account entries. Sub-concepts keyed by account number: gl.{account_number}."
+    calculation_methodology: "Debit and credit per account per period. DR=CR enforced per period. Cash as plug account."
+    comparability_rules: "Comparable across periods when chart of accounts structure is stable."
+
+  - id: coa
+    concept_id: FIN-039
+    name: Chart of Accounts
+    description: "Chart of accounts metadata — atemporal account definitions with hierarchy, type, and accounting policy properties"
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - account_name
+      - account_number
+      - account_type
+      - hierarchy_parent
+      - hierarchy_level
+      - department
+    aliases:
+      - chart_of_accounts_entry
+      - coa_definition
+    expected_type: string
+    typical_source_systems: [netsuite, sap, quickbooks, xero]
+    persona_relevance:
+      cfo: 0.8
+      coo: 0.3
+    recognition_basis: "Established when account is defined in the chart of accounts. Atemporal — no period dimension."
+    timing_semantics: "Atemporal reference data. No period field. One set per entity."
+    scope_boundaries: "Account definitions only. Sub-concepts keyed by account number: coa.{account_number}."
+    calculation_methodology: "N/A — categorical metadata, not numeric."
+    comparability_rules: "Comparable across entities when using a unified chart of accounts (COFA)."
+
   - id: customer
     concept_id: SALES-014
     name: Customer
