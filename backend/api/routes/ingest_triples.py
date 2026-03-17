@@ -49,6 +49,7 @@ class TriplePayload(BaseModel):
 class IngestRequest(BaseModel):
     tenant_id: str
     run_id: str
+    source_run_tag: Optional[str] = None
     triples: list[TriplePayload]
 
 
@@ -237,6 +238,7 @@ def ingest_triples(
             "source_field": t.source_field,
             "pipe_id": t.pipe_id,
             "run_id": req.run_id,
+            "source_run_tag": req.source_run_tag,
             "confidence_score": t.confidence_score,
             "confidence_tier": t.confidence_tier,
             "canonical_id": t.canonical_id,

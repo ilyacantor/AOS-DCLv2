@@ -172,6 +172,24 @@ def merge_overview(
             # --- Entity resolution ---
             acq_id, tgt_id, eng_id = _resolve_entities(cur, acquirer_id, target_id)
 
+            # --- Source run tag (provenance from upstream system) ---
+            cur.execute(
+                "SELECT DISTINCT ON (entity_id) entity_id, source_run_tag "
+                "FROM semantic_triples "
+                "WHERE is_active = true AND entity_id IN (%s, %s) "
+                "  AND source_run_tag IS NOT NULL "
+                "ORDER BY entity_id, created_at DESC",
+                (acq_id, tgt_id),
+            )
+            tag_map = {row[0]: row[1] for row in cur.fetchall()}
+            tags = list(set(tag_map.values()))
+            if len(tags) == 1:
+                source_run_tag = tags[0]
+            elif len(tags) > 1:
+                source_run_tag = tag_map
+            else:
+                source_run_tag = None
+
             # --- Section 1: Overview stats ---
             # Count both coa (source accounts) and cofa-prefixed (mapping results) triples.
             cur.execute(
@@ -333,6 +351,7 @@ def merge_overview(
 
     return {
         "engagement_id": eng_id,
+        "source_run_tag": source_run_tag,
         "acquirer": {"entity_id": acq_id, "display_name": _entity_display_name(acq_id)},
         "target": {"entity_id": tgt_id, "display_name": _entity_display_name(tgt_id)},
         "overview": overview,

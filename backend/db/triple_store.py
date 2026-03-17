@@ -23,7 +23,7 @@ class TripleStore:
             "tenant_id", "entity_id", "concept", "property", "value",
             "period", "currency", "unit",
             "source_system", "source_table", "source_field",
-            "pipe_id", "run_id",
+            "pipe_id", "run_id", "source_run_tag",
             "confidence_score", "confidence_tier",
             "canonical_id", "resolution_method", "resolution_confidence",
         ]
