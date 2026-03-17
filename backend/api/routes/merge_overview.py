@@ -228,15 +228,162 @@ def merge_overview(
                 "total_cofa_count": total_cofa,
             }
 
+            # --- Section 1b: Financial summary metrics ---
+            # Sum quarterly values for 2025 per entity for key metrics.
+            # Concepts: revenue.total, pnl.ebitda → sum Q1-Q4
+            # asset.total, cash_flow.net_change → latest Q4 or sum respectively
+            _ANNUAL_SUM_METRICS = [
+                ("revenue.total", "2025 Revenue", "currency"),
+                ("pnl.ebitda", "2025 EBITDA", "currency"),
+                ("cash_flow.net_change", "Total Net Cash Flow (2025)", "currency"),
+            ]
+            _POINT_IN_TIME_METRICS = [
+                ("asset.total", "Total Assets (YE 2025)", "currency", "2025-Q4"),
+            ]
+            _HEADCOUNT_CONCEPT = "position.headcount"
+
+            financial_summary: list[dict] = []
+
+            # Annual sum metrics (sum across Q1-Q4, deduplicated)
+            for concept, label, fmt in _ANNUAL_SUM_METRICS:
+                cur.execute(
+                    "SELECT entity_id, SUM(val) AS total FROM ("
+                    "  SELECT DISTINCT ON (entity_id, period) "
+                    "    entity_id, (value #>> '{}')::numeric AS val "
+                    "  FROM semantic_triples "
+                    "  WHERE is_active = true AND concept = %s AND property = 'amount' "
+                    "    AND period LIKE '2025-Q%%' AND entity_id IN (%s, %s) "
+                    "  ORDER BY entity_id, period, created_at DESC"
+                    ") sub GROUP BY entity_id",
+                    (concept, acq_id, tgt_id),
+                )
+                vals = {r[0]: float(r[1]) for r in cur.fetchall()}
+                acq_val = vals.get(acq_id)
+                tgt_val = vals.get(tgt_id)
+                cons = None
+                if acq_val is not None and tgt_val is not None:
+                    cons = acq_val + tgt_val
+                elif acq_val is not None:
+                    cons = acq_val
+                elif tgt_val is not None:
+                    cons = tgt_val
+                financial_summary.append({
+                    "label": label,
+                    "acquirer": acq_val,
+                    "target": tgt_val,
+                    "consolidated": cons,
+                    "format": fmt,
+                })
+
+            # EBITDA margin (derived from revenue and ebitda already fetched)
+            rev_row = next((m for m in financial_summary if m["label"] == "2025 Revenue"), None)
+            ebitda_row = next((m for m in financial_summary if m["label"] == "2025 EBITDA"), None)
+            if rev_row and ebitda_row:
+                def _margin(ebitda, rev):
+                    if ebitda is not None and rev is not None and rev != 0:
+                        return ebitda / rev
+                    return None
+                acq_margin = _margin(ebitda_row["acquirer"], rev_row["acquirer"])
+                tgt_margin = _margin(ebitda_row["target"], rev_row["target"])
+                cons_margin = _margin(ebitda_row["consolidated"], rev_row["consolidated"])
+                # Insert after EBITDA row
+                idx = financial_summary.index(ebitda_row) + 1
+                financial_summary.insert(idx, {
+                    "label": "2025 EBITDA Margin",
+                    "acquirer": acq_margin,
+                    "target": tgt_margin,
+                    "consolidated": cons_margin,
+                    "format": "percent",
+                    "is_derived": True,
+                })
+
+            # Point-in-time metrics (deduplicated — take most recent per entity)
+            for concept, label, fmt, period in _POINT_IN_TIME_METRICS:
+                cur.execute(
+                    "SELECT DISTINCT ON (entity_id) entity_id, "
+                    "  (value #>> '{}')::numeric AS val "
+                    "FROM semantic_triples "
+                    "WHERE is_active = true AND concept = %s AND property = 'amount' "
+                    "  AND period = %s AND entity_id IN (%s, %s) "
+                    "ORDER BY entity_id, created_at DESC",
+                    (concept, period, acq_id, tgt_id),
+                )
+                vals = {r[0]: float(r[1]) for r in cur.fetchall()}
+                acq_val = vals.get(acq_id)
+                tgt_val = vals.get(tgt_id)
+                cons = None
+                if acq_val is not None and tgt_val is not None:
+                    cons = acq_val + tgt_val
+                elif acq_val is not None:
+                    cons = acq_val
+                elif tgt_val is not None:
+                    cons = tgt_val
+                financial_summary.append({
+                    "label": label,
+                    "acquirer": acq_val,
+                    "target": tgt_val,
+                    "consolidated": cons,
+                    "format": fmt,
+                })
+
+            # Headcount — may use different property names (deduplicated)
+            cur.execute(
+                "SELECT DISTINCT ON (entity_id) "
+                "  entity_id, (value #>> '{}')::numeric AS val "
+                "FROM semantic_triples "
+                "WHERE is_active = true "
+                "  AND concept LIKE 'position.%%' AND property = 'headcount' "
+                "  AND entity_id IN (%s, %s) "
+                "ORDER BY entity_id, created_at DESC",
+                (acq_id, tgt_id),
+            )
+            hc_vals: dict[str, float] = {}
+            for r in cur.fetchall():
+                hc_vals[r[0]] = float(r[1])
+
+            # If no position.headcount triples, try summing overlap headcount (deduplicated)
+            if not hc_vals:
+                cur.execute(
+                    "SELECT entity_id, SUM(val) AS total FROM ("
+                    "  SELECT DISTINCT ON (entity_id, concept) "
+                    "    entity_id, (value #>> '{}')::numeric AS val "
+                    "  FROM semantic_triples "
+                    "  WHERE is_active = true AND property = 'headcount' "
+                    "    AND entity_id IN (%s, %s) "
+                    "  ORDER BY entity_id, concept, created_at DESC"
+                    ") sub GROUP BY entity_id",
+                    (acq_id, tgt_id),
+                )
+                for r in cur.fetchall():
+                    hc_vals[r[0]] = float(r[1])
+
+            acq_hc = hc_vals.get(acq_id)
+            tgt_hc = hc_vals.get(tgt_id)
+            cons_hc = None
+            if acq_hc is not None and tgt_hc is not None:
+                cons_hc = acq_hc + tgt_hc
+            elif acq_hc is not None:
+                cons_hc = acq_hc
+            elif tgt_hc is not None:
+                cons_hc = tgt_hc
+            financial_summary.append({
+                "label": "Headcount (YE 2025)",
+                "acquirer": acq_hc,
+                "target": tgt_hc,
+                "consolidated": cons_hc,
+                "format": "number",
+            })
+
             # --- Section 2: Side-by-side comparison ---
             # Use CoA (chart of accounts) triples for the account comparison,
             # not COFA conflict triples.  COFA conflicts are shown in section 3.
             cur.execute(
-                "SELECT entity_id, concept, property, value, period "
+                "SELECT DISTINCT ON (entity_id, concept, property, period) "
+                "  entity_id, concept, property, value, period "
                 "FROM semantic_triples "
                 "WHERE is_active = true AND split_part(concept, '.', 1) = 'coa' "
                 "  AND entity_id IN (%s, %s) "
-                "ORDER BY concept, entity_id, property",
+                "ORDER BY entity_id, concept, property, period, created_at DESC",
                 (acq_id, tgt_id),
             )
             # Group by concept
@@ -355,6 +502,7 @@ def merge_overview(
         "acquirer": {"entity_id": acq_id, "display_name": _entity_display_name(acq_id)},
         "target": {"entity_id": tgt_id, "display_name": _entity_display_name(tgt_id)},
         "overview": overview,
+        "financial_summary": financial_summary,
         "comparison": comparison,
         "matches": matches,
         "orphans": orphans,
