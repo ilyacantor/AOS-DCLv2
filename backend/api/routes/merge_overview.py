@@ -50,7 +50,7 @@ def _get_cofa_entity_ids(cur) -> list[str]:
     """Return distinct entity_ids that have active COFA triples, ordered alphabetically."""
     cur.execute(
         "SELECT DISTINCT entity_id FROM semantic_triples "
-        "WHERE is_active = true AND split_part(concept, '.', 1) = 'cofa' "
+        "WHERE is_active = true AND split_part(concept, '.', 1) LIKE 'cofa%%' "
         "ORDER BY entity_id"
     )
     return [r[0] for r in cur.fetchall()]
@@ -164,7 +164,7 @@ def merge_overview(
             cur.execute(
                 "SELECT entity_id, COUNT(*) AS cofa_count, MAX(created_at) AS last_ingest "
                 "FROM semantic_triples "
-                "WHERE is_active = true AND split_part(concept, '.', 1) = 'cofa' "
+                "WHERE is_active = true AND split_part(concept, '.', 1) LIKE 'cofa%%' "
                 "  AND entity_id IN (%s, %s) "
                 "GROUP BY entity_id",
                 (acq_id, tgt_id),
@@ -196,10 +196,12 @@ def merge_overview(
             }
 
             # --- Section 2: Side-by-side comparison ---
+            # Use CoA (chart of accounts) triples for the account comparison,
+            # not COFA conflict triples.  COFA conflicts are shown in section 3.
             cur.execute(
                 "SELECT entity_id, concept, property, value, period "
                 "FROM semantic_triples "
-                "WHERE is_active = true AND split_part(concept, '.', 1) = 'cofa' "
+                "WHERE is_active = true AND split_part(concept, '.', 1) = 'coa' "
                 "  AND entity_id IN (%s, %s) "
                 "ORDER BY concept, entity_id, property",
                 (acq_id, tgt_id),
@@ -229,6 +231,7 @@ def merge_overview(
             }
 
             # --- Section 3: Resolution matches (canonical_id join) ---
+            # Match COFA-related domains: cofa, cofa_mapping, cofa_conflict, cofa_unified
             cur.execute(
                 "SELECT DISTINCT ON (a.canonical_id) "
                 "  a.concept AS acquirer_concept, b.concept AS target_concept, "
@@ -238,8 +241,8 @@ def merge_overview(
                 "WHERE a.is_active = true AND b.is_active = true "
                 "  AND a.entity_id = %s AND b.entity_id = %s "
                 "  AND a.canonical_id IS NOT NULL "
-                "  AND split_part(a.concept, '.', 1) = 'cofa' "
-                "  AND split_part(b.concept, '.', 1) = 'cofa'",
+                "  AND split_part(a.concept, '.', 1) LIKE 'cofa%%' "
+                "  AND split_part(b.concept, '.', 1) LIKE 'cofa%%'",
                 (acq_id, tgt_id),
             )
             columns = [desc[0] for desc in cur.description]

@@ -251,12 +251,16 @@ def write_cofa_mapping(data: dict) -> dict:
         }
 
     run_id = data["run_id"]
+    acquirer_id = data["acquirer_entity_id"]
+    target_id = data["target_entity_id"]
     store = TripleStore()
 
-    # Idempotent: deactivate existing triples for this run_id
-    if store.run_exists(run_id):
-        deactivated = store.deactivate_run(run_id)
-        logger.info(f"[COFA] Deactivated {deactivated} existing triples for run_id={run_id}")
+    # Deactivate ALL prior COFA triples for this entity pair — prevents
+    # accumulation across runs (each run_id is unique, so run-scoped
+    # deactivation alone would leave old runs' triples active).
+    deactivated = store.deactivate_cofa_triples([acquirer_id, target_id])
+    if deactivated:
+        logger.info(f"[COFA] Deactivated {deactivated} prior COFA triples for entities [{acquirer_id}, {target_id}]")
 
     # Build all triples
     mapping_triples = _build_mapping_triples(data)

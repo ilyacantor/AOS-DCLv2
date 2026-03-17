@@ -91,9 +91,11 @@ def _ensure_pool() -> Optional[ThreadedConnectionPool]:
         )
         return _pool
     except Exception as e:
-        logger.warning(f"[db] Postgres pool failed: {e}")
         _pool = None
-        return None
+        raise RuntimeError(
+            f"[db] Postgres pool initialization failed: {e} — "
+            f"check DATABASE_URL and Supabase connectivity"
+        ) from e
 
 
 def _getconn_with_timeout(pool: ThreadedConnectionPool, timeout: float):
@@ -136,16 +138,18 @@ def _getconn_with_timeout(pool: ThreadedConnectionPool, timeout: float):
 def get_connection():
     """Borrow a connection from the shared pool.
 
-    Yields a ``psycopg2`` connection, or ``None`` when the database is
-    unavailable (callers should handle the None case gracefully).
+    Yields a ``psycopg2`` connection.
 
+    Raises RuntimeError if the database is unavailable.
     Raises PoolExhausted if all connections are checked out and the
     wait exceeds POOL_GETCONN_TIMEOUT seconds.
     """
     pg_pool = _ensure_pool()
     if pg_pool is None:
-        yield None
-        return
+        raise RuntimeError(
+            "[db] Connection pool unavailable (within retry cooldown). "
+            "Check DATABASE_URL and Supabase connectivity."
+        )
 
     conn = None
     try:
@@ -157,8 +161,13 @@ def get_connection():
     except PoolExhausted:
         raise  # Let callers handle pool exhaustion explicitly
     except Exception as e:
-        logger.warning(f"[db] Connection error: {e}")
-        yield None
+        # Re-raise exceptions thrown from inside the `with` block (e.g.
+        # HTTPException from route handlers).  Only true connection-setup
+        # errors (before the yield) should be caught, but @contextmanager
+        # funnels caller exceptions through the same except clause.
+        # Since the yield already happened at this point, the only safe
+        # action is to let the exception propagate.
+        raise
     finally:
         if conn is not None and pg_pool is not None:
             try:

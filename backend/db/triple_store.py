@@ -101,6 +101,36 @@ class TripleStore:
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
+    def deactivate_cofa_triples(self, entity_ids: list[str]) -> int:
+        """Deactivate all active COFA triples for the given entity_ids.
+
+        This ensures a new COFA unification run replaces — not accumulates on —
+        prior runs' data.  Matches on concept prefix (cofa., cofa_mapping.,
+        cofa_conflict., cofa_unified.) rather than source_field, because
+        triples may originate from different writers with varying source_field
+        values (including NULL).
+        """
+        all_ids = list(set(entity_ids + ["combined"]))
+        placeholders = ", ".join(["%s"] * len(all_ids))
+        sql = (
+            "UPDATE semantic_triples SET is_active = false, updated_at = now() "
+            "WHERE is_active = true "
+            "  AND (   split_part(concept, '.', 1) = 'cofa' "
+            "       OR split_part(concept, '.', 1) = 'cofa_mapping' "
+            "       OR split_part(concept, '.', 1) = 'cofa_conflict' "
+            "       OR split_part(concept, '.', 1) = 'cofa_unified') "
+            f"  AND entity_id IN ({placeholders})"
+        )
+        with get_connection() as conn:
+            if conn is None:
+                raise RuntimeError(
+                    "TripleStore.deactivate_cofa_triples failed: database connection unavailable."
+                )
+            with conn.cursor() as cur:
+                cur.execute(sql, all_ids)
+                conn.commit()
+                return cur.rowcount
+
     def deactivate_run(self, run_id: str) -> int:
         """Set is_active=false for all triples in a run. Returns count affected."""
         sql = (
