@@ -7,7 +7,6 @@ GET  /api/dcl/ingest-status     — list all runs
 """
 
 import uuid
-import json
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -224,13 +223,12 @@ def ingest_triples(
     # Build triple dicts for insertion
     rows = []
     for t in req.triples:
-        val = json.dumps(t.value)
         rows.append({
             "tenant_id": req.tenant_id,
             "entity_id": t.entity_id,
             "concept": t.concept,
             "property": t.property,
-            "value": val,
+            "value": t.value,
             "period": t.period,
             "currency": t.currency,
             "unit": t.unit,

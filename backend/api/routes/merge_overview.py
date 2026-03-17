@@ -32,13 +32,19 @@ def _entity_display_name(entity_id: str) -> str:
 
 
 def _serialize_value(val):
-    """Make a value JSON-serializable."""
+    """Make a value JSON-serializable.
+
+    Also strips embedded JSON quotes from double-encoded jsonb strings
+    (e.g. '"Cash & Equivalents"' → 'Cash & Equivalents').
+    """
     if isinstance(val, Decimal):
         return float(val)
     if isinstance(val, datetime):
         return val.isoformat()
     if isinstance(val, bytes):
         return val.decode("utf-8", errors="replace")
+    if isinstance(val, str) and len(val) > 2 and val.startswith('"') and val.endswith('"'):
+        return val[1:-1]
     return val
 
 

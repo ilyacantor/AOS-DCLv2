@@ -71,7 +71,11 @@ def _load_coa_accounts(cur, entity_id: str) -> dict[str, str]:
         "  AND property = 'account_name' AND is_active = true",
         (entity_id,),
     )
-    return {row[1]: row[0] for row in cur.fetchall() if row[1]}
+    return {
+        row[1].strip('"'): row[0]
+        for row in cur.fetchall()
+        if row[1]
+    }
 
 
 def _check_completeness(
