@@ -47,10 +47,16 @@ def _serialize_value(val):
 # ---------------------------------------------------------------------------
 
 def _get_cofa_entity_ids(cur) -> list[str]:
-    """Return distinct entity_ids that have active COFA triples, ordered alphabetically."""
+    """Return distinct entity_ids that have active COFA-related triples.
+
+    Includes coa (chart of accounts) and all cofa-prefixed domains so the
+    merge tab works both before and after Maestra runs.
+    """
     cur.execute(
         "SELECT DISTINCT entity_id FROM semantic_triples "
-        "WHERE is_active = true AND split_part(concept, '.', 1) LIKE 'cofa%%' "
+        "WHERE is_active = true "
+        "  AND (split_part(concept, '.', 1) = 'coa' "
+        "       OR split_part(concept, '.', 1) LIKE 'cofa%%') "
         "ORDER BY entity_id"
     )
     return [r[0] for r in cur.fetchall()]
@@ -161,10 +167,13 @@ def merge_overview(
             acq_id, tgt_id, eng_id = _resolve_entities(cur, acquirer_id, target_id)
 
             # --- Section 1: Overview stats ---
+            # Count both coa (source accounts) and cofa-prefixed (mapping results) triples.
             cur.execute(
                 "SELECT entity_id, COUNT(*) AS cofa_count, MAX(created_at) AS last_ingest "
                 "FROM semantic_triples "
-                "WHERE is_active = true AND split_part(concept, '.', 1) LIKE 'cofa%%' "
+                "WHERE is_active = true "
+                "  AND (split_part(concept, '.', 1) = 'coa' "
+                "       OR split_part(concept, '.', 1) LIKE 'cofa%%') "
                 "  AND entity_id IN (%s, %s) "
                 "GROUP BY entity_id",
                 (acq_id, tgt_id),
@@ -273,31 +282,49 @@ def merge_overview(
                 ),
             }
 
-            # --- Section 4: Orphans (concepts without resolution matches) ---
-            if has_matches:
-                matched_acq_concepts = {r["acquirer_concept"] for r in match_rows}
-                matched_tgt_concepts = {r["target_concept"] for r in match_rows}
+            # --- Section 4: Orphans (CoA accounts without COFA mappings) ---
+            # CoA concepts (coa.*) and mapping concepts (cofa_mapping.*) use
+            # different namespaces, so we cannot compare concept names directly.
+            # Instead, compare distinct concept counts per entity: each CoA
+            # account produces exactly one cofa_mapping concept on its entity's
+            # side (entity-specific accounts get mapping_target/source = N/A).
+            # If the counts match, all accounts are mapped → 0 orphans.
+            cur.execute(
+                "SELECT entity_id, "
+                "  COUNT(DISTINCT CASE WHEN split_part(concept, '.', 1) = 'coa' "
+                "        THEN concept END) AS coa_count, "
+                "  COUNT(DISTINCT CASE WHEN split_part(concept, '.', 1) = 'cofa_mapping' "
+                "        THEN concept END) AS mapping_count "
+                "FROM semantic_triples "
+                "WHERE is_active = true AND entity_id IN (%s, %s) "
+                "  AND split_part(concept, '.', 1) IN ('coa', 'cofa_mapping') "
+                "GROUP BY entity_id",
+                (acq_id, tgt_id),
+            )
+            coverage = {}
+            for row in cur.fetchall():
+                coverage[row[0]] = {"coa": row[1], "mapped": row[2]}
 
-                all_acq_concepts = {
-                    c["concept"] for c in concept_map.values()
-                    if len(c["acquirer_triples"]) > 0
-                }
-                all_tgt_concepts = {
-                    c["concept"] for c in concept_map.values()
-                    if len(c["target_triples"]) > 0
-                }
+            acq_cov = coverage.get(acq_id, {"coa": 0, "mapped": 0})
+            tgt_cov = coverage.get(tgt_id, {"coa": 0, "mapped": 0})
 
-                orphans = {
-                    "show_section": True,
-                    "acquirer_unmatched": sorted(all_acq_concepts - matched_acq_concepts),
-                    "target_unmatched": sorted(all_tgt_concepts - matched_tgt_concepts),
-                }
-            else:
-                orphans = {
-                    "show_section": False,
-                    "acquirer_unmatched": [],
-                    "target_unmatched": [],
-                }
+            acq_gap = max(0, acq_cov["coa"] - acq_cov["mapped"])
+            tgt_gap = max(0, tgt_cov["coa"] - tgt_cov["mapped"])
+            has_orphans = acq_gap > 0 or tgt_gap > 0
+
+            orphans = {
+                "show_section": has_orphans,
+                "acquirer_unmatched_count": acq_gap,
+                "target_unmatched_count": tgt_gap,
+                "acquirer_coa_total": acq_cov["coa"],
+                "acquirer_mapped": acq_cov["mapped"],
+                "target_coa_total": tgt_cov["coa"],
+                "target_mapped": tgt_cov["mapped"],
+                "message": (
+                    f"Acquirer: {acq_cov['mapped']}/{acq_cov['coa']} mapped, "
+                    f"Target: {tgt_cov['mapped']}/{tgt_cov['coa']} mapped"
+                ),
+            }
 
     return {
         "engagement_id": eng_id,
