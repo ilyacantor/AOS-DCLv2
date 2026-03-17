@@ -1,0 +1,289 @@
+﻿Category,Capability,AOD,AAM,DCL,NLQ,AOA,FARM,Platform,Status,Scope,Notes
+A2A Protocol,Agent discovery,,,,,A/R,I,,Aspirational,SE/ME,
+A2A Protocol,Context sharing,,,,,A/R,I,,Aspirational,SE/ME,
+A2A Protocol,Task delegation,,,,,A/R,C,,Aspirational,SE/ME,
+AAM Handoff,ConnectionCandidate export,A/R,,,,,,,Live,SE/ME,
+Action,Fabric Action Routing,,C,,,A/R,I,,Live,SE/ME,Routes 'Write' intent to Fabric Plane
+Action,Transaction Execution,,R,,,A/R,I,,Live,SE/ME,Executes via AAM Adapters
+Adapters,"API Gateway Adapter (Kong, Apigee)",,A/R,,,,I,,Stub,SE/ME,Managed API Proxy
+Adapters,"API Gateway Connection (Kong, Apigee)",,A/R,,,,I,,Stub,SE/ME,Proxy/REST modality
+Adapters,Adapter Factory Resolution,,A/R,,,,I,,Stub,SE/ME,Instantiates Strategy (Gateway vs Bus)
+Adapters,"Data Warehouse Connection (Snowflake, BigQuery)",,A/R,,,,I,,Stub,SE/ME,JDBC/Bulk Read modality
+Adapters,"Event Bus Adapter (Kafka, EventBridge)",,A/R,,,,I,,Stub,SE/ME,Streaming Consumer
+Adapters,"Event Bus Connection (Kafka, EventBridge)",,A/R,,,,I,,Stub,SE/ME,Streaming Consumer modality
+Adapters,"IPAAS Connection (Workato, MuleSoft)",,A/R,,,,I,,Stub,SE/ME,Webhooks/Signals modality
+Adapters,Pipe Discovery from Plane,,A/R,,,,I,,Stub,SE/ME,Inventory reusable data pipes
+Adapters,Plane Health Check,,A/R,,,,I,,Stub,SE/ME,Monitor adapter connectivity
+Adapters,"Warehouse Adapter (Snowflake, BigQuery)",,A/R,,,,I,,Stub,SE/ME,JDBC Read
+Adapters,"iPaaS Adapter (Workato, MuleSoft)",,A/R,,,,I,,Stub,SE/ME,Webhooks/Signals
+Agent Lifecycle,Agent health monitoring,,,,,A/R,C,,On Docket,SE/ME,
+Agent Lifecycle,Agent registration & configuration,,,,,A/R,I,,On Docket,SE/ME,
+Agent Lifecycle,Agent version management,,,,,A/R,I,,On Docket,SE/ME,
+Agent Registry,Agent discovery & inventory,C,C,I,,A/R,I,,On Docket,SE/ME,Agents as first-class assets
+Agent Registry,Agent metadata & ownership,I,I,C,,A/R,I,,On Docket,SE/ME,"Domain, owner, trust"
+Approval Workflows,Approval request generation,,,,,A/R,I,,On Docket,SE/ME,
+Approval Workflows,Human-in-the-loop routing,,,,,A/R,I,,On Docket,SE/ME,
+Approval Workflows,Override tracking,,,,,A/R,I,,On Docket,SE/ME,
+Asset Scan,Asset Discovery (Legacy Endpoints),A/R,,,,,,,Live,SE/ME,Legacy Fallback
+Asset Scan,Policy Manifest Export (Governance Rules),A/R,C,,,,,,Live,SE/ME,Export rules for AAM to enforce
+Candidate Intake,Candidate Defer,,A/R,,,,I,,Live,SE/ME,Defer with reason
+Candidate Intake,Candidate Ingestion,R,A,,,,I,,Live,SE/ME,Receives from AOD
+Candidate Intake,Candidate Match to Pipe,,A/R,,,,I,,Live,SE/ME,Link candidate to existing pipe
+Candidate Intake,Candidate Triage,,A/R,,,,I,,Live,SE/ME,Status management
+Capabilities,Capability contract registration,I,I,C,,A/R,I,,Live,SE/ME,Declared agent abilities
+Capabilities,Capability drift detection,C,C,C,,A/R,I,,Live,SE/ME,Observed vs declared behavior
+Classification & Governance,Governance status determination,A/R,,,,,C,,Live,SE/ME,
+Classification & Governance,IdP governance policy enforcement,A/R,,,,,C,,Live,SE/ME,
+Classification & Governance,Shadow IT classification,A/R,,,,,C,,Live,SE/ME,
+Classification & Governance,Vendor governance propagation,A/R,,,,,,,Live,SE/ME,
+Classification & Governance,Zombie asset detection,A/R,,,,,C,,Live,SE/ME,
+Collector Operations,Collector Registration,,A/R,,,,I,,Live,SE/ME,Register collection strategies
+Collector Operations,Collector Run Execution,,A/R,,,,I,,Live,SE/ME,Execute with tracking
+Collector Operations,Generate Observations,,A/R,,,,C,,Live,SE/ME,
+Collector Operations,Observation Storage,,A/R,,,,I,,Live,SE/ME,Raw collector output
+Collector Operations,Register Collectors,,A/R,,,,I,,Live,SE/ME,
+Collector Operations,Run Collectors,,A/R,,,,C,,Live,SE/ME,
+Collector Operations,Track Collector Runs,,A/R,,,,I,,Live,SE/ME,
+Connector Provisioning,Config Storage,,,A/R,,,I,,Aspirational,SE/ME,Aspirational — no code implementation
+Connector Provisioning,Dynamic Reconnection,,,A/R,,,C,,Aspirational,SE/ME,Aspirational — no code implementation
+Contract,Downstream Consumer Protocol (NLQ Interface),,,A/R,C,,C,,Live,SE/ME,DCL provides semantic API for NLQ consumption
+Convergence,Bridge (Target pipes join Acquirer pipes),,,A/R,,,C,I,On Docket,ME,"Same engine as base AOS. Entity is a tag, not a separate brain. No split brain"
+Convergence,COFA Merge tab (DCL UI),,,A/R,,,,I,Live,ME,"5 sections: merge overview, side-by-side comparison, match table, orphans, triple browser. Read-only"
+Convergence,Combining financial statements (4-column proforma),,,R,,,C,A/R,On Docket,ME,Entity A | Entity B | Adjustments | Combined. Every adjustment links to conflict register
+Convergence,Cross-sell analysis,,,A/R,I,,,C,On Docket,ME,Identifies revenue opportunities from combining customer bases
+Convergence,Diligence Integration Package (output bundle),,,C,,,,A/R,On Docket,ME,"Unified CoA, conflict register, combined FS, EBITDA bridge, cross-sell, audit trail. §1.3.3"
+Convergence,EBITDA bridge with confidence grades,,,R,I,,C,A/R,On Docket,ME,Adjustment categories with what-if sliders. High/medium/low confidence. Linked to evidence
+Convergence,Entity resolution,,,A/R,,,,C,On Docket,ME,Match entities across acquirer and target. O(n²) per advisory ruling
+Convergence,Hard accounting gates (deterministic validation),,,A/R,,,C,,Live,ME,"DR=CR, revenue identity, asset identity, BS identity. Maestra cannot override. §5.3"
+Convergence,Multi-entity data pipeline (entity_id tagging),,,R,,,A/R,I,Live,ME,Both entities flow through separate Farm configs → triple conversion → same PG store tagged by entity_id
+Convergence,Overlap/concentration analysis,,,A/R,I,,,C,On Docket,ME,"Customer, vendor, geographic concentration across both entities"
+Convergence,Quality of Earnings (QofE),,,R,I,,C,A/R,On Docket,ME,"Recurring vs non-recurring, trending, normalization. Feeds from EBITDA bridge"
+Coordination,Arbitration & conflict resolution,I,I,C,,A/R,I,,On Docket,SE/ME,Deterministic outcomes
+Coordination,Multi-agent workflow orchestration,I,C,C,,A/R,I,,On Docket,SE/ME,Fan-in / fan-out
+Data Mode,Demo Mode (Farm-sourced synthetic data),,C,R,I,,A/R,,Live,SE/ME,"Farm generates synthetic data via configs (Meridian $5B, Cascadia $1B). Output is triples to PG, not pipe ingest"
+Data Mode,Mode Switching & Fallback,,,A/R,I,,,,On Docket,SE/ME,"DCL decides data source per query; live data preferred, demo fallback if unavailable"
+Data Mode,Production Mode (Enterprise-sourced live data),,R,A/R,I,,,,On Docket,SE/ME,Enterprise SORs push directly to DCL via AAM-provisioned pipes; Farm has no role
+Data Query,Fact Base Execution,,,A/R,,,I,,Deprecated,SE/ME,fact_base.json removed. Replaced by semantic triple store (see Triple Store category)
+Data Query,Quality Score Metadata,,,A/R,,,I,,Live,SE/ME,"freshness, quality_score, record_count"
+Data Query,Query Endpoint (POST /api/dcl/query),,,A/R,C,,I,,Live,SE/ME,Metric + dimensions + filters
+Data Query,Ranking/Superlative Support,,,A/R,C,,I,,Live,SE/ME,"Top N, Bottom N, Best, Worst"
+Discovery & Cataloging,Asset discovery (find data sources),A/R,,,,,,,Live,SE/ME,
+Discovery & Cataloging,Domain canonicalization (alias collapsing),A/R,,,,,C,,Live,SE/ME,
+Discovery & Cataloging,Source catalog management,A/R,,,,,,,Live,SE/ME,
+Drift Detection,Acknowledge Drift,,A/R,,I,,I,,Live,SE/ME,
+Drift Detection,Detect Contract Drift,,A/R,,I,,C,,Live,SE/ME,
+Drift Detection,Detect Freshness Drift,,A/R,,I,,C,,Live,SE/ME,
+Drift Detection,Detect Schema Drift,,A/R,,I,,C,,Live,SE/ME,
+Drift Detection,Drift Acknowledgement,,A/R,,I,,I,,Live,SE/ME,Operator action
+Drift Detection,Fabric Drift Detection,,A/R,,I,,I,,Live,SE/ME,Connectivity drift
+Drift Detection,Schema Drift Detection,,A/R,,I,,C,,Live,SE/ME,Field changes (not connection)
+Drift Detection,Schema Hash Computation,,A/R,,I,,C,,Live,SE/ME,Data structure drift
+Drift Detection,Suppress Drift,,A/R,,I,,I,,Live,SE/ME,
+Economics,Budget enforcement,I,C,I,,A/R,I,,On Docket,SE/ME,Prevent runaway spend
+Economics,Cost attribution per agent,I,C,C,,A/R,I,,On Docket,SE/ME,Tokens & infra
+Engagement Type,"Convergence-Lite (upload-based, no AOD/AAM)",,,R,,,R,A/R,On Docket,ME,Greenfield M&A. GL upload. Farm processes. Maestra runs COFA chain. User story 1
+Engagement Type,Engagement type switching (UI conditional rendering),,,,,,,A/R,On Docket,SE/ME,"SE hides Convergence UI elements. ME shows Merge tab, combining, cross-sell. Config-driven"
+Engagement Type,Multi-entity engagement (Convergence),,,R,R,,R,A/R,On Docket,ME,"Two entities through same pipeline, tagged by entity_id. COFA unification, combining, full Convergence chain"
+Engagement Type,Single-entity engagement (ContextOS),R,R,R,R,,R,A/R,On Docket,SE,Full pipeline: AOD→AAM→Farm→DCL→NLQ. One entity_id. No Convergence features. Platform orchestrates
+Execution,Fabric action routing,I,C,I,,A/R,I,,Live,SE/ME,Writes routed via AAM
+Execution,Transaction execution,I,R,I,,A/R,I,,Live,SE/ME,Execution via adapters
+Export,DCL Pipe Export,,A/R,R,,,I,,Live,SE/ME,DeclaredPipes for DCL consumption
+Export,Pipe Snapshot Export,,A/R,,,,I,,Live,SE/ME,Point-in-time export
+Fabric Detection,Connection Routing Logic,A/R,I,,,,,,Live,SE/ME,Context for AAM Handoff
+Fabric Detection,Evidence Lead Export to AAM,A/R,I,,,,I,,Live,SE/ME,Passes connection hints in ConnectionCandidate handoff for AAM to validate against plane crawl
+Fabric Detection,Evidence Lead Generation (Connection Hints),A/R,C,,,,C,,Live,SE/ME,"Observation plane signals hinting at asset-to-fabric connections (Network traffic, IdP OAuth, CMDB deps)"
+Fabric Detection,Fabric Plane Identification,A/R,C,,,,,,Live,SE/ME,Detects the Backbone
+Fabric Mgmt,Fabric Plane Connection (The Backbone),,A/R,,,,I,,Live,SE/ME,"Connects to Planes, not Apps"
+Fabric Mgmt,Routing Policy Enforcement,,A/R,,,,I,,Live,SE/ME,Enforces 'Block Direct Access'
+Findings & Issues,CMDB gap detection,A/R,,,,,C,,Live,SE/ME,
+Findings & Issues,Data conflict detection,A/R,,,,,C,,Live,SE/ME,
+Findings & Issues,Finance gap detection,A/R,,,,,C,,Live,SE/ME,
+Findings & Issues,Identity gap detection,A/R,,,,,C,,Live,SE/ME,
+Governance,Auth Policy Enforcement,,A/R,,,,I,,Live,SE/ME,Plane-level auth validation
+Governance,PII Redaction (Edge),,A/R,,,,I,,Live,SE/ME,Redacts before data enters DCL
+Governance,Rate Limit Enforcement,,A/R,,,,I,,Live,SE/ME,Plane-level rate limiting
+Identity & Trust,Agent identity issuance,I,C,I,,A/R,I,,Live,SE/ME,Separate from service identity
+Identity & Trust,Trust tier enforcement,I,C,I,,A/R,I,,Live,SE/ME,Native vs customer vs third-party
+Ingest Pipeline,Drift Detection,,,A/R,I,,C,,Live,SE/ME,
+Ingest Pipeline,Record Buffering,,,A/R,I,,I,,Live,SE/ME,
+Ingest Pipeline,Self-Healing Repair,,,A/R,I,,C,,Live,SE/ME,
+Ingest Pipeline,Stream Consumption (Sidecar),,,A/R,I,,C,,Aspirational,SE/ME,Aspirational — no code implementation
+Ingest Pipeline,Verification with Farm,,,C,I,,A/R,,Live,SE/ME,
+Ingestion,Fabric Pointer Buffering (Zero-Trust),,,A/R,I,,I,,Live,SE/ME,"Buffers Pointers, NOT Payloads"
+Ingestion,Ingest Rejection Feedback,,I,A/R,I,,R,,Live,SE/ME,DCL produces structured rejection errors (NO_MATCHING_PIPE). Farm captures in push_results
+Ingestion,Just-in-Time Payload Fetching,,C,A/R,I,,,,Live,SE/ME,Fetch only on Semantic Map request
+Ingestion,Schema Drift Detection,,C,A/R,I,,C,,Live,SE/ME,Field changes (not connection)
+Ingestion,Schema-on-Write Validation (Ingest Guard),,,A/R,I,,I,,Live,SE/ME,DCL validates pipe schema exists before accepting ingest. Rejects with HTTP 422 if no matching pipe_id
+Inter-Service Contracts,AAM → DCL Pipe Export Contract,,A/R,R,,,,,Live,SE/ME,"Pipe definition schema, rejection handling, retry policy — needs formal spec"
+Inter-Service Contracts,AAM → Farm Dispatch Contract,,A/R,,,,R,,Live,SE/ME,"Manifest format, auth_token_ref requirement, timeout policy"
+Inter-Service Contracts,AOD → AAM Handoff Protocol,A/R,R,,,,,,Live,SE/ME,Underspecified — handoff.py is large module; contract doc needed
+Inter-Service Contracts,DCL → NLQ Query Contract,,,A/R,R,,,,Live,SE/ME,"Semantic catalog export, query endpoint, confidence propagation"
+Inter-Service Contracts,Farm → DCL Ingest Contract,,,A/R,,,R,,Live,SE/ME,"Row format, pipe_id matching, rejection feedback (422 NO_MATCHING_PIPE)"
+Lifecycle,Agent onboarding & versioning,I,I,I,,A/R,I,,Live,SE/ME,Promotion & rollback
+Lifecycle,Zombie agent detection,C,C,C,,A/R,I,,Live,SE/ME,Sprawl control
+Maestra,Constitution loading (Layers 0-4 + Orchestrator),,,,,,,A/R,Live,SE/ME,"Static Markdown files loaded every invocation. Governs voice, boundaries, reasoning rules"
+Maestra,Context assembly (prompt construction),,,C,,,,A/R,Live,SE/ME,Assembles: base constitution + module doc + retrieved triples + engagement state + user message
+Maestra,Domain keyword extraction,,,,,,,A/R,Live,SE/ME,Maps user-language terms to concept domain prefixes via domain_keywords.yaml. 19 domains
+Maestra,Entity detection (runtime DB query),,,C,,,,A/R,Live,SE/ME,Queries DB for entity_ids at runtime. No hardcoded entity names
+Maestra,Module knowledge doc loading (conditional),,,,,,,A/R,Live,SE/ME,"One module doc per request based on module_context. 6 docs: aod, aam, farm, dcl, nlq, convergence"
+Maestra,RACI boundary enforcement (module-scoped actions),,,,,,,A/R,Live,SE/ME,Actions scoped to current module. Knowledge unrestricted. Injected by assembler per §3.1
+Maestra,"Scenario variant loading (SE, ME, M&A, Portfolio)",,,,,,,A/R,On Docket,SE/ME,Separate constitution variants per scenario type sharing common base. SE only for demo
+Maestra,Streaming response (SSE via AI Gateway),,,,,,,A/R,Live,SE/ME,POST /api/maestra/chat. Reuses existing Claude API integration. Temperature 0.3
+Maestra,Triple retrieval via SQL (domain + entity filtering),,,R,,,,A/R,Live,SE/ME,Direct SQL to DCL triple store. Postgres-native filtering. NLQ bypassed for demo
+Maestra,Zero-result safeguard,,,,,,,A/R,Live,SE/ME,"When SQL returns zero triples for a matched domain, injects explicit no-data signal. Prevents hallucination. §10.1"
+Maestra COFA,COFA mapping write-back to DCL,,,R,,,,A/R,On Docket,ME,"Write mapping, conflict register, unified structure as triples. DCL validates via COFACompletionGate"
+Maestra COFA,COFA unification (two-CoA mapping),,,C,,,,A/R,Live,ME,"Reads two CoAs, builds unified mapping with confidence. Understands economic substance. Stage 5 STRONG PASS"
+Maestra COFA,COFACompletionGate (orphan account validation),,,A/R,,,,C,Live,ME,DCL validates every source account appears in mapping. Rejects orphans. Self-correcting loop
+Maestra COFA,Conflict detection and typing,,,C,,,,A/R,Live,ME,"Types: recognition timing, measurement basis, classification, scope. Ranked by dollar impact"
+Maestra COFA,Materiality ranking (dollar impact sorting),,,C,,,,A/R,Live,ME,Sorts conflicts by estimated annual dollar impact descending. Top 10 typically 90% of total
+Maestra Engagement,CSAT instrumentation (incentive metric),,,,,,,A/R,On Docket,SE/ME,Requires engagement persistence + feedback mechanism
+Maestra Engagement,Engagement state persistence (per-customer),,,,,,,A/R,On Docket,SE/ME,"Structured state in Supabase: steps completed, items flagged, outstanding issues. Survives across sessions"
+Maestra Engagement,Run ledger (per-step audit trail),,,,,,,A/R,On Docket,SE/ME,"engagement_id, step_name, model_version, constitution_version, validation result, timestamp. §3.6"
+Maestra Human Review,Batch approve (human-initiated),,,R,,,,A/R,On Docket,ME,"CFO selects conflicts below self-determined threshold, applies bulk resolution. Audit trail"
+Maestra Human Review,Four-tier confidence classification,,,,,,,A/R,On Docket,SE/ME,Compound confidence broken into components. Below medium: surface with explanation
+Maestra Human Review,Resolution audit trail,,,R,,,,A/R,On Docket,ME,"conflict_id, decision, decided_by, reasoning, timestamp, materiality. Goes into Diligence Package"
+Maestra Human Review,Structured recommendation with evidence,,,,,,,A/R,On Docket,SE/ME,For high-impact decisions. Maestra prepares; human confirms. §3.7
+Maestra UI,Chat widget (MaestraChat component),,,,,,,A/R,Live,SE/ME,"React component. Streaming, Markdown rendering, preset suggestions. 65/35 split layout"
+Maestra UI,Global chat store (above router),,,,,,,A/R,Live,SE/ME,MaestraChatProvider wraps entire app. Chat history persists across module navigation
+Maestra UI,Module context switching,,,,,,,A/R,Live,SE/ME,"Same widget in NLQ, AAM, DCL, AOD, Farm. Module doc and presets swap; history persists"
+Maestra UI,Module-aware preset suggestions (config-driven),,,,,,,A/R,Live,SE/ME,Presets stored in presets.ts. Per-module config. Adding presets requires no component changes
+Maestra UI,Onboarding walkthrough (guided first-time),,,C,,,,A/R,Live,SE/ME,dcl-onboarding-agent. Separate demo scene. Can integrate as Maestra workflow mode
+Observability,Cost tracking,,,,,A/R,I,,Live,SE/ME,
+Observability,Deterministic replay,I,I,C,,A/R,C,,Live,SE/ME,Debug & audit
+Observability,Execution trace & audit,I,I,C,,A/R,C,,Live,SE/ME,"Who did what, when"
+Observability,Performance metrics,,,,,A/R,C,,Live,SE/ME,
+Observability,Vitals aggregation,,,,,A/R,C,,Live,SE/ME,
+Operator UI,Display Candidates,,A/R,,,,I,,Live,SE/ME,
+Operator UI,Display Drift Events,,A/R,,,,I,,Live,SE/ME,
+Operator UI,Display Pipe Inventory,,A/R,,,,I,,Live,SE/ME,
+Pipe Inference,Create DeclaredPipe,,A/R,,,,I,,Live,SE/ME,
+Pipe Inference,DeclaredPipe Creation,,A/R,I,,,I,,Live,SE/ME,Publish to DCL
+Pipe Inference,Fabric Plane Inference,,A/R,,,,I,,Live,SE/ME,WHERE pipes live
+Pipe Inference,Infer Change Semantics,,A/R,,,,I,,Live,SE/ME,
+Pipe Inference,Infer Entity Scope,,A/R,,,,I,,Live,SE/ME,
+Pipe Inference,Infer Fabric Plane,,A/R,,,,I,,Live,SE/ME,
+Pipe Inference,Infer Identity Keys,,A/R,,,,I,,Live,SE/ME,
+Pipe Inference,Infer Modality,,A/R,,,,I,,Live,SE/ME,
+Pipe Inference,Infer Transport Kind,,A/R,,,,I,,Live,SE/ME,
+Pipe Inference,Modality Inference,,A/R,,,,I,,Live,SE/ME,HOW pipes are accessed
+Pipe Inference,Transport Kind Inference,,A/R,,,,I,,Live,SE/ME,"API, EVENT_STREAM, TABLE, FILE"
+Pipe Registry,Compute Schema Hash,,A/R,,,,I,,Live,SE/ME,
+Pipe Registry,Serve Pipe Queries,,A/R,,,,I,,Live,SE/ME,
+Pipe Registry,Store Declared Pipes,,A/R,,,,I,,Live,SE/ME,
+Pipe Registry,Version Pipe Changes,,A/R,,,,I,,Live,SE/ME,
+Pipeline Execution,Graph Building,,,A/R,I,,I,,Live,SE/ME,
+Pipeline Execution,Narration Broadcasting,,,A/R,I,,I,,Live,SE/ME,
+Pipeline Execution,Persona Filtering,,,A/R,I,,I,,Live,SE/ME,
+Pipeline Execution,Run Metrics Collection,,,A/R,I,,I,,Live,SE/ME,
+Policy & Governance,Agent-level policy evaluation,I,C,C,,A/R,I,,Live,SE/ME,"Autonomy, scope, cost"
+Policy & Governance,Autonomy bounds enforcement,I,C,I,,A/R,I,,Live,SE/ME,Guardrails
+Policy & Governance,HITL escalation,I,I,C,,A/R,I,,Live,SE/ME,Confidence-based approval
+Query Cache,Cache Learning (AI Mode),,,,A/R,,I,,Live,SE/ME,Stores successful parses
+Query Cache,LLM Call Tracking,,,,A/R,,I,,Live,SE/ME,Per-session counts with Supabase
+Query Cache,Query Cache Lookup,,,,A/R,,I,,Live,SE/ME,EXACT/HIGH/MEDIUM thresholds
+Query Cache,Query Learning Log,,,,A/R,,I,,Live,SE/ME,Logs all queries with success/failure
+Query Cache,Semantic Query Cache (Pinecone),,,,A/R,,I,,Live,SE/ME,Vector similarity for query matching
+Query Cache,Static/AI Mode Routing,,,,A/R,,I,,Live,SE/ME,Mode toggle for speed vs learning
+Query Engine,Answer Assembly & Formatting,,,,A/R,,I,,Live,SE/ME,Structures response for consumers
+Query Engine,Confidence Scoring,,,,A/R,,C,,Live,SE/ME,"Bounded [0,1] with weighted factors"
+Query Engine,Grounding & Citation,,,,A/R,,I,,Live,SE/ME,Attaches evidence to answers
+Query Engine,"Intent Classification (POINT, COMPARISON, TREND, AGGREGATION, BREAKDOWN)",,,,A/R,,I,,Live,SE/ME,5 intent types from natural language
+Query Engine,LLM-Based Query Parsing,,,,A/R,,I,,Live,SE/ME,Claude API extracts structured JSON
+Query Engine,Metric/Dimension Extraction,,,,A/R,,I,,Live,SE/ME,LLM extracts + synonym normalization
+Query Engine,Pattern-Based Pre-parsing,,,,A/R,,I,,Live,SE/ME,Regex before LLM for dashboards/viz
+Query Engine,"Query Execution (Aggregation, Filtering)",,,R,A,,I,,Live,SE/ME,"NLQ orchestrates, DCL provides data"
+Query Engine,Query Planning & Decomposition,,,,A/R,,I,,Live,SE/ME,Breaks complex questions into steps
+Query Engine,"Temporal Resolution (last year, Q3, etc.)",,,,A/R,,I,,Live,SE/ME,Interprets time references
+Reconciliation,Pipeline execution,C,,,,,A/R,,Live,SE/ME,
+Response Generation,Ambiguity Detection,,,,A/R,,I,,Live,SE/ME,"Pattern-based, returns prompts"
+Response Generation,Graceful Fallbacks,,,,A/R,,I,,Live,SE/ME,Never show raw errors
+Response Generation,Off-Topic Handling,,,,A/R,,I,,Live,SE/ME,"Easter eggs, polite redirects"
+Response Generation,Synonym Normalization,,,,A/R,,I,,Live,SE/ME,100+ synonyms → canonical names
+Response Generation,Text Response Formatting,,,,A/R,,I,,Live,SE/ME,"Value, unit, period, confidence"
+Runner Dispatch,Content Push to DCL,,I,R,I,,A/R,,Live,SE/ME,Farm pushes extracted data to DCL /ingest endpoint
+Runner Dispatch,Manifest Dispatch to Farm,,A/R,,I,,R,,Live,SE/ME,AAM constructs and dispatches JobManifest to Farm
+Runner Dispatch,Runner Execution (Data Extraction),,I,,I,,A/R,,Live,SE/ME,"Farm receives manifest, connects to external APIs, extracts data"
+Runtime,Task Queue Management,,,,,A/R,I,,Live,SE/ME,Moved from FARM (Ops) | AOA owns orchestration logic; Farm owns infra — see Scaling Infrastructure for Farm boundary
+Runtime,Worker pool management,I,I,I,,A/R,I,,Live,SE/ME,Scalable execution | AOA owns worker dispatch logic; Farm owns worker pool infra — see Scaling Infrastructure
+SOR Identification,Data domain classification,A/R,,,,,C,,Live,SE/ME,
+SOR Identification,System of Record scoring,A/R,,,,,C,,Live,SE/ME,
+Scaling Infrastructure,Auto-recovery,,,,,I,A/R,,Live,SE/ME,
+Scaling Infrastructure,Load balancing,,,,,I,A/R,,Live,SE/ME,
+Scaling Infrastructure,Task queue management,,,,,C,A/R,,Live,SE/ME,Farm owns infra; AOA owns orchestration logic — see Runtime for AOA-managed scheduling
+Scaling Infrastructure,Worker pool orchestration,,,,,I,A/R,,Live,SE/ME,Farm owns worker pool infra; AOA owns dispatch logic — see Runtime
+Scheduling,Cron-based scheduling,,,,,A/R,I,,On Docket,SE/ME,
+Scheduling,Event-driven triggers,,,,,A/R,R,,On Docket,SE/ME,
+Scheduling,Webhook triggers,,,,,A,R,,On Docket,SE/ME,
+Schema Ingestion,Demo Schema Loading,,,A/R,I,,I,,Deprecated,SE/ME,fact_base.json and CSV demo schemas removed. Data enters via Farm → triple conversion → PG
+Schema Ingestion,Farm Schema Fetching,,,A/R,I,,C,,Live,SE/ME,From FARM_API_URL
+Schema Ingestion,Stream Source Loading,,,A/R,I,,C,,Live,SE/ME,Real-time sources from DB
+Security,Context Sanitization,,,,,A/R,C,,Live,SE/ME,Security layer before Agent Logic
+Self-Healing,Connection/Fabric Drift Detection,,A/R,,,,I,,Stub,SE/ME,Detects lost connectivity to Plane
+Self-Healing,Consumer Lag Detection,,A/R,,,,I,,Stub,SE/ME,Event Bus specific drift
+Self-Healing,Execute Self-Heal (Restart Consumers),,A/R,,,,I,,Stub,SE/ME,Restarts Consumers/Reconnects
+Self-Healing,Heal History Logging,,A/R,,,,I,,Stub,SE/ME,Audit trail of repairs
+Self-Healing,Warehouse Suspend Detection,,A/R,,,,I,,Stub,SE/ME,Warehouse specific drift
+Semantic Catalog,Alias Resolution,,,A/R,C,,I,,Live,SE/ME,"'AR' → 'ar', 'attainment' → 'quota_attainment'"
+Semantic Catalog,Dimension Definitions,,,A/R,C,,I,,Live,SE/ME,"107 concepts across 9 enterprise domains (Business, Pipeline, Ops, Tech, HR, Finance, Sales, Product, Support)"
+Semantic Catalog,Metric Definitions,,,A/R,C,,I,,Live,SE/ME,325 valid concept-dimension pairings across CFO/CRO/COO/CTO/CHRO persona packs
+Semantic Catalog,Metric-Dimension Validation,,,A/R,C,,I,,Live,SE/ME,Validates which dimensions apply to which concepts — 325 valid pairings enforced
+Semantic Catalog,Semantic Export API,,,A/R,C,,I,,Live,SE/ME,Full catalog for NLQ consumption
+Semantic Intelligence,Concept Registry Management,,,A/R,I,,I,,Live,SE/ME,107 concept nodes across 9 enterprise domains
+Semantic Intelligence,Concept-Dimension Pairing Validation,,,A/R,I,,,,Live,SE/ME,325 valid pairings — enforced at graph build and query time
+Semantic Intelligence,Confidence Scoring,,,A/R,C,,,,Live,SE/ME,0.0-1.0 confidence on concept-dimension mappings; propagated to NLQ answers
+Semantic Intelligence,Inference Layer (Graph-based Discovery),,,A/R,C,,I,,Live,SE/ME,Approach 5 Layer 2 — graph traversal discovers implicit relationships between concepts
+Semantic Intelligence,Ontology Versioning,,,A/R,I,,,,On Docket,SE/ME,Track ontology changes over time; not yet implemented
+Semantic Intelligence,Runtime Resolution (LLM Pathfinding),,,A/R,C,,I,,Live,SE/ME,Approach 5 Layer 3 — LLM resolves ambiguous queries through semantic graph at query time
+Semantic Intelligence,Semantic Graph Build & Rebuild,,,A/R,I,,I,,Live,SE/ME,POST /api/dcl/run — auto-trigger on ingest is On Docket (currently manual)
+Semantic Intelligence,Skeleton Layer (Curated Ontology),,,A/R,C,,I,,Live,SE/ME,"Approach 5 Layer 1 — hand-curated concept-dimension pairings, authoritative"
+Semantic Mapping,Batch Mapping API,,,A/R,I,,I,,Live,SE/ME,Bulk semantic mapping endpoint
+Semantic Mapping,Heuristic Mapping (Dev Mode),,,A/R,I,,I,,Live,SE/ME,Pattern matching ~1s
+Semantic Mapping,LLM Refinement (Prod Mode),,,A/R,I,,I,,Live,SE/ME,OpenAI + Pinecone RAG ~5s
+Semantic Mapping,Mapping Persistence,,,A/R,I,,I,,Live,SE/ME,PostgreSQL storage
+Session Management,Row-Level Security,,,,A/R,,I,,Live,SE/ME,Supabase RLS policies
+Session Management,Session State (In-Memory),,,,A/R,,I,,Live,SE/ME,"Dashboard state, 2hr TTL"
+Session Management,Session Stats Persistence,,,,A/R,,I,,Live,SE/ME,Supabase storage
+Session Management,Tenant Isolation,,,,A/R,,I,,Live,SE/ME,tenant_id on all DB queries
+Source Normalization,Alias Resolution,,,A/R,I,,C,,Live,SE/ME,
+Source Normalization,Discovery Mode (New Sources),,,A/R,I,,C,,Live,SE/ME,
+Source Normalization,Pattern Matching,,,A/R,I,,I,,Live,SE/ME,
+Source Normalization,Registry Loading,,,A/R,I,,C,,Live,SE/ME,
+Tee Request Management,Approve/Reject Tee,,A/R,,,,I,,Live,SE/ME,
+Tee Request Management,Create Tee Request,,A/R,,,,I,,Live,SE/ME,
+Tee Request Management,Track Tee Status,,A/R,,,,I,,Live,SE/ME,
+Telemetry,Metrics Collection,,,A/R,,,I,,Live,SE/ME,
+Telemetry,TPS/Quality Calculation,,,A/R,,,C,,Live,SE/ME,
+Telemetry,Telemetry Broadcasting,,,A/R,,,I,,Live,SE/ME,
+Triage & Prioritization,Asset prioritization scoring,A/R,,,,,,,Live,SE/ME,
+Triage & Prioritization,Provisioning status assignment,A/R,,,,,,,Live,SE/ME,
+Triple Store,Domain-based organization (concept prefix),,,A/R,,,,C,Live,SE/ME,19 verified domains. First segment of concept name. Used for retrieval filtering
+Triple Store,Provenance tracking (per-triple),,,A/R,,,C,,Live,SE/ME,"source_system, source_field, confidence_score, confidence_tier, pipe_id, run_id, created_at"
+Triple Store,"Semantic triple storage (entity, concept, property, value, period)",,,A/R,C,,C,C,Live,SE/ME,"All data as triples in Postgres. Dot-separated concept hierarchy. 9,350+ base + 124K BlueWave HR + 1,176 COFA"
+Triple Store,Triple conversion (Farm output → PG),,,C,,,A/R,,Live,SE/ME,Farm generates model data → converts to triples → writes to PG direct. Bypasses old DCL ingest
+Triple Store,Triple ingest endpoint (POST /api/dcl/ingest-triples),,,A/R,,,C,,Live,SE/ME,Validates and writes triples to PG. Used for COFA write-back path
+Triple Store,V2 engine stack (8 engines on triple store),,,A/R,C,,,,Live,SE/ME,8 v2 engines reading from semantic triple store. Old JSON engines present via compat layer
+Trust & Security,Injection defense,,,,,A/R,I,,Live,SE/ME,
+Trust & Security,PII detection & redaction,,,,,A/R,I,,Live,SE/ME,
+Trust & Security,Policy enforcement,,,,,A/R,C,,Live,SE/ME,
+Verification,Accuracy Measurement,C,C,,,,A/R,,Live,SE/ME,Consolidated from Truth/Reconciliation per G2
+Verification,End-to-End Injection Tests,,I,I,,,A/R,,Live,SE/ME,"Farm pushes to DCL, verifies at DCL"
+Verification,Generate Test Data,,I,,,,A/R,,Live,SE/ME,
+Verification,Ground Truth Validation,C,C,C,,,A/R,,Live,SE/ME,FARM is Test Oracle
+Verification,Provide Source of Truth,,C,,,,A/R,,Live,SE/ME,
+Verification,Verify Against Truth,,C,,,,A/R,,Live,SE/ME,
+Visualization,4-Layer Sankey Graph,,,A/R,,,I,,Live,SE/ME,Pipeline→Sources→Ontology→Personas
+Visualization,Chart Generation,,,,A/R,,I,,Live,SE/ME,"Line, bar, area, pie, stacked, waterfall"
+Visualization,Dashboard Generation,,,,A/R,,I,,Live,SE/ME,Dynamic widget schemas from intent
+Visualization,Dashboard Refinement Actions,,,,A/R,,I,,Live,SE/ME,"'Add a chart', 'Show by region'"
+Visualization,Galaxy Visualization,,,,A/R,,I,,Live,SE/ME,Node-based with related metrics
+Visualization,Monitor Dashboard,,,A/R,,,I,,Live,SE/ME,Collapsible right panel
+Visualization,Persona-Based Filtering,,,A/R,,,I,,Live,SE/ME,CFO/CRO/COO/CTO buttons
+Visualization,Telemetry Ribbon,,,A/R,,,I,,Live,SE/ME,
+Visualization,Terminal Narration,,,A/R,,,I,,Live,SE/ME,Real-time processing log
+Visualization,Topology API Exposure,,I,A/R,,,,,Live,SE/ME,Backend for Graph UI
+Workflow Orchestration,Run cancellation,,,,,A,R,,Live,SE/ME,
+Workflow Orchestration,Run creation & tracking,,,,,A/R,R,,Live,SE/ME,
+Workflow Orchestration,Step sequencing,,,,,A/R,C,,Live,SE/ME,
+,,,,,,,,,,,
+SE- Single Entity state,,,,,,,,,,,
+ME - Multi-entity state,,,,,,,,,,,

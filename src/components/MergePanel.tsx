@@ -145,9 +145,7 @@ export function MergePanel() {
           const elapsed = Math.floor((Date.now() - mergeStartRef.current) / 1000);
           setMergeElapsed(elapsed);
           // Drive status messages from the timer (the POST blocks for 60-120s)
-          if (elapsed >= 90) {
-            setMergeStatus('Still working — large account sets take longer...');
-          } else if (elapsed >= 60) {
+          if (elapsed >= 60) {
             setMergeStatus('Writing mapping results to DCL...');
           } else if (elapsed >= 30) {
             setMergeStatus('Mapping accounts and identifying conflicts...');
@@ -235,7 +233,7 @@ export function MergePanel() {
     setMergeStatus('Sending to Maestra...');
     mergeStartRef.current = Date.now();
 
-    // Step 1: POST to Maestra chat
+    // Step 1: POST to Maestra chat — let it run to completion (no abort timer)
     let maestraOk = false;
     try {
       const res = await fetch('/api/platform/maestra/cofa-chat', {
@@ -295,7 +293,7 @@ export function MergePanel() {
 
     if (!maestraOk) return;
 
-    // Step 2: Poll merge overview for results (Maestra may have already written them)
+    // Step 2: Poll merge overview for results
     const pollForResults = () => {
       pollRef.current = setTimeout(async () => {
         try {
