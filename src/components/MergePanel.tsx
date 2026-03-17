@@ -47,8 +47,13 @@ interface MergeData {
   };
   orphans: {
     show_section: boolean;
-    acquirer_unmatched: string[];
-    target_unmatched: string[];
+    acquirer_unmatched_count: number;
+    target_unmatched_count: number;
+    acquirer_coa_total: number;
+    acquirer_mapped: number;
+    target_coa_total: number;
+    target_mapped: number;
+    message: string;
   };
 }
 
@@ -113,18 +118,31 @@ export function MergePanel() {
   const [mergeError, setMergeError] = useState<string | null>(null);
   const [mergeCollapsedResponse, setMergeCollapsedResponse] = useState<string | null>(null);
   const [mergeElapsed, setMergeElapsed] = useState(0);
+  const [mergeFinishedIn, setMergeFinishedIn] = useState<number | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mergeStartRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Live elapsed-seconds counter while merge is running
+  // Live elapsed-seconds counter while merge is running — also drives status messages
   useEffect(() => {
     if (mergeRunning) {
       setMergeElapsed(0);
+      setMergeFinishedIn(null);
       timerRef.current = setInterval(() => {
         if (mergeStartRef.current > 0) {
-          setMergeElapsed(Math.floor((Date.now() - mergeStartRef.current) / 1000));
+          const elapsed = Math.floor((Date.now() - mergeStartRef.current) / 1000);
+          setMergeElapsed(elapsed);
+          // Drive status messages from the timer (the POST blocks for 60-120s)
+          if (elapsed >= 90) {
+            setMergeStatus('Still working — large account sets take longer...');
+          } else if (elapsed >= 60) {
+            setMergeStatus('Writing mapping results to DCL...');
+          } else if (elapsed >= 30) {
+            setMergeStatus('Mapping accounts and identifying conflicts...');
+          } else if (elapsed >= 10) {
+            setMergeStatus('Maestra is analyzing charts of accounts...');
+          }
         }
       }, 1000);
     } else {
@@ -266,23 +284,9 @@ export function MergePanel() {
 
     if (!maestraOk) return;
 
-    // Step 2: Poll merge overview for results
-    setMergeStatus('Maestra is analyzing charts of accounts...');
+    // Step 2: Poll merge overview for results (Maestra may have already written them)
     const pollForResults = () => {
       pollRef.current = setTimeout(async () => {
-        const elapsed = Date.now() - mergeStartRef.current;
-
-        // Update status message based on elapsed time
-        if (elapsed > 60000) {
-          setMergeStatus(
-            'Still working — COFA unification typically takes 30-90 seconds for two entities.'
-          );
-        } else if (elapsed > 30000) {
-          setMergeStatus('Writing mapping to DCL...');
-        } else if (elapsed > 10000) {
-          setMergeStatus('Maestra is analyzing charts of accounts...');
-        }
-
         try {
           const res = await fetch('/api/dcl/merge/overview');
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -291,16 +295,15 @@ export function MergePanel() {
           if (freshData.matches.has_matches) {
             // Success — matches found
             if (pollRef.current) clearTimeout(pollRef.current);
+            const finalElapsed = Math.floor((Date.now() - mergeStartRef.current) / 1000);
+            setMergeFinishedIn(finalElapsed);
             setData(freshData);
             setMergeRunning(false);
             setMergeStatus(null);
 
             const accountCount = freshData.matches.rows.length;
-            const conflictCount =
-              freshData.orphans.acquirer_unmatched.length +
-              freshData.orphans.target_unmatched.length;
             setToast({
-              message: `COFA merge complete — ${accountCount} accounts mapped, ${conflictCount} conflicts identified.`,
+              message: `COFA merge complete in ${finalElapsed}s — ${accountCount} accounts mapped.`,
               type: 'success',
             });
             return;
@@ -393,6 +396,100 @@ export function MergePanel() {
     </svg>
   );
 
+  // --- Download helpers ---
+
+  const triggerDownload = (content: string, filename: string, mime: string) => {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadJson = useCallback(() => {
+    if (!data) return;
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    triggerDownload(JSON.stringify(data, null, 2), `cofa-merge-${ts}.json`, 'application/json');
+  }, [data]);
+
+  const downloadReport = useCallback(() => {
+    if (!data) return;
+    const lines: string[] = [];
+    const hr = '─'.repeat(72);
+
+    lines.push('COFA MERGE REPORT');
+    lines.push(hr);
+    lines.push(`Generated: ${new Date().toLocaleString()}`);
+    lines.push(`Engagement: ${data.engagement_id || 'N/A'}`);
+    if (mergeFinishedIn !== null) lines.push(`Merge duration: ${mergeFinishedIn}s`);
+    lines.push('');
+
+    // Entities
+    lines.push('ENTITIES');
+    lines.push(hr);
+    for (const e of data.overview.entities) {
+      const role = e.entity_id === data.acquirer.entity_id ? 'Acquirer' : 'Target';
+      lines.push(`  ${role}: ${e.display_name} (${e.entity_id})`);
+      lines.push(`    COFA triples: ${e.cofa_count}`);
+      lines.push(`    Last ingest: ${e.last_ingest || 'N/A'}`);
+    }
+    lines.push('');
+
+    // Coverage
+    lines.push('MAPPING COVERAGE');
+    lines.push(hr);
+    lines.push(`  ${data.acquirer.display_name}: ${data.orphans.acquirer_mapped}/${data.orphans.acquirer_coa_total} accounts mapped`);
+    lines.push(`  ${data.target.display_name}: ${data.orphans.target_mapped}/${data.orphans.target_coa_total} accounts mapped`);
+    if (data.orphans.acquirer_unmatched_count + data.orphans.target_unmatched_count > 0) {
+      lines.push(`  Unmapped: ${data.orphans.acquirer_unmatched_count} acquirer, ${data.orphans.target_unmatched_count} target`);
+    } else {
+      lines.push('  Status: COMPLETE — all accounts mapped');
+    }
+    lines.push('');
+
+    // Resolution matches
+    lines.push(`RESOLUTION MATCHES (${data.matches.rows.length})`);
+    lines.push(hr);
+    if (data.matches.rows.length === 0) {
+      lines.push('  No cross-entity resolution matches found.');
+    } else {
+      // Header
+      const acqW = 28, tgtW = 28, confW = 12, methW = 14;
+      lines.push(`  ${'Acquirer Account'.padEnd(acqW)} ${'Target Account'.padEnd(tgtW)} ${'Confidence'.padEnd(confW)} ${'Method'.padEnd(methW)}`);
+      lines.push(`  ${'─'.repeat(acqW)} ${'─'.repeat(tgtW)} ${'─'.repeat(confW)} ${'─'.repeat(methW)}`);
+      for (const r of data.matches.rows) {
+        const acq = (r.acquirer_concept || '-').replace('cofa_mapping.', '').replace('cofa.', '');
+        const tgt = (r.target_concept || '-').replace('cofa_mapping.', '').replace('cofa.', '');
+        const conf = r.resolution_confidence !== null ? `${(r.resolution_confidence * 100).toFixed(0)}%` : '-';
+        const meth = r.resolution_method || '-';
+        lines.push(`  ${acq.padEnd(acqW)} ${tgt.padEnd(tgtW)} ${conf.padEnd(confW)} ${meth.padEnd(methW)}`);
+      }
+    }
+    lines.push('');
+
+    // Side-by-side comparison
+    lines.push(`CHART OF ACCOUNTS COMPARISON (${data.comparison.concepts.length} concepts)`);
+    lines.push(hr);
+    for (const c of data.comparison.concepts) {
+      const acctName = c.acquirer_triples.find(t => t.property === 'account_name')?.value
+        || c.target_triples.find(t => t.property === 'account_name')?.value
+        || '';
+      lines.push(`  ${c.concept}: ${acctName}`);
+      if (c.acquirer_triples.length > 0 && c.target_triples.length > 0) {
+        lines.push(`    Acquirer: ${c.acquirer_triples.length} properties | Target: ${c.target_triples.length} properties`);
+      } else if (c.acquirer_triples.length > 0) {
+        lines.push(`    Acquirer only (${c.acquirer_triples.length} properties)`);
+      } else {
+        lines.push(`    Target only (${c.target_triples.length} properties)`);
+      }
+    }
+
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    triggerDownload(lines.join('\n'), `cofa-merge-report-${ts}.txt`, 'text/plain');
+  }, [data, mergeFinishedIn]);
+
   // --- Render ---
 
   if (loading) {
@@ -437,6 +534,25 @@ export function MergePanel() {
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold">COFA Merge</h2>
           <div className="flex items-center gap-2">
+            {/* Download buttons — visible when merge results exist */}
+            {data && data.matches.has_matches && (
+              <>
+                <button
+                  onClick={downloadJson}
+                  className="px-2.5 py-1 text-xs rounded font-medium bg-zinc-700/50 text-zinc-300 border border-zinc-600/40 hover:bg-zinc-600/50 transition-colors"
+                  title="Download raw merge data as JSON"
+                >
+                  JSON
+                </button>
+                <button
+                  onClick={downloadReport}
+                  className="px-2.5 py-1 text-xs rounded font-medium bg-zinc-700/50 text-zinc-300 border border-zinc-600/40 hover:bg-zinc-600/50 transition-colors"
+                  title="Download formatted merge report as plain text"
+                >
+                  Report
+                </button>
+              </>
+            )}
             {/* Run COFA Merge button — visible when two entities have COFA data */}
             {data && data.overview.entities.length >= 2 && (
               <button
@@ -473,12 +589,20 @@ export function MergePanel() {
           </div>
         </div>
 
-        {/* Progress / error bar */}
+        {/* Progress / completed time bar */}
         {mergeRunning && (
           <div className="mt-2 flex items-center gap-2 text-sm text-amber-400">
             <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin shrink-0" />
             <span className="tabular-nums font-mono">{mergeElapsed}s</span>
             {mergeStatus && <span>{mergeStatus}</span>}
+          </div>
+        )}
+        {!mergeRunning && mergeFinishedIn !== null && (
+          <div className="mt-2 flex items-center gap-2 text-sm text-emerald-400">
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>Completed in <span className="tabular-nums font-mono font-semibold">{mergeFinishedIn}s</span></span>
           </div>
         )}
         {mergeError && (
@@ -691,40 +815,28 @@ export function MergePanel() {
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-card/20 transition-colors"
                 >
                   {chevron(orphansOpen)}
-                  <span className="font-semibold uppercase tracking-wider text-muted-foreground text-sm">Unmatched Concepts</span>
+                  <span className="font-semibold uppercase tracking-wider text-muted-foreground text-sm">Coverage</span>
                   <span className="text-muted-foreground/70 font-mono">
-                    {data.orphans.acquirer_unmatched.length + data.orphans.target_unmatched.length} orphan(s)
+                    {data.orphans.acquirer_unmatched_count + data.orphans.target_unmatched_count} unmapped
                   </span>
                 </button>
                 {orphansOpen && (
                   <div className="grid grid-cols-2 divide-x divide-border/30 border-t border-border/30">
                     <div className="p-3">
                       <div className="text-xs font-semibold uppercase tracking-wider text-blue-400 mb-2">
-                        {data.acquirer.display_name} unmatched
+                        {data.acquirer.display_name}
                       </div>
-                      {data.orphans.acquirer_unmatched.length === 0 ? (
-                        <span className="text-xs text-muted-foreground/50">All matched</span>
-                      ) : (
-                        <div className="space-y-1">
-                          {data.orphans.acquirer_unmatched.map((c) => (
-                            <div key={c} className="font-mono text-xs text-foreground/80">{c}</div>
-                          ))}
-                        </div>
-                      )}
+                      <span className="font-mono text-xs text-foreground/80">
+                        {data.orphans.acquirer_mapped}/{data.orphans.acquirer_coa_total} mapped
+                      </span>
                     </div>
                     <div className="p-3">
                       <div className="text-xs font-semibold uppercase tracking-wider text-purple-400 mb-2">
-                        {data.target.display_name} unmatched
+                        {data.target.display_name}
                       </div>
-                      {data.orphans.target_unmatched.length === 0 ? (
-                        <span className="text-xs text-muted-foreground/50">All matched</span>
-                      ) : (
-                        <div className="space-y-1">
-                          {data.orphans.target_unmatched.map((c) => (
-                            <div key={c} className="font-mono text-xs text-foreground/80">{c}</div>
-                          ))}
-                        </div>
-                      )}
+                      <span className="font-mono text-xs text-foreground/80">
+                        {data.orphans.target_mapped}/{data.orphans.target_coa_total} mapped
+                      </span>
                     </div>
                   </div>
                 )}
