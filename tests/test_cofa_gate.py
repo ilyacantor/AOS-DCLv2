@@ -1,7 +1,7 @@
 """
 COFA Completeness Gate Tests
 =============================
-5 test cases validating the COFACompletionGate.
+7 test cases validating the COFACompletionGate.
 """
 
 import sys
@@ -39,119 +39,69 @@ def make_mappings_from_coa(
     ]
 
 
-gate = COFACompletionGate()
-passed = 0
-failed = 0
-total = 7
+def test_complete_mapping_passes():
+    """Test 1: Complete mapping passes (45 source, 45 mapped)."""
+    gate = COFACompletionGate()
+    source = make_source_coa(45)
+    mappings = make_mappings_from_coa(source)
+    result = gate.validate_mapping_completeness(source, mappings)
+    assert result["complete"] is True, f"got complete={result['complete']}"
 
 
-def check(name: str, condition: bool, detail: str = ""):
-    global passed, failed
-    if condition:
-        print(f"  [PASS] {name}")
-        passed += 1
-    else:
-        print(f"  [FAIL] {name} — {detail}")
-        failed += 1
+def test_incomplete_mapping_fails():
+    """Test 2: Incomplete mapping fails (45 source, 44 mapped, missing index 4)."""
+    gate = COFACompletionGate()
+    source = make_source_coa(45)
+    mappings = make_mappings_from_coa(source, skip_indices=[4])
+    result = gate.validate_and_reject(source, mappings)
+    assert result["complete"] is False, f"got complete={result['complete']}"
 
 
-# -----------------------------------------------------------------------
-# Test 1: Complete mapping passes
-# -----------------------------------------------------------------------
-print("\nTest 1: Complete mapping passes (45 source, 45 mapped)")
-source = make_source_coa(45)
-mappings = make_mappings_from_coa(source)
-result = gate.validate_mapping_completeness(source, mappings)
-check(
-    "complete=true",
-    result["complete"] is True,
-    f"got complete={result['complete']}",
-)
+def test_rejection_message_includes_account_details():
+    """Test 3: Rejection message includes account details."""
+    gate = COFACompletionGate()
+    source = make_source_coa(45)
+    mappings = make_mappings_from_coa(source, skip_indices=[4])
+    result = gate.validate_and_reject(source, mappings)
+    orphaned = result.get("orphaned_accounts", [])
+    assert len(orphaned) > 0 and "account_number" in orphaned[0], f"orphaned={orphaned}"
+    assert "account_name" in orphaned[0], f"orphaned={orphaned}"
+    assert "rejection_message" in result and "1400" in result.get("rejection_message", ""), (
+        f"rejection_message={result.get('rejection_message', 'MISSING')}"
+    )
 
-# -----------------------------------------------------------------------
-# Test 2: Incomplete mapping fails (missing account 6200)
-# -----------------------------------------------------------------------
-print("\nTest 2: Incomplete mapping fails (45 source, 44 mapped, missing index 4)")
-source = make_source_coa(45)
-# Skip index 4 → account_number "1400"
-mappings = make_mappings_from_coa(source, skip_indices=[4])
-result = gate.validate_and_reject(source, mappings)
-check(
-    "complete=false",
-    result["complete"] is False,
-    f"got complete={result['complete']}",
-)
 
-# -----------------------------------------------------------------------
-# Test 3: Rejection message includes account details
-# -----------------------------------------------------------------------
-print("\nTest 3: Rejection message includes account details")
-orphaned = result.get("orphaned_accounts", [])
-has_account_number = len(orphaned) > 0 and "account_number" in orphaned[0]
-has_account_name = len(orphaned) > 0 and "account_name" in orphaned[0]
-has_rejection_msg = "rejection_message" in result and "1400" in result.get("rejection_message", "")
-check(
-    "orphan has account_number and account_name and rejection_message cites it",
-    has_account_number and has_account_name and has_rejection_msg,
-    f"orphaned={orphaned}, rejection_message={result.get('rejection_message', 'MISSING')}",
-)
+def test_empty_mapping_fails():
+    """Test 4: Empty mapping fails (45 source, 0 mapped)."""
+    gate = COFACompletionGate()
+    source = make_source_coa(45)
+    result = gate.validate_mapping_completeness(source, [])
+    assert result["complete"] is False, f"complete={result['complete']}"
+    assert len(result["orphaned_accounts"]) == 45, f"orphaned={len(result['orphaned_accounts'])}"
 
-# -----------------------------------------------------------------------
-# Test 4: Empty mapping fails
-# -----------------------------------------------------------------------
-print("\nTest 4: Empty mapping fails (45 source, 0 mapped)")
-source = make_source_coa(45)
-result = gate.validate_mapping_completeness(source, [])
-check(
-    "complete=false, 45 orphaned",
-    result["complete"] is False and len(result["orphaned_accounts"]) == 45,
-    f"complete={result['complete']}, orphaned={len(result['orphaned_accounts'])}",
-)
 
-# -----------------------------------------------------------------------
-# Test 5: Empty source rejects (zero-account bypass prevention)
-# -----------------------------------------------------------------------
-print("\nTest 5: Empty source rejects (0 source, 0 mapped)")
-result = gate.validate_mapping_completeness([], [])
-check(
-    "complete=false, message mentions empty",
-    result["complete"] is False and "empty" in result["message"].lower(),
-    f"got complete={result['complete']}, message={result['message']}",
-)
+def test_empty_source_rejects():
+    """Test 5: Empty source rejects (0 source, 0 mapped)."""
+    gate = COFACompletionGate()
+    result = gate.validate_mapping_completeness([], [])
+    assert result["complete"] is False, f"got complete={result['complete']}"
+    assert "empty" in result["message"].lower(), f"message={result['message']}"
 
-# -----------------------------------------------------------------------
-# Test 6: Misconfigured source_key rejects
-# -----------------------------------------------------------------------
-print("\nTest 6: Misconfigured source_key rejects (key typo)")
-source = make_source_coa(10)
-mappings = make_mappings_from_coa(source)
-result = gate.validate_mapping_completeness(source, mappings, source_key="acct_num")
-check(
-    "complete=false, message cites missing field",
-    result["complete"] is False and "acct_num" in result["message"],
-    f"got complete={result['complete']}, message={result['message']}",
-)
 
-# -----------------------------------------------------------------------
-# Test 7: Accounts with empty-string key values reject
-# -----------------------------------------------------------------------
-print("\nTest 7: All-blank account_number values reject")
-blank_source = [{"account_number": "", "account_name": "Blank"} for _ in range(5)]
-result = gate.validate_mapping_completeness(blank_source, [])
-check(
-    "complete=false, message mentions zero extraction",
-    result["complete"] is False and "zero" in result["message"].lower(),
-    f"got complete={result['complete']}, message={result['message']}",
-)
+def test_misconfigured_source_key_rejects():
+    """Test 6: Misconfigured source_key rejects (key typo)."""
+    gate = COFACompletionGate()
+    source = make_source_coa(10)
+    mappings = make_mappings_from_coa(source)
+    result = gate.validate_mapping_completeness(source, mappings, source_key="acct_num")
+    assert result["complete"] is False, f"got complete={result['complete']}"
+    assert "acct_num" in result["message"], f"message={result['message']}"
 
-# -----------------------------------------------------------------------
-# Summary
-# -----------------------------------------------------------------------
-print(f"\n{'=' * 50}")
-print(f"COFA Gate Tests: {passed}/{total} passed")
-if failed > 0:
-    print(f"FAILURES: {failed}")
-    sys.exit(1)
-else:
-    print("All tests passed.")
-    sys.exit(0)
+
+def test_blank_account_values_reject():
+    """Test 7: All-blank account_number values reject."""
+    gate = COFACompletionGate()
+    blank_source = [{"account_number": "", "account_name": "Blank"} for _ in range(5)]
+    result = gate.validate_mapping_completeness(blank_source, [])
+    assert result["complete"] is False, f"got complete={result['complete']}"
+    assert "zero" in result["message"].lower(), f"message={result['message']}"
