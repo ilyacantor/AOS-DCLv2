@@ -291,16 +291,15 @@ def merge_overview(
             # --- Section 4: Orphans (CoA accounts without COFA mappings) ---
             # CoA concepts (coa.*) and mapping concepts (cofa_mapping.*) use
             # different namespaces, so we cannot compare concept names directly.
-            # Instead, compare distinct concept counts per entity: each CoA
-            # account produces exactly one cofa_mapping concept on its entity's
-            # side (entity-specific accounts get mapping_target/source = N/A).
-            # If the counts match, all accounts are mapped → 0 orphans.
+            # Count CoA accounts (DISTINCT concepts since each account = 1 concept)
+            # vs cofa_mapping triples (COUNT rows, not DISTINCT concepts, because
+            # many-to-one mappings produce multiple triples for one concept).
             cur.execute(
                 "SELECT entity_id, "
                 "  COUNT(DISTINCT CASE WHEN split_part(concept, '.', 1) = 'coa' "
                 "        THEN concept END) AS coa_count, "
-                "  COUNT(DISTINCT CASE WHEN split_part(concept, '.', 1) = 'cofa_mapping' "
-                "        THEN concept END) AS mapping_count "
+                "  SUM(CASE WHEN split_part(concept, '.', 1) = 'cofa_mapping' "
+                "      THEN 1 ELSE 0 END) AS mapping_count "
                 "FROM semantic_triples "
                 "WHERE is_active = true AND entity_id IN (%s, %s) "
                 "  AND split_part(concept, '.', 1) IN ('coa', 'cofa_mapping') "
