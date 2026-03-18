@@ -225,7 +225,7 @@ def ingest_triples(
         # for the entity_ids in this batch to prevent triple compounding
         entity_ids = list(set(t.entity_id for t in req.triples))
         if entity_ids:
-            deactivated = _triple_store.deactivate_entity_triples(entity_ids)
+            deactivated = _triple_store.deactivate_entity_triples(entity_ids, tenant_id=req.tenant_id)
             logger.info(
                 f"[ingest-triples] Deactivated {deactivated} prior triples for "
                 f"entities={entity_ids} before new run_id={req.run_id}"

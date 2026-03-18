@@ -131,26 +131,36 @@ class TripleStore:
                 conn.commit()
                 return cur.rowcount
 
-    def deactivate_entity_triples(self, entity_ids: list[str]) -> int:
-        """Deactivate all active triples for given entity_ids.
+    def deactivate_entity_triples(self, entity_ids: list[str], tenant_id: str = "") -> int:
+        """Deactivate all active triples for given entity_ids within a tenant.
 
         Used when a new Farm generation replaces all prior data for those entities.
         This prevents triple compounding across runs.
+
+        Args:
+            entity_ids: Entity IDs to deactivate triples for.
+            tenant_id: Required tenant scope — prevents cross-tenant data corruption.
         """
         if not entity_ids:
             return 0
+        if not tenant_id:
+            raise ValueError(
+                "deactivate_entity_triples requires tenant_id to prevent "
+                "cross-tenant data corruption."
+            )
         placeholders = ", ".join(["%s"] * len(entity_ids))
         sql = (
             "UPDATE semantic_triples SET is_active = false, updated_at = now() "
-            f"WHERE is_active = true AND entity_id IN ({placeholders})"
+            f"WHERE is_active = true AND tenant_id = %s AND entity_id IN ({placeholders})"
         )
+        params = [tenant_id] + entity_ids
         with get_connection() as conn:
             if conn is None:
                 raise RuntimeError(
                     "TripleStore.deactivate_entity_triples failed: database connection unavailable."
                 )
             with conn.cursor() as cur:
-                cur.execute(sql, entity_ids)
+                cur.execute(sql, params)
                 conn.commit()
                 return cur.rowcount
 

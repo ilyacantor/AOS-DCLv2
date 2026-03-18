@@ -207,13 +207,13 @@ def test_provenance_has_run_id(resolver):
 # --- Test 14: Materialized views ---
 def test_all_periods(views):
     periods = views.get_all_periods()
-    assert len(periods) == 13
-    assert periods[0] == "2023-Q4"
+    assert len(periods) == 24
+    assert periods[0] == "2021-Q1"
     assert periods[-1] == "2026-Q4"
 
 def test_all_entities(views):
     entities = views.get_all_entities()
-    assert set(entities) == {"meridian", "cascadia"}
+    assert set(entities) == {"meridian", "cascadia", "BlueWave-RR3T"}
 
 def test_entity_summary(views):
     summary = views.get_entity_summary("meridian")

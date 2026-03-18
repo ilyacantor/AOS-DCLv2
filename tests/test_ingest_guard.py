@@ -32,11 +32,11 @@ def _ingest_headers(**extra) -> dict:
 
 @pytest.fixture(autouse=True)
 def _clean_pipe_store():
-    """Ensure each test starts with a clean pipe store."""
+    """Ensure each test starts with a clean pipe store (including Postgres)."""
     store = get_pipe_store()
-    store.clear()
+    store.reset()
     yield
-    store.clear()
+    store.reset()
 
 
 @pytest.fixture()
