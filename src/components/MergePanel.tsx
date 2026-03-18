@@ -59,15 +59,6 @@ interface ConflictData {
   summary: { total: number; pending: number; resolved: number };
 }
 
-interface MergeRunSummary {
-  startedAt: string;       // ISO wall-clock
-  completedAt: string;     // ISO wall-clock
-  durationSec: number;
-  triples: { acquirerName: string; acquirerCount: number; targetName: string; targetCount: number; combined: number };
-  conflicts: { total: number; resolved: number; pending: number } | null;
-  accountsMapped: number;
-}
-
 interface MergeData {
   engagement_id: string | null;
   source_run_tag: string | Record<string, string> | null;
@@ -128,7 +119,6 @@ export function MergePanel() {
   const [mergeCollapsedResponse, setMergeCollapsedResponse] = useState<string | null>(null);
   const [mergeElapsed, setMergeElapsed] = useState(0);
   const [mergeFinishedIn, setMergeFinishedIn] = useState<number | null>(null);
-  const [mergeRunSummary, setMergeRunSummary] = useState<MergeRunSummary | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mergeStartRef = useRef<number>(0);
@@ -218,7 +208,6 @@ export function MergePanel() {
     setMergeRunning(true);
     setMergeError(null);
     setMergeCollapsedResponse(null);
-    setMergeRunSummary(null);
     setMergeStatus('Sending to Maestra...');
     mergeStartRef.current = Date.now();
 
@@ -271,48 +260,16 @@ export function MergePanel() {
 
           if (freshData.matches.has_matches) {
             if (pollRef.current) clearTimeout(pollRef.current);
-            const completedAt = new Date();
-            const startedAt = new Date(mergeStartRef.current);
-            const finalElapsed = Math.floor((completedAt.getTime() - mergeStartRef.current) / 1000);
+            const finalElapsed = Math.floor((Date.now() - mergeStartRef.current) / 1000);
             setMergeFinishedIn(finalElapsed);
             setData(freshData);
             setMergeRunning(false);
             setMergeStatus(null);
+            fetchConflicts();
 
-            // Fetch conflicts so we can include them in the run summary
-            let conflictSnap: ConflictData | null = null;
-            try {
-              const cRes = await fetch('/api/dcl/merge/conflicts');
-              if (cRes.ok) {
-                conflictSnap = await cRes.json();
-                setConflictData(conflictSnap);
-              }
-            } catch { /* non-fatal */ }
-
-            // Build run summary
-            const acqEntity = freshData.overview.entities.find(
-              e => e.entity_id === freshData.acquirer.entity_id
-            );
-            const tgtEntity = freshData.overview.entities.find(
-              e => e.entity_id === freshData.target.entity_id
-            );
-            setMergeRunSummary({
-              startedAt: startedAt.toISOString(),
-              completedAt: completedAt.toISOString(),
-              durationSec: finalElapsed,
-              triples: {
-                acquirerName: acqEntity?.display_name || freshData.acquirer.display_name,
-                acquirerCount: acqEntity?.cofa_count || 0,
-                targetName: tgtEntity?.display_name || freshData.target.display_name,
-                targetCount: tgtEntity?.cofa_count || 0,
-                combined: freshData.overview.total_cofa_count,
-              },
-              conflicts: conflictSnap?.summary || null,
-              accountsMapped: freshData.matches.rows.length,
-            });
-
+            const accountCount = freshData.matches.rows.length;
             setToast({
-              message: `COFA merge complete in ${finalElapsed}s — ${freshData.matches.rows.length} accounts mapped.`,
+              message: `COFA merge complete in ${finalElapsed}s — ${accountCount} accounts mapped.`,
               type: 'success',
             });
             return;
@@ -641,7 +598,7 @@ export function MergePanel() {
               </span>
             )}
             {mergeFinishedIn !== null && !mergeRunning && (
-              <span className="text-xs text-emerald-400 shrink-0">{mergeFinishedIn}s — {mergeRunSummary?.accountsMapped ?? 0} mapped</span>
+              <span className="text-xs text-emerald-400 shrink-0">{mergeFinishedIn}s</span>
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -733,46 +690,6 @@ export function MergePanel() {
               <button onClick={() => fetchMerge()} className="ml-3 px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90">
                 Retry
               </button>
-            </div>
-          )}
-
-          {/* ================================================================
-              Last Run Summary
-              ================================================================ */}
-          {mergeRunSummary && !mergeRunning && (
-            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Last Run</span>
-                <button
-                  onClick={() => setMergeRunSummary(null)}
-                  className="text-muted-foreground hover:text-foreground text-xs"
-                  title="Dismiss"
-                >&times;</button>
-              </div>
-              {/* Timing */}
-              <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm font-mono">
-                <span className="text-muted-foreground">Started <span className="text-foreground">{new Date(mergeRunSummary.startedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</span></span>
-                <span className="text-muted-foreground">Completed <span className="text-foreground">{new Date(mergeRunSummary.completedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</span></span>
-                <span className="text-muted-foreground">Duration <span className="text-emerald-400 font-semibold">{mergeRunSummary.durationSec}s</span></span>
-                <span className="text-muted-foreground">Accounts mapped <span className="text-foreground font-semibold">{mergeRunSummary.accountsMapped}</span></span>
-              </div>
-              {/* Triples per entity */}
-              <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm font-mono">
-                <span className="text-blue-400">{mergeRunSummary.triples.acquirerName} <span className="text-foreground font-semibold">{fmtNum(mergeRunSummary.triples.acquirerCount)}</span> <span className="text-muted-foreground">triples</span></span>
-                <span className="text-purple-400">{mergeRunSummary.triples.targetName} <span className="text-foreground font-semibold">{fmtNum(mergeRunSummary.triples.targetCount)}</span> <span className="text-muted-foreground">triples</span></span>
-                <span className="text-muted-foreground">Combined <span className="text-foreground font-semibold">{fmtNum(mergeRunSummary.triples.combined)}</span> <span className="text-muted-foreground">triples</span></span>
-              </div>
-              {/* Conflicts — clickable to open conflict section */}
-              {mergeRunSummary.conflicts && (
-                <button
-                  onClick={() => { if (!conflictsOpen) setConflictsOpen(true); }}
-                  className="flex gap-x-4 text-sm font-mono hover:underline text-left"
-                >
-                  <span className="text-muted-foreground">Conflicts <span className="text-foreground font-semibold">{mergeRunSummary.conflicts.total}</span></span>
-                  <span className="text-amber-400">Pending <span className="font-semibold">{mergeRunSummary.conflicts.pending}</span></span>
-                  <span className="text-emerald-400">Resolved <span className="font-semibold">{mergeRunSummary.conflicts.resolved}</span></span>
-                </button>
-              )}
             </div>
           )}
 
