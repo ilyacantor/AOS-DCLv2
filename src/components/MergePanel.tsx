@@ -155,8 +155,8 @@ export function MergePanel() {
 
   // --- Data fetching ---
 
-  const fetchMerge = useCallback(async () => {
-    setLoading(true);
+  const fetchMerge = useCallback(async (showSpinner = true) => {
+    if (showSpinner) setLoading(true);
     try {
       const res = await fetch('/api/dcl/merge/overview');
       if (!res.ok) {
@@ -642,6 +642,12 @@ export function MergePanel() {
                 {mergeRunning ? 'Running...' : data.matches.has_matches ? 'Re-run' : 'Run COFA Merge'}
               </button>
             )}
+            <button
+              onClick={() => { fetchMerge(false); fetchConflicts(); }}
+              className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Refresh
+            </button>
           </div>
         </div>
 
@@ -681,7 +687,7 @@ export function MergePanel() {
           {error && (
             <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-center">
               <span className="text-base text-red-400">{error}</span>
-              <button onClick={fetchMerge} className="ml-3 px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90">
+              <button onClick={() => fetchMerge()} className="ml-3 px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90">
                 Retry
               </button>
             </div>
