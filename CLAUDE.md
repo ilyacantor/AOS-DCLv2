@@ -1,5 +1,5 @@
 # AutonomOS (AOS) — Agent Constitution
-> Version: 5.1 | Updated: March 2026 | Owner: Ilya (CEO)
+> Version: 5.3 | Updated: March 2026 | Owner: Ilya (CEO)
 
 ---
 
@@ -15,6 +15,8 @@ All rules in this file are non-negotiable. Rules agents violate most often:
 - **B17:** Frontend is the pass/fail gate. Use Playwright headless to verify UI rendering. API/build evidence is not browser verification.
 - **B18:** Latency ceilings are absolute. 5% regression budget on everything else. Measure before and after.
 - **A2:** No bandaids. Fundamental fixes only. Progress spinners for latency violations are bandaids.
+
+**Before writing any code, answer 5 questions:** (1) Will new code produce identical results to what it replaces? (2) What happens at runtime when data is missing? (3) Is there a simpler existing path? (4) Does this solve the problem or make it look solved? (5) Is this a pattern — are there more instances?
 
 **Canonical governing document:** `maestra_platform_spec_v7.1.docx` — single source of truth for all AOS architecture. Pull it when: (a) scoping a new capability, (b) decision could contradict a locked ruling, (c) multi-repo build.
 
@@ -102,6 +104,26 @@ Every completed task must satisfy ALL of these:
 5. **All tests pass** — including pre-existing failures (D6). 100% or not done.
 6. **No latency regression** — measure before and after (B18). Hard ceilings are absolute.
 7. **No new features** — unless explicitly requested (A6). Fix what's broken, nothing more.
+
+---
+
+## BEFORE WRITING ANY CODE — ANTICIPATE BUGS
+Stop and answer these five questions while planning, before implementation:
+
+1. **Will the new code produce identical results to what it replaces?**
+   If you're rewriting a query, consolidating calls, or changing a data path — how will you verify equivalence? Plan the diff. If you can't describe how to prove old and new produce the same output, you don't understand the change well enough to make it.
+
+2. **What happens at runtime when a field is empty, a service is down, or the data doesn't match your assumption?**
+   For every input you're reading — what if it's None? What if the API returns empty? What if the triple has no `amount` property? Identify the failure modes in your plan, not after you've built on top of them.
+
+3. **Is there a simpler path you're not seeing?**
+   An existing endpoint that already does this. A single query instead of many. A field already computed upstream. Before designing new machinery, check what exists. Read the route registrations. Search for similar functions. The answer you need may already be built.
+
+4. **Does this solve the actual problem, or make it look solved?**
+   If you removed this change entirely, would the user still hit the same issue? If yes, you're planning to treat a symptom. An AbortController that kills a slow request doesn't make it fast. A progress spinner on a timeout doesn't fix the timeout. A default value on a missing field doesn't make the field exist. Redesign the approach.
+
+5. **Is this a pattern? Are there more instances?**
+   If you found one hardcoded value, one silent fallback, one missing null check — search the full codebase before planning to fix just this one. One grep, one audit, one fix pass. Plan for all instances, not just the one you tripped over.
 
 ---
 
@@ -397,6 +419,9 @@ If the prompt says fix it, fix it. Do not ask for permission. That is stalling. 
 ## C12: No piecemeal discovery of the same bug pattern
 If you find a hardcoded value that should be dynamic, do not fix that one instance and rerun. Audit the entire codebase for the same pattern first. One grep, one audit, one fix pass.
 
+## C13: No restructuring code to dodge the pre-commit hook
+If the hook flags hardcoded confidence scores, fix the confidence scores — don't restructure the code so the AST scanner can't pattern-match it. If the hook flags a silent fallback, remove the fallback — don't rewrite the try/except into a regex check that does the same thing without triggering the scanner. The hook exists to catch real problems. Evading the scanner while preserving the problem is cheating.
+
 ---
 
 # SECTION D: HARNESS EXECUTION FORMAT
@@ -418,6 +443,9 @@ If one test fails and the fix touches shared code, all tests must rerun.
 
 ## D6: Pre-existing failures are not excuses
 All tests must pass at the end of your session — including tests that were failing before you started. If a test was already broken, fix it. If a service isn't running, start it. "That was already failing" is not an acceptable status. You are responsible for the state of the system when you hand back control, not just the delta of your changes.
+
+## D7: Retest completely after pre-commit hook changes
+If the pre-commit hook blocks your commit and you modify code to satisfy it, you must rerun ALL tests before declaring done. Hook-triggered changes are code changes — they can introduce bugs. "I already tested before the hook ran" is not valid. The final code state is what gets tested, not an intermediate state. Do not restructure code merely to dodge the AST scanner — fix the actual problem the scanner is flagging.
 
 ---
 
