@@ -231,7 +231,7 @@ export function MergePanel() {
 
       const result = await res.json();
 
-      if (result.tool_calls_made && result.tool_calls_made > 0) {
+      if (result.tool_calls && result.tool_calls.length > 0) {
         maestraOk = true;
       } else {
         setMergeCollapsedResponse(result.response || 'Maestra responded but did not invoke mapping tool.');
