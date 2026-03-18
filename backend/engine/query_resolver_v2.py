@@ -8,6 +8,7 @@ v2 resolves directly against the semantic_triples fact store.
 from concurrent.futures import ThreadPoolExecutor
 
 from backend.core.db import get_connection
+from backend.engine.engagement import get_active_engagement
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -524,20 +525,15 @@ class TripleQueryResolver:
         }
 
     def _get_entities(self) -> list[str]:
-        """Get distinct entity_ids ordered descending (larger entity first).
+        """Get entity IDs from the active engagement config.
 
-        Excludes synthetic aggregate entities ('combined') — those are NLQ
-        query-time constructs, not real entities with full triple data.
+        The engagement defines which entities are in scope for combining
+        statements — not a blind DISTINCT on semantic_triples, which would
+        pick up HR entities, test artifacts, etc.
         """
-        sql = """
-            SELECT DISTINCT entity_id
-            FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
-              AND entity_id != 'combined'
-            ORDER BY entity_id DESC
-        """
-        rows = self._query(sql, [self.tenant_id])
-        return [r["entity_id"] for r in rows]
+        eng = get_active_engagement()
+        entity_a, entity_b = eng.entity_ids()
+        return [entity_a, entity_b]
 
     # ------------------------------------------------------------------
     # Overlapping concepts

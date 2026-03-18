@@ -26,6 +26,7 @@ from backend.db.triple_store import TripleStore
 from backend.db.engagement_store import EngagementStore
 from backend.db.resolution_store import ResolutionStore
 from backend.core.db import get_connection
+from backend.engine.engagement import get_active_engagement
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -634,34 +635,24 @@ def triples_browse_batch(req: BrowseBatchRequest):
 
 @router.get("/api/dcl/triples/engagement")
 def triples_engagement():
-    """Current engagement state."""
-    sql = "SELECT * FROM engagement_state ORDER BY created_at DESC LIMIT 1"
-    with get_connection() as conn:
-        if conn is None:
-            raise HTTPException(
-                status_code=503,
-                detail="triples/engagement failed: database connection unavailable.",
-            )
-        with conn.cursor() as cur:
-            cur.execute(sql)
-            row = cur.fetchone()
-            if row is None:
-                return {"engagement_id": None, "status": "none", "message": "No engagement found."}
-            columns = [desc[0] for desc in cur.description]
-            eng = dict(zip(columns, row))
+    """Current engagement state from the engagement config file.
 
+    The engagement config (data/engagements/demo-001.json) is the source of
+    truth for which entities are in scope — not the engagement_state table,
+    which can be polluted by test runs (e.g. COFA merge tests writing x/y).
+    """
+    eng = get_active_engagement()
     return {
-        "engagement_id": eng.get("engagement_id"),
+        "engagement_id": eng.engagement_id,
         "entity_a": {
-            "id": eng.get("entity_a_id"),
-            "display_name": _entity_display_name(eng.get("entity_a_id") or ""),
+            "id": eng.entity_a.id,
+            "display_name": eng.entity_a.display_name,
         },
         "entity_b": {
-            "id": eng.get("entity_b_id"),
-            "display_name": _entity_display_name(eng.get("entity_b_id") or ""),
-        } if eng.get("entity_b_id") else None,
-        "status": eng.get("status"),
-        "created_at": eng["created_at"].isoformat() if eng.get("created_at") else None,
+            "id": eng.entity_b.id,
+            "display_name": eng.entity_b.display_name,
+        },
+        "status": "active",
     }
 
 

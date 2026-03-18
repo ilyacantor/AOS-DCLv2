@@ -12,6 +12,7 @@ All data sourced from semantic_triples in PG — no JSON files.
 """
 
 from backend.core.db import get_connection
+from backend.engine.engagement import get_active_engagement
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -75,23 +76,9 @@ class EBITDABridgeV2:
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
     def _get_entities(self) -> tuple[str, str]:
-        """Get the two entity_ids, ordered descending (entity_a first)."""
-        sql = """
-            SELECT DISTINCT entity_id
-            FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
-              AND entity_id != 'combined'
-            ORDER BY entity_id DESC
-        """
-        rows = self._query(sql, [self.tenant_id])
-        entities = [r["entity_id"] for r in rows]
-        if len(entities) < 2:
-            raise ValueError(
-                f"EBITDABridgeV2 requires at least 2 entities, "
-                f"found {len(entities)}: {entities} for "
-                f"tenant_id='{self.tenant_id}', run_id='{self.run_id}'"
-            )
-        return entities[0], entities[1]
+        """Get entity IDs from the active engagement config."""
+        eng = get_active_engagement()
+        return eng.entity_ids()
 
     def _get_reported_ebitda(self, entity_id: str) -> float:
         """Sum pnl.ebitda across all 2025 quarters for an entity."""

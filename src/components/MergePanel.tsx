@@ -120,6 +120,7 @@ export function MergePanel() {
   const [mergeElapsed, setMergeElapsed] = useState(0);
   const [mergeFinishedIn, setMergeFinishedIn] = useState<number | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mergeStartRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -168,7 +169,7 @@ export function MergePanel() {
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to fetch merge overview');
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   }, []);
 
@@ -292,6 +293,16 @@ export function MergePanel() {
     fetchMerge();
     fetchConflicts();
   }, [fetchMerge, fetchConflicts]);
+
+  // Auto-polling (same pattern as TriplesPanel)
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(() => {
+      fetchMerge(false);
+      fetchConflicts();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, fetchMerge, fetchConflicts]);
 
   // --- Conflict resolution ---
 
@@ -642,8 +653,17 @@ export function MergePanel() {
                 {mergeRunning ? 'Running...' : data.matches.has_matches ? 'Re-run' : 'Run COFA Merge'}
               </button>
             )}
+            <label className="flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="rounded border-border"
+              />
+              Auto-refresh 5s
+            </label>
             <button
-              onClick={() => { fetchMerge(false); fetchConflicts(); }}
+              onClick={() => { fetchMerge(true); fetchConflicts(); }}
               className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Refresh
