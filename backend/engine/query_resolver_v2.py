@@ -5,6 +5,8 @@ Unlike v1 (query_resolver.py) which resolves against the in-memory semantic grap
 v2 resolves directly against the semantic_triples fact store.
 """
 
+from concurrent.futures import ThreadPoolExecutor
+
 from backend.core.db import get_connection
 from backend.utils.log_utils import get_logger
 
@@ -243,6 +245,50 @@ class TripleQueryResolver:
             result[suffix] = item["value"]
         return result
 
+    def _multi_domain_to_dict(self, domains: list[str], entity_id: str, period: str) -> dict[str, dict[str, float]]:
+        """Fetch multiple domains in a single SQL query and return as {domain: {sub_key: value}}.
+
+        Eliminates per-domain round trips and ThreadPoolExecutor pool contention.
+        E.g. domains=["revenue","cogs"] returns {"revenue": {"total": X}, "cogs": {"total": Y}}.
+        """
+        like_patterns = [f"{d}.%" for d in domains]
+
+        if _is_year_period(period):
+            quarters = _quarter_periods(period)
+            sql = """
+                WITH latest AS (
+                    SELECT DISTINCT ON (entity_id, concept, property, period)
+                           concept, value
+                    FROM semantic_triples
+                    WHERE tenant_id = %s AND is_active = true
+                      AND concept LIKE ANY(%s)
+                      AND entity_id = %s AND period = ANY(%s) AND property = 'amount'
+                    ORDER BY entity_id, concept, property, period, created_at DESC
+                )
+                SELECT concept, SUM(value::numeric) AS value
+                FROM latest
+                GROUP BY concept
+            """
+            rows = self._query(sql, [self.tenant_id, like_patterns, entity_id, quarters])
+        else:
+            sql = """
+                SELECT DISTINCT ON (entity_id, concept, property, period)
+                       concept, value
+                FROM semantic_triples
+                WHERE tenant_id = %s AND is_active = true
+                  AND concept LIKE ANY(%s)
+                  AND entity_id = %s AND period = %s AND property = 'amount'
+                ORDER BY entity_id, concept, property, period, created_at DESC
+            """
+            rows = self._query(sql, [self.tenant_id, like_patterns, entity_id, period])
+
+        result: dict[str, dict[str, float]] = {d: {} for d in domains}
+        for row in rows:
+            concept = row["concept"]
+            domain, sub_key = concept.split(".", 1)
+            result[domain][sub_key] = _to_float(row["value"])
+        return result
+
     def _cf_to_dict(self, entity_id: str, period: str) -> dict:
         """Fetch all cash_flow concepts and structure into nested dict.
 
@@ -293,10 +339,11 @@ class TripleQueryResolver:
         Validates P&L identity: revenue.total - cogs.total - opex.total == pnl.ebitda.
         Raises ValueError if identity fails.
         """
-        revenue = self._domain_to_dict("revenue", entity_id, period)
-        cogs = self._domain_to_dict("cogs", entity_id, period)
-        opex = self._domain_to_dict("opex", entity_id, period)
-        pnl = self._domain_to_dict("pnl", entity_id, period)
+        all_domains = self._multi_domain_to_dict(["revenue", "cogs", "opex", "pnl"], entity_id, period)
+        revenue = all_domains["revenue"]
+        cogs = all_domains["cogs"]
+        opex = all_domains["opex"]
+        pnl = all_domains["pnl"]
 
         rev_total = revenue.get("total")
         cogs_total = cogs.get("total")
@@ -350,9 +397,10 @@ class TripleQueryResolver:
         uses Q4 snapshot rather than summing quarters.
         """
         bs_period = f"{period}-Q4" if _is_year_period(period) else period
-        assets = self._domain_to_dict("asset", entity_id, bs_period)
-        liabilities = self._domain_to_dict("liability", entity_id, bs_period)
-        equity = self._domain_to_dict("equity", entity_id, bs_period)
+        all_domains = self._multi_domain_to_dict(["asset", "liability", "equity"], entity_id, bs_period)
+        assets = all_domains["asset"]
+        liabilities = all_domains["liability"]
+        equity = all_domains["equity"]
 
         a_total = assets.get("total")
         l_total = liabilities.get("total")
@@ -462,8 +510,11 @@ class TripleQueryResolver:
         entity_b = entities[1]
         method = method_map[statement_type]
 
-        stmt_a = method(entity_a, period)
-        stmt_b = method(entity_b, period)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            stmt_a_f = pool.submit(method, entity_a, period)
+            stmt_b_f = pool.submit(method, entity_b, period)
+            stmt_a = stmt_a_f.result()
+            stmt_b = stmt_b_f.result()
         combined = self._add_statement_dicts(stmt_a, stmt_b)
 
         return {

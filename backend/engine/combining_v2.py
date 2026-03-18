@@ -10,6 +10,7 @@ COFA conflicts read from cofa_conflict.* triples in the database.
 """
 
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 
 from backend.core.db import get_connection
 from backend.engine.query_resolver_v2 import TripleQueryResolver
@@ -141,10 +142,13 @@ class CombiningEngineV2:
         entity_a_id = entities[0]
         entity_b_id = entities[1]
 
-        stmt_a = self._resolver.get_income_statement(entity_a_id, period)
-        stmt_b = self._resolver.get_income_statement(entity_b_id, period)
-
-        cofas = self.get_cofa_adjustments(period=period)
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            stmt_a_f = pool.submit(self._resolver.get_income_statement, entity_a_id, period)
+            stmt_b_f = pool.submit(self._resolver.get_income_statement, entity_b_id, period)
+            cofas_f = pool.submit(self.get_cofa_adjustments, period)
+            stmt_a = stmt_a_f.result()
+            stmt_b = stmt_b_f.result()
+            cofas = cofas_f.result()
         adjustments, combined = self._apply_cofa_to_pnl(stmt_a, stmt_b, cofas)
 
         # Identity gate
@@ -198,8 +202,11 @@ class CombiningEngineV2:
         entity_a_id = entities[0]
         entity_b_id = entities[1]
 
-        bs_a = self._resolver.get_balance_sheet(entity_a_id, period)
-        bs_b = self._resolver.get_balance_sheet(entity_b_id, period)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            bs_a_f = pool.submit(self._resolver.get_balance_sheet, entity_a_id, period)
+            bs_b_f = pool.submit(self._resolver.get_balance_sheet, entity_b_id, period)
+            bs_a = bs_a_f.result()
+            bs_b = bs_b_f.result()
 
         combined = TripleQueryResolver._add_statement_dicts(bs_a, bs_b)
 
@@ -252,8 +259,11 @@ class CombiningEngineV2:
         entity_a_id = entities[0]
         entity_b_id = entities[1]
 
-        cf_a = self._resolver.get_cash_flow(entity_a_id, period)
-        cf_b = self._resolver.get_cash_flow(entity_b_id, period)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            cf_a_f = pool.submit(self._resolver.get_cash_flow, entity_a_id, period)
+            cf_b_f = pool.submit(self._resolver.get_cash_flow, entity_b_id, period)
+            cf_a = cf_a_f.result()
+            cf_b = cf_b_f.result()
 
         combined = TripleQueryResolver._add_statement_dicts(cf_a, cf_b)
 
