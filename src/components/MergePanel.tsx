@@ -38,6 +38,27 @@ interface FinancialMetric {
   format?: 'currency' | 'percent' | 'number';
 }
 
+interface ConflictItem {
+  conflict_id: string;
+  concept: string;
+  conflict_type: string;
+  severity: string;
+  description: string;
+  dollar_impact: number;
+  acquirer_treatment: string;
+  target_treatment: string;
+  resolution_status: string;
+  resolution: string;
+  resolved_by: string;
+  resolved_at: string;
+  resolution_notes: string;
+}
+
+interface ConflictData {
+  conflicts: ConflictItem[];
+  summary: { total: number; pending: number; resolved: number };
+}
+
 interface MergeData {
   engagement_id: string | null;
   source_run_tag: string | Record<string, string> | null;
@@ -68,35 +89,6 @@ interface MergeData {
   };
 }
 
-interface BrowseTriple {
-  id: string;
-  entity_id: string;
-  concept: string;
-  property: string;
-  value: unknown;
-  period: string;
-  source_system: string;
-  source_table: string;
-  source_field: string;
-  pipe_id: string;
-  run_id: string;
-  confidence_score: number;
-  confidence_tier: string;
-  canonical_id: string;
-  resolution_method: string;
-  resolution_confidence: number;
-  currency: string;
-  unit: string;
-  created_at: string;
-  tenant_id: string;
-}
-
-interface BrowseData {
-  triples: BrowseTriple[];
-  total_count: number;
-  filters_applied: Record<string, string>;
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -106,22 +98,19 @@ export function MergePanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Conflict state
+  const [conflictData, setConflictData] = useState<ConflictData | null>(null);
+  const [expandedConflictId, setExpandedConflictId] = useState<string | null>(null);
+  const [resolutionDrafts, setResolutionDrafts] = useState<Record<string, { resolution: string; notes: string }>>({});
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [batchSelected, setBatchSelected] = useState<Set<string>>(new Set());
+  const [batchResolution, setBatchResolution] = useState('acquirer');
+  const [batchResolving, setBatchResolving] = useState(false);
+
   // Collapsible sections
-  const [comparisonOpen, setComparisonOpen] = useState(true);
-  const [matchesOpen, setMatchesOpen] = useState(true);
-  const [orphansOpen, setOrphansOpen] = useState(true);
-  const [browseOpen, setBrowseOpen] = useState(false);
-
-  // Browse state
-  const [browseData, setBrowseData] = useState<BrowseData | null>(null);
-  const [browseLoading, setBrowseLoading] = useState(false);
-  const [browseEntity, setBrowseEntity] = useState('');
-  const [browsePeriod, setBrowsePeriod] = useState('');
-  const [browseOffset, setBrowseOffset] = useState(0);
-  const BROWSE_LIMIT = 50;
-
-  // Expanded triple in browse
-  const [expandedTriple, setExpandedTriple] = useState<string | null>(null);
+  const [conflictsOpen, setConflictsOpen] = useState(true);
+  const [matchesOpen, setMatchesOpen] = useState(false);
+  const [orphansOpen, setOrphansOpen] = useState(false);
 
   // COFA merge action state
   const [mergeRunning, setMergeRunning] = useState(false);
@@ -135,7 +124,7 @@ export function MergePanel() {
   const mergeStartRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Live elapsed-seconds counter while merge is running — also drives status messages
+  // Live elapsed-seconds counter while merge is running
   useEffect(() => {
     if (mergeRunning) {
       setMergeElapsed(0);
@@ -144,7 +133,6 @@ export function MergePanel() {
         if (mergeStartRef.current > 0) {
           const elapsed = Math.floor((Date.now() - mergeStartRef.current) / 1000);
           setMergeElapsed(elapsed);
-          // Drive status messages from the timer (the POST blocks for 60-120s)
           if (elapsed >= 60) {
             setMergeStatus('Writing mapping results to DCL...');
           } else if (elapsed >= 30) {
@@ -184,25 +172,15 @@ export function MergePanel() {
     }
   }, []);
 
-  const fetchBrowse = useCallback(async (offset = 0) => {
-    setBrowseLoading(true);
+  const fetchConflicts = useCallback(async () => {
     try {
-      const params = new URLSearchParams();
-      params.set('domain', 'cofa');
-      if (browseEntity) params.set('entity_id', browseEntity);
-      if (browsePeriod) params.set('period', browsePeriod);
-      params.set('limit', String(BROWSE_LIMIT));
-      params.set('offset', String(offset));
-      const res = await fetch(`/api/dcl/triples/browse?${params}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setBrowseData(await res.json());
-      setBrowseOffset(offset);
-    } catch (e) {
-      console.error('[MergePanel] Failed to fetch browse:', e);
-    } finally {
-      setBrowseLoading(false);
+      const res = await fetch('/api/dcl/merge/conflicts');
+      if (!res.ok) return;
+      setConflictData(await res.json());
+    } catch {
+      // Non-fatal — conflicts section just won't render
     }
-  }, [browseEntity, browsePeriod]);
+  }, []);
 
   // Cleanup poll on unmount
   useEffect(() => {
@@ -233,7 +211,7 @@ export function MergePanel() {
     setMergeStatus('Sending to Maestra...');
     mergeStartRef.current = Date.now();
 
-    // Step 1: POST to Maestra chat — let it run to completion (no abort timer)
+    // Step 1: POST to Maestra chat
     let maestraOk = false;
     try {
       const res = await fetch('/api/platform/maestra/cofa-chat', {
@@ -242,58 +220,37 @@ export function MergePanel() {
         body: JSON.stringify({
           session_id: `merge-${data.engagement_id || 'default'}`,
           engagement_id: data.engagement_id,
-          message:
-            "Perform COFA unification for this engagement. Read both entities' charts of accounts " +
-            "from DCL, produce a complete mapping table with confidence scores for every GL account, " +
-            "identify all conflicts with type and severity, build the unified account structure, and " +
-            "write the results using the write_cofa_mapping tool. Every account from both entities " +
-            "must appear in the mapping — no orphans.",
+          message: 'Run COFA unification — map all chart-of-accounts entries, identify conflicts, and write results to DCL.',
         }),
       });
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        const detail = typeof body.detail === 'string'
-          ? body.detail
-          : Array.isArray(body.detail)
-            ? body.detail.map((e: any) => e.msg || JSON.stringify(e)).join('; ')
-            : body.detail ? JSON.stringify(body.detail) : null;
-        throw new Error(
-          detail || body.error || `Maestra returned HTTP ${res.status}: ${res.statusText}`
-        );
+        throw new Error(body.detail || `Platform returned HTTP ${res.status}`);
       }
 
-      const responseData = await res.json();
-      maestraOk = true;
+      const result = await res.json();
 
-      // Check if Maestra actually invoked the tool (response may be text-only)
-      const responseText = responseData?.response || responseData?.message || '';
-      if (
-        responseText &&
-        !responseData?.tool_calls?.length &&
-        !responseText.includes('write_cofa_mapping') &&
-        !responseText.includes('mapping')
-      ) {
-        // Maestra responded but may not have written results
-        setMergeCollapsedResponse(responseText);
+      if (result.tool_calls_made && result.tool_calls_made > 0) {
+        maestraOk = true;
+      } else {
+        setMergeCollapsedResponse(result.response || 'Maestra responded but did not invoke mapping tool.');
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ERR_CONNECTION_REFUSED')) {
-        setMergeError(
-          'Cannot reach Maestra (Platform service). Is it running on port 8006?'
-        );
-      } else {
-        setMergeError(msg);
-      }
+      setMergeError(e instanceof Error ? e.message : 'Failed to reach Platform/Maestra');
       setMergeRunning(false);
       setMergeStatus(null);
       return;
     }
 
-    if (!maestraOk) return;
+    if (!maestraOk) {
+      setMergeRunning(false);
+      setMergeStatus(null);
+      return;
+    }
 
-    // Step 2: Poll merge overview for results
+    // Step 2: Poll for results
+    setMergeStatus('Waiting for DCL to receive mapping triples...');
     const pollForResults = () => {
       pollRef.current = setTimeout(async () => {
         try {
@@ -302,13 +259,13 @@ export function MergePanel() {
           const freshData: MergeData = await res.json();
 
           if (freshData.matches.has_matches) {
-            // Success — matches found
             if (pollRef.current) clearTimeout(pollRef.current);
             const finalElapsed = Math.floor((Date.now() - mergeStartRef.current) / 1000);
             setMergeFinishedIn(finalElapsed);
             setData(freshData);
             setMergeRunning(false);
             setMergeStatus(null);
+            fetchConflicts();
 
             const accountCount = freshData.matches.rows.length;
             setToast({
@@ -317,32 +274,84 @@ export function MergePanel() {
             });
             return;
           }
-        } catch (e) {
-          // Network error during polling
+        } catch {
           if (pollRef.current) clearTimeout(pollRef.current);
-          setMergeError(
-            'Lost connection while waiting for results. Check services and try again.'
-          );
+          setMergeError('Lost connection while waiting for results. Check services and try again.');
           setMergeRunning(false);
           setMergeStatus(null);
           return;
         }
 
-        // Keep polling — no results yet
         pollForResults();
       }, 3000);
     };
     pollForResults();
-  }, [data]);
+  }, [data, fetchConflicts]);
 
   useEffect(() => {
     fetchMerge();
-  }, [fetchMerge]);
+    fetchConflicts();
+  }, [fetchMerge, fetchConflicts]);
 
-  // Auto-load browse when filters change and section is open
-  useEffect(() => {
-    if (browseOpen) fetchBrowse(0);
-  }, [browseOpen, fetchBrowse]);
+  // --- Conflict resolution ---
+
+  const resolveConflict = async (conflictId: string) => {
+    const draft = resolutionDrafts[conflictId];
+    if (!draft?.resolution) return;
+
+    setResolvingId(conflictId);
+    try {
+      const res = await fetch(`/api/dcl/merge/conflicts/${conflictId}/resolve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resolution: draft.resolution,
+          notes: draft.notes || '',
+          resolved_by: 'operator',
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `HTTP ${res.status}`);
+      }
+      setToast({ message: `Conflict ${conflictId} resolved.`, type: 'success' });
+      setExpandedConflictId(null);
+      fetchConflicts();
+    } catch (e: unknown) {
+      setToast({ message: e instanceof Error ? e.message : 'Failed to resolve conflict', type: 'error' });
+    } finally {
+      setResolvingId(null);
+    }
+  };
+
+  const batchResolve = async () => {
+    if (batchSelected.size === 0) return;
+    setBatchResolving(true);
+    try {
+      const res = await fetch('/api/dcl/merge/conflicts/batch-resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conflict_ids: Array.from(batchSelected),
+          resolution: batchResolution,
+          notes: 'Batch approved',
+          resolved_by: 'operator',
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `HTTP ${res.status}`);
+      }
+      const result = await res.json();
+      setToast({ message: `${result.resolved} conflicts resolved.`, type: 'success' });
+      setBatchSelected(new Set());
+      fetchConflicts();
+    } catch (e: unknown) {
+      setToast({ message: e instanceof Error ? e.message : 'Batch resolve failed', type: 'error' });
+    } finally {
+      setBatchResolving(false);
+    }
+  };
 
   // --- Helpers ---
 
@@ -356,28 +365,19 @@ export function MergePanel() {
 
   const fmtNum = (n: number) => n.toLocaleString();
 
-  const fmtValue = (val: unknown): string => {
-    if (val === null || val === undefined) return '-';
-    if (typeof val === 'number') return val.toLocaleString();
-    if (typeof val === 'string') {
-      const n = Number(val);
-      if (!isNaN(n) && val.trim() !== '') return n.toLocaleString();
-      return val;
-    }
-    return JSON.stringify(val);
-  };
-
   const shortId = (id: string) => id ? id.slice(0, 8) : '-';
 
-  const getEntityRunTag = (entityId: string): string | null => {
+  const getRunTag = (): string | null => {
     if (!data?.source_run_tag) return null;
     if (typeof data.source_run_tag === 'string') return data.source_run_tag;
-    if (typeof data.source_run_tag === 'object') return data.source_run_tag[entityId] || null;
+    if (typeof data.source_run_tag === 'object') {
+      const vals = Object.values(data.source_run_tag);
+      return vals.length > 0 ? vals[0] : null;
+    }
     return null;
   };
 
   const fmtCurrency = (val: number | null): string => {
-    // Values from Farm financial model are in millions
     if (val === null || val === undefined) return '\u2014';
     const inDollars = val * 1e6;
     const abs = Math.abs(inDollars);
@@ -399,6 +399,15 @@ export function MergePanel() {
     return fmtCurrency(val);
   };
 
+  const fmtDollarImpact = (val: number): string => {
+    if (val === 0) return '';
+    const abs = Math.abs(val);
+    if (abs >= 1e9) return `$${(val / 1e9).toFixed(1)}B`;
+    if (abs >= 1e6) return `$${(val / 1e6).toFixed(1)}M`;
+    if (abs >= 1e3) return `$${(val / 1e3).toFixed(0)}K`;
+    return `$${val.toFixed(0)}`;
+  };
+
   const confidenceBadge = (score: number | null) => {
     if (score === null) return <span className="text-muted-foreground text-xs">-</span>;
     const cls = score >= 0.8
@@ -413,19 +422,6 @@ export function MergePanel() {
     );
   };
 
-  const tierBadge = (tier: string) => {
-    const cls = tier === 'exact' || tier === 'high'
-      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-      : tier === 'medium'
-        ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-        : 'bg-red-500/20 text-red-400 border-red-500/30';
-    return (
-      <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold border ${cls}`}>
-        {tier}
-      </span>
-    );
-  };
-
   const chevron = (open: boolean) => (
     <svg
       className={`w-2.5 h-2.5 shrink-0 transition-transform duration-150 text-muted-foreground ${open ? 'rotate-90' : ''}`}
@@ -434,6 +430,17 @@ export function MergePanel() {
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
     </svg>
   );
+
+  const statusBadge = (status: string) => {
+    const cls = status === 'resolved'
+      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+      : 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+    return (
+      <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold border ${cls}`}>
+        {status === 'resolved' ? 'Resolved' : 'Pending'}
+      </span>
+    );
+  };
 
   // --- Download helpers ---
 
@@ -449,14 +456,15 @@ export function MergePanel() {
 
   const downloadJson = useCallback(() => {
     if (!data) return;
+    const exportData = { ...data, conflicts: conflictData?.conflicts || [] };
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    triggerDownload(JSON.stringify(data, null, 2), `cofa-merge-${ts}.json`, 'application/json');
-  }, [data]);
+    triggerDownload(JSON.stringify(exportData, null, 2), `cofa-merge-${ts}.json`, 'application/json');
+  }, [data, conflictData]);
 
   const downloadReport = useCallback(() => {
     if (!data) return;
     const lines: string[] = [];
-    const hr = '─'.repeat(72);
+    const hr = '\u2500'.repeat(72);
 
     lines.push('COFA MERGE REPORT');
     lines.push(hr);
@@ -480,6 +488,22 @@ export function MergePanel() {
     }
     lines.push('');
 
+    // Conflicts
+    if (conflictData && conflictData.conflicts.length > 0) {
+      lines.push(`CONFLICTS (${conflictData.summary.total} total | ${conflictData.summary.resolved} resolved | ${conflictData.summary.pending} pending)`);
+      lines.push(hr);
+      for (const c of conflictData.conflicts) {
+        const impact = c.dollar_impact > 0 ? fmtDollarImpact(c.dollar_impact) : 'Not estimated';
+        lines.push(`  ${c.conflict_id}: ${c.description || c.conflict_type}`);
+        lines.push(`    Type: ${c.conflict_type} | Severity: ${c.severity} | Impact: ${impact}`);
+        lines.push(`    Acquirer: ${c.acquirer_treatment}`);
+        lines.push(`    Target: ${c.target_treatment}`);
+        lines.push(`    Status: ${c.resolution_status}${c.resolution ? ` (${c.resolution})` : ''}`);
+        if (c.resolution_notes) lines.push(`    Notes: ${c.resolution_notes}`);
+      }
+      lines.push('');
+    }
+
     // Coverage
     lines.push('MAPPING COVERAGE');
     lines.push(hr);
@@ -488,7 +512,7 @@ export function MergePanel() {
     if (data.orphans.acquirer_unmatched_count + data.orphans.target_unmatched_count > 0) {
       lines.push(`  Unmapped: ${data.orphans.acquirer_unmatched_count} acquirer, ${data.orphans.target_unmatched_count} target`);
     } else {
-      lines.push('  Status: COMPLETE — all accounts mapped');
+      lines.push('  Status: COMPLETE \u2014 all accounts mapped');
     }
     lines.push('');
 
@@ -498,10 +522,9 @@ export function MergePanel() {
     if (data.matches.rows.length === 0) {
       lines.push('  No cross-entity resolution matches found.');
     } else {
-      // Header
       const acqW = 28, tgtW = 28, confW = 12, methW = 14;
       lines.push(`  ${'Acquirer Account'.padEnd(acqW)} ${'Target Account'.padEnd(tgtW)} ${'Confidence'.padEnd(confW)} ${'Method'.padEnd(methW)}`);
-      lines.push(`  ${'─'.repeat(acqW)} ${'─'.repeat(tgtW)} ${'─'.repeat(confW)} ${'─'.repeat(methW)}`);
+      lines.push(`  ${'\u2500'.repeat(acqW)} ${'\u2500'.repeat(tgtW)} ${'\u2500'.repeat(confW)} ${'\u2500'.repeat(methW)}`);
       for (const r of data.matches.rows) {
         const acq = (r.acquirer_concept || '-').replace('cofa_mapping.', '').replace('cofa.', '');
         const tgt = (r.target_concept || '-').replace('cofa_mapping.', '').replace('cofa.', '');
@@ -510,28 +533,10 @@ export function MergePanel() {
         lines.push(`  ${acq.padEnd(acqW)} ${tgt.padEnd(tgtW)} ${conf.padEnd(confW)} ${meth.padEnd(methW)}`);
       }
     }
-    lines.push('');
-
-    // Side-by-side comparison
-    lines.push(`CHART OF ACCOUNTS COMPARISON (${data.comparison.concepts.length} concepts)`);
-    lines.push(hr);
-    for (const c of data.comparison.concepts) {
-      const acctName = c.acquirer_triples.find(t => t.property === 'account_name')?.value
-        || c.target_triples.find(t => t.property === 'account_name')?.value
-        || '';
-      lines.push(`  ${c.concept}: ${acctName}`);
-      if (c.acquirer_triples.length > 0 && c.target_triples.length > 0) {
-        lines.push(`    Acquirer: ${c.acquirer_triples.length} properties | Target: ${c.target_triples.length} properties`);
-      } else if (c.acquirer_triples.length > 0) {
-        lines.push(`    Acquirer only (${c.acquirer_triples.length} properties)`);
-      } else {
-        lines.push(`    Target only (${c.target_triples.length} properties)`);
-      }
-    }
 
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     triggerDownload(lines.join('\n'), `cofa-merge-report-${ts}.txt`, 'text/plain');
-  }, [data, mergeFinishedIn]);
+  }, [data, conflictData, mergeFinishedIn]);
 
   // --- Render ---
 
@@ -550,6 +555,11 @@ export function MergePanel() {
       </div>
     );
   }
+
+  // Compute conflict summary for header
+  const conflictSummary = conflictData?.summary;
+  const withImpact = conflictData?.conflicts.filter(c => c.dollar_impact > 0).length || 0;
+  const withoutImpact = (conflictSummary?.total || 0) - withImpact;
 
   return (
     <div className="h-full flex flex-col min-h-0">
@@ -572,14 +582,35 @@ export function MergePanel() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="shrink-0 px-6 py-3 border-b border-border bg-card/50">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold">COFA Merge</h2>
-          <div className="flex items-center gap-2">
-            {/* Download buttons — visible when merge results exist */}
+      {/* ================================================================
+          Header Bar — single compact line
+          ================================================================ */}
+      <div className="shrink-0 px-6 py-2.5 border-b border-border bg-card/50">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 text-sm min-w-0">
+            <h2 className="text-base font-semibold shrink-0">COFA Merge</h2>
+            {data?.engagement_id && (
+              <span className="text-muted-foreground font-mono truncate">{shortId(data.engagement_id)}</span>
+            )}
+            {getRunTag() && (
+              <span className="text-xs font-mono font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded shrink-0">
+                {getRunTag()}
+              </span>
+            )}
+            {mergeFinishedIn !== null && !mergeRunning && (
+              <span className="text-xs text-emerald-400 shrink-0">{mergeFinishedIn}s</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
             {data && data.matches.has_matches && (
               <>
+                <button
+                  onClick={downloadReport}
+                  className="px-2.5 py-1 text-xs rounded font-medium bg-zinc-700/50 text-zinc-300 border border-zinc-600/40 hover:bg-zinc-600/50 transition-colors"
+                  title="Download formatted merge report"
+                >
+                  Report
+                </button>
                 <button
                   onClick={downloadJson}
                   className="px-2.5 py-1 text-xs rounded font-medium bg-zinc-700/50 text-zinc-300 border border-zinc-600/40 hover:bg-zinc-600/50 transition-colors"
@@ -587,16 +618,8 @@ export function MergePanel() {
                 >
                   JSON
                 </button>
-                <button
-                  onClick={downloadReport}
-                  className="px-2.5 py-1 text-xs rounded font-medium bg-zinc-700/50 text-zinc-300 border border-zinc-600/40 hover:bg-zinc-600/50 transition-colors"
-                  title="Download formatted merge report as plain text"
-                >
-                  Report
-                </button>
               </>
             )}
-            {/* Run COFA Merge button — visible when two entities have COFA data */}
             {data && data.overview.entities.length >= 2 && (
               <button
                 onClick={runCofaMerge}
@@ -610,46 +633,28 @@ export function MergePanel() {
                 } disabled:opacity-40 disabled:cursor-not-allowed`}
                 title={
                   !data.engagement_id
-                    ? 'No engagement found — create one first'
+                    ? 'No engagement found \u2014 create one first'
                     : data.matches.has_matches
                       ? 'Re-run will replace existing mappings'
                       : 'Trigger Maestra to unify COFA accounts'
                 }
               >
-                {mergeRunning
-                  ? 'Running COFA Merge...'
-                  : data.matches.has_matches
-                    ? 'Re-run COFA Merge'
-                    : 'Run COFA Merge'}
+                {mergeRunning ? 'Running...' : data.matches.has_matches ? 'Re-run' : 'Run COFA Merge'}
               </button>
             )}
-            <button
-              onClick={fetchMerge}
-              className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              Refresh
-            </button>
           </div>
         </div>
 
-        {/* Progress / completed time bar */}
+        {/* Progress bar */}
         {mergeRunning && (
-          <div className="mt-2 flex items-center gap-2 text-sm text-amber-400">
-            <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin shrink-0" />
+          <div className="mt-1.5 flex items-center gap-2 text-sm text-amber-400">
+            <div className="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin shrink-0" />
             <span className="tabular-nums font-mono">{mergeElapsed}s</span>
-            {mergeStatus && <span>{mergeStatus}</span>}
-          </div>
-        )}
-        {!mergeRunning && mergeFinishedIn !== null && (
-          <div className="mt-2 flex items-center gap-2 text-sm text-emerald-400">
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-            <span>Completed in <span className="tabular-nums font-mono font-semibold">{mergeFinishedIn}s</span></span>
+            {mergeStatus && <span className="text-xs">{mergeStatus}</span>}
           </div>
         )}
         {mergeError && (
-          <div className="mt-2 rounded border border-red-500/20 bg-red-500/10 px-3 py-2">
+          <div className="mt-1.5 rounded border border-red-500/20 bg-red-500/10 px-3 py-1.5">
             <span className="text-sm text-red-400">{mergeError}</span>
             <button
               onClick={() => { setMergeError(null); runCofaMerge(); }}
@@ -660,9 +665,9 @@ export function MergePanel() {
           </div>
         )}
         {mergeCollapsedResponse && !mergeRunning && (
-          <details className="mt-2 rounded border border-amber-500/20 bg-amber-500/10 px-3 py-2">
+          <details className="mt-1.5 rounded border border-amber-500/20 bg-amber-500/10 px-3 py-1.5">
             <summary className="text-sm text-amber-400 cursor-pointer">
-              Maestra completed analysis but did not write results. This may require a follow-up message.
+              Maestra completed analysis but did not write results.
             </summary>
             <pre className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap max-h-40 overflow-y-auto">
               {mergeCollapsedResponse}
@@ -671,23 +676,23 @@ export function MergePanel() {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-        {error && (
-          <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-center">
-            <span className="text-base text-red-400">{error}</span>
-            <button onClick={fetchMerge} className="ml-3 px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90">
-              Retry
-            </button>
-          </div>
-        )}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="max-w-[1100px] mx-auto p-4 space-y-4">
+          {error && (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-center">
+              <span className="text-base text-red-400">{error}</span>
+              <button onClick={fetchMerge} className="ml-3 px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90">
+                Retry
+              </button>
+            </div>
+          )}
 
-        {data && (
-          <>
-            {/* ================================================================
-                Section 1: Overview Stats
-                ================================================================ */}
-            <div className="rounded-lg border border-border bg-card/30 px-4 py-3">
-              <div className="grid grid-cols-2 gap-4">
+          {data && (
+            <>
+              {/* ================================================================
+                  Entity Summary — compact cards
+                  ================================================================ */}
+              <div className="grid grid-cols-2 gap-3">
                 {data.overview.entities.map((entity) => {
                   const isAcquirer = entity.entity_id === data.acquirer.entity_id;
                   const borderColor = isAcquirer ? 'border-blue-500/30' : 'border-purple-500/30';
@@ -695,350 +700,207 @@ export function MergePanel() {
                   const label = isAcquirer ? 'Acquirer' : 'Target';
                   return (
                     <div key={entity.entity_id} className={`rounded-lg border ${borderColor} bg-card/20 p-3`}>
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-1">
                         <span className={`text-xs font-semibold uppercase tracking-wider ${textColor}`}>{label}</span>
                         <span className="text-sm font-semibold text-foreground">{entity.display_name}</span>
                       </div>
-                      <div className="flex items-center gap-4 text-sm font-mono flex-wrap">
+                      <div className="flex items-center gap-3 text-xs font-mono text-muted-foreground">
                         <span>
-                          <span className="text-foreground font-semibold">{fmtNum(entity.cofa_count)}</span>
-                          <span className="text-muted-foreground ml-1">COFA triples</span>
+                          <span className="text-foreground font-semibold">{fmtNum(entity.cofa_count)}</span> triples
+                        </span>
+                        <span>
+                          <span className="text-foreground font-semibold">{isAcquirer ? data.orphans.acquirer_coa_total : data.orphans.target_coa_total}</span> CoA accounts
                         </span>
                         {entity.last_ingest && (
-                          <span className="text-muted-foreground">
-                            last: {fmtDate(entity.last_ingest)}
-                          </span>
+                          <span>last: {fmtDate(entity.last_ingest)}</span>
                         )}
                       </div>
-                      {getEntityRunTag(entity.entity_id) && (
-                        <div className="mt-1.5 flex items-center gap-1.5">
-                          <span className="text-xs text-muted-foreground">source_run_tag:</span>
-                          <span className="text-xs font-mono font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
-                            {getEntityRunTag(entity.entity_id)}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
               </div>
-              <div className="mt-2 text-center text-sm font-mono text-muted-foreground">
-                <span className="text-foreground font-semibold">{fmtNum(data.overview.total_cofa_count)}</span> total COFA triples across both entities
-              </div>
-            </div>
 
-            {/* ================================================================
-                Section 1b: Financial Summary
-                ================================================================ */}
-            {data.financial_summary && data.financial_summary.length > 0 && (
-              <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
-                <div className="px-4 py-2.5 border-b border-border/30">
-                  <span className="font-semibold uppercase tracking-wider text-muted-foreground text-sm">Financial Summary</span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border text-sm uppercase tracking-wider text-muted-foreground">
-                        <th className="text-left px-4 py-2 font-medium">Metric</th>
-                        <th className="text-right px-4 py-2 font-medium">
-                          <span className="text-blue-400">{data.acquirer.display_name}</span>
-                        </th>
-                        <th className="text-right px-4 py-2 font-medium">
-                          <span className="text-purple-400">{data.target.display_name}</span>
-                        </th>
-                        <th className="text-right px-4 py-2 font-medium">Consolidated</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.financial_summary.map((m, i) => (
-                        <tr key={i} className="border-t border-border/30 hover:bg-card/20">
-                          <td className="px-4 py-2 text-foreground font-medium">{m.label}</td>
-                          <td className="px-4 py-2 text-right font-mono text-blue-400">
-                            {fmtMetric(m.acquirer, m.format)}
-                          </td>
-                          <td className="px-4 py-2 text-right font-mono text-purple-400">
-                            {fmtMetric(m.target, m.format)}
-                          </td>
-                          <td className="px-4 py-2 text-right font-mono text-foreground font-semibold">
-                            {fmtMetric(m.consolidated, m.format)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* ================================================================
-                Section 2: Side-by-Side Comparison
-                ================================================================ */}
-            <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
-              <button
-                onClick={() => setComparisonOpen(!comparisonOpen)}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-card/20 transition-colors"
-              >
-                {chevron(comparisonOpen)}
-                <span className="font-semibold uppercase tracking-wider text-muted-foreground text-sm">Side-by-Side Comparison</span>
-                <span className="text-muted-foreground/70 font-mono">{data.comparison.concepts.length} concepts</span>
-              </button>
-              {comparisonOpen && (
-                <div className="p-4">
-                  {data.comparison.concepts.length === 0 ? (
-                    <div className="text-center text-muted-foreground text-sm py-4">
-                      No COFA concepts found for these entities.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {data.comparison.concepts.map((c) => (
-                        <div key={c.concept} className="rounded-lg border border-border/50 overflow-hidden">
-                          <div className="px-3 py-1.5 bg-card/20 border-b border-border/30">
-                            <span className="font-mono text-sm font-semibold text-foreground">{c.concept}</span>
-                          </div>
-                          <div className="grid grid-cols-2 divide-x divide-border/30">
-                            {/* Acquirer column */}
-                            <div className="p-2">
-                              <div className="text-xs font-semibold uppercase tracking-wider text-blue-400 mb-1">
-                                {data.acquirer.display_name}
-                              </div>
-                              {c.acquirer_triples.length === 0 ? (
-                                <span className="text-xs text-muted-foreground/50">No data</span>
-                              ) : (
-                                <table className="w-full text-xs">
-                                  <tbody>
-                                    {c.acquirer_triples.map((t, i) => (
-                                      <tr key={i} className={i > 0 ? 'border-t border-border/20' : ''}>
-                                        <td className="py-0.5 text-muted-foreground pr-2">{t.property}</td>
-                                        <td className="py-0.5 text-right font-mono text-foreground">{fmtValue(t.value)}</td>
-                                        <td className="py-0.5 text-right text-muted-foreground/60 pl-2">{t.period || ''}</td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              )}
-                            </div>
-                            {/* Target column */}
-                            <div className="p-2">
-                              <div className="text-xs font-semibold uppercase tracking-wider text-purple-400 mb-1">
-                                {data.target.display_name}
-                              </div>
-                              {c.target_triples.length === 0 ? (
-                                <span className="text-xs text-muted-foreground/50">No data</span>
-                              ) : (
-                                <table className="w-full text-xs">
-                                  <tbody>
-                                    {c.target_triples.map((t, i) => (
-                                      <tr key={i} className={i > 0 ? 'border-t border-border/20' : ''}>
-                                        <td className="py-0.5 text-muted-foreground pr-2">{t.property}</td>
-                                        <td className="py-0.5 text-right font-mono text-foreground">{fmtValue(t.value)}</td>
-                                        <td className="py-0.5 text-right text-muted-foreground/60 pl-2">{t.period || ''}</td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              )}
-                            </div>
-                          </div>
+              {/* ================================================================
+                  Conflict Resolution Queue
+                  ================================================================ */}
+              {conflictData && conflictData.conflicts.length > 0 && (
+                <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
+                  <button
+                    onClick={() => setConflictsOpen(!conflictsOpen)}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-card/20 transition-colors"
+                  >
+                    {chevron(conflictsOpen)}
+                    <span className="font-semibold uppercase tracking-wider text-muted-foreground text-sm">Conflict Resolution</span>
+                    <span className="text-muted-foreground/70 font-mono text-xs">
+                      {conflictSummary?.total} total | {conflictSummary?.resolved} resolved | {conflictSummary?.pending} pending
+                      {withoutImpact > 0 && ` | ${withoutImpact} not estimated`}
+                    </span>
+                  </button>
+                  {conflictsOpen && (
+                    <div className="border-t border-border/30">
+                      {/* Batch controls */}
+                      {batchSelected.size > 0 && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-card/10 border-b border-border/20">
+                          <span className="text-xs text-muted-foreground">{batchSelected.size} selected</span>
+                          <select
+                            value={batchResolution}
+                            onChange={e => setBatchResolution(e.target.value)}
+                            className="px-2 py-1 text-xs rounded border border-border bg-background"
+                          >
+                            <option value="acquirer">Use Acquirer</option>
+                            <option value="target">Use Target</option>
+                            <option value="keep_both">Keep Both</option>
+                            <option value="post_close">Post-Close</option>
+                          </select>
+                          <button
+                            onClick={batchResolve}
+                            disabled={batchResolving}
+                            className="px-2.5 py-1 text-xs rounded font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 disabled:opacity-40"
+                          >
+                            {batchResolving ? 'Resolving...' : 'Batch Approve'}
+                          </button>
+                          <button
+                            onClick={() => setBatchSelected(new Set())}
+                            className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Clear
+                          </button>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                      )}
 
-            {/* ================================================================
-                Section 3: Resolution Matches
-                ================================================================ */}
-            <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
-              <button
-                onClick={() => setMatchesOpen(!matchesOpen)}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-card/20 transition-colors"
-              >
-                {chevron(matchesOpen)}
-                <span className="font-semibold uppercase tracking-wider text-muted-foreground text-sm">Resolution Matches</span>
-                <span className="text-muted-foreground/70 font-mono">
-                  {data.matches.has_matches ? `${data.matches.rows.length} matched` : 'none'}
-                </span>
-              </button>
-              {matchesOpen && (
-                <div className="border-t border-border/30">
-                  {data.matches.has_matches ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-border text-sm uppercase tracking-wider text-muted-foreground">
-                            <th className="text-left px-3 py-2 font-medium">Acquirer Concept</th>
-                            <th className="text-left px-3 py-2 font-medium">Target Concept</th>
-                            <th className="text-left px-3 py-2 font-medium">Canonical ID</th>
-                            <th className="text-left px-3 py-2 font-medium">Confidence</th>
-                            <th className="text-left px-3 py-2 font-medium">Method</th>
-                            <th className="text-left px-3 py-2 font-medium">Source Field</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.matches.rows.map((m, i) => (
-                            <tr key={i} className="border-t border-border/30 hover:bg-card/20 transition-colors">
-                              <td className="px-3 py-1.5 font-mono text-blue-400">{m.acquirer_concept}</td>
-                              <td className="px-3 py-1.5 font-mono text-purple-400">{m.target_concept}</td>
-                              <td className="px-3 py-1.5 font-mono text-muted-foreground/70">{m.canonical_id ? shortId(m.canonical_id) : '-'}</td>
-                              <td className="px-3 py-1.5">{confidenceBadge(m.resolution_confidence)}</td>
-                              <td className="px-3 py-1.5 text-muted-foreground">{m.resolution_method || '-'}</td>
-                              <td className="px-3 py-1.5 text-muted-foreground">{m.source_field || '-'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="px-4 py-3 bg-amber-500/10 border-amber-500/20">
-                      <span className="text-sm text-amber-400">{data.matches.message}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* ================================================================
-                Section 4: Orphans (only when matches exist)
-                ================================================================ */}
-            {data.orphans.show_section && (
-              <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
-                <button
-                  onClick={() => setOrphansOpen(!orphansOpen)}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-card/20 transition-colors"
-                >
-                  {chevron(orphansOpen)}
-                  <span className="font-semibold uppercase tracking-wider text-muted-foreground text-sm">Coverage</span>
-                  <span className="text-muted-foreground/70 font-mono">
-                    {data.orphans.acquirer_unmatched_count + data.orphans.target_unmatched_count} unmapped
-                  </span>
-                </button>
-                {orphansOpen && (
-                  <div className="grid grid-cols-2 divide-x divide-border/30 border-t border-border/30">
-                    <div className="p-3">
-                      <div className="text-xs font-semibold uppercase tracking-wider text-blue-400 mb-2">
-                        {data.acquirer.display_name}
-                      </div>
-                      <span className="font-mono text-xs text-foreground/80">
-                        {data.orphans.acquirer_mapped}/{data.orphans.acquirer_coa_total} mapped
-                      </span>
-                    </div>
-                    <div className="p-3">
-                      <div className="text-xs font-semibold uppercase tracking-wider text-purple-400 mb-2">
-                        {data.target.display_name}
-                      </div>
-                      <span className="font-mono text-xs text-foreground/80">
-                        {data.orphans.target_mapped}/{data.orphans.target_coa_total} mapped
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ================================================================
-                Section 5: Raw COFA Browser
-                ================================================================ */}
-            <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
-              <button
-                onClick={() => setBrowseOpen(!browseOpen)}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-card/20 transition-colors"
-              >
-                {chevron(browseOpen)}
-                <span className="font-semibold uppercase tracking-wider text-muted-foreground text-sm">COFA Triple Browser</span>
-              </button>
-              {browseOpen && (
-                <>
-                  {/* Filters */}
-                  <div className="flex items-center gap-3 px-4 py-2 border-t border-border/30 flex-wrap">
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-muted-foreground">Entity:</span>
-                      <select
-                        value={browseEntity}
-                        onChange={(e) => { setBrowseEntity(e.target.value); setBrowseOffset(0); }}
-                        className="px-2 py-1 text-xs rounded border border-border bg-background"
-                      >
-                        <option value="">All</option>
-                        {data.overview.entities.map((e) => (
-                          <option key={e.entity_id} value={e.entity_id}>{e.display_name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-muted-foreground">Period:</span>
-                      <input
-                        type="text"
-                        value={browsePeriod}
-                        onChange={(e) => { setBrowsePeriod(e.target.value); setBrowseOffset(0); }}
-                        placeholder="e.g. Q1 2024"
-                        className="px-2 py-1 text-xs rounded border border-border bg-background w-24"
-                      />
-                    </div>
-                    {browseData && (
-                      <span className="text-xs text-muted-foreground ml-auto font-mono">
-                        {fmtNum(browseData.total_count)} results
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Table */}
-                  {browseLoading ? (
-                    <div className="p-4 text-center text-muted-foreground text-sm">Loading...</div>
-                  ) : browseData && browseData.triples.length > 0 ? (
-                    <>
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="border-b border-border text-sm uppercase tracking-wider text-muted-foreground">
-                              <th className="text-left px-3 py-2 font-medium">Entity</th>
-                              <th className="text-left px-3 py-2 font-medium">Concept</th>
-                              <th className="text-left px-3 py-2 font-medium">Property</th>
-                              <th className="text-right px-3 py-2 font-medium">Value</th>
-                              <th className="text-left px-3 py-2 font-medium">Period</th>
-                              <th className="text-left px-3 py-2 font-medium">Source</th>
-                              <th className="text-left px-3 py-2 font-medium">Confidence</th>
-                              <th className="text-left px-3 py-2 font-medium">Run</th>
+                            <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
+                              <th className="px-2 py-2 w-8">
+                                <input
+                                  type="checkbox"
+                                  checked={batchSelected.size === conflictData.conflicts.filter(c => c.resolution_status !== 'resolved').length && batchSelected.size > 0}
+                                  onChange={e => {
+                                    if (e.target.checked) {
+                                      setBatchSelected(new Set(conflictData.conflicts.filter(c => c.resolution_status !== 'resolved').map(c => c.conflict_id)));
+                                    } else {
+                                      setBatchSelected(new Set());
+                                    }
+                                  }}
+                                  className="rounded"
+                                />
+                              </th>
+                              <th className="text-left px-2 py-2 font-medium">Type</th>
+                              <th className="text-left px-2 py-2 font-medium">Description</th>
+                              <th className="text-right px-2 py-2 font-medium">Annual Impact</th>
+                              <th className="text-left px-2 py-2 font-medium">Status</th>
+                              <th className="text-left px-2 py-2 font-medium w-20">Action</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {browseData.triples.map((t) => {
-                              const isExp = expandedTriple === t.id;
-                              const entityColor = t.entity_id === data.acquirer.entity_id
-                                ? 'text-blue-400'
-                                : t.entity_id === data.target.entity_id
-                                  ? 'text-purple-400'
-                                  : 'text-foreground/80';
+                            {conflictData.conflicts.map((c) => {
+                              const isExpanded = expandedConflictId === c.conflict_id;
+                              const isResolved = c.resolution_status === 'resolved';
                               return (
-                                <Fragment key={t.id}>
-                                  <tr
-                                    className="border-t border-border/30 hover:bg-card/20 cursor-pointer transition-colors"
-                                    onClick={() => setExpandedTriple(isExp ? null : t.id)}
-                                  >
-                                    <td className={`px-3 py-1.5 font-mono ${entityColor}`}>{t.entity_id}</td>
-                                    <td className="px-3 py-1.5 font-mono text-foreground">{t.concept}</td>
-                                    <td className="px-3 py-1.5 text-muted-foreground">{t.property}</td>
-                                    <td className="px-3 py-1.5 text-right font-mono text-foreground">{fmtValue(t.value)}</td>
-                                    <td className="px-3 py-1.5 text-muted-foreground">{t.period || '-'}</td>
-                                    <td className="px-3 py-1.5 text-muted-foreground">{t.source_system}</td>
-                                    <td className="px-3 py-1.5">{tierBadge(t.confidence_tier)}</td>
-                                    <td className="px-3 py-1.5 font-mono text-muted-foreground/70">{shortId(t.run_id)}</td>
+                                <Fragment key={c.conflict_id}>
+                                  <tr className={`border-t border-border/30 hover:bg-card/20 transition-colors ${isResolved ? 'opacity-60' : ''}`}>
+                                    <td className="px-2 py-1.5">
+                                      {!isResolved && (
+                                        <input
+                                          type="checkbox"
+                                          checked={batchSelected.has(c.conflict_id)}
+                                          onChange={e => {
+                                            const next = new Set(batchSelected);
+                                            if (e.target.checked) next.add(c.conflict_id);
+                                            else next.delete(c.conflict_id);
+                                            setBatchSelected(next);
+                                          }}
+                                          className="rounded"
+                                        />
+                                      )}
+                                    </td>
+                                    <td className="px-2 py-1.5">
+                                      <span className="text-xs font-mono text-foreground/80">{c.conflict_type}</span>
+                                    </td>
+                                    <td className="px-2 py-1.5 text-foreground max-w-[300px] truncate" title={c.description}>
+                                      {c.description || c.conflict_id}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right font-mono">
+                                      {c.dollar_impact > 0
+                                        ? <span className="text-foreground">{fmtDollarImpact(c.dollar_impact)}</span>
+                                        : <span className="text-muted-foreground/50 text-xs">Not estimated</span>
+                                      }
+                                    </td>
+                                    <td className="px-2 py-1.5">{statusBadge(c.resolution_status)}</td>
+                                    <td className="px-2 py-1.5">
+                                      <button
+                                        onClick={() => setExpandedConflictId(isExpanded ? null : c.conflict_id)}
+                                        className="px-2 py-0.5 text-xs rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                      >
+                                        {isExpanded ? 'Close' : 'Review'}
+                                      </button>
+                                    </td>
                                   </tr>
-                                  {isExp && (
+                                  {isExpanded && (
                                     <tr className="border-t border-border/10 bg-card/5">
-                                      <td colSpan={8} className="px-3 py-2 pl-8">
-                                        <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm font-mono">
-                                          <span><span className="text-muted-foreground/60">id </span><span className="text-foreground/80">{t.id}</span></span>
-                                          <span><span className="text-muted-foreground/60">tenant </span><span className="text-foreground/80">{shortId(t.tenant_id)}</span></span>
-                                          <span><span className="text-muted-foreground/60">source_table </span><span className="text-foreground/80">{t.source_table || '-'}</span></span>
-                                          <span><span className="text-muted-foreground/60">source_field </span><span className="text-foreground/80">{t.source_field || '-'}</span></span>
-                                          <span><span className="text-muted-foreground/60">pipe_id </span><span className="text-foreground/80">{t.pipe_id ? shortId(t.pipe_id) : '-'}</span></span>
-                                          <span><span className="text-muted-foreground/60">canonical_id </span><span className="text-foreground/80">{t.canonical_id ? shortId(t.canonical_id) : '-'}</span></span>
-                                          <span><span className="text-muted-foreground/60">resolution </span><span className="text-foreground/80">{t.resolution_method || '-'}</span></span>
-                                          <span><span className="text-muted-foreground/60">confidence </span><span className="text-foreground/80">{t.confidence_score}</span></span>
-                                          <span><span className="text-muted-foreground/60">currency </span><span className="text-foreground/80">{t.currency || '-'}</span></span>
-                                          <span><span className="text-muted-foreground/60">unit </span><span className="text-foreground/80">{t.unit || '-'}</span></span>
-                                          <span><span className="text-muted-foreground/60">created </span><span className="text-foreground/80">{t.created_at ? fmtDate(t.created_at) : '-'}</span></span>
+                                      <td colSpan={6} className="px-4 py-3">
+                                        <div className="space-y-3">
+                                          {/* Treatment comparison */}
+                                          <div className="grid grid-cols-2 gap-3">
+                                            <div className="rounded border border-blue-500/20 p-2">
+                                              <div className="text-xs font-semibold text-blue-400 mb-1">Acquirer Treatment</div>
+                                              <div className="text-sm text-foreground/80">{c.acquirer_treatment || '-'}</div>
+                                            </div>
+                                            <div className="rounded border border-purple-500/20 p-2">
+                                              <div className="text-xs font-semibold text-purple-400 mb-1">Target Treatment</div>
+                                              <div className="text-sm text-foreground/80">{c.target_treatment || '-'}</div>
+                                            </div>
+                                          </div>
+
+                                          {/* Resolution form */}
+                                          {isResolved ? (
+                                            <div className="text-xs text-muted-foreground space-y-1">
+                                              <div>Resolution: <span className="text-foreground">{c.resolution}</span></div>
+                                              <div>By: <span className="text-foreground">{c.resolved_by}</span> at {c.resolved_at ? fmtDate(c.resolved_at) : '-'}</div>
+                                              {c.resolution_notes && <div>Notes: <span className="text-foreground">{c.resolution_notes}</span></div>}
+                                            </div>
+                                          ) : (
+                                            <div className="space-y-2">
+                                              <div className="flex flex-wrap gap-3">
+                                                {(['acquirer', 'target', 'keep_both', 'post_close'] as const).map(opt => (
+                                                  <label key={opt} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                                                    <input
+                                                      type="radio"
+                                                      name={`resolution-${c.conflict_id}`}
+                                                      value={opt}
+                                                      checked={resolutionDrafts[c.conflict_id]?.resolution === opt}
+                                                      onChange={() => setResolutionDrafts(prev => ({
+                                                        ...prev,
+                                                        [c.conflict_id]: { ...prev[c.conflict_id], resolution: opt, notes: prev[c.conflict_id]?.notes || '' },
+                                                      }))}
+                                                      className="rounded"
+                                                    />
+                                                    <span className="text-foreground/80">
+                                                      {opt === 'acquirer' ? 'Use Acquirer' : opt === 'target' ? 'Use Target' : opt === 'keep_both' ? 'Keep Both' : 'Post-Close'}
+                                                    </span>
+                                                  </label>
+                                                ))}
+                                              </div>
+                                              <textarea
+                                                placeholder="Notes (optional)"
+                                                value={resolutionDrafts[c.conflict_id]?.notes || ''}
+                                                onChange={e => setResolutionDrafts(prev => ({
+                                                  ...prev,
+                                                  [c.conflict_id]: { ...prev[c.conflict_id], resolution: prev[c.conflict_id]?.resolution || '', notes: e.target.value },
+                                                }))}
+                                                className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background resize-none"
+                                                rows={2}
+                                              />
+                                              <button
+                                                onClick={() => resolveConflict(c.conflict_id)}
+                                                disabled={!resolutionDrafts[c.conflict_id]?.resolution || resolvingId === c.conflict_id}
+                                                className="px-3 py-1 text-sm rounded font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                                              >
+                                                {resolvingId === c.conflict_id ? 'Saving...' : 'Save Decision'}
+                                              </button>
+                                            </div>
+                                          )}
                                         </div>
                                       </td>
                                     </tr>
@@ -1049,37 +911,145 @@ export function MergePanel() {
                           </tbody>
                         </table>
                       </div>
-                      {/* Pagination */}
-                      <div className="flex items-center justify-between px-4 py-2 border-t border-border/30">
-                        <button
-                          onClick={() => fetchBrowse(Math.max(0, browseOffset - BROWSE_LIMIT))}
-                          disabled={browseOffset === 0}
-                          className="px-3 py-1 text-sm rounded bg-accent text-foreground hover:bg-accent/80 disabled:opacity-30"
-                        >
-                          Prev
-                        </button>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {browseOffset + 1}–{Math.min(browseOffset + BROWSE_LIMIT, browseData.total_count)} of {fmtNum(browseData.total_count)}
-                        </span>
-                        <button
-                          onClick={() => fetchBrowse(browseOffset + BROWSE_LIMIT)}
-                          disabled={browseOffset + BROWSE_LIMIT >= browseData.total_count}
-                          className="px-3 py-1 text-sm rounded bg-accent text-foreground hover:bg-accent/80 disabled:opacity-30"
-                        >
-                          Next
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="p-4 text-center text-muted-foreground text-sm border-t border-border/30">
-                      No COFA triples match the current filters
                     </div>
                   )}
-                </>
+                </div>
               )}
-            </div>
-          </>
-        )}
+
+              {/* ================================================================
+                  Account Mapping (Resolution Matches)
+                  ================================================================ */}
+              <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
+                <button
+                  onClick={() => setMatchesOpen(!matchesOpen)}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-card/20 transition-colors"
+                >
+                  {chevron(matchesOpen)}
+                  <span className="font-semibold uppercase tracking-wider text-muted-foreground text-sm">Account Mapping</span>
+                  <span className="text-muted-foreground/70 font-mono text-xs">
+                    {data.matches.has_matches ? `${data.matches.rows.length} matched` : 'none'}
+                    {data.orphans.show_section && ` | ${data.orphans.acquirer_unmatched_count + data.orphans.target_unmatched_count} unmapped`}
+                  </span>
+                </button>
+                {matchesOpen && (
+                  <div className="border-t border-border/30">
+                    {data.matches.has_matches ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
+                              <th className="text-left px-3 py-2 font-medium">Acquirer Account</th>
+                              <th className="text-left px-3 py-2 font-medium">Target Account</th>
+                              <th className="text-left px-3 py-2 font-medium">Confidence</th>
+                              <th className="text-left px-3 py-2 font-medium">Method</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.matches.rows.map((m, i) => (
+                              <tr key={i} className="border-t border-border/30 hover:bg-card/20 transition-colors">
+                                <td className="px-3 py-1.5 font-mono text-blue-400">
+                                  {m.acquirer_concept.replace('cofa_mapping.', '')}
+                                </td>
+                                <td className="px-3 py-1.5 font-mono text-purple-400">
+                                  {m.target_concept.replace('cofa_mapping.', '')}
+                                </td>
+                                <td className="px-3 py-1.5">{confidenceBadge(m.resolution_confidence)}</td>
+                                <td className="px-3 py-1.5 text-muted-foreground">{m.resolution_method || '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="px-4 py-3 bg-amber-500/10 border-amber-500/20">
+                        <span className="text-sm text-amber-400">{data.matches.message}</span>
+                      </div>
+                    )}
+
+                    {/* Orphans / coverage inline */}
+                    {data.orphans.show_section && (
+                      <div className="border-t border-border/20">
+                        <button
+                          onClick={() => setOrphansOpen(!orphansOpen)}
+                          className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-card/20 transition-colors"
+                        >
+                          {chevron(orphansOpen)}
+                          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Coverage</span>
+                          <span className="text-muted-foreground/70 font-mono text-xs">
+                            {data.orphans.acquirer_unmatched_count + data.orphans.target_unmatched_count} unmapped
+                          </span>
+                        </button>
+                        {orphansOpen && (
+                          <div className="grid grid-cols-2 divide-x divide-border/30 border-t border-border/20">
+                            <div className="p-3">
+                              <div className="text-xs font-semibold uppercase tracking-wider text-blue-400 mb-1">
+                                {data.acquirer.display_name}
+                              </div>
+                              <span className="font-mono text-xs text-foreground/80">
+                                {data.orphans.acquirer_mapped}/{data.orphans.acquirer_coa_total} mapped
+                              </span>
+                            </div>
+                            <div className="p-3">
+                              <div className="text-xs font-semibold uppercase tracking-wider text-purple-400 mb-1">
+                                {data.target.display_name}
+                              </div>
+                              <span className="font-mono text-xs text-foreground/80">
+                                {data.orphans.target_mapped}/{data.orphans.target_coa_total} mapped
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* ================================================================
+                  Financial Summary (at bottom)
+                  ================================================================ */}
+              {data.financial_summary && data.financial_summary.length > 0 && (
+                <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-border/30">
+                    <span className="font-semibold uppercase tracking-wider text-muted-foreground text-sm">Financial Summary</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
+                          <th className="text-left px-4 py-2 font-medium">Metric</th>
+                          <th className="text-right px-4 py-2 font-medium">
+                            <span className="text-blue-400">{data.acquirer.display_name}</span>
+                          </th>
+                          <th className="text-right px-4 py-2 font-medium">
+                            <span className="text-purple-400">{data.target.display_name}</span>
+                          </th>
+                          <th className="text-right px-4 py-2 font-medium">Consolidated</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.financial_summary.map((m, i) => (
+                          <tr key={i} className="border-t border-border/30 hover:bg-card/20">
+                            <td className="px-4 py-2 text-foreground font-medium">{m.label}</td>
+                            <td className="px-4 py-2 text-right font-mono text-blue-400">
+                              {fmtMetric(m.acquirer, m.format)}
+                            </td>
+                            <td className="px-4 py-2 text-right font-mono text-purple-400">
+                              {fmtMetric(m.target, m.format)}
+                            </td>
+                            <td className="px-4 py-2 text-right font-mono text-foreground font-semibold">
+                              {fmtMetric(m.consolidated, m.format)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

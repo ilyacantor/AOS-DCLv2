@@ -81,6 +81,7 @@ from backend.api.routes.triple_monitor import router as triple_monitor_router
 from backend.api.routes.cofa_validation import router as cofa_validation_router
 from backend.api.routes.cofa_mapping import router as cofa_mapping_router
 from backend.api.routes.merge_overview import router as merge_overview_router
+from backend.api.routes.merge_conflicts import router as merge_conflicts_router
 
 logger = get_logger(__name__)
 
@@ -352,6 +353,7 @@ app.include_router(triple_monitor_router)
 app.include_router(cofa_validation_router)
 app.include_router(cofa_mapping_router)
 app.include_router(merge_overview_router)
+app.include_router(merge_conflicts_router)
 
 
 # =============================================================================

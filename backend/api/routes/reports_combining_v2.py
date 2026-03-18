@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from backend.api.routes.v2_helpers import resolve_tenant_and_run
 from backend.engine.combining_v2 import CombiningEngineV2
+from backend.engine.query_resolver_v2 import TripleQueryResolver
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -83,6 +84,65 @@ async def get_cofa_adjustments_v2(
     try:
         engine = CombiningEngineV2(tid, rid)
         return engine.get_cofa_adjustments(period=period)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Single-entity financial statements (structured endpoints for Reports portal)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/income-statement")
+async def get_income_statement_v2(
+    entity_id: str = Query(..., description="Entity ID"),
+    period: str = Query(..., description="Period (e.g., 2025-Q1)"),
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+):
+    """Single-entity income statement from semantic_triples."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    try:
+        resolver = TripleQueryResolver(tid, rid)
+        return resolver.get_income_statement(entity_id, period)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+
+@router.get("/balance-sheet")
+async def get_balance_sheet_v2(
+    entity_id: str = Query(..., description="Entity ID"),
+    period: str = Query(..., description="Period (e.g., 2025-Q1)"),
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+):
+    """Single-entity balance sheet from semantic_triples."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    try:
+        resolver = TripleQueryResolver(tid, rid)
+        return resolver.get_balance_sheet(entity_id, period)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+
+@router.get("/cash-flow")
+async def get_cash_flow_v2(
+    entity_id: str = Query(..., description="Entity ID"),
+    period: str = Query(..., description="Period (e.g., 2025-Q1)"),
+    tenant_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+):
+    """Single-entity cash flow statement from semantic_triples."""
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    try:
+        resolver = TripleQueryResolver(tid, rid)
+        return resolver.get_cash_flow(entity_id, period)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except RuntimeError as e:

@@ -123,7 +123,7 @@ def _build_mapping_triples(data: dict) -> list[dict]:
                 "confidence_tier": tier,
                 "canonical_id": canonical,
                 "resolution_method": basis,
-                "resolution_confidence": None,
+                "resolution_confidence": confidence,
             })
 
         # Target-side triple
@@ -146,7 +146,7 @@ def _build_mapping_triples(data: dict) -> list[dict]:
                 "confidence_tier": tier,
                 "canonical_id": canonical,
                 "resolution_method": basis,
-                "resolution_confidence": None,
+                "resolution_confidence": confidence,
             })
 
     return triples

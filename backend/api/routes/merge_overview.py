@@ -422,7 +422,8 @@ def merge_overview(
                 "  AND a.entity_id = %s AND b.entity_id = %s "
                 "  AND a.canonical_id IS NOT NULL "
                 "  AND split_part(a.concept, '.', 1) LIKE 'cofa%%' "
-                "  AND split_part(b.concept, '.', 1) LIKE 'cofa%%'",
+                "  AND split_part(b.concept, '.', 1) LIKE 'cofa%%' "
+                "ORDER BY a.canonical_id, a.resolution_method NULLS LAST, a.created_at DESC",
                 (acq_id, tgt_id),
             )
             columns = [desc[0] for desc in cur.description]
@@ -463,8 +464,8 @@ def merge_overview(
                 "SELECT entity_id, "
                 "  COUNT(DISTINCT CASE WHEN split_part(concept, '.', 1) = 'coa' "
                 "        THEN concept END) AS coa_count, "
-                "  SUM(CASE WHEN split_part(concept, '.', 1) = 'cofa_mapping' "
-                "      THEN 1 ELSE 0 END) AS mapping_count "
+                "  COUNT(DISTINCT CASE WHEN split_part(concept, '.', 1) = 'cofa_mapping' "
+                "        THEN concept END) AS mapping_count "
                 "FROM semantic_triples "
                 "WHERE is_active = true AND entity_id IN (%s, %s) "
                 "  AND split_part(concept, '.', 1) IN ('coa', 'cofa_mapping') "
