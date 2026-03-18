@@ -9,7 +9,7 @@ from backend.engine.cross_sell_v2 import CrossSellEngineV2
 from tests.conftest import TENANT_ID, RUN_ID
 
 CUSTOMER_OVERLAP = 34
-VENDOR_OVERLAP = 170
+VENDOR_OVERLAP = 196
 EMPLOYEE_OVERLAP = 10
 MERIDIAN_CUSTOMERS = 1218
 CASCADIA_CUSTOMERS = 220

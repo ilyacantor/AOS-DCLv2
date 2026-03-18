@@ -18,6 +18,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.api.pipe_store import get_pipe_store
+from backend.api.ingest import get_ingest_store
 
 
 def _ingest_headers(**extra) -> dict:
@@ -31,12 +32,15 @@ def _ingest_headers(**extra) -> dict:
 
 
 @pytest.fixture(autouse=True)
-def _clean_pipe_store():
-    """Ensure each test starts with a clean pipe store (including Postgres)."""
-    store = get_pipe_store()
-    store.reset()
+def _clean_stores():
+    """Ensure each test starts with clean pipe and ingest stores."""
+    pipe_store = get_pipe_store()
+    ingest_store = get_ingest_store()
+    pipe_store.reset()
+    ingest_store.reset()
     yield
-    store.reset()
+    pipe_store.reset()
+    ingest_store.reset()
 
 
 @pytest.fixture()

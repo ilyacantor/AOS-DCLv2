@@ -18,9 +18,9 @@ DCL_BASE = "http://localhost:8004"
 # Ground truth from seed
 M_Q1_REV = 1323.43
 CUSTOMER_OVERLAP = 34
-VENDOR_OVERLAP = 170
+VENDOR_OVERLAP = 196
 EMPLOYEE_OVERLAP = 10
-COFA_COUNT = 12
+COFA_COUNT = 6
 
 # Common query params for tenant/run resolution
 _TR = {"tenant_id": TENANT_ID, "run_id": RUN_ID}

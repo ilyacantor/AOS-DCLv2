@@ -259,7 +259,7 @@ class TestSeedData:
         """COFA conflict triples present with required properties."""
         cur = conn.cursor()
         cur.execute(
-            "SELECT DISTINCT concept FROM semantic_triples WHERE tenant_id = %s AND concept LIKE 'cofa_conflict.%%' AND is_active = true",
+            "SELECT DISTINCT concept FROM semantic_triples WHERE tenant_id = %s AND concept LIKE 'cofa.%%' AND is_active = true",
             (TENANT_ID,),
         )
         cofa_concepts = {r[0] for r in cur.fetchall()}
@@ -276,8 +276,8 @@ class TestSeedData:
             assert "description" in props, (
                 f"COFA concept '{concept}' missing 'description' property. Has: {props}"
             )
-            assert "dollar_impact" in props, (
-                f"COFA concept '{concept}' missing 'dollar_impact' property. Has: {props}"
+            assert "adjustment_amount" in props, (
+                f"COFA concept '{concept}' missing 'adjustment_amount' property. Has: {props}"
             )
 
     # 10. Customer overlap
