@@ -12,6 +12,20 @@ logger = get_logger(__name__)
 
 _IDENTITY_TOLERANCE = 0.05
 
+# Year-only period pattern: "2025", "2026" etc. — no quarter suffix
+import re
+_YEAR_ONLY_RE = re.compile(r"^\d{4}$")
+
+
+def _is_year_period(period: str) -> bool:
+    """True if period is a full year (e.g. '2026') rather than a quarter ('2026-Q1')."""
+    return bool(_YEAR_ONLY_RE.match(period))
+
+
+def _quarter_periods(year: str) -> list[str]:
+    """Expand '2026' → ['2026-Q1', '2026-Q2', '2026-Q3', '2026-Q4']."""
+    return [f"{year}-Q{q}" for q in range(1, 5)]
+
 
 def _to_float(value) -> float:
     """Convert a JSONB value (returned as str by psycopg2) to float."""
@@ -159,19 +173,47 @@ class TripleQueryResolver:
         Get all concepts in a domain (e.g., 'revenue' returns revenue.total,
         revenue.consulting, etc.) for an entity/period.
         Domain = first segment of concept (split on '.').
+
+        If period is a year (e.g. '2026'), aggregates Q1-Q4 in a single SQL
+        query using SUM — no per-quarter round trips.
+
         Returns list of {"concept": str, "value": float, ...}.
         """
-        sql = """
-            SELECT DISTINCT ON (entity_id, concept, property, period)
-                   concept, entity_id, period, value, currency, unit,
-                   source_system, confidence_score
-            FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
-              AND concept LIKE %s
-              AND entity_id = %s AND period = %s AND property = 'amount'
-            ORDER BY entity_id, concept, property, period, created_at DESC
-        """
-        rows = self._query(sql, [self.tenant_id, f"{domain}.%", entity_id, period])
+        if _is_year_period(period):
+            quarters = _quarter_periods(period)
+            sql = """
+                WITH latest AS (
+                    SELECT DISTINCT ON (entity_id, concept, property, period)
+                           concept, entity_id, period, value, currency, unit,
+                           source_system, confidence_score
+                    FROM semantic_triples
+                    WHERE tenant_id = %s AND is_active = true
+                      AND concept LIKE %s
+                      AND entity_id = %s AND period = ANY(%s) AND property = 'amount'
+                    ORDER BY entity_id, concept, property, period, created_at DESC
+                )
+                SELECT concept,
+                       SUM(value::numeric) AS value,
+                       MIN(currency) AS currency,
+                       MIN(unit) AS unit,
+                       MIN(source_system) AS source_system,
+                       AVG(confidence_score) AS confidence_score
+                FROM latest
+                GROUP BY concept
+            """
+            rows = self._query(sql, [self.tenant_id, f"{domain}.%", entity_id, quarters])
+        else:
+            sql = """
+                SELECT DISTINCT ON (entity_id, concept, property, period)
+                       concept, entity_id, period, value, currency, unit,
+                       source_system, confidence_score
+                FROM semantic_triples
+                WHERE tenant_id = %s AND is_active = true
+                  AND concept LIKE %s
+                  AND entity_id = %s AND period = %s AND property = 'amount'
+                ORDER BY entity_id, concept, property, period, created_at DESC
+            """
+            rows = self._query(sql, [self.tenant_id, f"{domain}.%", entity_id, period])
         return [
             {
                 "concept": r["concept"],
@@ -303,10 +345,14 @@ class TripleQueryResolver:
         Assemble BS from triples: asset.*, liability.*, equity.*.
         Validates BS identity: asset.total == liability.total + equity.total.
         Raises ValueError if identity fails.
+
+        Balance sheet is point-in-time. For year periods (e.g. '2026'),
+        uses Q4 snapshot rather than summing quarters.
         """
-        assets = self._domain_to_dict("asset", entity_id, period)
-        liabilities = self._domain_to_dict("liability", entity_id, period)
-        equity = self._domain_to_dict("equity", entity_id, period)
+        bs_period = f"{period}-Q4" if _is_year_period(period) else period
+        assets = self._domain_to_dict("asset", entity_id, bs_period)
+        liabilities = self._domain_to_dict("liability", entity_id, bs_period)
+        equity = self._domain_to_dict("equity", entity_id, bs_period)
 
         a_total = assets.get("total")
         l_total = liabilities.get("total")
