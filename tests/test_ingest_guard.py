@@ -12,10 +12,22 @@ Test matrix:
   5. IngestResponse contains enriched fields (dcl_run_id, schema_fields, timestamp)
 """
 
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 
 from backend.api.pipe_store import get_pipe_store
+
+
+def _ingest_headers(**extra) -> dict:
+    """Build ingest headers including x-api-key from env."""
+    key = os.environ.get("DCL_INGEST_KEY", "")
+    headers = {}
+    if key:
+        headers["x-api-key"] = key
+    headers.update(extra)
+    return headers
 
 
 @pytest.fixture(autouse=True)
@@ -115,7 +127,7 @@ def test_export_then_ingest_matching_pipe(client):
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
-        headers={"x-pipe-id": "sf-crm-001", "x-run-id": "test-run-001"},
+        headers=_ingest_headers(**{"x-pipe-id": "sf-crm-001", "x-run-id": "test-run-001"}),
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -141,7 +153,7 @@ def test_ingest_wrong_pipe_id_rejected(client):
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
-        headers={"x-pipe-id": "nonexistent-pipe-999", "x-run-id": "test-run-002"},
+        headers=_ingest_headers(**{"x-pipe-id": "nonexistent-pipe-999", "x-run-id": "test-run-002"}),
     )
     assert resp.status_code == 422
     data = resp.json()
@@ -168,7 +180,7 @@ def test_ingest_no_definitions_guard_bypassed(client):
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
-        headers={"x-pipe-id": "any-pipe", "x-run-id": "farm_test-run-003"},
+        headers=_ingest_headers(**{"x-pipe-id": "any-pipe", "x-run-id": "farm_test-run-003"}),
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -233,7 +245,7 @@ def test_ingest_response_has_enriched_fields(client):
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
-        headers={"x-pipe-id": "ns-erp-001", "x-run-id": "enriched-run"},
+        headers=_ingest_headers(**{"x-pipe-id": "ns-erp-001", "x-run-id": "enriched-run"}),
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -345,7 +357,7 @@ def test_guard_activates_for_all_pipes(client):
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
-        headers={"x-pipe-id": "sf-crm-001", "x-run-id": "run-ok"},
+        headers=_ingest_headers(**{"x-pipe-id": "sf-crm-001", "x-run-id": "run-ok"}),
     )
     assert resp.status_code == 200
 
@@ -353,7 +365,7 @@ def test_guard_activates_for_all_pipes(client):
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
-        headers={"x-pipe-id": "ns-erp-001", "x-run-id": "run-fail"},
+        headers=_ingest_headers(**{"x-pipe-id": "ns-erp-001", "x-run-id": "run-fail"}),
     )
     assert resp.status_code == 422
     assert resp.json()["detail"]["error"] == "NO_MATCHING_PIPE"

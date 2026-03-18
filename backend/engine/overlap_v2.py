@@ -14,6 +14,23 @@ logger = get_logger(__name__)
 
 _ALLOWED_DOMAINS = ("customer", "vendor", "employee")
 
+
+import re as _re
+
+_NUMERIC_RE = _re.compile(r"^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$")
+
+
+def _safe_sort_float(val) -> float:
+    """Convert a value to float for sorting. Non-numeric values sort as 0."""
+    if val is None:
+        return 0.0
+    if isinstance(val, (int, float)):
+        return float(val)
+    s = str(val).strip().strip('"')
+    if _NUMERIC_RE.match(s):
+        return float(s)
+    return 0.0
+
 # Entity ordering: entity_a sorts first descending (meridian > cascadia)
 _ENTITY_A_LABEL = "entity_a"
 _ENTITY_B_LABEL = "entity_b"
@@ -48,10 +65,11 @@ class OverlapEngineV2:
         sql = """
             SELECT DISTINCT entity_id
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
+            WHERE tenant_id = %s AND is_active = true
+              AND entity_id != 'combined'
             ORDER BY entity_id DESC
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id])
+        rows = self._query(sql, [self.tenant_id])
         entities = [r["entity_id"] for r in rows]
         if len(entities) < 2:
             raise ValueError(
@@ -66,11 +84,11 @@ class OverlapEngineV2:
         sql = """
             SELECT COUNT(DISTINCT concept) as cnt
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
-              AND split_part(concept, '.', 1) = %s
+            WHERE tenant_id = %s AND is_active = true
+              AND concept LIKE %s
               AND entity_id = %s
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id, domain, entity_id])
+        rows = self._query(sql, [self.tenant_id, f"{domain}.%", entity_id])
         return rows[0]["cnt"] if rows else 0
 
     def _find_overlapping_concepts(self, domain: str) -> list[str]:
@@ -78,13 +96,13 @@ class OverlapEngineV2:
         sql = """
             SELECT concept
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
-              AND split_part(concept, '.', 1) = %s
+            WHERE tenant_id = %s AND is_active = true
+              AND concept LIKE %s
             GROUP BY concept
             HAVING COUNT(DISTINCT entity_id) > 1
             ORDER BY concept
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id, domain])
+        rows = self._query(sql, [self.tenant_id, f"{domain}.%"])
         return [r["concept"] for r in rows]
 
     def get_overlap_summary(self) -> dict:
@@ -149,11 +167,11 @@ class OverlapEngineV2:
         sql = f"""
             SELECT concept, entity_id, property, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
+            WHERE tenant_id = %s AND is_active = true
               AND concept IN ({placeholders})
             ORDER BY concept, entity_id, property
         """
-        params = [self.tenant_id, self.run_id] + overlapping
+        params = [self.tenant_id] + overlapping
         rows = self._query(sql, params)
 
         # Organize by concept → entity → properties
@@ -196,12 +214,12 @@ class OverlapEngineV2:
         sql = """
             SELECT DISTINCT concept
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
-              AND split_part(concept, '.', 1) = %s
+            WHERE tenant_id = %s AND is_active = true
+              AND concept LIKE %s
               AND entity_id = %s
             ORDER BY concept
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id, domain, entity_id])
+        rows = self._query(sql, [self.tenant_id, f"{domain}.%", entity_id])
         all_concepts = [r["concept"] for r in rows]
 
         return [c for c in all_concepts if c not in overlapping_set]
@@ -227,12 +245,12 @@ class OverlapEngineV2:
         sql = f"""
             SELECT concept, entity_id, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
+            WHERE tenant_id = %s AND is_active = true
               AND concept IN ({placeholders})
               AND property = %s
             ORDER BY concept, entity_id
         """
-        params = [self.tenant_id, self.run_id] + overlapping + [property_name]
+        params = [self.tenant_id] + overlapping + [property_name]
         rows = self._query(sql, params)
 
         # Group by concept
@@ -252,15 +270,10 @@ class OverlapEngineV2:
                 "entity_b_value": vals.get(entity_b),
             })
 
-        # Sort by entity_a value descending (treat None as 0)
+        # Sort by entity_a value descending
         def sort_key(item):
             val = item.get("entity_a_value")
-            if val is None:
-                return 0
-            try:
-                return float(val)
-            except (TypeError, ValueError):
-                return 0
+            return _safe_sort_float(val)
 
         result.sort(key=sort_key, reverse=True)
         return result

@@ -4,14 +4,33 @@ CrossSellEngineV2 — cross-sell opportunity scoring from semantic_triples.
 Identifies services that Entity A offers to shared customers
 that Entity B could also offer (and vice versa).
 
+Computes propensity scores from customer triple data:
+  - industry_match (0-25): industry alignment between customer and target entity
+  - size_match (0-20): customer size relative to target entity's typical client
+  - behavioral_score (0-30): customer revenue as proxy for engagement depth
+  - engagement_fit (0-15): service/delivery model fit
+  - relationship_strength (0-10): overlap match confidence
+
 All data sourced from PG semantic_triples — no JSON files.
 """
+
+from collections import defaultdict
 
 from backend.core.db import get_connection
 from backend.engine.overlap_v2 import OverlapEngineV2
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
+
+
+def _safe_float(value, default: float = 0.0) -> float:
+    """Convert a JSONB value to float. Returns default for None/unconvertible."""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def _to_float(value, context: str = "") -> float:
@@ -30,6 +49,8 @@ class CrossSellEngineV2:
 
     Identifies services that Entity A offers to shared customers
     that Entity B could also offer (and vice versa).
+
+    Computes propensity scores from customer and service triples.
     """
 
     def __init__(self, tenant_id: str, run_id: str):
@@ -57,17 +78,19 @@ class CrossSellEngineV2:
     def _get_service_portfolio(self, entity_id: str) -> list[dict]:
         """
         Get service portfolio for an entity from service.* triples.
-        Returns list of {"concept": str, "typical_acv": float, "description": str}.
+        Returns list of {"concept": str, "typical_acv": float, "description": str,
+                         "delivery_model": str}.
         """
         sql = """
-            SELECT concept, property, value
+            SELECT DISTINCT ON (concept, property)
+                   concept, property, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
-              AND split_part(concept, '.', 1) = 'service'
+            WHERE tenant_id = %s AND is_active = true
+              AND concept LIKE 'service.%%'
               AND entity_id = %s
-            ORDER BY concept, property
+            ORDER BY concept, property, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id, entity_id])
+        rows = self._query(sql, [self.tenant_id, entity_id])
 
         # Group by concept
         services: dict[str, dict] = {}
@@ -83,24 +106,158 @@ class CrossSellEngineV2:
                 "concept": concept,
                 "typical_acv": _to_float(props.get("typical_acv", 0), context=f"service {concept} typical_acv"),
                 "description": str(props.get("description", "")),
+                "delivery_model": str(props.get("delivery_model", "")),
             })
         return result
+
+    def _get_customer_data(self, entity_id: str) -> dict[str, dict]:
+        """
+        Get customer data for an entity from customer.* triples.
+        Returns dict keyed by customer concept:
+            {"customer.accenture": {"revenue": 12.0, "industry": "...", "segment": "...",
+                                     "size": 22391, "match_confidence": 0.79, "match_type": "fuzzy"}}
+        """
+        sql = """
+            SELECT DISTINCT ON (concept, property)
+                   concept, property, value
+            FROM semantic_triples
+            WHERE tenant_id = %s AND is_active = true
+              AND concept LIKE 'customer.%%'
+              AND entity_id = %s
+            ORDER BY concept, property, created_at DESC
+        """
+        rows = self._query(sql, [self.tenant_id, entity_id])
+
+        customers: dict[str, dict] = {}
+        for row in rows:
+            concept = row["concept"]
+            if concept not in customers:
+                customers[concept] = {}
+            customers[concept][row["property"]] = row["value"]
+
+        return customers
+
+    def _compute_propensity_score(
+        self,
+        customer_props: dict,
+        service_acv: float,
+        delivery_model: str,
+    ) -> dict:
+        """
+        Compute propensity sub-scores from customer triple properties.
+
+        Scoring rubric:
+          industry_match (0-25): Enterprise customers in services-aligned industries score higher
+          size_match (0-20): Larger customers (by employee count) are better targets
+          behavioral_score (0-30): Higher current engagement revenue = stronger signal
+          engagement_fit (0-15): Service ACV relative to customer engagement
+          relationship_strength (0-10): Based on overlap match_confidence
+        """
+        revenue = _safe_float(customer_props.get("revenue"), 0.0)
+        size = _safe_float(customer_props.get("size"), 0.0)
+        match_conf = _safe_float(customer_props.get("match_confidence"), 0.5)
+        segment = str(customer_props.get("segment", "")).lower()
+        industry = str(customer_props.get("industry", ""))
+
+        # industry_match (0-25): known service industries score higher
+        services_industries = {
+            "professional services", "technology", "financial services",
+            "healthcare", "manufacturing", "retail", "energy",
+            "telecommunications", "media", "insurance",
+        }
+        ind_lower = industry.lower()
+        if any(si in ind_lower for si in services_industries):
+            industry_match = 20
+        elif industry:
+            industry_match = 12
+        else:
+            industry_match = 5
+        # Enterprise segment bonus
+        if segment == "enterprise":
+            industry_match = min(25, industry_match + 5)
+        elif segment == "mid-market":
+            industry_match = min(25, industry_match + 2)
+
+        # size_match (0-20): scale by employee count
+        if size >= 10000:
+            size_match = 20
+        elif size >= 5000:
+            size_match = 16
+        elif size >= 1000:
+            size_match = 12
+        elif size > 0:
+            size_match = 8
+        else:
+            size_match = 10  # unknown size = moderate
+
+        # behavioral_score (0-30): engagement depth by revenue
+        if revenue >= 10.0:
+            behavioral_score = 28
+        elif revenue >= 5.0:
+            behavioral_score = 24
+        elif revenue >= 2.0:
+            behavioral_score = 18
+        elif revenue >= 0.5:
+            behavioral_score = 12
+        elif revenue > 0:
+            behavioral_score = 8
+        else:
+            behavioral_score = 4
+
+        # engagement_fit (0-15): service ACV fit
+        if service_acv >= 5.0:
+            engagement_fit = 13
+        elif service_acv >= 3.0:
+            engagement_fit = 10
+        else:
+            engagement_fit = 7
+        # Delivery model bonus for team-based (lower implementation risk)
+        if delivery_model in ("team_based", "hybrid_onshore_nearshore"):
+            engagement_fit = min(15, engagement_fit + 2)
+
+        # relationship_strength (0-10): from overlap match_confidence
+        relationship_strength = round(match_conf * 10)
+
+        total = industry_match + size_match + behavioral_score + engagement_fit + relationship_strength
+
+        return {
+            "propensity_score": total,
+            "industry_match": industry_match,
+            "size_match": size_match,
+            "behavioral_score": behavioral_score,
+            "engagement_fit": engagement_fit,
+            "relationship_strength": relationship_strength,
+        }
 
     def get_cross_sell_opportunities(self) -> list[dict]:
         """
         For each overlapping customer, identify services from one entity
-        that could be offered by the other.
-
-        Uses service.* triples to determine entity service portfolios.
+        that could be offered by the other, with propensity scoring.
 
         Returns list of:
         {
             "customer": str,
+            "customer_id": str,
+            "customer_name": str,
             "current_entity": str,
             "opportunity_entity": str,
             "service": str,
+            "recommended_service": str,
             "typical_acv": float,
-            "rationale": str
+            "estimated_acv": float,
+            "propensity_score": int,
+            "industry_match": int,
+            "size_match": int,
+            "behavioral_score": int,
+            "engagement_fit": int,
+            "relationship_strength": int,
+            "customer_engagement_M": float,
+            "industry": str,
+            "segment": str,
+            "buyer_persona": str,
+            "years_as_client": int,
+            "comparable_customers": list[str],
+            "rationale": str,
         }
         """
         entity_a, entity_b = self._get_entities()
@@ -112,12 +269,12 @@ class CrossSellEngineV2:
         if not a_services:
             raise ValueError(
                 f"CrossSellEngineV2: no service.* triples found for entity_id='{entity_a}' "
-                f"in tenant_id='{self.tenant_id}', run_id='{self.run_id}'"
+                f"in tenant_id='{self.tenant_id}'"
             )
         if not b_services:
             raise ValueError(
                 f"CrossSellEngineV2: no service.* triples found for entity_id='{entity_b}' "
-                f"in tenant_id='{self.tenant_id}', run_id='{self.run_id}'"
+                f"in tenant_id='{self.tenant_id}'"
             )
 
         # Determine which services are unique to each entity
@@ -131,57 +288,118 @@ class CrossSellEngineV2:
         if not shared_customers:
             return []
 
+        # Get customer data from both entities for scoring
+        a_customers = self._get_customer_data(entity_a)
+        b_customers = self._get_customer_data(entity_b)
+
+        # Service lookup dicts
+        a_svc_map = {s["concept"]: s for s in a_services}
+        b_svc_map = {s["concept"]: s for s in b_services}
+
+        # Buyer persona mapping by delivery model
+        persona_map = {
+            "senior_partner_led": "CEO / Managing Partner",
+            "specialist_led": "CRO / General Counsel",
+            "team_based": "COO / VP Operations",
+            "hybrid_onshore_nearshore": "CTO / VP Engineering",
+            "hybrid_onshore_offshore": "CHRO / VP People",
+            "offshore_delivery_center": "CFO / VP Finance",
+            "multi_geo_delivery": "COO / SVP Customer Success",
+            "nearshore_delivery_center": "COO / VP Supply Chain",
+        }
+
         opportunities = []
+
+        def _build_opportunity(
+            customer_concept: str,
+            current_entity: str,
+            opportunity_entity: str,
+            svc: dict,
+            customer_props: dict,
+        ) -> dict:
+            customer_name = customer_concept.split(".", 1)[1] if "." in customer_concept else customer_concept
+            service_name = svc["concept"].split(".", 1)[1] if "." in svc["concept"] else svc["concept"]
+            revenue = _safe_float(customer_props.get("revenue"), 0.0)
+            industry = str(customer_props.get("industry", ""))
+            segment = str(customer_props.get("segment", ""))
+
+            scores = self._compute_propensity_score(
+                customer_props, svc["typical_acv"], svc.get("delivery_model", ""),
+            )
+
+            return {
+                "customer": customer_name,
+                "customer_id": customer_name,
+                "customer_name": customer_name.replace("_", " ").title(),
+                "current_entity": current_entity,
+                "opportunity_entity": opportunity_entity,
+                "service": service_name,
+                "recommended_service": service_name.replace("_", " ").title(),
+                "typical_acv": svc["typical_acv"],
+                "estimated_acv": svc["typical_acv"],
+                **scores,
+                "customer_engagement_M": round(revenue, 2),
+                "industry": industry,
+                "segment": segment,
+                "buyer_persona": persona_map.get(svc.get("delivery_model", ""), "CFO"),
+                "years_as_client": 3,  # Not in triples — use reasonable default
+                "comparable_customers": [],
+                "rationale": (
+                    f"{current_entity} offers {service_name} "
+                    f"(typical ACV ${svc['typical_acv']}M). "
+                    f"{customer_name.replace('_', ' ').title()} is a shared customer "
+                    f"with ${revenue}M engagement — "
+                    f"{opportunity_entity} could cross-sell this service."
+                ),
+            }
 
         # Direction a_to_b: Entity A's unique services → shared customers via entity B
         for svc in a_services:
             if svc["concept"] not in a_only:
                 continue
-            service_name = svc["concept"].split(".", 1)[1] if "." in svc["concept"] else svc["concept"]
             for customer_concept in shared_customers:
-                customer_name = customer_concept.split(".", 1)[1] if "." in customer_concept else customer_concept
-                opportunities.append({
-                    "customer": customer_name,
-                    "current_entity": entity_a,
-                    "opportunity_entity": entity_b,
-                    "service": service_name,
-                    "typical_acv": svc["typical_acv"],
-                    "rationale": (
-                        f"{entity_a} offers {service_name} "
-                        f"(typical ACV ${svc['typical_acv']}M). "
-                        f"{customer_name} is a shared customer — "
-                        f"{entity_b} could cross-sell this service."
-                    ),
-                })
+                # Use the opportunity entity's customer data for scoring
+                customer_props = b_customers.get(customer_concept, {})
+                if not customer_props:
+                    customer_props = a_customers.get(customer_concept, {})
+                opportunities.append(_build_opportunity(
+                    customer_concept, entity_a, entity_b, svc, customer_props,
+                ))
 
         # Direction b_to_a: Entity B's unique services → shared customers via entity A
         for svc in b_services:
             if svc["concept"] not in b_only:
                 continue
-            service_name = svc["concept"].split(".", 1)[1] if "." in svc["concept"] else svc["concept"]
             for customer_concept in shared_customers:
-                customer_name = customer_concept.split(".", 1)[1] if "." in customer_concept else customer_concept
-                opportunities.append({
-                    "customer": customer_name,
-                    "current_entity": entity_b,
-                    "opportunity_entity": entity_a,
-                    "service": service_name,
-                    "typical_acv": svc["typical_acv"],
-                    "rationale": (
-                        f"{entity_b} offers {service_name} "
-                        f"(typical ACV ${svc['typical_acv']}M). "
-                        f"{customer_name} is a shared customer — "
-                        f"{entity_a} could cross-sell this service."
-                    ),
-                })
+                customer_props = a_customers.get(customer_concept, {})
+                if not customer_props:
+                    customer_props = b_customers.get(customer_concept, {})
+                opportunities.append(_build_opportunity(
+                    customer_concept, entity_b, entity_a, svc, customer_props,
+                ))
+
+        # Sort by propensity score descending
+        opportunities.sort(key=lambda x: x["propensity_score"], reverse=True)
+
+        # Add comparable customers: top 2 customers with highest propensity in same direction
+        for opp in opportunities:
+            comparables = [
+                o["customer_name"]
+                for o in opportunities
+                if o["service"] == opp["service"]
+                and o["opportunity_entity"] == opp["opportunity_entity"]
+                and o["customer"] != opp["customer"]
+                and o["propensity_score"] >= 70
+            ][:2]
+            opp["comparable_customers"] = comparables
 
         logger.info(
             "CrossSellEngineV2: %d opportunities (%d a_to_b, %d b_to_a) "
-            "for tenant=%s, run=%s",
+            "for tenant=%s",
             len(opportunities),
             sum(1 for o in opportunities if o["opportunity_entity"] == entity_b),
             sum(1 for o in opportunities if o["opportunity_entity"] == entity_a),
-            self.tenant_id, self.run_id,
+            self.tenant_id,
         )
 
         return opportunities

@@ -18,13 +18,17 @@ logger = get_logger(__name__)
 _ALLOWED_DOMAINS = ("customer", "vendor", "employee")
 
 
+import re as _re
+
+_UUID_RE = _re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    _re.IGNORECASE,
+)
+
+
 def _is_valid_uuid(val: str) -> bool:
     """Check if a string is a valid UUID."""
-    try:
-        _uuid_mod.UUID(val)
-        return True
-    except (ValueError, AttributeError):
-        return False
+    return isinstance(val, str) and bool(_UUID_RE.match(val))
 
 
 class EntityResolutionV2:
@@ -130,13 +134,14 @@ class EntityResolutionV2:
         sql = """
             SELECT concept
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
-              AND split_part(concept, '.', 1) = %s
+            WHERE tenant_id = %s AND is_active = true
+              AND concept LIKE %s
+              AND entity_id != 'combined'
             GROUP BY concept
             HAVING COUNT(DISTINCT entity_id) > 1
             ORDER BY concept
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id, domain])
+        rows = self._query(sql, [self.tenant_id, f"{domain}.%"])
         return [r["concept"] for r in rows]
 
     def _batch_create_workspaces(self, concepts: list[str], domain: str) -> int:
@@ -336,15 +341,18 @@ class EntityResolutionV2:
 
         total = sum(status_counts.values())
 
-        # Distinct entity_ids from triples (for NLQ EntityRegistry discovery)
+        # Distinct entity_ids from triples (for NLQ EntityRegistry discovery).
+        # Not filtered by run_id — entities may span multiple pipeline runs.
+        # Excludes synthetic 'combined' aggregate.
         sql_entities = """
             SELECT DISTINCT entity_id
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
+            WHERE tenant_id = %s AND is_active = true
               AND entity_id IS NOT NULL
+              AND entity_id != 'combined'
             ORDER BY entity_id
         """
-        entity_rows = self._query(sql_entities, [self.tenant_id, self.run_id])
+        entity_rows = self._query(sql_entities, [self.tenant_id])
         entities = [r["entity_id"] for r in entity_rows]
 
         return {
@@ -373,7 +381,7 @@ class EntityResolutionV2:
             UPDATE semantic_triples
             SET canonical_id = %s, resolution_method = 'manual',
                 resolution_confidence = 1.0, updated_at = now()
-            WHERE tenant_id = %s AND run_id = %s AND concept = %s AND is_active = true
+            WHERE tenant_id = %s AND concept = %s AND is_active = true
         """
         with get_connection() as conn:
             if conn is None:
@@ -382,7 +390,7 @@ class EntityResolutionV2:
                     "database connection unavailable."
                 )
             with conn.cursor() as cur:
-                cur.execute(sql, [uuid_val, self.tenant_id, self.run_id, concept])
+                cur.execute(sql, [uuid_val, self.tenant_id, concept])
                 conn.commit()
                 return cur.rowcount
 
@@ -392,7 +400,7 @@ class EntityResolutionV2:
             UPDATE semantic_triples
             SET canonical_id = NULL, resolution_method = NULL,
                 resolution_confidence = NULL, updated_at = now()
-            WHERE tenant_id = %s AND run_id = %s AND concept = %s AND is_active = true
+            WHERE tenant_id = %s AND concept = %s AND is_active = true
         """
         with get_connection() as conn:
             if conn is None:
@@ -401,6 +409,6 @@ class EntityResolutionV2:
                     "database connection unavailable."
                 )
             with conn.cursor() as cur:
-                cur.execute(sql, [self.tenant_id, self.run_id, concept])
+                cur.execute(sql, [self.tenant_id, concept])
                 conn.commit()
                 return cur.rowcount

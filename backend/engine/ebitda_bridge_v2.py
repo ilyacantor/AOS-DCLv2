@@ -79,10 +79,11 @@ class EBITDABridgeV2:
         sql = """
             SELECT DISTINCT entity_id
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
+            WHERE tenant_id = %s AND is_active = true
+              AND entity_id != 'combined'
             ORDER BY entity_id DESC
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id])
+        rows = self._query(sql, [self.tenant_id])
         entities = [r["entity_id"] for r in rows]
         if len(entities) < 2:
             raise ValueError(
@@ -96,14 +97,16 @@ class EBITDABridgeV2:
         """Sum pnl.ebitda across all 2025 quarters for an entity."""
         placeholders = ", ".join(["%s"] * len(_ANNUAL_PERIODS))
         sql = f"""
-            SELECT period, value
+            SELECT DISTINCT ON (entity_id, concept, period)
+                   period, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
+            WHERE tenant_id = %s AND is_active = true
               AND concept = 'pnl.ebitda' AND entity_id = %s
               AND property = 'amount'
               AND period IN ({placeholders})
+            ORDER BY entity_id, concept, period, created_at DESC
         """
-        params = [self.tenant_id, self.run_id, entity_id] + _ANNUAL_PERIODS
+        params = [self.tenant_id, entity_id] + _ANNUAL_PERIODS
         rows = self._query(sql, params)
 
         if not rows:
@@ -131,14 +134,15 @@ class EBITDABridgeV2:
         Raises ValueError if no triples found.
         """
         sql = """
-            SELECT concept, property, value
+            SELECT DISTINCT ON (entity_id, concept, property)
+                   concept, property, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
+            WHERE tenant_id = %s AND is_active = true
               AND concept LIKE 'ebitda_adjustment.%%'
               AND entity_id = %s
-            ORDER BY concept, property
+            ORDER BY entity_id, concept, property, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id, entity_id])
+        rows = self._query(sql, [self.tenant_id, entity_id])
 
         if not rows:
             raise ValueError(
@@ -290,13 +294,15 @@ class EBITDABridgeV2:
         entity_a, entity_b = self._get_entities()
 
         sql = """
-            SELECT entity_id, property, value
+            SELECT DISTINCT ON (entity_id, concept, property)
+                   entity_id, property, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
+            WHERE tenant_id = %s AND is_active = true
               AND concept = %s
-            ORDER BY entity_id, property
+              AND entity_id != 'combined'
+            ORDER BY entity_id, concept, property, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id, adjustment_concept])
+        rows = self._query(sql, [self.tenant_id, adjustment_concept])
 
         if not rows:
             raise ValueError(

@@ -1,5 +1,5 @@
 # AutonomOS (AOS) — Agent Constitution
-> Version: 5.0 | Updated: March 2026 | Owner: Ilya (CEO)
+> Version: 5.1 | Updated: March 2026 | Owner: Ilya (CEO)
 
 ---
 
@@ -12,7 +12,7 @@ All rules in this file are non-negotiable. Rules agents violate most often:
 - **C10:** Latency ceilings mean the operation COMPLETES in time, not ABORTS in time. Timeouts are not performance fixes.
 - **C11:** If the prompt says fix it, fix it. Do not ask "want me to fix it?"
 - **C12:** After finding one instance of a bug pattern, audit the full codebase before fixing piecemeal.
-- **B17:** Frontend is the pass/fail gate. A correct API response that doesn't render in the browser is not a pass.
+- **B17:** Frontend is the pass/fail gate. Use Playwright headless to verify UI rendering. API/build evidence is not browser verification.
 - **B18:** Latency ceilings are absolute. 5% regression budget on everything else. Measure before and after.
 - **A2:** No bandaids. Fundamental fixes only. Progress spinners for latency violations are bandaids.
 
@@ -174,6 +174,66 @@ Silent fallbacks are the most dangerous failure mode in this codebase. They make
 
 ---
 
+## UI VERIFICATION — MANDATORY FOR ALL FRONTEND WORK
+CC agents cannot open a browser GUI, but that does not exempt you from B17 (frontend is the pass/fail gate). Use Playwright headless to verify UI rendering.
+
+**Setup (once per session if not already installed):**
+```bash
+npm install -g playwright
+npx playwright install chromium
+```
+
+**Before declaring any UI work done, run the verification script:**
+```bash
+node tests/verify-ui.js <url> [checks...]
+```
+
+**Or write inline verification for the specific page:**
+```javascript
+const { chromium } = require('playwright');
+(async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  await page.goto('http://localhost:3006');
+  await page.waitForLoadState('networkidle');
+
+  // Screenshot — attach to your results
+  await page.screenshot({ path: '/tmp/ui-verify.png', fullPage: true });
+
+  // Check for error banners
+  const errors = await page.locator('[class*="error"], [class*="Error"]').count();
+  console.log(`Error elements: ${errors}`);
+
+  // Check for specific text
+  const hasTag = await page.locator('text=triples_').count();
+  console.log(`Farm triples tag visible: ${hasTag > 0}`);
+
+  // Check no full UUIDs rendered (36-char pattern)
+  const bodyText = await page.locator('body').innerText();
+  const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+  const uuids = bodyText.match(uuidPattern) || [];
+  console.log(`Full UUIDs visible in UI: ${uuids.length}`, uuids.length > 0 ? uuids : '');
+
+  await browser.close();
+})();
+```
+
+**What counts as UI verification:**
+- Screenshot taken and described (what's visible, what's missing)
+- DOM assertions on rendered text (not API responses)
+- Error element count is zero
+- Expected content is present in rendered page
+
+**What does NOT count:**
+- "Vite HMR confirmed hot updates" — that's build verification, not UI verification
+- "TSC clean" — that's compilation, not rendering
+- "Backend endpoints returning correct data" — that's API testing, not UI testing
+- "Services healthy" — that's infrastructure, not UI
+
+If Playwright is unavailable or cannot be installed, explicitly state: "B17 NOT VERIFIED — requires Ilya to visually confirm at [url]." Do not substitute API evidence and call it browser verification.
+
+---
+
 ## FORBIDDEN PATTERNS
 - Tests that pass while the real feature fails
 - **Silent fallbacks that hide errors** — #1 most forbidden pattern
@@ -292,7 +352,7 @@ The harness is only valid after a fresh pipeline run. Verify pipeline freshness 
 Every test hits the live system fresh. No memoization, no response caching.
 
 ## B17: Frontend is the pass/fail gate
-Backend queries and API responses are diagnostic tools, not proof of correctness. The UI rendering the correct data in the browser is the real test. Open the browser, look at the screen, verify what the user would see.
+Backend queries and API responses are diagnostic tools, not proof of correctness. The UI rendering the correct data in the browser is the real test. Use Playwright headless to verify (see UI VERIFICATION section above). Take a screenshot, assert on rendered DOM text, check for error elements. If Playwright is unavailable, explicitly state "B17 NOT VERIFIED — requires Ilya to visually confirm at [url]." Do not substitute API/build evidence and label it browser verification.
 
 ## B18: 5% latency budget
 Measure response time before and after every code change. More than 5% regression on any endpoint is a blocking issue. Hard latency ceilings stated in prompts are absolute and non-negotiable.

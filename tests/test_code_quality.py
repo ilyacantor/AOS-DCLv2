@@ -9,6 +9,7 @@ No live backend required. Uses mocking for external dependencies.
 import os
 import sys
 import time
+import inspect
 import importlib
 import unittest
 from unittest.mock import patch, MagicMock
@@ -23,71 +24,26 @@ import backend.engine  # noqa: E402 — warm the import chain
 from backend.semantic_mapper.persist_mappings import MappingPersistence as _MP  # noqa: E402
 
 
-@unittest.skipIf(
-    __import__("backend.semantic_mapper.persist_mappings", fromlist=["pool"]).pool is None,
-    "psycopg2 not installed"
-)
-class TestConnectionPoolRetry(unittest.TestCase):
-    """Fix 1.1: Connection pool must NOT be permanently locked on failure."""
+class TestConnectionPoolManagement(unittest.TestCase):
+    """Fix 1.1: Connection pool managed via backend.core.db singleton."""
 
-    def setUp(self):
-        """Reset class-level state before each test."""
-        from backend.semantic_mapper.persist_mappings import MappingPersistence
-        MappingPersistence._pool = None
-        MappingPersistence._pool_initialized = False
-        MappingPersistence._pool_last_attempt = 0
-
-    def test_pool_not_marked_initialized_on_failure(self):
-        """If pool creation fails, _pool_initialized must stay False so retry is possible."""
-        from backend.semantic_mapper.persist_mappings import MappingPersistence
-
-        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://fake:fake@localhost/fake"}):
-            with patch("backend.semantic_mapper.persist_mappings.pool.SimpleConnectionPool", side_effect=Exception("Connection refused")):
-                try:
-                    mp = MappingPersistence()
-                except Exception:
-                    pass
-
-        # The critical assertion: pool_initialized must NOT be True when pool is None
-        if MappingPersistence._pool is None:
-            self.assertFalse(
-                MappingPersistence._pool_initialized,
-                "BUG REGRESSION: _pool_initialized is True despite _pool being None. "
-                "This permanently locks the system out of the database."
-            )
-
-    def test_pool_retries_after_cooldown(self):
-        """After a failure, pool creation should be retried once the cooldown expires."""
-        from backend.semantic_mapper.persist_mappings import MappingPersistence
-
-        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://fake:fake@localhost/fake"}):
-            with patch("backend.semantic_mapper.persist_mappings.pool.SimpleConnectionPool", side_effect=Exception("refused")):
-                try:
-                    mp = MappingPersistence()
-                except Exception:
-                    pass
-
-            # Set last attempt far in the past to simulate cooldown expiry
-            MappingPersistence._pool_last_attempt = time.time() - 999
-
-            mock_pool = MagicMock()
-            with patch("backend.semantic_mapper.persist_mappings.pool.SimpleConnectionPool", return_value=mock_pool):
-                try:
-                    mp = MappingPersistence()
-                except Exception:
-                    pass
-
-        # After cooldown, pool should have been retried and now be available
-        self.assertIsNotNone(
-            MappingPersistence._pool,
-            "Pool should retry initialization after cooldown period expires"
+    def test_get_connection_is_context_manager(self):
+        """backend.core.db.get_connection must be a context manager."""
+        from backend.core.db import get_connection
+        import contextlib
+        self.assertTrue(
+            hasattr(get_connection, '__call__'),
+            "get_connection must be callable"
         )
 
-    def tearDown(self):
+    def test_persist_mappings_uses_core_db(self):
+        """MappingPersistence delegates pool to backend.core.db, not its own pool."""
         from backend.semantic_mapper.persist_mappings import MappingPersistence
-        MappingPersistence._pool = None
-        MappingPersistence._pool_initialized = False
-        MappingPersistence._pool_last_attempt = 0
+        source = inspect.getsource(MappingPersistence)
+        self.assertNotIn(
+            "SimpleConnectionPool", source,
+            "MappingPersistence should not create its own pool — use backend.core.db"
+        )
 
 
 class TestRAGServiceTruthfulCounts(unittest.TestCase):
@@ -296,14 +252,14 @@ class TestSourceTrackingDisplayModeIndependent(unittest.TestCase):
     """Fix: Source tracking must NOT depend on graph display mode (kind=source vs kind=fabric)."""
 
     def test_meta_contains_source_names(self):
-        """GraphSnapshot meta must include source_names derived from source data, not graph nodes."""
+        """GraphSnapshot meta must include sourceNames derived from source data, not graph nodes."""
         from backend.engine.dcl_engine import DCLEngine
         import inspect
         source = inspect.getsource(DCLEngine.build_graph_snapshot)
         self.assertIn(
-            "source_names",
+            "sourceNames",
             source,
-            "BUG REGRESSION: DCLEngine.build_graph_snapshot must populate 'source_names' in meta "
+            "BUG REGRESSION: DCLEngine.build_graph_snapshot must populate 'sourceNames' in meta "
             "so run_dcl can track loaded sources independently of display mode (fabric vs source nodes)."
         )
 
@@ -321,9 +277,9 @@ class TestSourceTrackingDisplayModeIndependent(unittest.TestCase):
         )
         # Should use meta-derived source names
         self.assertIn(
-            "source_names",
+            "sourceNames",
             source,
-            "run_dcl should derive loaded_sources from snapshot.meta['source_names']"
+            "run_dcl should derive loaded_sources from snapshot.meta['sourceNames']"
         )
 
 

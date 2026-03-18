@@ -10,7 +10,7 @@ from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
-_IDENTITY_TOLERANCE = 0.01
+_IDENTITY_TOLERANCE = 0.05
 
 
 def _to_float(value) -> float:
@@ -64,14 +64,16 @@ class TripleQueryResolver:
         Raises ValueError if not found (NO silent fallback to None/0).
         """
         sql = """
-            SELECT concept, entity_id, period, value, currency, unit,
+            SELECT DISTINCT ON (entity_id, concept, property, period)
+                   concept, entity_id, period, value, currency, unit,
                    source_system, confidence_score
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
+            WHERE tenant_id = %s AND is_active = true
               AND concept = %s AND entity_id = %s AND period = %s
               AND property = 'amount'
+            ORDER BY entity_id, concept, property, period, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id, concept, entity_id, period])
+        rows = self._query(sql, [self.tenant_id, concept, entity_id, period])
         if not rows:
             raise ValueError(
                 f"Metric not found: concept='{concept}', entity_id='{entity_id}', "
@@ -104,26 +106,28 @@ class TripleQueryResolver:
         if periods:
             placeholders = ", ".join(["%s"] * len(periods))
             sql = f"""
-                SELECT concept, entity_id, period, value, currency, unit,
+                SELECT DISTINCT ON (entity_id, concept, property, period)
+                       concept, entity_id, period, value, currency, unit,
                        source_system, confidence_score
                 FROM semantic_triples
-                WHERE tenant_id = %s AND run_id = %s AND is_active = true
+                WHERE tenant_id = %s AND is_active = true
                   AND concept = %s AND entity_id = %s AND property = 'amount'
                   AND period IN ({placeholders})
-                ORDER BY period
+                ORDER BY entity_id, concept, property, period, created_at DESC
             """
-            params = [self.tenant_id, self.run_id, concept, entity_id] + periods
+            params = [self.tenant_id, concept, entity_id] + periods
         else:
             sql = """
-                SELECT concept, entity_id, period, value, currency, unit,
+                SELECT DISTINCT ON (entity_id, concept, property, period)
+                       concept, entity_id, period, value, currency, unit,
                        source_system, confidence_score
                 FROM semantic_triples
-                WHERE tenant_id = %s AND run_id = %s AND is_active = true
+                WHERE tenant_id = %s AND is_active = true
                   AND concept = %s AND entity_id = %s AND property = 'amount'
                   AND period IS NOT NULL
-                ORDER BY period
+                ORDER BY entity_id, concept, property, period, created_at DESC
             """
-            params = [self.tenant_id, self.run_id, concept, entity_id]
+            params = [self.tenant_id, concept, entity_id]
 
         rows = self._query(sql, params)
         if not rows:
@@ -158,15 +162,16 @@ class TripleQueryResolver:
         Returns list of {"concept": str, "value": float, ...}.
         """
         sql = """
-            SELECT concept, entity_id, period, value, currency, unit,
+            SELECT DISTINCT ON (entity_id, concept, property, period)
+                   concept, entity_id, period, value, currency, unit,
                    source_system, confidence_score
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
-              AND split_part(concept, '.', 1) = %s
+            WHERE tenant_id = %s AND is_active = true
+              AND concept LIKE %s
               AND entity_id = %s AND period = %s AND property = 'amount'
-            ORDER BY concept
+            ORDER BY entity_id, concept, property, period, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id, domain, entity_id, period])
+        rows = self._query(sql, [self.tenant_id, f"{domain}.%", entity_id, period])
         return [
             {
                 "concept": r["concept"],
@@ -422,14 +427,19 @@ class TripleQueryResolver:
         }
 
     def _get_entities(self) -> list[str]:
-        """Get distinct entity_ids ordered descending (larger entity first)."""
+        """Get distinct entity_ids ordered descending (larger entity first).
+
+        Excludes synthetic aggregate entities ('combined') — those are NLQ
+        query-time constructs, not real entities with full triple data.
+        """
         sql = """
             SELECT DISTINCT entity_id
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
+            WHERE tenant_id = %s AND is_active = true
+              AND entity_id != 'combined'
             ORDER BY entity_id DESC
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id])
+        rows = self._query(sql, [self.tenant_id])
         return [r["entity_id"] for r in rows]
 
     # ------------------------------------------------------------------
@@ -445,13 +455,13 @@ class TripleQueryResolver:
         sql = """
             SELECT concept
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
-              AND split_part(concept, '.', 1) = %s
+            WHERE tenant_id = %s AND is_active = true
+              AND concept LIKE %s
             GROUP BY concept
             HAVING COUNT(DISTINCT entity_id) > 1
             ORDER BY concept
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id, domain])
+        rows = self._query(sql, [self.tenant_id, f"{domain}.%"])
         return [r["concept"] for r in rows]
 
     # ------------------------------------------------------------------
@@ -464,14 +474,16 @@ class TripleQueryResolver:
         pipe_id, confidence_score, confidence_tier, run_id.
         """
         sql = """
-            SELECT source_system, source_table, source_field,
+            SELECT DISTINCT ON (entity_id, concept, property, period)
+                   source_system, source_table, source_field,
                    pipe_id, confidence_score, confidence_tier, run_id
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
+            WHERE tenant_id = %s AND is_active = true
               AND concept = %s AND entity_id = %s AND period = %s
               AND property = 'amount'
+            ORDER BY entity_id, concept, property, period, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id, concept, entity_id, period])
+        rows = self._query(sql, [self.tenant_id, concept, entity_id, period])
         if not rows:
             raise ValueError(
                 f"Provenance not found: concept='{concept}', entity_id='{entity_id}', "

@@ -81,23 +81,18 @@ def _get_active_engagement() -> dict | None:
         "FROM engagement_state WHERE status = 'active' "
         "ORDER BY created_at DESC LIMIT 1"
     )
-    try:
-        with get_connection() as conn:
-            if conn is None:
-                logger.warning(
-                    "v2_helpers._get_active_engagement: database connection unavailable"
-                )
+    with get_connection() as conn:
+        if conn is None:
+            raise RuntimeError(
+                "v2_helpers._get_active_engagement: database connection unavailable"
+            )
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            row = cur.fetchone()
+            if row is None:
                 return None
-            with conn.cursor() as cur:
-                cur.execute(sql)
-                row = cur.fetchone()
-                if row is None:
-                    return None
-                columns = [desc[0] for desc in cur.description]
-                return dict(zip(columns, row))
-    except Exception as e:
-        logger.warning("v2_helpers._get_active_engagement failed: %s", e)
-        return None
+            columns = [desc[0] for desc in cur.description]
+            return dict(zip(columns, row))
 
 
 def _get_latest_tenant() -> str | None:
@@ -109,46 +104,42 @@ def _get_latest_tenant() -> str | None:
         ORDER BY created_at DESC
         LIMIT 1
     """
-    try:
-        with get_connection() as conn:
-            if conn is None:
-                logger.warning(
-                    "v2_helpers._get_latest_tenant: database connection unavailable"
-                )
+    with get_connection() as conn:
+        if conn is None:
+            raise RuntimeError(
+                "v2_helpers._get_latest_tenant: database connection unavailable"
+            )
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            row = cur.fetchone()
+            if row is None:
                 return None
-            with conn.cursor() as cur:
-                cur.execute(sql)
-                row = cur.fetchone()
-                if row is None:
-                    return None
-                return str(row[0])
-    except Exception as e:
-        logger.warning("v2_helpers._get_latest_tenant failed: %s", e)
-        return None
+            return str(row[0])
 
 
 def _get_latest_run(tenant_id: str) -> str | None:
-    """Get the most recent run_id for a tenant from semantic_triples."""
+    """Get the primary run_id for a tenant from semantic_triples.
+
+    Picks the run_id with the most active triples, not just the newest
+    created_at. This prevents small supplementary runs (COFA conflicts,
+    HR imports) from shadowing the main financial ingest run.
+    """
     sql = """
         SELECT run_id
         FROM semantic_triples
         WHERE tenant_id = %s AND is_active = true
-        ORDER BY created_at DESC
+        GROUP BY run_id
+        ORDER BY COUNT(*) DESC
         LIMIT 1
     """
-    try:
-        with get_connection() as conn:
-            if conn is None:
-                logger.warning(
-                    "v2_helpers._get_latest_run: database connection unavailable"
-                )
+    with get_connection() as conn:
+        if conn is None:
+            raise RuntimeError(
+                "v2_helpers._get_latest_run: database connection unavailable"
+            )
+        with conn.cursor() as cur:
+            cur.execute(sql, [tenant_id])
+            row = cur.fetchone()
+            if row is None:
                 return None
-            with conn.cursor() as cur:
-                cur.execute(sql, [tenant_id])
-                row = cur.fetchone()
-                if row is None:
-                    return None
-                return str(row[0])
-    except Exception as e:
-        logger.warning("v2_helpers._get_latest_run failed: %s", e)
-        return None
+            return str(row[0])

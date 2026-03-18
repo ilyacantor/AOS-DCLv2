@@ -726,21 +726,29 @@ class PipeDefinitionStore:
         on the ingest path where cross-worker consistency is critical.
         """
         # 1. Try Postgres (source of truth)
-        defn = self._lookup_from_postgres(pipe_id)
-        if defn is not None:
-            # Backfill in-memory cache for subsequent reads
-            with self._lock:
-                self._definitions[pipe_id] = defn
-            return defn
+        try:
+            defn = self._lookup_from_postgres(pipe_id)
+            if defn is not None:
+                with self._lock:
+                    self._definitions[pipe_id] = defn
+                return defn
+        except Exception:
+            logger.warning("[PipeStore] Postgres unavailable for %s, trying Redis", pipe_id)
 
         # 2. Try Redis (write-through cache)
-        defn = self._lookup_from_redis(pipe_id)
-        if defn is not None:
-            with self._lock:
-                self._definitions[pipe_id] = defn
-            return defn
+        try:
+            defn = self._lookup_from_redis(pipe_id)
+            if defn is not None:
+                with self._lock:
+                    self._definitions[pipe_id] = defn
+                return defn
+        except Exception:
+            logger.warning("[PipeStore] Redis unavailable for %s, trying in-memory", pipe_id)
 
-        return None
+        # 3. Fall back to in-memory cache (covers cases where Postgres/Redis
+        # are unavailable but the definition was registered in this process)
+        with self._lock:
+            return self._definitions.get(pipe_id)
 
     def _lookup_from_postgres(self, pipe_id: str) -> Optional[PipeDefinition]:
         """Single-row lookup from Postgres by primary key."""
@@ -783,9 +791,9 @@ class PipeDefinitionStore:
                         data_quality_score=row[18] or 0,
                         received_at=str(row[19]) if row[19] else "",
                     )
-            except Exception as e:
-                logger.warning(f"[PipeStore] Postgres single-row lookup failed for {pipe_id}: {e}")
-                return None
+            except Exception:
+                logger.exception("[PipeStore] Postgres single-row lookup failed for %s", pipe_id)
+                raise
 
     def _lookup_from_redis(self, pipe_id: str) -> Optional[PipeDefinition]:
         """Single-field lookup from Redis definitions hash."""
@@ -799,9 +807,9 @@ class PipeDefinitionStore:
             if defn.fabric_plane:
                 defn.fabric_plane = defn.fabric_plane.lower()
             return defn
-        except Exception as e:
-            logger.warning(f"[PipeStore] Redis single-key lookup failed for {pipe_id}: {e}")
-            return None
+        except Exception:
+            logger.exception("[PipeStore] Redis single-key lookup failed for %s", pipe_id)
+            raise
 
     def lookup(self, pipe_id: str) -> Optional[PipeDefinition]:
         """Look up a pipe definition by pipe_id (the JOIN key).

@@ -5,6 +5,7 @@ GET /api/dcl/triples/overview         — high-level summary
 GET /api/dcl/triples/runs             — ingest run list
 GET /api/dcl/triples/identity-checks  — accounting identity verification
 GET /api/dcl/triples/browse           — paginated triple browser
+POST /api/dcl/triples/browse-batch    — batch browse (multiple domains, one SQL)
 GET /api/dcl/triples/engagement       — engagement state
 GET /api/dcl/triples/resolution-summary — resolution workspace stats
 GET /api/dcl/triples/persona-stats    — per-persona stats from triples
@@ -18,7 +19,8 @@ from pathlib import Path
 
 import yaml
 from fastapi import APIRouter, HTTPException, Query
-from typing import Optional
+from pydantic import BaseModel, Field
+from typing import List, Optional
 
 from backend.db.triple_store import TripleStore
 from backend.db.engagement_store import EngagementStore
@@ -76,28 +78,45 @@ def _serialize_row(row: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 @router.get("/api/dcl/triples/overview")
-def triples_overview():
-    """High-level summary of the triple store."""
-    sql_total = "SELECT COUNT(*) FROM semantic_triples WHERE is_active = true"
+def triples_overview(
+    source_run_tag: Optional[str] = Query(None, description="Filter by Farm-originated source_run_tag"),
+):
+    """High-level summary of the triple store.
+
+    Optional source_run_tag filter narrows results to triples from a specific run.
+    """
+    tag_filter = ""
+    params: list = []
+    if source_run_tag:
+        tag_filter = " AND source_run_tag = %s"
+        params = [source_run_tag]
+
+    sql_total = f"SELECT COUNT(*) FROM semantic_triples WHERE is_active = true{tag_filter}"
     sql_entities = (
-        "SELECT entity_id, COUNT(*) AS triple_count "
-        "FROM semantic_triples WHERE is_active = true "
-        "GROUP BY entity_id ORDER BY triple_count DESC"
+        f"SELECT entity_id, COUNT(*) AS triple_count "
+        f"FROM semantic_triples WHERE is_active = true{tag_filter} "
+        f"GROUP BY entity_id ORDER BY triple_count DESC"
     )
     sql_domains = (
-        "SELECT split_part(concept, '.', 1) AS domain, entity_id, COUNT(*) AS cnt "
-        "FROM semantic_triples WHERE is_active = true "
-        "GROUP BY domain, entity_id ORDER BY domain, entity_id"
+        f"SELECT split_part(concept, '.', 1) AS domain, entity_id, COUNT(*) AS cnt "
+        f"FROM semantic_triples WHERE is_active = true{tag_filter} "
+        f"GROUP BY domain, entity_id ORDER BY domain, entity_id"
     )
     sql_periods = (
-        "SELECT DISTINCT period FROM semantic_triples "
-        "WHERE is_active = true AND period IS NOT NULL "
-        "ORDER BY period"
+        f"SELECT DISTINCT period FROM semantic_triples "
+        f"WHERE is_active = true AND period IS NOT NULL{tag_filter} "
+        f"ORDER BY period"
     )
     sql_latest = (
-        "SELECT run_id, MIN(created_at) AS timestamp, COUNT(*) AS triple_count "
-        "FROM semantic_triples WHERE is_active = true "
-        "GROUP BY run_id ORDER BY MIN(created_at) DESC LIMIT 1"
+        f"SELECT run_id, MIN(created_at) AS timestamp, COUNT(*) AS triple_count "
+        f"FROM semantic_triples WHERE is_active = true{tag_filter} "
+        f"GROUP BY run_id ORDER BY MIN(created_at) DESC LIMIT 1"
+    )
+    # Conflict count: distinct conflict IDs from cofa_conflict.* triples
+    sql_conflicts = (
+        f"SELECT COUNT(DISTINCT split_part(concept, '.', 2)) "
+        f"FROM semantic_triples "
+        f"WHERE is_active = true AND split_part(concept, '.', 1) = 'cofa_conflict'{tag_filter}"
     )
 
     with get_connection() as conn:
@@ -108,10 +127,10 @@ def triples_overview():
                        "Check DATABASE_URL and Supabase connectivity.",
             )
         with conn.cursor() as cur:
-            cur.execute(sql_total)
+            cur.execute(sql_total, params)
             total_triples = cur.fetchone()[0]
 
-            cur.execute(sql_entities)
+            cur.execute(sql_entities, params)
             entities = []
             for row in cur.fetchall():
                 entity_id = row[0]
@@ -121,7 +140,7 @@ def triples_overview():
                     "display_name": _entity_display_name(entity_id),
                 })
 
-            cur.execute(sql_domains)
+            cur.execute(sql_domains, params)
             # Pivot per-entity counts into {domain, count, by_entity}
             domain_map: dict[str, dict] = {}
             for r in cur.fetchall():
@@ -132,10 +151,10 @@ def triples_overview():
                 domain_map[domain]["by_entity"][entity_id] = cnt
             domains = sorted(domain_map.values(), key=lambda d: d["count"], reverse=True)
 
-            cur.execute(sql_periods)
+            cur.execute(sql_periods, params)
             periods = [r[0] for r in cur.fetchall()]
 
-            cur.execute(sql_latest)
+            cur.execute(sql_latest, params)
             latest_row = cur.fetchone()
             last_ingest = None
             if latest_row:
@@ -145,6 +164,9 @@ def triples_overview():
                     "triple_count": latest_row[2],
                 }
 
+            cur.execute(sql_conflicts, params)
+            conflict_count = cur.fetchone()[0]
+
     return {
         "total_triples": total_triples,
         "active_triples": total_triples,
@@ -152,6 +174,7 @@ def triples_overview():
         "domains": domains,
         "periods": periods,
         "last_ingest": last_ingest,
+        "conflict_count": conflict_count,
     }
 
 
@@ -472,8 +495,10 @@ def triples_browse(
     params: list = []
 
     if domain:
-        clauses.append("split_part(concept, '.', 1) = %s")
-        params.append(domain)
+        # Use prefix LIKE instead of split_part for index-friendly filtering.
+        # concept LIKE 'revenue.%' can use btree indexes on concept.
+        clauses.append("concept LIKE %s")
+        params.append(f"{domain}.%")
     if entity_id:
         clauses.append("entity_id = %s")
         params.append(entity_id)
@@ -486,10 +511,17 @@ def triples_browse(
 
     where = " AND ".join(clauses)
 
-    count_sql = f"SELECT COUNT(*) FROM semantic_triples WHERE {where}"
+    # Deduplicate triples that differ only by run_id or source_run_tag
+    # (multiple pipeline runs produce duplicates). Keep the most recent
+    # triple per (entity_id, concept, property, period).
+    count_sql = (
+        f"SELECT COUNT(DISTINCT (entity_id, concept, property, period)) "
+        f"FROM semantic_triples WHERE {where}"
+    )
     data_sql = (
-        f"SELECT * FROM semantic_triples WHERE {where} "
-        f"ORDER BY entity_id, concept, period "
+        f"SELECT DISTINCT ON (entity_id, concept, property, period) * "
+        f"FROM semantic_triples WHERE {where} "
+        f"ORDER BY entity_id, concept, property, period, created_at DESC "
         f"LIMIT %s OFFSET %s"
     )
 
@@ -521,6 +553,78 @@ def triples_browse(
         "triples": triples,
         "total_count": total_count,
         "filters_applied": filters_applied,
+    }
+
+
+# ---------------------------------------------------------------------------
+# POST /api/dcl/triples/browse-batch
+# ---------------------------------------------------------------------------
+
+class BrowseBatchRequest(BaseModel):
+    """Request body for batch browse — fetches triples across multiple domains
+    in a single SQL query instead of N individual browse calls."""
+    domains: List[str] = Field(..., min_length=1, description="List of concept domains to fetch")
+    entity_ids: Optional[List[str]] = Field(None, description="Filter by entity IDs")
+    period: Optional[str] = Field(None, description="Filter by period")
+
+
+@router.post("/api/dcl/triples/browse-batch")
+def triples_browse_batch(req: BrowseBatchRequest):
+    """Batch browse: fetch deduplicated triples for multiple domains in one call.
+
+    Returns triples grouped by domain. Replaces N individual browse calls with
+    one SQL query, eliminating HTTP round-trip overhead for reports.
+    """
+    clauses = ["is_active = true"]
+    params: list = []
+
+    # Domain filter: concept LIKE 'domain1.%' OR concept LIKE 'domain2.%' ...
+    domain_conditions = []
+    for domain in req.domains:
+        domain_conditions.append("concept LIKE %s")
+        params.append(f"{domain}.%")
+    clauses.append(f"({' OR '.join(domain_conditions)})")
+
+    if req.entity_ids:
+        placeholders = ", ".join(["%s"] * len(req.entity_ids))
+        clauses.append(f"entity_id IN ({placeholders})")
+        params.extend(req.entity_ids)
+
+    if req.period:
+        clauses.append("period = %s")
+        params.append(req.period)
+
+    where = " AND ".join(clauses)
+
+    data_sql = (
+        f"SELECT DISTINCT ON (entity_id, concept, property, period) * "
+        f"FROM semantic_triples WHERE {where} "
+        f"ORDER BY entity_id, concept, property, period, created_at DESC"
+    )
+
+    with get_connection() as conn:
+        if conn is None:
+            raise HTTPException(
+                status_code=503,
+                detail="triples/browse-batch failed: database connection unavailable.",
+            )
+        with conn.cursor() as cur:
+            cur.execute(data_sql, params)
+            columns = [desc[0] for desc in cur.description]
+            all_triples = [_serialize_row(dict(zip(columns, row))) for row in cur.fetchall()]
+
+    # Group by domain (first segment of concept)
+    by_domain: dict = {}
+    for t in all_triples:
+        concept = t.get("concept", "")
+        domain = concept.split(".")[0] if concept else ""
+        by_domain.setdefault(domain, []).append(t)
+
+    return {
+        "triples_by_domain": by_domain,
+        "total_count": len(all_triples),
+        "domains_requested": req.domains,
+        "domains_returned": list(by_domain.keys()),
     }
 
 

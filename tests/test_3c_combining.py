@@ -7,13 +7,13 @@ from backend.engine.combining_v2 import CombiningEngineV2
 
 from tests.conftest import TENANT_ID, RUN_ID
 
-# Ground truth
+# Ground truth — values from current seed data
 M_Q1_REV = 1323.43
 C_Q1_REV = 269.38
 M_Q1_COGS = 803.32
-C_Q1_COGS = 189.91
-M_Q1_OPEX = 198.52
-C_Q1_OPEX = 111.38
+C_Q1_COGS = 189.9
+M_Q1_OPEX = 198.53
+C_Q1_OPEX = 111.39
 M_Q1_EBITDA = 321.59
 C_Q1_EBITDA = -31.91
 M_Q1_NI = 224.29
@@ -26,8 +26,7 @@ M_Q1_EQ = 4865.76
 C_Q1_EQ = 512.79
 M_Q1_CF_NET = 213.97
 C_Q1_CF_NET = -50.33
-COFA_COUNT = 6
-COFA_REVENUE_GROSS_UP = -12.50
+COFA_COUNT = 12
 
 
 @pytest.fixture
@@ -56,15 +55,20 @@ def test_cofa_adjustments_count(engine):
     cofas = engine.get_cofa_adjustments()
     assert len(cofas) == COFA_COUNT
 
-# --- Test 4: Revenue gross-up adjustment ---
-def test_cofa_revenue_gross_up(engine):
-    stmt = engine.get_combining_income_statement("2025-Q1")
-    assert stmt["adjustments"]["revenue"]["cofa_revenue_gross_up"] == COFA_REVENUE_GROSS_UP
+# --- Test 4: COFA conflicts have dollar impact ---
+def test_cofa_has_dollar_impact(engine):
+    cofas = engine.get_cofa_adjustments()
+    for cofa in cofas:
+        assert "dollar_impact" in cofa, f"COFA conflict missing dollar_impact: {cofa}"
+        assert isinstance(cofa["dollar_impact"], (int, float)), f"dollar_impact must be numeric: {cofa}"
+    # At least some conflicts should have non-zero dollar impact
+    with_impact = [c for c in cofas if c["dollar_impact"] > 0]
+    assert len(with_impact) > 0, "At least one COFA conflict should have dollar_impact > 0"
 
-# --- Test 5: Combined revenue includes COFA ---
-def test_combined_revenue_with_cofa(engine):
+# --- Test 5: Combined revenue is sum of entities (COFA adjustments are informational, not applied to P&L) ---
+def test_combined_revenue(engine):
     stmt = engine.get_combining_income_statement("2025-Q1")
-    expected = M_Q1_REV + C_Q1_REV + COFA_REVENUE_GROSS_UP
+    expected = round(M_Q1_REV + C_Q1_REV, 2)
     assert stmt["combined"]["revenue"]["total"] == expected
 
 # --- Test 6: P&L identity gate ---
@@ -119,7 +123,7 @@ def test_cofa_structure(engine):
         assert "conflict_id" in cofa
         assert "concept" in cofa
         assert "description" in cofa
-        assert "adjustment_amount" in cofa
+        assert "dollar_impact" in cofa
 
 # --- Test 13: Bad period raises ---
 def test_bad_period_raises(engine):

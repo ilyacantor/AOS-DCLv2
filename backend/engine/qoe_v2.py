@@ -62,47 +62,59 @@ class QualityOfEarningsV2:
     def _get_metric(self, concept: str, entity_id: str, period: str) -> float | None:
         """Get a single metric value, returning None if not found."""
         sql = """
-            SELECT value
+            SELECT DISTINCT ON (entity_id, concept, period)
+                   value
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
+            WHERE tenant_id = %s AND is_active = true
               AND concept = %s AND entity_id = %s AND period = %s
               AND property = 'amount'
+            ORDER BY entity_id, concept, period, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id, concept, entity_id, period])
+        rows = self._query(sql, [self.tenant_id, concept, entity_id, period])
         if not rows:
             return None
         return _to_float(rows[0]["value"])
 
     def _get_revenue_streams(self, entity_id: str) -> list[dict]:
-        """Get all revenue.* concepts for an entity across 2025 quarters."""
+        """Get all revenue.* concepts for an entity across 2025 quarters.
+
+        Uses a CTE with DISTINCT ON to dedup across runs before aggregating.
+        """
         placeholders = ", ".join(["%s"] * len(_ANNUAL_PERIODS))
         sql = f"""
+            WITH deduped AS (
+                SELECT DISTINCT ON (entity_id, concept, period)
+                       concept, period, value
+                FROM semantic_triples
+                WHERE tenant_id = %s AND is_active = true
+                  AND concept LIKE 'revenue.%%'
+                  AND entity_id = %s
+                  AND property = 'amount'
+                  AND period IN ({placeholders})
+                ORDER BY entity_id, concept, period, created_at DESC
+            )
             SELECT concept, SUM((value #>> '{{}}')::float) as total_value
-            FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
-              AND concept LIKE 'revenue.%%'
-              AND entity_id = %s
-              AND property = 'amount'
-              AND period IN ({placeholders})
+            FROM deduped
             GROUP BY concept
             ORDER BY SUM((value #>> '{{}}')::float) DESC
         """
-        params = [self.tenant_id, self.run_id, entity_id] + _ANNUAL_PERIODS
+        params = [self.tenant_id, entity_id] + _ANNUAL_PERIODS
         return self._query(sql, params)
 
     def _get_margin_trend(self, entity_id: str) -> list[dict]:
         """Get EBITDA margin trend across all available periods."""
         # Get revenue.total and pnl.ebitda for each period
         sql = """
-            SELECT period, concept, value
+            SELECT DISTINCT ON (entity_id, concept, period)
+                   period, concept, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s AND is_active = true
+            WHERE tenant_id = %s AND is_active = true
               AND concept IN ('revenue.total', 'pnl.ebitda')
               AND entity_id = %s
               AND property = 'amount'
-            ORDER BY period, concept
+            ORDER BY entity_id, concept, period, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, self.run_id, entity_id])
+        rows = self._query(sql, [self.tenant_id, entity_id])
 
         # Group by period
         by_period: dict[str, dict[str, float]] = {}

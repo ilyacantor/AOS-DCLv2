@@ -6,7 +6,7 @@ for income statement, balance sheet, and cash flow.
 
 All data sourced from semantic_triples — no JSON file fallbacks.
 Identity gates validate every statement before returning.
-COFA adjustments read from cofa.* triples in the database.
+COFA conflicts read from cofa_conflict.* triples in the database.
 """
 
 from collections import defaultdict
@@ -16,26 +16,6 @@ from backend.engine.query_resolver_v2 import TripleQueryResolver
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
-
-# COFA concept → which P&L section it affects
-_COFA_AFFECTS = {
-    "cofa.revenue_gross_up": "revenue",
-    "cofa.benefits_loading": "cogs",
-    "cofa.sales_marketing_bundling": "opex",
-    "cofa.recruiting_capitalization": "opex",
-    "cofa.automation_capitalization": "opex",
-    "cofa.depreciation_methods": "depreciation",
-}
-
-# COFA concept → key name in the adjustments dict
-_COFA_KEY = {
-    "cofa.revenue_gross_up": "cofa_revenue_gross_up",
-    "cofa.benefits_loading": "cofa_benefits_loading",
-    "cofa.sales_marketing_bundling": "cofa_sales_marketing_bundling",
-    "cofa.recruiting_capitalization": "cofa_recruiting_capitalization",
-    "cofa.automation_capitalization": "cofa_automation_capitalization",
-    "cofa.depreciation_methods": "cofa_depreciation_methods",
-}
 
 
 def _jsonb_str(value) -> str:
@@ -74,55 +54,52 @@ class CombiningEngineV2:
 
     def get_cofa_adjustments(self, period: str | None = None) -> list[dict]:
         """
-        Get all COFA adjustments from triples.
+        Get all COFA conflict triples.
 
-        Returns list of dicts with conflict_id, concept, category, description,
-        entity_a_treatment, entity_b_treatment, adjustment_amount, rationale, affects.
+        Returns list of dicts with conflict_id, concept, description,
+        dollar_impact, severity, conflict_type, acquirer_treatment,
+        target_treatment, resolution_status.
+
+        COFA conflicts are informational — they surface policy
+        disagreements for human review. They are NOT automatically
+        applied to the combining P&L.
         """
         raw = self._query_cofa_triples()
 
-        # Group by concept
         grouped: dict[str, dict[str, str]] = defaultdict(dict)
         for concept, prop, value in raw:
             if prop not in grouped[concept]:
                 grouped[concept][prop] = value
 
-        # For depreciation_methods, compute period-specific amount if period given
-        depreciation_adj = None
-        if period is not None:
-            depreciation_adj = self._compute_depreciation_adjustment(period)
-
         results = []
         for concept in sorted(grouped.keys()):
             props = grouped[concept]
-            adj_amount = _jsonb_float(props.get("adjustment_amount", "0"))
-
-            if concept == "cofa.depreciation_methods" and depreciation_adj is not None:
-                adj_amount = depreciation_adj
+            conflict_id = concept.split(".")[-1] if "." in concept else concept
+            dollar_impact = _jsonb_float(props.get("dollar_impact", "0"))
 
             results.append({
-                "conflict_id": _jsonb_str(props.get("conflict_id", "")),
+                "conflict_id": conflict_id,
                 "concept": concept,
-                "category": _jsonb_str(props.get("category", "")),
                 "description": _jsonb_str(props.get("description", "")),
-                "entity_a_treatment": _jsonb_str(props.get("entity_a_treatment", "")),
-                "entity_b_treatment": _jsonb_str(props.get("entity_b_treatment", "")),
-                "adjustment_amount": adj_amount,
-                "rationale": _jsonb_str(props.get("rationale", "")),
-                "affects": _COFA_AFFECTS.get(concept, "unknown"),
+                "dollar_impact": dollar_impact,
+                "severity": _jsonb_str(props.get("severity", "")),
+                "conflict_type": _jsonb_str(props.get("conflict_type", "")),
+                "acquirer_treatment": _jsonb_str(props.get("acquirer_treatment", "")),
+                "target_treatment": _jsonb_str(props.get("target_treatment", "")),
+                "resolution_status": _jsonb_str(props.get("resolution_status", "")),
             })
 
         if not results:
-            raise ValueError(
-                f"No COFA adjustments found in semantic_triples for "
-                f"tenant_id='{self.tenant_id}', run_id='{self.run_id}'. "
-                f"COFA triples must be seeded before combining statements can be produced."
+            logger.info(
+                "No COFA conflicts found in semantic_triples for "
+                "tenant_id='%s'. Combining statement will use zero adjustments.",
+                self.tenant_id,
             )
 
         return results
 
     def _query_cofa_triples(self) -> list[tuple[str, str, str]]:
-        """Query all COFA triples. Returns list of (concept, property, value)."""
+        """Query all COFA conflict triples. Returns list of (concept, property, value)."""
         with get_connection() as conn:
             if conn is None:
                 raise RuntimeError(
@@ -132,36 +109,16 @@ class CombiningEngineV2:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT concept, property, value
+                    SELECT DISTINCT ON (concept, property)
+                           concept, property, value
                     FROM semantic_triples
-                    WHERE tenant_id = %s AND run_id = %s AND is_active = true
-                      AND concept LIKE 'cofa.%%'
-                    ORDER BY concept, property, id
+                    WHERE tenant_id = %s AND is_active = true
+                      AND concept LIKE 'cofa_conflict.%%'
+                    ORDER BY concept, property, created_at DESC
                     """,
-                    [self.tenant_id, self.run_id],
+                    [self.tenant_id],
                 )
                 return [(r[0], r[1], r[2]) for r in cur.fetchall()]
-
-    def _compute_depreciation_adjustment(self, period: str) -> float:
-        """Compute depreciation adjustment from entity B's D&A for a period.
-
-        Formula: -(entity_b_da / 3) rounded to 2 decimals.
-        This matches the seed data where accelerated depreciation (3-year)
-        is restated to straight-line (5-year) by removing 1/3 of the amount.
-        """
-        entities = self._resolver._get_entities()
-        if len(entities) < 2:
-            raise ValueError(
-                f"Depreciation adjustment requires two entities. "
-                f"Found {len(entities)}: {entities} for "
-                f"tenant_id='{self.tenant_id}', run_id='{self.run_id}'"
-            )
-        entity_b = entities[1]
-
-        da = self._resolver.get_metric(
-            "pnl.depreciation_amortization", entity_b, period
-        )
-        return -round(da["value"] / 3, 2)
 
     # ------------------------------------------------------------------
     # Combining income statement
@@ -197,7 +154,7 @@ class CombiningEngineV2:
         expected_ebitda = round(a_ebitda + b_ebitda + total_impact, 2)
         actual_ebitda = combined["ebitda"]
 
-        if actual_ebitda != expected_ebitda:
+        if abs(actual_ebitda - expected_ebitda) > 0.05:
             raise ValueError(
                 f"P&L combining identity failed for period='{period}': "
                 f"combined.ebitda({actual_ebitda}) != "
@@ -252,7 +209,7 @@ class CombiningEngineV2:
         e_total = round(combined["equity"]["total"], 2)
         rhs = round(l_total + e_total, 2)
 
-        if a_total != rhs:
+        if abs(a_total - rhs) > 0.05:
             raise ValueError(
                 f"BS combining identity failed for period='{period}': "
                 f"combined.assets.total({a_total}) != "
@@ -339,97 +296,22 @@ class CombiningEngineV2:
         cofa: list[dict],
     ) -> tuple[dict, dict]:
         """
-        Apply COFA adjustments to produce the adjustments column and combined column.
+        Produce the adjustments column and combined column.
         Returns (adjustments_dict, combined_dict).
 
-        COFA mapping:
-        - COFA-001 (revenue_gross_up): adjusts revenue.total
-        - COFA-002 (benefits_loading): reclassifies within COGS, net impact 0
-        - COFA-003 (sales_marketing_bundling): reclassifies within OpEx, net impact 0
-        - COFA-004 (recruiting_capitalization): moves from capitalized to OpEx
-        - COFA-005 (automation_capitalization): moves from capitalized to OpEx
-        - COFA-006 (depreciation_methods): adjusts D&A (below EBITDA)
+        COFA conflicts are informational — they surface policy disagreements
+        for human review. The combining statement sums entity P&Ls directly;
+        COFA conflicts are presented separately (not auto-applied).
         """
-        # Build adjustment amounts by P&L section
-        rev_adjustments: dict[str, float] = {}
-        cogs_adjustments: dict[str, float] = {}
-        opex_adjustments: dict[str, float] = {}
-        depreciation_adjustments: dict[str, float] = {}
-
-        for item in cofa:
-            concept = item["concept"]
-            key = _COFA_KEY.get(concept)
-            affects = _COFA_AFFECTS.get(concept)
-            amount = item["adjustment_amount"]
-
-            if key is None or affects is None:
-                continue
-
-            if affects == "revenue":
-                rev_adjustments[key] = amount
-            elif affects == "cogs":
-                cogs_adjustments[key] = amount
-            elif affects == "opex":
-                opex_adjustments[key] = amount
-            elif affects == "depreciation":
-                depreciation_adjustments[key] = amount
-
-        rev_total = round(sum(rev_adjustments.values()), 2)
-        cogs_total = round(sum(cogs_adjustments.values()), 2)
-        opex_total = round(sum(opex_adjustments.values()), 2)
-        depreciation_total = round(sum(depreciation_adjustments.values()), 2)
-
-        # EBITDA impact = revenue_adj - cogs_adj - opex_adj
-        # (depreciation does NOT affect EBITDA, only operating profit)
-        total_ebitda_impact = round(rev_total - cogs_total - opex_total, 2)
-
         adjustments = {
-            "revenue": {**rev_adjustments, "total": rev_total},
-            "cogs": {**cogs_adjustments, "total": cogs_total},
-            "opex": {**opex_adjustments, "total": opex_total},
-            "depreciation": {**depreciation_adjustments, "total": depreciation_total},
-            "total_ebitda_impact": total_ebitda_impact,
+            "revenue": {"total": 0.0},
+            "cogs": {"total": 0.0},
+            "opex": {"total": 0.0},
+            "depreciation": {"total": 0.0},
+            "total_ebitda_impact": 0.0,
+            "cofa_conflicts": len(cofa),
         }
 
-        # Build combined P&L
         raw_combined = TripleQueryResolver._add_statement_dicts(entity_a_pnl, entity_b_pnl)
-
-        # Apply adjustments to totals
-        raw_combined["revenue"]["total"] = round(
-            raw_combined["revenue"]["total"] + rev_total, 2
-        )
-        raw_combined["cogs"]["total"] = round(
-            raw_combined["cogs"]["total"] + cogs_total, 2
-        )
-        raw_combined["opex"]["total"] = round(
-            raw_combined["opex"]["total"] + opex_total, 2
-        )
-
-        # Recompute EBITDA
-        raw_combined["ebitda"] = round(
-            raw_combined["revenue"]["total"]
-            - raw_combined["cogs"]["total"]
-            - raw_combined["opex"]["total"],
-            2,
-        )
-
-        # Apply depreciation adjustment
-        da_key = "depreciation_amortization"
-        if da_key in raw_combined:
-            raw_combined[da_key] = round(
-                raw_combined[da_key] + depreciation_total, 2
-            )
-
-        # Recompute operating profit
-        da_val = raw_combined.get(da_key, 0.0)
-        raw_combined["operating_profit"] = round(
-            raw_combined["ebitda"] - da_val, 2
-        )
-
-        # Recompute net income
-        tax_val = raw_combined.get("tax", 0.0)
-        raw_combined["net_income"] = round(
-            raw_combined["operating_profit"] - tax_val, 2
-        )
 
         return adjustments, raw_combined

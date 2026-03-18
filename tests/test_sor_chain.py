@@ -12,12 +12,24 @@ These tests complement test_ingest_guard.py (which covers pipe_id matching)
 with SOR-specific behavior added in the SOR count fix commits.
 """
 
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 
 from backend.api.pipe_store import get_pipe_store, ExportReceipt
 from backend.api.ingest import get_ingest_store
 from backend.core.mode_state import set_current_mode
+
+
+def _ingest_headers(**extra) -> dict:
+    """Build ingest headers including x-api-key from env."""
+    key = os.environ.get("DCL_INGEST_KEY", "")
+    headers = {}
+    if key:
+        headers["x-api-key"] = key
+    headers.update(extra)
+    return headers
 
 
 @pytest.fixture(autouse=True)
@@ -202,7 +214,7 @@ def test_content_ingest_uses_aod_sor_count(client):
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
-        headers={"x-pipe-id": "sf-crm-001", "x-run-id": "test-sor-run-001"},
+        headers=_ingest_headers(**{"x-pipe-id": "sf-crm-001", "x-run-id": "test-sor-run-001"}),
     )
     assert resp.status_code == 200
     ingest_data = resp.json()
@@ -231,7 +243,7 @@ def test_content_before_structure_warns(client):
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
-        headers={"x-pipe-id": "any-pipe", "x-run-id": "farm_sor-run-002"},
+        headers=_ingest_headers(**{"x-pipe-id": "any-pipe", "x-run-id": "farm_sor-run-002"}),
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -289,7 +301,7 @@ def test_reconciliation_shows_aod_authority(client):
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
-        headers={"x-pipe-id": "sf-crm-001", "x-run-id": "test-sor-run-003"},
+        headers=_ingest_headers(**{"x-pipe-id": "sf-crm-001", "x-run-id": "test-sor-run-003"}),
     )
     assert resp.status_code == 200
 
