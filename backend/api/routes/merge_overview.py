@@ -93,14 +93,21 @@ def _resolve_entities(cur, acquirer_id: Optional[str], target_id: Optional[str])
             ),
         )
 
-    # Look up engagement_state regardless — we need the engagement_id
+    # Look up engagement_state — prefer active engagement, then most recent
     eng_id, engagement_a, engagement_b = None, None, None
     try:
         cur.execute(
             "SELECT engagement_id, entity_a_id, entity_b_id FROM engagement_state "
+            "WHERE status = 'active' "
             "ORDER BY created_at DESC LIMIT 1"
         )
         row = cur.fetchone()
+        if not row:
+            cur.execute(
+                "SELECT engagement_id, entity_a_id, entity_b_id FROM engagement_state "
+                "ORDER BY created_at DESC LIMIT 1"
+            )
+            row = cur.fetchone()
         if row and row[1] and row[2]:
             eng_id, engagement_a, engagement_b = row[0], row[1], row[2]
     except Exception as e:
@@ -497,6 +504,20 @@ def merge_overview(
                 ),
             }
 
+            # --- Aggregate stats for Platform run-stats consumption ---
+            cur.execute(
+                "SELECT COUNT(*) FILTER (WHERE true) AS total, "
+                "       COUNT(*) FILTER (WHERE value #>> '{resolution_status}' = 'resolved') AS resolved "
+                "FROM semantic_triples "
+                "WHERE is_active = true "
+                "  AND split_part(concept, '.', 1) = 'cofa_conflict' "
+                "  AND entity_id IN (%s, %s)",
+                (acq_id, tgt_id),
+            )
+            conflict_row = cur.fetchone()
+            conflict_total = conflict_row[0] if conflict_row else 0
+            conflict_resolved = conflict_row[1] if conflict_row else 0
+
     return {
         "engagement_id": eng_id,
         "source_run_tag": source_run_tag,
@@ -507,4 +528,7 @@ def merge_overview(
         "comparison": comparison,
         "matches": matches,
         "orphans": orphans,
+        "mapped_count": acq_cov["mapped"] + tgt_cov["mapped"],
+        "conflict_count": conflict_total,
+        "resolved_count": conflict_resolved,
     }
