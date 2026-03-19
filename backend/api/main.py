@@ -817,7 +817,7 @@ async def platform_proxy(request: Request, path: str):
     body = await request.body()
     headers = {
         k: v for k, v in request.headers.items()
-        if k.lower() not in ("host", "content-length", "transfer-encoding")
+        if k.lower() not in ("host", "content-length", "transfer-encoding", "accept-encoding")
     }
     # Add internal service key for Platform auth bypass
     internal_key = os.getenv("INTERNAL_SERVICE_KEY")
