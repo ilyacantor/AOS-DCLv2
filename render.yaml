@@ -12,7 +12,9 @@ services:
       - key: DCL_ENV
         value: production
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: dcl-db
+          property: connectionString
       - key: SUPABASE_DB_URL
         sync: false
       - key: OPENAI_API_KEY
@@ -47,3 +49,9 @@ services:
         sync: false
       - key: SOURCE_NAME
         sync: false
+
+databases:
+  - name: dcl-db
+    plan: starter
+    region: oregon
+    postgresMajorVersion: "16"
