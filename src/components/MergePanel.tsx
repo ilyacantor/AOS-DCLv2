@@ -60,6 +60,22 @@ interface ConflictItem {
   to_category: string;
 }
 
+interface ConflictDetail {
+  conflict_id: string;
+  description: string;
+  dollar_impact: number;
+  revenue_impact: number;
+  expense_impact: number;
+  ebitda_impact: number;
+  impact_area: string;
+  severity: string;
+  acquirer_treatment: string;
+  target_treatment: string;
+  resolution_status: string;
+  from_category: string;
+  to_category: string;
+}
+
 interface CategoryEntry {
   count: number;
   total_dollar_impact: number;
@@ -67,6 +83,7 @@ interface CategoryEntry {
   expense_impact: number;
   ebitda_impact: number;
   conflicts: string[];
+  conflict_details: ConflictDetail[];
   reclassifications: {
     conflict_id: string;
     from_category: string;
@@ -85,6 +102,18 @@ interface ConflictData {
   conflicts: ConflictItem[];
   summary: { total: number; pending: number; resolved: number };
   category_summary: CategorySummary;
+}
+
+interface MaestraEngagement {
+  engagement_id: string;
+  entity_a: string;
+  entity_b: string;
+  entity_a_name: string;
+  entity_b_name: string;
+  state: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface MergeData {
@@ -139,6 +168,7 @@ export function MergePanel() {
   const [conflictsOpen, setConflictsOpen] = useState(true);
   const [matchesOpen, setMatchesOpen] = useState(false);
   const [orphansOpen, setOrphansOpen] = useState(false);
+  const [expandedBucket, setExpandedBucket] = useState<string | null>(null);
 
   // COFA merge action state
   const [mergeRunning, setMergeRunning] = useState(false);
@@ -149,6 +179,12 @@ export function MergePanel() {
   const [mergeFinishedIn, setMergeFinishedIn] = useState<number | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+
+  // Engagement selector
+  const [engagements, setEngagements] = useState<MaestraEngagement[]>([]);
+  const [selectedEngagementId, setSelectedEngagementId] = useState<string | null>(null);
+  const [engagementError, setEngagementError] = useState<string | null>(null);
+
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mergeStartRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -211,6 +247,34 @@ export function MergePanel() {
     }
   }, []);
 
+  const fetchEngagements = useCallback(async () => {
+    try {
+      const res = await fetch('/api/platform/maestra/engagements');
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setEngagementError(body.detail || `Failed to load engagements (HTTP ${res.status})`);
+        return;
+      }
+      const list: MaestraEngagement[] = await res.json();
+      setEngagements(list);
+      setEngagementError(null);
+
+      // Auto-select: prefer active engagement, then most recent
+      if (!selectedEngagementId || !list.find(e => e.engagement_id === selectedEngagementId)) {
+        const active = list.find(e => e.state === 'active');
+        if (active) {
+          setSelectedEngagementId(active.engagement_id);
+        } else if (list.length > 0) {
+          // Most recent by created_at
+          const sorted = [...list].sort((a, b) => b.created_at.localeCompare(a.created_at));
+          setSelectedEngagementId(sorted[0].engagement_id);
+        }
+      }
+    } catch {
+      setEngagementError('Cannot reach Platform — engagement list unavailable');
+    }
+  }, [selectedEngagementId]);
+
   // Cleanup poll on unmount
   useEffect(() => {
     return () => {
@@ -226,10 +290,10 @@ export function MergePanel() {
   }, [toast]);
 
   const runCofaMerge = useCallback(async () => {
-    if (!data?.engagement_id) {
+    if (!selectedEngagementId) {
       setMergeError(
-        'No engagement found in engagement_state table. ' +
-        'Create an engagement first so Maestra knows which entities to unify.'
+        'No engagement selected. Select an engagement from the dropdown, ' +
+        'or create one in Platform first.'
       );
       return;
     }
@@ -247,8 +311,8 @@ export function MergePanel() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          session_id: `merge-${data.engagement_id || 'default'}`,
-          engagement_id: data.engagement_id,
+          session_id: `merge-${selectedEngagementId}`,
+          engagement_id: selectedEngagementId,
           message: 'Run COFA unification — map all chart-of-accounts entries, identify conflicts, and write results to DCL.',
         }),
       });
@@ -315,12 +379,13 @@ export function MergePanel() {
       }, 3000);
     };
     pollForResults();
-  }, [data, fetchConflicts]);
+  }, [data, fetchConflicts, selectedEngagementId]);
 
   useEffect(() => {
     fetchMerge();
     fetchConflicts();
-  }, [fetchMerge, fetchConflicts]);
+    fetchEngagements();
+  }, [fetchMerge, fetchConflicts, fetchEngagements]);
 
   // Auto-polling (same pattern as TriplesPanel)
   useEffect(() => {
@@ -403,8 +468,6 @@ export function MergePanel() {
   };
 
   const fmtNum = (n: number) => n.toLocaleString();
-
-  const shortId = (id: string) => id ? id.slice(0, 8) : '-';
 
   const getRunTag = (): string | null => {
     if (!data?.source_run_tag) return null;
@@ -508,7 +571,7 @@ export function MergePanel() {
     lines.push('COFA MERGE REPORT');
     lines.push(hr);
     lines.push(`Generated: ${new Date().toLocaleString()}`);
-    lines.push(`Engagement: ${data.engagement_id || 'N/A'}`);
+    lines.push(`Engagement: ${selectedEngagementId || data.engagement_id || 'N/A'}`);
     const runTag = typeof data.source_run_tag === 'string'
       ? data.source_run_tag
       : data.source_run_tag ? JSON.stringify(data.source_run_tag) : 'N/A';
@@ -628,8 +691,23 @@ export function MergePanel() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 text-sm min-w-0">
             <h2 className="text-base font-semibold shrink-0">COFA Merge</h2>
-            {data?.engagement_id && (
-              <span className="text-muted-foreground font-mono truncate">{shortId(data.engagement_id)}</span>
+            {engagements.length > 0 ? (
+              <select
+                value={selectedEngagementId || ''}
+                onChange={e => setSelectedEngagementId(e.target.value || null)}
+                className="px-2 py-1 text-xs font-mono rounded border border-border bg-background text-foreground max-w-[220px] truncate"
+                title="Select Maestra engagement"
+              >
+                {engagements.map(eng => (
+                  <option key={eng.engagement_id} value={eng.engagement_id}>
+                    {eng.engagement_id} ({eng.state})
+                  </option>
+                ))}
+              </select>
+            ) : engagementError ? (
+              <span className="text-xs text-red-400 truncate" title={engagementError}>No engagements</span>
+            ) : (
+              <span className="text-xs text-muted-foreground">Loading engagements...</span>
             )}
             {getRunTag() && (
               <span className="text-xs font-mono font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded shrink-0">
@@ -662,7 +740,7 @@ export function MergePanel() {
             {data && data.overview.entities.length >= 2 && (
               <button
                 onClick={runCofaMerge}
-                disabled={mergeRunning || !data.engagement_id}
+                disabled={mergeRunning || !selectedEngagementId}
                 className={`px-3 py-1 text-sm rounded font-medium transition-colors ${
                   mergeRunning
                     ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 cursor-wait'
@@ -671,8 +749,8 @@ export function MergePanel() {
                       : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30'
                 } disabled:opacity-40 disabled:cursor-not-allowed`}
                 title={
-                  !data.engagement_id
-                    ? 'No engagement found \u2014 create one first'
+                  !selectedEngagementId
+                    ? 'No engagement selected \u2014 select or create one first'
                     : data.matches.has_matches
                       ? 'Re-run will replace existing mappings'
                       : 'Trigger Maestra to unify COFA accounts'
@@ -795,22 +873,93 @@ export function MergePanel() {
                         </tr>
                       </thead>
                       <tbody>
-                        {Object.entries(conflictData.category_summary.by_type).map(([type, cat]) => (
-                          <tr key={type} className="border-b border-border/10 hover:bg-card/20">
-                            <td className="px-3 py-2 font-medium capitalize">{type}</td>
-                            <td className="px-3 py-2 text-center font-mono">{cat.count}</td>
-                            <td className="px-3 py-2 text-right font-mono">{fmtDollarImpact(cat.total_dollar_impact)}</td>
-                            <td className={`px-3 py-2 text-right font-mono ${cat.revenue_impact !== 0 ? 'text-amber-400' : 'text-muted-foreground/40'}`}>
-                              {cat.revenue_impact !== 0 ? fmtDollarImpact(cat.revenue_impact) : '—'}
-                            </td>
-                            <td className={`px-3 py-2 text-right font-mono ${cat.expense_impact !== 0 ? 'text-amber-400' : 'text-muted-foreground/40'}`}>
-                              {cat.expense_impact !== 0 ? fmtDollarImpact(cat.expense_impact) : '—'}
-                            </td>
-                            <td className={`px-3 py-2 text-right font-mono ${cat.ebitda_impact !== 0 ? (cat.ebitda_impact > 0 ? 'text-emerald-400' : 'text-red-400') : 'text-muted-foreground/40'}`}>
-                              {cat.ebitda_impact !== 0 ? fmtDollarImpact(cat.ebitda_impact) : '—'}
-                            </td>
-                          </tr>
-                        ))}
+                        {Object.entries(conflictData.category_summary.by_type).map(([type, cat]) => {
+                          const isBucketExpanded = expandedBucket === type;
+                          return (
+                            <Fragment key={type}>
+                              <tr
+                                className="border-b border-border/10 hover:bg-card/20 cursor-pointer select-none"
+                                onClick={() => setExpandedBucket(isBucketExpanded ? null : type)}
+                              >
+                                <td className="px-3 py-2 font-medium capitalize">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    {chevron(isBucketExpanded)}
+                                    {type}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-center font-mono">{cat.count}</td>
+                                <td className="px-3 py-2 text-right font-mono">{fmtDollarImpact(cat.total_dollar_impact)}</td>
+                                <td className={`px-3 py-2 text-right font-mono ${cat.revenue_impact !== 0 ? 'text-amber-400' : 'text-muted-foreground/40'}`}>
+                                  {cat.revenue_impact !== 0 ? fmtDollarImpact(cat.revenue_impact) : '—'}
+                                </td>
+                                <td className={`px-3 py-2 text-right font-mono ${cat.expense_impact !== 0 ? 'text-amber-400' : 'text-muted-foreground/40'}`}>
+                                  {cat.expense_impact !== 0 ? fmtDollarImpact(cat.expense_impact) : '—'}
+                                </td>
+                                <td className={`px-3 py-2 text-right font-mono ${cat.ebitda_impact !== 0 ? (cat.ebitda_impact > 0 ? 'text-emerald-400' : 'text-red-400') : 'text-muted-foreground/40'}`}>
+                                  {cat.ebitda_impact !== 0 ? fmtDollarImpact(cat.ebitda_impact) : '—'}
+                                </td>
+                              </tr>
+                              {isBucketExpanded && cat.conflict_details && cat.conflict_details.length > 0 && (
+                                <tr className="bg-card/5">
+                                  <td colSpan={6} className="px-0 py-0">
+                                    <table className="w-full text-xs">
+                                      <thead>
+                                        <tr className="border-b border-border/20 text-[10px] uppercase tracking-wider text-muted-foreground">
+                                          <th className="text-left px-3 py-1.5 font-medium">Description</th>
+                                          <th className="text-center px-2 py-1.5 font-medium">Severity</th>
+                                          <th className="text-right px-3 py-1.5 font-medium">Dollar Impact</th>
+                                          <th className="text-right px-3 py-1.5 font-medium">Revenue</th>
+                                          <th className="text-right px-3 py-1.5 font-medium">Expenses</th>
+                                          <th className="text-right px-3 py-1.5 font-medium">EBITDA</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {cat.conflict_details.map(d => {
+                                          const sevCls = d.severity === 'critical'
+                                            ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                                            : d.severity === 'medium'
+                                              ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                                              : 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30';
+                                          return (
+                                            <tr
+                                              key={d.conflict_id}
+                                              className="border-b border-border/5 hover:bg-card/10"
+                                              title={`Acquirer: ${d.acquirer_treatment}\nTarget: ${d.target_treatment}${d.impact_area ? `\nImpact Area: ${d.impact_area}` : ''}`}
+                                            >
+                                              <td className="px-3 py-1.5 text-foreground/80 max-w-[280px] truncate" title={d.description}>
+                                                <span className="flex items-center gap-1.5">
+                                                  {statusBadge(d.resolution_status)}
+                                                  {d.description || d.conflict_id}
+                                                </span>
+                                              </td>
+                                              <td className="px-2 py-1.5 text-center">
+                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold border ${sevCls}`}>
+                                                  {d.severity || '—'}
+                                                </span>
+                                              </td>
+                                              <td className="px-3 py-1.5 text-right font-mono">
+                                                {d.dollar_impact > 0 ? fmtDollarImpact(d.dollar_impact) : '—'}
+                                              </td>
+                                              <td className={`px-3 py-1.5 text-right font-mono ${d.revenue_impact !== 0 ? 'text-amber-400' : 'text-muted-foreground/40'}`}>
+                                                {d.revenue_impact !== 0 ? fmtDollarImpact(d.revenue_impact) : '—'}
+                                              </td>
+                                              <td className={`px-3 py-1.5 text-right font-mono ${d.expense_impact !== 0 ? 'text-amber-400' : 'text-muted-foreground/40'}`}>
+                                                {d.expense_impact !== 0 ? fmtDollarImpact(d.expense_impact) : '—'}
+                                              </td>
+                                              <td className={`px-3 py-1.5 text-right font-mono ${d.ebitda_impact !== 0 ? (d.ebitda_impact > 0 ? 'text-emerald-400' : 'text-red-400') : 'text-muted-foreground/40'}`}>
+                                                {d.ebitda_impact !== 0 ? fmtDollarImpact(d.ebitda_impact) : '—'}
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
+                          );
+                        })}
                         <tr className="border-t border-border font-semibold bg-card/10">
                           <td className="px-3 py-2">Combined</td>
                           <td className="px-3 py-2 text-center font-mono">{conflictData.summary.total}</td>
