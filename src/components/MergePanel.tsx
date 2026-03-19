@@ -52,11 +52,39 @@ interface ConflictItem {
   resolved_by: string;
   resolved_at: string;
   resolution_notes: string;
+  impact_area: string;
+  revenue_impact: number | null;
+  expense_impact: number | null;
+  ebitda_impact: number | null;
+  from_category: string;
+  to_category: string;
+}
+
+interface CategoryEntry {
+  count: number;
+  total_dollar_impact: number;
+  revenue_impact: number;
+  expense_impact: number;
+  ebitda_impact: number;
+  conflicts: string[];
+  reclassifications: {
+    conflict_id: string;
+    from_category: string;
+    to_category: string;
+    amount: number;
+    description: string;
+  }[];
+}
+
+interface CategorySummary {
+  by_type: Record<string, CategoryEntry>;
+  combined_impact: { revenue: number; expenses: number; ebitda: number };
 }
 
 interface ConflictData {
   conflicts: ConflictItem[];
   summary: { total: number; pending: number; resolved: number };
+  category_summary: CategorySummary;
 }
 
 interface MergeData {
@@ -745,6 +773,106 @@ export function MergePanel() {
                   );
                 })}
               </div>
+
+              {/* ================================================================
+                  Categorized Impact Summary
+                  ================================================================ */}
+              {conflictData && conflictData.category_summary && Object.keys(conflictData.category_summary.by_type).length > 0 && (
+                <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
+                  <div className="px-4 py-2.5">
+                    <span className="font-semibold uppercase tracking-wider text-muted-foreground text-sm">Financial Statement Impact</span>
+                  </div>
+                  <div className="border-t border-border/30 overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
+                          <th className="text-left px-3 py-2 font-medium">Category</th>
+                          <th className="text-center px-3 py-2 font-medium">#</th>
+                          <th className="text-right px-3 py-2 font-medium">Dollar Impact</th>
+                          <th className="text-right px-3 py-2 font-medium">Revenue</th>
+                          <th className="text-right px-3 py-2 font-medium">Expenses</th>
+                          <th className="text-right px-3 py-2 font-medium">EBITDA</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(conflictData.category_summary.by_type).map(([type, cat]) => (
+                          <tr key={type} className="border-b border-border/10 hover:bg-card/20">
+                            <td className="px-3 py-2 font-medium capitalize">{type}</td>
+                            <td className="px-3 py-2 text-center font-mono">{cat.count}</td>
+                            <td className="px-3 py-2 text-right font-mono">{fmtDollarImpact(cat.total_dollar_impact)}</td>
+                            <td className={`px-3 py-2 text-right font-mono ${cat.revenue_impact !== 0 ? 'text-amber-400' : 'text-muted-foreground/40'}`}>
+                              {cat.revenue_impact !== 0 ? fmtDollarImpact(cat.revenue_impact) : '—'}
+                            </td>
+                            <td className={`px-3 py-2 text-right font-mono ${cat.expense_impact !== 0 ? 'text-amber-400' : 'text-muted-foreground/40'}`}>
+                              {cat.expense_impact !== 0 ? fmtDollarImpact(cat.expense_impact) : '—'}
+                            </td>
+                            <td className={`px-3 py-2 text-right font-mono ${cat.ebitda_impact !== 0 ? (cat.ebitda_impact > 0 ? 'text-emerald-400' : 'text-red-400') : 'text-muted-foreground/40'}`}>
+                              {cat.ebitda_impact !== 0 ? fmtDollarImpact(cat.ebitda_impact) : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="border-t border-border font-semibold bg-card/10">
+                          <td className="px-3 py-2">Combined</td>
+                          <td className="px-3 py-2 text-center font-mono">{conflictData.summary.total}</td>
+                          <td className="px-3 py-2 text-right font-mono">
+                            {fmtDollarImpact(Object.values(conflictData.category_summary.by_type).reduce((s, c) => s + c.total_dollar_impact, 0))}
+                          </td>
+                          <td className={`px-3 py-2 text-right font-mono ${conflictData.category_summary.combined_impact.revenue !== 0 ? 'text-amber-400' : 'text-muted-foreground/40'}`}>
+                            {conflictData.category_summary.combined_impact.revenue !== 0 ? fmtDollarImpact(conflictData.category_summary.combined_impact.revenue) : '—'}
+                          </td>
+                          <td className={`px-3 py-2 text-right font-mono ${conflictData.category_summary.combined_impact.expenses !== 0 ? 'text-amber-400' : 'text-muted-foreground/40'}`}>
+                            {conflictData.category_summary.combined_impact.expenses !== 0 ? fmtDollarImpact(conflictData.category_summary.combined_impact.expenses) : '—'}
+                          </td>
+                          <td className={`px-3 py-2 text-right font-mono ${conflictData.category_summary.combined_impact.ebitda !== 0 ? (conflictData.category_summary.combined_impact.ebitda > 0 ? 'text-emerald-400' : 'text-red-400') : 'text-muted-foreground/40'}`}>
+                            {conflictData.category_summary.combined_impact.ebitda !== 0 ? fmtDollarImpact(conflictData.category_summary.combined_impact.ebitda) : '—'}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Expense Reclassification Detail */}
+                  {Object.values(conflictData.category_summary.by_type).some(cat => cat.reclassifications.length > 0) && (
+                    <>
+                      <div className="px-4 py-2 border-t border-border/30">
+                        <span className="font-semibold uppercase tracking-wider text-muted-foreground text-xs">Expense Reclassification Detail</span>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
+                              <th className="text-left px-3 py-2 font-medium">Conflict</th>
+                              <th className="text-left px-3 py-2 font-medium">Description</th>
+                              <th className="text-left px-3 py-2 font-medium">From</th>
+                              <th className="text-center px-3 py-2 font-medium">→</th>
+                              <th className="text-left px-3 py-2 font-medium">To</th>
+                              <th className="text-right px-3 py-2 font-medium">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.values(conflictData.category_summary.by_type)
+                              .flatMap(cat => cat.reclassifications)
+                              .map(r => (
+                                <tr key={r.conflict_id} className="border-b border-border/10 hover:bg-card/20">
+                                  <td className="px-3 py-2 font-mono text-xs">{r.conflict_id}</td>
+                                  <td className="px-3 py-2 text-muted-foreground">{r.description}</td>
+                                  <td className="px-3 py-2">
+                                    <span className="px-1.5 py-0.5 rounded text-xs bg-red-500/10 text-red-400 border border-red-500/20">{r.from_category}</span>
+                                  </td>
+                                  <td className="px-3 py-2 text-center text-muted-foreground">→</td>
+                                  <td className="px-3 py-2">
+                                    <span className="px-1.5 py-0.5 rounded text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20">{r.to_category}</span>
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-mono">{fmtDollarImpact(r.amount)}</td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* ================================================================
                   Conflict Resolution Queue

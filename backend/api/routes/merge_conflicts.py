@@ -54,6 +54,27 @@ def _jsonb_float(value) -> float:
     return float(s)
 
 
+def _jsonb_float_or_none(value) -> float | None:
+    """Convert a JSONB value to float, returning None if absent or empty.
+
+    Optional impact fields (revenue_impact, expense_impact, ebitda_impact)
+    may be absent in pre-existing conflicts — None is the correct sentinel.
+    Non-numeric strings are logged and treated as absent.
+    """
+    if value is None:
+        return None
+    s = str(value).strip('"')
+    if not s:
+        return None
+    # Guard against non-numeric strings without try/except
+    # Valid patterns: optional sign, digits, optional decimal
+    cleaned = s.lstrip("-+")
+    if not cleaned.replace(".", "", 1).isdigit():
+        logger.warning("_jsonb_float_or_none: non-numeric value %r — treating as absent", value)
+        return None
+    return float(s)
+
+
 def _load_conflicts(cur) -> list[dict]:
     """Load all COFA conflicts from semantic_triples, grouped by concept.
 
@@ -95,6 +116,12 @@ def _load_conflicts(cur) -> list[dict]:
             "resolved_by": _jsonb_str(props.get("resolved_by", "")),
             "resolved_at": _jsonb_str(props.get("resolved_at", "")),
             "resolution_notes": _jsonb_str(props.get("resolution_notes", "")),
+            "impact_area": _jsonb_str(props.get("impact_area", "")),
+            "revenue_impact": _jsonb_float_or_none(props.get("revenue_impact")),
+            "expense_impact": _jsonb_float_or_none(props.get("expense_impact")),
+            "ebitda_impact": _jsonb_float_or_none(props.get("ebitda_impact")),
+            "from_category": _jsonb_str(props.get("from_category", "")),
+            "to_category": _jsonb_str(props.get("to_category", "")),
         })
 
     conflicts.sort(key=lambda c: c["dollar_impact"], reverse=True)
@@ -186,6 +213,92 @@ def _resolve_conflict(cur, conn, conflict_id: str, resolution: str, notes: str, 
     }
 
 
+def _build_category_summary(conflicts: list[dict]) -> dict:
+    """Build categorized impact summary from conflict list.
+
+    Groups conflicts by conflict_type, aggregates financial impacts:
+    - Combined financial impact: revenue, expenses, EBITDA per category
+    - Expense reclassification detail: from/to categories for classification conflicts
+
+    When impact fields are absent (pre-existing conflicts), falls back to
+    deriving impact from conflict_type + dollar_impact.
+    """
+    # Impact derivation rules when explicit fields are missing.
+    # Maps conflict_type keywords to (revenue, expense, ebitda) impact functions.
+    _FALLBACK_RULES = [
+        (["recognition", "revenue"],    lambda d: (d, 0.0, d)),        # revenue + EBITDA
+        (["classification"],            lambda d: (0.0, 0.0, 0.0)),    # reclassification only
+        (["capitalization"],            lambda d: (0.0, -d, d)),       # expense removed → EBITDA up
+        (["depreciation"],              lambda d: (0.0, 0.0, d)),      # EBITDA via depreciation
+        (["policy", "gap", "headcount"],lambda d: (0.0, 0.0, 0.0)),   # policy — impact unclear without detail
+    ]
+
+    def _derive_impact(ctype: str, dollar: float) -> tuple[float, float, float]:
+        ct_lower = ctype.lower()
+        for keywords, fn in _FALLBACK_RULES:
+            if any(kw in ct_lower for kw in keywords):
+                return fn(dollar)
+        return (0.0, 0.0, 0.0)
+
+    by_type: dict[str, dict] = {}
+
+    for c in conflicts:
+        ctype = c.get("conflict_type", "other")
+        if ctype not in by_type:
+            by_type[ctype] = {
+                "count": 0,
+                "total_dollar_impact": 0.0,
+                "revenue_impact": 0.0,
+                "expense_impact": 0.0,
+                "ebitda_impact": 0.0,
+                "conflicts": [],
+                "reclassifications": [],
+            }
+
+        entry = by_type[ctype]
+        entry["count"] += 1
+        entry["total_dollar_impact"] += c.get("dollar_impact", 0.0)
+        entry["conflicts"].append(c["conflict_id"])
+
+        # Use explicit impact fields if present, otherwise derive from type
+        rev = c.get("revenue_impact")
+        exp = c.get("expense_impact")
+        ebitda = c.get("ebitda_impact")
+        if rev is not None and exp is not None and ebitda is not None:
+            entry["revenue_impact"] += rev
+            entry["expense_impact"] += exp
+            entry["ebitda_impact"] += ebitda
+        else:
+            fb_rev, fb_exp, fb_ebitda = _derive_impact(ctype, c.get("dollar_impact", 0.0))
+            entry["revenue_impact"] += fb_rev
+            entry["expense_impact"] += fb_exp
+            entry["ebitda_impact"] += fb_ebitda
+
+        # Reclassification detail for classification conflicts
+        from_cat = c.get("from_category", "")
+        to_cat = c.get("to_category", "")
+        if ctype == "classification" and (from_cat or to_cat):
+            entry["reclassifications"].append({
+                "conflict_id": c["conflict_id"],
+                "from_category": from_cat,
+                "to_category": to_cat,
+                "amount": c.get("dollar_impact", 0.0),
+                "description": c.get("description", ""),
+            })
+
+    # Combined totals across all categories
+    combined = {
+        "revenue": sum(cat["revenue_impact"] for cat in by_type.values()),
+        "expenses": sum(cat["expense_impact"] for cat in by_type.values()),
+        "ebitda": sum(cat["ebitda_impact"] for cat in by_type.values()),
+    }
+
+    return {
+        "by_type": by_type,
+        "combined_impact": combined,
+    }
+
+
 @router.get("/api/dcl/merge/conflicts")
 def list_conflicts():
     """List all COFA conflicts sorted by dollar_impact descending."""
@@ -210,6 +323,7 @@ def list_conflicts():
             "pending": pending,
             "resolved": resolved,
         },
+        "category_summary": _build_category_summary(conflicts),
     }
 
 

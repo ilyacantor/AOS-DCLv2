@@ -166,6 +166,8 @@ def _build_conflict_triples(data: dict) -> list[dict]:
         property_fields = [
             "conflict_type", "severity", "dollar_impact", "description",
             "acquirer_treatment", "target_treatment", "resolution_status",
+            "impact_area", "revenue_impact", "expense_impact", "ebitda_impact",
+            "from_category", "to_category",
         ]
         for prop in property_fields:
             val = c.get(prop)
