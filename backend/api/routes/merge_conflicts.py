@@ -252,6 +252,7 @@ def _build_category_summary(conflicts: list[dict]) -> dict:
                 "expense_impact": 0.0,
                 "ebitda_impact": 0.0,
                 "conflicts": [],
+                "conflict_details": [],
                 "reclassifications": [],
             }
 
@@ -260,19 +261,35 @@ def _build_category_summary(conflicts: list[dict]) -> dict:
         entry["total_dollar_impact"] += c.get("dollar_impact", 0.0)
         entry["conflicts"].append(c["conflict_id"])
 
-        # Use explicit impact fields if present, otherwise derive from type
+        # Resolve impact: use explicit fields if present, otherwise derive from type
         rev = c.get("revenue_impact")
         exp = c.get("expense_impact")
         ebitda = c.get("ebitda_impact")
         if rev is not None and exp is not None and ebitda is not None:
-            entry["revenue_impact"] += rev
-            entry["expense_impact"] += exp
-            entry["ebitda_impact"] += ebitda
+            r_rev, r_exp, r_ebitda = rev, exp, ebitda
         else:
-            fb_rev, fb_exp, fb_ebitda = _derive_impact(ctype, c.get("dollar_impact", 0.0))
-            entry["revenue_impact"] += fb_rev
-            entry["expense_impact"] += fb_exp
-            entry["ebitda_impact"] += fb_ebitda
+            r_rev, r_exp, r_ebitda = _derive_impact(ctype, c.get("dollar_impact", 0.0))
+
+        entry["revenue_impact"] += r_rev
+        entry["expense_impact"] += r_exp
+        entry["ebitda_impact"] += r_ebitda
+
+        # Full detail record for drill-down (provenance / audit)
+        entry["conflict_details"].append({
+            "conflict_id": c["conflict_id"],
+            "description": c.get("description", ""),
+            "dollar_impact": c.get("dollar_impact", 0.0),
+            "revenue_impact": r_rev,
+            "expense_impact": r_exp,
+            "ebitda_impact": r_ebitda,
+            "impact_area": c.get("impact_area", ""),
+            "severity": c.get("severity", ""),
+            "acquirer_treatment": c.get("acquirer_treatment", ""),
+            "target_treatment": c.get("target_treatment", ""),
+            "resolution_status": c.get("resolution_status", "pending"),
+            "from_category": c.get("from_category", ""),
+            "to_category": c.get("to_category", ""),
+        })
 
         # Reclassification detail for classification conflicts
         from_cat = c.get("from_category", "")
