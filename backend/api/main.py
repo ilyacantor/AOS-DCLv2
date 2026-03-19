@@ -793,19 +793,27 @@ def mcp_tool_call(tool_call: MCPToolCall):
 # Platform reverse proxy — mirrors Vite dev proxy for production
 # =============================================================================
 
-PLATFORM_BASE_URL = os.getenv("PLATFORM_URL", "http://localhost:8006")
-
-
 @app.api_route("/api/platform/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def platform_proxy(request: Request, path: str):
     """Proxy requests to the Platform service.
 
     In local dev, Vite handles this via its proxy config.
     In production (Render), this route forwards to PLATFORM_URL.
+    Reads PLATFORM_URL at request time so env var changes take effect without restart.
     """
     import httpx
 
-    target_url = f"{PLATFORM_BASE_URL}/api/{path}"
+    platform_url = os.getenv("PLATFORM_URL")
+    if not platform_url:
+        raise HTTPException(
+            status_code=503,
+            detail="PLATFORM_URL environment variable is not set — "
+                   "cannot proxy to Platform service. "
+                   "Set PLATFORM_URL to the Platform base URL "
+                   "(e.g. https://autonomos-platform.onrender.com).",
+        )
+
+    target_url = f"{platform_url.rstrip('/')}/api/{path}"
     body = await request.body()
     headers = {
         k: v for k, v in request.headers.items()
@@ -824,7 +832,7 @@ async def platform_proxy(request: Request, path: str):
     except httpx.ConnectError as e:
         raise HTTPException(
             status_code=502,
-            detail=f"Cannot connect to Platform at {PLATFORM_BASE_URL} — {e}",
+            detail=f"Cannot connect to Platform at {platform_url} — {e}",
         )
     except httpx.TimeoutException:
         raise HTTPException(
