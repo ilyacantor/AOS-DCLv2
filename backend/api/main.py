@@ -843,11 +843,21 @@ async def platform_proxy(request: Request, path: str):
             status_code=504,
             detail=f"Platform request timed out: {request.method} {target_url}",
         )
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Platform proxy error: {type(e).__name__}: {e} — "
+                   f"target={target_url}, method={request.method}",
+        )
 
     content_type = resp.headers.get("content-type", "")
     if content_type.startswith("application/json"):
+        try:
+            json_body = resp.json()
+        except Exception:
+            json_body = {"raw": resp.text, "_proxy_note": "Platform returned application/json but body was not valid JSON"}
         return JSONResponse(
-            content=resp.json(),
+            content=json_body,
             status_code=resp.status_code,
         )
     from fastapi.responses import Response
