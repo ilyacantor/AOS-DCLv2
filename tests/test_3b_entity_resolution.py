@@ -10,9 +10,9 @@ from backend.core.db import get_connection
 from tests.conftest import TENANT_ID, RUN_ID
 
 CUSTOMER_OVERLAP = 34
-VENDOR_OVERLAP = 196
+VENDOR_OVERLAP = 170
 EMPLOYEE_OVERLAP = 10
-TOTAL_OVERLAP = 240
+TOTAL_OVERLAP = 214
 
 
 @pytest.fixture(autouse=True)

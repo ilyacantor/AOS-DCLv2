@@ -1,12 +1,17 @@
 """
 Semantic triple ingest endpoint.
 
-POST /api/dcl/ingest-triples    — batch ingest triples
-GET  /api/dcl/ingest-status/{run_id}  — run status
-GET  /api/dcl/ingest-status     — list all runs
+POST   /api/dcl/ingest-triples         — batch ingest triples
+GET    /api/dcl/ingest-status/{run_id}  — run status
+GET    /api/dcl/ingest-status           — list all runs
+DELETE /api/dcl/purge-inactive          — hard-delete deactivated triples
 """
 
+import json
+import os
 import uuid
+from datetime import datetime, timezone
+from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -221,15 +226,15 @@ def ingest_triples(
         _triple_store.deactivate_run(req.run_id)
         logger.info(f"[ingest-triples] Deactivated old triples for run_id={req.run_id}")
     elif not run_exists and replace:
-        # New run replacing old data — deactivate all prior active triples
-        # for the entity_ids in this batch to prevent triple compounding
-        entity_ids = list(set(t.entity_id for t in req.triples))
-        if entity_ids:
-            deactivated = _triple_store.deactivate_entity_triples(entity_ids, tenant_id=req.tenant_id)
-            logger.info(
-                f"[ingest-triples] Deactivated {deactivated} prior triples for "
-                f"entities={entity_ids} before new run_id={req.run_id}"
-            )
+        # New run replacing old data — deactivate ALL prior active triples
+        # for this tenant. Entity-scoped deactivation was broken: HR triples
+        # have per-employee entity_ids that never matched financial entity_ids,
+        # so they escaped deactivation permanently.
+        deactivated = _triple_store.deactivate_tenant_triples(tenant_id=req.tenant_id)
+        logger.info(
+            f"[ingest-triples] Deactivated {deactivated} prior triples for "
+            f"tenant_id={req.tenant_id} before new run_id={req.run_id}"
+        )
 
     # Build triple dicts for insertion
     rows = []
@@ -263,6 +268,10 @@ def ingest_triples(
         f"[ingest-triples] Ingested {count} triples for run_id={req.run_id}, "
         f"tenant_id={req.tenant_id}, concepts={concept_summary}"
     )
+
+    # On replace ingest, update seed_manifest.json so tests point at the live run
+    if replace and not run_exists:
+        _update_seed_manifest(req.tenant_id, req.run_id, count, concept_summary)
 
     return IngestResponse(
         run_id=req.run_id,
@@ -310,3 +319,65 @@ def list_ingest_status():
             "is_active": r["is_active"],
         })
     return result
+
+
+# ---------------------------------------------------------------------------
+# Purge inactive triples
+# ---------------------------------------------------------------------------
+
+@router.delete("/api/dcl/purge-inactive")
+def purge_inactive(confirm: bool = Query(False)):
+    """Hard-delete all deactivated triples from the database.
+
+    Requires ?confirm=true as a safety gate — this is a maintenance operation
+    that permanently removes historical data.
+    """
+    if not confirm:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "CONFIRMATION_REQUIRED",
+                "message": (
+                    "This will permanently delete all inactive triples. "
+                    "Pass ?confirm=true to proceed."
+                ),
+            },
+        )
+
+    deleted = _triple_store.delete_inactive()
+    logger.info(f"[purge-inactive] Hard-deleted {deleted} inactive triples")
+    return {"deleted": deleted}
+
+
+# ---------------------------------------------------------------------------
+# Seed manifest update
+# ---------------------------------------------------------------------------
+
+_MANIFEST_PATH = Path(__file__).resolve().parents[3] / "data" / "seed_manifest.json"
+
+
+def _update_seed_manifest(
+    tenant_id: str,
+    run_id: str,
+    triple_count: int,
+    concept_summary: dict,
+) -> None:
+    """Update data/seed_manifest.json with current active run info."""
+    try:
+        existing = {}
+        if _MANIFEST_PATH.exists():
+            existing = json.loads(_MANIFEST_PATH.read_text())
+
+        existing.update({
+            "seed_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "run_id": run_id,
+            "tenant_id": tenant_id,
+            "total_triples": triple_count,
+            "concept_summary": concept_summary,
+        })
+
+        _MANIFEST_PATH.write_text(json.dumps(existing, indent=2) + "\n")
+        logger.info(f"[ingest-triples] Updated seed_manifest.json: run_id={run_id}")
+    except Exception as e:
+        # Manifest update is informational — log but don't fail the ingest
+        logger.warning(f"[ingest-triples] Failed to update seed_manifest.json: {e}")

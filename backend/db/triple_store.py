@@ -164,6 +164,44 @@ class TripleStore:
                 conn.commit()
                 return cur.rowcount
 
+    def deactivate_tenant_triples(self, tenant_id: str) -> int:
+        """Deactivate ALL active triples for a tenant.
+
+        Used on full replacement ingest — kills everything (financials, HR,
+        COFA) so the new run is the sole active dataset.
+        """
+        if not tenant_id:
+            raise ValueError("deactivate_tenant_triples requires tenant_id.")
+        sql = (
+            "UPDATE semantic_triples SET is_active = false, updated_at = now() "
+            "WHERE is_active = true AND tenant_id = %s"
+        )
+        with get_connection() as conn:
+            if conn is None:
+                raise RuntimeError(
+                    "TripleStore.deactivate_tenant_triples failed: database connection unavailable."
+                )
+            with conn.cursor() as cur:
+                cur.execute(sql, (tenant_id,))
+                conn.commit()
+                return cur.rowcount
+
+    def delete_inactive(self) -> int:
+        """Hard-delete all inactive triples across all tenants.
+
+        Maintenance operation to purge deactivated runs and reclaim space.
+        """
+        sql = "DELETE FROM semantic_triples WHERE is_active = false"
+        with get_connection() as conn:
+            if conn is None:
+                raise RuntimeError(
+                    "TripleStore.delete_inactive failed: database connection unavailable."
+                )
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                conn.commit()
+                return cur.rowcount
+
     def deactivate_run(self, run_id: str) -> int:
         """Set is_active=false for all triples in a run. Returns count affected."""
         sql = (

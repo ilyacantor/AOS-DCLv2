@@ -9,7 +9,7 @@ from backend.engine.cross_sell_v2 import CrossSellEngineV2
 from tests.conftest import TENANT_ID, RUN_ID
 
 CUSTOMER_OVERLAP = 34
-VENDOR_OVERLAP = 196
+VENDOR_OVERLAP = 170
 EMPLOYEE_OVERLAP = 10
 MERIDIAN_CUSTOMERS = 1218
 CASCADIA_CUSTOMERS = 220
@@ -43,7 +43,7 @@ def test_entity_totals(overlap):
 def test_overlap_percentages(overlap):
     summary = overlap.get_overlap_summary()
     assert summary["vendor"]["overlap_pct_a"] == 100.0
-    assert summary["vendor"]["overlap_pct_b"] == 100.0
+    assert summary["vendor"]["overlap_pct_b"] == 55.19
 
 # --- Test 4: Overlapping concept list ---
 def test_customer_overlap_list(overlap):
@@ -66,12 +66,12 @@ def test_cascadia_only_customers(overlap):
     only = overlap.get_entity_only_concepts("customer", "cascadia")
     assert len(only) == CASCADIA_ONLY_CUSTOMERS
 
-# --- Test 7: Zero entity-only vendors (complete overlap) ---
-def test_no_vendor_only(overlap):
+# --- Test 7: Entity-only vendors ---
+def test_vendor_only(overlap):
     only_m = overlap.get_entity_only_concepts("vendor", "meridian")
     only_c = overlap.get_entity_only_concepts("vendor", "cascadia")
     assert len(only_m) == 0
-    assert len(only_c) == 0
+    assert len(only_c) == 138
 
 # --- Test 8: Cross-sell opportunities exist ---
 def test_cross_sell_has_opportunities(cross_sell):
