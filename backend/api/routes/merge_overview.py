@@ -506,8 +506,11 @@ def merge_overview(
 
             # --- Aggregate stats for Platform run-stats consumption ---
             cur.execute(
-                "SELECT COUNT(*) FILTER (WHERE true) AS total, "
-                "       COUNT(*) FILTER (WHERE value #>> '{resolution_status}' = 'resolved') AS resolved "
+                "SELECT COUNT(DISTINCT concept) AS total, "
+                "       COUNT(DISTINCT CASE "
+                "           WHEN property = 'resolution_status' "
+                "             AND value #>> '{}' = 'resolved' "
+                "           THEN concept END) AS resolved "
                 "FROM semantic_triples "
                 "WHERE is_active = true "
                 "  AND split_part(concept, '.', 1) = 'cofa_conflict' "
