@@ -819,6 +819,10 @@ async def platform_proxy(request: Request, path: str):
         k: v for k, v in request.headers.items()
         if k.lower() not in ("host", "content-length", "transfer-encoding")
     }
+    # Add internal service key for Platform auth bypass
+    internal_key = os.getenv("INTERNAL_SERVICE_KEY")
+    if internal_key:
+        headers["x-internal-service-key"] = internal_key
 
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
