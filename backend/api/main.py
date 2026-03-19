@@ -790,6 +790,63 @@ def mcp_tool_call(tool_call: MCPToolCall):
 
 
 # =============================================================================
+# Platform reverse proxy — mirrors Vite dev proxy for production
+# =============================================================================
+
+PLATFORM_BASE_URL = os.getenv("PLATFORM_URL", "http://localhost:8006")
+
+
+@app.api_route("/api/platform/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def platform_proxy(request: Request, path: str):
+    """Proxy requests to the Platform service.
+
+    In local dev, Vite handles this via its proxy config.
+    In production (Render), this route forwards to PLATFORM_URL.
+    """
+    import httpx
+
+    target_url = f"{PLATFORM_BASE_URL}/api/{path}"
+    body = await request.body()
+    headers = {
+        k: v for k, v in request.headers.items()
+        if k.lower() not in ("host", "content-length", "transfer-encoding")
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.request(
+                method=request.method,
+                url=target_url,
+                content=body,
+                headers=headers,
+                params=dict(request.query_params),
+            )
+    except httpx.ConnectError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Cannot connect to Platform at {PLATFORM_BASE_URL} — {e}",
+        )
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail=f"Platform request timed out: {request.method} {target_url}",
+        )
+
+    content_type = resp.headers.get("content-type", "")
+    if content_type.startswith("application/json"):
+        return JSONResponse(
+            content=resp.json(),
+            status_code=resp.status_code,
+        )
+    from fastapi.responses import Response
+    return Response(
+        content=resp.content,
+        status_code=resp.status_code,
+        media_type=content_type or "application/octet-stream",
+    )
+
+
+# =============================================================================
 # SPA serving (must be last — catch-all routes)
 # =============================================================================
 

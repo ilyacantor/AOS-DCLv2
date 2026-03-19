@@ -25,6 +25,8 @@ services:
         sync: false
       - key: FARM_API_URL
         value: "https://farmv2.onrender.com"
+      - key: PLATFORM_URL
+        value: "https://autonomos-platform.onrender.com"
       - key: CORS_ORIGINS
         sync: false
 
