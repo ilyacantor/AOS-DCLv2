@@ -15,19 +15,39 @@ services:
         fromDatabase:
           name: dcl-db
           property: connectionString
+      - key: SUPABASE_DB_URL
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
         sync: false
       - key: PINECONE_API_KEY
         sync: false
       - key: AAM_API_URL
         sync: false
+      - key: AAM_URL
+        sync: false
       - key: FARM_API_URL
         value: "https://farmv2.onrender.com"
       - key: PLATFORM_URL
-        value: "https://autonomos-platform.onrender.com"
+        value: "https://autonomos-platform-1.onrender.com"
+      - key: DCL_API_URL
+        sync: false
+      - key: DCL_INGEST_KEY
+        sync: false
+      - key: DCL_DATASET_ID
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: SLACK_WEBHOOK_URL
+        sync: false
       - key: CORS_ORIGINS
+        sync: false
+      - key: SOURCE_NAME
         sync: false
 
 databases:
