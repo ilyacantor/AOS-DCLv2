@@ -152,7 +152,22 @@ def _resolve_entities(cur, acquirer_id: Optional[str], target_id: Optional[str])
             f"Fix: ensure engagement entity IDs match the entity_id values used during Farm ingestion."
         )
 
-    # 3. First two COFA entities alphabetically
+    # 2.5. File-based engagement config — authoritative when no DB engagement exists
+    try:
+        from backend.engine.engagement import get_active_engagement
+        file_eng = get_active_engagement()
+        a_id, b_id = file_eng.entity_a.id, file_eng.entity_b.id
+        if a_id in cofa_entities and b_id in cofa_entities:
+            logger.info(
+                f"[merge] No engagement_state row — using file config: "
+                f"engagement_id={file_eng.engagement_id}, "
+                f"acquirer={a_id}, target={b_id}"
+            )
+            return a_id, b_id, file_eng.engagement_id
+    except Exception as e:
+        logger.debug(f"[merge] File-based engagement lookup failed: {e}")
+
+    # 3. First two COFA entities alphabetically (last resort)
     return cofa_entities[0], cofa_entities[1], eng_id
 
 
