@@ -31,12 +31,12 @@ async def get_bridge(
     run_id: Optional[str] = Query(None),
 ):
     """EBITDA bridge for one entity or combined (entity_id=None)."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         engine = EBITDABridgeV2(tid, rid)
         return engine.get_bridge(entity_id)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -47,12 +47,12 @@ async def get_bridge_comparison(
     run_id: Optional[str] = Query(None),
 ):
     """Side-by-side bridge for both entities + combined."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         engine = EBITDABridgeV2(tid, rid)
         return engine.get_bridge_comparison()
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -64,12 +64,12 @@ async def get_adjustment_detail(
     run_id: Optional[str] = Query(None),
 ):
     """Detailed view of one adjustment concept."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         engine = EBITDABridgeV2(tid, rid)
         return engine.get_adjustment_detail(concept)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -80,29 +80,29 @@ async def get_sensitivity_matrix(
     run_id: Optional[str] = Query(None),
 ):
     """Sensitivity matrix showing base/low/high scenarios."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         engine = EBITDABridgeV2(tid, rid)
         return engine.get_sensitivity_matrix()
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
 
 @router.get("/qoe")
 async def get_qoe_summary(
-    entity_id: str = "meridian",
+    entity_id: str = Query(..., description="Entity ID (e.g. the entity name from the engagement)"),
     tenant_id: Optional[str] = Query(None),
     run_id: Optional[str] = Query(None),
 ):
     """QoE summary for one entity."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         engine = QualityOfEarningsV2(tid, rid)
         return engine.get_qoe_summary(entity_id)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -113,11 +113,11 @@ async def get_combined_qoe(
     run_id: Optional[str] = Query(None),
 ):
     """Combined QoE for both entities."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         engine = QualityOfEarningsV2(tid, rid)
         return engine.get_combined_qoe()
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))

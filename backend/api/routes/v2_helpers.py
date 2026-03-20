@@ -18,6 +18,14 @@ from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
+# Concept prefixes that identify financial statement data.  Used by
+# domain_hint='financial' to prefer runs containing P&L / BS / CF triples
+# over non-financial runs (e.g. HR workforce data).
+_FINANCIAL_PREFIXES = [
+    "revenue.%", "cogs.%", "opex.%", "pnl.%",
+    "asset.%", "liability.%", "equity.%",
+]
+
 
 def resolve_tenant_id(tenant_id: str | None) -> str:
     """Resolve tenant_id from explicit param or active engagement.
@@ -44,7 +52,9 @@ def resolve_tenant_id(tenant_id: str | None) -> str:
     )
 
 
-def resolve_run_id(run_id: str | None, tenant_id: str) -> str:
+def resolve_run_id(
+    run_id: str | None, tenant_id: str, domain_hint: str | None = None,
+) -> str:
     """Resolve run_id from explicit param or most recent active run.
 
     Never returns a hardcoded default. Raises HTTP 400 if unresolvable.
@@ -52,7 +62,7 @@ def resolve_run_id(run_id: str | None, tenant_id: str) -> str:
     if run_id:
         return run_id
 
-    latest = _get_latest_run(tenant_id)
+    latest = _get_latest_run(tenant_id, domain_hint=domain_hint)
     if latest:
         return latest
 
@@ -66,11 +76,17 @@ def resolve_run_id(run_id: str | None, tenant_id: str) -> str:
 
 
 def resolve_tenant_and_run(
-    tenant_id: str | None, run_id: str | None
+    tenant_id: str | None,
+    run_id: str | None,
+    domain_hint: str | None = None,
 ) -> tuple[str, str]:
-    """Resolve both tenant_id and run_id. Convenience wrapper."""
+    """Resolve both tenant_id and run_id. Convenience wrapper.
+
+    Pass domain_hint='financial' from financial report endpoints so run
+    resolution prefers runs containing P&L/BS/CF triples.
+    """
     tid = resolve_tenant_id(tenant_id)
-    rid = resolve_run_id(run_id, tid)
+    rid = resolve_run_id(run_id, tid, domain_hint=domain_hint)
     return tid, rid
 
 
@@ -117,28 +133,49 @@ def _get_latest_tenant() -> str | None:
             return str(row[0])
 
 
-def _get_latest_run(tenant_id: str) -> str | None:
+def _get_latest_run(
+    tenant_id: str, domain_hint: str | None = None,
+) -> str | None:
     """Get the primary run_id for a tenant from semantic_triples.
 
     Picks the run_id with the most active triples, not just the newest
     created_at. This prevents small supplementary runs (COFA conflicts,
     HR imports) from shadowing the main financial ingest run.
+
+    When domain_hint='financial', only counts triples whose concept
+    matches financial domain prefixes (revenue.%, cogs.%, etc.).  This
+    prevents non-financial runs (e.g. 124K HR triples) from being
+    selected when a financial report endpoint needs the financial run.
     """
-    sql = """
-        SELECT run_id
-        FROM semantic_triples
-        WHERE tenant_id = %s AND is_active = true
-        GROUP BY run_id
-        ORDER BY COUNT(*) DESC
-        LIMIT 1
-    """
+    if domain_hint == "financial":
+        sql = """
+            SELECT run_id
+            FROM semantic_triples
+            WHERE tenant_id = %s AND is_active = true
+              AND concept LIKE ANY(%s)
+            GROUP BY run_id
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+        """
+        params: list = [tenant_id, _FINANCIAL_PREFIXES]
+    else:
+        sql = """
+            SELECT run_id
+            FROM semantic_triples
+            WHERE tenant_id = %s AND is_active = true
+            GROUP BY run_id
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+        """
+        params = [tenant_id]
+
     with get_connection() as conn:
         if conn is None:
             raise RuntimeError(
                 "v2_helpers._get_latest_run: database connection unavailable"
             )
         with conn.cursor() as cur:
-            cur.execute(sql, [tenant_id])
+            cur.execute(sql, params)
             row = cur.fetchone()
             if row is None:
                 return None

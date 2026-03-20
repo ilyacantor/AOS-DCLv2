@@ -39,12 +39,12 @@ def combining_income_statement(
     run_id: Optional[str] = Query(None),
 ):
     """Compat: combining income statement via v2 engine."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         engine = CombiningEngineV2(tid, rid)
         return engine.get_combining_income_statement(period)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -63,7 +63,7 @@ def entity_overlap(
         engine = OverlapEngineV2(tid, rid)
         return engine.get_overlap_summary()
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -82,7 +82,7 @@ def cross_sell(
         engine = CrossSellEngineV2(tid, rid)
         return engine.get_cross_sell_summary()
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -97,12 +97,12 @@ def ebitda_bridge(
     run_id: Optional[str] = Query(None),
 ):
     """Compat: EBITDA bridge via v2 engine."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         engine = EBITDABridgeV2(tid, rid)
         return engine.get_bridge(entity_id=entity_id)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -117,12 +117,12 @@ def quality_of_earnings(
     run_id: Optional[str] = Query(None),
 ):
     """Compat: QoE summary via v2 engine."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         engine = QualityOfEarningsV2(tid, rid)
         return engine.get_qoe_summary(entity_id)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -144,14 +144,14 @@ def what_if(
     run_id: Optional[str] = Query(None),
 ):
     """Compat: what-if scenario via v2 engine. Accepts 'levers' or 'adjustments'."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     # Support both old 'levers' and new 'adjustments' field names
     adjustments = request.adjustments or request.levers or []
     try:
         engine = WhatIfEngineV2(tid, rid)
         return engine.apply_scenario(request.entity_id, request.period, adjustments)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -167,12 +167,15 @@ def dashboard(
     run_id: Optional[str] = Query(None),
 ):
     """Compat: persona dashboard via v2 engine resolver."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         resolver = TripleQueryResolver(tid, rid)
         entities = resolver._get_entities()
         if not entities:
-            raise HTTPException(status_code=404, detail="No entities found in triples")
+            raise HTTPException(
+                status_code=422,
+                detail={"error": "data_incomplete", "detail": "No entities found in triples"},
+            )
 
         entity_id = entities[0]  # primary entity
 
@@ -189,6 +192,6 @@ def dashboard(
             "source": "v2_engine",
         }
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))

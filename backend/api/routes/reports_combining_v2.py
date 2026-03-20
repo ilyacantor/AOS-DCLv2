@@ -29,12 +29,12 @@ async def get_combining_income_statement_v2(
     run_id: Optional[str] = Query(None),
 ):
     """Four-column combining income statement from semantic_triples."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         engine = CombiningEngineV2(tid, rid)
         return engine.get_combining_income_statement(period)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -46,12 +46,12 @@ async def get_combining_balance_sheet_v2(
     run_id: Optional[str] = Query(None),
 ):
     """Four-column combining balance sheet from semantic_triples."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         engine = CombiningEngineV2(tid, rid)
         return engine.get_combining_balance_sheet(period)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -63,12 +63,12 @@ async def get_combining_cash_flow_v2(
     run_id: Optional[str] = Query(None),
 ):
     """Four-column combining cash flow from semantic_triples."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         engine = CombiningEngineV2(tid, rid)
         return engine.get_combining_cash_flow(period)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -80,12 +80,12 @@ async def get_cofa_adjustments_v2(
     run_id: Optional[str] = Query(None),
 ):
     """Get all COFA adjustments from semantic_triples."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         engine = CombiningEngineV2(tid, rid)
         return engine.get_cofa_adjustments(period=period)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -103,12 +103,12 @@ async def get_income_statement_v2(
     run_id: Optional[str] = Query(None),
 ):
     """Single-entity income statement from semantic_triples."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         resolver = TripleQueryResolver(tid, rid)
         return resolver.get_income_statement(entity_id, period)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -121,12 +121,12 @@ async def get_balance_sheet_v2(
     run_id: Optional[str] = Query(None),
 ):
     """Single-entity balance sheet from semantic_triples."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         resolver = TripleQueryResolver(tid, rid)
         return resolver.get_balance_sheet(entity_id, period)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -139,11 +139,11 @@ async def get_cash_flow_v2(
     run_id: Optional[str] = Query(None),
 ):
     """Single-entity cash flow statement from semantic_triples."""
-    tid, rid = resolve_tenant_and_run(tenant_id, run_id)
+    tid, rid = resolve_tenant_and_run(tenant_id, run_id, domain_hint="financial")
     try:
         resolver = TripleQueryResolver(tid, rid)
         return resolver.get_cash_flow(entity_id, period)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))

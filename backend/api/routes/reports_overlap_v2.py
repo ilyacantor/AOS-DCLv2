@@ -34,7 +34,7 @@ async def get_overlap_summary(
         engine = OverlapEngineV2(tid, rid)
         return engine.get_overlap_summary()
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -88,7 +88,7 @@ async def get_cross_sell(
         opportunities = engine.get_cross_sell_opportunities()
         return {"total": len(opportunities), "opportunities": opportunities}
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -104,6 +104,6 @@ async def get_cross_sell_summary(
         engine = CrossSellEngineV2(tid, rid)
         return engine.get_cross_sell_summary()
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
