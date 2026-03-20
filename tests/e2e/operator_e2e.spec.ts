@@ -79,6 +79,10 @@ test.describe.serial("E2E Health Gate", () => {
 // ============================================================
 
 test.describe.serial("NLQ Reports Portal — Operator View", () => {
+  // Each test navigates from scratch and waits for multiple API round-trips
+  // (NLQ → DCL → DB). 60s accommodates variable dev environment latency.
+  test.setTimeout(60_000);
+
   test.beforeEach(async ({ page }) => {
     await blockExternalRequests(page);
   });

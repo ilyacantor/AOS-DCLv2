@@ -342,10 +342,24 @@ export function MergePanel() {
       return;
     }
 
-    // Step 2: Poll for results
+    // Step 2: Poll for results (max 120s — Maestra LLM + write should complete within this)
     setMergeStatus('Waiting for DCL to receive mapping triples...');
+    const POLL_TIMEOUT_MS = 120_000;
     const pollForResults = () => {
       pollRef.current = setTimeout(async () => {
+        const elapsed = Date.now() - mergeStartRef.current;
+        if (elapsed > POLL_TIMEOUT_MS) {
+          if (pollRef.current) clearTimeout(pollRef.current);
+          setMergeError(
+            `Merge timed out after ${Math.floor(elapsed / 1000)}s. ` +
+            'Maestra may still be processing — check Platform logs. ' +
+            'Refresh the page and try again if needed.'
+          );
+          setMergeRunning(false);
+          setMergeStatus(null);
+          return;
+        }
+
         try {
           const res = await fetch('/api/dcl/merge/overview');
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -367,6 +381,8 @@ export function MergePanel() {
             });
             return;
           }
+
+          setMergeStatus(`Waiting for DCL to receive mapping triples... (${Math.floor(elapsed / 1000)}s)`);
         } catch {
           if (pollRef.current) clearTimeout(pollRef.current);
           setMergeError('Lost connection while waiting for results. Check services and try again.');

@@ -127,7 +127,7 @@ def test_ebitda_bridge(client):
 # --- Test 8: QoE ---
 def test_qoe(client):
     """GET qoe — 200, has key fields."""
-    resp = client.get("/api/dcl/reports/v2/qoe", params=_TR)
+    resp = client.get("/api/dcl/reports/v2/qoe", params={**_TR, "entity_id": "meridian"})
     assert resp.status_code == 200
     data = resp.json()
     assert "reported_ebitda" in data
@@ -157,7 +157,7 @@ def test_whatif_baseline(client):
 # --- Test 10: Revenue bridge ---
 def test_revenue_bridge(client):
     """GET revenue-bridge/yoy — 200, drivers present."""
-    resp = client.get("/api/dcl/reports/v2/revenue-bridge/yoy", params=_TR)
+    resp = client.get("/api/dcl/reports/v2/revenue-bridge/yoy", params={**_TR, "entity_id": "meridian"})
     assert resp.status_code == 200
     data = resp.json()
     assert "from_total" in data

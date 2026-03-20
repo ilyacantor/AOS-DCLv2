@@ -266,22 +266,27 @@ def merge_overview(
 
             financial_summary: list[dict] = []
 
-            # Annual sum metrics (sum across Q1-Q4, deduplicated)
+            # Annual sum metrics — single batched query for all 3 concepts
+            concept_names = [c for c, _, _ in _ANNUAL_SUM_METRICS]
+            cur.execute(
+                "SELECT entity_id, concept, SUM(val) AS total FROM ("
+                "  SELECT DISTINCT ON (entity_id, period, concept) "
+                "    entity_id, concept, (value #>> '{}')::numeric AS val "
+                "  FROM semantic_triples "
+                "  WHERE is_active = true AND concept = ANY(%s) AND property = 'amount' "
+                "    AND period LIKE '2025-Q%%' AND entity_id IN (%s, %s) "
+                "  ORDER BY entity_id, period, concept, created_at DESC"
+                ") sub GROUP BY entity_id, concept",
+                (concept_names, acq_id, tgt_id),
+            )
+            # Index: (entity_id, concept) -> total
+            batched_vals: dict[tuple[str, str], float] = {}
+            for row in cur.fetchall():
+                batched_vals[(row[0], row[1])] = float(row[2])
+
             for concept, label, fmt in _ANNUAL_SUM_METRICS:
-                cur.execute(
-                    "SELECT entity_id, SUM(val) AS total FROM ("
-                    "  SELECT DISTINCT ON (entity_id, period) "
-                    "    entity_id, (value #>> '{}')::numeric AS val "
-                    "  FROM semantic_triples "
-                    "  WHERE is_active = true AND concept = %s AND property = 'amount' "
-                    "    AND period LIKE '2025-Q%%' AND entity_id IN (%s, %s) "
-                    "  ORDER BY entity_id, period, created_at DESC"
-                    ") sub GROUP BY entity_id",
-                    (concept, acq_id, tgt_id),
-                )
-                vals = {r[0]: float(r[1]) for r in cur.fetchall()}
-                acq_val = vals.get(acq_id)
-                tgt_val = vals.get(tgt_id)
+                acq_val = batched_vals.get((acq_id, concept))
+                tgt_val = batched_vals.get((tgt_id, concept))
                 cons = None
                 if acq_val is not None and tgt_val is not None:
                     cons = acq_val + tgt_val

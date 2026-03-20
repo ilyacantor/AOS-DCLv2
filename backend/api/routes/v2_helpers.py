@@ -37,7 +37,16 @@ def resolve_tenant_id(tenant_id: str | None) -> str:
 
     active = _get_active_engagement()
     if active and active.get("tenant_id"):
-        return str(active["tenant_id"])
+        eng_tid = str(active["tenant_id"])
+        # Validate the engagement's tenant actually has active triples.
+        # Stale engagements may reference a tenant_id with no data.
+        if _tenant_has_active_triples(eng_tid):
+            return eng_tid
+        logger.warning(
+            f"[v2_helpers] engagement {active.get('engagement_id')} references "
+            f"tenant_id={eng_tid} which has no active triples — falling through "
+            f"to latest tenant from semantic_triples"
+        )
 
     latest = _get_latest_tenant()
     if latest:
@@ -109,6 +118,22 @@ def _get_active_engagement() -> dict | None:
                 return None
             columns = [desc[0] for desc in cur.description]
             return dict(zip(columns, row))
+
+
+def _tenant_has_active_triples(tenant_id: str) -> bool:
+    """Check whether a tenant_id has at least one active triple."""
+    sql = (
+        "SELECT 1 FROM semantic_triples "
+        "WHERE tenant_id = %s AND is_active = true LIMIT 1"
+    )
+    with get_connection() as conn:
+        if conn is None:
+            raise RuntimeError(
+                "v2_helpers._tenant_has_active_triples: database connection unavailable"
+            )
+        with conn.cursor() as cur:
+            cur.execute(sql, (tenant_id,))
+            return cur.fetchone() is not None
 
 
 def _get_latest_tenant() -> str | None:
