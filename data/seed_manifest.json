@@ -1,28 +1,35 @@
 {
-  "seed_date": "2026-03-19",
-  "run_id": "51dac7f3-a959-4b55-b9ee-c77fb91685be",
-  "farm_run_id": "triples_b38bac0d1ab6",
-  "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
+  "seed_date": "2026-03-20",
+  "run_id": "5210ed57-ed93-5dc0-a000-04d6aa892844",
+  "farm_run_id": "triples_b43a0e923874",
+  "tenant_id": "16871dd9-d8c0-58de-b7fd-ac3eb39243c2",
   "entity_a_id": "meridian",
   "entity_b_id": "cascadia",
-  "total_triples": 1000,
+  "total_triples": 18481,
   "concept_summary": {
-    "asset": 104,
-    "cash_flow": 168,
-    "cogs": 60,
-    "equity": 39,
-    "gl": 420,
-    "liability": 65,
-    "opex": 48,
-    "pnl": 60,
-    "revenue": 36
+    "asset": 208,
+    "cash_flow": 336,
+    "coa": 590,
+    "cofa": 1176,
+    "cogs": 204,
+    "customer": 5872,
+    "ebitda_adjustment": 112,
+    "employee": 40,
+    "equity": 78,
+    "gl": 8229,
+    "liability": 130,
+    "opex": 136,
+    "pnl": 152,
+    "revenue": 124,
+    "service": 30,
+    "vendor": 1064
   },
   "identity_checks": {
-    "bs_identity": "PASS \u2014 all entity-period combinations",
-    "cf_identity": "PASS \u2014 all entity-period combinations",
-    "pl_identity": "FAIL",
-    "cash_continuity": "PASS \u2014 all consecutive quarter pairs"
+    "bs_identity": "PASS",
+    "cf_identity": "PASS",
+    "pl_identity": "PASS",
+    "cash_continuity": "PASS"
   },
-  "meridian_annual_revenue": 5401.69,
-  "cascadia_annual_revenue": 1105.42
+  "meridian_annual_revenue": 5401.67,
+  "cascadia_annual_revenue": 1105.41
 }

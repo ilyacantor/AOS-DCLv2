@@ -4,7 +4,7 @@ Sweep 1 — Engine Stack Integration Test
 Verifies the full v2 engine stack works end-to-end:
 QueryResolver feeds into Combining/Overlap/EBITDA/WhatIf.
 
-All values are exact ground truth from the seed.
+All expected values fetched from Farm's ground truth API at runtime (B10).
 """
 import json
 import pytest
@@ -30,24 +30,20 @@ RUN_ID = _manifest["run_id"]
 ENTITY_A = _manifest["entity_a_id"]
 ENTITY_B = _manifest["entity_b_id"]
 
-# Ground truth from seed
-M_Q1_REV = 1323.43
-C_Q1_REV = 269.38
-COMBINED_Q1_REV = 1592.81
-M_Q1_EBITDA = 321.59
-C_Q1_EBITDA = -31.91
-M_Q1_ASSETS = 5552.52
-M_Q1_LIAB = 789.24
-M_Q1_EQ = 4763.28
-C_Q1_ASSETS = 652.25
-C_Q1_LIAB = 235.03
-C_Q1_EQ = 417.22
-CUSTOMER_OVERLAP = 34
-VENDOR_OVERLAP = 170
-EMPLOYEE_OVERLAP = 10
-COFA_COUNT = 6
-M_ADJ_TOTAL = 136.58
-C_ADJ_TOTAL = 14.4
+# Ground truth from Farm API (B10)
+from tests.conftest import gt_metric, gt_overlap_count, _get_ground_truth
+
+
+def _sum_ebitda_adjustments(entity: str) -> float:
+    """Sum all EBITDA adjustment amount_current values for an entity from ground truth."""
+    gt = _get_ground_truth()
+    agt = gt.get("atemporal_ground_truth", {}).get(entity, {})
+    total = sum(
+        props.get("amount_current", 0)
+        for concept, props in agt.items()
+        if concept.startswith("ebitda_adjustment.")
+    )
+    return round(total, 2)
 
 
 # --- Fixtures ---
@@ -87,10 +83,11 @@ def rev_bridge():
 # --- Test 1: Resolver → Combining P&L ---
 def test_resolver_to_combining_pnl(resolver, combining):
     """Resolver and Combining agree on revenue for 2025-Q1."""
+    m_q1_rev = gt_metric("meridian", "2025-Q1", "revenue.total")
     res_metric = resolver.get_metric("revenue.total", ENTITY_A, "2025-Q1")
     stmt = combining.get_combining_income_statement("2025-Q1")
-    assert res_metric["value"] == M_Q1_REV
-    assert stmt["entity_a"]["revenue"]["total"] == M_Q1_REV
+    assert res_metric["value"] == m_q1_rev
+    assert stmt["entity_a"]["revenue"]["total"] == m_q1_rev
     assert res_metric["value"] == stmt["entity_a"]["revenue"]["total"]
 
 
@@ -127,9 +124,9 @@ def test_combining_pnl_identity_gate(combining):
 def test_resolver_to_overlap(overlap):
     """Overlap counts match seed ground truth."""
     summary = overlap.get_overlap_summary()
-    assert summary["customer"]["overlap_count"] == CUSTOMER_OVERLAP
-    assert summary["vendor"]["overlap_count"] == VENDOR_OVERLAP
-    assert summary["employee"]["overlap_count"] == EMPLOYEE_OVERLAP
+    assert summary["customer"]["overlap_count"] == gt_overlap_count("customer")
+    assert summary["vendor"]["overlap_count"] == gt_overlap_count("vendor")
+    assert summary["employee"]["overlap_count"] == gt_overlap_count("employee")
 
 
 # --- Test 6: Resolver → Cross-sell ---
@@ -150,7 +147,7 @@ def test_resolver_to_ebitda_bridge(resolver, bridge):
     m_stmt = resolver.get_income_statement(ENTITY_A, "2025-Q1")
     # The bridge may use annual or quarterly EBITDA — check it's consistent
     assert m_bridge["reported_ebitda"] is not None
-    assert m_bridge["total_adjustments"] == M_ADJ_TOTAL
+    assert m_bridge["total_adjustments"] == _sum_ebitda_adjustments(ENTITY_A)
     assert m_bridge["adjusted_ebitda"] == m_bridge["reported_ebitda"] + m_bridge["total_adjustments"]
 
 
@@ -168,24 +165,28 @@ def test_resolver_to_qoe(qoe):
 # --- Test 9: Resolver → What-If ---
 def test_resolver_to_whatif(whatif, bridge):
     """What-if baseline matches bridge reported EBITDA."""
+    m_q1_rev = gt_metric("meridian", "2025-Q1", "revenue.total")
+    m_q1_ebitda = gt_metric("meridian", "2025-Q1", "pnl.ebitda")
     baseline = whatif.get_baseline(ENTITY_A, "2025-Q1")
-    assert baseline["revenue"]["total"] == M_Q1_REV
-    assert baseline["ebitda"] == M_Q1_EBITDA
+    assert baseline["revenue"]["total"] == m_q1_rev
+    assert baseline["ebitda"] == m_q1_ebitda
 
     # Apply a scenario — result should differ
     result = whatif.apply_scenario(ENTITY_A, "2025-Q1", [
         {"concept": "revenue.total", "type": "pct", "value": -10.0}
     ])
-    assert result["adjusted"]["revenue"]["total"] < M_Q1_REV
-    assert result["adjusted"]["ebitda"] < M_Q1_EBITDA
+    assert result["adjusted"]["revenue"]["total"] < m_q1_rev
+    assert result["adjusted"]["ebitda"] < m_q1_ebitda
 
 
 # --- Test 10: Resolver → Revenue Bridge ---
 def test_resolver_to_revenue_bridge(rev_bridge):
     """Revenue bridge drivers sum to total variance."""
+    m_q1_rev = gt_metric("meridian", "2025-Q1", "revenue.total")
+    m_q1_2024_rev = gt_metric("meridian", "2024-Q1", "revenue.total")
     b = rev_bridge.get_revenue_bridge(ENTITY_A, "2024-Q1", "2025-Q1")
-    assert b["from_total"] == 1250.00
-    assert b["to_total"] == M_Q1_REV
+    assert b["from_total"] == m_q1_2024_rev
+    assert b["to_total"] == m_q1_rev
     total_delta = b["to_total"] - b["from_total"]
     stream_delta = sum(s["delta"] for s in b["by_stream"])
     assert abs(total_delta - stream_delta) < 0.01, \
@@ -204,14 +205,15 @@ def test_resolution_overlap_chain():
     vendor_ws = resolution.list_workspaces(domain="vendor")
     employee_ws = resolution.list_workspaces(domain="employee")
 
-    assert len(customer_ws) == CUSTOMER_OVERLAP
-    assert len(vendor_ws) == VENDOR_OVERLAP
-    assert len(employee_ws) == EMPLOYEE_OVERLAP
+    assert len(customer_ws) == gt_overlap_count("customer")
+    assert len(vendor_ws) == gt_overlap_count("vendor")
+    assert len(employee_ws) == gt_overlap_count("employee")
 
 
 # --- Test 12: Scenario persistence round-trip ---
 def test_scenario_persistence_roundtrip(whatif):
     """Save, list, load scenario — values match."""
+    m_q1_rev = gt_metric("meridian", "2025-Q1", "revenue.total")
     adjustments = [{"concept": "revenue.total", "type": "pct", "value": -5.0}]
     scenario_id = whatif.save_scenario("sweep1_integration", ENTITY_A, "2025-Q1", adjustments)
     assert scenario_id is not None
@@ -223,4 +225,4 @@ def test_scenario_persistence_roundtrip(whatif):
 
     loaded = whatif.load_scenario(scenario_id)
     assert loaded["name"] == "sweep1_integration"
-    assert loaded["baseline"]["revenue"]["total"] == M_Q1_REV
+    assert loaded["baseline"]["revenue"]["total"] == m_q1_rev

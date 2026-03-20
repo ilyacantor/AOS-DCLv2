@@ -1,29 +1,26 @@
 """
 Stage 3E Harness — EBITDA Bridge + Quality of Earnings
 Tests bridge construction and QoE analysis from ebitda_adjustment.* triples.
+Expected values fetched from Farm's ground truth API at runtime (B10).
 """
 import pytest
 from backend.engine.ebitda_bridge_v2 import EBITDABridgeV2
 from backend.engine.qoe_v2 import QualityOfEarningsV2
 
-from tests.conftest import TENANT_ID, RUN_ID
+from tests.conftest import TENANT_ID, RUN_ID, gt_atemporal
 
-M_ADJ_TOTAL = 136.58
-C_ADJ_TOTAL = 14.4
-COMBINED_ADJ_TOTAL = 150.98
-ADJUSTMENT_TYPE_COUNT = 8
 
-M_ADJ_FACILITY = 19.86
-M_ADJ_HEADCOUNT = 27.65
-M_ADJ_LEGAL = 11.23
-M_ADJ_PROF_FEES = 6.38
-M_ADJ_OWNER_COMP = 21.15
-M_ADJ_RELATED_PARTY = 4.25
-M_ADJ_RUN_RATE = 33.88
-M_ADJ_TECH = 12.18
-
-CONF_LEGAL = 0.85
-CONF_TECH = 0.65
+def _sum_ebitda_adjustments(entity: str) -> float:
+    """Sum all EBITDA adjustment amount_current values for an entity from ground truth."""
+    from tests.conftest import _get_ground_truth
+    gt = _get_ground_truth()
+    agt = gt.get("atemporal_ground_truth", {}).get(entity, {})
+    total = sum(
+        props.get("amount_current", 0)
+        for concept, props in agt.items()
+        if concept.startswith("ebitda_adjustment.")
+    )
+    return round(total, 2)
 
 
 @pytest.fixture
@@ -38,33 +35,34 @@ def qoe():
 # --- Test 1: Meridian bridge total ---
 def test_meridian_total_adjustments(bridge):
     b = bridge.get_bridge("meridian")
-    assert b["total_adjustments"] == M_ADJ_TOTAL
+    assert b["total_adjustments"] == _sum_ebitda_adjustments("meridian")
 
 # --- Test 2: Cascadia bridge total ---
 def test_cascadia_total_adjustments(bridge):
     b = bridge.get_bridge("cascadia")
-    assert b["total_adjustments"] == C_ADJ_TOTAL
+    assert b["total_adjustments"] == _sum_ebitda_adjustments("cascadia")
 
 # --- Test 3: Combined bridge total ---
 def test_combined_total_adjustments(bridge):
     b = bridge.get_bridge()  # None = combined
-    assert b["total_adjustments"] == COMBINED_ADJ_TOTAL
+    expected = round(_sum_ebitda_adjustments("meridian") + _sum_ebitda_adjustments("cascadia"), 2)
+    assert b["total_adjustments"] == expected
 
 # --- Test 4: Adjustment count ---
 def test_adjustment_count(bridge):
     b = bridge.get_bridge("meridian")
-    assert len(b["adjustments"]) == ADJUSTMENT_TYPE_COUNT
+    assert len(b["adjustments"]) == 8
 
 # --- Test 5: Individual adjustment values ---
 def test_meridian_facility_adjustment(bridge):
     b = bridge.get_bridge("meridian")
     facility = next(a for a in b["adjustments"] if "facility" in a["concept"])
-    assert facility["amount"] == M_ADJ_FACILITY
+    assert facility["amount"] == gt_atemporal("meridian", "ebitda_adjustment.facility_consolidation")
 
 def test_meridian_headcount_adjustment(bridge):
     b = bridge.get_bridge("meridian")
     headcount = next(a for a in b["adjustments"] if "headcount" in a["concept"])
-    assert headcount["amount"] == M_ADJ_HEADCOUNT
+    assert headcount["amount"] == gt_atemporal("meridian", "ebitda_adjustment.headcount_synergies")
 
 # --- Test 6: Lever classification ---
 def test_lever_classification(bridge):
@@ -82,15 +80,15 @@ def test_bridge_arithmetic(bridge):
 def test_confidence_scores(bridge):
     b = bridge.get_bridge("meridian")
     legal = next(a for a in b["adjustments"] if "legal" in a["concept"])
-    assert legal["confidence"] == CONF_LEGAL
+    assert legal["confidence"] == gt_atemporal("meridian", "ebitda_adjustment.non_recurring_legal", "confidence")
     tech = next(a for a in b["adjustments"] if "technology" in a["concept"])
-    assert tech["confidence"] == CONF_TECH
+    assert tech["confidence"] == gt_atemporal("meridian", "ebitda_adjustment.technology_consolidation", "confidence")
 
 # --- Test 9: Comparison ---
 def test_bridge_comparison(bridge):
     comp = bridge.get_bridge_comparison()
-    assert comp["entity_a"]["total_adjustments"] == M_ADJ_TOTAL
-    assert comp["entity_b"]["total_adjustments"] == C_ADJ_TOTAL
+    assert comp["entity_a"]["total_adjustments"] == _sum_ebitda_adjustments("meridian")
+    assert comp["entity_b"]["total_adjustments"] == _sum_ebitda_adjustments("cascadia")
 
 # --- Test 10: Sensitivity matrix ---
 def test_sensitivity_matrix(bridge):
