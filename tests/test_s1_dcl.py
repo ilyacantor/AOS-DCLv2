@@ -80,8 +80,6 @@ def cleanup():
 def _cleanup_all():
     """Remove all test data from all tables."""
     with get_connection() as conn:
-        if conn is None:
-            return
         with conn.cursor() as cur:
             # Triples
             cur.execute(

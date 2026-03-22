@@ -121,12 +121,6 @@ def triples_overview(
     )
 
     with get_connection() as conn:
-        if conn is None:
-            raise HTTPException(
-                status_code=503,
-                detail="triples/overview failed: database connection unavailable. "
-                       "Check DATABASE_URL and Supabase connectivity.",
-            )
         with conn.cursor() as cur:
             cur.execute(sql_total, params)
             total_triples = cur.fetchone()[0]
@@ -196,11 +190,6 @@ def triples_runs():
     )
 
     with get_connection() as conn:
-        if conn is None:
-            raise HTTPException(
-                status_code=503,
-                detail="triples/runs failed: database connection unavailable.",
-            )
         with conn.cursor() as cur:
             cur.execute(sql)
             columns = [desc[0] for desc in cur.description]
@@ -223,11 +212,10 @@ def triples_runs():
         )
         entity_summary = {}
         with get_connection() as conn2:
-            if conn2 is not None:
-                with conn2.cursor() as cur2:
-                    cur2.execute(entity_sql, (run_id_str,))
-                    for erow in cur2.fetchall():
-                        entity_summary[erow[0]] = erow[1]
+            with conn2.cursor() as cur2:
+                cur2.execute(entity_sql, (run_id_str,))
+                for erow in cur2.fetchall():
+                    entity_summary[erow[0]] = erow[1]
 
         runs.append({
             "run_id": run_id_str,
@@ -304,11 +292,6 @@ def triples_identity_checks():
     """Run accounting identity checks against the live triple store."""
     # Get all entity_ids and periods
     with get_connection() as conn:
-        if conn is None:
-            raise HTTPException(
-                status_code=503,
-                detail="triples/identity-checks failed: database connection unavailable.",
-            )
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT DISTINCT entity_id FROM semantic_triples "
@@ -527,11 +510,6 @@ def triples_browse(
     )
 
     with get_connection() as conn:
-        if conn is None:
-            raise HTTPException(
-                status_code=503,
-                detail="triples/browse failed: database connection unavailable.",
-            )
         with conn.cursor() as cur:
             cur.execute(count_sql, params)
             total_count = cur.fetchone()[0]
@@ -604,11 +582,6 @@ def triples_browse_batch(req: BrowseBatchRequest):
     )
 
     with get_connection() as conn:
-        if conn is None:
-            raise HTTPException(
-                status_code=503,
-                detail="triples/browse-batch failed: database connection unavailable.",
-            )
         with conn.cursor() as cur:
             cur.execute(data_sql, params)
             columns = [desc[0] for desc in cur.description]
@@ -668,8 +641,6 @@ def triples_resolution_summary():
         type_col = "domain" if table == "resolution_workspaces_v2" else "workspace_type"
         try:
             with get_connection() as conn:
-                if conn is None:
-                    raise RuntimeError("DB unavailable")
                 with conn.cursor() as cur:
                     cur.execute(f"SELECT COUNT(*) FROM {table}")
                     total = cur.fetchone()[0]

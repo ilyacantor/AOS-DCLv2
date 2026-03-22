@@ -29,11 +29,6 @@ _PNL_CASCADE_CONCEPTS = [
 def _ensure_scenarios_table() -> None:
     """Create the whatif_scenarios table if it does not exist."""
     with get_connection() as conn:
-        if conn is None:
-            raise RuntimeError(
-                "WhatIfEngineV2: database connection unavailable. "
-                "Check DATABASE_URL and Supabase connectivity."
-            )
         with conn.cursor() as cur:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS whatif_scenarios (
@@ -248,11 +243,6 @@ class WhatIfEngineV2:
         scenario_id = str(uuid.uuid4())
 
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "WhatIfEngineV2.save_scenario: database connection unavailable. "
-                    "Check DATABASE_URL and Supabase connectivity."
-                )
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -278,11 +268,6 @@ class WhatIfEngineV2:
         _ensure_scenarios_table()
 
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "WhatIfEngineV2.list_scenarios: database connection unavailable. "
-                    "Check DATABASE_URL and Supabase connectivity."
-                )
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -313,11 +298,6 @@ class WhatIfEngineV2:
         _ensure_scenarios_table()
 
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "WhatIfEngineV2.load_scenario: database connection unavailable. "
-                    "Check DATABASE_URL and Supabase connectivity."
-                )
             with conn.cursor() as cur:
                 cur.execute(
                     """

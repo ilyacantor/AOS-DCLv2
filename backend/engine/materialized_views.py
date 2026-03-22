@@ -26,11 +26,6 @@ class MaterializedViews:
     def _query(self, sql: str, params: list) -> list[dict]:
         """Execute a parameterized query and return rows as dicts."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "MaterializedViews: database connection unavailable. "
-                    "Check DATABASE_URL and Supabase connectivity."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 columns = [desc[0] for desc in cur.description]

@@ -51,22 +51,11 @@ class EntityResolutionV2:
         """Get a database connection or raise."""
         conn_ctx = get_connection()
         conn = conn_ctx.__enter__()
-        if conn is None:
-            conn_ctx.__exit__(None, None, None)
-            raise RuntimeError(
-                "EntityResolutionV2: database connection unavailable. "
-                "Check DATABASE_URL and Supabase connectivity."
-            )
         return conn, conn_ctx
 
     def _query(self, sql: str, params: list | tuple) -> list[dict]:
         """Execute a parameterized query and return rows as dicts."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "EntityResolutionV2: database connection unavailable. "
-                    "Check DATABASE_URL and Supabase connectivity."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 columns = [desc[0] for desc in cur.description]
@@ -75,11 +64,6 @@ class EntityResolutionV2:
     def _execute(self, sql: str, params: list | tuple) -> list[dict]:
         """Execute a write query, commit, and return rows from RETURNING clause."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "EntityResolutionV2: database connection unavailable. "
-                    "Check DATABASE_URL and Supabase connectivity."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 conn.commit()
@@ -164,11 +148,6 @@ class EntityResolutionV2:
         )
 
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "EntityResolutionV2._batch_create_workspaces: "
-                    "database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 conn.commit()
@@ -384,11 +363,6 @@ class EntityResolutionV2:
             WHERE tenant_id = %s AND concept = %s AND is_active = true
         """
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "EntityResolutionV2._set_canonical_on_triples: "
-                    "database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, [uuid_val, self.tenant_id, concept])
                 conn.commit()
@@ -403,11 +377,6 @@ class EntityResolutionV2:
             WHERE tenant_id = %s AND concept = %s AND is_active = true
         """
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "EntityResolutionV2._clear_canonical_on_triples: "
-                    "database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, [self.tenant_id, concept])
                 conn.commit()

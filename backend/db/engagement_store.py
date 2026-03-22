@@ -30,10 +30,6 @@ class EngagementStore:
             json.dumps(engagement.get("config", {})),
         )
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "EngagementStore.create_engagement failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 conn.commit()
@@ -44,10 +40,6 @@ class EngagementStore:
         """Get engagement by engagement_id."""
         sql = "SELECT * FROM engagement_state WHERE engagement_id = %s"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "EngagementStore.get_by_engagement_id failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (engagement_id,))
                 row = cur.fetchone()
@@ -63,10 +55,6 @@ class EngagementStore:
             "WHERE engagement_id = %s RETURNING *"
         )
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "EngagementStore.update_status failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (status, engagement_id))
                 conn.commit()
@@ -80,10 +68,6 @@ class EngagementStore:
         """List all engagements for a tenant."""
         sql = "SELECT * FROM engagement_state WHERE tenant_id = %s ORDER BY created_at DESC"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "EngagementStore.list_engagements failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (tenant_id,))
                 columns = [desc[0] for desc in cur.description]
@@ -93,10 +77,6 @@ class EngagementStore:
         """Hard-delete an engagement (test cleanup only)."""
         sql = "DELETE FROM engagement_state WHERE engagement_id = %s"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "EngagementStore.delete_engagement failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (engagement_id,))
                 conn.commit()

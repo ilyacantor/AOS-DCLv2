@@ -13,10 +13,11 @@ Usage:
     from backend.core.db import get_connection, close_pool
 
     with get_connection() as conn:
-        if conn is None:
-            return  # DB unavailable — degrade gracefully
         with conn.cursor() as cur:
             cur.execute("SELECT ...")
+
+    # get_connection() raises RuntimeError or PoolExhausted on failure —
+    # it never returns None. Do not check `if conn is None`.
 """
 
 import os
@@ -74,6 +75,14 @@ def _ensure_pool() -> Optional[ThreadedConnectionPool]:
     if not database_url:
         return None
 
+    # Extract host for diagnostic messages (mask password)
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(database_url)
+        db_host = parsed.hostname or "unknown"
+    except Exception:
+        db_host = "unknown"
+
     try:
         _pool_last_attempt = now
         _pool = ThreadedConnectionPool(
@@ -82,19 +91,36 @@ def _ensure_pool() -> Optional[ThreadedConnectionPool]:
             dsn=database_url,
             connect_timeout=DB_CONNECT_TIMEOUT,
         )
+
+        # Startup validation: verify we can actually use the pool
+        test_conn = _pool.getconn()
+        try:
+            with test_conn.cursor() as cur:
+                cur.execute("SELECT 1")
+        finally:
+            _pool.putconn(test_conn)
+
         _pool_initialized = True
         logger.info(
             f"[db] Shared Postgres pool initialised "
             f"(min={POOL_MIN_CONN}, max={POOL_MAX_CONN}, "
             f"connect_timeout={DB_CONNECT_TIMEOUT}s, "
-            f"getconn_timeout={POOL_GETCONN_TIMEOUT}s)"
+            f"getconn_timeout={POOL_GETCONN_TIMEOUT}s, "
+            f"host={db_host})"
         )
         return _pool
     except Exception as e:
+        if _pool is not None:
+            try:
+                _pool.closeall()
+            except Exception:
+                pass
         _pool = None
         raise RuntimeError(
-            f"[db] Postgres pool initialization failed: {e} — "
-            f"check DATABASE_URL and Supabase connectivity"
+            f"DCL startup: cannot connect to database. "
+            f"POOL_MAX_CONN={POOL_MAX_CONN}, host={db_host}. "
+            f"Check DATABASE_URL and instance max_connections. "
+            f"Error: {e}"
         ) from e
 
 

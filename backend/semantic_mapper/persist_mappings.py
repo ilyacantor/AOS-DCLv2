@@ -34,12 +34,6 @@ class MappingPersistence:
         for modules like schema_loader that catch exceptions).
         """
         with get_connection() as conn:
-            if conn is None:
-                try:
-                    import psycopg2
-                    raise psycopg2.OperationalError("Connection pool not available")
-                except ImportError:
-                    raise RuntimeError("Connection pool not available")
             yield conn
 
     def save_mappings(self, mappings: List[Mapping], clear_existing: bool = False) -> int:

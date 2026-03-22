@@ -182,14 +182,6 @@ def merge_overview(
 ):
     """COFA merge overview — side-by-side comparison of two entities."""
     with get_connection() as conn:
-        if conn is None:
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "merge/overview failed: database connection unavailable. "
-                    "Check DATABASE_URL and Supabase connectivity."
-                ),
-            )
         with conn.cursor() as cur:
             # --- Entity resolution ---
             acq_id, tgt_id, eng_id = _resolve_entities(cur, acquirer_id, target_id)

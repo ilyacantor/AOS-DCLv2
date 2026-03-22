@@ -97,28 +97,22 @@ CREATE INDEX IF NOT EXISTS idx_project_customer_map_customer
 """
 
 
-def ensure_schema() -> bool:
+def ensure_schema() -> None:
     """Create dimension_values and relationship tables if they don't exist.
 
-    Returns True on success, False on failure (DB unavailable).
+    Raises on failure — schema creation is a fatal startup prerequisite.
     """
     with get_connection() as conn:
-        if conn is None:
-            logger.error(
-                "Cannot create dimension hierarchy schema — database unavailable. "
-                "Set DATABASE_URL to a valid Supabase PostgreSQL connection string."
-            )
-            return False
         try:
             with conn.cursor() as cur:
                 cur.execute(_SCHEMA_SQL)
             conn.commit()
             logger.info("[dimension_hierarchy] Schema ensured (dimension_values + relationship tables)")
-            return True
         except Exception as e:
             conn.rollback()
-            logger.error(f"[dimension_hierarchy] Schema creation failed: {e}", exc_info=True)
-            return False
+            raise RuntimeError(
+                f"[dimension_hierarchy] Schema creation failed: {e}"
+            ) from e
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -176,11 +170,6 @@ class DimensionHierarchyStore:
     def insert_value(self, dv: DimensionValue) -> bool:
         """Insert a dimension value. Returns True on success."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "Cannot insert dimension value — database unavailable. "
-                    "Ensure DATABASE_URL is set."
-                )
             try:
                 with conn.cursor() as cur:
                     cur.execute(
@@ -221,11 +210,6 @@ class DimensionHierarchyStore:
         if not values:
             return 0
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "Cannot insert dimension values — database unavailable. "
-                    "Ensure DATABASE_URL is set."
-                )
             try:
                 with conn.cursor() as cur:
                     args = [
@@ -267,8 +251,6 @@ class DimensionHierarchyStore:
     def get_value(self, dimension_id: str, value: str) -> Optional[DimensionValue]:
         """Get a single dimension value."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable for dimension query")
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -287,8 +269,6 @@ class DimensionHierarchyStore:
     def get_children(self, dimension_id: str, parent_value: str) -> List[DimensionValue]:
         """Get immediate children of a value in a dimension."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable for dimension query")
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -320,8 +300,6 @@ class DimensionHierarchyStore:
             return [dv]
         # Single query for all path components instead of N+1
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable for dimension ancestor query")
             with conn.cursor() as cur:
                 placeholders = ",".join(["%s"] * len(parts))
                 cur.execute(
@@ -342,8 +320,6 @@ class DimensionHierarchyStore:
     def get_descendants(self, dimension_id: str, value: str) -> List[DimensionValue]:
         """Get all descendants of a value using path prefix matching."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable for dimension query")
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -365,8 +341,6 @@ class DimensionHierarchyStore:
         if dv.parent_id is None:
             # Root level — siblings are other root nodes
             with get_connection() as conn:
-                if conn is None:
-                    raise RuntimeError("Database unavailable")
                 with conn.cursor() as cur:
                     cur.execute(
                         """
@@ -385,8 +359,6 @@ class DimensionHierarchyStore:
     def get_roots(self, dimension_id: str) -> List[DimensionValue]:
         """Get root values (depth=0) for a dimension."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable")
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -403,8 +375,6 @@ class DimensionHierarchyStore:
     def get_at_depth(self, dimension_id: str, depth: int) -> List[DimensionValue]:
         """Get all values at a specific depth for a dimension."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable")
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -421,8 +391,6 @@ class DimensionHierarchyStore:
     def get_max_depth(self, dimension_id: str) -> int:
         """Get the maximum depth for a dimension."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable")
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT COALESCE(MAX(depth), 0) FROM dimension_values WHERE dimension_id = %s",
@@ -434,8 +402,6 @@ class DimensionHierarchyStore:
     def get_all_values(self, dimension_id: str) -> List[DimensionValue]:
         """Get all values for a dimension, ordered by depth then value."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable")
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -452,8 +418,6 @@ class DimensionHierarchyStore:
     def get_dimension_ids(self) -> List[str]:
         """Get all distinct dimension IDs."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable")
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT DISTINCT dimension_id FROM dimension_values ORDER BY dimension_id"
@@ -715,8 +679,6 @@ class DrillThroughStore:
                    entity_id: Optional[str] = None) -> bool:
         """Insert or update a rep assignment."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable")
             try:
                 with conn.cursor() as cur:
                     cur.execute(
@@ -740,8 +702,6 @@ class DrillThroughStore:
                         rep_id: str, entity_id: Optional[str] = None) -> bool:
         """Insert or update a customer-rep mapping."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable")
             try:
                 with conn.cursor() as cur:
                     cur.execute(
@@ -765,8 +725,6 @@ class DrillThroughStore:
                        customer_id: str, entity_id: Optional[str] = None) -> bool:
         """Insert or update a project-customer mapping."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable")
             try:
                 with conn.cursor() as cur:
                     cur.execute(
@@ -789,8 +747,6 @@ class DrillThroughStore:
     def get_reps_by_region(self, region: str) -> List[Dict[str, Any]]:
         """Get all reps assigned to a region."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable")
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT rep_id, rep_name, region FROM rep_assignments WHERE region = %s ORDER BY rep_name",
@@ -801,8 +757,6 @@ class DrillThroughStore:
     def get_customers_by_rep(self, rep_id: str) -> List[Dict[str, Any]]:
         """Get all customers assigned to a rep."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable")
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT customer_id, customer_name, rep_id FROM customer_rep_map WHERE rep_id = %s ORDER BY customer_name",
@@ -813,8 +767,6 @@ class DrillThroughStore:
     def get_projects_by_customer(self, customer_id: str) -> List[Dict[str, Any]]:
         """Get all projects for a customer."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable")
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT project_id, project_name, customer_id FROM project_customer_map WHERE customer_id = %s ORDER BY project_name",
@@ -825,8 +777,6 @@ class DrillThroughStore:
     def get_all_regions(self) -> List[str]:
         """Get distinct regions with reps."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable")
             with conn.cursor() as cur:
                 cur.execute("SELECT DISTINCT region FROM rep_assignments ORDER BY region")
                 return [r[0] for r in cur.fetchall()]
@@ -837,8 +787,6 @@ class DrillThroughStore:
         Returns counts of orphans at each level (0 = clean).
         """
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError("Database unavailable")
             with conn.cursor() as cur:
                 # Orphan reps: reps with no region in dimension_values
                 cur.execute("""

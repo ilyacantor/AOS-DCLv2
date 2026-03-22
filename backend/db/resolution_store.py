@@ -33,10 +33,6 @@ class ResolutionStore:
             workspace.get("decided_at"),
         )
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "ResolutionStore.create_workspace failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 conn.commit()
@@ -47,10 +43,6 @@ class ResolutionStore:
         """Get a workspace by ID."""
         sql = "SELECT * FROM resolution_workspaces WHERE id = %s"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "ResolutionStore.get_workspace failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (workspace_id,))
                 row = cur.fetchone()
@@ -75,10 +67,6 @@ class ResolutionStore:
             workspace_id,
         )
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "ResolutionStore.update_status failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 conn.commit()
@@ -103,10 +91,6 @@ class ResolutionStore:
         sql = f"SELECT * FROM resolution_workspaces WHERE {where} ORDER BY created_at DESC"
 
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "ResolutionStore.list_workspaces failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 columns = [desc[0] for desc in cur.description]
@@ -116,10 +100,6 @@ class ResolutionStore:
         """Hard-delete a workspace (test cleanup only)."""
         sql = "DELETE FROM resolution_workspaces WHERE id = %s"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "ResolutionStore.delete_workspace failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (workspace_id,))
                 conn.commit()

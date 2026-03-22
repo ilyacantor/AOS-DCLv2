@@ -531,6 +531,15 @@ class DCLEngine:
         # ── L3: Persona nodes + L2→L3 consumption links ──
         persona_concepts = self.persona_view.get_relevant_concepts(personas)
 
+        # Count how many personas consume each domain so we can split
+        # the flow proportionally and preserve the Sankey invariant:
+        # total flow into each L2 node == total flow out.
+        domain_consumer_count: Dict[str, int] = {}
+        for persona in personas:
+            for concept_id in persona_concepts.get(persona.value, []):
+                if concept_id in domains:
+                    domain_consumer_count[concept_id] = domain_consumer_count.get(concept_id, 0) + 1
+
         for persona in personas:
             bll_id = f"bll_{persona.value.lower()}"
             nodes.append(GraphNode(
@@ -546,12 +555,13 @@ class DCLEngine:
             relevant_concepts = persona_concepts.get(persona.value, [])
             for concept_id in relevant_concepts:
                 if concept_id in domains:
+                    split_value = float(domains[concept_id]) / domain_consumer_count[concept_id]
                     link_id = f"link_{concept_id}_{persona.value}_{uuid.uuid4().hex[:8]}"
                     links.append(GraphLink(
                         id=link_id,
                         source=f"ontology_{concept_id}",
                         target=bll_id,
-                        value=float(domains[concept_id]),
+                        value=split_value,
                         flow_type="consumption",
                         info_summary=f"{concept_id} consumed by {persona.value} BLL",
                     ))

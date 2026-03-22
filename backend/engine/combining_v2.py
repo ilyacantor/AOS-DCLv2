@@ -103,11 +103,6 @@ class CombiningEngineV2:
     def _query_cofa_triples(self) -> list[tuple[str, str, str]]:
         """Query all COFA conflict triples. Returns list of (concept, property, value)."""
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "CombiningEngineV2: database connection unavailable. "
-                    "Check DATABASE_URL and Supabase connectivity."
-                )
             with conn.cursor() as cur:
                 cur.execute(
                     """

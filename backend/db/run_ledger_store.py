@@ -37,10 +37,6 @@ class RunLedgerStore:
             step.get("error"),
         )
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "RunLedgerStore.create_step failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 conn.commit()
@@ -51,10 +47,6 @@ class RunLedgerStore:
         """Get a step by ID."""
         sql = "SELECT * FROM run_ledger WHERE id = %s"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "RunLedgerStore.get_step failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (step_id,))
                 row = cur.fetchone()
@@ -67,10 +59,6 @@ class RunLedgerStore:
         """Get step by idempotency key."""
         sql = "SELECT * FROM run_ledger WHERE idempotency_key = %s"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "RunLedgerStore.get_by_idempotency_key failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (key,))
                 row = cur.fetchone()
@@ -87,10 +75,6 @@ class RunLedgerStore:
             "WHERE id = %s RETURNING *"
         )
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "RunLedgerStore.update_status failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (status, error, outputs_ref, status, step_id))
                 conn.commit()
@@ -112,10 +96,6 @@ class RunLedgerStore:
         sql = f"SELECT * FROM run_ledger WHERE {where} ORDER BY created_at"
 
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "RunLedgerStore.list_steps failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 columns = [desc[0] for desc in cur.description]
@@ -125,10 +105,6 @@ class RunLedgerStore:
         """Find steps where upstream_deps array contains the given value."""
         sql = "SELECT * FROM run_ledger WHERE %s = ANY(upstream_deps) ORDER BY created_at"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "RunLedgerStore.find_downstream failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (upstream_dep,))
                 columns = [desc[0] for desc in cur.description]
@@ -138,10 +114,6 @@ class RunLedgerStore:
         """Hard-delete all steps for an engagement (test cleanup only)."""
         sql = "DELETE FROM run_ledger WHERE engagement_id = %s"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "RunLedgerStore.delete_by_engagement failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (engagement_id,))
                 conn.commit()
@@ -151,10 +123,6 @@ class RunLedgerStore:
         """Hard-delete a step by idempotency key (test cleanup only)."""
         sql = "DELETE FROM run_ledger WHERE idempotency_key = %s"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "RunLedgerStore.delete_by_idempotency_key failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (key,))
                 conn.commit()

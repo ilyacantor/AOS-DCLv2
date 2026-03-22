@@ -32,11 +32,6 @@ class TripleStore:
         sql = f"INSERT INTO semantic_triples ({col_names}) VALUES ({placeholders})"
 
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.insert_triples failed: database connection unavailable. "
-                    "Check DATABASE_URL and Supabase connectivity."
-                )
             with conn.cursor() as cur:
                 rows = []
                 for t in triples:
@@ -79,10 +74,6 @@ class TripleStore:
         sql = f"SELECT * FROM semantic_triples WHERE {where} ORDER BY created_at"
 
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.get_triples failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 columns = [desc[0] for desc in cur.description]
@@ -92,10 +83,6 @@ class TripleStore:
         """All triples from a run."""
         sql = "SELECT * FROM semantic_triples WHERE run_id = %s ORDER BY created_at"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.get_triples_by_run failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (run_id,))
                 columns = [desc[0] for desc in cur.description]
@@ -122,10 +109,6 @@ class TripleStore:
             f"  AND entity_id IN ({placeholders})"
         )
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.deactivate_cofa_triples failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, all_ids)
                 conn.commit()
@@ -155,10 +138,6 @@ class TripleStore:
         )
         params = [tenant_id] + entity_ids
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.deactivate_entity_triples failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 conn.commit()
@@ -177,10 +156,6 @@ class TripleStore:
             "WHERE is_active = true AND tenant_id = %s"
         )
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.deactivate_tenant_triples failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (tenant_id,))
                 conn.commit()
@@ -193,10 +168,6 @@ class TripleStore:
         """
         sql = "DELETE FROM semantic_triples WHERE is_active = false"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.delete_inactive failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql)
                 conn.commit()
@@ -209,10 +180,6 @@ class TripleStore:
             "WHERE run_id = %s AND is_active = true"
         )
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.deactivate_run failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (run_id,))
                 conn.commit()
@@ -237,10 +204,6 @@ class TripleStore:
         )
 
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.count_by_domain failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 return {row[0]: row[1] for row in cur.fetchall()}
@@ -249,10 +212,6 @@ class TripleStore:
         """Count triples for a given run_id (active only)."""
         sql = "SELECT COUNT(*) FROM semantic_triples WHERE run_id = %s AND is_active = true"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.count_by_run failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (run_id,))
                 return cur.fetchone()[0]
@@ -261,10 +220,6 @@ class TripleStore:
         """Check if any triples exist for a run_id."""
         sql = "SELECT EXISTS(SELECT 1 FROM semantic_triples WHERE run_id = %s)"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.run_exists failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (run_id,))
                 return cur.fetchone()[0]
@@ -279,10 +234,6 @@ class TripleStore:
             "GROUP BY run_id"
         )
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.get_run_info failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (run_id,))
                 row = cur.fetchone()
@@ -313,10 +264,6 @@ class TripleStore:
             params = ()
 
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.list_runs failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 columns = [desc[0] for desc in cur.description]
@@ -332,10 +279,6 @@ class TripleStore:
             params = ()
 
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.count_active failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 return cur.fetchone()[0]
@@ -351,11 +294,6 @@ class TripleStore:
             "GROUP BY run_id ORDER BY MIN(created_at) DESC"
         )
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.get_source_run_ids failed: database connection unavailable. "
-                    "Check DATABASE_URL and Supabase connectivity."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql)
                 columns = [desc[0] for desc in cur.description]
@@ -380,11 +318,6 @@ class TripleStore:
             "GROUP BY domain"
         )
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.get_persona_domain_stats failed: database connection unavailable. "
-                    "Check DATABASE_URL and Supabase connectivity."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql)
                 domain_stats: dict[str, dict] = {}
@@ -413,11 +346,6 @@ class TripleStore:
                     f"AND split_part(concept, '.', 1) IN ({placeholders})"
                 )
                 with get_connection() as conn2:
-                    if conn2 is None:
-                        raise RuntimeError(
-                            "TripleStore.get_persona_domain_stats failed: "
-                            "database connection unavailable on source count query."
-                        )
                     with conn2.cursor() as cur2:
                         cur2.execute(src_sql, matched_domains)
                         data_sources = cur2.fetchone()[0]
@@ -458,11 +386,6 @@ class TripleStore:
         )
 
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.get_sankey_aggregation failed: database connection unavailable. "
-                    "Check DATABASE_URL and Supabase connectivity."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 columns = [desc[0] for desc in cur.description]
@@ -472,10 +395,6 @@ class TripleStore:
         """Hard-delete all triples for a run (test cleanup only)."""
         sql = "DELETE FROM semantic_triples WHERE run_id = %s"
         with get_connection() as conn:
-            if conn is None:
-                raise RuntimeError(
-                    "TripleStore.delete_by_run failed: database connection unavailable."
-                )
             with conn.cursor() as cur:
                 cur.execute(sql, (run_id,))
                 conn.commit()

@@ -107,10 +107,6 @@ def _get_active_engagement() -> dict | None:
         "ORDER BY created_at DESC LIMIT 1"
     )
     with get_connection() as conn:
-        if conn is None:
-            raise RuntimeError(
-                "v2_helpers._get_active_engagement: database connection unavailable"
-            )
         with conn.cursor() as cur:
             cur.execute(sql)
             row = cur.fetchone()
@@ -127,10 +123,6 @@ def _tenant_has_active_triples(tenant_id: str) -> bool:
         "WHERE tenant_id = %s AND is_active = true LIMIT 1"
     )
     with get_connection() as conn:
-        if conn is None:
-            raise RuntimeError(
-                "v2_helpers._tenant_has_active_triples: database connection unavailable"
-            )
         with conn.cursor() as cur:
             cur.execute(sql, (tenant_id,))
             return cur.fetchone() is not None
@@ -146,10 +138,6 @@ def _get_latest_tenant() -> str | None:
         LIMIT 1
     """
     with get_connection() as conn:
-        if conn is None:
-            raise RuntimeError(
-                "v2_helpers._get_latest_tenant: database connection unavailable"
-            )
         with conn.cursor() as cur:
             cur.execute(sql)
             row = cur.fetchone()
@@ -195,10 +183,6 @@ def _get_latest_run(
         params = [tenant_id]
 
     with get_connection() as conn:
-        if conn is None:
-            raise RuntimeError(
-                "v2_helpers._get_latest_run: database connection unavailable"
-            )
         with conn.cursor() as cur:
             cur.execute(sql, params)
             row = cur.fetchone()

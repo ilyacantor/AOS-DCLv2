@@ -243,8 +243,6 @@ class PipeDefinitionStore:
     def _ensure_pg_tables(self) -> None:
         """Create pipe_definitions and pipe_export_receipts tables if they don't exist."""
         with _pg_conn() as conn:
-            if conn is None:
-                return
             try:
                 with conn.cursor() as cur:
                     cur.execute(_CREATE_DEFINITIONS_TABLE)
@@ -286,8 +284,6 @@ class PipeDefinitionStore:
     def _load_from_postgres(self) -> None:
         """Load all pipe definitions and export receipts from Postgres."""
         with _pg_conn() as conn:
-            if conn is None:
-                return
             try:
                 with conn.cursor() as cur:
                     cur.execute(
@@ -364,8 +360,6 @@ class PipeDefinitionStore:
         from psycopg2.extras import execute_values
 
         with _pg_conn() as conn:
-            if conn is None:
-                return
             try:
                 with conn.cursor() as cur:
                     # Batch upsert all definitions via execute_values
@@ -753,8 +747,6 @@ class PipeDefinitionStore:
     def _lookup_from_postgres(self, pipe_id: str) -> Optional[PipeDefinition]:
         """Single-row lookup from Postgres by primary key."""
         with _pg_conn() as conn:
-            if conn is None:
-                return None
             try:
                 with conn.cursor() as cur:
                     cur.execute(
