@@ -3,37 +3,65 @@ import { GraphSnapshot, PersonaId, PersonaStats } from './types';
 import { MonitorPanel } from './components/MonitorPanel';
 import { SnapshotPanel } from './components/SnapshotPanel';
 import { SankeyGraph } from './components/SankeyGraph';
-import { EnterpriseDashboard } from './components/EnterpriseDashboard';
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/resizable';
+import { ResizablePanelGroup, ResizablePanel } from './components/ui/resizable';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import { Toaster } from './components/ui/toaster';
 import { useToast } from './hooks/use-toast';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import { UserGuide } from './components/UserGuide';
-import { ReconciliationPanel } from './components/ReconciliationPanel';
-import { IngestionPanel } from './components/IngestionPanel';
-import { TriplesPanel } from './components/TriplesPanel';
+import { IngestTab } from './components/IngestTab';
+import { ContextTab } from './components/ContextTab';
+import { DashboardTab } from './components/DashboardTab';
+import { ReconTab } from './components/ReconTab';
 import { MergePanel } from './components/MergePanel';
+import { useEntities } from './components/RunSelector';
 
-type MainView = 'graph' | 'dashboard' | 'triples' | 'guide' | 'recon' | 'ingest' | 'merge';
+type MainView = 'graph' | 'dashboard' | 'context' | 'guide' | 'recon' | 'ingest' | 'merge';
 
 const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO', 'CHRO'];
 
+const CACHE_KEY = 'dcl_last_run';
+
+function loadCachedRun(): { graph: GraphSnapshot; runId: string } | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.graph?.nodes && parsed?.runId) return parsed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedRun(graph: GraphSnapshot, runId: string): void {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ graph, runId }));
+  } catch {
+    // localStorage full or unavailable — non-critical
+  }
+}
+
 function App() {
-  const [graphData, setGraphData] = useState<GraphSnapshot | null>(null);
+  const cached = useRef(loadCachedRun());
+  const [graphData, setGraphData] = useState<GraphSnapshot | null>(cached.current?.graph ?? null);
   const [runMode, setRunMode] = useState<'Dev' | 'Prod'>('Dev');
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>(['CFO', 'CRO', 'COO', 'CTO', 'CHRO']);
-  const [runId, setRunId] = useState<string | undefined>(undefined);
+  const [runId, setRunId] = useState<string | undefined>(cached.current?.runId);
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [mainView, setMainView] = useState<MainView>('graph');
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isCachedView, setIsCachedView] = useState(cached.current !== null);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [personaDropdownOpen, setPersonaDropdownOpen] = useState(false);
   const [selectedSnapshotName, setSelectedSnapshotName] = useState<string | undefined>(undefined);
   const personaDropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Shared entity state — all 4 monitoring tabs use this
+  const { entities, selectedEntityId, setSelectedEntityId, loading: entitiesLoading, error: entitiesError } = useEntities();
 
   useEffect(() => {
     if (!isRunning) return;
@@ -129,8 +157,13 @@ function App() {
   useEffect(() => {
     if (autoLoadedRef.current) return;
     autoLoadedRef.current = true;
-    setIsRunning(true);
-    setElapsedTime(0);
+
+    // If we have cached data, show it immediately — no spinner needed
+    const hasCached = cached.current !== null;
+    if (!hasCached) {
+      setIsRunning(true);
+      setElapsedTime(0);
+    }
 
     const runPromise = fetch('/api/dcl/run', {
       method: 'POST',
@@ -158,13 +191,19 @@ function App() {
             runMetrics: data.run_metrics,
           },
         };
-        setGraphData(prev => prev || gv);
-        setRunId(prev => prev || data.run_id);
+        setGraphData(gv);
+        setRunId(data.run_id);
+        setIsCachedView(false);
         setIsRunning(false);
+        setLoadError(null);
+        saveCachedRun(gv, data.run_id);
       })
       .catch((err) => {
         console.error('[App] Auto-load failed:', err);
-        setLoadError(`Auto-load failed: ${err instanceof Error ? err.message : 'Could not connect to DCL Engine'}. Start the backend and click Run.`);
+        if (!hasCached) {
+          // No cached data and backend unavailable — show error
+          setLoadError(`Auto-load failed: ${err instanceof Error ? err.message : 'Could not connect to DCL Engine'}. Start the backend and click Run.`);
+        }
         setIsRunning(false);
       });
   }, []);
@@ -226,7 +265,9 @@ function App() {
       };
       setGraphData(graphWithViews);
       setRunId(data.run_id);
+      setIsCachedView(false);
       setIsRunning(false);
+      saveCachedRun(graphWithViews, data.run_id);
       toast({ title: 'Pipeline Complete', description: `${data.graph.nodes.length} nodes, ${data.graph.links.length} links` });
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to run pipeline';
@@ -251,7 +292,7 @@ function App() {
   const navTabs: { id: MainView; label: string }[] = [
     { id: 'graph', label: 'Graph' },
     { id: 'dashboard', label: 'Dashboard' },
-    { id: 'triples', label: 'Triples' },
+    { id: 'context', label: 'Context' },
     { id: 'recon', label: 'Recon' },
     { id: 'ingest', label: 'Ingest' },
     { id: 'merge', label: 'Merge' },
@@ -364,6 +405,9 @@ function App() {
                     {(graphData.meta.runMetrics.processingMs / 1000).toFixed(1)}s
                   </span>
                 )}
+                {isCachedView && !isRunning && (
+                  <span className="text-xs text-yellow-500" title="Displaying last successful run from cache">cached</span>
+                )}
               </div>
             </div>
         </div>
@@ -373,35 +417,16 @@ function App() {
       <div className="flex-1 overflow-hidden">
         {mainView === 'merge' ? (
           <MergePanel />
-        ) : mainView === 'triples' ? (
-          <TriplesPanel />
+        ) : mainView === 'context' ? (
+          <ContextTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
         ) : mainView === 'ingest' ? (
-          <IngestionPanel />
+          <IngestTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
         ) : mainView === 'recon' ? (
-          <ReconciliationPanel runId={runId} />
+          <ReconTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
         ) : mainView === 'guide' ? (
           <UserGuide />
         ) : mainView === 'dashboard' ? (
-          <ResizablePanelGroup direction="horizontal">
-            <ResizablePanel defaultSize={75} minSize={50}>
-              <div className="h-full w-full">
-                <EnterpriseDashboard data={graphData} runId={runId} />
-              </div>
-            </ResizablePanel>
-
-            <ResizableHandle className="bg-border/50 w-1.5 hover:bg-primary/50 transition-colors" />
-
-            <ResizablePanel defaultSize={25} minSize={15}>
-              <div className="h-full border-l bg-sidebar">
-                <SnapshotPanel
-                currentSnapshotName={graphData?.meta?.snapshotName}
-                runMetrics={graphData?.meta?.runMetrics}
-                aodRunId={graphData?.meta?.aodRunId}
-                onSnapshotSelect={setSelectedSnapshotName}
-              />
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
+          <DashboardTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
         ) : (
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel defaultSize={70} minSize={40}>
