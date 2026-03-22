@@ -185,7 +185,7 @@ class TripleStore:
                 conn.commit()
                 return cur.rowcount
 
-    def count_by_domain(self, tenant_id: str | None, run_id: str | None = None) -> dict:
+    def count_by_domain(self, tenant_id: str | None, run_id: str | None = None, entity_id: str | None = None) -> dict:
         """Count triples grouped by root concept domain (first segment before dot)."""
         clauses = ["is_active = true"]
         params: list = []
@@ -195,6 +195,9 @@ class TripleStore:
         if run_id is not None:
             clauses.append("run_id = %s")
             params.append(run_id)
+        if entity_id is not None:
+            clauses.append("entity_id = %s")
+            params.append(entity_id)
 
         where = " AND ".join(clauses)
         sql = (

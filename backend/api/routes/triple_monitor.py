@@ -47,6 +47,7 @@ def _entity_display_name(entity_id: str) -> str:
     return entity_id.replace("_", " ").title()
 
 
+
 router = APIRouter(tags=["Triple Monitor"])
 
 _triple_store = TripleStore()
@@ -72,6 +73,37 @@ def _serialize_value(val):
 def _serialize_row(row: dict) -> dict:
     """Serialize all values in a row dict for JSON response."""
     return {k: _serialize_value(v) for k, v in row.items()}
+
+
+# ---------------------------------------------------------------------------
+# GET /api/dcl/entities
+# ---------------------------------------------------------------------------
+
+@router.get("/api/dcl/entities")
+def list_entities():
+    """Return distinct entities from semantic_triples with triple counts and recency."""
+    sql = (
+        "SELECT entity_id, COUNT(*) AS triple_count, MAX(created_at) AS latest_ingest "
+        "FROM semantic_triples WHERE is_active = true "
+        "GROUP BY entity_id ORDER BY latest_ingest DESC"
+    )
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            rows = cur.fetchall()
+
+    entities = []
+    for i, (entity_id, triple_count, latest_ingest) in enumerate(rows):
+        entities.append({
+            "entity_id": entity_id,
+            "display_name": _entity_display_name(entity_id),
+            "triple_count": triple_count,
+            "latest_ingest": latest_ingest.isoformat() if latest_ingest else None,
+            "is_most_recent": i == 0,
+        })
+
+    return {"entities": entities}
 
 
 # ---------------------------------------------------------------------------
@@ -179,8 +211,13 @@ def triples_overview(
 
 @router.get("/api/dcl/triples/runs")
 def triples_runs():
-    """List all ingest runs with per-run summary."""
-    sql = (
+    """List all ingest runs with per-run summary.
+
+    Uses a single connection for all 3 queries to avoid pool exhaustion
+    under concurrent load (N+1 pattern previously opened 2 connections
+    per run, exhausting the 10-connection pool).
+    """
+    runs_sql = (
         "SELECT run_id, tenant_id, COUNT(*) AS triple_count, "
         "MIN(created_at) AS created_at, "
         "bool_and(is_active) AS is_active "
@@ -189,41 +226,62 @@ def triples_runs():
         "ORDER BY MIN(created_at) DESC"
     )
 
+    domain_sql = (
+        "SELECT run_id, split_part(concept, '.', 1) AS domain, COUNT(*) AS cnt "
+        "FROM semantic_triples WHERE is_active = true "
+        "GROUP BY run_id, domain ORDER BY run_id, domain"
+    )
+
+    entity_sql = (
+        "SELECT run_id, entity_id, COUNT(*) AS cnt "
+        "FROM semantic_triples "
+        "GROUP BY run_id, entity_id"
+    )
+
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql)
+            cur.execute(runs_sql)
             columns = [desc[0] for desc in cur.description]
             raw_runs = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+            cur.execute(domain_sql)
+            domain_rows = cur.fetchall()
+
+            cur.execute(entity_sql)
+            entity_rows = cur.fetchall()
+
+    # Index domain summaries by run_id
+    domain_by_run: dict[str, dict[str, int]] = {}
+    for run_id_val, domain, cnt in domain_rows:
+        rid = str(run_id_val)
+        domain_by_run.setdefault(rid, {})[domain] = cnt
+
+    # Index entity summaries by run_id
+    entity_by_run: dict[str, dict[str, int]] = {}
+    for run_id_val, entity_id, cnt in entity_rows:
+        rid = str(run_id_val)
+        entity_by_run.setdefault(rid, {})[entity_id] = cnt
 
     runs = []
     for r in raw_runs:
         run_id_str = str(r["run_id"])
-
-        # Domain summary for this run
-        domain_summary = _triple_store.count_by_domain(
-            tenant_id=None, run_id=run_id_str,
+        tenant_id_str = str(r["tenant_id"])
+        entity_ids = list(entity_by_run.get(run_id_str, {}).keys())
+        real = [e for e in entity_ids if e and e != "combined"]
+        label = (
+            " · ".join(_entity_display_name(e) for e in sorted(real))
+            if real else tenant_id_str[:8]
         )
-
-        # Entity summary for this run
-        entity_sql = (
-            "SELECT entity_id, COUNT(*) AS cnt "
-            "FROM semantic_triples WHERE run_id = %s "
-            "GROUP BY entity_id"
-        )
-        entity_summary = {}
-        with get_connection() as conn2:
-            with conn2.cursor() as cur2:
-                cur2.execute(entity_sql, (run_id_str,))
-                for erow in cur2.fetchall():
-                    entity_summary[erow[0]] = erow[1]
 
         runs.append({
             "run_id": run_id_str,
+            "tenant_id": tenant_id_str,
+            "tenant_label": label,
             "timestamp": r["created_at"].isoformat() if r["created_at"] else None,
             "triple_count": r["triple_count"],
             "is_active": r["is_active"],
-            "domain_summary": domain_summary,
-            "entity_summary": entity_summary,
+            "domain_summary": domain_by_run.get(run_id_str, {}),
+            "entity_summary": entity_by_run.get(run_id_str, {}),
         })
 
     return {"runs": runs}
@@ -232,6 +290,16 @@ def triples_runs():
 # ---------------------------------------------------------------------------
 # GET /api/dcl/triples/identity-checks
 # ---------------------------------------------------------------------------
+
+# All concept prefixes needed for identity checks, grouped by check.
+_CONCEPT_PREFIXES = [
+    "asset", "liability", "equity",
+    "cash_flow.operating", "cash_flow.investing",
+    "cash_flow.financing", "cash_flow.net_change",
+    "revenue.total", "cogs.total", "opex.total", "pnl.ebitda",
+    "asset.current.cash",
+]
+
 
 def _coerce_to_float(raw) -> float | None:
     """Coerce a JSONB-stored value to float.
@@ -255,203 +323,182 @@ def _coerce_to_float(raw) -> float | None:
     return None  # unknown type, not coercible
 
 
-def _get_triple_value(
-    cur, entity_id: str, concept_prefix: str, period: str,
-) -> float | None:
-    """Fetch a single numeric triple value. Returns None if not found."""
+def _build_identity_lookup(cur) -> tuple[dict, list[str], list[str]]:
+    """Fetch all identity-relevant triples in one query.
+
+    Returns (lookup, entity_ids, periods) where lookup maps
+    (entity_id, concept_prefix, period) -> float value.
+    """
+    like_clauses = " OR ".join(["concept LIKE %s"] * len(_CONCEPT_PREFIXES))
+    like_params = [p + "%" for p in _CONCEPT_PREFIXES]
+
     sql = (
-        "SELECT value FROM semantic_triples "
-        "WHERE is_active = true AND entity_id = %s "
-        "AND concept LIKE %s AND property = 'amount' "
-        "AND period = %s "
-        "LIMIT 1"
+        "SELECT DISTINCT ON (entity_id, period, concept) "
+        "  entity_id, concept, period, value "
+        "FROM semantic_triples "
+        "WHERE is_active = true AND property = 'amount' "
+        f"  AND ({like_clauses}) "
+        "ORDER BY entity_id, period, concept"
     )
-    cur.execute(sql, (entity_id, concept_prefix + "%", period))
-    row = cur.fetchone()
-    if row is None:
-        return None
-    raw = row[0]
-    return _coerce_to_float(raw)
+    cur.execute(sql, like_params)
+    rows = cur.fetchall()
 
+    # Build lookup keyed by (entity_id, concept_prefix, period).
+    # For each row, find the longest matching prefix so that e.g.
+    # "asset.current.cash" matches prefix "asset.current.cash" not "asset".
+    # Sort prefixes longest-first for greedy matching.
+    sorted_prefixes = sorted(_CONCEPT_PREFIXES, key=len, reverse=True)
 
-def _sum_triple_values(
-    cur, entity_id: str, concept_prefixes: list[str], period: str,
-) -> float | None:
-    """Sum multiple triple values. Returns None if any are missing."""
-    total = 0.0
-    for prefix in concept_prefixes:
-        val = _get_triple_value(cur, entity_id, prefix, period)
+    lookup: dict[tuple[str, str, str], float] = {}
+    entity_set: set[str] = set()
+    period_set: set[str] = set()
+
+    for row in rows:
+        eid, concept, period, raw_val = row[0], row[1], row[2], row[3]
+        val = _coerce_to_float(raw_val)
         if val is None:
-            return None
-        total += val
-    return total
+            continue
+        entity_set.add(eid)
+        if period is not None:
+            period_set.add(period)
+
+        for prefix in sorted_prefixes:
+            if concept.startswith(prefix):
+                key = (eid, prefix, period)
+                if key not in lookup:
+                    lookup[key] = val
+                break
+
+    return lookup, sorted(entity_set), sorted(period_set)
+
+
+def _run_check(lookup, entity_ids, periods, name, description, lhs_prefixes, rhs_prefixes, lhs_signs=None, rhs_signs=None):
+    """Run a single identity check: sum(lhs) == sum(rhs) within tolerance."""
+    if lhs_signs is None:
+        lhs_signs = [1.0] * len(lhs_prefixes)
+    if rhs_signs is None:
+        rhs_signs = [1.0] * len(rhs_prefixes)
+
+    results = []
+    pass_count = 0
+    fail_count = 0
+
+    for eid in entity_ids:
+        for period in periods:
+            lhs = 0.0
+            rhs = 0.0
+            skip = False
+            for prefix, sign in zip(lhs_prefixes, lhs_signs):
+                v = lookup.get((eid, prefix, period))
+                if v is None:
+                    skip = True
+                    break
+                lhs += sign * v
+            if skip:
+                continue
+            for prefix, sign in zip(rhs_prefixes, rhs_signs):
+                v = lookup.get((eid, prefix, period))
+                if v is None:
+                    skip = True
+                    break
+                rhs += sign * v
+            if skip:
+                continue
+
+            status = "PASS" if abs(lhs - rhs) < 0.01 else "FAIL"
+            if status == "PASS":
+                pass_count += 1
+            else:
+                fail_count += 1
+            results.append({
+                "entity_id": eid,
+                "period": period,
+                "status": status,
+                "lhs": round(lhs, 2),
+                "rhs": round(rhs, 2),
+            })
+
+    return {
+        "name": name,
+        "description": description,
+        "results": results,
+        "overall": "FAIL" if fail_count > 0 else ("PASS" if pass_count > 0 else "N/A"),
+        "pass_count": pass_count,
+        "fail_count": fail_count,
+    }
 
 
 @router.get("/api/dcl/triples/identity-checks")
 def triples_identity_checks():
     """Run accounting identity checks against the live triple store."""
-    # Get all entity_ids and periods
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                "SELECT DISTINCT entity_id FROM semantic_triples "
-                "WHERE is_active = true ORDER BY entity_id"
-            )
-            entity_ids = [r[0] for r in cur.fetchall()]
+            lookup, entity_ids, periods = _build_identity_lookup(cur)
 
-            cur.execute(
-                "SELECT DISTINCT period FROM semantic_triples "
-                "WHERE is_active = true AND period IS NOT NULL "
-                "ORDER BY period"
-            )
-            periods = [r[0] for r in cur.fetchall()]
+    checks = []
 
-            checks = []
+    # BS Identity: Assets = Liabilities + Equity
+    checks.append(_run_check(
+        lookup, entity_ids, periods,
+        "BS Identity", "Assets = Liabilities + Equity",
+        lhs_prefixes=["asset"],
+        rhs_prefixes=["liability", "equity"],
+    ))
 
-            # --- BS Identity: Assets = Liabilities + Equity ---
-            bs_results = []
-            bs_pass = 0
-            bs_fail = 0
-            for eid in entity_ids:
-                for period in periods:
-                    assets = _get_triple_value(cur, eid, "asset", period)
-                    liabilities = _get_triple_value(cur, eid, "liability", period)
-                    equity = _get_triple_value(cur, eid, "equity", period)
-                    if assets is None or liabilities is None or equity is None:
-                        continue
-                    lhs = assets
-                    rhs = liabilities + equity
-                    status = "PASS" if abs(lhs - rhs) < 0.01 else "FAIL"
-                    if status == "PASS":
-                        bs_pass += 1
-                    else:
-                        bs_fail += 1
-                    bs_results.append({
-                        "entity_id": eid,
-                        "period": period,
-                        "status": status,
-                        "lhs": round(lhs, 2),
-                        "rhs": round(rhs, 2),
-                    })
+    # CF Identity: Operating + Investing + Financing = Net Change
+    checks.append(_run_check(
+        lookup, entity_ids, periods,
+        "CF Identity", "Operating + Investing + Financing = Net Change",
+        lhs_prefixes=["cash_flow.operating", "cash_flow.investing", "cash_flow.financing"],
+        rhs_prefixes=["cash_flow.net_change"],
+    ))
 
-            checks.append({
-                "name": "BS Identity",
-                "description": "Assets = Liabilities + Equity",
-                "results": bs_results,
-                "overall": "FAIL" if bs_fail > 0 else ("PASS" if bs_pass > 0 else "N/A"),
-                "pass_count": bs_pass,
-                "fail_count": bs_fail,
+    # P&L Identity: Revenue - COGS - OpEx = EBITDA
+    checks.append(_run_check(
+        lookup, entity_ids, periods,
+        "P&L Identity", "Revenue - COGS - OpEx = EBITDA",
+        lhs_prefixes=["revenue.total", "cogs.total", "opex.total"],
+        lhs_signs=[1.0, -1.0, -1.0],
+        rhs_prefixes=["pnl.ebitda"],
+    ))
+
+    # Cash Continuity: Cash[Q(n)] + Net Change[Q(n+1)] = Cash[Q(n+1)]
+    cc_results = []
+    cc_pass = 0
+    cc_fail = 0
+    sorted_periods = sorted(periods)
+    for eid in entity_ids:
+        for i in range(len(sorted_periods) - 1):
+            p_curr = sorted_periods[i]
+            p_next = sorted_periods[i + 1]
+            cash_curr = lookup.get((eid, "asset.current.cash", p_curr))
+            net_change_next = lookup.get((eid, "cash_flow.net_change", p_next))
+            cash_next = lookup.get((eid, "asset.current.cash", p_next))
+            if any(v is None for v in [cash_curr, net_change_next, cash_next]):
+                continue
+            lhs = cash_curr + net_change_next
+            rhs = cash_next
+            status = "PASS" if abs(lhs - rhs) < 0.01 else "FAIL"
+            if status == "PASS":
+                cc_pass += 1
+            else:
+                cc_fail += 1
+            cc_results.append({
+                "entity_id": eid,
+                "period": p_next,
+                "status": status,
+                "lhs": round(lhs, 2),
+                "rhs": round(rhs, 2),
             })
 
-            # --- CF Identity: Operating + Investing + Financing = Net Change ---
-            cf_results = []
-            cf_pass = 0
-            cf_fail = 0
-            for eid in entity_ids:
-                for period in periods:
-                    operating = _get_triple_value(cur, eid, "cash_flow.operating", period)
-                    investing = _get_triple_value(cur, eid, "cash_flow.investing", period)
-                    financing = _get_triple_value(cur, eid, "cash_flow.financing", period)
-                    net_change = _get_triple_value(cur, eid, "cash_flow.net_change", period)
-                    if any(v is None for v in [operating, investing, financing, net_change]):
-                        continue
-                    lhs = operating + investing + financing
-                    rhs = net_change
-                    status = "PASS" if abs(lhs - rhs) < 0.01 else "FAIL"
-                    if status == "PASS":
-                        cf_pass += 1
-                    else:
-                        cf_fail += 1
-                    cf_results.append({
-                        "entity_id": eid,
-                        "period": period,
-                        "status": status,
-                        "lhs": round(lhs, 2),
-                        "rhs": round(rhs, 2),
-                    })
-
-            checks.append({
-                "name": "CF Identity",
-                "description": "Operating + Investing + Financing = Net Change",
-                "results": cf_results,
-                "overall": "FAIL" if cf_fail > 0 else ("PASS" if cf_pass > 0 else "N/A"),
-                "pass_count": cf_pass,
-                "fail_count": cf_fail,
-            })
-
-            # --- P&L Identity: Revenue - COGS - OpEx = EBITDA ---
-            pnl_results = []
-            pnl_pass = 0
-            pnl_fail = 0
-            for eid in entity_ids:
-                for period in periods:
-                    revenue = _get_triple_value(cur, eid, "revenue.total", period)
-                    cogs_val = _get_triple_value(cur, eid, "cogs.total", period)
-                    opex_val = _get_triple_value(cur, eid, "opex.total", period)
-                    ebitda = _get_triple_value(cur, eid, "pnl.ebitda", period)
-                    if any(v is None for v in [revenue, cogs_val, opex_val, ebitda]):
-                        continue
-                    lhs = revenue - cogs_val - opex_val
-                    rhs = ebitda
-                    status = "PASS" if abs(lhs - rhs) < 0.01 else "FAIL"
-                    if status == "PASS":
-                        pnl_pass += 1
-                    else:
-                        pnl_fail += 1
-                    pnl_results.append({
-                        "entity_id": eid,
-                        "period": period,
-                        "status": status,
-                        "lhs": round(lhs, 2),
-                        "rhs": round(rhs, 2),
-                    })
-
-            checks.append({
-                "name": "P&L Identity",
-                "description": "Revenue - COGS - OpEx = EBITDA",
-                "results": pnl_results,
-                "overall": "FAIL" if pnl_fail > 0 else ("PASS" if pnl_pass > 0 else "N/A"),
-                "pass_count": pnl_pass,
-                "fail_count": pnl_fail,
-            })
-
-            # --- Cash Continuity: Cash[Q(n)] + Net Change[Q(n+1)] = Cash[Q(n+1)] ---
-            cc_results = []
-            cc_pass = 0
-            cc_fail = 0
-            for eid in entity_ids:
-                sorted_periods = sorted(periods)
-                for i in range(len(sorted_periods) - 1):
-                    p_curr = sorted_periods[i]
-                    p_next = sorted_periods[i + 1]
-                    cash_curr = _get_triple_value(cur, eid, "asset.current.cash", p_curr)
-                    net_change_next = _get_triple_value(cur, eid, "cash_flow.net_change", p_next)
-                    cash_next = _get_triple_value(cur, eid, "asset.current.cash", p_next)
-                    if any(v is None for v in [cash_curr, net_change_next, cash_next]):
-                        continue
-                    lhs = cash_curr + net_change_next
-                    rhs = cash_next
-                    status = "PASS" if abs(lhs - rhs) < 0.01 else "FAIL"
-                    if status == "PASS":
-                        cc_pass += 1
-                    else:
-                        cc_fail += 1
-                    cc_results.append({
-                        "entity_id": eid,
-                        "period": p_next,
-                        "status": status,
-                        "lhs": round(lhs, 2),
-                        "rhs": round(rhs, 2),
-                    })
-
-            checks.append({
-                "name": "Cash Continuity",
-                "description": "Cash[Q(n)] + Net Change[Q(n+1)] = Cash[Q(n+1)]",
-                "results": cc_results,
-                "overall": "FAIL" if cc_fail > 0 else ("PASS" if cc_pass > 0 else "N/A"),
-                "pass_count": cc_pass,
-                "fail_count": cc_fail,
-            })
+    checks.append({
+        "name": "Cash Continuity",
+        "description": "Cash[Q(n)] + Net Change[Q(n+1)] = Cash[Q(n+1)]",
+        "results": cc_results,
+        "overall": "FAIL" if cc_fail > 0 else ("PASS" if cc_pass > 0 else "N/A"),
+        "pass_count": cc_pass,
+        "fail_count": cc_fail,
+    })
 
     all_pass = all(c["overall"] == "PASS" for c in checks)
     return {
@@ -748,3 +795,246 @@ def deactivate_run(run_id: str = Query(...)):
     count = _triple_store.deactivate_run(run_id)
     logger.info(f"[triple-monitor] Deactivated {count} triples for run_id={run_id}")
     return {"run_id": run_id, "deactivated_count": count}
+
+
+# ---------------------------------------------------------------------------
+# GET /api/dcl/contextualization-summary
+# ---------------------------------------------------------------------------
+
+from backend.registry.concept_registry import ConceptRegistry
+
+_concept_registry = ConceptRegistry()
+
+
+@router.get("/api/dcl/contextualization-summary")
+def contextualization_summary(
+    entity_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+):
+    """Contextualization quality summary: domain coverage, confidence, resolution, sources."""
+    clauses = ["is_active = true"]
+    params: list = []
+
+    if entity_id:
+        clauses.append("entity_id = %s")
+        params.append(entity_id)
+    if run_id:
+        clauses.append("run_id = %s")
+        params.append(run_id)
+
+    where = " AND ".join(clauses)
+
+    # Query 1: per-domain aggregation
+    domain_sql = (
+        f"SELECT split_part(concept, '.', 1) AS domain, "
+        f"COUNT(*) AS triple_count, "
+        f"COUNT(DISTINCT concept) AS concepts_used, "
+        f"COUNT(DISTINCT source_system) AS source_count, "
+        f"AVG(confidence_score) AS avg_confidence, "
+        f"COUNT(*) FILTER (WHERE confidence_tier = 'exact') AS tier_exact, "
+        f"COUNT(*) FILTER (WHERE confidence_tier = 'high') AS tier_high, "
+        f"COUNT(*) FILTER (WHERE confidence_tier = 'medium') AS tier_medium, "
+        f"COUNT(*) FILTER (WHERE confidence_tier = 'low') AS tier_low "
+        f"FROM semantic_triples WHERE {where} "
+        f"GROUP BY domain ORDER BY triple_count DESC"
+    )
+
+    # Query 2: source system breakdown
+    source_sql = (
+        f"SELECT source_system, COUNT(*) AS triple_count, "
+        f"AVG(confidence_score) AS avg_confidence "
+        f"FROM semantic_triples WHERE {where} "
+        f"GROUP BY source_system ORDER BY triple_count DESC"
+    )
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(domain_sql, params)
+            domain_rows = cur.fetchall()
+
+            cur.execute(source_sql, params)
+            source_rows = cur.fetchall()
+
+    # Build ontology concept map for concepts_available per domain
+    all_concepts = _concept_registry.list_concepts()
+    concept_domain_map: dict[str, list[str]] = {}
+    for cid in all_concepts:
+        concept_domain_map.setdefault(cid, []).append(cid)
+
+    # Populated domains from live data
+    populated_domains = set()
+    domain_data = []
+    total_confidence = {"exact": 0, "high": 0, "medium": 0, "low": 0}
+
+    for row in domain_rows:
+        domain_name = row[0]
+        populated_domains.add(domain_name)
+        concepts_available = 1 if domain_name in concept_domain_map else 0
+        domain_data.append({
+            "domain": domain_name,
+            "triple_count": row[1],
+            "concepts_used": row[2],
+            "concepts_available": max(row[2], concepts_available),
+            "source_count": row[3],
+            "avg_confidence": round(float(row[4]), 3) if row[4] else 0.0,
+        })
+        total_confidence["exact"] += row[5]
+        total_confidence["high"] += row[6]
+        total_confidence["medium"] += row[7]
+        total_confidence["low"] += row[8]
+
+    # Resolution activity from resolution_workspaces_v2
+    resolution = {"workspaces_total": 0, "workspaces_pending": 0, "workspaces_resolved": 0, "conflicts_detected": 0}
+    for table in ("resolution_workspaces_v2", "resolution_workspaces"):
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(f"SELECT COUNT(*) FROM {table}")
+                    total = cur.fetchone()[0]
+                    if total == 0:
+                        continue
+                    cur.execute(f"SELECT status, COUNT(*) FROM {table} GROUP BY status")
+                    by_status = {r[0]: r[1] for r in cur.fetchall()}
+                    resolution["workspaces_total"] = total
+                    resolution["workspaces_pending"] = by_status.get("pending", 0)
+                    resolution["workspaces_resolved"] = (
+                        by_status.get("resolved", 0) + by_status.get("confirmed", 0)
+                    )
+                    resolution["conflicts_detected"] = by_status.get("conflict", 0) + by_status.get("escalated", 0)
+                    break
+        except Exception:
+            continue
+
+    source_data = []
+    for row in source_rows:
+        source_data.append({
+            "system": row[0],
+            "triple_count": row[1],
+            "avg_confidence": round(float(row[2]), 3) if row[2] else 0.0,
+        })
+
+    return {
+        "domain_coverage": {
+            "domains_populated": len(populated_domains),
+            "domains_total": len(all_concepts),
+            "domains": domain_data,
+        },
+        "confidence_distribution": total_confidence,
+        "resolution_activity": resolution,
+        "source_system_breakdown": source_data,
+    }
+
+
+# ---------------------------------------------------------------------------
+# GET /api/dcl/dashboard-data
+# ---------------------------------------------------------------------------
+
+@router.get("/api/dcl/dashboard-data")
+def dashboard_data(
+    entity_id: Optional[str] = Query(None),
+    domain: Optional[str] = Query(None),
+    source_system: Optional[str] = Query(None),
+    period: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=500),
+):
+    """Paginated, filterable triple data with aggregations for the Dashboard tab."""
+    clauses = ["is_active = true"]
+    params: list = []
+
+    if entity_id:
+        clauses.append("entity_id = %s")
+        params.append(entity_id)
+    if run_id:
+        clauses.append("run_id = %s")
+        params.append(run_id)
+    if domain:
+        clauses.append("concept LIKE %s")
+        params.append(f"{domain}.%")
+    if source_system:
+        clauses.append("source_system = %s")
+        params.append(source_system)
+    if period:
+        clauses.append("period = %s")
+        params.append(period)
+
+    where = " AND ".join(clauses)
+    offset = (page - 1) * page_size
+
+    # Count query (deduplicated)
+    count_sql = (
+        f"SELECT COUNT(DISTINCT (entity_id, concept, property, period)) "
+        f"FROM semantic_triples WHERE {where}"
+    )
+
+    # Paginated data query (deduplicated)
+    data_sql = (
+        f"SELECT DISTINCT ON (entity_id, concept, property, period) "
+        f"id, entity_id, concept, property, value, period, "
+        f"source_system, confidence_score, confidence_tier, pipe_id, run_id "
+        f"FROM semantic_triples WHERE {where} "
+        f"ORDER BY entity_id, concept, property, period, created_at DESC "
+        f"LIMIT %s OFFSET %s"
+    )
+
+    # Aggregation queries (ignore pagination, apply same filters)
+    agg_domain_sql = (
+        f"SELECT split_part(concept, '.', 1) AS domain, "
+        f"COUNT(DISTINCT (entity_id, concept, property, period)) AS cnt "
+        f"FROM semantic_triples WHERE {where} "
+        f"GROUP BY domain ORDER BY cnt DESC"
+    )
+    agg_source_sql = (
+        f"SELECT source_system, "
+        f"COUNT(DISTINCT (entity_id, concept, property, period)) AS cnt "
+        f"FROM semantic_triples WHERE {where} "
+        f"GROUP BY source_system ORDER BY cnt DESC"
+    )
+    agg_period_sql = (
+        f"SELECT period, "
+        f"COUNT(DISTINCT (entity_id, concept, property, period)) AS cnt "
+        f"FROM semantic_triples WHERE {where} AND period IS NOT NULL "
+        f"GROUP BY period ORDER BY period"
+    )
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(count_sql, params)
+            total_count = cur.fetchone()[0]
+
+            cur.execute(data_sql, params + [page_size, offset])
+            columns = [desc[0] for desc in cur.description]
+            rows = [_serialize_row(dict(zip(columns, row))) for row in cur.fetchall()]
+
+            cur.execute(agg_domain_sql, params)
+            by_domain = [{"domain": r[0], "count": r[1]} for r in cur.fetchall()]
+
+            cur.execute(agg_source_sql, params)
+            by_source = [{"system": r[0], "count": r[1]} for r in cur.fetchall()]
+
+            cur.execute(agg_period_sql, params)
+            by_period = [{"period": r[0], "count": r[1]} for r in cur.fetchall()]
+
+    filters_applied = {}
+    if entity_id:
+        filters_applied["entity_id"] = entity_id
+    if domain:
+        filters_applied["domain"] = domain
+    if source_system:
+        filters_applied["source_system"] = source_system
+    if period:
+        filters_applied["period"] = period
+
+    return {
+        "rows": rows,
+        "total_count": total_count,
+        "page": page,
+        "page_size": page_size,
+        "filters_applied": filters_applied,
+        "aggregations": {
+            "by_domain": by_domain,
+            "by_source": by_source,
+            "by_period": by_period,
+        },
+    }
