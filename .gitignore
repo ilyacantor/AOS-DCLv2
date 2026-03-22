@@ -61,6 +61,7 @@ dump.rdb
 data/history.json
 backend/cache/
 test_results_*.txt
+test-results/
 
 # Claude Code
 .claude/
