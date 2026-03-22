@@ -382,8 +382,13 @@ class DCLEngine:
         else:
             source_run_id = ""
 
-        # Build a human-readable snapshot label from entity names
-        snapshot_label = " / ".join(entities) if entities else ""
+        # Build provenance scoped to the current (latest) source run
+        if source_run_id:
+            run_entities = triple_store.get_run_entities(source_run_id)
+            snapshot_label = " / ".join(run_entities) if run_entities else ""
+        else:
+            run_entities = entities
+            snapshot_label = " / ".join(entities) if entities else ""
 
         snapshot = GraphSnapshot(
             nodes=graph["nodes"],
@@ -401,7 +406,7 @@ class DCLEngine:
                     "mappings": len(sankey_rows),
                     "triple_count": triple_count,
                     "personas": [p.value for p in personas],
-                    "entities": entities,
+                    "entities": run_entities,
                 },
                 "sourceCanonicalIds": source_names,
                 "sourceNames": source_names,

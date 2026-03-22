@@ -224,8 +224,8 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
 
       <SankeyTooltip tooltip={tooltip} />
 
-      {/* Run metadata (when available) */}
-      {data?.meta && (
+      {/* Run provenance — scoped to current source run, never DCL engine runId */}
+      {data?.meta && (data.meta.sourceRunId || data.meta.aodRunId || data.meta.snapshotName) && (
         <span className="absolute bottom-2 right-3 text-[10px] text-slate-500 font-mono pointer-events-none text-right">
           {data.meta.snapshotName && (
             <>
@@ -233,7 +233,9 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
               <br />
             </>
           )}
-          {`run: ${(data.meta.sourceRunId || data.meta.aodRunId || data.meta.runId || '').slice(0, 8)}`}
+          {(data.meta.sourceRunId || data.meta.aodRunId) &&
+            `run: ${(data.meta.sourceRunId || data.meta.aodRunId || '').slice(0, 8)}`
+          }
         </span>
       )}
     </div>

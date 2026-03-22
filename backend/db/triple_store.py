@@ -299,6 +299,18 @@ class TripleStore:
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
+    def get_run_entities(self, run_id: str) -> list[str]:
+        """Return distinct entity_ids for a specific run_id (active triples only)."""
+        sql = (
+            "SELECT DISTINCT entity_id FROM semantic_triples "
+            "WHERE run_id = %s AND is_active = true AND entity_id IS NOT NULL "
+            "ORDER BY entity_id"
+        )
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (run_id,))
+                return [row[0] for row in cur.fetchall()]
+
     def get_persona_domain_stats(self, persona_domains: dict[str, list[str]]) -> dict:
         """Compute per-persona stats from active triples by domain mapping.
 
