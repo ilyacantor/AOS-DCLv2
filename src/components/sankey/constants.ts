@@ -1,87 +1,93 @@
 /**
- * Sankey Graph Configuration Constants
- * Centralized configuration for the Sankey visualization
+ * SE-mode Sankey configuration constants.
  */
 
-export const SANKEY_CONFIG = {
-  // Node dimensions
-  node: {
-    width: 20,
-    padding: 30,
-    minHeight: 24,
+export const SE_CONFIG = {
+  node: { width: 18, padding: 14 },
+  margin: { top: 52, right: 50, bottom: 20, left: 50 },
+  link: {
+    strokeWidth: 2.5,
+    internalStrokeWidth: 1.5,
+    restOpacity: 0.25,
+    hoverOpacity: 0.65,
+    internalRestOpacity: 0.15,
+    transitionMs: 200,
   },
-
-  // Graph margins
-  margin: {
-    top: 20,
-    right: 60,
-    bottom: 20,
-    left: 20,
-  },
-
-  // Layer X positions as percentages of available width
-  // These are base positions that will be adjusted dynamically
-  layerPositions: {
-    L0: 0.02,   // Pipeline node at 2%
-    L1: 0.20,   // Sources at 20%
-    L2: 0.55,   // Ontology at 55%
-    L3: 0.85,   // BLL/Personas at 85%
-  },
-
-  // Label configuration
   label: {
-    offsetX: 28,           // Offset from node edge
-    maxWidth: 120,         // Max label width before truncation
-    fontSize: 10,
+    offsetX: 26,
+    fontSize: 11,
     fontWeight: 500,
   },
-
-  // Link styling
-  link: {
-    minStrokeWidth: 1,
-    defaultOpacity: 0.6,
-    hoverOpacity: 1,
-    transitionDuration: 150,
-  },
-
-  // Tooltip configuration
-  tooltip: {
-    offsetY: -10,
-  },
-
-  // Performance settings
+  tooltip: { offsetY: -12 },
   performance: {
     resizeDebounceMs: 150,
     initialRenderDelayMs: 50,
-    virtualizationThreshold: 100, // Links beyond this count get virtualized
   },
 } as const;
 
-// Color scheme for each layer level
+export const LAYER_LABELS = [
+  'L0 \u00b7 Sources',
+  'L1 \u00b7 DCL',
+  'L2 \u00b7 Concepts',
+  'L3 \u00b7 Personas',
+] as const;
+
+export const NODE_COLORS: Record<string, string> = {
+  source: '#14b8a6',
+  dcl: '#8b5cf6',
+  persona: '#3b82f6',
+};
+
+export const DOMAIN_COLORS: Record<string, string> = {
+  financial: '#f59e0b',
+  hr: '#14b8a6',
+  crm: '#3b82f6',
+  ops: '#6b7280',
+};
+
+export const NODE_TEXT_COLORS: Record<string, string> = {
+  source: '#ccfbf1',
+  dcl: '#ede9fe',
+  financial: '#fef3c7',
+  hr: '#ccfbf1',
+  crm: '#dbeafe',
+  ops: '#e5e7eb',
+  persona: '#dbeafe',
+};
+
+export const BG_COLOR = '#080d18';
+
+// Backward-compat aliases (index.ts re-exports everything)
+export type LayerLevel = 'L0' | 'L1' | 'L2' | 'L3';
+
 export const LEVEL_COLORS = {
-  L0: '#10b981', // Emerald - Pipeline
-  L1: '#10b981', // Emerald - Sources
-  L2: '#06b6d4', // Cyan - Ontology
-  L3: '#8b5cf6', // Violet - BLL/Personas
+  L0: NODE_COLORS.source,
+  L1: NODE_COLORS.dcl,
+  L2: DOMAIN_COLORS.financial,
+  L3: NODE_COLORS.persona,
 } as const;
 
-// Text colors corresponding to each level (for readability on dark bg)
 export const LEVEL_TEXT_COLORS = {
-  L0: '#d1fae5', // Emerald light
-  L1: '#d1fae5', // Emerald light
-  L2: '#cffafe', // Cyan light
-  L3: '#ede9fe', // Violet light
+  L0: NODE_TEXT_COLORS.source,
+  L1: NODE_TEXT_COLORS.dcl,
+  L2: NODE_TEXT_COLORS.financial,
+  L3: NODE_TEXT_COLORS.persona,
 } as const;
 
-// Colors for fabric plane nodes (AAM mode aggregation)
-export const FABRIC_COLORS: Record<string, string> = {
-  IPAAS: '#f59e0b',          // Amber
-  API_GATEWAY: '#ec4899',    // Pink
-  EVENT_BUS: '#8b5cf6',      // Violet
-  DATA_WAREHOUSE: '#06b6d4', // Cyan
-  UNMAPPED: '#6b7280',       // Gray
+export const SANKEY_CONFIG = {
+  node: SE_CONFIG.node,
+  margin: SE_CONFIG.margin,
+  layerPositions: { L0: 0, L1: 0.33, L2: 0.66, L3: 1.0 },
+  label: SE_CONFIG.label,
+  link: {
+    minStrokeWidth: 1,
+    defaultOpacity: SE_CONFIG.link.restOpacity,
+    hoverOpacity: SE_CONFIG.link.hoverOpacity,
+    transitionDuration: SE_CONFIG.link.transitionMs,
+  },
+  tooltip: SE_CONFIG.tooltip,
+  performance: SE_CONFIG.performance,
 } as const;
 
-export const FABRIC_DEFAULT_COLOR = '#10b981'; // Emerald fallback
-
-export type LayerLevel = keyof typeof LEVEL_COLORS;
+export const FABRIC_COLORS: Record<string, string> = {};
+export const FABRIC_DEFAULT_COLOR = '#14b8a6';

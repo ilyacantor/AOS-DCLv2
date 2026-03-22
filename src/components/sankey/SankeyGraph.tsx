@@ -1,299 +1,240 @@
 /**
- * SankeyGraph Component (Refactored)
+ * SE-mode Sankey Graph — 4-layer data flow through DCL.
  *
- * A comprehensive refactor addressing:
- * - Proper TypeScript types (no `any`)
- * - Debounced resize handling
- * - Memoized event handlers
- * - Pure SVG rendering (no foreignObject)
- * - Dynamic layer positioning
- * - Link virtualization for performance
- * - Centralized configuration constants
+ * L0 Sources → L1 DCL Processing → L2 Ontology Concepts → L3 Personas
+ *
+ * Uses d3-sankey (sankeyLinkHorizontal) for link paths.
+ * Column x-positions forced explicitly; nodeSort: null (order preserved).
  */
 
 import { useRef, useMemo, useCallback, useState } from 'react';
-import { sankey, sankeyLinkHorizontal, sankeyLeft } from 'd3-sankey';
-
 import { useResizeObserver } from '../../hooks/useResizeObserver';
-import { SANKEY_CONFIG, LEVEL_COLORS, LEVEL_TEXT_COLORS, FABRIC_COLORS, FABRIC_DEFAULT_COLOR } from './constants';
-import type {
-  SankeyGraphProps,
-  SankeyGraphData,
-  SankeyNode,
-  SankeyLink,
-  TooltipState,
-  ViewportBounds,
-} from './types';
-import {
-  computeLayerPositions,
-  getVisibleLinks,
-  getLinkGradientId,
-  getNodeColor,
-  buildTooltipContent,
-  getLinkStrokeWidth,
-} from './utils';
+import { SE_CONFIG, LAYER_LABELS, BG_COLOR } from './constants';
+import { computeSELayout, getNodeColor, getNodeTextColor, getLinkGradientId } from './utils';
 import { SankeyNodeLabel } from './SankeyNodeLabel';
 import { SankeyTooltip } from './SankeyTooltip';
+import type { SankeyGraphProps, TooltipState, LayoutNode, LayoutLink } from './types';
 
 export function SankeyGraph({ data }: SankeyGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const containerRectRef = useRef<DOMRect | null>(null);
 
-  // Debounced resize observer
   const size = useResizeObserver(containerRef, {
-    debounceMs: SANKEY_CONFIG.performance.resizeDebounceMs,
-    initialDelay: SANKEY_CONFIG.performance.initialRenderDelayMs,
+    debounceMs: SE_CONFIG.performance.resizeDebounceMs,
+    initialDelay: SE_CONFIG.performance.initialRenderDelayMs,
   });
 
-  // Tooltip state
   const [tooltip, setTooltip] = useState<TooltipState>({
     visible: false,
     x: 0,
     y: 0,
     content: null,
   });
+  const [hoveredLinkId, setHoveredLinkId] = useState<string | null>(null);
 
-  // Memoized viewport bounds for virtualization
-  const viewport: ViewportBounds = useMemo(
-    () => ({
-      minX: 0,
-      maxX: size.width,
-      minY: 0,
-      maxY: size.height,
-    }),
-    [size.width, size.height]
-  );
+  const layout = useMemo(() => {
+    if (size.width === 0 || size.height === 0) return null;
+    return computeSELayout(size.width, size.height);
+  }, [size.width, size.height]);
 
-  // Compute graph layout with dynamic layer positions
-  const graphData = useMemo((): SankeyGraphData | null => {
-    if (!data || size.width === 0 || size.height === 0) return null;
-
-    const { margin, node: nodeConfig } = SANKEY_CONFIG;
-
-    // Clone nodes and links to avoid mutating original data
-    const nodes = data.nodes.map(n => ({ ...n }));
-    const links = data.links.map(l => ({ ...l }));
-
-    if (links.length === 0) return null;
-
-    // Configure D3 Sankey generator
-    const sankeyGenerator = sankey<SankeyNode, SankeyLink>()
-      .nodeId((d) => d.id)
-      .nodeAlign(sankeyLeft)
-      .nodeWidth(nodeConfig.width)
-      .nodePadding(nodeConfig.padding)
-      .extent([
-        [margin.left, margin.top],
-        [size.width - margin.right, size.height - margin.bottom],
-      ]);
-
-    // Generate initial layout
-    const { nodes: sNodes, links: sLinks } = sankeyGenerator({
-      nodes: nodes as SankeyNode[],
-      links: links as unknown as SankeyLink[],
-    });
-
-    // Compute dynamic layer positions based on content
-    const layerPositions = computeLayerPositions(data.nodes, size);
-
-    // Apply layer positions to nodes
-    sNodes.forEach((node) => {
-      const layerPos = layerPositions[node.level as keyof typeof layerPositions];
-      if (layerPos) {
-        node.x0 = layerPos.x0;
-        node.x1 = layerPos.x1;
-      }
-    });
-
-    return { nodes: sNodes, links: sLinks };
-  }, [data, size]);
-
-  // Memoized visible links (virtualized)
-  const visibleLinks = useMemo(() => {
-    if (!graphData) return [];
-    return getVisibleLinks(graphData.links, viewport);
-  }, [graphData, viewport]);
-
-  // Cache container rect to avoid layout thrashing
-  const updateContainerRect = useCallback(() => {
+  const updateRect = useCallback(() => {
     if (containerRef.current) {
       containerRectRef.current = containerRef.current.getBoundingClientRect();
     }
   }, []);
 
-  // Memoized mouse enter handler - uses data attributes to avoid closures
-  const handleLinkMouseEnter = useCallback(
-    (event: React.MouseEvent<SVGPathElement>, link: SankeyLink) => {
-      // Update cached rect if needed
-      if (!containerRectRef.current) {
-        updateContainerRect();
-      }
-
-      const containerRect = containerRectRef.current;
-      if (!containerRect) return;
-
-      const x = event.clientX - containerRect.left;
-      const y = event.clientY - containerRect.top + SANKEY_CONFIG.tooltip.offsetY;
-
+  const showTooltip = useCallback(
+    (event: React.MouseEvent, title: string, detail?: string, type: 'node' | 'link' = 'link') => {
+      if (!containerRectRef.current) updateRect();
+      const rect = containerRectRef.current;
+      if (!rect) return;
       setTooltip({
         visible: true,
-        x,
-        y,
-        content: buildTooltipContent(link),
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top + SE_CONFIG.tooltip.offsetY,
+        content: { title, detail, type },
       });
     },
-    [updateContainerRect]
+    [updateRect],
   );
 
-  // Memoized mouse leave handler
-  const handleLinkMouseLeave = useCallback(() => {
-    setTooltip((prev) => ({ ...prev, visible: false }));
+  const hideTooltip = useCallback(() => {
+    setTooltip(prev => ({ ...prev, visible: false }));
+    setHoveredLinkId(null);
   }, []);
 
-  // Detect display mode: fabric-aggregated vs detailed (individual sources)
-  const displayMode = useMemo(() => {
-    if (!graphData) return null;
-    const hasFabric = graphData.nodes.some(n => n.kind === 'fabric');
-    return hasFabric ? 'Fabric-Aggregated' : 'Detailed';
-  }, [graphData]);
+  const handleLinkEnter = useCallback(
+    (event: React.MouseEvent, link: LayoutLink) => {
+      setHoveredLinkId(link.id);
+      showTooltip(event, `${link.source.label} \u2192 ${link.target.label}`, link.hoverContent, 'link');
+    },
+    [showTooltip],
+  );
 
-  const isEmptyState = data && (data.meta as Record<string, unknown>)?.status === 'no_data';
-  const isLoading = !data || (!graphData && !isEmptyState);
-  const hasNoLinks = data && !graphData && !isEmptyState && data.nodes?.length > 0 && (data.links?.length ?? 0) === 0;
-  const diagnostics = isEmptyState ? (data.meta as Record<string, unknown>).diagnostics as Record<string, unknown> | undefined : undefined;
+  const handleLinkMove = useCallback(
+    (event: React.MouseEvent) => {
+      if (!containerRectRef.current) updateRect();
+      const rect = containerRectRef.current;
+      if (!rect) return;
+      setTooltip(prev => ({
+        ...prev,
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top + SE_CONFIG.tooltip.offsetY,
+      }));
+    },
+    [updateRect],
+  );
+
+  const handleNodeEnter = useCallback(
+    (event: React.MouseEvent, node: LayoutNode) => {
+      if (node.hoverContent) {
+        showTooltip(event, node.label, node.hoverContent, 'node');
+      }
+    },
+    [showTooltip],
+  );
+
+  // Loading state — show spinner until container is measured
+  if (!layout || layout.nodes.length === 0) {
+    return (
+      <div
+        ref={containerRef}
+        className="w-full h-full overflow-hidden relative select-none"
+        style={{ backgroundColor: BG_COLOR }}
+      >
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="w-5 h-5 border-2 border-slate-600 border-t-slate-400 rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
       ref={containerRef}
-      className="w-full h-full bg-[#020617] overflow-hidden relative select-none"
+      className="w-full h-full overflow-hidden relative select-none"
+      style={{ backgroundColor: BG_COLOR }}
     >
-      {isEmptyState ? (
-        <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-3">
-          <span className="text-sm font-medium text-slate-300">No data ingested</span>
-          <span className="text-xs text-slate-500 text-center max-w-md leading-relaxed">
-            {diagnostics?.message
-              ? String(diagnostics.message)
-              : 'Run Farm enterprise generator and ingest triples via POST /api/dcl/ingest-triples.'}
-          </span>
-        </div>
-      ) : hasNoLinks ? (
-        <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
-          <span className="text-sm">No data connections found</span>
-          <span className="text-xs text-slate-500">External source may be unreachable — try running again</span>
-        </div>
-      ) : isLoading || !graphData ? (
-        <div className="w-full h-full flex items-center justify-center">
-          <div className="w-5 h-5 border-2 border-slate-600 border-t-slate-400 rounded-full animate-spin" />
-        </div>
-      ) : (
-      <>
       <svg
         width={size.width}
         height={size.height}
         className="overflow-visible"
         role="img"
-        aria-label="Data flow Sankey diagram"
+        aria-label="SE mode data flow through DCL"
       >
-        {/* Gradient definitions for links */}
         <defs>
-          {visibleLinks.map((link, idx) => {
-            // Use fabric-specific color for fabric nodes in link gradients
-            const srcNode = link.source;
-            const tgtNode = link.target;
-            const sourceColor = srcNode?.kind === 'fabric'
-              ? (FABRIC_COLORS[(srcNode.group || '').toUpperCase()] || FABRIC_DEFAULT_COLOR)
-              : getNodeColor(srcNode?.level || 'L0');
-            const targetColor = tgtNode?.kind === 'fabric'
-              ? (FABRIC_COLORS[(tgtNode.group || '').toUpperCase()] || FABRIC_DEFAULT_COLOR)
-              : getNodeColor(tgtNode?.level || 'L0');
-            const gradientId = getLinkGradientId(link, idx);
-
-            return (
-              <linearGradient
-                key={gradientId}
-                id={gradientId}
-                gradientUnits="userSpaceOnUse"
-                x1={link.source?.x1 || 0}
-                x2={link.target?.x0 || 0}
-              >
-                <stop offset="0%" stopColor={sourceColor} stopOpacity="0.7" />
-                <stop offset="100%" stopColor={targetColor} stopOpacity="0.7" />
-              </linearGradient>
-            );
-          })}
+          {/* Gradients for horizontal links (skip internal) */}
+          {layout.links
+            .filter(l => l.type !== 'internal')
+            .map(link => {
+              const srcColor = getNodeColor(link.source);
+              const tgtColor = getNodeColor(link.target);
+              const gid = getLinkGradientId(link);
+              return (
+                <linearGradient
+                  key={gid}
+                  id={gid}
+                  gradientUnits="userSpaceOnUse"
+                  x1={link.source.x1}
+                  x2={link.target.x0}
+                >
+                  <stop offset="0%" stopColor={srcColor} stopOpacity="0.8" />
+                  <stop offset="100%" stopColor={tgtColor} stopOpacity="0.8" />
+                </linearGradient>
+              );
+            })}
 
           {/* Glow filter for nodes */}
           <filter id="node-glow">
-            <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
+            <feGaussianBlur stdDeviation="2" result="blur" />
             <feMerge>
-              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
         </defs>
 
-        {/* Links layer */}
-        <g className="links" aria-label="Data flow connections">
-          {visibleLinks.map((link, idx) => {
-            const gradientId = getLinkGradientId(link, idx);
-            const pathData = sankeyLinkHorizontal()(link as any) || '';
+        {/* Layer labels */}
+        {LAYER_LABELS.map((label, idx) => (
+          <text
+            key={label}
+            x={layout.columnXs[idx] + SE_CONFIG.node.width / 2}
+            y={SE_CONFIG.margin.top - 16}
+            textAnchor="middle"
+            fill="rgba(148, 163, 184, 0.7)"
+            fontSize={10}
+            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+            fontWeight={500}
+            letterSpacing="0.05em"
+          >
+            {label}
+          </text>
+        ))}
+
+        {/* Links */}
+        <g aria-label="Data flow connections">
+          {layout.links.map(link => {
+            const isHovered = hoveredLinkId === link.id;
+            const isInternal = link.type === 'internal';
+            const baseOpacity = isInternal
+              ? SE_CONFIG.link.internalRestOpacity
+              : SE_CONFIG.link.restOpacity;
+            const opacity = isHovered ? SE_CONFIG.link.hoverOpacity : baseOpacity;
 
             return (
               <path
-                key={link.id || `link-${idx}`}
-                d={pathData}
-                stroke={`url(#${gradientId})`}
-                strokeWidth={getLinkStrokeWidth(link)}
+                key={link.id}
+                d={link.path}
+                stroke={
+                  isInternal
+                    ? getNodeColor(link.source)
+                    : `url(#${getLinkGradientId(link)})`
+                }
+                strokeWidth={link.width}
                 fill="none"
-                opacity={SANKEY_CONFIG.link.defaultOpacity}
-                className="cursor-pointer transition-opacity"
+                opacity={opacity}
+                className="cursor-pointer"
                 style={{
                   pointerEvents: 'stroke',
-                  transitionDuration: `${SANKEY_CONFIG.link.transitionDuration}ms`,
+                  transition: `opacity ${SE_CONFIG.link.transitionMs}ms`,
                 }}
-                onMouseEnter={(e) => handleLinkMouseEnter(e, link)}
-                onMouseLeave={handleLinkMouseLeave}
-                aria-label={`Link from ${link.source?.label} to ${link.target?.label}`}
+                onMouseEnter={e => handleLinkEnter(e, link)}
+                onMouseMove={handleLinkMove}
+                onMouseLeave={hideTooltip}
+                aria-label={`${link.source.label} to ${link.target.label}`}
               />
             );
           })}
         </g>
 
-        {/* Nodes layer */}
-        <g className="nodes" aria-label="Data entities">
-          {graphData.nodes.map((node) => {
-            // Fabric nodes get plane-specific colors; others use level colors
-            const isFabric = node.kind === 'fabric';
-            const fabricPlane = isFabric ? (node.group || '').toUpperCase() : '';
-            const color = isFabric
-              ? (FABRIC_COLORS[fabricPlane] || FABRIC_DEFAULT_COLOR)
-              : (LEVEL_COLORS[node.level as keyof typeof LEVEL_COLORS] || '#999');
-            const textColor = isFabric
-              ? '#ffffff'
-              : (LEVEL_TEXT_COLORS[node.level as keyof typeof LEVEL_TEXT_COLORS] || '#fff');
-
-            return (
-              <SankeyNodeLabel
-                key={node.id}
-                node={node}
-                color={color}
-                textColor={textColor}
-              />
-            );
-          })}
+        {/* Nodes */}
+        <g aria-label="Data entities">
+          {layout.nodes.map(node => (
+            <SankeyNodeLabel
+              key={node.id}
+              node={node}
+              color={getNodeColor(node)}
+              textColor={getNodeTextColor(node)}
+              onMouseEnter={handleNodeEnter}
+              onMouseLeave={hideTooltip}
+            />
+          ))}
         </g>
       </svg>
+
       <SankeyTooltip tooltip={tooltip} />
-      {displayMode && (
-        <span className="absolute bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none">
-          {displayMode}
+
+      {/* Run metadata (when available) */}
+      {data?.meta && (
+        <span className="absolute bottom-2 right-3 text-[10px] text-slate-500 font-mono pointer-events-none text-right">
+          {data.meta.snapshotName && (
+            <>
+              {data.meta.snapshotName}
+              <br />
+            </>
+          )}
+          {`run: ${(data.meta.sourceRunId || data.meta.aodRunId || data.meta.runId || '').slice(0, 8)}`}
         </span>
-      )}
-      <span className="absolute bottom-2 right-3 text-[10px] text-slate-500 font-mono pointer-events-none text-right">
-        {data.meta.snapshotName && <>{data.meta.snapshotName}<br /></>}
-        {`run: ${(data.meta.sourceRunId || data.meta.aodRunId || data.meta.runId || '').slice(0, 8)}`}
-      </span>
-      </>
       )}
     </div>
   );

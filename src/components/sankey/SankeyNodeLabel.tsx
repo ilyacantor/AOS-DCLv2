@@ -1,86 +1,90 @@
 /**
- * SankeyNodeLabel Component
- * Renders a node with its label using pure SVG (no foreignObject)
+ * SE-mode node label — renders a node bar with a label pill.
+ * L3 (rightmost column) labels are positioned to the LEFT of the node
+ * to avoid clipping at the canvas edge.
  */
 
 import { memo } from 'react';
 import type { SankeyNodeProps } from './types';
-import { SANKEY_CONFIG } from './constants';
-import { truncateLabel } from './utils';
+import { SE_CONFIG } from './constants';
 
 export const SankeyNodeLabel = memo(function SankeyNodeLabel({
   node,
   color,
   textColor,
+  onMouseEnter,
+  onMouseLeave,
 }: SankeyNodeProps) {
-  const { label: labelConfig } = SANKEY_CONFIG;
+  const { label: lc } = SE_CONFIG;
+  const nw = node.x1 - node.x0;
+  const nh = node.y1 - node.y0;
+  const cy = node.y0 + nh / 2;
 
-  const nodeHeight = Math.max((node.y1 || 0) - (node.y0 || 0), SANKEY_CONFIG.node.minHeight);
-  const nodeWidth = (node.x1 || 0) - (node.x0 || 0);
-  const centerY = (node.y0 || 0) + nodeHeight / 2;
-  const centerX = (node.x0 || 0) + nodeWidth / 2;
+  const maxChars = 22;
+  const display = node.label.length > maxChars
+    ? `${node.label.slice(0, maxChars - 1)}\u2026`
+    : node.label;
 
-  // Truncate long labels
-  const displayLabel = truncateLabel(node.label.replace('BLL ', ''), 20);
-  const isBLL = node.kind === 'bll';
+  const pillW = Math.min(display.length * 6.5 + 16, 160);
+  const isRight = node.layer === 3; // rightmost column: label goes left
+  const pillX = isRight ? node.x0 - pillW - 8 : node.x0 + lc.offsetX;
+  const textX = pillX + 8;
 
   return (
-    <g className="sankey-node">
-      {/* Node circle/pill */}
+    <g
+      className="sankey-node cursor-pointer"
+      data-layer={node.layer}
+      onMouseEnter={e => onMouseEnter(e, node)}
+      onMouseLeave={onMouseLeave}
+    >
+      {/* Node bar */}
       <rect
         x={node.x0}
         y={node.y0}
-        width={nodeWidth}
-        height={nodeHeight}
-        rx={nodeWidth / 2}
-        ry={nodeWidth / 2}
-        fill="#0f172a"
+        width={nw}
+        height={nh}
+        rx={nw / 2}
+        fill="#0c1222"
         stroke={color}
         strokeWidth={1.5}
-        style={{
-          filter: `drop-shadow(0 0 6px ${color}40)`,
-        }}
+        style={{ filter: `drop-shadow(0 0 6px ${color}40)` }}
       />
 
-      {/* Inner line decoration */}
+      {/* Inner accent line */}
       <line
-        x1={centerX}
-        y1={(node.y0 || 0) + 4}
-        x2={centerX}
-        y2={(node.y1 || 0) - 4}
-        stroke="rgba(255,255,255,0.2)"
+        x1={node.x0 + nw / 2}
+        y1={node.y0 + 4}
+        x2={node.x0 + nw / 2}
+        y2={node.y1 - 4}
+        stroke="rgba(255,255,255,0.15)"
         strokeWidth={2}
         strokeLinecap="round"
       />
 
-      {/* Label background pill */}
+      {/* Label pill */}
       <rect
-        x={(node.x0 || 0) + labelConfig.offsetX}
-        y={centerY - 10}
-        width={Math.min(displayLabel.length * 6.5 + 16, labelConfig.maxWidth)}
+        x={pillX}
+        y={cy - 10}
+        width={pillW}
         height={20}
         rx={10}
-        ry={10}
-        fill={isBLL ? '#0f172a' : 'rgba(15, 23, 42, 0.9)'}
-        stroke={isBLL ? color : `${color}40`}
+        fill="rgba(8, 13, 24, 0.92)"
+        stroke={`${color}50`}
         strokeWidth={1}
-        style={{
-          filter: isBLL ? `drop-shadow(0 0 8px ${color}60)` : undefined,
-        }}
       />
 
       {/* Label text */}
       <text
-        x={(node.x0 || 0) + labelConfig.offsetX + 8}
-        y={centerY}
+        x={textX}
+        y={cy}
         dy="0.35em"
         fill={textColor}
-        fontSize={labelConfig.fontSize}
-        fontWeight={labelConfig.fontWeight}
+        fontSize={lc.fontSize}
+        fontWeight={lc.fontWeight}
         fontFamily="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
-        className="select-none"
+        className="select-none pointer-events-none"
       >
-        {displayLabel}
+        {display}
       </text>
     </g>
   );

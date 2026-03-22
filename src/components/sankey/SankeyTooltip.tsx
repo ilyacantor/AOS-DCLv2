@@ -1,17 +1,14 @@
 /**
- * SankeyTooltip Component
- * Displays hover information for links in the Sankey diagram
+ * SE-mode hover tooltip for nodes and links.
  */
 
 import { memo } from 'react';
 import type { SankeyTooltipProps } from './types';
-import { formatConfidence } from './utils';
 
 export const SankeyTooltip = memo(function SankeyTooltip({ tooltip }: SankeyTooltipProps) {
   if (!tooltip.visible || !tooltip.content) return null;
 
-  const { sourceLabel, targetLabel, confidence, mappingInfo } = tooltip.content;
-  const formattedConfidence = formatConfidence(confidence);
+  const { title, detail } = tooltip.content;
 
   return (
     <div
@@ -20,24 +17,15 @@ export const SankeyTooltip = memo(function SankeyTooltip({ tooltip }: SankeyTool
         left: tooltip.x,
         top: tooltip.y,
         transform: 'translate(-50%, -100%)',
+        maxWidth: 320,
       }}
     >
-      <div className="text-xs font-medium text-white/90 space-y-1">
-        <div className="flex items-center gap-2">
-          <span>{sourceLabel}</span>
-          <span className="text-white/50">→</span>
-          <span>{targetLabel}</span>
-        </div>
-        {mappingInfo && (
-          <div className="text-white/70 text-[10px]">{mappingInfo}</div>
-        )}
-        {formattedConfidence && (
-          <div className="text-white/70 text-[10px]">
-            Confidence: {formattedConfidence}
-          </div>
+      <div className="text-xs space-y-1">
+        <div className="font-medium text-white/90">{title}</div>
+        {detail && (
+          <div className="text-[10px] text-white/60 font-mono leading-relaxed">{detail}</div>
         )}
       </div>
-      {/* Tooltip arrow */}
       <div className="absolute left-1/2 -bottom-1 -translate-x-1/2 w-2 h-2 bg-[#1e293b]/95 border-b border-r border-white/20 rotate-45" />
     </div>
   );

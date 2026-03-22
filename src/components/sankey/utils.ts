@@ -1,158 +1,157 @@
 /**
- * Sankey Graph Utility Functions
- * Helper functions for layout, virtualization, and data transformation
+ * SE-mode Sankey layout computation.
+ *
+ * Positions are computed manually for full control over the 4-column layout.
+ * d3-sankey's sankeyLinkHorizontal generates the bezier link paths.
  */
 
-import { SANKEY_CONFIG, LEVEL_COLORS } from './constants';
-import type {
-  SankeyLink,
-  ContainerSize,
-  ViewportBounds,
-  ComputedLayerPositions,
-  TooltipContent,
-} from './types';
-import type { GraphNode } from '../../types';
+import { sankeyLinkHorizontal } from 'd3-sankey';
+import { SE_NODES, SE_LINKS, type SELinkDef } from './data';
+import { SE_CONFIG, NODE_COLORS, DOMAIN_COLORS, NODE_TEXT_COLORS } from './constants';
+import type { LayoutNode, LayoutLink, SELayout } from './types';
 
-/**
- * Compute dynamic layer positions based on available width and content
- */
-export function computeLayerPositions(
-  nodes: GraphNode[],
-  size: ContainerSize
-): ComputedLayerPositions {
-  const { margin, node: nodeConfig, label } = SANKEY_CONFIG;
+/* d3-sankey link path generator — reads source.x1, target.x0, y0, y1 */
+const linkPath = sankeyLinkHorizontal();
 
-  // Calculate max label width per layer (estimate based on label length)
-  const estimateLabelWidth = (n: GraphNode) =>
-    Math.min(n.label.length * 6.5, label.maxWidth);
+/** Compute full SE-mode layout for the given canvas dimensions. */
+export function computeSELayout(width: number, height: number): SELayout {
+  const { margin, node: nc } = SE_CONFIG;
+  const usableW = width - margin.left - margin.right;
+  const usableH = height - margin.top - margin.bottom;
 
-  // Safe max that handles empty arrays
-  const safeMax = (arr: number[], fallback: number) =>
-    arr.length > 0 ? Math.max(...arr) : fallback;
-
-  const maxLabelWidths = {
-    L0: safeMax(nodes.filter(n => n.level === 'L0').map(estimateLabelWidth), 40),
-    L1: safeMax(nodes.filter(n => n.level === 'L1').map(estimateLabelWidth), 60),
-    L2: safeMax(nodes.filter(n => n.level === 'L2').map(estimateLabelWidth), 80),
-    L3: safeMax(nodes.filter(n => n.level === 'L3').map(estimateLabelWidth), 60),
-  };
-
-  // Minimum spacing between layers to prevent overlap
-  const minSpacing = nodeConfig.width + label.offsetX + 20;
-
-  // Calculate positions ensuring no overlap
-  const L0_x = margin.left;
-  const L3_x = size.width - margin.right - nodeConfig.width - maxLabelWidths.L3;
-
-  // Distribute L1 and L2 in the remaining space
-  const middleSpace = L3_x - L0_x - nodeConfig.width - maxLabelWidths.L0 - minSpacing;
-
-  // Weight L2 slightly more since ontology labels tend to be longer
-  const L1_x = L0_x + nodeConfig.width + maxLabelWidths.L0 + minSpacing;
-  const L2_x = L1_x + Math.max(middleSpace * 0.45, minSpacing + maxLabelWidths.L1);
-
-  return {
-    L0: { x0: L0_x, x1: L0_x + nodeConfig.width },
-    L1: { x0: L1_x, x1: L1_x + nodeConfig.width },
-    L2: { x0: L2_x, x1: L2_x + nodeConfig.width },
-    L3: { x0: L3_x, x1: L3_x + nodeConfig.width },
-  };
-}
-
-/**
- * Check if a link is within the visible viewport (for virtualization)
- */
-export function isLinkVisible(
-  link: SankeyLink,
-  viewport: ViewportBounds,
-  padding: number = 50
-): boolean {
-  const linkMinX = Math.min(link.source.x1, link.target.x0);
-  const linkMaxX = Math.max(link.source.x1, link.target.x0);
-  const linkMinY = Math.min(link.y0, link.y1) - link.width / 2;
-  const linkMaxY = Math.max(link.y0, link.y1) + link.width / 2;
-
-  return (
-    linkMaxX >= viewport.minX - padding &&
-    linkMinX <= viewport.maxX + padding &&
-    linkMaxY >= viewport.minY - padding &&
-    linkMinY <= viewport.maxY + padding
-  );
-}
-
-/**
- * Filter links for virtualization - only render visible links
- */
-export function getVisibleLinks(
-  links: SankeyLink[],
-  viewport: ViewportBounds
-): SankeyLink[] {
-  const { virtualizationThreshold } = SANKEY_CONFIG.performance;
-
-  // If under threshold, render all links
-  if (links.length <= virtualizationThreshold) {
-    return links;
+  if (usableW <= 0 || usableH <= 0) {
+    return { nodes: [], links: [], columnXs: [] };
   }
 
-  return links.filter(link => isLinkVisible(link, viewport));
-}
+  // ---- columns: 4 evenly spaced ----
+  const colSpan = (usableW - nc.width) / 3;
+  const columnXs = [0, 1, 2, 3].map(i => margin.left + i * colSpan);
 
-/**
- * Generate a unique gradient ID for a link
- */
-export function getLinkGradientId(link: SankeyLink, index: number): string {
-  const sourceId = link.source?.id ?? 'unknown';
-  const targetId = link.target?.id ?? 'unknown';
-  return `gradient-${link.id || `${sourceId}-${targetId}-${index}`}`;
-}
+  // ---- node positions ----
+  const layers: (typeof SE_NODES[number])[][] = [[], [], [], []];
+  SE_NODES.forEach(n => layers[n.layer].push(n));
 
-/**
- * Get the color for a node based on its level
- */
-export function getNodeColor(level: string): string {
-  return LEVEL_COLORS[level as keyof typeof LEVEL_COLORS] || '#999';
-}
+  const MAX_NODE_H = 70;
+  const nodeMap = new Map<string, LayoutNode>();
 
-/**
- * Build structured tooltip content from a link
- */
-export function buildTooltipContent(link: SankeyLink): TooltipContent {
-  const sourceLabel = link.source?.label || link.source?.id || 'Unknown';
-  const targetLabel = link.target?.label || link.target?.id || 'Unknown';
-  const confidence = link.confidence;
-  const mappingInfo = link.infoSummary;
+  layers.forEach((defs, col) => {
+    const count = defs.length;
+    const gap = nc.padding;
+    const rawH = (usableH - (count - 1) * gap) / count;
+    const nh = Math.min(rawH, MAX_NODE_H);
+    const totalH = count * nh + (count - 1) * gap;
+    const startY = margin.top + (usableH - totalH) / 2;
 
-  return {
-    sourceLabel,
-    targetLabel,
-    confidence,
-    mappingInfo,
-  };
-}
+    defs.forEach((def, idx) => {
+      nodeMap.set(def.id, {
+        ...def,
+        x0: columnXs[col],
+        x1: columnXs[col] + nc.width,
+        y0: startY + idx * (nh + gap),
+        y1: startY + idx * (nh + gap) + nh,
+      });
+    });
+  });
 
-/**
- * Truncate a label to fit within maxWidth (approximate)
- */
-export function truncateLabel(label: string, maxChars: number = 18): string {
-  if (label.length <= maxChars) return label;
-  return `${label.slice(0, maxChars - 1)}…`;
-}
+  // ---- per-node link lists (excluding internal) ----
+  const outgoing = new Map<string, SELinkDef[]>();
+  const incoming = new Map<string, SELinkDef[]>();
 
-/**
- * Calculate the stroke width for a link, ensuring minimum visibility
- */
-export function getLinkStrokeWidth(link: SankeyLink): number {
-  return Math.max(SANKEY_CONFIG.link.minStrokeWidth, link.width || 1);
-}
-
-/**
- * Format confidence value for display
- */
-export function formatConfidence(confidence: string | number | undefined): string | null {
-  if (confidence === undefined || confidence === null) return null;
-  if (typeof confidence === 'number') {
-    return `${Math.round(confidence * 100)}%`;
+  for (const l of SE_LINKS) {
+    if (l.type === 'internal') continue;
+    if (!outgoing.has(l.source)) outgoing.set(l.source, []);
+    outgoing.get(l.source)!.push(l);
+    if (!incoming.has(l.target)) incoming.set(l.target, []);
+    incoming.get(l.target)!.push(l);
   }
-  if (confidence === 'high' || confidence === '') return null;
-  return String(confidence);
+
+  // sort by connected node y position so links don't cross unnecessarily
+  for (const [, list] of outgoing) {
+    list.sort((a, b) => nodeMap.get(a.target)!.y0 - nodeMap.get(b.target)!.y0);
+  }
+  for (const [, list] of incoming) {
+    list.sort((a, b) => nodeMap.get(a.source)!.y0 - nodeMap.get(b.source)!.y0);
+  }
+
+  // ---- link positions + paths ----
+  const layoutLinks: LayoutLink[] = [];
+  const PAD = 5; // inset from node top/bottom edge for attachment points
+
+  for (const def of SE_LINKS) {
+    const src = nodeMap.get(def.source)!;
+    const tgt = nodeMap.get(def.target)!;
+    const id = `${def.source}-${def.target}`;
+
+    if (def.type === 'internal') {
+      // Right-side arc connecting the two L1 nodes
+      const rx = src.x1;
+      const sy = src.y1;
+      const ty = tgt.y0;
+      const midY = (sy + ty) / 2;
+      const bulge = 35;
+
+      layoutLinks.push({
+        id,
+        source: src,
+        target: tgt,
+        type: def.type,
+        hoverContent: def.hoverContent,
+        y0: sy,
+        y1: ty,
+        width: SE_CONFIG.link.internalStrokeWidth,
+        path: `M ${rx} ${sy} C ${rx + bulge} ${midY - (ty - sy) * 0.1}, ${rx + bulge} ${midY + (ty - sy) * 0.1}, ${rx} ${ty}`,
+      });
+      continue;
+    }
+
+    // Horizontal link: compute attachment y within source and target nodes
+    const outList = outgoing.get(def.source) || [];
+    const inList = incoming.get(def.target) || [];
+    const oi = outList.indexOf(def);
+    const ii = inList.indexOf(def);
+
+    const srcH = src.y1 - src.y0 - 2 * PAD;
+    const tgtH = tgt.y1 - tgt.y0 - 2 * PAD;
+
+    const y0 = src.y0 + PAD + (oi + 0.5) * srcH / outList.length;
+    const y1 = tgt.y0 + PAD + (ii + 0.5) * tgtH / inList.length;
+
+    // sankeyLinkHorizontal reads source.x1, target.x0, y0, y1
+    const pathStr = (linkPath as any)({ source: { x1: src.x1 }, target: { x0: tgt.x0 }, y0, y1 }) || '';
+
+    layoutLinks.push({
+      id,
+      source: src,
+      target: tgt,
+      type: def.type,
+      hoverContent: def.hoverContent,
+      y0,
+      y1,
+      width: SE_CONFIG.link.strokeWidth,
+      path: pathStr,
+    });
+  }
+
+  return { nodes: Array.from(nodeMap.values()), links: layoutLinks, columnXs };
+}
+
+/** Resolve node fill color based on layer and domain. */
+export function getNodeColor(node: { layer: number; domain?: string }): string {
+  if (node.layer === 0) return NODE_COLORS.source;
+  if (node.layer === 1) return NODE_COLORS.dcl;
+  if (node.layer === 3) return NODE_COLORS.persona;
+  return DOMAIN_COLORS[node.domain || 'financial'] || DOMAIN_COLORS.financial;
+}
+
+/** Resolve label text color for readability on dark background. */
+export function getNodeTextColor(node: { layer: number; domain?: string }): string {
+  if (node.layer === 0) return NODE_TEXT_COLORS.source;
+  if (node.layer === 1) return NODE_TEXT_COLORS.dcl;
+  if (node.layer === 3) return NODE_TEXT_COLORS.persona;
+  return NODE_TEXT_COLORS[node.domain || 'financial'] || NODE_TEXT_COLORS.financial;
+}
+
+/** Gradient ID for a layout link. */
+export function getLinkGradientId(link: LayoutLink): string {
+  return `se-grad-${link.id}`;
 }
