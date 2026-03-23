@@ -13,6 +13,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 
 from backend.api.routes.v2_helpers import resolve_tenant_and_run
+from backend.core.db import PoolExhausted
 from backend.engine.combining_v2 import CombiningEngineV2
 from backend.engine.query_resolver_v2 import TripleQueryResolver
 from backend.utils.log_utils import get_logger
@@ -35,6 +36,11 @@ async def get_combining_income_statement_v2(
         return engine.get_combining_income_statement(period)
     except ValueError as e:
         raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -52,6 +58,11 @@ async def get_combining_balance_sheet_v2(
         return engine.get_combining_balance_sheet(period)
     except ValueError as e:
         raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -69,6 +80,11 @@ async def get_combining_cash_flow_v2(
         return engine.get_combining_cash_flow(period)
     except ValueError as e:
         raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -86,6 +102,11 @@ async def get_cofa_adjustments_v2(
         return engine.get_cofa_adjustments(period=period)
     except ValueError as e:
         raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -109,6 +130,11 @@ async def get_income_statement_v2(
         return resolver.get_income_statement(entity_id, period)
     except ValueError as e:
         raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -127,6 +153,11 @@ async def get_balance_sheet_v2(
         return resolver.get_balance_sheet(entity_id, period)
     except ValueError as e:
         raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -145,5 +176,10 @@ async def get_cash_flow_v2(
         return resolver.get_cash_flow(entity_id, period)
     except ValueError as e:
         raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))

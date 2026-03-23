@@ -6,6 +6,7 @@ and the reprompt loop (success + exhaustion).
 """
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from decimal import Decimal
 
@@ -36,6 +37,12 @@ from maestra.validation.rules import (
 )
 from maestra.validation.seed_coa import CoALookup
 from maestra.validation.reprompt import reprompt_loop
+
+
+def _run_async(coro):
+    """Run an async coroutine from sync code, even when another event loop is active (e.g. Playwright)."""
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(asyncio.run, coro).result()
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -413,7 +420,7 @@ class TestRepromptLoop:
                                amount=Decimal("40000")),
                 ])
 
-        output, results = asyncio.get_event_loop().run_until_complete(
+        output, results = _run_async(
             reprompt_loop(mock_agent, "Generate BS", max_attempts=3)
         )
 
@@ -437,7 +444,7 @@ class TestRepromptLoop:
                            amount=Decimal("10000")),
             ])
 
-        output, results = asyncio.get_event_loop().run_until_complete(
+        output, results = _run_async(
             reprompt_loop(mock_agent, "Generate BS", max_attempts=3)
         )
 

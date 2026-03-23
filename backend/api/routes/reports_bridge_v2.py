@@ -15,6 +15,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 
 from backend.api.routes.v2_helpers import resolve_tenant_and_run
+from backend.core.db import PoolExhausted
 from backend.engine.ebitda_bridge_v2 import EBITDABridgeV2
 from backend.engine.qoe_v2 import QualityOfEarningsV2
 from backend.utils.log_utils import get_logger
@@ -37,6 +38,11 @@ async def get_bridge(
         return engine.get_bridge(entity_id)
     except ValueError as e:
         raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -53,6 +59,11 @@ async def get_bridge_comparison(
         return engine.get_bridge_comparison()
     except ValueError as e:
         raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -70,6 +81,11 @@ async def get_adjustment_detail(
         return engine.get_adjustment_detail(concept)
     except ValueError as e:
         raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -86,6 +102,11 @@ async def get_sensitivity_matrix(
         return engine.get_sensitivity_matrix()
     except ValueError as e:
         raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -103,6 +124,11 @@ async def get_qoe_summary(
         return engine.get_qoe_summary(entity_id)
     except ValueError as e:
         raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -119,5 +145,10 @@ async def get_combined_qoe(
         return engine.get_combined_qoe()
     except ValueError as e:
         raise HTTPException(status_code=422, detail={"error": "data_incomplete", "detail": str(e)})
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))

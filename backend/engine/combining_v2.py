@@ -9,6 +9,7 @@ Identity gates validate every statement before returning.
 COFA conflicts read from cofa_conflict.* triples in the database.
 """
 
+import os
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
@@ -17,6 +18,13 @@ from backend.engine.query_resolver_v2 import TripleQueryResolver
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
+
+# Shared executor for all combining report queries. Caps total DB thread
+# demand regardless of concurrent requests. Default 6 threads.
+# Set DCL_COMBINING_MAX_WORKERS env var to tune. Must be < POOL_MAX_CONN
+# to leave headroom for non-combining queries.
+_COMBINING_MAX_WORKERS = int(os.environ.get("DCL_COMBINING_MAX_WORKERS", "6"))
+_combining_executor = ThreadPoolExecutor(max_workers=_COMBINING_MAX_WORKERS)
 
 
 def _jsonb_str(value) -> str:
@@ -76,19 +84,18 @@ class CombiningEngineV2:
         for concept in sorted(grouped.keys()):
             props = grouped[concept]
             conflict_id = concept.split(".")[-1] if "." in concept else concept
-            dollar_impact = _jsonb_float(props.get("adjustment_amount", "0"))
+            dollar_impact = _jsonb_float(props.get("dollar_impact", "0"))
 
             results.append({
-                "conflict_id": _jsonb_str(props.get("conflict_id", conflict_id)),
+                "conflict_id": conflict_id,
                 "concept": concept,
                 "description": _jsonb_str(props.get("description", "")),
                 "dollar_impact": dollar_impact,
                 "severity": _jsonb_str(props.get("severity", "")),
-                "conflict_type": _jsonb_str(props.get("category", "")),
-                "acquirer_treatment": _jsonb_str(props.get("entity_a_treatment", "")),
-                "target_treatment": _jsonb_str(props.get("entity_b_treatment", "")),
+                "conflict_type": _jsonb_str(props.get("conflict_type", "")),
+                "acquirer_treatment": _jsonb_str(props.get("acquirer_treatment", "")),
+                "target_treatment": _jsonb_str(props.get("target_treatment", "")),
                 "resolution_status": _jsonb_str(props.get("resolution_status", "")),
-                "rationale": _jsonb_str(props.get("rationale", "")),
             })
 
         if not results:
@@ -110,7 +117,7 @@ class CombiningEngineV2:
                            concept, property, value
                     FROM semantic_triples
                     WHERE tenant_id = %s AND is_active = true
-                      AND concept LIKE 'cofa.%%'
+                      AND concept LIKE 'cofa_conflict.%%'
                     ORDER BY concept, property, created_at DESC
                     """,
                     [self.tenant_id],
@@ -138,13 +145,12 @@ class CombiningEngineV2:
         entity_a_id = entities[0]
         entity_b_id = entities[1]
 
-        with ThreadPoolExecutor(max_workers=3) as pool:
-            stmt_a_f = pool.submit(self._resolver.get_income_statement, entity_a_id, period)
-            stmt_b_f = pool.submit(self._resolver.get_income_statement, entity_b_id, period)
-            cofas_f = pool.submit(self.get_cofa_adjustments, period)
-            stmt_a = stmt_a_f.result()
-            stmt_b = stmt_b_f.result()
-            cofas = cofas_f.result()
+        stmt_a_f = _combining_executor.submit(self._resolver.get_income_statement, entity_a_id, period)
+        stmt_b_f = _combining_executor.submit(self._resolver.get_income_statement, entity_b_id, period)
+        cofas_f = _combining_executor.submit(self.get_cofa_adjustments, period)
+        stmt_a = stmt_a_f.result()
+        stmt_b = stmt_b_f.result()
+        cofas = cofas_f.result()
         adjustments, combined = self._apply_cofa_to_pnl(stmt_a, stmt_b, cofas)
 
         # Identity gate
@@ -198,11 +204,10 @@ class CombiningEngineV2:
         entity_a_id = entities[0]
         entity_b_id = entities[1]
 
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            bs_a_f = pool.submit(self._resolver.get_balance_sheet, entity_a_id, period)
-            bs_b_f = pool.submit(self._resolver.get_balance_sheet, entity_b_id, period)
-            bs_a = bs_a_f.result()
-            bs_b = bs_b_f.result()
+        bs_a_f = _combining_executor.submit(self._resolver.get_balance_sheet, entity_a_id, period)
+        bs_b_f = _combining_executor.submit(self._resolver.get_balance_sheet, entity_b_id, period)
+        bs_a = bs_a_f.result()
+        bs_b = bs_b_f.result()
 
         combined = TripleQueryResolver._add_statement_dicts(bs_a, bs_b)
 
@@ -255,11 +260,10 @@ class CombiningEngineV2:
         entity_a_id = entities[0]
         entity_b_id = entities[1]
 
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            cf_a_f = pool.submit(self._resolver.get_cash_flow, entity_a_id, period)
-            cf_b_f = pool.submit(self._resolver.get_cash_flow, entity_b_id, period)
-            cf_a = cf_a_f.result()
-            cf_b = cf_b_f.result()
+        cf_a_f = _combining_executor.submit(self._resolver.get_cash_flow, entity_a_id, period)
+        cf_b_f = _combining_executor.submit(self._resolver.get_cash_flow, entity_b_id, period)
+        cf_a = cf_a_f.result()
+        cf_b = cf_b_f.result()
 
         combined = TripleQueryResolver._add_statement_dicts(cf_a, cf_b)
 

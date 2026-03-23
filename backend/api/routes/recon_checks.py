@@ -265,6 +265,10 @@ def run_recon(
     entity_id: Optional[str] = Query(None, description="Entity ID to scope recon checks."),
 ):
     """Cross-module chain validation for a specific ingest run, optionally scoped by entity."""
+    # Normalize empty-string entity_id to None (frontend sends "" for "All Entities")
+    if entity_id is not None and entity_id.strip() == "":
+        entity_id = None
+
     # Resolve run_id when entity_id is provided without run_id
     if entity_id and not run_id:
         with get_connection() as conn:

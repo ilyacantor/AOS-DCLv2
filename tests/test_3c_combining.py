@@ -26,7 +26,7 @@ M_Q1_EQ = 4763.28
 C_Q1_EQ = 417.22
 M_Q1_CF_NET = 214.16
 C_Q1_CF_NET = -50.24
-COFA_COUNT = 6
+COFA_COUNT = 10
 
 
 @pytest.fixture

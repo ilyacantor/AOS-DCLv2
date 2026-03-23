@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from backend.api.routes.v2_helpers import resolve_tenant_and_run
+from backend.core.db import PoolExhausted
 from backend.engine.entity_resolution_v2 import EntityResolutionV2
 from backend.utils.log_utils import get_logger
 
@@ -76,6 +77,11 @@ def get_workspace(
     try:
         ws = resolver.get_workspace(workspace_id)
         return ws
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -95,6 +101,11 @@ def confirm_match(
             workspace_id, request.canonical_id, request.decided_by
         )
         return ws
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -112,6 +123,11 @@ def reject_match(
     try:
         ws = resolver.reject_match(workspace_id, request.decided_by)
         return ws
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -131,6 +147,11 @@ def escalate(
             workspace_id, request.reason, request.decided_by
         )
         return ws
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -147,6 +168,11 @@ def undo_decision(
     try:
         ws = resolver.undo_decision(workspace_id)
         return ws
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 

@@ -346,14 +346,21 @@ function App() {
               {/* Run Mode */}
               <div className="flex items-center gap-1">
                 <span className="text-xs text-muted-foreground">Mode:</span>
-                <select
-                  value={runMode}
-                  onChange={(e) => setRunMode(e.target.value as 'Dev' | 'Prod')}
-                  className="px-2 py-1 text-xs rounded border border-border bg-background"
-                >
-                  <option value="Dev">Dev</option>
-                  <option value="Prod">Prod</option>
-                </select>
+                <div className="flex rounded border border-border overflow-hidden">
+                  {(['Dev', 'Prod'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setRunMode(mode)}
+                      className={`px-2 py-1 text-xs transition-colors ${
+                        runMode === mode
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-background text-muted-foreground hover:bg-accent'
+                      }`}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Persona Selector — Dropdown */}

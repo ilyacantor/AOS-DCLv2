@@ -25,7 +25,7 @@ from typing import List, Optional
 from backend.db.triple_store import TripleStore
 from backend.db.engagement_store import EngagementStore
 from backend.db.resolution_store import ResolutionStore
-from backend.core.db import get_connection
+from backend.core.db import get_connection, PoolExhausted
 from backend.engine.engagement import get_active_engagement
 from backend.utils.log_utils import get_logger
 
@@ -779,6 +779,11 @@ def triples_persona_stats():
 
     try:
         stats = _triple_store.get_persona_domain_stats(persona_domains)
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 

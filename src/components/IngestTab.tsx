@@ -29,23 +29,12 @@ export function IngestTab({ entities, selectedEntityId, onEntityChange, entities
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
-  // Derive total_triples and latest_ingest from entities prop
-  const entityMetrics = useMemo(() => {
-    if (selectedEntityId) {
-      const entity = entities.find((e) => e.entity_id === selectedEntityId);
-      return {
-        totalTriples: entity?.triple_count ?? 0,
-        latestIngest: entity?.latest_ingest ?? null,
-      };
-    }
-    // "All Entities": sum triple_count, show newest latest_ingest
-    return {
-      totalTriples: entities.reduce((sum, e) => sum + e.triple_count, 0),
-      latestIngest: entities.length > 0
-        ? entities.reduce((newest, e) => (e.latest_ingest > newest ? e.latest_ingest : newest), entities[0].latest_ingest)
-        : null,
-    };
-  }, [entities, selectedEntityId]);
+  // "Total Triples" is always the system-wide count (label says "Active in store").
+  // Per-entity latest_ingest is scoped to the selection.
+  const storeTotalTriples = useMemo(
+    () => entities.reduce((sum, e) => sum + e.triple_count, 0),
+    [entities],
+  );
 
   const fetchData = async (entityId?: string) => {
     setLoading(true);
@@ -115,7 +104,7 @@ export function IngestTab({ entities, selectedEntityId, onEntityChange, entities
         />
         <MetricCard
           label="Total Triples"
-          value={entityMetrics.totalTriples.toLocaleString()}
+          value={storeTotalTriples.toLocaleString()}
           detail="Active in store"
         />
         <MetricCard
