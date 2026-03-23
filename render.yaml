@@ -24,9 +24,9 @@ services:
       - key: PINECONE_API_KEY
         sync: false
       - key: AAM_API_URL
-        sync: false
+        value: "https://aos-aam.onrender.com"
       - key: AAM_URL
-        sync: false
+        value: "https://aos-aam.onrender.com"
       - key: FARM_API_URL
         value: "https://farmv2.onrender.com"
       - key: PLATFORM_URL
