@@ -210,47 +210,27 @@ def test_content_ingest_uses_aod_sor_count(client):
     resp = client.post("/api/dcl/export-pipes", json=EXPORT_PAYLOAD_WITH_SOR)
     assert resp.status_code == 200
 
-    # Content phase
+    # Content phase — POST /api/dcl/ingest is deprecated (410 Gone)
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
         headers=_ingest_headers(**{"x-pipe-id": "sf-crm-001", "x-run-id": "test-sor-run-001"}),
     )
-    assert resp.status_code == 200
-    ingest_data = resp.json()
-    assert ingest_data["status"] == "ingested"
-    assert ingest_data["warnings"] == []  # no warnings when SORs present
-
-    # Verify activity log: content entry has sors=6
-    store = get_ingest_store()
-    activity = store.get_activity_log()
-    content_entries = [e for e in activity if e["phase"] == "content"]
-    assert len(content_entries) >= 1
-    assert content_entries[0]["sors"] == 6  # AOD-authoritative count
+    assert resp.status_code == 410
 
 
 # ---------------------------------------------------------------------------
 # Test 4: content before structure → warning in response
 # ---------------------------------------------------------------------------
 
-def test_content_before_structure_warns(client):
-    """Ingest with no prior export-pipes → response includes broken-sequence warning.
-
-    Uses farm_ run_id prefix to bypass the canonical source gate (Farm
-    self-directed pushes are the realistic scenario for this race condition).
-    """
-    # No export-pipes call — pipe store is empty
+def test_content_before_structure_deprecated(client):
+    """POST /api/dcl/ingest returns 410 — content now goes through /api/dcl/ingest-triples."""
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
         headers=_ingest_headers(**{"x-pipe-id": "any-pipe", "x-run-id": "farm_sor-run-002"}),
     )
-    assert resp.status_code == 200
-    data = resp.json()
-
-    # Should have the broken-sequence warning
-    assert len(data["warnings"]) >= 1
-    assert any("3-phase sequence is broken" in w for w in data["warnings"])
+    assert resp.status_code == 410
 
 
 # ---------------------------------------------------------------------------
@@ -288,21 +268,13 @@ def test_old_receipt_deserialization_without_sor_field():
 # ---------------------------------------------------------------------------
 
 def test_reconciliation_shows_aod_authority(client):
-    """After export-pipes + ingest → cross-system reconciliation returns aod_authority.sor_count=6.
+    """After export-pipes → cross-system reconciliation returns aod_authority.sor_count=6.
 
-    The aod_authority block lives on the /api/dcl/reconciliation/cross-system
-    endpoint (the unified stats view), not the per-dispatch reconciliation.
+    POST /api/dcl/ingest is deprecated; reconciliation reads from PipeStore
+    (populated by export-pipes), not from ingest data.
     """
     # Structure phase with 6 SOR declarations
     resp = client.post("/api/dcl/export-pipes", json=EXPORT_PAYLOAD_WITH_SOR)
-    assert resp.status_code == 200
-
-    # Content phase
-    resp = client.post(
-        "/api/dcl/ingest",
-        json=INGEST_PAYLOAD,
-        headers=_ingest_headers(**{"x-pipe-id": "sf-crm-001", "x-run-id": "test-sor-run-003"}),
-    )
     assert resp.status_code == 200
 
     # Cross-system reconciliation (reads from PipeStore, no AAM_URL needed)

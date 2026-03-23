@@ -360,37 +360,136 @@ class TestReconTab:
         btn = page.locator("button").filter(has_text="Run Recon")
         expect(btn.first).to_be_visible(timeout=5_000)
 
-    def test_recon_executes_and_shows_results(self, page_setup: Page):
+    def test_recon_executes_and_shows_correct_results(self, page_setup: Page):
+        """Run recon and verify all 5 checks render with correct data from the backend."""
         page = page_setup
         navigate_to_tab(page, "Recon")
 
-        # Click Run Recon
+        # Get the selected entity from the dropdown
+        entity_select = page.locator("select").first
+        selected_entity = entity_select.input_value()
+
+        # Fetch backend ground truth for this entity
+        recon_url = f"{DCL_BACKEND}/api/dcl/recon?entity_id={selected_entity}"
+        api_resp = httpx.get(recon_url, timeout=30.0)
+        assert api_resp.status_code == 200, f"Recon API failed: {api_resp.status_code}"
+        api_data = api_resp.json()
+        api_checks = {c["check"]: c for c in api_data["checks"]}
+
+        # Click Run Recon in UI
         btn = page.locator("button").filter(has_text="Run Recon")
         expect(btn.first).to_be_visible(timeout=5_000)
         btn.first.click()
 
-        # Wait for results (recon calls upstream services, may take a few seconds)
-        page.wait_for_timeout(8_000)
+        # Wait for results
+        page.wait_for_timeout(10_000)
 
         body_text = page.locator("body").text_content() or ""
 
-        # Should show check names
-        expected_checks = ["Farm", "Entity Consistency", "Source Coverage", "Validation Rejections", "Domain Completeness"]
-        found_checks = sum(1 for c in expected_checks if c in body_text)
-        assert found_checks >= 3, (
-            f"Expected at least 3 check cards, found {found_checks}. "
-            f"Body contains: {body_text[:500]}"
-        )
+        # All 5 checks must render — not "at least 3"
+        check_labels = [
+            "Farm", "Entity Consistency", "Source Coverage",
+            "Validation Rejections", "Domain Completeness",
+        ]
+        for label in check_labels:
+            assert label in body_text, (
+                f"Check '{label}' not found in recon results. "
+                f"Body: {body_text[:500]}"
+            )
 
-    def test_overall_status_badge(self, page_setup: Page):
+        # Verify entity_consistency shows the correct entity name
+        ec = api_checks.get("entity_consistency", {})
+        if ec.get("entities"):
+            for ent in ec["entities"]:
+                assert ent in body_text, (
+                    f"Entity '{ent}' not shown in Entity Consistency check"
+                )
+
+        # Verify source_coverage shows source count or missing list
+        sc = api_checks.get("source_coverage", {})
+        if sc.get("status") == "pass":
+            actual_sources = sc.get("actual", [])
+            assert f"{len(actual_sources)} sources present" in body_text, (
+                f"Source Coverage should show '{len(actual_sources)} sources present', "
+                f"body: {body_text[:500]}"
+            )
+        elif sc.get("missing"):
+            for m in sc["missing"]:
+                assert m in body_text, (
+                    f"Missing source '{m}' not shown in Source Coverage check"
+                )
+
+        # Verify validation_rejections shows correct count
+        vr = api_checks.get("validation_rejections", {})
+        if vr.get("rejected", 0) == 0:
+            assert "No rejections" in body_text, (
+                "Validation Rejections should show 'No rejections'"
+            )
+        else:
+            assert f"{vr['rejected']} rejected" in body_text, (
+                f"Validation Rejections should show '{vr['rejected']} rejected'"
+            )
+
+        # Verify domain_completeness shows populated/total
+        dc = api_checks.get("domain_completeness", {})
+        if dc.get("populated") is not None and dc.get("total") is not None:
+            expected_summary = f"{dc['populated']} / {dc['total']} domains populated"
+            assert expected_summary in body_text, (
+                f"Domain Completeness should show '{expected_summary}', "
+                f"body: {body_text[:500]}"
+            )
+
+        # Verify farm_dcl_count shows expected/actual numbers
+        fc = api_checks.get("farm_dcl_count", {})
+        if fc.get("status") not in ("skip", None) and fc.get("expected") is not None:
+            assert f"Expected: {fc['expected']}" in body_text, (
+                f"Farm count should show 'Expected: {fc['expected']}'"
+            )
+            assert f"Actual: {fc['actual']}" in body_text, (
+                f"Farm count should show 'Actual: {fc['actual']}'"
+            )
+
+    def test_overall_status_matches_backend(self, page_setup: Page):
+        """Overall status badge must match the backend's overall verdict."""
         page = page_setup
         navigate_to_tab(page, "Recon")
 
+        # Get the selected entity
+        entity_select = page.locator("select").first
+        selected_entity = entity_select.input_value()
+
+        # Fetch backend ground truth
+        api_resp = httpx.get(
+            f"{DCL_BACKEND}/api/dcl/recon?entity_id={selected_entity}",
+            timeout=30.0,
+        )
+        assert api_resp.status_code == 200
+        expected_overall = api_resp.json()["overall"].upper()  # "PASS", "WARN", or "FAIL"
+
+        # Run recon in UI
         btn = page.locator("button").filter(has_text="Run Recon")
         btn.first.click()
-        page.wait_for_timeout(8_000)
+        page.wait_for_timeout(10_000)
 
         body_text = page.locator("body").text_content() or ""
-        # Overall status should be PASS, WARN, or FAIL
-        has_status = "PASS" in body_text or "WARN" in body_text or "FAIL" in body_text
-        assert has_status, "Overall status badge not found after recon"
+
+        # The overall badge must match the backend verdict
+        assert expected_overall in body_text, (
+            f"Overall status should be {expected_overall} but not found in UI. "
+            f"Body: {body_text[:300]}"
+        )
+
+        # Each individual check status must appear in the UI
+        api_checks = api_resp.json()["checks"]
+        for check in api_checks:
+            status_text = check["status"].upper()  # PASS, FAIL, WARN, SKIP
+            check_name = {
+                "farm_dcl_count": "Farm",
+                "entity_consistency": "Entity Consistency",
+                "source_coverage": "Source Coverage",
+                "validation_rejections": "Validation Rejections",
+                "domain_completeness": "Domain Completeness",
+            }.get(check["check"], check["check"])
+            assert status_text in body_text, (
+                f"Check '{check_name}' status {status_text} not found in UI"
+            )

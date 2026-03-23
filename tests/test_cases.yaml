@@ -12,7 +12,7 @@
 
 - id: PI_001
   category: pipeline_ingest
-  description: "Push revenue rows via ingest endpoint"
+  description: "POST /api/dcl/ingest is deprecated (410 Gone)"
   method: post
   path: /api/dcl/ingest
   headers:
@@ -24,7 +24,6 @@
     snapshot_name: revenue_fbg
     run_timestamp: "2026-03-10T00:00:00Z"
     schema_version: "1.0"
-    entity_id: meridian
     row_count: 2
     rows:
       - { metric: revenue, period: "2025-Q3", value: 42.5 }
@@ -32,13 +31,7 @@
   assertions:
     - field: status_code
       op: equals
-      value: 200
-    - field: status
-      op: equals
-      value: ingested
-    - field: rows_accepted
-      op: greater_than
-      value: 0
+      value: 410
 
 - id: PI_002
   category: pipeline_ingest

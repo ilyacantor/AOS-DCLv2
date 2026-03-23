@@ -533,18 +533,22 @@ class TripleQueryResolver:
         """
         Find concepts that appear under both entity_ids.
         Domain: 'customer', 'vendor', 'employee'.
-        Returns list of concept names that have rows for both entities.
+        Returns list of entity-level concept names (domain.entity_name) that
+        have rows for both entities. Subcategory concepts like
+        customer.pipeline.closed_won are excluded — they represent structural
+        metadata, not actual entity overlaps.
         """
         sql = """
             SELECT concept
             FROM semantic_triples
             WHERE tenant_id = %s AND is_active = true
               AND concept LIKE %s
+              AND concept NOT LIKE %s
             GROUP BY concept
             HAVING COUNT(DISTINCT entity_id) > 1
             ORDER BY concept
         """
-        rows = self._query(sql, [self.tenant_id, f"{domain}.%"])
+        rows = self._query(sql, [self.tenant_id, f"{domain}.%", f"{domain}.%.%"])
         return [r["concept"] for r in rows]
 
     # ------------------------------------------------------------------

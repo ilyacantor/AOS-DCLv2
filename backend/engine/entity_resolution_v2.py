@@ -114,18 +114,23 @@ class EntityResolutionV2:
         return {"created": total_created, "by_domain": by_domain}
 
     def _find_overlapping_concepts(self, domain: str) -> list[str]:
-        """Find concepts in a domain that appear under both entity_ids."""
+        """Find entity-level concepts in a domain that appear under both entity_ids.
+
+        Excludes subcategory concepts (e.g. customer.pipeline.closed_won) which
+        represent structural metadata, not actual entity overlaps.
+        """
         sql = """
             SELECT concept
             FROM semantic_triples
             WHERE tenant_id = %s AND is_active = true
               AND concept LIKE %s
+              AND concept NOT LIKE %s
               AND entity_id != 'combined'
             GROUP BY concept
             HAVING COUNT(DISTINCT entity_id) > 1
             ORDER BY concept
         """
-        rows = self._query(sql, [self.tenant_id, f"{domain}.%"])
+        rows = self._query(sql, [self.tenant_id, f"{domain}.%", f"{domain}.%.%"])
         return [r["concept"] for r in rows]
 
     def _batch_create_workspaces(self, concepts: list[str], domain: str) -> int:

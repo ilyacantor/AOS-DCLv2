@@ -705,75 +705,27 @@ def _process_ingest_sync(
     )
 
 
-@router.post("", response_model=IngestResponse)
-async def dcl_ingest(
-    request: Request,
-    x_run_id: Optional[str] = Header(None),
-    x_pipe_id: Optional[str] = Header(None),
-    x_schema_hash: Optional[str] = Header(None),
-    x_api_key: Optional[str] = Header(None),
-    x_dispatch_id: Optional[str] = Header(None, alias="x-dispatch-id"),
-):
+@router.post("")
+async def dcl_ingest(request: Request):
     """
-    Accept a data push from Farm (Path 3 — Content Path).
+    DEPRECATED — this endpoint accepted raw-row pushes from Farm.
 
-    Schema-on-write validation: before accepting any payload, checks
-    that a matching pipe definition exists (registered via /export-pipes).
-    If no match, returns HTTP 422 NO_MATCHING_PIPE.
-
-    If no pipe definitions have been registered at all (export-pipes
-    not yet called), the guard is bypassed with a WARNING log so
-    existing Farm self-directed flows continue working.
+    Farm now converts rows to semantic triples and pushes to
+    POST /api/dcl/ingest-triples instead. This endpoint returns
+    410 Gone so callers know to migrate.
     """
-    now = utc_now()
-
-    # Log raw request info for debugging connectivity issues
     client_host = request.client.host if request.client else "unknown"
-    content_type = request.headers.get("content-type", "missing")
-    content_length = request.headers.get("content-length", "missing")
-    logger.info(
-        f"[Ingest] Incoming POST from {client_host} | "
-        f"content-type={content_type} content-length={content_length} | "
-        f"x-run-id={x_run_id} x-pipe-id={x_pipe_id}"
+    logger.warning(
+        f"[Ingest] DEPRECATED POST /api/dcl/ingest called from {client_host}. "
+        f"Use POST /api/dcl/ingest-triples instead."
     )
-
-    try:
-        # Read body bytes async, then offload JSON parse to thread pool.
-        # json.loads() on a 26MB payload takes 2-5s and blocks the event loop,
-        # starving health checks and queries during ingest bursts.
-        raw_bytes = await request.body()
-        loop = asyncio.get_running_loop()
-        raw_body = await loop.run_in_executor(None, json.loads, raw_bytes)
-    except (json.JSONDecodeError, UnicodeDecodeError) as e:
-        logger.error(
-            f"[Ingest] JSON parse failed from {client_host}: {e} | "
-            f"raw body ({len(raw_bytes)} bytes): {raw_bytes[:500]!r}"
-        )
-        raise HTTPException(status_code=400, detail=f"Invalid JSON body: {e}")
-    except Exception as e:
-        logger.error(f"[Ingest] Body read/parse failed from {client_host}: {e}")
-        raise HTTPException(status_code=400, detail=f"Invalid request body: {e}")
-
-    logger.info(f"[Ingest] Received keys: {list(raw_body.keys()) if isinstance(raw_body, dict) else type(raw_body).__name__}")
-
-    # ── Offload ALL sync-heavy processing to thread pool ──
-    # With 89 concurrent ingest requests, even small sync work per request
-    # (Pydantic validation, Redis lookups, schema hashing, zlib compression)
-    # starves the event loop and blocks health checks. A single executor call
-    # per request keeps the event loop free for health/query endpoints.
-    result = await loop.run_in_executor(
-        None,
-        lambda: _process_ingest_sync(
-            raw_body=raw_body,
-            now=now,
-            x_run_id=x_run_id,
-            x_pipe_id=x_pipe_id,
-            x_dispatch_id=x_dispatch_id,
-            x_schema_hash=x_schema_hash,
-            x_api_key=x_api_key,
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "POST /api/dcl/ingest is deprecated and no longer accepts data. "
+            "Use POST /api/dcl/ingest-triples for semantic triple ingestion."
         ),
     )
-    return result
 
 
 # ---------------------------------------------------------------------------

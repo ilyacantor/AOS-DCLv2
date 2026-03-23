@@ -10,7 +10,7 @@
 import { useRef, useMemo, useCallback, useState } from 'react';
 import { useResizeObserver } from '../../hooks/useResizeObserver';
 import { SE_CONFIG, LAYER_LABELS, BG_COLOR } from './constants';
-import { computeSELayout, getNodeColor, getNodeTextColor, getLinkGradientId } from './utils';
+import { computeSELayout, extractLinkValues, getNodeColor, getNodeTextColor, getLinkGradientId } from './utils';
 import { SankeyNodeLabel } from './SankeyNodeLabel';
 import { SankeyTooltip } from './SankeyTooltip';
 import type { SankeyGraphProps, TooltipState, LayoutNode, LayoutLink } from './types';
@@ -32,10 +32,12 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
   });
   const [hoveredLinkId, setHoveredLinkId] = useState<string | null>(null);
 
+  const linkValues = useMemo(() => extractLinkValues(data), [data]);
+
   const layout = useMemo(() => {
     if (size.width === 0 || size.height === 0) return null;
-    return computeSELayout(size.width, size.height);
-  }, [size.width, size.height]);
+    return computeSELayout(size.width, size.height, linkValues);
+  }, [size.width, size.height, linkValues]);
 
   const updateRect = useCallback(() => {
     if (containerRef.current) {
@@ -224,18 +226,10 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
 
       <SankeyTooltip tooltip={tooltip} />
 
-      {/* Run provenance — scoped to current source run, never DCL engine runId */}
-      {data?.meta && (data.meta.sourceRunId || data.meta.aodRunId || data.meta.snapshotName) && (
+      {/* Tenant provenance — readable entity names, no UUIDs */}
+      {data?.meta?.snapshotName && (
         <span className="absolute bottom-2 right-3 text-[10px] text-slate-500 font-mono pointer-events-none text-right">
-          {data.meta.snapshotName && (
-            <>
-              {data.meta.snapshotName}
-              <br />
-            </>
-          )}
-          {(data.meta.sourceRunId || data.meta.aodRunId) &&
-            `run: ${(data.meta.sourceRunId || data.meta.aodRunId || '').slice(0, 8)}`
-          }
+          {data.meta.snapshotName}
         </span>
       )}
     </div>

@@ -22,6 +22,19 @@ from backend.core.constants import utc_now
 logger = get_logger(__name__)
 
 
+def _display_entity(entity_id: str) -> str:
+    """Format entity_id for human-readable display.
+
+    Preserves IDs that already contain uppercase or hyphens (e.g. SysHub-NUU2).
+    Title-cases plain lowercase IDs (e.g. meridian → Meridian).
+    """
+    if not entity_id:
+        return entity_id
+    if any(c.isupper() for c in entity_id) or "-" in entity_id:
+        return entity_id
+    return entity_id.replace("_", " ").title()
+
+
 class DCLEngine:
     
     def __init__(self):
@@ -385,10 +398,10 @@ class DCLEngine:
         # Build provenance scoped to the current (latest) source run
         if source_run_id:
             run_entities = triple_store.get_run_entities(source_run_id)
-            snapshot_label = " / ".join(run_entities) if run_entities else ""
+            snapshot_label = " · ".join(_display_entity(e) for e in run_entities) if run_entities else ""
         else:
             run_entities = entities
-            snapshot_label = " / ".join(entities) if entities else ""
+            snapshot_label = " · ".join(_display_entity(e) for e in entities) if entities else ""
 
         snapshot = GraphSnapshot(
             nodes=graph["nodes"],

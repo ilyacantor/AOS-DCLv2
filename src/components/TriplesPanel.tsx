@@ -182,7 +182,6 @@ export function TriplesPanel() {
 
   const fetchAll = useCallback(() => {
     fetchOverview();
-    fetchChecks();
     fetchRuns();
     fetchResolution();
   }, []);
@@ -207,6 +206,7 @@ export function TriplesPanel() {
     try {
       const res = await fetch(`/api/dcl/triples/deactivate-run?run_id=${encodeURIComponent(runId)}`, { method: 'POST' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setChecks(null);
       fetchAll();
     } catch (e) {
       console.error('[TriplesPanel] Deactivate failed:', e);

@@ -8,6 +8,8 @@ export const SE_CONFIG = {
   link: {
     strokeWidth: 2.5,
     internalStrokeWidth: 1.5,
+    minStrokeWidth: 1.5,
+    maxStrokeWidth: 6,
     restOpacity: 0.25,
     hoverOpacity: 0.65,
     internalRestOpacity: 0.15,

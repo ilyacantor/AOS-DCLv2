@@ -74,17 +74,22 @@ class OverlapEngineV2:
         return rows[0]["cnt"] if rows else 0
 
     def _find_overlapping_concepts(self, domain: str) -> list[str]:
-        """Find concepts in a domain that appear under both entity_ids."""
+        """Find entity-level concepts in a domain that appear under both entity_ids.
+
+        Excludes subcategory concepts (e.g. customer.pipeline.closed_won) which
+        represent structural metadata, not actual entity overlaps.
+        """
         sql = """
             SELECT concept
             FROM semantic_triples
             WHERE tenant_id = %s AND is_active = true
               AND concept LIKE %s
+              AND concept NOT LIKE %s
             GROUP BY concept
             HAVING COUNT(DISTINCT entity_id) > 1
             ORDER BY concept
         """
-        rows = self._query(sql, [self.tenant_id, f"{domain}.%"])
+        rows = self._query(sql, [self.tenant_id, f"{domain}.%", f"{domain}.%.%"])
         return [r["concept"] for r in rows]
 
     def get_overlap_summary(self) -> dict:

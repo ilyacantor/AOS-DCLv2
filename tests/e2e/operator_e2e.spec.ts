@@ -314,20 +314,20 @@ test.describe("DCL Frontend — Engine Dashboard", () => {
       page.locator("button, a").filter({ hasText: "Graph" }).first()
     ).toBeVisible({ timeout: 10_000 });
     await expect(
-      page.locator("button, a").filter({ hasText: "Triples" }).first()
+      page.locator("button, a").filter({ hasText: "Context" }).first()
     ).toBeVisible({ timeout: 5_000 });
 
     await page.screenshot({ path: "/tmp/e2e-dcl-main.png", fullPage: true });
     expect(consoleErrors).toHaveLength(0);
   });
 
-  test("10. Triples tab shows triple store data", async ({ page }) => {
+  test("10. Context tab shows triple store data", async ({ page }) => {
     const consoleErrors: string[] = [];
     setupPage(page, consoleErrors);
 
     await page.goto(DCL_URL, { waitUntil: "load" });
 
-    const triplesTab = page.locator("button, a").filter({ hasText: "Triples" });
+    const triplesTab = page.locator("button, a").filter({ hasText: "Context" });
     await expect(triplesTab.first()).toBeVisible({ timeout: 10_000 });
     await triplesTab.first().click();
 

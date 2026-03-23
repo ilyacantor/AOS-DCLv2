@@ -4,11 +4,13 @@ Semantic triple ingest endpoint.
 POST   /api/dcl/ingest-triples         — batch ingest triples
 GET    /api/dcl/ingest-status/{run_id}  — run status
 GET    /api/dcl/ingest-status           — list all runs
+GET    /api/dcl/ingest-log              — ingest activity log
 DELETE /api/dcl/purge-inactive          — hard-delete deactivated triples
 """
 
 import json
 import os
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,6 +18,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Optional
 
+from backend.core.db import get_connection
 from backend.db.triple_store import TripleStore
 from backend.registry.concept_registry import ConceptRegistry
 from backend.utils.log_utils import get_logger
@@ -261,12 +264,31 @@ def ingest_triples(
             "resolution_confidence": t.resolution_confidence,
         })
 
+    # --- Instrumentation: capture timing around the write ---
+    triples_received = len(rows)
+    entity_ids = list({r["entity_id"] for r in rows if r.get("entity_id")})
+    source_systems = sorted({r["source_system"] for r in rows if r.get("source_system")})
+
+    start_ts = time.monotonic()
     count = _triple_store.insert_triples(rows)
+    duration_ms = int((time.monotonic() - start_ts) * 1000)
+
     concept_summary = _triple_store.count_by_domain(req.tenant_id, run_id=req.run_id)
 
     logger.info(
         f"[ingest-triples] Ingested {count} triples for run_id={req.run_id}, "
-        f"tenant_id={req.tenant_id}, concepts={concept_summary}"
+        f"tenant_id={req.tenant_id}, concepts={concept_summary}, duration={duration_ms}ms"
+    )
+
+    # Record to ingest_log — observability only, never fails the ingest
+    _record_ingest_log(
+        run_id=req.run_id,
+        tenant_id=req.tenant_id,
+        entity_id=entity_ids[0] if len(entity_ids) == 1 else None,
+        source_systems=source_systems,
+        triples_received=triples_received,
+        triples_written=count,
+        duration_ms=duration_ms,
     )
 
     # On replace ingest, update seed_manifest.json so tests point at the live run
@@ -322,6 +344,89 @@ def list_ingest_status():
 
 
 # ---------------------------------------------------------------------------
+# Ingest activity log
+# ---------------------------------------------------------------------------
+
+def _record_ingest_log(
+    run_id: str,
+    tenant_id: str,
+    entity_id: str | None,
+    source_systems: list[str],
+    triples_received: int,
+    triples_written: int,
+    duration_ms: int,
+    triples_rejected: int = 0,
+    rejection_reasons: list | None = None,
+) -> None:
+    """Write a row to ingest_log. Failure is logged, never raised."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO ingest_log "
+                    "(run_id, entity_id, tenant_id, triples_received, triples_written, "
+                    " triples_rejected, rejection_reasons, source_systems, duration_ms) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (
+                        run_id, entity_id, tenant_id,
+                        triples_received, triples_written,
+                        triples_rejected,
+                        json.dumps(rejection_reasons or []),
+                        source_systems,
+                        duration_ms,
+                    ),
+                )
+                conn.commit()
+    except Exception as e:
+        logger.warning(f"[ingest-log] Failed to record ingest log: {e}")
+
+
+@router.get("/api/dcl/ingest-log")
+def get_ingest_log(
+    limit: int = Query(20, ge=1, le=200),
+    entity_id: Optional[str] = Query(None),
+    run_id: Optional[str] = Query(None),
+):
+    """Return recent ingest log entries, newest first."""
+    clauses = []
+    params: list = []
+
+    if entity_id:
+        clauses.append("entity_id = %s")
+        params.append(entity_id)
+    if run_id:
+        clauses.append("run_id = %s")
+        params.append(run_id)
+
+    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+
+    sql = (
+        f"SELECT id, run_id, entity_id, tenant_id, "
+        f"triples_received, triples_written, triples_rejected, "
+        f"rejection_reasons, source_systems, duration_ms, created_at "
+        f"FROM ingest_log {where} "
+        f"ORDER BY created_at DESC LIMIT %s"
+    )
+    params.append(limit)
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            columns = [desc[0] for desc in cur.description]
+            rows = []
+            for row in cur.fetchall():
+                d = dict(zip(columns, row))
+                d["id"] = str(d["id"])
+                d["run_id"] = str(d["run_id"])
+                d["tenant_id"] = str(d["tenant_id"])
+                if d["created_at"]:
+                    d["created_at"] = d["created_at"].isoformat()
+                rows.append(d)
+
+    return rows
+
+
+# ---------------------------------------------------------------------------
 # Purge inactive triples
 # ---------------------------------------------------------------------------
 
@@ -362,11 +467,25 @@ def _update_seed_manifest(
     triple_count: int,
     concept_summary: dict,
 ) -> None:
-    """Update data/seed_manifest.json with current active run info."""
+    """Update data/seed_manifest.json with current active run info.
+
+    Only overwrites if the new run has at least as many concept domains as the
+    existing manifest, preventing SE pipeline runs (few concepts) from stomping
+    rich seed data (many concepts).
+    """
     try:
         existing = {}
         if _MANIFEST_PATH.exists():
             existing = json.loads(_MANIFEST_PATH.read_text())
+
+        existing_concept_count = len(existing.get("concept_summary", {}))
+        new_concept_count = len(concept_summary)
+        if existing_concept_count > new_concept_count:
+            logger.info(
+                f"[ingest-triples] Skipping seed_manifest.json update: existing has "
+                f"{existing_concept_count} concept domains vs {new_concept_count} in new run"
+            )
+            return
 
         existing.update({
             "seed_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),

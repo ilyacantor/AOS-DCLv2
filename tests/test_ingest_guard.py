@@ -1,15 +1,9 @@
 """
-Tests for the DCL Ingest Guard (schema-on-write validation).
+Tests for the DCL Ingest Guard and endpoint deprecation.
 
-Covers the Trifecta architecture's core invariant:
-  Content (Farm /ingest) must match Structure (AAM /export-pipes) on pipe_id.
-
-Test matrix:
-  1. export-pipes → ingest with matching pipe_id → 200 with matched_schema=true
-  2. ingest with WRONG pipe_id when store has definitions → 422 NO_MATCHING_PIPE
-  3. ingest when store is empty (no export-pipes called) → 200 (guard bypassed)
-  4. export-pipes with empty/invalid payload → 400
-  5. IngestResponse contains enriched fields (dcl_run_id, schema_fields, timestamp)
+POST /api/dcl/ingest is deprecated (410 Gone) — Farm now pushes semantic
+triples to POST /api/dcl/ingest-triples. Tests 1-3, 5, 7 verify the
+deprecated endpoint returns 410. Tests 4 and 6 cover export-pipes (unchanged).
 """
 
 import os
@@ -116,83 +110,53 @@ INGEST_PAYLOAD = {
 # Test 1: Happy path — export then ingest with matching pipe_id
 # ---------------------------------------------------------------------------
 
-def test_export_then_ingest_matching_pipe(client):
-    """Structure + Content with same pipe_id → 200 with matched_schema=true."""
-    # Step 1: Register pipe definitions (Path 1 — Structure)
+def test_export_then_ingest_deprecated(client):
+    """POST /api/dcl/ingest is deprecated — returns 410 Gone."""
+    # export-pipes still works
     resp = client.post("/api/dcl/export-pipes", json=EXPORT_PAYLOAD)
     assert resp.status_code == 200
     export_data = resp.json()
     assert export_data["status"] == "accepted"
     assert export_data["pipes_registered"] == 2
-    assert "sf-crm-001" in export_data["pipe_ids"]
-    assert "ns-erp-001" in export_data["pipe_ids"]
 
-    # Step 2: Push data with matching pipe_id (Path 3 — Content)
+    # POST /api/dcl/ingest now returns 410
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
         headers=_ingest_headers(**{"x-pipe-id": "sf-crm-001", "x-run-id": "test-run-001"}),
     )
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "ingested"
-    assert data["matched_schema"] is True
-    assert data["schema_fields"] == ["id", "email", "revenue", "account_name"]
-    assert data["pipe_id"] == "sf-crm-001"
-    assert data["rows_accepted"] == 2
-    assert data["dcl_run_id"] == "test-run-001"
-    assert data["timestamp"] != ""
+    assert resp.status_code == 410
+    assert "deprecated" in resp.json()["detail"].lower()
 
 
 # ---------------------------------------------------------------------------
 # Test 2: Rejection — ingest with WRONG pipe_id → 422
 # ---------------------------------------------------------------------------
 
-def test_ingest_wrong_pipe_id_rejected(client):
-    """Content with unknown pipe_id when definitions exist → 422."""
-    # Register definitions first
+def test_ingest_wrong_pipe_id_deprecated(client):
+    """POST /api/dcl/ingest returns 410 regardless of pipe_id."""
     client.post("/api/dcl/export-pipes", json=EXPORT_PAYLOAD)
 
-    # Push with non-existent pipe_id
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
         headers=_ingest_headers(**{"x-pipe-id": "nonexistent-pipe-999", "x-run-id": "test-run-002"}),
     )
-    assert resp.status_code == 422
-    data = resp.json()
-    detail = data["detail"]
-    assert detail["error"] == "NO_MATCHING_PIPE"
-    assert detail["pipe_id"] == "nonexistent-pipe-999"
-    assert "sf-crm-001" in detail["available_pipes"]
-    assert "ns-erp-001" in detail["available_pipes"]
-    assert detail["timestamp"] != ""
+    assert resp.status_code == 410
 
 
 # ---------------------------------------------------------------------------
 # Test 3: Backward compat — ingest when no definitions registered → 200
 # ---------------------------------------------------------------------------
 
-def test_ingest_no_definitions_guard_bypassed(client):
-    """No export-pipes called → guard bypassed, ingest succeeds.
-
-    Uses farm_ run_id prefix to bypass the canonical source gate —
-    Farm self-directed pushes are the realistic scenario where no
-    export-pipes have been called yet.
-    """
-    # No export-pipes call — store is empty
+def test_ingest_no_definitions_deprecated(client):
+    """POST /api/dcl/ingest returns 410 even with no definitions registered."""
     resp = client.post(
         "/api/dcl/ingest",
         json=INGEST_PAYLOAD,
         headers=_ingest_headers(**{"x-pipe-id": "any-pipe", "x-run-id": "farm_test-run-003"}),
     )
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "ingested"
-    # matched_schema is false because no definition exists
-    assert data["matched_schema"] is False
-    assert data["schema_fields"] == []
-    assert data["rows_accepted"] == 2
+    assert resp.status_code == 410
 
 
 # ---------------------------------------------------------------------------
@@ -242,8 +206,8 @@ def test_export_connection_without_pipe_id_rejected(client):
 # Test 5: Enriched response fields present
 # ---------------------------------------------------------------------------
 
-def test_ingest_response_has_enriched_fields(client):
-    """IngestResponse includes dcl_run_id, matched_schema, schema_fields, timestamp."""
+def test_ingest_response_is_410(client):
+    """POST /api/dcl/ingest returns 410 with deprecation message."""
     client.post("/api/dcl/export-pipes", json=EXPORT_PAYLOAD)
 
     resp = client.post(
@@ -251,18 +215,8 @@ def test_ingest_response_has_enriched_fields(client):
         json=INGEST_PAYLOAD,
         headers=_ingest_headers(**{"x-pipe-id": "ns-erp-001", "x-run-id": "enriched-run"}),
     )
-    assert resp.status_code == 200
-    data = resp.json()
-
-    # All enriched fields must be present
-    assert "dcl_run_id" in data
-    assert "matched_schema" in data
-    assert "schema_fields" in data
-    assert "timestamp" in data
-
-    # Schema fields should come from the ns-erp-001 definition
-    assert data["matched_schema"] is True
-    assert set(data["schema_fields"]) == {"invoice_id", "amount", "currency", "date"}
+    assert resp.status_code == 410
+    assert "ingest-triples" in resp.json()["detail"]
 
 
 # ---------------------------------------------------------------------------
@@ -332,9 +286,8 @@ def test_export_overwrites_definitions(client):
 # Test 8: Guard activates for ALL pipes once any definition exists
 # ---------------------------------------------------------------------------
 
-def test_guard_activates_for_all_pipes(client):
-    """Once even one pipe definition exists, ALL unregistered pipe_ids are rejected."""
-    # Register only sf-crm-001
+def test_guard_activates_for_all_pipes_deprecated(client):
+    """POST /api/dcl/ingest returns 410 regardless of registered pipes."""
     single_export = {
         "source": "aam",
         "total_connections": 1,
@@ -355,21 +308,13 @@ def test_guard_activates_for_all_pipes(client):
         ],
     }
     resp = client.post("/api/dcl/export-pipes", json=single_export)
-    assert resp.status_code == 200, f"export-pipes failed: {resp.json()}"
-
-    # sf-crm-001 should work
-    resp = client.post(
-        "/api/dcl/ingest",
-        json=INGEST_PAYLOAD,
-        headers=_ingest_headers(**{"x-pipe-id": "sf-crm-001", "x-run-id": "run-ok"}),
-    )
     assert resp.status_code == 200
 
-    # Any other pipe_id should be rejected
-    resp = client.post(
-        "/api/dcl/ingest",
-        json=INGEST_PAYLOAD,
-        headers=_ingest_headers(**{"x-pipe-id": "ns-erp-001", "x-run-id": "run-fail"}),
-    )
-    assert resp.status_code == 422
-    assert resp.json()["detail"]["error"] == "NO_MATCHING_PIPE"
+    # Both matching and non-matching pipe_ids get 410
+    for pipe_id in ["sf-crm-001", "ns-erp-001"]:
+        resp = client.post(
+            "/api/dcl/ingest",
+            json=INGEST_PAYLOAD,
+            headers=_ingest_headers(**{"x-pipe-id": pipe_id, "x-run-id": f"run-{pipe_id}"}),
+        )
+        assert resp.status_code == 410
