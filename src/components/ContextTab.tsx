@@ -86,6 +86,7 @@ export function ContextTab({ entities, selectedEntityId, onEntityChange, entitie
   const conf = data?.confidence_distribution ?? { exact: 0, high: 0, medium: 0, low: 0 };
   const confTotal = conf.exact + conf.high + conf.medium + conf.low;
   const resolution = data?.resolution_activity ?? { workspaces_total: 0, workspaces_pending: 0, workspaces_resolved: 0, conflicts_detected: 0 };
+  const showResolution = !selectedEntityId && resolution.workspaces_total > 0;
 
   return (
     <div className="h-full flex flex-col p-4 gap-3 overflow-hidden">
@@ -104,22 +105,24 @@ export function ContextTab({ entities, selectedEntityId, onEntityChange, entitie
       </div>
 
       {/* Top metric row */}
-      <div className="shrink-0 grid grid-cols-4 gap-3">
+      <div className={`shrink-0 grid gap-3 ${showResolution ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <MetricCard
           label="Domain Coverage"
           value={`${data?.domain_coverage.domains_populated ?? 0} / ${data?.domain_coverage.domains_total ?? 0}`}
           detail="Ontology concepts with data"
         />
         <MetricCard
-          label="Confidence"
+          label="Triples"
           value={confTotal.toLocaleString()}
-          detail={`H:${conf.high} M:${conf.medium} L:${conf.low}`}
+          detail={`E:${conf.exact} H:${conf.high} M:${conf.medium} L:${conf.low}`}
         />
-        <MetricCard
-          label="Resolution"
-          value={`${resolution.workspaces_resolved} / ${resolution.workspaces_total}`}
-          detail={`${resolution.workspaces_pending} pending`}
-        />
+        {showResolution && (
+          <MetricCard
+            label="Resolution"
+            value={`${resolution.workspaces_resolved} / ${resolution.workspaces_total}`}
+            detail={`${resolution.workspaces_pending} pending`}
+          />
+        )}
         <MetricCard
           label="Source Systems"
           value={String(data?.source_system_breakdown.length ?? 0)}
