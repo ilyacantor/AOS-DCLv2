@@ -495,21 +495,6 @@ export function MergePanel() {
     return null;
   };
 
-  const fmtCurrency = (val: number | null): string => {
-    if (val === null || val === undefined) return '\u2014';
-    const inDollars = val * 1e6;
-    const abs = Math.abs(inDollars);
-    if (abs >= 1e9) return `$${(inDollars / 1e9).toFixed(1)}B`;
-    if (abs >= 1e6) return `$${(inDollars / 1e6).toFixed(1)}M`;
-    if (abs >= 1e3) return `$${(inDollars / 1e3).toFixed(0)}K`;
-    return `$${inDollars.toFixed(0)}`;
-  };
-
-  const fmtPercent = (val: number | null): string => {
-    if (val === null || val === undefined) return '\u2014';
-    return `${(val * 100).toFixed(1)}%`;
-  };
-
   const fmtDollarImpact = (val: number): string => {
     if (val === 0) return '';
     const abs = Math.abs(val);
