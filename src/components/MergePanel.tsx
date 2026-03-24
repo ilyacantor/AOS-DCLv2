@@ -1324,48 +1324,6 @@ export function MergePanel() {
                 )}
               </div>
 
-              {/* ================================================================
-                  Financial Summary (at bottom)
-                  ================================================================ */}
-              {data.financial_summary && data.financial_summary.length > 0 && (
-                <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
-                  <div className="px-4 py-2.5 border-b border-border/30">
-                    <span className="font-semibold uppercase tracking-wider text-muted-foreground text-sm">Financial Summary</span>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
-                          <th className="text-left px-4 py-2 font-medium">Metric</th>
-                          <th className="text-right px-4 py-2 font-medium">
-                            <span className="text-blue-400">{data.acquirer.display_name}</span>
-                          </th>
-                          <th className="text-right px-4 py-2 font-medium">
-                            <span className="text-purple-400">{data.target.display_name}</span>
-                          </th>
-                          <th className="text-right px-4 py-2 font-medium">Consolidated</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.financial_summary.map((m, i) => (
-                          <tr key={i} className="border-t border-border/30 hover:bg-card/20">
-                            <td className="px-4 py-2 text-foreground font-medium">{m.label}</td>
-                            <td className="px-4 py-2 text-right font-mono text-blue-400">
-                              {fmtMetric(m.acquirer, m.format)}
-                            </td>
-                            <td className="px-4 py-2 text-right font-mono text-purple-400">
-                              {fmtMetric(m.target, m.format)}
-                            </td>
-                            <td className="px-4 py-2 text-right font-mono text-foreground font-semibold">
-                              {fmtMetric(m.consolidated, m.format)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>
