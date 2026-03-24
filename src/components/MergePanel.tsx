@@ -510,13 +510,6 @@ export function MergePanel() {
     return `${(val * 100).toFixed(1)}%`;
   };
 
-  const fmtMetric = (val: number | null, format?: string): string => {
-    if (val === null || val === undefined) return '\u2014';
-    if (format === 'percent') return fmtPercent(val);
-    if (format === 'number') return val.toLocaleString();
-    return fmtCurrency(val);
-  };
-
   const fmtDollarImpact = (val: number): string => {
     if (val === 0) return '';
     const abs = Math.abs(val);
