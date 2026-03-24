@@ -3,7 +3,7 @@
   "deal_name": "Meridian-Cascadia Integration",
   "entity_a": {
     "id": "meridian",
-    "display_name": "Meridian Partners",
+    "display_name": "Meridian",
     "role": "acquirer",
     "business_model": "consultancy",
     "source_systems": {
@@ -14,7 +14,7 @@
   },
   "entity_b": {
     "id": "cascadia",
-    "display_name": "Cascadia Process Solutions",
+    "display_name": "Cascadia",
     "role": "target",
     "business_model": "bpm",
     "source_systems": {
