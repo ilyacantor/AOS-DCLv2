@@ -20,7 +20,7 @@ All rules in this file are non-negotiable. Rules agents violate most often:
 
 **Canonical governing document:** `maestra_platform_spec_v7.1.docx` — single source of truth for all AOS architecture. Pull it when: (a) scoping a new capability, (b) decision could contradict a locked ruling, (c) multi-repo build.
 
-**RACI:** `ONGOING_PROMPTS/AOS_MASTER_RACIv7.csv` (289 rows, 8 modules, 218 Live). The RACI table in this file is a summary — the CSV is authoritative.
+**RACI:** `ONGOING_PROMPTS/AOS_MASTER_RACIv8.csv` (289 rows, 8 modules, 218 Live). The RACI table in this file is a summary — the CSV is authoritative.
 
 ---
 
@@ -57,7 +57,7 @@ All data flows through semantic triples stored in Postgres. The pipeline is: AOD
 ---
 
 ## MODULE RACI — SUMMARY
-**The authoritative RACI is `ONGOING_PROMPTS/AOS_MASTER_RACIv7.csv` (289 rows, 8 modules).** This table is a quick reference only.
+**The authoritative RACI is `ONGOING_PROMPTS/AOS_MASTER_RACIv8.csv` (289 rows, 8 modules).** This table is a quick reference only.
 
 | Module | Owns | Does NOT own |
 |--------|------|-------------|
@@ -374,7 +374,7 @@ The harness is only valid after a fresh pipeline run. Verify pipeline freshness 
 Every test hits the live system fresh. No memoization, no response caching.
 
 ## B17: Frontend is the pass/fail gate
-Backend queries and API responses are diagnostic tools, not proof of correctness. The UI rendering the correct data in the browser is the real test. Use Playwright headless to verify (see UI VERIFICATION section above). Take a screenshot, assert on rendered DOM text, check for error elements. If Playwright is unavailable, explicitly state "B17 NOT VERIFIED — requires Ilya to visually confirm at [url]." Do not substitute API/build evidence and label it browser verification.
+Backend queries and API responses are diagnostic tools, not proof of correctness. The UI rendering the correct data in the browser is the real test. Use Playwright headless to verify (see UI VERIFICATION section above). Take a screenshot, assert on rendered DOM text, check for error elements. Do not substitute API/build evidence and label it browser verification.
 
 ## B18: 5% latency budget
 Measure response time before and after every code change. More than 5% regression on any endpoint is a blocking issue. Hard latency ceilings stated in prompts are absolute and non-negotiable.
