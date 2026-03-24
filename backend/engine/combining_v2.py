@@ -83,8 +83,13 @@ class CombiningEngineV2:
         results = []
         for concept in sorted(grouped.keys()):
             props = grouped[concept]
-            conflict_id = concept.split(".")[-1] if "." in concept else concept
-            dollar_impact = _jsonb_float(props.get("dollar_impact", "0"))
+            conflict_id = _jsonb_str(props.get("conflict_id", ""))
+            if not conflict_id:
+                conflict_id = concept.split(".")[-1] if "." in concept else concept
+            # Support both legacy property names and current Farm output
+            dollar_impact = _jsonb_float(
+                props.get("dollar_impact", props.get("adjustment_amount", "0"))
+            )
 
             results.append({
                 "conflict_id": conflict_id,
@@ -92,10 +97,17 @@ class CombiningEngineV2:
                 "description": _jsonb_str(props.get("description", "")),
                 "dollar_impact": dollar_impact,
                 "severity": _jsonb_str(props.get("severity", "")),
-                "conflict_type": _jsonb_str(props.get("conflict_type", "")),
-                "acquirer_treatment": _jsonb_str(props.get("acquirer_treatment", "")),
-                "target_treatment": _jsonb_str(props.get("target_treatment", "")),
+                "conflict_type": _jsonb_str(
+                    props.get("conflict_type", props.get("category", ""))
+                ),
+                "acquirer_treatment": _jsonb_str(
+                    props.get("acquirer_treatment", props.get("entity_a_treatment", ""))
+                ),
+                "target_treatment": _jsonb_str(
+                    props.get("target_treatment", props.get("entity_b_treatment", ""))
+                ),
                 "resolution_status": _jsonb_str(props.get("resolution_status", "")),
+                "rationale": _jsonb_str(props.get("rationale", "")),
             })
 
         if not results:
@@ -108,7 +120,10 @@ class CombiningEngineV2:
         return results
 
     def _query_cofa_triples(self) -> list[tuple[str, str, str]]:
-        """Query all COFA conflict triples. Returns list of (concept, property, value)."""
+        """Query all COFA conflict triples. Returns list of (concept, property, value).
+
+        Matches both legacy cofa_conflict.* and current cofa.* concept prefixes.
+        """
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -117,7 +132,7 @@ class CombiningEngineV2:
                            concept, property, value
                     FROM semantic_triples
                     WHERE tenant_id = %s AND is_active = true
-                      AND concept LIKE 'cofa_conflict.%%'
+                      AND (concept LIKE 'cofa_conflict.%%' OR concept LIKE 'cofa.%%')
                     ORDER BY concept, property, created_at DESC
                     """,
                     [self.tenant_id],

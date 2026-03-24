@@ -192,6 +192,14 @@ class QualityOfEarningsV2:
         # Risk factors
         risk_factors = self._compute_risk_factors(bridge, adjustment_pct, margin_trend)
 
+        # Build adjustment_lifecycle from bridge adjustments
+        adjustment_lifecycle = self._build_adjustment_lifecycle(bridge)
+
+        # Build sustainability_trend from margin data
+        sustainability_trend = self._compute_sustainability_trend(
+            bridge, margin_trend
+        )
+
         return {
             "entity_id": entity_id,
             "reported_ebitda": reported,
@@ -204,6 +212,8 @@ class QualityOfEarningsV2:
             },
             "margin_trend": margin_trend,
             "risk_factors": risk_factors,
+            "adjustment_lifecycle": adjustment_lifecycle,
+            "sustainability_trend": sustainability_trend,
         }
 
     def get_combined_qoe(self) -> dict:
@@ -264,6 +274,14 @@ class QualityOfEarningsV2:
 
         risk_factors = self._compute_risk_factors(bridge, adjustment_pct, combined_trend)
 
+        # Build adjustment_lifecycle from combined bridge
+        adjustment_lifecycle = self._build_adjustment_lifecycle(bridge)
+
+        # Build sustainability_trend from combined margin data
+        sustainability_trend = self._compute_sustainability_trend(
+            bridge, combined_trend
+        )
+
         return {
             "entity_id": "combined",
             "reported_ebitda": reported,
@@ -272,7 +290,102 @@ class QualityOfEarningsV2:
             "confidence_weighted_ebitda": confidence_weighted_ebitda,
             "margin_trend": combined_trend,
             "risk_factors": risk_factors,
+            "adjustment_lifecycle": adjustment_lifecycle,
+            "sustainability_trend": sustainability_trend,
         }
+
+    @staticmethod
+    def _build_adjustment_lifecycle(bridge: dict) -> dict:
+        """Build adjustment_lifecycle from bridge adjustments.
+
+        Returns {category_name: [{stage, amount, confidence}, ...]} for each
+        adjustment that has lifecycle_history data.
+        """
+        result = {}
+        for adj in bridge.get("adjustments", []):
+            history = adj.get("lifecycle_history", [])
+            if not history:
+                continue
+            # Key by category name (strip ebitda_adjustment. prefix)
+            category = adj["concept"].split(".", 1)[1] if "." in adj["concept"] else adj["concept"]
+            result[category] = [
+                {
+                    "stage": entry["stage"],
+                    "amount": entry["amount"],
+                    "confidence": entry["confidence"],
+                }
+                for entry in history
+            ]
+        return result
+
+    @staticmethod
+    def _compute_sustainability_trend(
+        bridge: dict,
+        margin_trend: list[dict],
+    ) -> list[dict]:
+        """Compute sustainability score per available assessment period.
+
+        Score is derived from:
+        - Average confidence across adjustments (higher = better)
+        - Adjustment magnitude relative to EBITDA (lower = better)
+        - Margin stability (less volatile = better)
+
+        Returns [{period, score, grade}, ...].
+        """
+        reported = bridge.get("reported_ebitda", 0)
+        adjustments = bridge.get("adjustments", [])
+
+        if not margin_trend or reported == 0:
+            return []
+
+        # Average confidence across all adjustments
+        if adjustments:
+            avg_confidence = sum(a["confidence"] for a in adjustments) / len(adjustments)
+        else:
+            avg_confidence = 1.0
+
+        # Adjustment magnitude penalty: |total_adj / reported|
+        total_adj = bridge.get("total_adjustments", 0)
+        adj_ratio = abs(total_adj / reported) if reported != 0 else 0
+
+        # Base score from confidence and adjustment magnitude
+        # confidence contributes 60%, adj_ratio penalty contributes 40%
+        conf_score = avg_confidence * 60
+        adj_penalty = max(0, 40 - adj_ratio * 200)  # penalize heavily if adjustments > 20%
+
+        # Compute per-period scores with margin stability component
+        result = []
+        for i, point in enumerate(margin_trend):
+            period = point["period"]
+            # Margin stability bonus: compare to previous period
+            margin_bonus = 0
+            if i > 0:
+                delta = abs(point["ebitda_margin"] - margin_trend[i - 1]["ebitda_margin"])
+                margin_bonus = max(0, 10 - delta * 2)  # up to 10 points for stability
+            else:
+                margin_bonus = 5  # neutral for first period
+
+            score = round(min(100, conf_score + adj_penalty + margin_bonus))
+
+            # Grade from score
+            if score >= 90:
+                grade = "A"
+            elif score >= 80:
+                grade = "B"
+            elif score >= 70:
+                grade = "C"
+            elif score >= 60:
+                grade = "D"
+            else:
+                grade = "F"
+
+            result.append({
+                "period": period,
+                "score": score,
+                "grade": grade,
+            })
+
+        return result
 
     @staticmethod
     def _compute_risk_factors(

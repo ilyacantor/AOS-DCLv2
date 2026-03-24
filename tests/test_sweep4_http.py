@@ -20,7 +20,7 @@ M_Q1_REV = 1323.43
 CUSTOMER_OVERLAP = 34
 VENDOR_OVERLAP = 170
 EMPLOYEE_OVERLAP = 10
-COFA_COUNT = 10
+COFA_COUNT = 6
 
 # Common query params for tenant/run resolution
 _TR = {"tenant_id": TENANT_ID, "run_id": RUN_ID}
@@ -124,6 +124,22 @@ def test_ebitda_bridge(client):
     )
 
 
+# --- Test 7b: Bridge lifecycle fields ---
+def test_ebitda_bridge_lifecycle_fields(client):
+    """GET bridge — lifecycle-aware fields present on adjustments."""
+    resp = client.get("/api/dcl/reports/v2/bridge", params={**_TR, "entity_id": "meridian"})
+    assert resp.status_code == 200
+    data = resp.json()
+    for adj in data["adjustments"]:
+        assert "diligence_amount" in adj, f"Missing diligence_amount on {adj['concept']}"
+        assert "prior_amount" in adj, f"Missing prior_amount on {adj['concept']}"
+        assert "trend" in adj, f"Missing trend on {adj['concept']}"
+        assert "lifecycle_history" in adj, f"Missing lifecycle_history on {adj['concept']}"
+        assert "lifecycle_stage" in adj, f"Missing lifecycle_stage on {adj['concept']}"
+        assert isinstance(adj["lifecycle_history"], list)
+        assert len(adj["lifecycle_history"]) >= 1
+
+
 # --- Test 8: QoE ---
 def test_qoe(client):
     """GET qoe — 200, has key fields."""
@@ -134,6 +150,22 @@ def test_qoe(client):
     assert "adjusted_ebitda" in data
     assert "revenue_quality" in data
     assert "margin_trend" in data
+
+
+# --- Test 8b: QoE combined has adjustment_lifecycle and sustainability_trend ---
+def test_qoe_combined_lifecycle_fields(client):
+    """GET qoe/combined — 200, has adjustment_lifecycle and sustainability_trend."""
+    resp = client.get("/api/dcl/reports/v2/qoe/combined", params=_TR)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "combined" in data
+    combined = data["combined"]
+    assert "adjustment_lifecycle" in combined
+    assert "sustainability_trend" in combined
+    assert isinstance(combined["adjustment_lifecycle"], dict)
+    assert isinstance(combined["sustainability_trend"], list)
+    assert len(combined["adjustment_lifecycle"]) > 0
+    assert len(combined["sustainability_trend"]) > 0
 
 
 # --- Test 9: What-if baseline ---

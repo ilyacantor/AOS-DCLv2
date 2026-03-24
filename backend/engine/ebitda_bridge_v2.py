@@ -17,7 +17,7 @@ from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
-# Lever classification for each adjustment concept
+# Lever classification for each adjustment concept (keyed by base 2-segment concept)
 _LEVER_MAP = {
     "ebitda_adjustment.non_recurring_legal": "normalization",
     "ebitda_adjustment.non_recurring_professional_fees": "normalization",
@@ -27,6 +27,15 @@ _LEVER_MAP = {
     "ebitda_adjustment.headcount_synergies": "synergy",
     "ebitda_adjustment.run_rate_cost_savings": "synergy",
     "ebitda_adjustment.technology_consolidation": "synergy",
+}
+
+# Lifecycle stage ordering — higher number = later in diligence process
+STAGE_ORDER = {
+    "management": 0,
+    "initial_diligence": 1,
+    "confirmatory": 2,
+    "agreed": 3,
+    "post_close": 4,
 }
 
 # All 2025 quarters for annual EBITDA
@@ -44,6 +53,34 @@ def _to_str(value) -> str:
     if len(s) >= 2 and s.startswith('"') and s.endswith('"'):
         return s[1:-1]
     return s
+
+
+def _parse_concept(concept: str) -> tuple[str, str]:
+    """Parse a concept into (base_concept, lifecycle_stage).
+
+    3-segment concepts: ebitda_adjustment.category.stage -> (ebitda_adjustment.category, stage)
+    2-segment concepts: ebitda_adjustment.category -> (ebitda_adjustment.category, initial_diligence)
+    """
+    parts = concept.split(".")
+    if len(parts) >= 3:
+        base = ".".join(parts[:2])
+        stage = parts[2]
+        return base, stage
+    # Legacy 2-segment: treat as initial_diligence (locked decision)
+    return concept, "initial_diligence"
+
+
+def _derive_trend(current: float | None, prior: float | None) -> str:
+    """Derive trend from current and prior amounts."""
+    if prior is None:
+        return "neutral"
+    if current is None:
+        return "neutral"
+    if current > prior:
+        return "increasing"
+    if current < prior:
+        return "decreasing"
+    return "stable"
 
 
 class EBITDABridgeV2:
@@ -110,14 +147,21 @@ class EBITDABridgeV2:
         return sum(_to_float(r["value"]) for r in rows)
 
     def _get_adjustment_triples(self, entity_id: str) -> list[dict]:
-        """Fetch all ebitda_adjustment.* triples for an entity, grouped by concept.
+        """Fetch all ebitda_adjustment.* triples for an entity, lifecycle-aware.
 
-        Returns list of dicts, one per adjustment concept, with all properties.
+        Groups triples by base concept (2-segment), collects all lifecycle
+        stages per concept, and pivots into the output format with
+        diligence_amount, prior_amount, trend, and lifecycle_history.
+
+        Returns list of dicts, one per base adjustment concept.
         Raises ValueError if no triples found.
         """
+        # DISTINCT ON deduplicates across runs per (entity, full-concept, property).
+        # The full 3-segment concept distinguishes lifecycle stages, so each
+        # stage's properties are returned separately.
         sql = """
             SELECT DISTINCT ON (entity_id, concept, property)
-                   concept, property, value
+                   concept, property, value, period
             FROM semantic_triples
             WHERE tenant_id = %s AND is_active = true
               AND concept LIKE 'ebitda_adjustment.%%'
@@ -133,38 +177,85 @@ class EBITDABridgeV2:
                 f"EBITDA adjustment triples must be seeded before bridge can be produced."
             )
 
-        # Group by concept
-        grouped: dict[str, dict[str, str]] = {}
+        # Group by (base_concept, stage) -> {property: value}
+        stage_data: dict[str, dict[str, dict[str, object]]] = {}
+        period_map: dict[str, str | None] = {}
         for row in rows:
-            concept = row["concept"]
-            if concept not in grouped:
-                grouped[concept] = {}
-            grouped[concept][row["property"]] = row["value"]
+            base_concept, stage = _parse_concept(row["concept"])
+            if base_concept not in stage_data:
+                stage_data[base_concept] = {}
+            if stage not in stage_data[base_concept]:
+                stage_data[base_concept][stage] = {}
+            stage_data[base_concept][stage][row["property"]] = row["value"]
+            if row.get("period"):
+                period_map[base_concept] = row["period"]
 
-        # Build adjustment list
+        # Build adjustment list — one entry per base concept
         adjustments = []
-        for concept in sorted(grouped.keys()):
-            props = grouped[concept]
-            lever = _LEVER_MAP.get(concept)
+        for base_concept in sorted(stage_data.keys()):
+            stages = stage_data[base_concept]
+
+            lever = _LEVER_MAP.get(base_concept)
             if lever is None:
                 raise ValueError(
-                    f"Unknown ebitda_adjustment concept '{concept}' — "
+                    f"Unknown ebitda_adjustment concept '{base_concept}' — "
                     f"not in lever classification map"
                 )
 
-            # Extract the sub-name from the concept (e.g., "facility_consolidation")
-            name = concept.split(".", 1)[1].replace("_", " ").title()
+            # Build lifecycle_history ordered by stage progression
+            lifecycle_history = []
+            for stage_name in sorted(stages.keys(), key=lambda s: STAGE_ORDER.get(s, 99)):
+                props = stages[stage_name]
+                lifecycle_history.append({
+                    "stage": stage_name,
+                    "amount": round(_to_float(props.get("amount_current", 0)), 2),
+                    "amount_low": round(_to_float(props.get("amount_low", 0)), 2),
+                    "amount_high": round(_to_float(props.get("amount_high", 0)), 2),
+                    "confidence": round(_to_float(props.get("confidence", 0)), 2),
+                })
+
+            # Latest = highest STAGE_ORDER present
+            latest_entry = lifecycle_history[-1]
+            latest_stage = latest_entry["stage"]
+            latest_props = stages[latest_stage]
+
+            # Prior = one step before latest (if more than one stage)
+            prior_entry = lifecycle_history[-2] if len(lifecycle_history) >= 2 else None
+
+            # Diligence amount = management stage (LOI number)
+            management_entry = next(
+                (e for e in lifecycle_history if e["stage"] == "management"),
+                None,
+            )
+
+            # Get display name from the triple's name property, falling back to concept
+            name_from_triple = _to_str(latest_props.get("name", ""))
+            if name_from_triple:
+                display_name = name_from_triple.replace("_", " ").title()
+            else:
+                display_name = base_concept.split(".", 1)[1].replace("_", " ").title()
+
+            current_amount = latest_entry["amount"]
+            prior_amount = prior_entry["amount"] if prior_entry else None
+            diligence_amount = management_entry["amount"] if management_entry else None
 
             adjustments.append({
-                "name": name,
-                "concept": concept,
+                "name": display_name,
+                "concept": base_concept,
                 "lever": lever,
-                "amount": round(_to_float(props["amount_current"]), 2),
-                "amount_low": round(_to_float(props["amount_low"]), 2),
-                "amount_high": round(_to_float(props["amount_high"]), 2),
-                "confidence": round(_to_float(props["confidence"]), 2),
-                "rationale": _to_str(props.get("rationale", "")),
-                "support_reference": _to_str(props.get("support_reference", "")),
+                "amount": current_amount,
+                "diligence_amount": diligence_amount,
+                "prior_amount": prior_amount,
+                "trend": _derive_trend(current_amount, prior_amount),
+                "amount_low": latest_entry["amount_low"],
+                "amount_high": latest_entry["amount_high"],
+                "confidence": latest_entry["confidence"],
+                "lifecycle_stage": latest_stage,
+                "period": period_map.get(base_concept),
+                "period_type": _to_str(latest_props.get("period_type", "")),
+                "rationale": _to_str(latest_props.get("rationale", "")),
+                "support_reference": _to_str(latest_props.get("support_reference", "")),
+                "lifecycle_history": lifecycle_history,
             })
 
         return adjustments
@@ -179,7 +270,9 @@ class EBITDABridgeV2:
             "reported_ebitda": float,
             "adjustments": [
                 {"name": str, "concept": str, "lever": str, "amount": float,
-                 "confidence": float, "rationale": str}
+                 "diligence_amount": float|null, "prior_amount": float|null,
+                 "trend": str, "confidence": float, "lifecycle_stage": str,
+                 "lifecycle_history": [...], "rationale": str}
             ],
             "total_adjustments": float,
             "adjusted_ebitda": float,
@@ -205,7 +298,7 @@ class EBITDABridgeV2:
             adj_a = self._get_adjustment_triples(entity_a)
             adj_b = self._get_adjustment_triples(entity_b)
 
-            # Merge adjustments by concept (sum amounts)
+            # Merge adjustments by base concept (sum amounts)
             adj_map: dict[str, dict] = {}
             for adj in adj_a + adj_b:
                 concept = adj["concept"]
@@ -215,11 +308,17 @@ class EBITDABridgeV2:
                         "concept": concept,
                         "lever": adj["lever"],
                         "amount": 0.0,
+                        "diligence_amount": 0.0,
+                        "prior_amount": 0.0,
                         "amount_low": 0.0,
                         "amount_high": 0.0,
                         "confidence": adj["confidence"],
+                        "lifecycle_stage": adj["lifecycle_stage"],
+                        "period": adj["period"],
+                        "period_type": adj["period_type"],
                         "rationale": adj["rationale"],
                         "support_reference": adj["support_reference"],
+                        "lifecycle_history": [],
                     }
                 adj_map[concept]["amount"] = round(
                     adj_map[concept]["amount"] + adj["amount"], 2
@@ -229,6 +328,50 @@ class EBITDABridgeV2:
                 )
                 adj_map[concept]["amount_high"] = round(
                     adj_map[concept]["amount_high"] + adj["amount_high"], 2
+                )
+                # Sum diligence/prior amounts across entities
+                if adj["diligence_amount"] is not None:
+                    if adj_map[concept]["diligence_amount"] is None:
+                        adj_map[concept]["diligence_amount"] = 0.0
+                    adj_map[concept]["diligence_amount"] = round(
+                        adj_map[concept]["diligence_amount"] + adj["diligence_amount"], 2
+                    )
+                if adj["prior_amount"] is not None:
+                    if adj_map[concept]["prior_amount"] is None:
+                        adj_map[concept]["prior_amount"] = 0.0
+                    adj_map[concept]["prior_amount"] = round(
+                        adj_map[concept]["prior_amount"] + adj["prior_amount"], 2
+                    )
+
+                # Merge lifecycle histories by summing amounts per matching stage
+                for entry in adj["lifecycle_history"]:
+                    existing = next(
+                        (h for h in adj_map[concept]["lifecycle_history"]
+                         if h["stage"] == entry["stage"]),
+                        None,
+                    )
+                    if existing:
+                        existing["amount"] = round(existing["amount"] + entry["amount"], 2)
+                        existing["amount_low"] = round(existing["amount_low"] + entry["amount_low"], 2)
+                        existing["amount_high"] = round(existing["amount_high"] + entry["amount_high"], 2)
+                    else:
+                        adj_map[concept]["lifecycle_history"].append({
+                            "stage": entry["stage"],
+                            "amount": entry["amount"],
+                            "amount_low": entry["amount_low"],
+                            "amount_high": entry["amount_high"],
+                            "confidence": entry["confidence"],
+                        })
+
+            # Sort lifecycle history and derive combined trend
+            for entry in adj_map.values():
+                entry["lifecycle_history"].sort(
+                    key=lambda h: STAGE_ORDER.get(h["stage"], 99)
+                )
+                # Set combined diligence/prior to None if they stayed at 0.0
+                # from initialization (i.e., no entity had that value)
+                entry["trend"] = _derive_trend(
+                    entry["amount"], entry["prior_amount"]
                 )
 
             adjustments = [adj_map[c] for c in sorted(adj_map.keys())]
@@ -268,23 +411,27 @@ class EBITDABridgeV2:
 
     def get_adjustment_detail(self, adjustment_concept: str) -> dict:
         """
-        Detailed view of one adjustment: amount_current, amount_low, amount_high,
-        confidence, rationale, support_reference.
+        Detailed view of one adjustment across both entities with lifecycle history.
 
-        Returns combined view across both entities.
+        Accepts base concept (2-segment, e.g. 'ebitda_adjustment.facility_consolidation')
+        and queries all matching lifecycle stages.
+
+        Returns combined view with lifecycle history per entity.
         """
         entity_a, entity_b = self._get_entities()
 
+        # Query all stages for this base concept (match 3-segment concepts)
         sql = """
             SELECT DISTINCT ON (entity_id, concept, property)
-                   entity_id, property, value
+                   entity_id, concept, property, value
             FROM semantic_triples
             WHERE tenant_id = %s AND is_active = true
-              AND concept = %s
+              AND (concept = %s OR concept LIKE %s)
               AND entity_id != 'combined'
             ORDER BY entity_id, concept, property, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, adjustment_concept])
+        like_pattern = adjustment_concept + ".%"
+        rows = self._query(sql, [self.tenant_id, adjustment_concept, like_pattern])
 
         if not rows:
             raise ValueError(
@@ -292,24 +439,46 @@ class EBITDABridgeV2:
                 f"tenant_id='{self.tenant_id}', run_id='{self.run_id}'"
             )
 
-        # Group by entity
-        by_entity: dict[str, dict[str, str]] = {}
+        # Group by entity -> stage -> {property: value}
+        by_entity: dict[str, dict[str, dict[str, object]]] = {}
         for row in rows:
             eid = row["entity_id"]
+            _, stage = _parse_concept(row["concept"])
             if eid not in by_entity:
                 by_entity[eid] = {}
-            by_entity[eid][row["property"]] = row["value"]
+            if stage not in by_entity[eid]:
+                by_entity[eid][stage] = {}
+            by_entity[eid][stage][row["property"]] = row["value"]
 
         result: dict = {"concept": adjustment_concept, "entities": {}}
         for eid in sorted(by_entity.keys()):
-            props = by_entity[eid]
+            stages = by_entity[eid]
+
+            # Build lifecycle history ordered by stage
+            lifecycle_history = []
+            for stage_name in sorted(stages.keys(), key=lambda s: STAGE_ORDER.get(s, 99)):
+                props = stages[stage_name]
+                lifecycle_history.append({
+                    "stage": stage_name,
+                    "amount_current": round(_to_float(props.get("amount_current", "0")), 2),
+                    "amount_low": round(_to_float(props.get("amount_low", "0")), 2),
+                    "amount_high": round(_to_float(props.get("amount_high", "0")), 2),
+                    "confidence": round(_to_float(props.get("confidence", "0")), 2),
+                    "rationale": _to_str(props.get("rationale", "")),
+                    "support_reference": _to_str(props.get("support_reference", "")),
+                })
+
+            # Latest stage summary
+            latest = lifecycle_history[-1] if lifecycle_history else {}
             result["entities"][eid] = {
-                "amount_current": round(_to_float(props.get("amount_current", "0")), 2),
-                "amount_low": round(_to_float(props.get("amount_low", "0")), 2),
-                "amount_high": round(_to_float(props.get("amount_high", "0")), 2),
-                "confidence": round(_to_float(props.get("confidence", "0")), 2),
-                "rationale": _to_str(props.get("rationale", "")),
-                "support_reference": _to_str(props.get("support_reference", "")),
+                "amount_current": latest.get("amount_current", 0.0),
+                "amount_low": latest.get("amount_low", 0.0),
+                "amount_high": latest.get("amount_high", 0.0),
+                "confidence": latest.get("confidence", 0.0),
+                "rationale": latest.get("rationale", ""),
+                "support_reference": latest.get("support_reference", ""),
+                "lifecycle_stage": lifecycle_history[-1]["stage"] if lifecycle_history else None,
+                "lifecycle_history": lifecycle_history,
             }
 
         return result
