@@ -278,14 +278,24 @@ class CrossSellEngineV2:
         a_only = a_concepts - b_concepts
         b_only = b_concepts - a_concepts
 
-        # Get overlapping customers
-        shared_customers = self._overlap_engine._find_overlapping_concepts("customer")
-        if not shared_customers:
-            return []
-
-        # Get customer data from both entities for scoring
+        # Get customer data from both entities
         a_customers = self._get_customer_data(entity_a)
         b_customers = self._get_customer_data(entity_b)
+
+        # Entity-exclusive customers — the real cross-sell targets.
+        # Filter to top-level concepts (exclude subcategories like customer.pipeline.closed_won).
+        a_customer_concepts = {c for c in a_customers if c.count(".") == 1}
+        b_customer_concepts = {c for c in b_customers if c.count(".") == 1}
+        b_exclusive = b_customer_concepts - a_customer_concepts  # B-only clients
+        a_exclusive = a_customer_concepts - b_customer_concepts  # A-only clients
+
+        if not b_exclusive and not a_exclusive:
+            logger.info(
+                "CrossSellEngineV2: no entity-exclusive customers found for tenant=%s "
+                "(a_customers=%d, b_customers=%d, all shared) — no cross-sell opportunities",
+                self.tenant_id, len(a_customer_concepts), len(b_customer_concepts),
+            )
+            return []
 
         # Service lookup dicts
         a_svc_map = {s["concept"]: s for s in a_services}
@@ -342,33 +352,28 @@ class CrossSellEngineV2:
                 "rationale": (
                     f"{current_entity} offers {service_name} "
                     f"(typical ACV ${svc['typical_acv']}M). "
-                    f"{customer_name.replace('_', ' ').title()} is a shared customer "
-                    f"with ${revenue}M engagement — "
-                    f"{opportunity_entity} could cross-sell this service."
+                    f"{customer_name.replace('_', ' ').title()} is an exclusive "
+                    f"{opportunity_entity} client with ${revenue}M engagement — "
+                    f"cross-sell opportunity via {current_entity} service capabilities."
                 ),
             }
 
-        # Direction a_to_b: Entity A's unique services → shared customers via entity B
+        # Direction a_to_b: Entity A's unique services → entity B's exclusive clients
         for svc in a_services:
             if svc["concept"] not in a_only:
                 continue
-            for customer_concept in shared_customers:
-                # Use the opportunity entity's customer data for scoring
+            for customer_concept in sorted(b_exclusive):
                 customer_props = b_customers.get(customer_concept, {})
-                if not customer_props:
-                    customer_props = a_customers.get(customer_concept, {})
                 opportunities.append(_build_opportunity(
                     customer_concept, entity_a, entity_b, svc, customer_props,
                 ))
 
-        # Direction b_to_a: Entity B's unique services → shared customers via entity A
+        # Direction b_to_a: Entity B's unique services → entity A's exclusive clients
         for svc in b_services:
             if svc["concept"] not in b_only:
                 continue
-            for customer_concept in shared_customers:
+            for customer_concept in sorted(a_exclusive):
                 customer_props = a_customers.get(customer_concept, {})
-                if not customer_props:
-                    customer_props = b_customers.get(customer_concept, {})
                 opportunities.append(_build_opportunity(
                     customer_concept, entity_b, entity_a, svc, customer_props,
                 ))
@@ -390,10 +395,12 @@ class CrossSellEngineV2:
 
         logger.info(
             "CrossSellEngineV2: %d opportunities (%d a_to_b, %d b_to_a) "
-            "for tenant=%s",
+            "from %d/%d exclusive customers for tenant=%s",
             len(opportunities),
             sum(1 for o in opportunities if o["opportunity_entity"] == entity_b),
             sum(1 for o in opportunities if o["opportunity_entity"] == entity_a),
+            len(b_exclusive),
+            len(a_exclusive),
             self.tenant_id,
         )
 
