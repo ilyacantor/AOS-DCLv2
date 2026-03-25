@@ -3638,6 +3638,35 @@ concepts:
     calculation_methodology: null
     comparability_rules: "Customer counts depend on definition scope (active vs all-time). Parent-subsidiary relationships may inflate counts. Cross-entity comparison requires deduplication."
 
+  - id: customer_service
+    concept_id: SALES-015
+    name: Customer Service Engagement
+    description: "Links a customer to a specific service they purchase from an entity, with engagement details (revenue, contract type, satisfaction)"
+    domain: sales
+    cluster: Sales
+    example_fields:
+      - customer_id
+      - service_id
+      - engagement_revenue
+      - contract_type
+      - satisfaction_score
+      - engagement_start_year
+    aliases:
+      - customer_engagement
+      - service_engagement
+      - customer_service_link
+    expected_type: string
+    typical_source_systems: [salesforce, netsuite, hubspot]
+    persona_relevance:
+      cro: 1.0
+      cfo: 0.8
+      coo: 0.7
+    recognition_basis: "Created when a customer is linked to a specific service engagement with measurable revenue and contract terms."
+    timing_semantics: "Engagement-level granularity. Start year and contract type define the temporal scope."
+    scope_boundaries: "Each triple represents one customer-service pair per entity. Concept format: customer_service.{customer}.{service}."
+    calculation_methodology: null
+    comparability_rules: "Cross-entity comparison enables upsell gap analysis — services one entity provides to a shared customer that the other does not."
+
   - id: bench
     concept_id: OPS-011
     name: Bench Utilization
