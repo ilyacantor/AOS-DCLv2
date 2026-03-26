@@ -55,11 +55,13 @@ SCHEMA_CACHE_TTL = float(os.getenv("DCL_SCHEMA_CACHE_TTL", "300.0"))
 POOL_RETRY_COOLDOWN = float(os.getenv("DCL_POOL_RETRY_COOLDOWN", "30.0"))
 POOL_MIN_CONN = int(os.getenv("DCL_POOL_MIN_CONN", "2"))
 # POOL_MAX_CONN: Set via environment variable in production.
-# Default 10 is conservative floor. Tune based on the Postgres instance's
-# max_connections (check Render dashboard or: SELECT setting FROM pg_settings
-# WHERE name = 'max_connections'). Leave headroom for admin/migration connections.
+# Default 20 accounts for Console's burst request patterns (concurrent
+# triples/browse + reports) on top of the combining engine's 6 worker threads.
+# Tune based on the Postgres instance's max_connections (check Render dashboard
+# or: SELECT setting FROM pg_settings WHERE name = 'max_connections').
+# Leave headroom for admin/migration connections.
 # DO NOT hardcode a production value here — this has been reverted 5+ times.
-POOL_MAX_CONN = int(os.getenv("DCL_POOL_MAX_CONN", "10"))
+POOL_MAX_CONN = int(os.getenv("DCL_POOL_MAX_CONN", "20"))
 DB_CONNECT_TIMEOUT = int(os.getenv("DCL_DB_CONNECT_TIMEOUT", "10"))
 POOL_GETCONN_TIMEOUT = float(os.getenv("DCL_POOL_GETCONN_TIMEOUT", "5.0"))
 

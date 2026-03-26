@@ -130,9 +130,14 @@ def _getconn_with_timeout(pool: ThreadedConnectionPool, timeout: float):
     ThreadedConnectionPool.getconn() blocks indefinitely when all
     connections are checked out. This wrapper uses a thread + Event
     to enforce a maximum wait time.
+
+    If the caller times out, the daemon thread may still eventually
+    acquire a connection. The ``timed_out`` flag ensures the thread
+    returns that connection to the pool instead of leaking it.
     """
     result = [None]
     error = [None]
+    timed_out = [False]
     done = threading.Event()
 
     def _fetch():
@@ -142,11 +147,23 @@ def _getconn_with_timeout(pool: ThreadedConnectionPool, timeout: float):
             error[0] = e
         finally:
             done.set()
+            # If the caller already timed out, return the connection
+            # so it isn't permanently leaked from the pool.
+            if timed_out[0] and result[0] is not None:
+                try:
+                    pool.putconn(result[0])
+                    logger.warning(
+                        "[db] Returned orphaned connection after caller timeout — "
+                        "pool leak averted"
+                    )
+                except Exception:
+                    pass
 
     t = threading.Thread(target=_fetch, daemon=True)
     t.start()
 
     if not done.wait(timeout=timeout):
+        timed_out[0] = True
         raise PoolExhausted(
             f"Connection pool exhausted ({POOL_MAX_CONN}/{POOL_MAX_CONN} in use). "
             f"Timed out after {timeout}s waiting for a free connection. "
