@@ -113,43 +113,49 @@ def list_entities():
 @router.get("/api/dcl/triples/overview")
 def triples_overview(
     source_run_tag: Optional[str] = Query(None, description="Filter by Farm-originated source_run_tag"),
+    tenant_id: Optional[str] = Query(None, description="Filter by tenant_id (deal scope)"),
 ):
     """High-level summary of the triple store.
 
-    Optional source_run_tag filter narrows results to triples from a specific run.
+    Optional filters narrow results:
+    - tenant_id: scope to a single deal/tenant (required for multi-tenant accuracy)
+    - source_run_tag: scope to triples from a specific Farm run
     """
-    tag_filter = ""
+    extra_filter = ""
     params: list = []
+    if tenant_id:
+        extra_filter += " AND tenant_id = %s"
+        params.append(tenant_id)
     if source_run_tag:
-        tag_filter = " AND source_run_tag = %s"
-        params = [source_run_tag]
+        extra_filter += " AND source_run_tag = %s"
+        params.append(source_run_tag)
 
-    sql_total = f"SELECT COUNT(*) FROM semantic_triples WHERE is_active = true{tag_filter}"
+    sql_total = f"SELECT COUNT(*) FROM semantic_triples WHERE is_active = true{extra_filter}"
     sql_entities = (
         f"SELECT entity_id, COUNT(*) AS triple_count "
-        f"FROM semantic_triples WHERE is_active = true{tag_filter} "
+        f"FROM semantic_triples WHERE is_active = true{extra_filter} "
         f"GROUP BY entity_id ORDER BY triple_count DESC"
     )
     sql_domains = (
         f"SELECT split_part(concept, '.', 1) AS domain, entity_id, COUNT(*) AS cnt "
-        f"FROM semantic_triples WHERE is_active = true{tag_filter} "
+        f"FROM semantic_triples WHERE is_active = true{extra_filter} "
         f"GROUP BY domain, entity_id ORDER BY domain, entity_id"
     )
     sql_periods = (
         f"SELECT DISTINCT period FROM semantic_triples "
-        f"WHERE is_active = true AND period IS NOT NULL{tag_filter} "
+        f"WHERE is_active = true AND period IS NOT NULL{extra_filter} "
         f"ORDER BY period"
     )
     sql_latest = (
         f"SELECT run_id, MIN(created_at) AS timestamp, COUNT(*) AS triple_count "
-        f"FROM semantic_triples WHERE is_active = true{tag_filter} "
+        f"FROM semantic_triples WHERE is_active = true{extra_filter} "
         f"GROUP BY run_id ORDER BY MIN(created_at) DESC LIMIT 1"
     )
     # Conflict count: distinct conflict IDs from cofa_conflict.* triples
     sql_conflicts = (
         f"SELECT COUNT(DISTINCT split_part(concept, '.', 2)) "
         f"FROM semantic_triples "
-        f"WHERE is_active = true AND split_part(concept, '.', 1) = 'cofa_conflict'{tag_filter}"
+        f"WHERE is_active = true AND split_part(concept, '.', 1) = 'cofa_conflict'{extra_filter}"
     )
 
     with get_connection() as conn:
@@ -815,11 +821,15 @@ _concept_registry = ConceptRegistry()
 def contextualization_summary(
     entity_id: Optional[str] = Query(None),
     run_id: Optional[str] = Query(None),
+    tenant_id: Optional[str] = Query(None, description="Filter by tenant_id (deal scope)"),
 ):
     """Contextualization quality summary: domain coverage, confidence, resolution, sources."""
     clauses = ["is_active = true"]
     params: list = []
 
+    if tenant_id:
+        clauses.append("tenant_id = %s")
+        params.append(tenant_id)
     if entity_id:
         clauses.append("entity_id = %s")
         params.append(entity_id)
