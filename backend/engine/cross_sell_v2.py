@@ -105,23 +105,38 @@ class CrossSellEngineV2:
             })
         return result
 
-    def _get_customer_data(self, entity_id: str) -> dict[str, dict]:
+    def _get_exclusive_customer_data(self, entity_id: str, other_entity_id: str) -> dict[str, dict]:
         """
-        Get customer data for an entity from customer.* triples.
-        Returns dict keyed by customer concept:
-            {"customer.accenture": {"revenue": 12.0, "industry": "...", "segment": "...",
-                                     "size": 22391, "match_confidence": 0.79, "match_type": "fuzzy"}}
+        Get customer data for customers exclusive to entity_id (not in other_entity_id).
+
+        Pushes exclusivity filter into SQL via NOT EXISTS and only fetches the 5
+        properties used by propensity scoring. Excludes subcategory concepts
+        (e.g. customer.pipeline.closed_won) in both outer and subquery.
+
+        Returns dict keyed by top-level customer concept:
+            {"customer.accenture": {"revenue": "12.0", "industry": "...", ...}}
         """
         sql = """
-            SELECT DISTINCT ON (concept, property)
-                   concept, property, value
-            FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
-              AND concept LIKE 'customer.%%'
-              AND entity_id = %s
-            ORDER BY concept, property, created_at DESC
+            SELECT DISTINCT ON (st.concept, st.property)
+                   st.concept, st.property, st.value
+            FROM semantic_triples st
+            WHERE st.tenant_id = %s AND st.is_active = true
+              AND st.concept LIKE 'customer.%%'
+              AND st.concept NOT LIKE 'customer.%%.%%'
+              AND st.entity_id = %s
+              AND st.property IN ('revenue', 'industry', 'segment', 'size', 'match_confidence')
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM semantic_triples other
+                  WHERE other.tenant_id = %s AND other.is_active = true
+                    AND other.concept = st.concept
+                    AND other.concept LIKE 'customer.%%'
+                    AND other.concept NOT LIKE 'customer.%%.%%'
+                    AND other.entity_id = %s
+              )
+            ORDER BY st.concept, st.property, st.created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, entity_id])
+        rows = self._query(sql, [self.tenant_id, entity_id, self.tenant_id, other_entity_id])
 
         customers: dict[str, dict] = {}
         for row in rows:
@@ -278,16 +293,12 @@ class CrossSellEngineV2:
         a_only = a_concepts - b_concepts
         b_only = b_concepts - a_concepts
 
-        # Get customer data from both entities
-        a_customers = self._get_customer_data(entity_a)
-        b_customers = self._get_customer_data(entity_b)
+        # Get customer data for entity-exclusive customers only (SQL-filtered).
+        b_customers = self._get_exclusive_customer_data(entity_b, entity_a)
+        a_customers = self._get_exclusive_customer_data(entity_a, entity_b)
 
-        # Entity-exclusive customers — the real cross-sell targets.
-        # Filter to top-level concepts (exclude subcategories like customer.pipeline.closed_won).
-        a_customer_concepts = {c for c in a_customers if c.count(".") == 1}
-        b_customer_concepts = {c for c in b_customers if c.count(".") == 1}
-        b_exclusive = b_customer_concepts - a_customer_concepts  # B-only clients
-        a_exclusive = a_customer_concepts - b_customer_concepts  # A-only clients
+        b_exclusive = set(b_customers.keys())
+        a_exclusive = set(a_customers.keys())
 
         if not b_exclusive and not a_exclusive:
             logger.info(
@@ -381,17 +392,18 @@ class CrossSellEngineV2:
         # Sort by propensity score descending
         opportunities.sort(key=lambda x: x["propensity_score"], reverse=True)
 
-        # Add comparable customers: top 2 customers with highest propensity in same direction
+        # Add comparable customers: top 2 customers with highest propensity in same direction.
+        # Pre-index by (service, opportunity_entity) to avoid O(n²) scan.
+        comp_index: dict[tuple[str, str], list[str]] = defaultdict(list)
         for opp in opportunities:
-            comparables = [
-                o["customer_name"]
-                for o in opportunities
-                if o["service"] == opp["service"]
-                and o["opportunity_entity"] == opp["opportunity_entity"]
-                and o["customer"] != opp["customer"]
-                and o["propensity_score"] >= 70
-            ][:2]
-            opp["comparable_customers"] = comparables
+            if opp["propensity_score"] >= 70:
+                key = (opp["service"], opp["opportunity_entity"])
+                comp_index[key].append(opp["customer_name"])
+
+        for opp in opportunities:
+            key = (opp["service"], opp["opportunity_entity"])
+            candidates = comp_index.get(key, [])
+            opp["comparable_customers"] = [c for c in candidates if c != opp["customer_name"]][:2]
 
         logger.info(
             "CrossSellEngineV2: %d opportunities (%d a_to_b, %d b_to_a) "
