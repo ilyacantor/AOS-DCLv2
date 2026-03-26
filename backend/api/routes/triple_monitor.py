@@ -126,6 +126,8 @@ def triples_overview(
     if tenant_id:
         extra_filter += " AND tenant_id = %s"
         params.append(tenant_id)
+        extra_filter += " AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)"
+        params.append(tenant_id)
     if source_run_tag:
         extra_filter += " AND source_run_tag = %s"
         params.append(source_run_tag)
@@ -829,6 +831,8 @@ def contextualization_summary(
 
     if tenant_id:
         clauses.append("tenant_id = %s")
+        params.append(tenant_id)
+        clauses.append("run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)")
         params.append(tenant_id)
     if entity_id:
         clauses.append("entity_id = %s")

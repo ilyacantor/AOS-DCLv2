@@ -120,11 +120,12 @@ def _tenant_has_active_triples(tenant_id: str) -> bool:
     """Check whether a tenant_id has at least one active triple."""
     sql = (
         "SELECT 1 FROM semantic_triples "
-        "WHERE tenant_id = %s AND is_active = true LIMIT 1"
+        "WHERE tenant_id = %s AND is_active = true "
+        "AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) LIMIT 1"
     )
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql, (tenant_id,))
+            cur.execute(sql, (tenant_id, tenant_id))
             return cur.fetchone() is not None
 
 
@@ -165,22 +166,24 @@ def _get_latest_run(
             SELECT run_id
             FROM semantic_triples
             WHERE tenant_id = %s AND is_active = true
+              AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)
               AND concept LIKE ANY(%s)
             GROUP BY run_id
             ORDER BY COUNT(*) DESC
             LIMIT 1
         """
-        params: list = [tenant_id, _FINANCIAL_PREFIXES]
+        params: list = [tenant_id, tenant_id, _FINANCIAL_PREFIXES]
     else:
         sql = """
             SELECT run_id
             FROM semantic_triples
             WHERE tenant_id = %s AND is_active = true
+              AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)
             GROUP BY run_id
             ORDER BY COUNT(*) DESC
             LIMIT 1
         """
-        params = [tenant_id]
+        params = [tenant_id, tenant_id]
 
     with get_connection() as conn:
         with conn.cursor() as cur:

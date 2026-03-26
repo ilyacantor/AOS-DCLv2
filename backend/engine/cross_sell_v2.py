@@ -80,12 +80,12 @@ class CrossSellEngineV2:
             SELECT DISTINCT ON (concept, property)
                    concept, property, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s AND run_id = %s
               AND concept LIKE 'service.%%'
               AND entity_id = %s
             ORDER BY concept, property, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, entity_id])
+        rows = self._query(sql, [self.tenant_id, self.run_id, entity_id])
 
         # Group by concept
         services: dict[str, dict] = {}
@@ -120,7 +120,7 @@ class CrossSellEngineV2:
             SELECT DISTINCT ON (st.concept, st.property)
                    st.concept, st.property, st.value
             FROM semantic_triples st
-            WHERE st.tenant_id = %s AND st.is_active = true
+            WHERE st.tenant_id = %s AND st.run_id = %s
               AND st.concept LIKE 'customer.%%'
               AND st.concept NOT LIKE 'customer.%%.%%'
               AND st.entity_id = %s
@@ -128,7 +128,7 @@ class CrossSellEngineV2:
               AND NOT EXISTS (
                   SELECT 1
                   FROM semantic_triples other
-                  WHERE other.tenant_id = %s AND other.is_active = true
+                  WHERE other.tenant_id = %s AND other.run_id = %s
                     AND other.concept = st.concept
                     AND other.concept LIKE 'customer.%%'
                     AND other.concept NOT LIKE 'customer.%%.%%'
@@ -136,7 +136,7 @@ class CrossSellEngineV2:
               )
             ORDER BY st.concept, st.property, st.created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, entity_id, self.tenant_id, other_entity_id])
+        rows = self._query(sql, [self.tenant_id, self.run_id, entity_id, self.tenant_id, self.run_id, other_entity_id])
 
         customers: dict[str, dict] = {}
         for row in rows:

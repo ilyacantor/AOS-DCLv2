@@ -86,6 +86,11 @@ def _cleanup_all():
                 "DELETE FROM semantic_triples WHERE tenant_id = %s",
                 (TEST_TENANT_ID,),
             )
+            # Tenant run pointer
+            cur.execute(
+                "DELETE FROM tenant_runs WHERE tenant_id = %s",
+                (TEST_TENANT_ID,),
+            )
             # Resolution workspaces
             cur.execute(
                 "DELETE FROM resolution_workspaces WHERE tenant_id = %s",
@@ -176,6 +181,15 @@ class TestTripleStore:
         # Clean test data before each test method
         self.store.delete_by_run(TEST_RUN_ID_A)
         self.store.delete_by_run(TEST_RUN_ID_B)
+        # Register run A as current so get_triples(active_only=True) works via current_run_id pointer
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM tenant_runs WHERE tenant_id = %s",
+                    (TEST_TENANT_ID,),
+                )
+                conn.commit()
+        self.store.upsert_tenant_run(TEST_TENANT_ID, TEST_RUN_ID_A)
 
     def test_03_triple_round_trip(self):
         """Insert via TripleStore → read back → all fields match. JSONB numeric values survive."""
@@ -285,19 +299,19 @@ class TestTripleStore:
         assert by_period[0]["entity_id"] == "ent_b"
 
     def test_07_run_deactivation(self):
-        """Two runs. Deactivate one. Verify is_active flags."""
+        """Two runs. Swap pointer to run B. Verify tenant_runs.current_run_id reflects the swap."""
         t_a = {**make_test_triple(entity_id="deact_a"), "tenant_id": TEST_TENANT_ID, "run_id": TEST_RUN_ID_A}
         t_b = {**make_test_triple(entity_id="deact_b"), "tenant_id": TEST_TENANT_ID, "run_id": TEST_RUN_ID_B}
         self.store.insert_triples([t_a])
         self.store.insert_triples([t_b])
 
-        self.store.deactivate_run(TEST_RUN_ID_A)
+        # Atomic run swap: point tenant to run B. Run A triples remain is_active=True
+        # in the DB but are invisible to queries filtered by current_run_id.
+        self.store.upsert_tenant_run(TEST_TENANT_ID, TEST_RUN_ID_B)
 
-        rows_a = self.store.get_triples_by_run(TEST_RUN_ID_A)
-        assert all(r["is_active"] is False for r in rows_a), "Run A triples should be inactive"
-
-        rows_b = self.store.get_triples_by_run(TEST_RUN_ID_B)
-        assert all(r["is_active"] is True for r in rows_b), "Run B triples should be active"
+        current = self.store.get_current_run_id(TEST_TENANT_ID)
+        assert current != TEST_RUN_ID_A, "Run A should not be current_run_id after swap"
+        assert current == TEST_RUN_ID_B, "Run B should be current_run_id after swap"
 
 
 class TestResolutionStore:
@@ -533,7 +547,8 @@ class TestIngestEndpoint:
         assert resp2.status_code == 409, f"Expected 409, got {resp2.status_code}: {resp2.text}"
 
     def test_18_idempotency_replace(self):
-        """Ingest run B → re-ingest with ?replace=true → 201. Old inactive, new active."""
+        """Ingest run → re-ingest same run_id with ?replace=true → 201. Both triples remain
+        is_active=True; the pointer swap makes the old data invisible to queries, not is_active."""
         run_id = str(uuid.uuid4())
         triples_v1 = [make_test_triple(entity_id="v1_entity", value=100)]
         resp1, _ = self._post_triples(triples_v1, run_id=run_id)
@@ -545,12 +560,14 @@ class TestIngestEndpoint:
 
         store = TripleStore()
         all_rows = store.get_triples_by_run(run_id)
-        active = [r for r in all_rows if r["is_active"] is True]
-        inactive = [r for r in all_rows if r["is_active"] is False]
-        assert len(active) == 1, f"Expected 1 active triple, got {len(active)}"
-        assert len(inactive) == 1, f"Expected 1 inactive triple, got {len(inactive)}"
-        assert active[0]["entity_id"] == "v2_entity"
-        assert inactive[0]["entity_id"] == "v1_entity"
+        # Under atomic run swap, no deactivation occurs — all triples remain is_active=True.
+        assert all(r["is_active"] is True for r in all_rows), (
+            "All triples in a run stay is_active=True; visibility is controlled by "
+            "tenant_runs.current_run_id, not is_active."
+        )
+        entity_ids = {r["entity_id"] for r in all_rows}
+        assert "v1_entity" in entity_ids, "v1_entity triple should still be in the DB"
+        assert "v2_entity" in entity_ids, "v2_entity triple should be present after replace ingest"
 
     def test_19_run_status_endpoint(self):
         """Ingest → GET status → correct count and summary."""

@@ -43,10 +43,11 @@ class MaterializedViews:
                 COUNT(DISTINCT concept) AS concept_count,
                 COUNT(DISTINCT split_part(concept, '.', 1)) AS domain_count
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s
+              AND run_id = %s
               AND entity_id = %s
         """
-        rows = self._query(sql, [self.tenant_id, entity_id])
+        rows = self._query(sql, [self.tenant_id, self.run_id, entity_id])
         if not rows or rows[0]["total_triples"] == 0:
             raise ValueError(
                 f"Entity summary not found: entity_id='{entity_id}' — "
@@ -58,21 +59,23 @@ class MaterializedViews:
         domain_sql = """
             SELECT split_part(concept, '.', 1) AS domain, COUNT(*) AS cnt
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s
+              AND run_id = %s
               AND entity_id = %s
             GROUP BY domain ORDER BY domain
         """
-        domain_rows = self._query(domain_sql, [self.tenant_id, entity_id])
+        domain_rows = self._query(domain_sql, [self.tenant_id, self.run_id, entity_id])
         domain_counts = {r["domain"]: r["cnt"] for r in domain_rows}
 
         concept_sql = """
             SELECT DISTINCT concept
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s
+              AND run_id = %s
               AND entity_id = %s
             ORDER BY concept
         """
-        concept_rows = self._query(concept_sql, [self.tenant_id, entity_id])
+        concept_rows = self._query(concept_sql, [self.tenant_id, self.run_id, entity_id])
         concepts = [r["concept"] for r in concept_rows]
 
         return {
@@ -94,7 +97,8 @@ class MaterializedViews:
             SELECT DISTINCT ON (entity_id, concept, period)
                    concept, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s
+              AND run_id = %s
               AND entity_id = %s AND period = %s AND property = 'amount'
               AND concept IN (
                   'revenue.total', 'cogs.total', 'opex.total', 'pnl.ebitda',
@@ -102,7 +106,7 @@ class MaterializedViews:
               )
             ORDER BY entity_id, concept, period, created_at DESC
         """
-        rows = self._query(totals_sql, [self.tenant_id, entity_id, period])
+        rows = self._query(totals_sql, [self.tenant_id, self.run_id, entity_id, period])
         if not rows:
             raise ValueError(
                 f"Period summary not found: entity_id='{entity_id}', period='{period}' — "
@@ -131,12 +135,13 @@ class MaterializedViews:
         sql = """
             SELECT DISTINCT period
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s
+              AND run_id = %s
               AND period IS NOT NULL
               AND period ~ '^[0-9]{4}-Q[1-4]$'
             ORDER BY period
         """
-        rows = self._query(sql, [self.tenant_id])
+        rows = self._query(sql, [self.tenant_id, self.run_id])
         return [r["period"] for r in rows]
 
     def get_all_entities(self) -> list[str]:
@@ -144,9 +149,10 @@ class MaterializedViews:
         sql = """
             SELECT DISTINCT entity_id
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s
+              AND run_id = %s
               AND entity_id != 'combined'
             ORDER BY entity_id
         """
-        rows = self._query(sql, [self.tenant_id])
+        rows = self._query(sql, [self.tenant_id, self.run_id])
         return [r["entity_id"] for r in rows]

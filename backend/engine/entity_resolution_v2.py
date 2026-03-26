@@ -122,7 +122,7 @@ class EntityResolutionV2:
         sql = """
             SELECT concept
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s AND run_id = %s
               AND concept LIKE %s
               AND concept NOT LIKE %s
               AND entity_id != 'combined'
@@ -130,7 +130,7 @@ class EntityResolutionV2:
             HAVING COUNT(DISTINCT entity_id) > 1
             ORDER BY concept
         """
-        rows = self._query(sql, [self.tenant_id, f"{domain}.%", f"{domain}.%.%"])
+        rows = self._query(sql, [self.tenant_id, self.run_id, f"{domain}.%", f"{domain}.%.%"])
         return [r["concept"] for r in rows]
 
     def _batch_create_workspaces(self, concepts: list[str], domain: str) -> int:
@@ -331,12 +331,12 @@ class EntityResolutionV2:
         sql_entities = """
             SELECT DISTINCT entity_id
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s AND run_id = %s
               AND entity_id IS NOT NULL
               AND entity_id != 'combined'
             ORDER BY entity_id
         """
-        entity_rows = self._query(sql_entities, [self.tenant_id])
+        entity_rows = self._query(sql_entities, [self.tenant_id, self.run_id])
         entities = [r["entity_id"] for r in entity_rows]
 
         return {
@@ -365,11 +365,11 @@ class EntityResolutionV2:
             UPDATE semantic_triples
             SET canonical_id = %s, resolution_method = 'manual',
                 resolution_confidence = 1.0, updated_at = now()
-            WHERE tenant_id = %s AND concept = %s AND is_active = true
+            WHERE tenant_id = %s AND concept = %s AND run_id = %s
         """
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, [uuid_val, self.tenant_id, concept])
+                cur.execute(sql, [uuid_val, self.tenant_id, concept, self.run_id])
                 conn.commit()
                 return cur.rowcount
 
@@ -379,10 +379,10 @@ class EntityResolutionV2:
             UPDATE semantic_triples
             SET canonical_id = NULL, resolution_method = NULL,
                 resolution_confidence = NULL, updated_at = now()
-            WHERE tenant_id = %s AND concept = %s AND is_active = true
+            WHERE tenant_id = %s AND concept = %s AND run_id = %s
         """
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, [self.tenant_id, concept])
+                cur.execute(sql, [self.tenant_id, concept, self.run_id])
                 conn.commit()
                 return cur.rowcount

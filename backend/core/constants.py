@@ -64,6 +64,10 @@ POOL_MIN_CONN = int(os.getenv("DCL_POOL_MIN_CONN", "2"))
 POOL_MAX_CONN = int(os.getenv("DCL_POOL_MAX_CONN", "20"))
 DB_CONNECT_TIMEOUT = int(os.getenv("DCL_DB_CONNECT_TIMEOUT", "10"))
 POOL_GETCONN_TIMEOUT = float(os.getenv("DCL_POOL_GETCONN_TIMEOUT", "5.0"))
+# Ingest path statement timeout — prevents indefinite thread block when Supabase
+# is slow on bulk UPDATE (deactivate) or INSERT (triple write).
+# Must stay below Farm's 120s httpx timeout so failures propagate before Farm times out.
+INGEST_STATEMENT_TIMEOUT_MS = int(os.getenv("DCL_INGEST_STATEMENT_TIMEOUT_MS", "45000"))
 
 # --- Source Normalizer ---
 CB_COOLDOWN = float(os.getenv("DCL_CB_COOLDOWN", "120.0"))

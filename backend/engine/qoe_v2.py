@@ -60,12 +60,12 @@ class QualityOfEarningsV2:
             SELECT DISTINCT ON (entity_id, concept, period)
                    value
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s AND run_id = %s
               AND concept = %s AND entity_id = %s AND period = %s
               AND property = 'amount'
             ORDER BY entity_id, concept, period, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, concept, entity_id, period])
+        rows = self._query(sql, [self.tenant_id, self.run_id, concept, entity_id, period])
         if not rows:
             return None
         return _to_float(rows[0]["value"])
@@ -81,7 +81,7 @@ class QualityOfEarningsV2:
                 SELECT DISTINCT ON (entity_id, concept, period)
                        concept, period, value
                 FROM semantic_triples
-                WHERE tenant_id = %s AND is_active = true
+                WHERE tenant_id = %s AND run_id = %s
                   AND concept LIKE 'revenue.%%'
                   AND entity_id = %s
                   AND property = 'amount'
@@ -93,7 +93,7 @@ class QualityOfEarningsV2:
             GROUP BY concept
             ORDER BY SUM((value #>> '{{}}')::float) DESC
         """
-        params = [self.tenant_id, entity_id] + _ANNUAL_PERIODS
+        params = [self.tenant_id, self.run_id, entity_id] + _ANNUAL_PERIODS
         return self._query(sql, params)
 
     def _get_margin_trend(self, entity_id: str) -> list[dict]:
@@ -103,13 +103,13 @@ class QualityOfEarningsV2:
             SELECT DISTINCT ON (entity_id, concept, period)
                    period, concept, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s AND run_id = %s
               AND concept IN ('revenue.total', 'pnl.ebitda')
               AND entity_id = %s
               AND property = 'amount'
             ORDER BY entity_id, concept, period, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, entity_id])
+        rows = self._query(sql, [self.tenant_id, self.run_id, entity_id])
 
         # Group by period
         by_period: dict[str, dict[str, float]] = {}
@@ -365,13 +365,13 @@ class QualityOfEarningsV2:
             SELECT DISTINCT ON (entity_id, concept, period)
                    entity_id, concept, period, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s AND run_id = %s
               AND concept IN ('revenue.total', 'pnl.ebitda')
               AND entity_id IN (%s, %s)
               AND property = 'amount'
             ORDER BY entity_id, concept, period, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, entity_a, entity_b])
+        rows = self._query(sql, [self.tenant_id, self.run_id, entity_a, entity_b])
 
         metric_map: dict[tuple[str, str, str], float] = {}
         for row in rows:

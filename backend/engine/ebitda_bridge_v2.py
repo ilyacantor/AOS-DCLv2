@@ -119,13 +119,13 @@ class EBITDABridgeV2:
             SELECT DISTINCT ON (entity_id, concept, period)
                    period, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s AND run_id = %s
               AND concept = 'pnl.ebitda' AND entity_id = %s
               AND property = 'amount'
               AND period IN ({placeholders})
             ORDER BY entity_id, concept, period, created_at DESC
         """
-        params = [self.tenant_id, entity_id] + _ANNUAL_PERIODS
+        params = [self.tenant_id, self.run_id, entity_id] + _ANNUAL_PERIODS
         rows = self._query(sql, params)
 
         if not rows:
@@ -163,12 +163,12 @@ class EBITDABridgeV2:
             SELECT DISTINCT ON (entity_id, concept, property)
                    concept, property, value, period
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s AND run_id = %s
               AND concept LIKE 'ebitda_adjustment.%%'
               AND entity_id = %s
             ORDER BY entity_id, concept, property, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, entity_id])
+        rows = self._query(sql, [self.tenant_id, self.run_id, entity_id])
 
         if not rows:
             raise ValueError(
@@ -425,13 +425,13 @@ class EBITDABridgeV2:
             SELECT DISTINCT ON (entity_id, concept, property)
                    entity_id, concept, property, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s AND run_id = %s
               AND (concept = %s OR concept LIKE %s)
               AND entity_id != 'combined'
             ORDER BY entity_id, concept, property, created_at DESC
         """
         like_pattern = adjustment_concept + ".%"
-        rows = self._query(sql, [self.tenant_id, adjustment_concept, like_pattern])
+        rows = self._query(sql, [self.tenant_id, self.run_id, adjustment_concept, like_pattern])
 
         if not rows:
             raise ValueError(

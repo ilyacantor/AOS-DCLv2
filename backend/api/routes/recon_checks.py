@@ -53,7 +53,7 @@ def _check_farm_dcl_count(run_id: str, entity_id: str | None = None) -> dict:
     source_tag = tags[0]
 
     # Count DCL triples, scoped by entity_id if provided
-    count_clauses = ["run_id = %s", "is_active = true"]
+    count_clauses = ["run_id = %s"]
     count_params: list = [run_id]
     if entity_id is not None:
         count_clauses.append("entity_id = %s")
@@ -104,7 +104,7 @@ def _check_farm_dcl_count(run_id: str, entity_id: str | None = None) -> dict:
 
 def _check_entity_consistency(run_id: str, entity_id: str | None = None) -> dict:
     """Check 2: All triples should share consistent entity_ids."""
-    clauses = ["run_id = %s", "is_active = true"]
+    clauses = ["run_id = %s"]
     params: list = [run_id]
     if entity_id is not None:
         clauses.append("entity_id = %s")
@@ -137,7 +137,7 @@ def _check_entity_consistency(run_id: str, entity_id: str | None = None) -> dict
 
 def _check_source_coverage(run_id: str, entity_id: str | None = None) -> dict:
     """Check 3: Source systems present in this run vs AAM expectations."""
-    clauses = ["run_id = %s", "is_active = true"]
+    clauses = ["run_id = %s"]
     params: list = [run_id]
     if entity_id is not None:
         clauses.append("entity_id = %s")

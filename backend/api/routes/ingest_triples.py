@@ -225,18 +225,13 @@ def ingest_triples(
             },
         )
 
+    # Atomic run swap: no bulk deactivation on ingest hot path.
+    # Old runs remain in the DB; they become invisible once tenant_runs.current_run_id
+    # is updated to the new run_id after insert. Cleanup happens via purge-old-runs.
     if run_exists and replace:
-        _triple_store.deactivate_run(req.run_id)
-        logger.info(f"[ingest-triples] Deactivated old triples for run_id={req.run_id}")
-    elif not run_exists and replace:
-        # New run replacing old data — deactivate ALL prior active triples
-        # for this tenant. Entity-scoped deactivation was broken: HR triples
-        # have per-employee entity_ids that never matched financial entity_ids,
-        # so they escaped deactivation permanently.
-        deactivated = _triple_store.deactivate_tenant_triples(tenant_id=req.tenant_id)
         logger.info(
-            f"[ingest-triples] Deactivated {deactivated} prior triples for "
-            f"tenant_id={req.tenant_id} before new run_id={req.run_id}"
+            f"[ingest-triples] replace=true for existing run_id={req.run_id}; "
+            f"inserting new triples, pointer will be updated after insert"
         )
 
     # Build triple dicts for insertion
@@ -272,6 +267,16 @@ def ingest_triples(
     start_ts = time.monotonic()
     count = _triple_store.insert_triples(rows)
     duration_ms = int((time.monotonic() - start_ts) * 1000)
+
+    # Atomic pointer swap — O(1), single-row UPSERT, no table scan.
+    # Not set for append=true (multi-batch ingest of the same run_id keeps
+    # whatever pointer was set by the initial replace ingest).
+    if not append:
+        _triple_store.upsert_tenant_run(str(req.tenant_id), str(req.run_id))
+        logger.info(
+            f"[ingest-triples] tenant_runs updated: tenant_id={req.tenant_id} "
+            f"→ current_run_id={req.run_id}"
+        )
 
     concept_summary = _triple_store.count_by_domain(req.tenant_id, run_id=req.run_id)
 
@@ -454,6 +459,31 @@ def purge_inactive(confirm: bool = Query(False)):
     return {"deleted": deleted}
 
 
+@router.post("/api/dcl/purge-old-runs")
+def purge_old_runs(tenant_id: str, keep_runs: int = 2):
+    """Hard-delete triples from old runs for a tenant, keeping the N most recent.
+
+    The current run (pointed to by tenant_runs.current_run_id) is always among
+    the kept runs — it is the most recent by definition.
+
+    Args:
+        tenant_id: Tenant UUID.
+        keep_runs: Number of most recent run_ids to keep (default 2).
+    """
+    _validate_uuid(tenant_id, "tenant_id")
+    if keep_runs < 1:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "INVALID_PARAM", "message": "keep_runs must be >= 1"},
+        )
+    deleted = _triple_store.purge_old_runs(tenant_id, keep_runs)
+    logger.info(
+        f"[purge-old-runs] Deleted {deleted} triples for tenant_id={tenant_id}, "
+        f"kept_runs={keep_runs}"
+    )
+    return {"deleted": deleted, "tenant_id": tenant_id, "kept_runs": keep_runs}
+
+
 # ---------------------------------------------------------------------------
 # Seed manifest update
 # ---------------------------------------------------------------------------
@@ -469,9 +499,11 @@ def _update_seed_manifest(
 ) -> None:
     """Update data/seed_manifest.json with current active run info.
 
-    Only overwrites if the new run has at least as many concept domains as the
-    existing manifest, preventing SE pipeline runs (few concepts) from stomping
-    rich seed data (many concepts).
+    Two-gate protection:
+    1. Only overwrites if the new run has at least as many concept domains as
+       the existing manifest (prevents SE pipeline runs from stomping rich seed data).
+    2. Rejects runs whose entity_ids are all UUID-format strings — those are
+       pipeline runs with misconfigured entity_id (should be 'meridian'/'cascadia').
     """
     try:
         existing = {}
@@ -484,6 +516,29 @@ def _update_seed_manifest(
             logger.info(
                 f"[ingest-triples] Skipping seed_manifest.json update: existing has "
                 f"{existing_concept_count} concept domains vs {new_concept_count} in new run"
+            )
+            return
+
+        # Gate 2: reject runs where all entity_ids look like UUIDs.
+        # Valid seed runs have human-readable entity_ids like 'meridian'/'cascadia'.
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT DISTINCT entity_id FROM semantic_triples "
+                    "WHERE run_id = %s AND entity_id IS NOT NULL LIMIT 20",
+                    (run_id,),
+                )
+                entity_ids = [str(r[0]) for r in cur.fetchall()]
+
+        _UUID_RE = __import__("re").compile(
+            r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            __import__("re").IGNORECASE,
+        )
+        all_uuid = entity_ids and all(_UUID_RE.match(eid) for eid in entity_ids)
+        if all_uuid:
+            logger.info(
+                f"[ingest-triples] Skipping seed_manifest.json update: run {run_id} "
+                f"has UUID-format entity_ids {entity_ids[:3]} — likely a misconfigured pipeline run"
             )
             return
 

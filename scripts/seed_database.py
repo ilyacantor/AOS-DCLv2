@@ -209,7 +209,7 @@ def main():
 
         # Verify
         with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM semantic_triples WHERE run_id = %s AND is_active = true", (run_id,))
+            cur.execute("SELECT COUNT(*) FROM semantic_triples WHERE run_id = %s", (run_id,))
             verified = cur.fetchone()[0]
 
         if verified != total_inserted:

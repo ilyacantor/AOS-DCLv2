@@ -5,8 +5,9 @@ triple dataset in DCL's PG database.
 All tests query PG directly (not via the API). Financial identities are
 mathematical invariants, not hardcoded values.
 
-Uses tenant_id from seed_manifest.json (via conftest). Queries active triples
-across all runs — consistent with how v2 engines query data.
+Uses tenant_id and run_id from seed_manifest.json (via conftest). Queries filter
+by run_id directly (not current_run_id) so tests are stable even when the
+ingest pipeline updates tenant_runs.current_run_id.
 """
 
 import os
@@ -17,7 +18,7 @@ from pathlib import Path
 import psycopg2
 import pytest
 
-from tests.conftest import TENANT_ID
+from tests.conftest import TENANT_ID, RUN_ID
 
 
 # ---------------------------------------------------------------------------
@@ -57,16 +58,16 @@ QUARTERS = [
 # ---------------------------------------------------------------------------
 
 def _fetch_value(cur, tenant_id: str, entity_id: str, concept: str, prop: str, period: str) -> float | None:
-    """Fetch a single triple value as float, using DISTINCT ON to dedup across runs."""
+    """Fetch a single triple value as float from the manifest run."""
     cur.execute(
         """
         SELECT value FROM semantic_triples
         WHERE tenant_id = %s AND entity_id = %s AND concept = %s
-          AND property = %s AND period = %s AND is_active = true
+          AND property = %s AND period = %s AND run_id = %s
         ORDER BY confidence_score DESC NULLS LAST
         LIMIT 1
         """,
-        (tenant_id, entity_id, concept, prop, period),
+        (tenant_id, entity_id, concept, prop, period, RUN_ID),
     )
     row = cur.fetchone()
     if row is None:
@@ -86,23 +87,23 @@ class TestSeedData:
 
     # 1. Triples exist
     def test_01_triples_exist(self, conn):
-        """Total active triple count > 0."""
+        """Manifest run triple count > 0."""
         cur = conn.cursor()
         cur.execute(
-            "SELECT COUNT(*) FROM semantic_triples WHERE tenant_id = %s AND is_active = true",
-            (TENANT_ID,),
+            "SELECT COUNT(*) FROM semantic_triples WHERE tenant_id = %s AND run_id = %s",
+            (TENANT_ID, RUN_ID),
         )
         count = cur.fetchone()[0]
-        assert count > 0, f"Expected active triples for tenant_id={TENANT_ID}, found 0"
-        print(f"  Total active triples: {count}")
+        assert count > 0, f"Expected triples for run_id={RUN_ID}, found 0"
+        print(f"  Total triples in manifest run: {count}")
 
     # 2. Both entities present
     def test_02_both_entities_present(self, conn):
         """Triples exist for both meridian and cascadia."""
         cur = conn.cursor()
         cur.execute(
-            "SELECT DISTINCT entity_id FROM semantic_triples WHERE tenant_id = %s AND is_active = true",
-            (TENANT_ID,),
+            "SELECT DISTINCT entity_id FROM semantic_triples WHERE tenant_id = %s AND run_id = %s",
+            (TENANT_ID, RUN_ID),
         )
         entities = {r[0] for r in cur.fetchall()}
         assert any("meridian" in e.lower() for e in entities), (
@@ -289,12 +290,12 @@ class TestSeedData:
         cur.execute(
             """
             SELECT concept FROM semantic_triples
-            WHERE tenant_id = %s AND concept LIKE 'customer.%%' AND is_active = true
+            WHERE tenant_id = %s AND concept LIKE 'customer.%%' AND run_id = %s
             GROUP BY concept
             HAVING COUNT(DISTINCT entity_id) > 1
             LIMIT 1
             """,
-            (TENANT_ID,),
+            (TENANT_ID, RUN_ID),
         )
         row = cur.fetchone()
         assert row is not None, "No customer concept found with triples under both entity_ids"
@@ -307,12 +308,12 @@ class TestSeedData:
         cur.execute(
             """
             SELECT concept FROM semantic_triples
-            WHERE tenant_id = %s AND concept LIKE 'vendor.%%' AND is_active = true
+            WHERE tenant_id = %s AND concept LIKE 'vendor.%%' AND run_id = %s
             GROUP BY concept
             HAVING COUNT(DISTINCT entity_id) > 1
             LIMIT 1
             """,
-            (TENANT_ID,),
+            (TENANT_ID, RUN_ID),
         )
         row = cur.fetchone()
         assert row is not None, "No vendor concept found with triples under both entity_ids"
@@ -325,12 +326,12 @@ class TestSeedData:
         cur.execute(
             """
             SELECT concept FROM semantic_triples
-            WHERE tenant_id = %s AND concept LIKE 'employee.%%' AND is_active = true
+            WHERE tenant_id = %s AND concept LIKE 'employee.%%' AND run_id = %s
             GROUP BY concept
             HAVING COUNT(DISTINCT entity_id) > 1
             LIMIT 1
             """,
-            (TENANT_ID,),
+            (TENANT_ID, RUN_ID),
         )
         row = cur.fetchone()
         assert row is not None, "No employee concept found with triples under both entity_ids"
@@ -344,11 +345,11 @@ class TestSeedData:
             """
             SELECT source_system, confidence_score, confidence_tier, run_id
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s AND run_id = %s
             ORDER BY random()
             LIMIT 50
             """,
-            (TENANT_ID,),
+            (TENANT_ID, RUN_ID),
         )
         rows = cur.fetchall()
         assert len(rows) == 50, f"Expected 50 sample triples, got {len(rows)}"
@@ -367,17 +368,17 @@ class TestSeedData:
 
         assert not failures, "Provenance failures:\n" + "\n".join(failures)
 
-    # 14. All triples active (no inactive triples for this tenant)
+    # 14. Manifest run has triples
     def test_14_all_triples_active(self, conn):
-        """Active triples exist and outnumber inactive for this tenant."""
+        """Manifest run has triples in the database."""
         cur = conn.cursor()
         cur.execute(
-            "SELECT COUNT(*) FROM semantic_triples WHERE tenant_id = %s AND is_active = true",
-            (TENANT_ID,),
+            "SELECT COUNT(*) FROM semantic_triples WHERE tenant_id = %s AND run_id = %s",
+            (TENANT_ID, RUN_ID),
         )
-        active = cur.fetchone()[0]
-        assert active > 0, "No active triples found"
-        print(f"  Active triples: {active}")
+        count = cur.fetchone()[0]
+        assert count > 0, f"No triples found for manifest run_id={RUN_ID}"
+        print(f"  Triples in manifest run: {count}")
 
     # 15. Period coverage: both entities have triples for all 12 quarters
     def test_15_period_coverage(self, conn):
@@ -391,10 +392,10 @@ class TestSeedData:
                 """
                 SELECT DISTINCT period FROM semantic_triples
                 WHERE tenant_id = %s AND entity_id = %s
-                  AND period IS NOT NULL AND is_active = true
+                  AND period IS NOT NULL AND run_id = %s
                   AND concept LIKE 'revenue.%%'
                 """,
-                (TENANT_ID, entity),
+                (TENANT_ID, entity, RUN_ID),
             )
             actual = {r[0] for r in cur.fetchall()}
             missing = expected_quarters - actual
@@ -403,17 +404,23 @@ class TestSeedData:
 
         assert not failures, "Period coverage failures:\n" + "\n".join(failures)
 
-    # 16. At least one run_id present
+    # 16. tenant_runs pointer is registered and manifest run has triples
     def test_16_single_run_id(self, conn):
-        """Active triples have at least one run_id (may span multiple runs)."""
+        """tenant_runs has a registered current_run_id and manifest run has triples."""
         cur = conn.cursor()
+        # Verify tenant_runs pointer exists
         cur.execute(
-            """
-            SELECT DISTINCT run_id FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
-            """,
+            "SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s",
             (TENANT_ID,),
         )
-        run_ids = [str(r[0]) for r in cur.fetchall()]
-        assert len(run_ids) >= 1, f"Expected at least 1 run_id, found 0"
-        print(f"  Active run_ids: {len(run_ids)}")
+        row = cur.fetchone()
+        assert row is not None, f"No tenant_runs entry for tenant_id={TENANT_ID}"
+        print(f"  current_run_id: {row[0]}")
+        # Verify manifest run has triples (independent of which run is "current")
+        cur.execute(
+            "SELECT COUNT(*) FROM semantic_triples WHERE run_id = %s",
+            (RUN_ID,),
+        )
+        count = cur.fetchone()[0]
+        assert count > 0, f"Manifest run_id={RUN_ID} has no triples in semantic_triples"
+        print(f"  Manifest run triple count: {count}")

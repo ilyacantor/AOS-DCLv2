@@ -79,12 +79,12 @@ class UpsellEngineV2:
             SELECT DISTINCT ON (concept, property)
                    concept, property, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s AND run_id = %s
               AND concept LIKE 'service.%%'
               AND entity_id = %s
             ORDER BY concept, property, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, entity_id])
+        rows = self._query(sql, [self.tenant_id, self.run_id, entity_id])
 
         services: dict[str, dict] = {}
         for row in rows:
@@ -122,12 +122,12 @@ class UpsellEngineV2:
             SELECT DISTINCT ON (concept, property)
                    concept, property, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s AND run_id = %s
               AND concept LIKE 'customer_service.%%'
               AND entity_id = %s
             ORDER BY concept, property, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, entity_id])
+        rows = self._query(sql, [self.tenant_id, self.run_id, entity_id])
 
         # Group by concept then split into customer/service
         raw: dict[str, dict] = {}
@@ -421,13 +421,13 @@ class UpsellEngineV2:
             SELECT DISTINCT ON (concept, property)
                    concept, property, value
             FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
+            WHERE tenant_id = %s AND run_id = %s
               AND concept LIKE 'customer.%%'
               AND concept NOT LIKE 'customer.%%.%%'
               AND entity_id = %s
             ORDER BY concept, property, created_at DESC
         """
-        rows = self._query(sql, [self.tenant_id, entity_id])
+        rows = self._query(sql, [self.tenant_id, self.run_id, entity_id])
 
         customers: dict[str, dict] = {}
         for row in rows:
