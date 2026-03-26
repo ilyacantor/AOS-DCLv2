@@ -132,24 +132,12 @@ class QualityOfEarningsV2:
         return trend
 
     def get_qoe_summary(self, entity_id: str) -> dict:
-        """
-        Returns:
-        {
-            "entity_id": str,
-            "reported_ebitda": float,
-            "adjusted_ebitda": float,
-            "adjustment_pct": float,  # total_adjustments / reported_ebitda
-            "confidence_weighted_ebitda": float,
-            "revenue_quality": {
-                "total_revenue": float,
-                "by_stream": [{"concept": str, "value": float, "pct": float}]
-            },
-            "margin_trend": [{"period": str, "ebitda_margin": float}],
-            "risk_factors": [str]
-        }
-        """
+        """QoE summary for one entity (fetches its own bridge)."""
         bridge = self._bridge_engine.get_bridge(entity_id)
+        return self._get_qoe_summary_with_bridge(entity_id, bridge)
 
+    def _get_qoe_summary_with_bridge(self, entity_id: str, bridge: dict) -> dict:
+        """QoE summary using a pre-computed bridge (avoids redundant DB calls)."""
         reported = bridge["reported_ebitda"]
         adjusted = bridge["adjusted_ebitda"]
         total_adj = bridge["total_adjustments"]
@@ -162,7 +150,6 @@ class QualityOfEarningsV2:
 
         adjustment_pct = round(total_adj / reported * 100, 2)
 
-        # Confidence-weighted EBITDA: sum(amount * confidence) for each adjustment
         conf_weighted_adj = sum(
             a["amount"] * a["confidence"] for a in bridge["adjustments"]
         )
@@ -182,20 +169,12 @@ class QualityOfEarningsV2:
                     "value": val,
                 })
 
-        # Calculate percentages
         for item in by_stream:
             item["pct"] = round(item["value"] / total_revenue * 100, 2) if total_revenue != 0 else 0.0
 
-        # Margin trend
         margin_trend = self._get_margin_trend(entity_id)
-
-        # Risk factors
         risk_factors = self._compute_risk_factors(bridge, adjustment_pct, margin_trend)
-
-        # Build adjustment_lifecycle from bridge adjustments
         adjustment_lifecycle = self._build_adjustment_lifecycle(bridge)
-
-        # Build sustainability_trend from margin data
         sustainability_trend = self._compute_sustainability_trend(
             bridge, margin_trend
         )
@@ -217,18 +196,149 @@ class QualityOfEarningsV2:
         }
 
     def get_combined_qoe(self) -> dict:
-        """Combined QoE for both entities."""
+        """Combined QoE for both entities.
+
+        Computes per-entity bridges once and reuses them everywhere,
+        avoiding redundant DB round-trips (was 18 queries, now 11).
+        Includes the combined bridge in the response so callers (NLQ)
+        don't need a separate /bridge call.
+        """
         entity_a, entity_b = self._bridge_engine._get_entities()
+
+        # Compute bridges once — these are the heaviest DB calls
+        bridge_a = self._bridge_engine.get_bridge(entity_a)
+        bridge_b = self._bridge_engine.get_bridge(entity_b)
+        combined_bridge = self._merge_bridges(bridge_a, bridge_b)
+
+        # Per-entity QoE, passing pre-computed bridges to avoid re-fetching
+        qoe_a = self._get_qoe_summary_with_bridge(entity_a, bridge_a)
+        qoe_b = self._get_qoe_summary_with_bridge(entity_b, bridge_b)
+
+        combined = self._get_combined_summary(
+            entity_a, entity_b, combined_bridge,
+            qoe_a.get("margin_trend", []),
+            qoe_b.get("margin_trend", []),
+        )
+
         return {
-            "entity_a": self.get_qoe_summary(entity_a),
-            "entity_b": self.get_qoe_summary(entity_b),
-            "combined": self._get_combined_summary(entity_a, entity_b),
+            "entity_a": qoe_a,
+            "entity_b": qoe_b,
+            "combined": combined,
+            "bridge": combined_bridge,
         }
 
-    def _get_combined_summary(self, entity_a: str, entity_b: str) -> dict:
-        """Produce combined QoE summary."""
-        bridge = self._bridge_engine.get_bridge(None)  # combined
+    def _merge_bridges(self, bridge_a: dict, bridge_b: dict) -> dict:
+        """Merge two per-entity bridges into a combined bridge."""
+        reported = round(bridge_a["reported_ebitda"] + bridge_b["reported_ebitda"], 2)
 
+        adj_map: dict[str, dict] = {}
+        for adj in bridge_a["adjustments"] + bridge_b["adjustments"]:
+            concept = adj["concept"]
+            if concept not in adj_map:
+                adj_map[concept] = {
+                    "name": adj["name"],
+                    "concept": concept,
+                    "lever": adj["lever"],
+                    "amount": 0.0,
+                    "diligence_amount": 0.0,
+                    "prior_amount": 0.0,
+                    "amount_low": 0.0,
+                    "amount_high": 0.0,
+                    "confidence": adj["confidence"],
+                    "lifecycle_stage": adj["lifecycle_stage"],
+                    "period": adj["period"],
+                    "period_type": adj["period_type"],
+                    "rationale": adj["rationale"],
+                    "support_reference": adj["support_reference"],
+                    "lifecycle_history": [],
+                }
+            adj_map[concept]["amount"] = round(
+                adj_map[concept]["amount"] + adj["amount"], 2
+            )
+            adj_map[concept]["amount_low"] = round(
+                adj_map[concept]["amount_low"] + adj["amount_low"], 2
+            )
+            adj_map[concept]["amount_high"] = round(
+                adj_map[concept]["amount_high"] + adj["amount_high"], 2
+            )
+            if adj["diligence_amount"] is not None:
+                if adj_map[concept]["diligence_amount"] is None:
+                    adj_map[concept]["diligence_amount"] = 0.0
+                adj_map[concept]["diligence_amount"] = round(
+                    adj_map[concept]["diligence_amount"] + adj["diligence_amount"], 2
+                )
+            if adj["prior_amount"] is not None:
+                if adj_map[concept]["prior_amount"] is None:
+                    adj_map[concept]["prior_amount"] = 0.0
+                adj_map[concept]["prior_amount"] = round(
+                    adj_map[concept]["prior_amount"] + adj["prior_amount"], 2
+                )
+
+            # Merge lifecycle histories by stage
+            stage_index = {
+                h["stage"]: h for h in adj_map[concept]["lifecycle_history"]
+            }
+            for entry in adj["lifecycle_history"]:
+                existing = stage_index.get(entry["stage"])
+                if existing:
+                    existing["amount"] = round(existing["amount"] + entry["amount"], 2)
+                    existing["amount_low"] = round(existing["amount_low"] + entry["amount_low"], 2)
+                    existing["amount_high"] = round(existing["amount_high"] + entry["amount_high"], 2)
+                else:
+                    new_entry = {
+                        "stage": entry["stage"],
+                        "amount": entry["amount"],
+                        "amount_low": entry["amount_low"],
+                        "amount_high": entry["amount_high"],
+                        "confidence": entry["confidence"],
+                    }
+                    adj_map[concept]["lifecycle_history"].append(new_entry)
+                    stage_index[entry["stage"]] = new_entry
+
+        from backend.engine.ebitda_bridge_v2 import STAGE_ORDER, _derive_trend
+        for entry in adj_map.values():
+            entry["lifecycle_history"].sort(
+                key=lambda h: STAGE_ORDER.get(h["stage"], 99)
+            )
+            entry["trend"] = _derive_trend(
+                entry["amount"], entry["prior_amount"]
+            )
+
+        adjustments = [adj_map[c] for c in sorted(adj_map.keys())]
+        total_adjustments = round(sum(a["amount"] for a in adjustments), 2)
+        adjusted_ebitda = round(reported + total_adjustments, 2)
+
+        by_lever: dict[str, float] = {
+            "normalization": 0.0,
+            "cost_reduction": 0.0,
+            "synergy": 0.0,
+        }
+        for adj in adjustments:
+            by_lever[adj["lever"]] = round(
+                by_lever[adj["lever"]] + adj["amount"], 2
+            )
+
+        return {
+            "reported_ebitda": reported,
+            "adjustments": adjustments,
+            "total_adjustments": total_adjustments,
+            "adjusted_ebitda": adjusted_ebitda,
+            "by_lever": by_lever,
+        }
+
+    def _get_combined_summary(
+        self,
+        entity_a: str,
+        entity_b: str,
+        bridge: dict,
+        margin_trend_a: list[dict],
+        margin_trend_b: list[dict],
+    ) -> dict:
+        """Produce combined QoE summary.
+
+        Accepts pre-computed bridge and margin trends to avoid redundant
+        DB queries (previously re-fetched everything from scratch).
+        """
         reported = bridge["reported_ebitda"]
         adjusted = bridge["adjusted_ebitda"]
         total_adj = bridge["total_adjustments"]
@@ -245,23 +355,34 @@ class QualityOfEarningsV2:
         )
         confidence_weighted_ebitda = round(reported + conf_weighted_adj, 2)
 
-        # Combined margin trend
-        margin_trend_a = self._get_margin_trend(entity_a)
-        margin_trend_b = self._get_margin_trend(entity_b)
-
-        # Merge by period
+        # Merge margin trend periods from both entities
         margin_map_a = {m["period"]: m["ebitda_margin"] for m in margin_trend_a}
         margin_map_b = {m["period"]: m["ebitda_margin"] for m in margin_trend_b}
         all_periods = sorted(set(margin_map_a.keys()) | set(margin_map_b.keys()))
 
-        # For combined margin we need raw revenue and EBITDA, not just percentages
-        # Use a simplified weighted average approach
+        # Batch-fetch raw revenue and EBITDA for both entities in one query
+        sql = """
+            SELECT DISTINCT ON (entity_id, concept, period)
+                   entity_id, concept, period, value
+            FROM semantic_triples
+            WHERE tenant_id = %s AND is_active = true
+              AND concept IN ('revenue.total', 'pnl.ebitda')
+              AND entity_id IN (%s, %s)
+              AND property = 'amount'
+            ORDER BY entity_id, concept, period, created_at DESC
+        """
+        rows = self._query(sql, [self.tenant_id, entity_a, entity_b])
+
+        metric_map: dict[tuple[str, str, str], float] = {}
+        for row in rows:
+            metric_map[(row["entity_id"], row["concept"], row["period"])] = _to_float(row["value"])
+
         combined_trend = []
         for period in all_periods:
-            rev_a = self._get_metric("revenue.total", entity_a, period)
-            rev_b = self._get_metric("revenue.total", entity_b, period)
-            ebitda_a = self._get_metric("pnl.ebitda", entity_a, period)
-            ebitda_b = self._get_metric("pnl.ebitda", entity_b, period)
+            rev_a = metric_map.get((entity_a, "revenue.total", period))
+            rev_b = metric_map.get((entity_b, "revenue.total", period))
+            ebitda_a = metric_map.get((entity_a, "pnl.ebitda", period))
+            ebitda_b = metric_map.get((entity_b, "pnl.ebitda", period))
 
             if all(v is not None for v in (rev_a, rev_b, ebitda_a, ebitda_b)):
                 total_rev = rev_a + rev_b
@@ -273,11 +394,7 @@ class QualityOfEarningsV2:
                     })
 
         risk_factors = self._compute_risk_factors(bridge, adjustment_pct, combined_trend)
-
-        # Build adjustment_lifecycle from combined bridge
         adjustment_lifecycle = self._build_adjustment_lifecycle(bridge)
-
-        # Build sustainability_trend from combined margin data
         sustainability_trend = self._compute_sustainability_trend(
             bridge, combined_trend
         )
