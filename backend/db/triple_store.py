@@ -66,6 +66,48 @@ class TripleStore:
                 conn.commit()
                 return len(triples)
 
+    def replace_tenant_triples(self, tenant_id: str, triples: list[dict]) -> int:
+        """Atomically DELETE all triples for tenant, then COPY-insert new batch.
+
+        Both operations share one transaction. If COPY fails, DELETE rolls back.
+        """
+        if not tenant_id:
+            raise ValueError("replace_tenant_triples requires tenant_id")
+        if not triples:
+            return 0
+
+        escape = self._copy_escape
+        cols = self._COPY_COLS
+        buf = io.StringIO()
+        for t in triples:
+            row_vals = []
+            for c in cols:
+                if c == "value":
+                    row_vals.append(escape(json.dumps(t["value"])))
+                else:
+                    row_vals.append(escape(t.get(c)))
+            buf.write("\t".join(row_vals))
+            buf.write("\n")
+        buf.seek(0)
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"SET LOCAL statement_timeout = {int(INGEST_STATEMENT_TIMEOUT_MS)}"
+                )
+                cur.execute(
+                    "DELETE FROM semantic_triples WHERE tenant_id = %s",
+                    (tenant_id,),
+                )
+                deleted = cur.rowcount
+                logger.info(
+                    "[replace_tenant_triples] Deleted %d old triples for tenant_id=%s",
+                    deleted, tenant_id,
+                )
+                cur.copy_expert(self._COPY_SQL, buf)
+                conn.commit()
+                return len(triples)
+
     def get_triples(
         self,
         tenant_id: str,
@@ -394,6 +436,13 @@ class TripleStore:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(sql, params)
+                return cur.fetchone()[0]
+
+    def count_total_rows(self) -> int:
+        """Count ALL rows in semantic_triples (all tenants, active + inactive)."""
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM semantic_triples")
                 return cur.fetchone()[0]
 
     def get_source_run_ids(self) -> list[dict]:

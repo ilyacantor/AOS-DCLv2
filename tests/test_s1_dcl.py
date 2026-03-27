@@ -547,8 +547,8 @@ class TestIngestEndpoint:
         assert resp2.status_code == 409, f"Expected 409, got {resp2.status_code}: {resp2.text}"
 
     def test_18_idempotency_replace(self):
-        """Ingest run → re-ingest same run_id with ?replace=true → 201. Both triples remain
-        is_active=True; the pointer swap makes the old data invisible to queries, not is_active."""
+        """Ingest run -> re-ingest same run_id with ?replace=true -> 201.
+        replace=true DELETEs all tenant triples before inserting new ones."""
         run_id = str(uuid.uuid4())
         triples_v1 = [make_test_triple(entity_id="v1_entity", value=100)]
         resp1, _ = self._post_triples(triples_v1, run_id=run_id)
@@ -560,14 +560,34 @@ class TestIngestEndpoint:
 
         store = TripleStore()
         all_rows = store.get_triples_by_run(run_id)
-        # Under atomic run swap, no deactivation occurs — all triples remain is_active=True.
-        assert all(r["is_active"] is True for r in all_rows), (
-            "All triples in a run stay is_active=True; visibility is controlled by "
-            "tenant_runs.current_run_id, not is_active."
-        )
         entity_ids = {r["entity_id"] for r in all_rows}
-        assert "v1_entity" in entity_ids, "v1_entity triple should still be in the DB"
-        assert "v2_entity" in entity_ids, "v2_entity triple should be present after replace ingest"
+        assert "v1_entity" not in entity_ids, "v1_entity should be deleted by replace"
+        assert "v2_entity" in entity_ids, "v2_entity should be present after replace"
+        assert len(all_rows) == 1, f"Expected 1 triple after replace, got {len(all_rows)}"
+
+    def test_18b_replace_different_runs(self):
+        """Ingest run_A -> ingest run_B with replace=true -> only run_B data exists."""
+        run_id_1 = str(uuid.uuid4())
+        run_id_2 = str(uuid.uuid4())
+
+        triples_1 = [
+            make_test_triple(entity_id="alpha", concept="revenue.total", value=111),
+            make_test_triple(entity_id="beta", concept="cost.direct", value=222),
+        ]
+        resp1, _ = self._post_triples(triples_1, run_id=run_id_1)
+        assert resp1.status_code == 201
+
+        triples_2 = [make_test_triple(entity_id="gamma", concept="revenue.consulting", value=333)]
+        resp2, _ = self._post_triples(triples_2, run_id=run_id_2, replace=True)
+        assert resp2.status_code == 201
+
+        store = TripleStore()
+        old_rows = store.get_triples_by_run(run_id_1)
+        assert len(old_rows) == 0, f"Expected 0 triples for run_1 after replace, got {len(old_rows)}"
+
+        new_rows = store.get_triples_by_run(run_id_2)
+        assert len(new_rows) == 1, f"Expected 1 triple for run_2, got {len(new_rows)}"
+        assert new_rows[0]["entity_id"] == "gamma"
 
     def test_19_run_status_endpoint(self):
         """Ingest → GET status → correct count and summary."""

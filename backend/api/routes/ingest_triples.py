@@ -225,9 +225,9 @@ def ingest_triples(
             },
         )
 
-    # Atomic run swap: no bulk deactivation on ingest hot path.
-    # Old runs remain in the DB; they become invisible once tenant_runs.current_run_id
-    # is updated to the new run_id after insert. Cleanup happens via purge-old-runs.
+    # When replace=true, all existing triples for this tenant are atomically
+    # deleted and replaced with the new batch inside a single transaction.
+    # The tenant_runs pointer is updated after the replace completes.
     if run_exists and replace:
         logger.info(
             f"[ingest-triples] replace=true for existing run_id={req.run_id}; "
@@ -266,7 +266,10 @@ def ingest_triples(
 
     start_ts = time.monotonic()
     try:
-        count = _triple_store.insert_triples(rows)
+        if replace:
+            count = _triple_store.replace_tenant_triples(str(req.tenant_id), rows)
+        else:
+            count = _triple_store.insert_triples(rows)
     except Exception as db_err:
         duration_ms = int((time.monotonic() - start_ts) * 1000)
         logger.error(
@@ -318,6 +321,20 @@ def ingest_triples(
         f"[ingest-triples] Ingested {count} triples for run_id={req.run_id}, "
         f"tenant_id={req.tenant_id}, concepts={concept_summary}, duration={duration_ms}ms"
     )
+
+    # Safety warning: flag if table is growing beyond expected bounds
+    if replace:
+        try:
+            total = _triple_store.count_total_rows()
+            if total > 200_000:
+                logger.warning(
+                    "[ingest-triples] semantic_triples has %s total rows "
+                    "(threshold: 200,000). Consider running POST /api/dcl/purge-old-runs "
+                    "for tenant_id=%s.",
+                    f"{total:,}", req.tenant_id,
+                )
+        except Exception:
+            logger.warning("[ingest-triples] Failed to check total row count", exc_info=True)
 
     # Record to ingest_log — observability only, never fails the ingest
     _record_ingest_log(
