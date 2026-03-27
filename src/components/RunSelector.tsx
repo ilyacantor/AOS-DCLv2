@@ -57,7 +57,14 @@ export function useEntities() {
     setError(null);
     try {
       const res = await fetch('/api/dcl/entities');
-      if (!res.ok) throw new Error(`Entities endpoint returned HTTP ${res.status}`);
+      if (!res.ok) {
+        let detail = `Entities endpoint returned HTTP ${res.status}`;
+        try {
+          const body = await res.json();
+          if (body.detail) detail = body.detail;
+        } catch { /* non-JSON response */ }
+        throw new Error(detail);
+      }
       const data = await res.json();
       const list: EntityInfo[] = data.entities || [];
       setEntities(list);

@@ -24,6 +24,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from typing import List, Literal, Optional, Dict, Any
 
+from backend.core.db import PoolExhausted
 from backend.domain import Persona, GraphSnapshot, RunMetrics
 from backend.engine import DCLEngine
 from backend.engine.schema_loader import SchemaLoader
@@ -295,6 +296,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(PoolExhausted)
+async def pool_exhausted_handler(request: Request, exc: PoolExhausted):
+    """Convert PoolExhausted into a 503 with actionable detail.
+
+    This catches pool exhaustion from ANY endpoint — routes, engines,
+    stores — so individual call sites don't need their own try/except.
+    """
+    logger.error(f"[db] PoolExhausted on {request.url.path}: {exc}")
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": f"DCL database pool exhausted — too many concurrent requests. {exc}",
+            "path": str(request.url.path),
+        },
+    )
+
 
 engine = DCLEngine()
 app.state.loaded_sources = []

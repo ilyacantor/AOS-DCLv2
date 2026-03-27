@@ -88,10 +88,18 @@ def list_entities():
         "GROUP BY entity_id ORDER BY latest_ingest DESC"
     )
 
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(sql)
-            rows = cur.fetchall()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                rows = cur.fetchall()
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
     entities = []
     for i, (entity_id, triple_count, latest_ingest) in enumerate(rows):
@@ -160,47 +168,55 @@ def triples_overview(
         f"WHERE is_active = true AND split_part(concept, '.', 1) = 'cofa_conflict'{extra_filter}"
     )
 
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(sql_total, params)
-            total_triples = cur.fetchone()[0]
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql_total, params)
+                total_triples = cur.fetchone()[0]
 
-            cur.execute(sql_entities, params)
-            entities = []
-            for row in cur.fetchall():
-                entity_id = row[0]
-                entities.append({
-                    "entity_id": entity_id,
-                    "triple_count": row[1],
-                    "display_name": _entity_display_name(entity_id),
-                })
+                cur.execute(sql_entities, params)
+                entities = []
+                for row in cur.fetchall():
+                    entity_id = row[0]
+                    entities.append({
+                        "entity_id": entity_id,
+                        "triple_count": row[1],
+                        "display_name": _entity_display_name(entity_id),
+                    })
 
-            cur.execute(sql_domains, params)
-            # Pivot per-entity counts into {domain, count, by_entity}
-            domain_map: dict[str, dict] = {}
-            for r in cur.fetchall():
-                domain, entity_id, cnt = r[0], r[1], r[2]
-                if domain not in domain_map:
-                    domain_map[domain] = {"domain": domain, "count": 0, "by_entity": {}}
-                domain_map[domain]["count"] += cnt
-                domain_map[domain]["by_entity"][entity_id] = cnt
-            domains = sorted(domain_map.values(), key=lambda d: d["count"], reverse=True)
+                cur.execute(sql_domains, params)
+                # Pivot per-entity counts into {domain, count, by_entity}
+                domain_map: dict[str, dict] = {}
+                for r in cur.fetchall():
+                    domain, entity_id, cnt = r[0], r[1], r[2]
+                    if domain not in domain_map:
+                        domain_map[domain] = {"domain": domain, "count": 0, "by_entity": {}}
+                    domain_map[domain]["count"] += cnt
+                    domain_map[domain]["by_entity"][entity_id] = cnt
+                domains = sorted(domain_map.values(), key=lambda d: d["count"], reverse=True)
 
-            cur.execute(sql_periods, params)
-            periods = [r[0] for r in cur.fetchall()]
+                cur.execute(sql_periods, params)
+                periods = [r[0] for r in cur.fetchall()]
 
-            cur.execute(sql_latest, params)
-            latest_row = cur.fetchone()
-            last_ingest = None
-            if latest_row:
-                last_ingest = {
-                    "run_id": str(latest_row[0]),
-                    "timestamp": latest_row[1].isoformat() if latest_row[1] else None,
-                    "triple_count": latest_row[2],
-                }
+                cur.execute(sql_latest, params)
+                latest_row = cur.fetchone()
+                last_ingest = None
+                if latest_row:
+                    last_ingest = {
+                        "run_id": str(latest_row[0]),
+                        "timestamp": latest_row[1].isoformat() if latest_row[1] else None,
+                        "triple_count": latest_row[2],
+                    }
 
-            cur.execute(sql_conflicts, params)
-            conflict_count = cur.fetchone()[0]
+                cur.execute(sql_conflicts, params)
+                conflict_count = cur.fetchone()[0]
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
     return {
         "total_triples": total_triples,
@@ -246,17 +262,25 @@ def triples_runs():
         "GROUP BY run_id, entity_id"
     )
 
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(runs_sql)
-            columns = [desc[0] for desc in cur.description]
-            raw_runs = [dict(zip(columns, row)) for row in cur.fetchall()]
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(runs_sql)
+                columns = [desc[0] for desc in cur.description]
+                raw_runs = [dict(zip(columns, row)) for row in cur.fetchall()]
 
-            cur.execute(domain_sql)
-            domain_rows = cur.fetchall()
+                cur.execute(domain_sql)
+                domain_rows = cur.fetchall()
 
-            cur.execute(entity_sql)
-            entity_rows = cur.fetchall()
+                cur.execute(entity_sql)
+                entity_rows = cur.fetchall()
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
     # Index domain summaries by run_id
     domain_by_run: dict[str, dict[str, int]] = {}
@@ -439,9 +463,17 @@ def _run_check(lookup, entity_ids, periods, name, description, lhs_prefixes, rhs
 @router.get("/api/dcl/triples/identity-checks")
 def triples_identity_checks():
     """Run accounting identity checks against the live triple store."""
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            lookup, entity_ids, periods = _build_identity_lookup(cur)
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                lookup, entity_ids, periods = _build_identity_lookup(cur)
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
     checks = []
 
@@ -564,14 +596,22 @@ def triples_browse(
         f"LIMIT %s OFFSET %s"
     )
 
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(count_sql, params)
-            total_count = cur.fetchone()[0]
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(count_sql, params)
+                total_count = cur.fetchone()[0]
 
-            cur.execute(data_sql, params + [limit, offset])
-            columns = [desc[0] for desc in cur.description]
-            triples = [_serialize_row(dict(zip(columns, row))) for row in cur.fetchall()]
+                cur.execute(data_sql, params + [limit, offset])
+                columns = [desc[0] for desc in cur.description]
+                triples = [_serialize_row(dict(zip(columns, row))) for row in cur.fetchall()]
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
     filters_applied = {}
     if domain:
@@ -636,11 +676,19 @@ def triples_browse_batch(req: BrowseBatchRequest):
         f"ORDER BY entity_id, concept, property, period, created_at DESC"
     )
 
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(data_sql, params)
-            columns = [desc[0] for desc in cur.description]
-            all_triples = [_serialize_row(dict(zip(columns, row))) for row in cur.fetchall()]
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(data_sql, params)
+                columns = [desc[0] for desc in cur.description]
+                all_triples = [_serialize_row(dict(zip(columns, row))) for row in cur.fetchall()]
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
     # Group by domain (first segment of concept)
     by_domain: dict = {}
@@ -739,6 +787,13 @@ def triples_resolution_summary():
                         "recent_decisions": recent,
                     }
 
+        except PoolExhausted as e:
+            raise HTTPException(
+                status_code=503,
+                detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+            )
+        except RuntimeError as e:
+            raise HTTPException(status_code=503, detail=str(e))
         except Exception as e:
             logger.debug(f"[resolution-summary] Table {table} query failed: {e}")
             continue
@@ -866,13 +921,21 @@ def contextualization_summary(
         f"GROUP BY source_system ORDER BY triple_count DESC"
     )
 
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(domain_sql, params)
-            domain_rows = cur.fetchall()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(domain_sql, params)
+                domain_rows = cur.fetchall()
 
-            cur.execute(source_sql, params)
-            source_rows = cur.fetchall()
+                cur.execute(source_sql, params)
+                source_rows = cur.fetchall()
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
     # Build ontology concept map for concepts_available per domain
     all_concepts = _concept_registry.list_concepts()
@@ -921,6 +984,13 @@ def contextualization_summary(
                     )
                     resolution["conflicts_detected"] = by_status.get("conflict", 0) + by_status.get("escalated", 0)
                     break
+        except PoolExhausted as e:
+            raise HTTPException(
+                status_code=503,
+                detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+            )
+        except RuntimeError as e:
+            raise HTTPException(status_code=503, detail=str(e))
         except Exception:
             continue
 
@@ -1017,23 +1087,31 @@ def dashboard_data(
         f"GROUP BY period ORDER BY period"
     )
 
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(count_sql, params)
-            total_count = cur.fetchone()[0]
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(count_sql, params)
+                total_count = cur.fetchone()[0]
 
-            cur.execute(data_sql, params + [page_size, offset])
-            columns = [desc[0] for desc in cur.description]
-            rows = [_serialize_row(dict(zip(columns, row))) for row in cur.fetchall()]
+                cur.execute(data_sql, params + [page_size, offset])
+                columns = [desc[0] for desc in cur.description]
+                rows = [_serialize_row(dict(zip(columns, row))) for row in cur.fetchall()]
 
-            cur.execute(agg_domain_sql, params)
-            by_domain = [{"domain": r[0], "count": r[1]} for r in cur.fetchall()]
+                cur.execute(agg_domain_sql, params)
+                by_domain = [{"domain": r[0], "count": r[1]} for r in cur.fetchall()]
 
-            cur.execute(agg_source_sql, params)
-            by_source = [{"system": r[0], "count": r[1]} for r in cur.fetchall()]
+                cur.execute(agg_source_sql, params)
+                by_source = [{"system": r[0], "count": r[1]} for r in cur.fetchall()]
 
-            cur.execute(agg_period_sql, params)
-            by_period = [{"period": r[0], "count": r[1]} for r in cur.fetchall()]
+                cur.execute(agg_period_sql, params)
+                by_period = [{"period": r[0], "count": r[1]} for r in cur.fetchall()]
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"DCL database pool exhausted — too many concurrent requests. {e}",
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
     filters_applied = {}
     if entity_id:
