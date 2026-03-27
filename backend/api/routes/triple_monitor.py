@@ -25,6 +25,7 @@ from typing import List, Optional
 from backend.db.triple_store import TripleStore
 from backend.db.engagement_store import EngagementStore
 from backend.db.resolution_store import ResolutionStore
+from psycopg2 import sql as pgsql
 from backend.core.db import get_connection, PoolExhausted
 from backend.engine.engagement import get_active_engagement
 from backend.utils.log_utils import get_logger
@@ -740,33 +741,41 @@ def triples_engagement():
 def triples_resolution_summary():
     """Resolution workspace aggregate stats."""
     # Try v2 table first, fall back to v1
-    for table in ("resolution_workspaces_v2", "resolution_workspaces"):
-        type_col = "domain" if table == "resolution_workspaces_v2" else "workspace_type"
+    for table_name, type_col_name, decided_col_name in (
+        ("resolution_workspaces_v2", "domain", "updated_at"),
+        ("resolution_workspaces", "workspace_type", "decided_at"),
+    ):
+        tbl = pgsql.Identifier(table_name)
+        type_col = pgsql.Identifier(type_col_name)
+        decided_col = pgsql.Identifier(decided_col_name)
         try:
             with get_connection() as conn:
                 with conn.cursor() as cur:
-                    cur.execute(f"SELECT COUNT(*) FROM {table}")
+                    cur.execute(pgsql.SQL("SELECT COUNT(*) FROM {}").format(tbl))
                     total = cur.fetchone()[0]
                     if total == 0:
                         continue
 
                     cur.execute(
-                        f"SELECT status, COUNT(*) FROM {table} GROUP BY status"
+                        pgsql.SQL("SELECT status, COUNT(*) FROM {} GROUP BY status").format(tbl)
                     )
                     by_status = {r[0]: r[1] for r in cur.fetchall()}
 
                     cur.execute(
-                        f"SELECT {type_col}, COUNT(*) FROM {table} GROUP BY {type_col}"
+                        pgsql.SQL("SELECT {}, COUNT(*) FROM {} GROUP BY {}").format(
+                            type_col, tbl, type_col
+                        )
                     )
                     by_type = {r[0]: r[1] for r in cur.fetchall()}
 
                     # Recent decisions
-                    decided_col = "decided_at" if table == "resolution_workspaces" else "updated_at"
                     cur.execute(
-                        f"SELECT id, {type_col}, status, decided_by, {decided_col} "
-                        f"FROM {table} "
-                        f"WHERE status IN ('resolved', 'confirmed', 'rejected', 'escalated') "
-                        f"ORDER BY {decided_col} DESC NULLS LAST LIMIT 10"
+                        pgsql.SQL(
+                            "SELECT id, {type_col}, status, decided_by, {decided_col} "
+                            "FROM {tbl} "
+                            "WHERE status IN ('resolved', 'confirmed', 'rejected', 'escalated') "
+                            "ORDER BY {decided_col} DESC NULLS LAST LIMIT 10"
+                        ).format(type_col=type_col, decided_col=decided_col, tbl=tbl)
                     )
                     columns = [desc[0] for desc in cur.description]
                     recent = []
@@ -774,10 +783,10 @@ def triples_resolution_summary():
                         d = dict(zip(columns, row))
                         recent.append({
                             "workspace_id": str(d["id"]),
-                            "type": d[type_col],
+                            "type": d[type_col_name],
                             "decision": d["status"],
                             "decided_by": d.get("decided_by"),
-                            "decided_at": d[decided_col].isoformat() if d.get(decided_col) else None,
+                            "decided_at": d[decided_col_name].isoformat() if d.get(decided_col_name) else None,
                         })
 
                     return {
@@ -795,7 +804,7 @@ def triples_resolution_summary():
         except RuntimeError as e:
             raise HTTPException(status_code=503, detail=str(e))
         except Exception as e:
-            logger.debug(f"[resolution-summary] Table {table} query failed: {e}")
+            logger.debug(f"[resolution-summary] Table {table_name} query failed: {e}")
             continue
 
     # No data in either table
@@ -967,15 +976,16 @@ def contextualization_summary(
 
     # Resolution activity from resolution_workspaces_v2
     resolution = {"workspaces_total": 0, "workspaces_pending": 0, "workspaces_resolved": 0, "conflicts_detected": 0}
-    for table in ("resolution_workspaces_v2", "resolution_workspaces"):
+    for table_name in ("resolution_workspaces_v2", "resolution_workspaces"):
+        tbl = pgsql.Identifier(table_name)
         try:
             with get_connection() as conn:
                 with conn.cursor() as cur:
-                    cur.execute(f"SELECT COUNT(*) FROM {table}")
+                    cur.execute(pgsql.SQL("SELECT COUNT(*) FROM {}").format(tbl))
                     total = cur.fetchone()[0]
                     if total == 0:
                         continue
-                    cur.execute(f"SELECT status, COUNT(*) FROM {table} GROUP BY status")
+                    cur.execute(pgsql.SQL("SELECT status, COUNT(*) FROM {} GROUP BY status").format(tbl))
                     by_status = {r[0]: r[1] for r in cur.fetchall()}
                     resolution["workspaces_total"] = total
                     resolution["workspaces_pending"] = by_status.get("pending", 0)
@@ -992,7 +1002,7 @@ def contextualization_summary(
         except RuntimeError as e:
             raise HTTPException(status_code=503, detail=str(e))
         except Exception as e:
-            logger.warning(f"[persona-view] Failed to query resolution table {table}: {e}")
+            logger.warning(f"[persona-view] Failed to query resolution table {table_name}: {e}")
             continue
 
     source_data = []

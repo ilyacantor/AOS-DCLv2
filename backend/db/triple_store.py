@@ -61,7 +61,7 @@ class TripleStore:
 
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(f"SET LOCAL statement_timeout = '{INGEST_STATEMENT_TIMEOUT_MS}'")
+                cur.execute(f"SET LOCAL statement_timeout = {int(INGEST_STATEMENT_TIMEOUT_MS)}")
                 cur.copy_expert(self._COPY_SQL, buf)
                 conn.commit()
                 return len(triples)
@@ -163,7 +163,7 @@ class TripleStore:
         params = [tenant_id] + entity_ids
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(f"SET LOCAL statement_timeout = '{INGEST_STATEMENT_TIMEOUT_MS}'")
+                cur.execute(f"SET LOCAL statement_timeout = {int(INGEST_STATEMENT_TIMEOUT_MS)}")
                 cur.execute(sql, params)
                 conn.commit()
                 return cur.rowcount
@@ -182,7 +182,7 @@ class TripleStore:
         )
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(f"SET LOCAL statement_timeout = '{INGEST_STATEMENT_TIMEOUT_MS}'")
+                cur.execute(f"SET LOCAL statement_timeout = {int(INGEST_STATEMENT_TIMEOUT_MS)}")
                 cur.execute(sql, (tenant_id,))
                 conn.commit()
                 return cur.rowcount
@@ -207,7 +207,7 @@ class TripleStore:
         )
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(f"SET LOCAL statement_timeout = '{INGEST_STATEMENT_TIMEOUT_MS}'")
+                cur.execute(f"SET LOCAL statement_timeout = {int(INGEST_STATEMENT_TIMEOUT_MS)}")
                 cur.execute(sql, (run_id,))
                 conn.commit()
                 return cur.rowcount

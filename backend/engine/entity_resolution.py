@@ -120,14 +120,12 @@ class EntityResolutionStore:
                 self._source_records.append(rec)
 
         # Load non-match records (they exist in the pool for browse/search)
+        seen = {(r.record_id, r.source_system) for r in self._source_records}
         for pair in frag.get("non_matches", []):
             for rec_data in pair.get("records", []):
-                # Check if this record_id is already loaded (might overlap with company records)
-                already = any(
-                    r.record_id == rec_data["record_id"] and r.source_system == rec_data["source_system"]
-                    for r in self._source_records
-                )
-                if not already:
+                key = (rec_data["record_id"], rec_data["source_system"])
+                if key not in seen:
+                    seen.add(key)
                     rec = SourceRecord(
                         source_system=rec_data["source_system"],
                         record_id=rec_data["record_id"],

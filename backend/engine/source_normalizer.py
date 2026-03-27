@@ -74,18 +74,10 @@ class SourceNormalizer:
     # Hardcoded fallbacks only used if YAML is missing or malformed.
     _YAML_CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "source_aliases.yaml"
 
-    _cb_last_failure: float = 0.0  # class-level, shared across instances
-
     def __init__(self):
         self._registry_cache: Dict[str, CanonicalSource] = {}
         self._discovered_sources: Dict[str, CanonicalSource] = {}
         self._registry_loaded = False
-        self._load_yaml_config()
-
-    def _load_yaml_config(self) -> None:
-        """Load alias/pattern/category config from YAML. Fall back to minimal defaults."""
-        from backend.core.constants import CB_COOLDOWN
-        self._cb_cooldown = CB_COOLDOWN
 
         try:
             with open(self._YAML_CONFIG_PATH, "r") as f:
