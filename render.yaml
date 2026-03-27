@@ -3,10 +3,10 @@ services:
     name: dcl-engine
     runtime: python
     region: oregon
-    plan: starter
+    plan: pro
     branch: dev
     buildCommand: pip install -r requirements.txt && python migrations/run_migration.py && npm install && npm run build
-    startCommand: uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT --workers 2
+    startCommand: uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT --workers 4
     healthCheckPath: /api/health
     envVars:
       - key: DCL_ENV
@@ -50,6 +50,6 @@ services:
 
 databases:
   - name: dcl-db
-    plan: starter
+    plan: pro
     region: oregon
     postgresMajorVersion: "16"

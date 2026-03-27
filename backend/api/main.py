@@ -7,6 +7,9 @@ DCL run/narration/mapping/topology/semantic/query/MCP endpoints
 that are tightly coupled to the DCLEngine singleton.
 """
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import asyncio
 import os
 import signal
