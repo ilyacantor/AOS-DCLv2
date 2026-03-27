@@ -991,7 +991,8 @@ def contextualization_summary(
             )
         except RuntimeError as e:
             raise HTTPException(status_code=503, detail=str(e))
-        except Exception:
+        except Exception as e:
+            logger.warning(f"[persona-view] Failed to query resolution table {table}: {e}")
             continue
 
     source_data = []

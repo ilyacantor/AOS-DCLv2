@@ -265,7 +265,41 @@ def ingest_triples(
     source_systems = sorted({r["source_system"] for r in rows if r.get("source_system")})
 
     start_ts = time.monotonic()
-    count = _triple_store.insert_triples(rows)
+    try:
+        count = _triple_store.insert_triples(rows)
+    except Exception as db_err:
+        duration_ms = int((time.monotonic() - start_ts) * 1000)
+        logger.error(
+            f"[ingest-triples] DB write failed after {duration_ms}ms for "
+            f"run_id={req.run_id}, tenant_id={req.tenant_id}, "
+            f"triples_attempted={triples_received}: {db_err}",
+            exc_info=True,
+        )
+        err_str = str(db_err)
+        if "statement timeout" in err_str or "canceling statement" in err_str:
+            raise HTTPException(
+                status_code=504,
+                detail={
+                    "error": "INGEST_STATEMENT_TIMEOUT",
+                    "message": (
+                        f"Triple INSERT timed out after {duration_ms}ms "
+                        f"({triples_received} triples). The database statement "
+                        f"timeout was exceeded — the batch may be too large for "
+                        f"current Supabase PG capacity."
+                    ),
+                    "triples_attempted": triples_received,
+                    "duration_ms": duration_ms,
+                },
+            )
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "INGEST_DB_ERROR",
+                "message": f"Database write failed: {err_str[:300]}",
+                "triples_attempted": triples_received,
+                "duration_ms": duration_ms,
+            },
+        )
     duration_ms = int((time.monotonic() - start_ts) * 1000)
 
     # Atomic pointer swap — O(1), single-row UPSERT, no table scan.

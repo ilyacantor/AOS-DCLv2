@@ -116,10 +116,11 @@ class DCLEngine:
         try:
             all_mappings_grouped = semantic_mapper.get_all_mappings_grouped()
         except Exception as e:
-            logger.warning(f"Failed to load stored mappings from DB: {e}. Will generate fresh mappings.")
-            self.narration.add_message(run_id, "Engine", "DB unavailable - generating fresh mappings")
-            all_mappings_grouped = {}
-            metrics.db_fallback = True
+            logger.error(f"Failed to load stored mappings from DB: {e} — graph build aborted")
+            self.narration.add_message(run_id, "Engine", f"DB unavailable: {e} — graph build aborted")
+            raise RuntimeError(
+                f"Cannot build graph: DB mapping load failed — {e}"
+            ) from e
         
         stored_mappings = []
         sources_with_mappings = set()
@@ -268,7 +269,7 @@ class DCLEngine:
                 "sourceFabricPlanes": sorted(set(
                     f"{s.fabric_plane}:{s.vendor}"
                     for s in sources
-                    if getattr(s, 'fabric_plane', None)
+                    if s.fabric_plane
                 )),
             }
         )
@@ -729,12 +730,10 @@ class DCLEngine:
                 table_count = len(source.tables)
                 field_count = sum(len(t.fields) for t in source.tables)
 
-                discovery_status = getattr(source, 'discovery_status', None)
-                discovery_value = discovery_status.value if discovery_status else "canonical"
+                discovery_value = source.discovery_status.value
                 status = "ok" if discovery_value == "canonical" else "pending"
 
-                resolution_type = getattr(source, 'resolution_type', None)
-                resolution_value = resolution_type.value if resolution_type else "exact"
+                resolution_value = source.resolution_type.value if source.resolution_type else "exact"
 
                 nodes.append(GraphNode(
                     id=source_id,
@@ -747,14 +746,14 @@ class DCLEngine:
                         "tables": table_count,
                         "fields": field_count,
                         "type": source.type,
-                        "canonical_id": getattr(source, 'canonical_id', source.id),
-                        "raw_id": getattr(source, 'raw_id', source.id),
+                        "canonical_id": source.canonical_id or source.id,
+                        "raw_id": source.raw_id or source.id,
                         "discovery_status": discovery_value,
                         "resolution_type": resolution_value,
-                        "trust_score": getattr(source, 'trust_score', 50),
-                        "data_quality_score": getattr(source, 'data_quality_score', 50),
-                        "vendor": getattr(source, 'vendor', None),
-                        "category": getattr(source, 'category', None),
+                        "trust_score": source.trust_score,
+                        "data_quality_score": source.data_quality_score,
+                        "vendor": source.vendor,
+                        "category": source.category,
                     }
                 ))
 

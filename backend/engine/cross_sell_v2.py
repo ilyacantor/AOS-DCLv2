@@ -304,7 +304,7 @@ class CrossSellEngineV2:
             logger.info(
                 "CrossSellEngineV2: no entity-exclusive customers found for tenant=%s "
                 "(a_customers=%d, b_customers=%d, all shared) — no cross-sell opportunities",
-                self.tenant_id, len(a_customer_concepts), len(b_customer_concepts),
+                self.tenant_id, len(a_customers), len(b_customers),
             )
             return []
 

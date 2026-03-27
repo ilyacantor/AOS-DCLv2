@@ -20,6 +20,9 @@ from enum import Enum
 from difflib import SequenceMatcher
 
 from backend.aam.ingress import normalize_source_id
+from backend.utils.log_utils import get_logger
+
+logger = get_logger(__name__)
 
 
 class DiscoveryStatus(str, Enum):
@@ -93,11 +96,17 @@ class SourceNormalizer:
                 (r["pattern"], r["canonical_id"]) for r in raw_patterns
             ]
             self.CATEGORY_PATTERNS: Dict[str, List[str]] = cfg.get("category_patterns", {})
-        except Exception:
-            # Minimal hardcoded fallback — just enough to not crash
+        except FileNotFoundError:
+            logger.info(
+                f"Source aliases config not found at {self._YAML_CONFIG_PATH} — using minimal defaults"
+            )
             self.ALIAS_MAP = {"salesforce": "salesforce_crm", "netsuite": "netsuite_erp"}
             self.PATTERN_RULES = []
             self.CATEGORY_PATTERNS = {}
+        except Exception as e:
+            raise RuntimeError(
+                f"Source aliases config at {self._YAML_CONFIG_PATH} exists but failed to load: {e}"
+            ) from e
 
     def load_registry_from_pipe_store(self, narration=None, run_id: Optional[str] = None) -> int:
         """Populate registry cache from DCL's pipe_store (AOD → AAM → DCL chain).
@@ -157,72 +166,6 @@ class SourceNormalizer:
             "SourceNormalizer registry not loaded — pipe_store is empty. "
             "Call load_registry_from_pipe_store() after AAM /export-pipes completes."
         )
-
-    # DEPRECATED: Farm API as registry source. Retained for reference only.
-    # Do not call. Remove by 2026-04-26.
-    def _load_registry_from_farm_api_deprecated(self, narration=None, run_id: Optional[str] = None) -> int:
-        # Circuit breaker: if Farm API failed recently, skip the network call
-        now = time.time()
-        if SourceNormalizer._cb_last_failure > 0 and (now - SourceNormalizer._cb_last_failure) < self._cb_cooldown:
-            if narration and run_id:
-                narration.add_message(
-                    run_id, "SourceNormalizer",
-                    "Skipping registry load (Farm API circuit breaker open). Using built-in aliases."
-                )
-            self._registry_loaded = True  # mark loaded so normalize() doesn't retry
-            return 0
-
-        from backend.core.constants import FARM_API_URL
-        farm_url = FARM_API_URL
-        registry_url = f"{farm_url}/api/sources/registry"
-
-        try:
-            from backend.core.constants import FARM_REGISTRY_TIMEOUT
-            with httpx.Client(timeout=FARM_REGISTRY_TIMEOUT) as client:
-                response = client.get(registry_url)
-                response.raise_for_status()
-                data = response.json()
-
-                sources = data.get("sources", data) if isinstance(data, dict) else data
-
-                for source_data in sources:
-                    canonical = CanonicalSource(
-                        source_id=source_data["sourceId"],
-                        name=source_data["name"],
-                        description=source_data.get("description", ""),
-                        source_type=source_data.get("sourceType", "UNKNOWN"),
-                        category=source_data.get("category", "unknown"),
-                        vendor=source_data.get("vendor", "Unknown"),
-                        connection_type=source_data.get("connectionType", "api"),
-                        entities=source_data.get("entities", []),
-                        trust_score=source_data.get("trustScore", 50),
-                        data_quality_score=source_data.get("dataQualityScore", 50),
-                        is_primary=source_data.get("isPrimary", False),
-                        metadata=source_data.get("metadata", {}),
-                        discovery_status=DiscoveryStatus.CANONICAL,
-                    )
-                    self._registry_cache[canonical.source_id] = canonical
-
-                self._registry_loaded = True
-                SourceNormalizer._cb_last_failure = 0.0  # reset circuit breaker on success
-
-                if narration and run_id:
-                    narration.add_message(
-                        run_id, "SourceNormalizer",
-                        f"Loaded {len(self._registry_cache)} canonical sources from registry"
-                    )
-
-                return len(self._registry_cache)
-
-        except Exception as e:
-            SourceNormalizer._cb_last_failure = now  # trip the circuit breaker
-            self._registry_loaded = True  # don't retry on every normalize() call
-            if narration and run_id:
-                narration.add_message(
-                    run_id, "SourceNormalizer",
-                    f"Registry unavailable ({type(e).__name__}). Using built-in aliases."
-                )
-            return 0
 
     def normalize(self, raw_source: str, narration=None, run_id: Optional[str] = None) -> NormalizationResult:
         if not self._registry_loaded:

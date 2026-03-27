@@ -18,27 +18,44 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-_graph: Optional[SemanticGraph] = None
-_resolver: Optional[QueryResolver] = None
+
+class _GraphHolder:
+    """Immutable holder for graph + resolver, swapped atomically."""
+    __slots__ = ('graph', 'resolver')
+
+    def __init__(
+        self,
+        graph: Optional[SemanticGraph] = None,
+        resolver: Optional[QueryResolver] = None,
+    ):
+        self.graph = graph
+        self.resolver = resolver
+
+
+_holder = _GraphHolder()
 
 
 def get_semantic_graph() -> Optional[SemanticGraph]:
     """Return the current semantic graph (None if not yet built)."""
-    return _graph
+    return _holder.graph
 
 
 def get_query_resolver() -> Optional[QueryResolver]:
     """Return the current query resolver (None if not yet built)."""
-    return _resolver
+    return _holder.resolver
 
 
 def set_semantic_graph(graph: SemanticGraph) -> None:
-    """Replace the singleton graph and rebuild the resolver."""
-    global _graph, _resolver
+    """Replace the singleton graph and rebuild the resolver.
+
+    Uses an atomic reference swap so concurrent readers never see
+    a new graph paired with a stale resolver.
+    """
+    global _holder
     from backend.engine.query_resolver import QueryResolver
 
-    _graph = graph
-    _resolver = QueryResolver(graph)
+    resolver = QueryResolver(graph)
+    _holder = _GraphHolder(graph, resolver)
     logger.info(f"[GraphStore] Graph set: {graph.stats}")
 
 
@@ -58,22 +75,15 @@ def rebuild_graph() -> None:
     # 2. Contour map (sample in dev, approved map in prod)
     graph.load_from_contour_map()
 
-    # 3. Normalizer mappings (from DB, with in-memory fallback)
-    all_mappings = []
-    try:
-        from backend.semantic_mapper import SemanticMapper
-        mapper = SemanticMapper()
-        all_grouped = mapper.get_all_mappings_grouped()
-        all_mappings = [m for group in all_grouped.values() for m in group]
-        if all_mappings:
-            logger.info(f"[GraphStore] Loaded {len(all_mappings)} normalizer mappings from DB")
-    except Exception as e:
-        logger.warning(f"[GraphStore] Could not load normalizer mappings from DB: {e}")
+    # 3. Normalizer mappings from DB
+    from backend.semantic_mapper import SemanticMapper
+    mapper = SemanticMapper()
+    all_grouped = mapper.get_all_mappings_grouped()
+    all_mappings = [m for group in all_grouped.values() for m in group]
 
     if not all_mappings:
         logger.info("[GraphStore] No normalizer mappings found in DB — graph will have ontology + AAM edges only")
-
-    if all_mappings:
+    else:
         graph.load_from_normalizer(all_mappings)
         logger.info(f"[GraphStore] Graph loaded {len(all_mappings)} normalizer mappings")
 

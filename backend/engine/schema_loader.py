@@ -184,10 +184,16 @@ class SchemaLoader:
         source_norm_cache: Dict[str, NormalizationResult] = {}
         
         for endpoint_config in browser_endpoints:
-            records = SchemaLoader._fetch_browser_endpoint(
-                farm_url, endpoint_config, narration, run_id, limit=500
-            )
-            
+            try:
+                records = SchemaLoader._fetch_browser_endpoint(
+                    farm_url, endpoint_config, narration, run_id, limit=500
+                )
+            except Exception as e:
+                logger.warning(f"Browser endpoint {endpoint_config['endpoint']} failed: {e}")
+                if narration and run_id:
+                    narration.add_message(run_id, "SchemaLoader", f"Browser {endpoint_config['endpoint']}: {e}")
+                continue
+
             if not records:
                 continue
             
@@ -327,7 +333,9 @@ class SchemaLoader:
                     logger.info("AAM fetch failed, falling back to stale cache")
                     cached_sources, cached_kpis = SchemaLoader._aam_cache
                     return copy.deepcopy(cached_sources), dict(cached_kpis)
-            return [], {"fabrics": 0, "pipes": 0, "sources": 0, "unpipedCount": 0, "totalAamConnections": 0}
+            raise RuntimeError(
+                f"AAM fetch failed and no stale cache available — cannot load schemas: {e}"
+            ) from e
 
         adapter = AAMIngressAdapter()
         payload = adapter.ingest_pipes(pipes_data)
@@ -521,13 +529,8 @@ class SchemaLoader:
 
     @staticmethod
     def _get_pool():
-        try:
-            from backend.semantic_mapper.persist_mappings import MappingPersistence
-            persistence = MappingPersistence()
-            return persistence
-        except Exception as e:
-            logger.warning(f"Failed to get connection pool: {e}")
-            return None
+        from backend.semantic_mapper.persist_mappings import MappingPersistence
+        return MappingPersistence()
     
     @staticmethod
     def load_stream_sources(narration=None, run_id: Optional[str] = None) -> List[SourceSystem]:
@@ -537,81 +540,74 @@ class SchemaLoader:
             return []
 
         pool = SchemaLoader._get_pool()
-        if pool is None:
-            return []
 
-        try:
-            with pool._get_connection() as conn:
-                with conn.cursor() as cursor:
-                    # Fetch all stream sources
-                    cursor.execute("""
-                        SELECT id, name, type, vendor, category, trust_score, discovery_status
-                        FROM source_systems
-                        WHERE type = 'stream'
-                    """)
-                    source_rows = cursor.fetchall()
+        with pool._get_connection() as conn:
+            with conn.cursor() as cursor:
+                # Fetch all stream sources
+                cursor.execute("""
+                    SELECT id, name, type, vendor, category, trust_score, discovery_status
+                    FROM source_systems
+                    WHERE type = 'stream'
+                """)
+                source_rows = cursor.fetchall()
 
-                    if not source_rows:
-                        return []
+                if not source_rows:
+                    return []
 
-                    # Fetch all mappings for these sources in one query
-                    source_ids = [r[0] for r in source_rows]
-                    cursor.execute("""
-                        SELECT DISTINCT source_id, table_name, field_name, concept_id, confidence
-                        FROM field_concept_mappings
-                        WHERE source_id = ANY(%s)
-                        ORDER BY source_id, table_name, field_name
-                    """, (source_ids,))
+                # Fetch all mappings for these sources in one query
+                source_ids = [r[0] for r in source_rows]
+                cursor.execute("""
+                    SELECT DISTINCT source_id, table_name, field_name, concept_id, confidence
+                    FROM field_concept_mappings
+                    WHERE source_id = ANY(%s)
+                    ORDER BY source_id, table_name, field_name
+                """, (source_ids,))
 
-                    # Group mappings by source_id → table_name → fields
-                    mappings_by_source: Dict[str, Dict[str, List[FieldSchema]]] = {}
-                    for mapping_row in cursor.fetchall():
-                        sid, table_name, field_name = mapping_row[0], mapping_row[1], mapping_row[2]
-                        mappings_by_source.setdefault(sid, {}).setdefault(table_name, []).append(
-                            FieldSchema(name=field_name, type="string", semantic_hint=None, nullable=True)
-                        )
-
-                sources = []
-                for row in source_rows:
-                    source_id = row[0]
-                    tables_data = mappings_by_source.get(source_id, {})
-
-                    tables = [
-                        TableSchema(
-                            id=f"{source_id}.{table_name}",
-                            system_id=source_id,
-                            name=table_name,
-                            fields=fields,
-                        )
-                        for table_name, fields in tables_data.items()
-                    ]
-
-                    source = SourceSystem(
-                        id=source_id,
-                        name=row[1],
-                        type=row[2] or "stream",
-                        tags=["stream", "real-time", "farm-synced"],
-                        tables=tables,
-                        discovery_status=DiscoveryStatus.CUSTOM,
-                        resolution_type=ResolutionType.PATTERN,
-                        trust_score=row[5] or 75,
-                        vendor=row[3],
-                        category=row[4],
+                # Group mappings by source_id → table_name → fields
+                mappings_by_source: Dict[str, Dict[str, List[FieldSchema]]] = {}
+                for mapping_row in cursor.fetchall():
+                    sid, table_name, field_name = mapping_row[0], mapping_row[1], mapping_row[2]
+                    mappings_by_source.setdefault(sid, {}).setdefault(table_name, []).append(
+                        FieldSchema(name=field_name, type="string", semantic_hint=None, nullable=True)
                     )
-                    sources.append(source)
 
-                    if narration and run_id:
-                        total_fields = sum(len(t.fields) for t in tables)
-                        narration.add_message(
-                            run_id, "SchemaLoader",
-                            f"Stream source: {row[1]} - {len(tables)} tables, {total_fields} fields"
-                        )
+            sources = []
+            for row in source_rows:
+                source_id = row[0]
+                tables_data = mappings_by_source.get(source_id, {})
 
-                return sources
+                tables = [
+                    TableSchema(
+                        id=f"{source_id}.{table_name}",
+                        system_id=source_id,
+                        name=table_name,
+                        fields=fields,
+                    )
+                    for table_name, fields in tables_data.items()
+                ]
 
-        except Exception as e:
-            logger.warning(f"Failed to load stream sources: {e}")
-            return []
+                source = SourceSystem(
+                    id=source_id,
+                    name=row[1],
+                    type=row[2] or "stream",
+                    tags=["stream", "real-time", "farm-synced"],
+                    tables=tables,
+                    discovery_status=DiscoveryStatus.CUSTOM,
+                    resolution_type=ResolutionType.PATTERN,
+                    trust_score=row[5] or 75,
+                    vendor=row[3],
+                    category=row[4],
+                )
+                sources.append(source)
+
+                if narration and run_id:
+                    total_fields = sum(len(t.fields) for t in tables)
+                    narration.add_message(
+                        run_id, "SchemaLoader",
+                        f"Stream source: {row[1]} - {len(tables)} tables, {total_fields} fields"
+                    )
+
+            return sources
     
     @staticmethod
     def _fetch_browser_endpoint(
@@ -623,37 +619,25 @@ class SchemaLoader:
     ) -> List[Dict[str, Any]]:
         endpoint = config["endpoint"]
         params = {"limit": limit}
-        
-        try:
-            from backend.core.constants import FARM_BROWSER_TIMEOUT
-            with httpx.Client(timeout=FARM_BROWSER_TIMEOUT) as client:
-                response = client.get(f"{base_url}{endpoint}", params=params)
-                response.raise_for_status()
-                data = response.json()
-                
-                if isinstance(data, list):
-                    return data
-                elif isinstance(data, dict) and "data" in data:
-                    return data["data"]
-                elif isinstance(data, dict) and "error" in data:
-                    if narration and run_id:
-                        narration.add_message(run_id, "SchemaLoader", f"Browser {endpoint}: {data['error']}")
-                    return []
-                else:
-                    return []
-                    
-        except httpx.HTTPStatusError as e:
-            if narration and run_id:
-                narration.add_message(run_id, "SchemaLoader", f"Browser {endpoint}: HTTP {e.response.status_code}")
-            return []
-        except httpx.TimeoutException:
-            if narration and run_id:
-                narration.add_message(run_id, "SchemaLoader", f"Browser {endpoint}: Timeout")
-            return []
-        except Exception as e:
-            if narration and run_id:
-                narration.add_message(run_id, "SchemaLoader", f"Browser {endpoint}: {str(e)}")
-            return []
+
+        from backend.core.constants import FARM_BROWSER_TIMEOUT
+        with httpx.Client(timeout=FARM_BROWSER_TIMEOUT) as client:
+            response = client.get(f"{base_url}{endpoint}", params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            if isinstance(data, list):
+                return data
+            elif isinstance(data, dict) and "data" in data:
+                return data["data"]
+            elif isinstance(data, dict) and "error" in data:
+                raise RuntimeError(
+                    f"Farm browser {endpoint} returned error: {data['error']}"
+                )
+            else:
+                raise RuntimeError(
+                    f"Farm browser {endpoint} returned unexpected format: {type(data).__name__}"
+                )
     
     @staticmethod
     def _infer_table_schema_from_json(

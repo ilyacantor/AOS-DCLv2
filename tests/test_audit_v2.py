@@ -227,13 +227,17 @@ class TestFallbackFlags(unittest.TestCase):
         self.assertFalse(metrics.db_fallback, "db_fallback default should be False")
         self.assertFalse(metrics.llm_fallback, "llm_fallback default should be False")
 
-    def test_engine_sets_db_fallback_on_failure(self):
-        """dcl_engine.py must set metrics.db_fallback = True when DB fails."""
+    def test_engine_raises_on_db_failure(self):
+        """dcl_engine.py must raise when DB mapping load fails (no silent fallback)."""
         engine_path = PROJECT_ROOT / "backend" / "engine" / "dcl_engine.py"
         source = engine_path.read_text()
         self.assertIn(
+            "Cannot build graph: DB mapping load failed", source,
+            "dcl_engine.py must raise RuntimeError when DB mapping load fails"
+        )
+        self.assertNotIn(
             "db_fallback = True", source,
-            "dcl_engine.py does not set db_fallback flag when DB is unavailable"
+            "dcl_engine.py must not silently fall back when DB is unavailable"
         )
 
     def test_engine_sets_llm_fallback_on_failure(self):

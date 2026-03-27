@@ -4,8 +4,8 @@ TripleStore — data access for the semantic_triples table.
 Sync psycopg2, parameterized queries, no business logic.
 """
 
+import io
 import json
-from psycopg2.extras import execute_values
 from backend.core.db import get_connection
 from backend.core.constants import INGEST_STATEMENT_TIMEOUT_MS
 from backend.utils.log_utils import get_logger
@@ -15,41 +15,56 @@ logger = get_logger(__name__)
 
 class TripleStore:
 
+    _COPY_COLS = [
+        "tenant_id", "entity_id", "concept", "property", "value",
+        "period", "currency", "unit",
+        "source_system", "source_table", "source_field",
+        "pipe_id", "run_id", "source_run_tag",
+        "confidence_score", "confidence_tier",
+        "canonical_id", "resolution_method", "resolution_confidence",
+    ]
+    _COPY_SQL = (
+        f"COPY semantic_triples ({', '.join(_COPY_COLS)}) "
+        f"FROM STDIN WITH (FORMAT text)"
+    )
+
+    @staticmethod
+    def _copy_escape(val) -> str:
+        """Escape a value for PostgreSQL COPY TEXT format."""
+        if val is None:
+            return "\\N"
+        s = str(val)
+        s = s.replace("\\", "\\\\")
+        s = s.replace("\t", "\\t")
+        s = s.replace("\n", "\\n")
+        s = s.replace("\r", "\\r")
+        return s
+
     def insert_triples(self, triples: list[dict]) -> int:
-        """Batch insert triples. Returns count inserted."""
+        """Batch insert triples using COPY for maximum throughput."""
         if not triples:
             return 0
 
-        cols = [
-            "tenant_id", "entity_id", "concept", "property", "value",
-            "period", "currency", "unit",
-            "source_system", "source_table", "source_field",
-            "pipe_id", "run_id", "source_run_tag",
-            "confidence_score", "confidence_tier",
-            "canonical_id", "resolution_method", "resolution_confidence",
-        ]
-        placeholders = ", ".join(["%s"] * len(cols))
-        col_names = ", ".join(cols)
-        sql = f"INSERT INTO semantic_triples ({col_names}) VALUES ({placeholders})"
+        escape = self._copy_escape
+        cols = self._COPY_COLS
+        buf = io.StringIO()
+        for t in triples:
+            row_vals = []
+            for c in cols:
+                if c == "value":
+                    row_vals.append(escape(json.dumps(t["value"])))
+                else:
+                    row_vals.append(escape(t.get(c)))
+            buf.write("\t".join(row_vals))
+            buf.write("\n")
+        buf.seek(0)
 
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(f"SET LOCAL statement_timeout = '{INGEST_STATEMENT_TIMEOUT_MS}'")
-                rows = []
-                for t in triples:
-                    val = json.dumps(t["value"])
-                    rows.append(tuple(
-                        val if c == "value" else t.get(c)
-                        for c in cols
-                    ))
-                # execute_values sends a single multi-row INSERT instead of
-                # N individual INSERTs — typically 10-50x faster over network.
-                template = "(" + ", ".join(["%s"] * len(cols)) + ")"
-                execute_values(cur, sql.replace(
-                    f"VALUES ({placeholders})", "VALUES %s"
-                ), rows, template=template, page_size=1000)
+                cur.copy_expert(self._COPY_SQL, buf)
                 conn.commit()
-                return len(rows)
+                return len(triples)
 
     def get_triples(
         self,
@@ -254,15 +269,13 @@ class TripleStore:
             with conn.cursor() as cur:
                 cur.execute(sql_find, (tenant_id, keep_runs))
                 old_run_ids = [row[0] for row in cur.fetchall()]
-        if not old_run_ids:
-            return 0
-        placeholders = ", ".join(["%s"] * len(old_run_ids))
-        sql_delete = (
-            f"DELETE FROM semantic_triples "
-            f"WHERE tenant_id = %s AND run_id IN ({placeholders})"
-        )
-        with get_connection() as conn:
-            with conn.cursor() as cur:
+                if not old_run_ids:
+                    return 0
+                placeholders = ", ".join(["%s"] * len(old_run_ids))
+                sql_delete = (
+                    f"DELETE FROM semantic_triples "
+                    f"WHERE tenant_id = %s AND run_id IN ({placeholders})"
+                )
                 cur.execute(sql_delete, [tenant_id] + old_run_ids)
                 conn.commit()
                 return cur.rowcount
