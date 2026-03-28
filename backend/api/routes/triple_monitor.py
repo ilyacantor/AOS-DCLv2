@@ -33,38 +33,11 @@ from backend.utils.log_utils import get_logger
 logger = get_logger(__name__)
 
 
-_entity_name_cache: dict[str, str] = {}
-
-
 def _entity_display_name(entity_id: str) -> str:
-    """Human-readable display name from entity_id.
-
-    Looks up entity_name from tenant_registry (cached).
-    Falls back to title-casing for unregistered ids.
-    """
+    """Human-readable display name from entity_id via title-case transform."""
     if not entity_id:
         return entity_id
-    if entity_id in _entity_name_cache:
-        return _entity_name_cache[entity_id]
-    # Try registry lookup
-    try:
-        from backend.core.db import get_connection
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT entity_name FROM tenant_registry WHERE entity_id = %s",
-                    (entity_id,),
-                )
-                row = cur.fetchone()
-                if row:
-                    _entity_name_cache[entity_id] = row[0]
-                    return row[0]
-    except Exception:
-        pass  # Registry table may not exist yet — fall back
-    # Fallback: title-case transform
-    display = entity_id.replace("_", " ").title()
-    _entity_name_cache[entity_id] = display
-    return display
+    return entity_id.replace("_", " ").title()
 
 
 
