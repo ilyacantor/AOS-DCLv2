@@ -535,6 +535,28 @@ def purge_old_runs(tenant_id: str, keep_runs: int = 2):
     return {"deleted": deleted, "tenant_id": tenant_id, "kept_runs": keep_runs}
 
 
+@router.post("/api/dcl/admin/purge-stale")
+def purge_stale_all_tenants():
+    """Hard-delete all non-current-run triples across every known tenant.
+
+    Iterates all tenant_ids from tenant_runs, calls purge_old_runs(keep_runs=1)
+    for each. Current run data is always preserved.
+    """
+    from ..db.connection import get_connection
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT tenant_id FROM tenant_runs")
+            tenant_ids = [str(row[0]) for row in cur.fetchall()]
+    total_deleted = 0
+    for tid in tenant_ids:
+        total_deleted += _triple_store.purge_old_runs(tid, keep_runs=1)
+    logger.warning(
+        "[purge-stale-all] Deleted %d stale triples across %d tenant(s)",
+        total_deleted, len(tenant_ids),
+    )
+    return {"deleted": total_deleted, "tenants_purged": len(tenant_ids)}
+
+
 # ---------------------------------------------------------------------------
 # Seed manifest update
 # ---------------------------------------------------------------------------
