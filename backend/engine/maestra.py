@@ -1036,29 +1036,11 @@ def _handle_people_detail(state: dict, ctx: _EngineContext, msg_lower: str) -> t
 
 
 def _handle_dashboard_detail(state: dict, ctx: _EngineContext, msg_lower: str) -> tuple[str, list[str], list[str], dict | None]:
-    """Dashboard summary for a specific persona."""
-    from backend.engine.dashboards import compute_dashboard
-
-    persona = "cfo"
-    for p in ("cfo", "cro", "coo", "cto", "chro"):
-        if p in msg_lower:
-            persona = p
-            break
-
-    dashboard = compute_dashboard(persona)
-    kpi_lines = []
-    for k, v in dashboard.get("kpis", {}).items():
-        label = k.replace("_", " ").title()
-        if isinstance(v, (int, float)) and abs(v) > 100_000:
-            kpi_lines.append(f"  {label}: {_fmt_m(v)}")
-        else:
-            kpi_lines.append(f"  {label}: {v:,.0f}" if isinstance(v, (int, float)) else f"  {label}: {v}")
-
-    text = (
-        f"{dashboard.get('title', persona.upper() + ' Dashboard')}\n\n"
-        f"Key metrics:\n" + "\n".join(kpi_lines)
+    """Dashboard summary — moved to Convergence service."""
+    raise RuntimeError(
+        "Dashboard engine moved to Convergence service (port 8010). "
+        "Persona dashboards are ME-only and no longer available in DCL."
     )
-    return text, ["dashboard_presented"], _phase_suggestions(state["phase"]), {"tab": "dashboards"}
 
 
 def _handle_default(state: dict) -> tuple[str, list[str], list[str]]:
