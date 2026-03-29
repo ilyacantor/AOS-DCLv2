@@ -548,7 +548,8 @@ class TestIngestEndpoint:
 
     def test_18_idempotency_replace(self):
         """Ingest run -> re-ingest same run_id with ?replace=true -> 201.
-        replace=true DELETEs all tenant triples before inserting new ones."""
+        replace=true deletes triples for the ENTITIES in the new batch only,
+        preserving other entities' data within the same tenant."""
         run_id = str(uuid.uuid4())
         triples_v1 = [make_test_triple(entity_id="v1_entity", value=100)]
         resp1, _ = self._post_triples(triples_v1, run_id=run_id)
@@ -561,12 +562,14 @@ class TestIngestEndpoint:
         store = TripleStore()
         all_rows = store.get_triples_by_run(run_id)
         entity_ids = {r["entity_id"] for r in all_rows}
-        assert "v1_entity" not in entity_ids, "v1_entity should be deleted by replace"
+        # v1_entity survives — entity-scoped replace only deletes matching entities
+        assert "v1_entity" in entity_ids, "v1_entity should survive (different entity)"
         assert "v2_entity" in entity_ids, "v2_entity should be present after replace"
-        assert len(all_rows) == 1, f"Expected 1 triple after replace, got {len(all_rows)}"
+        assert len(all_rows) == 2, f"Expected 2 triples after replace, got {len(all_rows)}"
 
     def test_18b_replace_different_runs(self):
-        """Ingest run_A -> ingest run_B with replace=true -> only run_B data exists."""
+        """Ingest run_A -> ingest run_B with replace=true -> run_A entities survive
+        because replace is scoped to entities in the new batch."""
         run_id_1 = str(uuid.uuid4())
         run_id_2 = str(uuid.uuid4())
 
@@ -582,12 +585,50 @@ class TestIngestEndpoint:
         assert resp2.status_code == 201
 
         store = TripleStore()
+        # alpha and beta survive — different entities from gamma
         old_rows = store.get_triples_by_run(run_id_1)
-        assert len(old_rows) == 0, f"Expected 0 triples for run_1 after replace, got {len(old_rows)}"
+        assert len(old_rows) == 2, f"Expected 2 triples for run_1 (preserved), got {len(old_rows)}"
 
         new_rows = store.get_triples_by_run(run_id_2)
         assert len(new_rows) == 1, f"Expected 1 triple for run_2, got {len(new_rows)}"
         assert new_rows[0]["entity_id"] == "gamma"
+
+    def test_18c_replace_same_entity(self):
+        """Replace=true with same entity_id deletes old triples for that entity."""
+        run_id = str(uuid.uuid4())
+        triples_v1 = [make_test_triple(entity_id="meridian", value=100)]
+        resp1, _ = self._post_triples(triples_v1, run_id=run_id)
+        assert resp1.status_code == 201
+
+        triples_v2 = [make_test_triple(entity_id="meridian", value=999)]
+        resp2, _ = self._post_triples(triples_v2, run_id=run_id, replace=True)
+        assert resp2.status_code == 201
+
+        store = TripleStore()
+        rows = store.get_triples_by_run(run_id)
+        assert len(rows) == 1, f"Expected 1 triple after same-entity replace, got {len(rows)}"
+        assert rows[0]["value"] == 999, "Should have the replaced value"
+
+    def test_18d_replace_preserves_other_entity(self):
+        """ME scenario: replacing meridian triples preserves cascadia triples."""
+        run_id = str(uuid.uuid4())
+        triples = [
+            make_test_triple(entity_id="meridian", concept="revenue.total", value=5_000),
+            make_test_triple(entity_id="cascadia", concept="revenue.total", value=1_000),
+        ]
+        resp1, _ = self._post_triples(triples, run_id=run_id)
+        assert resp1.status_code == 201
+
+        # Replace only meridian
+        new_meridian = [make_test_triple(entity_id="meridian", concept="revenue.total", value=5_500)]
+        resp2, _ = self._post_triples(new_meridian, run_id=run_id, replace=True)
+        assert resp2.status_code == 201
+
+        store = TripleStore()
+        rows = store.get_triples_by_run(run_id)
+        by_entity = {r["entity_id"]: r["value"] for r in rows}
+        assert by_entity["meridian"] == 5_500, "Meridian should have new value"
+        assert by_entity["cascadia"] == 1_000, "Cascadia should be untouched"
 
     def test_19_run_status_endpoint(self):
         """Ingest → GET status → correct count and summary."""
