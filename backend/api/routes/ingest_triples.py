@@ -542,7 +542,6 @@ def purge_stale_all_tenants():
     Iterates all tenant_ids from tenant_runs, calls purge_old_runs(keep_runs=1)
     for each. Current run data is always preserved.
     """
-    from ..db.connection import get_connection
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT tenant_id FROM tenant_runs")
