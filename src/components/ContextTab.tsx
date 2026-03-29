@@ -72,6 +72,20 @@ export function ContextTab({ entities, selectedEntityId, onEntityChange, entitie
 
   useEffect(() => { fetchData(selectedEntityId || undefined); }, [selectedEntityId]);
 
+  const handlePurgeStale = async () => {
+    if (!window.confirm('Delete all stale-run triples across all tenants? Current run data is preserved.')) return;
+    try {
+      const res = await fetch('/api/dcl/admin/purge-stale', { method: 'POST' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const d = await res.json();
+      alert(`Purged ${d.deleted.toLocaleString()} stale triples across ${d.tenants_purged} tenant(s).`);
+      fetchData(selectedEntityId || undefined);
+    } catch (e) {
+      console.error('[ContextTab] Purge stale failed:', e);
+      alert('Purge failed — check console.');
+    }
+  };
+
   if (error) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -94,6 +108,13 @@ export function ContextTab({ entities, selectedEntityId, onEntityChange, entitie
       <div className="shrink-0 flex items-center gap-3">
         <EntitySelector entities={entities} selectedEntityId={selectedEntityId} onEntityChange={onEntityChange} loading={entitiesLoading} error={entitiesError} />
         <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={handlePurgeStale}
+            disabled={loading}
+            className="px-2 py-1 text-xs rounded border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+          >
+            Purge Stale
+          </button>
           <button
             onClick={() => fetchData(selectedEntityId || undefined)}
             disabled={loading}

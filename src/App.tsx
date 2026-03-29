@@ -14,10 +14,9 @@ import { IngestTab } from './components/IngestTab';
 import { ContextTab } from './components/ContextTab';
 import { DashboardTab } from './components/DashboardTab';
 import { ReconTab } from './components/ReconTab';
-import { MergePanel } from './components/MergePanel';
 import { useEntities } from './components/RunSelector';
 
-type MainView = 'graph' | 'dashboard' | 'context' | 'guide' | 'recon' | 'ingest' | 'merge';
+type MainView = 'graph' | 'dashboard' | 'context' | 'guide' | 'recon' | 'ingest';
 
 const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO', 'CHRO'];
 
@@ -295,7 +294,6 @@ function App() {
     { id: 'context', label: 'Context' },
     { id: 'recon', label: 'Recon' },
     { id: 'ingest', label: 'Ingest' },
-    { id: 'merge', label: 'Merge' },
   ];
 
   return (
@@ -422,9 +420,7 @@ function App() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        {mainView === 'merge' ? (
-          <MergePanel />
-        ) : mainView === 'context' ? (
+        {mainView === 'context' ? (
           <ContextTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
         ) : mainView === 'ingest' ? (
           <IngestTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />

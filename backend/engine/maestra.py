@@ -19,10 +19,116 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from backend.engine.engagement import get_active_engagement
+import httpx
+import os
+from dataclasses import dataclass
+
 from backend.utils.log_utils import get_logger
 
 logger = get_logger("maestra")
+
+
+# ---------------------------------------------------------------------------
+# Engagement HTTP client (replaces direct import of engagement.py)
+# ---------------------------------------------------------------------------
+
+CONVERGENCE_API_URL = os.environ.get("CONVERGENCE_API_URL", "http://localhost:8010")
+
+
+@dataclass(frozen=True)
+class _EngagementEntity:
+    id: str
+    display_name: str
+    role: str
+    business_model: str
+    source_systems: dict
+
+
+@dataclass(frozen=True)
+class _EngagementConfig:
+    engagement_id: str
+    deal_name: str
+    entity_a: _EngagementEntity
+    entity_b: _EngagementEntity
+    deal_parameters: dict
+    synergy_targets: dict
+
+    def entity_ids(self) -> tuple:
+        return self.entity_a.id, self.entity_b.id
+
+    def entity_by_id(self, entity_id: str) -> _EngagementEntity:
+        if entity_id == self.entity_a.id:
+            return self.entity_a
+        if entity_id == self.entity_b.id:
+            return self.entity_b
+        raise ValueError(
+            f"Entity '{entity_id}' not in engagement {self.engagement_id}. "
+            f"Known entities: {self.entity_a.id}, {self.entity_b.id}"
+        )
+
+    def a_to_b_label(self) -> str:
+        return f"{self.entity_a.display_name} → {self.entity_b.display_name}"
+
+    def b_to_a_label(self) -> str:
+        return f"{self.entity_b.display_name} → {self.entity_a.display_name}"
+
+
+_cached_engagement: _EngagementConfig | None = None
+
+
+def get_active_engagement() -> _EngagementConfig:
+    """Fetch engagement config from Convergence service over HTTP.
+
+    Cached after first successful fetch. Fails loudly if convergence is
+    unreachable — no silent fallback, no empty dict, no None.
+    """
+    global _cached_engagement
+    if _cached_engagement is not None:
+        return _cached_engagement
+
+    url = f"{CONVERGENCE_API_URL}/api/convergence/engagement/active"
+    try:
+        resp = httpx.get(url, timeout=5.0)
+        resp.raise_for_status()
+    except httpx.ConnectError as e:
+        raise RuntimeError(
+            f"Convergence service unreachable at {CONVERGENCE_API_URL} — "
+            f"engagement tools unavailable. Is Convergence running on port 8010? Error: {e}"
+        ) from e
+    except Exception as e:
+        raise RuntimeError(
+            f"Failed to fetch engagement from Convergence at {url}: {e}"
+        ) from e
+
+    data = resp.json()
+
+    def _parse_entity(d: dict) -> _EngagementEntity:
+        return _EngagementEntity(
+            id=d["id"],
+            display_name=d["display_name"],
+            role=d["role"],
+            business_model=d.get("business_model", "unknown"),
+            source_systems=d.get("source_systems", {}),
+        )
+
+    config = _EngagementConfig(
+        engagement_id=data["engagement_id"],
+        deal_name=data["deal_name"],
+        entity_a=_parse_entity(data["entity_a"]),
+        entity_b=_parse_entity(data["entity_b"]),
+        deal_parameters=data.get("deal_parameters", {}),
+        synergy_targets=data.get("synergy_targets", {}),
+    )
+
+    _cached_engagement = config
+    logger.info(
+        "[maestra] Fetched engagement %s from convergence: %s vs %s",
+        config.engagement_id,
+        config.entity_a.display_name,
+        config.entity_b.display_name,
+    )
+    return config
+
 
 # ---------------------------------------------------------------------------
 # Constants
