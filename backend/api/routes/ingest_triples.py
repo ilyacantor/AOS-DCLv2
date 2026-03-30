@@ -58,13 +58,23 @@ class IngestRequest(BaseModel):
     tenant_id: str
     run_id: str
     source_run_tag: Optional[str] = None
+    source_farm_manifest_id: Optional[str] = None
+    entity_id: Optional[str] = None
+    source_rows: Optional[int] = None
     triples: list[TriplePayload]
 
 
 class IngestResponse(BaseModel):
+    dcl_ingest_id: str
     run_id: str
+    tenant_id: str
+    entity_id: Optional[str] = None
+    source_farm_manifest_id: Optional[str] = None
     triple_count: int
     concept_summary: dict
+    source_rows: int
+    triples_written: int
+    expansion_factor: float
 
 
 # ---------------------------------------------------------------------------
@@ -351,10 +361,26 @@ def ingest_triples(
     if replace and not run_exists:
         _update_seed_manifest(req.tenant_id, req.run_id, count, concept_summary)
 
+    # Determine batch-level entity_id: explicit request field takes priority,
+    # then infer from triples if all share a single entity_id.
+    batch_entity_id = req.entity_id
+    if batch_entity_id is None and len(entity_ids) == 1:
+        batch_entity_id = entity_ids[0]
+
+    source_rows_val = req.source_rows if req.source_rows is not None else triples_received
+    expansion = round(count / source_rows_val, 1) if source_rows_val > 0 else 0.0
+
     return IngestResponse(
+        dcl_ingest_id=req.run_id,
         run_id=req.run_id,
+        tenant_id=req.tenant_id,
+        entity_id=batch_entity_id,
+        source_farm_manifest_id=req.source_farm_manifest_id,
         triple_count=count,
         concept_summary=concept_summary,
+        source_rows=source_rows_val,
+        triples_written=count,
+        expansion_factor=expansion,
     )
 
 

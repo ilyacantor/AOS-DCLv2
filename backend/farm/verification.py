@@ -12,6 +12,7 @@ and compares against the ground truth, reporting honest scores.
 """
 
 import time
+import uuid
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional, Tuple
 
@@ -59,6 +60,7 @@ class DimensionalScore:
 @dataclass
 class VerificationReport:
     """Complete verification report for a Farm run."""
+    verify_id: str
     farm_run_id: str
     dcl_run_id: Optional[str]
     verified_at: str
@@ -92,8 +94,10 @@ class VerificationReport:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
+            "verify_id": self.verify_id,
             "farm_run_id": self.farm_run_id,
             "dcl_run_id": self.dcl_run_id,
+            "dcl_ingest_id": self.dcl_run_id,
             "verified_at": self.verified_at,
             "ingestion": {
                 "expected_pipes": self.expected_pipes,
@@ -167,9 +171,11 @@ def verify_against_ground_truth(
     5. Verify dimensional breakdowns
     """
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    verify_id = str(uuid.uuid4())
     farm_client = get_farm_client()
 
     report = VerificationReport(
+        verify_id=verify_id,
         farm_run_id=farm_run_id,
         dcl_run_id=dcl_run_id,
         verified_at=now,
