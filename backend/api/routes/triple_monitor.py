@@ -192,7 +192,7 @@ def triples_overview(
                 last_ingest = None
                 if latest_row:
                     last_ingest = {
-                        "run_id": str(latest_row[0]),
+                        "dcl_ingest_id": str(latest_row[0]),
                         "timestamp": latest_row[1].isoformat() if latest_row[1] else None,
                         "triple_count": latest_row[2],
                     }
@@ -295,7 +295,7 @@ def triples_runs():
         )
 
         runs.append({
-            "run_id": run_id_str,
+            "dcl_ingest_id": run_id_str,
             "tenant_id": tenant_id_str,
             "tenant_label": label,
             "timestamp": r["created_at"].isoformat() if r["created_at"] else None,
@@ -877,7 +877,7 @@ def deactivate_run(run_id: str = Query(...)):
     """Deactivate all triples for a specific run."""
     count = _triple_store.deactivate_run(run_id)
     logger.info(f"[triple-monitor] Deactivated {count} triples for run_id={run_id}")
-    return {"run_id": run_id, "deactivated_count": count}
+    return {"dcl_ingest_id": run_id, "deactivated_count": count}
 
 
 # ---------------------------------------------------------------------------

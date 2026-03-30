@@ -530,7 +530,7 @@ async def seed_ingest(request: Request):
                 phase=item.get("phase", ""),
                 source=item.get("source", ""),
                 snapshot_name=item.get("snapshot_name", ""),
-                run_id=item.get("run_id", ""),
+                dcl_ingest_id=item.get("dcl_ingest_id", item.get("run_id", "")),
                 timestamp=item.get("timestamp", ""),
                 pipes=item.get("pipes", 0),
                 sors=item.get("sors", 0),
@@ -553,7 +553,7 @@ async def seed_ingest(request: Request):
                 error_code=item.get("error_code", ""),
                 source_system=item.get("source_system", ""),
                 timestamp=item.get("timestamp", ""),
-                run_id=item.get("run_id", ""),
+                dcl_ingest_id=item.get("dcl_ingest_id", item.get("run_id", "")),
                 dispatch_id=item.get("dispatch_id", ""),
                 snapshot_name=item.get("snapshot_name", ""),
                 tenant_id=item.get("tenant_id", ""),
@@ -571,13 +571,13 @@ async def seed_ingest(request: Request):
 @app.get("/api/dcl/narration/{run_id}")
 def get_narration(run_id: str):
     messages = engine.narration.get_messages(run_id)
-    return {"run_id": run_id, "messages": messages}
+    return {"dcl_ingest_id": run_id, "messages": messages}
 
 
 @app.get("/api/dcl/monitor/{run_id}")
 def get_monitor(run_id: str):
     return {
-        "run_id": run_id,
+        "dcl_ingest_id": run_id,
         "monitor_data": {
             "message": "Monitor data endpoint ready",
             "sources": [],

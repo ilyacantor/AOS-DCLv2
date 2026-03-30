@@ -155,8 +155,8 @@ class IngestRequest(BaseModel):
 class IngestResponse(BaseModel):
     """Acknowledgement returned to the Runner."""
     status: str                        # "ingested" | "rejected"
-    dcl_run_id: str                    # DCL's internal run ID
-    run_id: str                        # alias kept for backward compat
+    dcl_ingest_id: str                 # DCL's namespaced run identifier (I1)
+    dcl_run_id: str                    # alias — same as dcl_ingest_id
     dispatch_id: str = ""
     pipe_id: str
     rows_accepted: int
@@ -211,7 +211,7 @@ class ActivityEntry:
     phase: str                      # "structure" | "dispatch" | "content"
     source: str                     # "AAM" | "AAM/Farm" | "Farm"
     snapshot_name: str              # e.g. "NetLabs-RWC4"
-    run_id: str                     # originating run_id
+    dcl_ingest_id: str              # originating run identifier (I1: namespaced)
     timestamp: str                  # ISO-8601 when DCL recorded this
 
     # Counts (populated when available)
@@ -248,13 +248,24 @@ class DropEntry:
     error_code: str             # NO_MATCHING_PIPE, MISSING_SNAPSHOT, VALIDATION_ERROR, AUTH_FAILED
     source_system: str
     timestamp: str              # ISO-8601
-    run_id: str = ""
+    dcl_ingest_id: str = ""
     dispatch_id: str = ""
     snapshot_name: str = ""
     tenant_id: str = ""
 
 
 _MAX_DROPS = 500  # keep last N drop entries
+
+
+def _migrate_run_id_key(d: dict) -> dict:
+    """Migrate legacy 'run_id' key to 'dcl_ingest_id' in serialized dicts.
+
+    Old persisted ActivityEntry/DropEntry dicts have 'run_id'.
+    New dataclass field is 'dcl_ingest_id' (I1 compliance).
+    """
+    if "run_id" in d and "dcl_ingest_id" not in d:
+        d = {**d, "dcl_ingest_id": d.pop("run_id")}
+    return d
 
 
 # ---------------------------------------------------------------------------
@@ -499,8 +510,8 @@ class IngestStore:
                     self._schema_registry[k] = SchemaRecord(**v)
 
                 self._drift_events = [SchemaDriftEvent(**d) for d in data.get("drift_events", [])]
-                self._activity_log = [ActivityEntry(**d) for d in data.get("activity_log", [])]
-                self._drop_log = [DropEntry(**d) for d in data.get("drop_log", [])]
+                self._activity_log = [ActivityEntry(**_migrate_run_id_key(d)) for d in data.get("activity_log", [])]
+                self._drop_log = [DropEntry(**_migrate_run_id_key(d)) for d in data.get("drop_log", [])]
 
                 # row_buffer and materialized are no longer persisted to disk
                 # (they live in Redis).  Load legacy data if present for backward
@@ -782,7 +793,7 @@ class IngestStore:
             activity_raw = r.get(f"{_REDIS_PREFIX}activity_log")
             if activity_raw:
                 for d in json.loads(activity_raw):
-                    self._activity_log.append(ActivityEntry(**d))
+                    self._activity_log.append(ActivityEntry(**_migrate_run_id_key(d)))
                     if d.get("dispatch_id"):
                         self._seen_dispatch_ids.add(d["dispatch_id"])
 
@@ -790,7 +801,7 @@ class IngestStore:
             drop_raw = r.get(f"{_REDIS_PREFIX}drop_log")
             if drop_raw:
                 for d in json.loads(drop_raw):
-                    self._drop_log.append(DropEntry(**d))
+                    self._drop_log.append(DropEntry(**_migrate_run_id_key(d)))
 
             # Content tracking sets — rehydrate from Redis on startup
             self._sync_all_content_sets()
@@ -1163,7 +1174,7 @@ class IngestStore:
 
             # Activity log
             if activity_raw:
-                entries = [ActivityEntry(**d) for d in json.loads(activity_raw)]
+                entries = [ActivityEntry(**_migrate_run_id_key(d)) for d in json.loads(activity_raw)]
                 with self._lock:
                     self._activity_log = entries
                     self._seen_dispatch_ids = {
@@ -1173,7 +1184,7 @@ class IngestStore:
             # Drop log
             if drop_raw:
                 with self._lock:
-                    self._drop_log = [DropEntry(**d) for d in json.loads(drop_raw)]
+                    self._drop_log = [DropEntry(**_migrate_run_id_key(d)) for d in json.loads(drop_raw)]
 
             # Receipts (metadata only — rows stay lazy)
             if order:
@@ -1468,7 +1479,7 @@ class IngestStore:
                     "first_received_at": sorted_receipts[0].received_at,
                     "latest_received_at": sorted_receipts[-1].received_at,
                     "drift_count": sum(1 for r in receipts if r.schema_drift),
-                    "run_ids": run_ids,
+                    "dcl_ingest_ids": run_ids,
                 })
             result.sort(key=lambda d: d["latest_received_at"], reverse=True)
             return result
@@ -1513,7 +1524,7 @@ class IngestStore:
                     "row_count": r.row_count,
                     "schema_drift": r.schema_drift,
                     "received_at": r.received_at,
-                    "run_id": r.run_id,
+                    "dcl_ingest_id": r.run_id,
                 })
 
             # Enrich each pipe entry with its category (mapped/unmapped/tooling/unknown)
@@ -1546,7 +1557,7 @@ class IngestStore:
                 "first_received_at": sorted_receipts[0].received_at,
                 "latest_received_at": sorted_receipts[-1].received_at,
                 "drift_count": sum(1 for r in receipts if r.schema_drift),
-                "run_ids": sorted(set(r.run_id for r in receipts)),
+                "dcl_ingest_ids": sorted(set(r.run_id for r in receipts)),
                 "sources_breakdown": sources_breakdown,
                 "pipes": pipes_detail,
                 "mapped_count": len(mapped_set),
@@ -1695,8 +1706,8 @@ class IngestStore:
             "total_rows": sum(r.row_count for r in receipts),
             "unique_sources": len(sources),
             "source_list": sources,
-            "first_run_id": receipts[0].run_id,
-            "latest_run_id": receipts[-1].run_id,
+            "first_dcl_ingest_id": receipts[0].run_id,
+            "latest_dcl_ingest_id": receipts[-1].run_id,
             "first_received_at": receipts[0].received_at,
             "latest_received_at": receipts[-1].received_at,
             "drift_count": sum(1 for r in receipts if r.schema_drift),
@@ -1745,7 +1756,7 @@ class IngestStore:
                 "source_system_names": sorted(unique_sources),
                 "unique_tenants": len(unique_tenants),
                 "tenant_names": sorted(unique_tenants),
-                "latest_run_id": latest.run_id if latest else None,
+                "latest_dcl_ingest_id": latest.run_id if latest else None,
                 "latest_run_at": latest.received_at if latest else None,
                 "first_run_at": first.received_at if first else None,
                 "max_runs": _MAX_RUNS,
@@ -1936,8 +1947,7 @@ class IngestStore:
                 )
                 return True
         except Exception as e:
-            logger.warning(f"[IngestStore] Redis reload materialized failed: {e}")
-        return False
+            raise RuntimeError(f"[IngestStore] Redis reload materialized failed: {e}") from e
 
     def _persist_materialized(self, key: str, points: List[Dict[str, Any]]) -> None:
         """Write materialized points to Redis."""

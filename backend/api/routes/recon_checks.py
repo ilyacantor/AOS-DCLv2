@@ -282,7 +282,7 @@ def run_recon(
                 row = cur.fetchone()
                 if not row:
                     return {
-                        "run_id": None,
+                        "dcl_ingest_id": None,
                         "entity_id": entity_id,
                         "timestamp": datetime.now(timezone.utc).isoformat(),
                         "overall": "fail",
@@ -303,7 +303,7 @@ def run_recon(
                 row = cur.fetchone()
                 if not row:
                     return {
-                        "run_id": None,
+                        "dcl_ingest_id": None,
                         "entity_id": entity_id,
                         "timestamp": datetime.now(timezone.utc).isoformat(),
                         "overall": "fail",
@@ -330,7 +330,7 @@ def run_recon(
         overall = "pass"
 
     return {
-        "run_id": run_id,
+        "dcl_ingest_id": run_id,
         "entity_id": entity_id,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "overall": overall,

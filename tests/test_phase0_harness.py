@@ -111,11 +111,11 @@ def get_latest_farm_run_id() -> Optional[str]:
         if r.status_code == 200:
             runs = r.json()
             if isinstance(runs, list) and runs:
-                return runs[0].get("run_id") or runs[0].get("id")
+                return runs[0].get("farm_manifest_id") or runs[0].get("run_id") or runs[0].get("id")
             elif isinstance(runs, dict):
                 run_list = runs.get("runs", [])
                 if run_list:
-                    return run_list[0].get("run_id") or run_list[0].get("id")
+                    return run_list[0].get("farm_manifest_id") or run_list[0].get("run_id") or run_list[0].get("id")
     except Exception:
         pass
     return None

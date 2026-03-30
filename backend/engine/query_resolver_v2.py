@@ -602,5 +602,5 @@ class TripleQueryResolver:
             "pipe_id": str(row["pipe_id"]) if row["pipe_id"] else None,
             "confidence_score": float(row["confidence_score"]) if row["confidence_score"] is not None else 0.0,
             "confidence_tier": row["confidence_tier"],
-            "run_id": str(row["run_id"]),
+            "dcl_ingest_id": str(row["run_id"]),
         }

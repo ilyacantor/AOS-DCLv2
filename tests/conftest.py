@@ -29,7 +29,7 @@ def _load_manifest() -> dict:
 _manifest = _load_manifest()
 
 TENANT_ID: str = _manifest["tenant_id"]
-RUN_ID: str = _manifest["run_id"]
+RUN_ID: str = _manifest.get("dcl_ingest_id", _manifest.get("run_id", ""))
 FARM_RUN_ID: str = _manifest["farm_run_id"]
 
 

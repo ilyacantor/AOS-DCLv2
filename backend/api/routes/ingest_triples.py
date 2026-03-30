@@ -66,7 +66,6 @@ class IngestRequest(BaseModel):
 
 class IngestResponse(BaseModel):
     dcl_ingest_id: str
-    run_id: str
     tenant_id: str
     entity_id: Optional[str] = None
     source_farm_manifest_id: Optional[str] = None
@@ -231,7 +230,7 @@ def ingest_triples(
                 "message": f"run_id {req.run_id} already has triples in the store. "
                            "Use ?replace=true to deactivate old triples and re-ingest, "
                            "or ?append=true to add more triples to this run.",
-                "run_id": req.run_id,
+                "dcl_ingest_id": req.run_id,
             },
         )
 
@@ -260,7 +259,7 @@ def ingest_triples(
             "source_table": t.source_table,
             "source_field": t.source_field,
             "pipe_id": t.pipe_id,
-            "run_id": req.run_id,
+            "run_id": req.run_id,  # DB column
             "source_run_tag": req.source_run_tag,
             "confidence_score": t.confidence_score,
             "confidence_tier": t.confidence_tier,
@@ -372,7 +371,6 @@ def ingest_triples(
 
     return IngestResponse(
         dcl_ingest_id=req.run_id,
-        run_id=req.run_id,
         tenant_id=req.tenant_id,
         entity_id=batch_entity_id,
         source_farm_manifest_id=req.source_farm_manifest_id,
@@ -401,7 +399,7 @@ def get_ingest_status(run_id: str):
 
     concept_summary = _triple_store.count_by_domain(tenant_id=None, run_id=run_id)
     return {
-        "run_id": str(info["run_id"]),
+        "dcl_ingest_id": str(info["run_id"]),
         "triple_count": info["triple_count"],
         "concept_summary": concept_summary,
         "created_at": info["created_at"].isoformat() if info["created_at"] else None,
@@ -416,7 +414,7 @@ def list_ingest_status():
     result = []
     for r in runs:
         result.append({
-            "run_id": str(r["run_id"]),
+            "dcl_ingest_id": str(r["run_id"]),
             "tenant_id": str(r["tenant_id"]),
             "triple_count": r["triple_count"],
             "created_at": r["created_at"].isoformat() if r["created_at"] else None,
@@ -499,7 +497,7 @@ def get_ingest_log(
             for row in cur.fetchall():
                 d = dict(zip(columns, row))
                 d["id"] = str(d["id"])
-                d["run_id"] = str(d["run_id"])
+                d["dcl_ingest_id"] = str(d.pop("run_id"))
                 d["tenant_id"] = str(d["tenant_id"])
                 if d["created_at"]:
                     d["created_at"] = d["created_at"].isoformat()
@@ -642,7 +640,7 @@ def _update_seed_manifest(
 
         existing.update({
             "seed_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-            "run_id": run_id,
+            "dcl_ingest_id": run_id,
             "tenant_id": tenant_id,
             "total_triples": triple_count,
             "concept_summary": concept_summary,

@@ -334,7 +334,7 @@ class FarmClient:
 
         Returns:
             {
-                "run_id": "...",
+                "farm_manifest_id": "...",
                 "record_counts": {...},
                 "manifest_valid": true,
                 "pipes_pushed": 20
@@ -355,9 +355,9 @@ class FarmClient:
             response = self._get_client().post(url, json=payload, timeout=120.0)
             response.raise_for_status()
             data = response.json()
-            run_id = data.get("run_id", "unknown")
+            run_id = data.get("farm_manifest_id", data.get("run_id", "unknown"))
             logger.info(
-                f"[FarmClient] Business data generated: run_id={run_id}, "
+                f"[FarmClient] Business data generated: farm_manifest_id={run_id}, "
                 f"pipes_pushed={data.get('pipes_pushed', 0)}"
             )
             return data

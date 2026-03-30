@@ -118,7 +118,7 @@ def _validate_pipe_guard(pipe_id: str, run_id: str, source_system: str, now: str
             error_code="NO_MATCHING_PIPE",
             source_system=source_system,
             timestamp=now,
-            run_id=run_id,
+            dcl_ingest_id=run_id,
             tenant_id=tenant_id,
             snapshot_name=snapshot_name,
         ))
@@ -310,7 +310,7 @@ def _record_ingest_activity(
             phase="content",
             source="Farm",
             snapshot_name=snap,
-            run_id=run_id,
+            dcl_ingest_id=run_id,
             timestamp=now,
             pipes=1,
             sors=aod_sor_count,
@@ -391,7 +391,7 @@ def _record_ingest_activity(
             phase="content",
             source="Farm",
             snapshot_name=snapshot_name,
-            run_id=run_id,
+            dcl_ingest_id=run_id,
             timestamp=now,
             pipes=1,
             sors=aod_sor_count,
@@ -453,7 +453,7 @@ def _process_ingest_sync(
                 error_code="MISSING_SNAPSHOT",
                 source_system=source,
                 timestamp=now,
-                run_id=x_run_id or "",
+                dcl_ingest_id=x_run_id or "",
                 tenant_id=tenant,
             ))
             raise
@@ -474,7 +474,7 @@ def _process_ingest_sync(
             error_code="VALIDATION_ERROR",
             source_system=source,
             timestamp=now,
-            run_id=x_run_id or "",
+            dcl_ingest_id=x_run_id or "",
             snapshot_name=snapshot,
             tenant_id=tenant,
         ))
@@ -521,7 +521,7 @@ def _process_ingest_sync(
                 error_code="NON_CANONICAL_SOURCE",
                 source_system=ingest_req.source_system,
                 timestamp=now,
-                run_id=x_run_id or "",
+                dcl_ingest_id=x_run_id or "",
                 snapshot_name=ingest_req.snapshot_name,
                 tenant_id=ingest_req.tenant_id,
             ))
@@ -547,7 +547,7 @@ def _process_ingest_sync(
             error_code="AUTH_FAILED",
             source_system=ingest_req.source_system,
             timestamp=now,
-            run_id=x_run_id or "",
+            dcl_ingest_id=x_run_id or "",
             snapshot_name=ingest_req.snapshot_name,
             tenant_id=ingest_req.tenant_id,
         ))
@@ -568,8 +568,8 @@ def _process_ingest_sync(
         pipe_def = get_pipe_store().lookup(pipe_id)
         return IngestResponse(
             status="deduplicated",
+            dcl_ingest_id=run_id,
             dcl_run_id=run_id,
-            run_id=run_id,
             dispatch_id=existing_receipt.dispatch_id,
             pipe_id=pipe_id,
             rows_accepted=existing_receipt.row_count,
@@ -691,8 +691,8 @@ def _process_ingest_sync(
 
     return IngestResponse(
         status="ingested",
+        dcl_ingest_id=run_id,
         dcl_run_id=run_id,
-        run_id=run_id,
         dispatch_id=dispatch_id,
         pipe_id=pipe_id,
         rows_accepted=actual_rows,
@@ -740,7 +740,7 @@ def list_ingest_runs():
     return {
         "runs": [
             {
-                "run_id": r.run_id,
+                "dcl_ingest_id": r.run_id,
                 "dispatch_id": r.dispatch_id,
                 "pipe_id": r.pipe_id,
                 "source_system": r.source_system,
@@ -779,7 +779,7 @@ def get_ingest_run(run_id: str):
     for receipt in receipts:
         rows = store.get_rows(receipt.run_id, receipt.pipe_id)
         pipes.append({
-            "run_id": receipt.run_id,
+            "dcl_ingest_id": receipt.run_id,
             "pipe_id": receipt.pipe_id,
             "source_system": receipt.source_system,
             "canonical_source_id": receipt.canonical_source_id,
@@ -788,7 +788,7 @@ def get_ingest_run(run_id: str):
             "schema_drift": receipt.schema_drift,
         })
     return {
-        "run_id": run_id,
+        "dcl_ingest_id": run_id,
         "pipe_count": len(pipes),
         "total_rows": sum(p["row_count"] for p in pipes),
         "pipes": pipes,
@@ -804,7 +804,7 @@ def list_schema_drift():
         "drift_events": [
             {
                 "pipe_id": e.pipe_id,
-                "run_id": e.run_id,
+                "dcl_ingest_id": e.run_id,
                 "previous_hash": e.previous_hash,
                 "incoming_hash": e.incoming_hash,
                 "added_fields": e.added_fields,
@@ -1080,7 +1080,7 @@ async def seed_ingest_store(request: Request):
                 phase=item.get("phase", ""),
                 source=item.get("source", ""),
                 snapshot_name=item.get("snapshot_name", ""),
-                run_id=item.get("run_id", ""),
+                dcl_ingest_id=item.get("dcl_ingest_id", item.get("run_id", "")),
                 timestamp=item.get("timestamp", ""),
                 pipes=item.get("pipes", 0),
                 sors=item.get("sors", 0),
@@ -1105,7 +1105,7 @@ async def seed_ingest_store(request: Request):
                 error_code=item.get("error_code", ""),
                 source_system=item.get("source_system", ""),
                 timestamp=item.get("timestamp", ""),
-                run_id=item.get("run_id", ""),
+                dcl_ingest_id=item.get("dcl_ingest_id", item.get("run_id", "")),
                 dispatch_id=item.get("dispatch_id", ""),
                 snapshot_name=item.get("snapshot_name", ""),
                 tenant_id=item.get("tenant_id", ""),

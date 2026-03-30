@@ -276,7 +276,7 @@ def reconcile_aam(request: ReconcileRequest):
 
     return {
         "status": verdict,
-        "run_id": None,
+        "dcl_ingest_id": None,
         "aod_run_id": effective_run_id,
         "expected_count": total_expected,
         "actual_count": total_actual,
@@ -745,8 +745,8 @@ def _get_revenue_2025(snapshot_name: Optional[str] = None) -> Optional[float]:
 
         total = sum(period_totals.values())
         return round(total, 2) if total > 0 else None
-    except Exception:
-        return None
+    except Exception as e:
+        raise RuntimeError(f"Failed to compute aggregate total for recon: {e}") from e
 
 
 @router.get("/api/dcl/reconciliation/cross-system")
