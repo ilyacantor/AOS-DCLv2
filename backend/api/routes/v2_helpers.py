@@ -4,11 +4,10 @@ Shared helpers for v2 route files — tenant_id and run_id resolution.
 Every v2 endpoint that needs a tenant_id or run_id must use these helpers.
 No hardcoded UUIDs anywhere in route handlers.
 
-Resolution order:
+Resolution order (DCL — SE only, engagement lookup removed in convergence carve-out):
 1. Explicit query parameter (?tenant_id=...)
-2. Active engagement from engagement_state table
-3. Most recent active tenant from semantic_triples
-4. HTTP 400 with actionable error message
+2. Most recent active tenant from semantic_triples
+3. HTTP 400 with actionable error message
 """
 
 from fastapi import HTTPException
@@ -28,25 +27,12 @@ _FINANCIAL_PREFIXES = [
 
 
 def resolve_tenant_id(tenant_id: str | None) -> str:
-    """Resolve tenant_id from explicit param or active engagement.
+    """Resolve tenant_id from explicit param or latest tenant in PG.
 
     Never returns a hardcoded default. Raises HTTP 400 if unresolvable.
     """
     if tenant_id:
         return tenant_id
-
-    active = _get_active_engagement()
-    if active and active.get("tenant_id"):
-        eng_tid = str(active["tenant_id"])
-        # Validate the engagement's tenant actually has active triples.
-        # Stale engagements may reference a tenant_id with no data.
-        if _tenant_has_active_triples(eng_tid):
-            return eng_tid
-        logger.warning(
-            f"[v2_helpers] engagement {active.get('engagement_id')} references "
-            f"tenant_id={eng_tid} which has no active triples — falling through "
-            f"to latest tenant from semantic_triples"
-        )
 
     latest = _get_latest_tenant()
     if latest:
@@ -55,7 +41,7 @@ def resolve_tenant_id(tenant_id: str | None) -> str:
     raise HTTPException(
         status_code=400,
         detail=(
-            "No tenant_id provided, no active engagement, and no tenants found "
+            "No tenant_id provided and no tenants found "
             "in semantic_triples. Ingest data first or pass ?tenant_id= explicitly."
         ),
     )
@@ -97,36 +83,6 @@ def resolve_tenant_and_run(
     tid = resolve_tenant_id(tenant_id)
     rid = resolve_run_id(run_id, tid, domain_hint=domain_hint)
     return tid, rid
-
-
-def _get_active_engagement() -> dict | None:
-    """Query engagement_state for the most recent active engagement."""
-    sql = (
-        "SELECT tenant_id, engagement_id, entity_a_id, entity_b_id "
-        "FROM engagement_state WHERE status = 'active' "
-        "ORDER BY created_at DESC LIMIT 1"
-    )
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(sql)
-            row = cur.fetchone()
-            if row is None:
-                return None
-            columns = [desc[0] for desc in cur.description]
-            return dict(zip(columns, row))
-
-
-def _tenant_has_active_triples(tenant_id: str) -> bool:
-    """Check whether a tenant_id has at least one active triple."""
-    sql = (
-        "SELECT 1 FROM semantic_triples "
-        "WHERE tenant_id = %s AND is_active = true "
-        "AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) LIMIT 1"
-    )
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(sql, (tenant_id, tenant_id))
-            return cur.fetchone() is not None
 
 
 def _get_latest_tenant() -> str | None:

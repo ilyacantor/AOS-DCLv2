@@ -62,30 +62,18 @@ from backend.core.mode_state import set_current_mode
 from backend.core.constants import CORS_ORIGINS, API_VERSION, utc_now
 from backend.core.redis_client import is_redis_available
 
-# Route modules
+# Route modules (SE only — ME routes moved to convergence repo)
 from backend.api.routes.ingest import router as ingest_router
 from backend.api.routes.export_pipes import router as export_pipes_router
 from backend.api.routes.reconciliation import router as reconciliation_router
 from backend.api.routes.temporal import router as temporal_router
-from backend.api.routes.entities import router as entities_router
 from backend.api.routes.deprecated import router as deprecated_router
 from backend.farm.routes import router as farm_router
 from backend.dcl.routes import router as dcl_router
 from backend.api.routes.graph_traversal import router as graph_traversal_router
-from backend.api.routes.reports import router as reports_router
-from backend.api.routes.compat import router as compat_router
 from backend.api.routes.maestra import router as maestra_router
 from backend.api.routes.ingest_triples import router as ingest_triples_router
-from backend.api.routes.resolution_v2 import router as resolution_v2_router
-from backend.api.routes.reports_combining_v2 import router as reports_combining_v2_router
-from backend.api.routes.reports_overlap_v2 import router as reports_overlap_v2_router
-from backend.api.routes.reports_bridge_v2 import router as reports_bridge_v2_router
-from backend.api.routes.reports_whatif_v2 import router as reports_whatif_v2_router
 from backend.api.routes.triple_monitor import router as triple_monitor_router
-from backend.api.routes.cofa_validation import router as cofa_validation_router
-from backend.api.routes.cofa_mapping import router as cofa_mapping_router
-from backend.api.routes.merge_overview import router as merge_overview_router
-from backend.api.routes.merge_conflicts import router as merge_conflicts_router
 from backend.api.routes.recon_checks import router as recon_checks_router
 
 logger = get_logger(__name__)
@@ -353,29 +341,13 @@ app.include_router(ingest_router)
 app.include_router(export_pipes_router)
 app.include_router(reconciliation_router)
 app.include_router(temporal_router)
-app.include_router(entities_router)
 app.include_router(deprecated_router)
 app.include_router(farm_router)
 app.include_router(dcl_router)
 app.include_router(graph_traversal_router)
-if os.environ.get("LEGACY_JSON_LOAD", "").lower() in ("true", "1", "yes"):
-    app.include_router(reports_router)
-    logger.info("[main] LEGACY_JSON_LOAD=true — old /api/reports/* routes active (JSON-backed)")
-else:
-    app.include_router(compat_router)
-    logger.info("[main] /api/reports/* routes serving v2 engine data via compat layer")
 app.include_router(maestra_router)
 app.include_router(ingest_triples_router)
-app.include_router(resolution_v2_router)
-app.include_router(reports_combining_v2_router)
-app.include_router(reports_overlap_v2_router)
-app.include_router(reports_bridge_v2_router)
-app.include_router(reports_whatif_v2_router)
 app.include_router(triple_monitor_router)
-app.include_router(cofa_validation_router)
-app.include_router(cofa_mapping_router)
-app.include_router(merge_overview_router)
-app.include_router(merge_conflicts_router)
 app.include_router(recon_checks_router)
 
 
@@ -889,6 +861,110 @@ async def platform_proxy(request: Request, path: str):
         status_code=resp.status_code,
         media_type=content_type or "application/octet-stream",
     )
+
+
+# =============================================================================
+# Convergence (ME) reverse proxy — Phase 2 of carve-out
+# =============================================================================
+
+_CONVERGENCE_ME_PREFIXES = (
+    "/api/dcl/reports/v2/",
+    "/api/dcl/merge/",
+    "/api/dcl/cofa-mapping",
+    "/api/dcl/cofa/",
+    "/api/dcl/resolution/v2/",
+)
+
+
+async def _proxy_to_convergence(request: Request) -> JSONResponse:
+    """Forward an ME request to Convergence, rewriting /api/dcl/ → /api/convergence/.
+
+    No silent fallback — fails loudly if convergence is unreachable.
+    """
+    import httpx
+
+    convergence_url = os.getenv("CONVERGENCE_API_URL")
+    if not convergence_url:
+        raise HTTPException(
+            status_code=503,
+            detail="CONVERGENCE_API_URL environment variable is not set — "
+                   "cannot proxy to Convergence service. "
+                   "Set CONVERGENCE_API_URL to the Convergence base URL "
+                   "(e.g. http://localhost:8010).",
+        )
+
+    original_path = request.url.path
+    target_path = original_path.replace("/api/dcl/", "/api/convergence/", 1)
+    target_url = f"{convergence_url.rstrip('/')}{target_path}"
+
+    body = await request.body()
+    headers = {
+        k: v for k, v in request.headers.items()
+        if k.lower() not in ("host", "content-length", "transfer-encoding", "accept-encoding")
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.request(
+                method=request.method,
+                url=target_url,
+                content=body,
+                headers=headers,
+                params=dict(request.query_params),
+            )
+    except httpx.ConnectError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Cannot connect to Convergence at {convergence_url} — {e}. "
+                   f"Is the Convergence service running on port 8010?",
+        )
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail=f"Convergence request timed out: {request.method} {target_url}",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Convergence proxy error: {type(e).__name__}: {e} — "
+                   f"target={target_url}, method={request.method}",
+        )
+
+    content_type = resp.headers.get("content-type", "")
+    if content_type.startswith("application/json"):
+        try:
+            json_body = resp.json()
+        except Exception:
+            json_body = {"raw": resp.text}
+        return JSONResponse(content=json_body, status_code=resp.status_code)
+    from fastapi.responses import Response
+    return Response(
+        content=resp.content,
+        status_code=resp.status_code,
+        media_type=content_type or "application/octet-stream",
+    )
+
+
+# Individual proxy routes for each ME path group
+@app.api_route("/api/dcl/reports/v2/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def convergence_proxy_reports(request: Request, path: str):
+    return await _proxy_to_convergence(request)
+
+@app.api_route("/api/dcl/merge/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def convergence_proxy_merge(request: Request, path: str):
+    return await _proxy_to_convergence(request)
+
+@app.api_route("/api/dcl/cofa-mapping", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def convergence_proxy_cofa_mapping(request: Request):
+    return await _proxy_to_convergence(request)
+
+@app.api_route("/api/dcl/cofa/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def convergence_proxy_cofa(request: Request, path: str):
+    return await _proxy_to_convergence(request)
+
+@app.api_route("/api/dcl/resolution/v2/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def convergence_proxy_resolution(request: Request, path: str):
+    return await _proxy_to_convergence(request)
 
 
 # =============================================================================

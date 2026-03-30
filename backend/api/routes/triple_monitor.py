@@ -13,6 +13,7 @@ POST /api/dcl/triples/deactivate-run  — deactivate a run
 """
 
 import json
+import os
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -23,11 +24,8 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 
 from backend.db.triple_store import TripleStore
-from backend.db.engagement_store import EngagementStore
-from backend.db.resolution_store import ResolutionStore
 from psycopg2 import sql as pgsql
 from backend.core.db import get_connection, PoolExhausted
-from backend.engine.engagement import get_active_engagement
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -44,8 +42,6 @@ def _entity_display_name(entity_id: str) -> str:
 router = APIRouter(tags=["Triple Monitor"])
 
 _triple_store = TripleStore()
-_engagement_store = EngagementStore()
-_resolution_store = ResolutionStore()
 
 
 # ---------------------------------------------------------------------------
@@ -704,22 +700,40 @@ def triples_browse_batch(req: BrowseBatchRequest):
 
 @router.get("/api/dcl/triples/engagement")
 def triples_engagement():
-    """Current engagement state from the engagement config file.
+    """Current engagement state — proxied from Convergence service.
 
-    The engagement config (data/engagements/demo-001.json) is the source of
-    truth for which entities are in scope — not the engagement_state table,
-    which can be polluted by test runs (e.g. COFA merge tests writing x/y).
+    Engagement lifecycle is owned by convergence. DCL fetches it over HTTP.
+    Fails loudly if convergence is unreachable — no silent fallback.
     """
-    eng = get_active_engagement()
+    import httpx
+
+    convergence_url = os.environ.get("CONVERGENCE_API_URL", "http://localhost:8010")
+    url = f"{convergence_url}/api/convergence/engagement/active"
+    try:
+        resp = httpx.get(url, timeout=5.0)
+        resp.raise_for_status()
+    except httpx.ConnectError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Convergence service unreachable at {convergence_url} — "
+                   f"engagement data unavailable. Error: {e}",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to fetch engagement from Convergence: {e}",
+        )
+
+    data = resp.json()
     return {
-        "engagement_id": eng.engagement_id,
+        "engagement_id": data["engagement_id"],
         "entity_a": {
-            "id": eng.entity_a.id,
-            "display_name": eng.entity_a.display_name,
+            "id": data["entity_a"]["id"],
+            "display_name": data["entity_a"]["display_name"],
         },
         "entity_b": {
-            "id": eng.entity_b.id,
-            "display_name": eng.entity_b.display_name,
+            "id": data["entity_b"]["id"],
+            "display_name": data["entity_b"]["display_name"],
         },
         "status": "active",
     }

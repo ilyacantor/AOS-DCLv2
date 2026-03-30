@@ -31,9 +31,7 @@ def maestra_status(tenant_id: str = Query("default")) -> Dict[str, Any]:
         build_metric_entity_matrix,
     )
     from backend.engine.metric_materializer import _load_extraction_rules
-    from backend.engine.entity_resolution import get_entity_store
     from backend.core.mode_state import get_current_mode
-    from backend.api.ingest import get_ingest_store
 
     # --- Concepts (published metrics) ---
     concept_count = len(PUBLISHED_METRICS)
@@ -51,16 +49,8 @@ def maestra_status(tenant_id: str = Query("default")) -> Dict[str, Any]:
     # --- Extraction rules ---
     rules = _load_extraction_rules()
     rule_count = len(rules)
-    # All loaded rules are considered active; errored rules would fail
-    # to load entirely (YAML parse error) — no partial error state exists.
     active_count = rule_count
     errored_count = 0
-
-    # --- Entity resolution state ---
-    er_store = get_entity_store()
-    canonical_entities = list(er_store._canonical_entities.values())
-    er_configured = len(er_store._source_records) > 0
-    active_entity_ids = [ce.dcl_global_id for ce in canonical_entities]
 
     # --- Last update (from mode state) ---
     mode = get_current_mode()
@@ -82,8 +72,7 @@ def maestra_status(tenant_id: str = Query("default")) -> Dict[str, Any]:
             "errored": errored_count,
         },
         "entity_resolution": {
-            "configured": er_configured,
-            "active_entities": active_entity_ids,
+            "note": "Entity resolution moved to Convergence service (port 8010)",
         },
         "last_update_at": last_update_at,
         "healthy": healthy,

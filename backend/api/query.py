@@ -685,51 +685,9 @@ def execute_query(request: QueryRequest) -> QueryResponse:
     # Provenance comes from ingest pipeline receipts only
     provenance_info = []
 
-    # Entity resolution
+    # Entity resolution and conflict detection moved to Convergence service.
     entity_info = None
-    if request.entity:
-        try:
-            from backend.engine.entity_resolution import get_entity_store
-            er_store = get_entity_store()
-            results = er_store.browse_entities(request.entity)
-            if results:
-                confirmed = [r for r in results if r.get("match_status") == "confirmed"]
-                entity_info = EntityInfo(
-                    resolved_name=confirmed[0]["name"] if confirmed else results[0]["name"],
-                    candidates=[r["name"] for r in results],
-                    confidence=confirmed[0].get("confidence", 1.0) if confirmed else results[0].get("confidence", 0.5),
-                    match_type="confirmed" if confirmed else "candidate",
-                )
-        except Exception as e:
-            logger.warning(f"[query] Entity resolution failed for entity={request.entity}: {e}", exc_info=True)
-            enrichment_errors["entity"] = "Entity context unavailable"
-
-    # Conflict info
     conflicts_info = None
-    if request.entity:
-        try:
-            from backend.engine.conflict_detection import get_conflict_store
-            cd_store = get_conflict_store()
-            all_conflicts = cd_store.get_all_conflicts()
-            entity_conflicts = [
-                c for c in all_conflicts
-                if request.entity.lower() in c.entity_name.lower()
-                and c.metric == request.metric
-            ]
-            if entity_conflicts:
-                conflicts_info = [
-                    ConflictInfo(
-                        systems=[v.source_system for v in c.values],
-                        values={v.source_system: v.value for v in c.values},
-                        root_cause=c.root_cause,
-                        severity=c.severity,
-                        trust_recommendation=c.trust_recommendation.get("system", "unknown"),
-                    )
-                    for c in entity_conflicts
-                ]
-        except Exception as e:
-            logger.warning(f"[query] Conflict detection failed for entity={request.entity}, metric={request.metric}: {e}", exc_info=True)
-            enrichment_errors["conflicts"] = "Conflict detection unavailable"
 
     # Temporal warning
     temporal_warning = None

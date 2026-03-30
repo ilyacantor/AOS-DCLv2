@@ -387,20 +387,13 @@ def _compare_values(
 
 def _get_dcl_detected_conflicts() -> List[Dict[str, Any]]:
     """
-    Get conflicts that DCL has actually detected from its conflict store.
+    Get conflicts detected by the Convergence service.
+
+    Conflict detection moved to convergence in the ME carve-out.
+    Returns empty list — conflict verification should query convergence at port 8010.
     """
-    try:
-        from backend.engine.conflict_detection import get_conflict_store
-        store = get_conflict_store()
-        conflicts = store.get_active_conflicts()
-        return [c.model_dump() for c in conflicts]
-    except Exception as e:
-        logger.error(
-            f"[verification] Conflict store fetch failed: {e}. "
-            "Returning empty list — conflict count will show 0 even if detection is down.",
-            exc_info=True
-        )
-        return []
+    logger.info("[verification] Conflict detection moved to Convergence service — returning empty list")
+    return []
 
 
 def _check_conflict_detected(

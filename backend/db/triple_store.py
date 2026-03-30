@@ -100,16 +100,27 @@ class TripleStore:
                 cur.execute(
                     f"SET LOCAL statement_timeout = {int(INGEST_STATEMENT_TIMEOUT_MS)}"
                 )
+                # Exclude COFA-process triples (cofa_conflict, cofa_mapping,
+                # cofa_unified) from the DELETE.  These are owned by the COFA
+                # mapping writer and have their own deactivation lifecycle via
+                # deactivate_cofa_triples().  Without this exclusion, every
+                # Farm re-ingest nukes conflict triples that Maestra wrote.
+                cofa_exclusion = (
+                    " AND split_part(concept, '.', 1) NOT IN "
+                    "('cofa', 'cofa_conflict', 'cofa_mapping', 'cofa_unified')"
+                )
                 if entity_ids:
                     placeholders = ", ".join(["%s"] * len(entity_ids))
                     cur.execute(
                         f"DELETE FROM semantic_triples "
-                        f"WHERE tenant_id = %s AND entity_id IN ({placeholders})",
+                        f"WHERE tenant_id = %s AND entity_id IN ({placeholders})"
+                        f"{cofa_exclusion}",
                         [tenant_id] + entity_ids,
                     )
                 else:
                     cur.execute(
-                        "DELETE FROM semantic_triples WHERE tenant_id = %s",
+                        "DELETE FROM semantic_triples WHERE tenant_id = %s"
+                        f"{cofa_exclusion}",
                         (tenant_id,),
                     )
                 deleted = cur.rowcount
@@ -212,9 +223,13 @@ class TripleStore:
                 "cross-tenant data corruption."
             )
         placeholders = ", ".join(["%s"] * len(entity_ids))
+        # Exclude COFA-process triples — their lifecycle is managed by
+        # deactivate_cofa_triples(), not by Farm ingest cycles.
         sql = (
             "UPDATE semantic_triples SET is_active = false, updated_at = now() "
-            f"WHERE is_active = true AND tenant_id = %s AND entity_id IN ({placeholders})"
+            f"WHERE is_active = true AND tenant_id = %s AND entity_id IN ({placeholders}) "
+            "AND split_part(concept, '.', 1) NOT IN "
+            "('cofa', 'cofa_conflict', 'cofa_mapping', 'cofa_unified')"
         )
         params = [tenant_id] + entity_ids
         with get_connection() as conn:
@@ -225,16 +240,19 @@ class TripleStore:
                 return cur.rowcount
 
     def deactivate_tenant_triples(self, tenant_id: str) -> int:
-        """Deactivate ALL active triples for a tenant.
+        """Deactivate all active non-COFA triples for a tenant.
 
-        Used on full replacement ingest — kills everything (financials, HR,
-        COFA) so the new run is the sole active dataset.
+        Used on full replacement ingest — kills financials, HR, etc. so the
+        new run is the sole active dataset.  Excludes COFA-process triples
+        whose lifecycle is managed by deactivate_cofa_triples().
         """
         if not tenant_id:
             raise ValueError("deactivate_tenant_triples requires tenant_id.")
         sql = (
             "UPDATE semantic_triples SET is_active = false, updated_at = now() "
-            "WHERE is_active = true AND tenant_id = %s"
+            "WHERE is_active = true AND tenant_id = %s "
+            "AND split_part(concept, '.', 1) NOT IN "
+            "('cofa', 'cofa_conflict', 'cofa_mapping', 'cofa_unified')"
         )
         with get_connection() as conn:
             with conn.cursor() as cur:

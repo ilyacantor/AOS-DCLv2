@@ -22,8 +22,6 @@ load_dotenv(_repo / ".env")
 
 from backend.core.db import get_connection
 from backend.db.triple_store import TripleStore
-from backend.db.resolution_store import ResolutionStore
-from backend.db.engagement_store import EngagementStore
 from backend.db.run_ledger_store import RunLedgerStore
 from backend.registry.concept_registry import ConceptRegistry
 
@@ -312,79 +310,6 @@ class TestTripleStore:
         current = self.store.get_current_run_id(TEST_TENANT_ID)
         assert current != TEST_RUN_ID_A, "Run A should not be current_run_id after swap"
         assert current == TEST_RUN_ID_B, "Run B should be current_run_id after swap"
-
-
-class TestResolutionStore:
-    """Test 8: Resolution workspace round-trip."""
-
-    def setup_method(self):
-        self.store = ResolutionStore()
-
-    def teardown_method(self):
-        with get_connection() as conn:
-            if conn:
-                with conn.cursor() as cur:
-                    cur.execute("DELETE FROM resolution_workspaces WHERE tenant_id = %s", (TEST_TENANT_ID,))
-                    conn.commit()
-
-    def test_08_resolution_workspace_round_trip(self):
-        """Create → read → update status → read → verify all fields including JSONB."""
-        candidates = [{"name": "Acme Corp", "source": "salesforce"}, {"name": "ACME Inc", "source": "netsuite"}]
-        evidence = {"similarity_score": 0.92, "matching_fields": ["name", "address"]}
-
-        ws = self.store.create_workspace({
-            "tenant_id": TEST_TENANT_ID,
-            "workspace_type": "customer",
-            "candidates": candidates,
-            "evidence": evidence,
-        })
-        assert ws["status"] == "pending"
-        assert ws["workspace_type"] == "customer"
-
-        # Read back
-        fetched = self.store.get_workspace(str(ws["id"]))
-        assert fetched is not None
-        assert fetched["candidates"] == candidates
-        assert fetched["evidence"] == evidence
-
-        # Update status
-        decision = {"action": "merge", "canonical": "Acme Corp"}
-        updated = self.store.update_status(str(ws["id"]), "resolved", decided_by="ilya", decision=decision)
-        assert updated["status"] == "resolved"
-        assert updated["decided_by"] == "ilya"
-        assert updated["decided_at"] is not None
-        assert updated["decision"] == decision
-
-
-class TestEngagementStore:
-    """Test 9: Engagement state round-trip."""
-
-    def setup_method(self):
-        self.store = EngagementStore()
-
-    def teardown_method(self):
-        self.store.delete_engagement(TEST_ENGAGEMENT_ID)
-
-    def test_09_engagement_round_trip(self):
-        """Create → read by engagement_id → update status → verify."""
-        eng = self.store.create_engagement({
-            "tenant_id": TEST_TENANT_ID,
-            "engagement_id": TEST_ENGAGEMENT_ID,
-            "entity_a_id": "meridian",
-            "entity_b_id": "cascadia",
-            "config": {"scope": "full_merge"},
-        })
-        assert eng["engagement_id"] == TEST_ENGAGEMENT_ID
-        assert eng["status"] == "active"
-
-        fetched = self.store.get_by_engagement_id(TEST_ENGAGEMENT_ID)
-        assert fetched is not None
-        assert fetched["entity_a_id"] == "meridian"
-        assert fetched["entity_b_id"] == "cascadia"
-        assert fetched["config"] == {"scope": "full_merge"}
-
-        updated = self.store.update_status(TEST_ENGAGEMENT_ID, "complete")
-        assert updated["status"] == "complete"
 
 
 class TestRunLedgerStore:

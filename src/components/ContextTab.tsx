@@ -81,8 +81,8 @@ export function ContextTab({ entities, selectedEntityId, onEntityChange, entitie
       alert(`Purged ${d.deleted.toLocaleString()} stale triples across ${d.tenants_purged} tenant(s).`);
       fetchData(selectedEntityId || undefined);
     } catch (e) {
+      console.error('[ContextTab] Purge stale failed:', e);
       alert('Purge failed — check console.');
-      console.error('[ContextTab] purge-stale failed:', e);
     }
   };
 
@@ -110,7 +110,8 @@ export function ContextTab({ entities, selectedEntityId, onEntityChange, entitie
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={handlePurgeStale}
-            className="px-2 py-1 text-xs rounded border border-red-500/30 text-red-400 hover:bg-red-500/10"
+            disabled={loading}
+            className="px-2 py-1 text-xs rounded border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 disabled:opacity-50"
           >
             Purge Stale
           </button>
