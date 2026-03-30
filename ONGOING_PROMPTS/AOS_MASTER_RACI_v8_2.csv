@@ -1,0 +1,332 @@
+Category,Capability,AOD,AAM,DCL,Convergence,NLQ,Farm,Platform (sunset),Console,Status,Scope,Notes,v8.2 Delta
+A2A Protocol,Agent discovery,,,,,,I,,,Aspirational,SE/ME,,v8→v8.1: AOA cancelled.
+A2A Protocol,Context sharing,,,,,,I,,,Aspirational,SE/ME,,v8→v8.1: AOA cancelled.
+A2A Protocol,Task delegation,,,,,,C,,,Aspirational,SE/ME,,v8→v8.1: AOA cancelled.
+AAM Controls,Control surface gating by mode,,A/R,,,,,,,On Docket,SE/ME,"Gates dormant/superseded controls based on get_operating_mode(). SYNTHETIC skips dispatch, runners, collectors, self-healing. Guard clause per control entry point. Logs skipped controls.",
+AAM Controls,Decoupled infer endpoint (no dispatch in SYNTHETIC),,A/R,,,,,,,On Docket,SE/ME,POST /api/aam/infer returns after pipe inference + triple write without dispatching JobManifest in SYNTHETIC mode. Response includes ledger entry for Platform verification.,
+AAM Controls,Layer 1 data drift (triple-store signals),,A/R,,,,,,,On Docket,SE/ME,"Four drift signals from triple-store queries: schema drift (concept+property delta), freshness drift, coverage drift (missing domains), volume drift (>20% change). Pluggable DriftSignal interface. Read-only PG queries.",
+AAM Controls,Operating mode detection (get_operating_mode),,A/R,,,,,,,On Docket,SE/ME,"Three-value enum: SYNTHETIC, PRODUCTION_SE, PRODUCTION_ME. Data-driven detection from MCP connection registry + entity count. Single gating function for all control surfaces.",
+AAM Controls,Triple write ledger (AAM-local audit trail),,A/R,,,,,,,On Docket,SE/ME,"SQLite table tracking every triple write AAM makes. Columns: run_id, entity_id, trigger, write_path, concept_prefixes, triple_count, status, error_detail, pipe_id, duration_ms. Three GET APIs.",
+AAM Handoff,ConnectionCandidate export,A/R,,,,,,,,Live,SE/ME,,
+Action,Fabric Action Routing,,C,,,,I,,,Cancelled,SE/ME,Routes 'Write' intent to Fabric Plane,v8→v8.1: AOA cancelled.
+Action,Transaction Execution,,R,,,,I,,,Cancelled,SE/ME,Executes via AAM Adapters,v8→v8.1: AOA cancelled.
+Adapters,Adapter Factory Resolution,,A/R,,,,I,,,Stub,SE/ME,Instantiates Strategy (Gateway vs Bus),
+Adapters,"API Gateway Adapter (Kong, Apigee)",,A/R,,,,I,,,Stub,SE/ME,Managed API Proxy,
+Adapters,"API Gateway Connection (Kong, Apigee)",,A/R,,,,I,,,Stub,SE/ME,Proxy/REST modality,
+Adapters,"Data Warehouse Connection (Snowflake, BigQuery)",,A/R,,,,I,,,Stub,SE/ME,JDBC/Bulk Read modality,
+Adapters,"Event Bus Adapter (Kafka, EventBridge)",,A/R,,,,I,,,Stub,SE/ME,Streaming Consumer,
+Adapters,"Event Bus Connection (Kafka, EventBridge)",,A/R,,,,I,,,Stub,SE/ME,Streaming Consumer modality,
+Adapters,"iPaaS Adapter (Workato, MuleSoft)",,A/R,,,,I,,,Stub,SE/ME,Webhooks/Signals,
+Adapters,"IPAAS Connection (Workato, MuleSoft)",,A/R,,,,I,,,Stub,SE/ME,Webhooks/Signals modality,
+Adapters,Pipe Discovery from Plane,,A/R,,,,I,,,Stub,SE/ME,Inventory reusable data pipes,
+Adapters,Plane Health Check,,A/R,,,,I,,,Stub,SE/ME,Monitor adapter connectivity,
+Adapters,"Warehouse Adapter (Snowflake, BigQuery)",,A/R,,,,I,,,Stub,SE/ME,JDBC Read,
+Agent Lifecycle,Agent health monitoring,,,,,,C,,,Cancelled,SE/ME,,v8→v8.1: AOA cancelled.
+Agent Lifecycle,Agent registration & configuration,,,,,,I,,,Cancelled,SE/ME,,v8→v8.1: AOA cancelled.
+Agent Lifecycle,Agent version management,,,,,,I,,,Cancelled,SE/ME,,v8→v8.1: AOA cancelled.
+Agent Registry,Agent discovery & inventory,C,C,I,,,I,,,Cancelled,SE/ME,Agents as first-class assets,v8→v8.1: AOA cancelled.
+Agent Registry,Agent metadata & ownership,I,I,C,,,I,,,Cancelled,SE/ME,"Domain, owner, trust",v8→v8.1: AOA cancelled.
+Approval Workflows,Approval request generation,,,,,,I,,,Cancelled,SE/ME,,v8→v8.1: AOA cancelled.
+Approval Workflows,Human-in-the-loop routing,,,,,,I,,,Cancelled,SE/ME,,v8→v8.1: AOA cancelled.
+Approval Workflows,Override tracking,,,,,,I,,,Cancelled,SE/ME,,v8→v8.1: AOA cancelled.
+Asset Scan,Asset Discovery (Legacy Endpoints),A/R,,,,,,,,Live,SE/ME,Legacy Fallback,
+Asset Scan,Policy Manifest Export (Governance Rules),A/R,C,,,,,,,Live,SE/ME,Export rules for AAM to enforce,
+Candidate Intake,Candidate Defer,,A/R,,,,I,,,Live,SE/ME,Defer with reason,
+Candidate Intake,Candidate Ingestion,R,A,,,,I,,,Live,SE/ME,Receives from AOD,
+Candidate Intake,Candidate Match to Pipe,,A/R,,,,I,,,Live,SE/ME,Link candidate to existing pipe,
+Candidate Intake,Candidate Triage,,A/R,,,,I,,,Live,SE/ME,Status management,
+Capabilities,Capability contract registration,I,I,C,,,I,,,Cancelled,SE/ME,Declared agent abilities,v8→v8.1: AOA cancelled.
+Capabilities,Capability drift detection,C,C,C,,,I,,,Cancelled,SE/ME,Observed vs declared behavior,v8→v8.1: AOA cancelled.
+Classification & Governance,Governance status determination,A/R,,,,,C,,,Live,SE/ME,,
+Classification & Governance,IdP governance policy enforcement,A/R,,,,,C,,,Live,SE/ME,,
+Classification & Governance,Shadow IT classification,A/R,,,,,C,,,Live,SE/ME,,
+Classification & Governance,Vendor governance propagation,A/R,,,,,,,,Live,SE/ME,,
+Classification & Governance,Zombie asset detection,A/R,,,,,C,,,Live,SE/ME,,
+Collector Operations,Collector Registration,,A/R,,,,I,,,Live,SE/ME,Register collection strategies,
+Collector Operations,Collector Run Execution,,A/R,,,,I,,,Live,SE/ME,Execute with tracking,
+Collector Operations,Generate Observations,,A/R,,,,C,,,Live,SE/ME,,
+Collector Operations,Observation Storage,,A/R,,,,I,,,Live,SE/ME,Raw collector output,
+Collector Operations,Register Collectors,,A/R,,,,I,,,Live,SE/ME,,
+Collector Operations,Run Collectors,,A/R,,,,C,,,Live,SE/ME,,
+Collector Operations,Track Collector Runs,,A/R,,,,I,,,Live,SE/ME,,
+Connector Provisioning,Config Storage,,,A/R,,,I,,,Aspirational,SE/ME,Aspirational — no code implementation,
+Connector Provisioning,Dynamic Reconnection,,,A/R,,,C,,,Aspirational,SE/ME,Aspirational — no code implementation,
+Contract,Downstream Consumer Protocol (NLQ Interface),,,A/R,R,C,C,,,Live,SE/ME,DCL provides semantic API for NLQ consumption,v8.1→v8.2: Convergence reads DCL-owned tables (SELECT only).
+Convergence,Bridge (Target pipes join Acquirer pipes),,,C,A/R,,C,demo,I,On Docket,ME,"Same engine as base AOS. Entity is a tag, not a separate brain. No split brain",v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Convergence,COFA Merge tab (DCL UI),,,C,A/R,,,demo,I,Live,ME,"5 sections: merge overview, side-by-side comparison, match table, orphans, triple browser. Read-only",v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Convergence,Combining financial statements (4-column proforma),,,C,A/R,,C,demo,A/R,On Docket,ME,Entity A | Entity B | Adjustments | Combined. Every adjustment links to conflict register,v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Convergence,Cross-sell analysis,,,C,A/R,I,,demo,C,On Docket,ME,Identifies revenue opportunities from combining customer bases,v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Convergence,Diligence Integration Package (output bundle),,,,A/R,,,demo,A/R,On Docket,ME,"Unified CoA, conflict register, combined FS, EBITDA bridge, cross-sell, audit trail. §1.3.3",v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Convergence,EBITDA bridge with confidence grades,,,C,A/R,I,C,demo,A/R,On Docket,ME,Adjustment categories with what-if sliders. High/medium/low confidence. Linked to evidence,v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Convergence,Entity resolution,,,C,A/R,,,demo,C,On Docket,ME,Match entities across acquirer and target. O(n²) per advisory ruling,v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Convergence,Hard accounting gates (deterministic validation),,,C,A/R,,C,,,Live,ME,"DR=CR, revenue identity, asset identity, BS identity. Maestra cannot override. §5.3",v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Convergence,Multi-entity data pipeline (entity_id tagging),,,C,A/R,,A/R,demo,I,Live,ME,Both entities flow through separate Farm configs → triple conversion → same PG store tagged by entity_id,v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Convergence,Overlap/concentration analysis,,,C,A/R,I,,demo,C,On Docket,ME,"Customer, vendor, geographic concentration across both entities",v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Convergence,Quality of Earnings (QofE),,,C,A/R,I,C,demo,A/R,On Docket,ME,"Recurring vs non-recurring, trending, normalization. Feeds from EBITDA bridge",v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Coordination,Arbitration & conflict resolution,I,I,C,,,I,,,Cancelled,SE/ME,Deterministic outcomes,v8→v8.1: AOA cancelled.
+Coordination,Multi-agent workflow orchestration,I,C,C,,,I,,,Cancelled,SE/ME,Fan-in / fan-out,v8→v8.1: AOA cancelled.
+Data Mode,Demo Mode (Farm-sourced synthetic data),,C,R,,I,A/R,,,Live,SE/ME,"Farm generates synthetic data via configs (Meridian $5B, Cascadia $1B). Output is triples to PG, not pipe ingest",
+Data Mode,Mode Switching & Fallback,,,A/R,,I,,,,On Docket,SE/ME,"DCL decides data source per query; live data preferred, demo fallback if unavailable",
+Data Mode,Production Mode (Enterprise-sourced live data),,R,A/R,,I,,,,On Docket,SE/ME,"Enterprise data enters via MCP discovery → transport shims → flow controller → production ingest pipeline → PG. Per Connectivity Architecture Blueprint. AAM provisions connections, not pipes.",
+Data Query,Fact Base Execution,,,A/R,,,I,,,Deprecated,SE/ME,fact_base.json removed. Replaced by semantic triple store (see Triple Store category),
+Data Query,Quality Score Metadata,,,A/R,,,I,,,Live,SE/ME,"freshness, quality_score, record_count",
+Data Query,Query Endpoint (POST /api/dcl/query),,,A/R,R,C,I,,,Live,SE/ME,Metric + dimensions + filters,v8.1→v8.2: Convergence reads DCL-owned tables (SELECT only).
+Data Query,Ranking/Superlative Support,,,A/R,,C,I,,,Live,SE/ME,"Top N, Bottom N, Best, Worst",
+Discovery & Cataloging,Asset discovery (find data sources),A/R,,,,,,,,Live,SE/ME,,
+Discovery & Cataloging,Domain canonicalization (alias collapsing),A/R,,,,,C,,,Live,SE/ME,,
+Discovery & Cataloging,Source catalog management,A/R,,,,,,,,Live,SE/ME,,
+Drift Detection,Acknowledge Drift,,A/R,,,I,I,,,Live,SE/ME,,
+Drift Detection,Detect Contract Drift,,A/R,,,I,C,,,Live,SE/ME,,
+Drift Detection,Detect Freshness Drift,,A/R,,,I,C,,,Live,SE/ME,,
+Drift Detection,Detect Schema Drift,,A/R,,,I,C,,,Live,SE/ME,,
+Drift Detection,Drift Acknowledgement,,A/R,,,I,I,,,Live,SE/ME,Operator action,
+Drift Detection,Fabric Drift Detection,,A/R,,,I,I,,,Live,SE/ME,Connectivity drift,
+Drift Detection,Schema Drift Detection,,A/R,,,I,C,,,Live,SE/ME,Field changes (not connection),
+Drift Detection,Schema Hash Computation,,A/R,,,I,C,,,Live,SE/ME,SYNTHETIC mode: replaced by triple-store concept+property delta between run_ids (AAM controls redesign Layer 1). PRODUCTION_SE: vendor-specific detection per Connectivity Blueprint §4. Hash computation code retained.,
+Drift Detection,Suppress Drift,,A/R,,,I,I,,,Live,SE/ME,,
+Economics,Budget enforcement,I,C,I,,,I,,,Cancelled,SE/ME,Prevent runaway spend,v8→v8.1: AOA cancelled.
+Economics,Cost attribution per agent,I,C,C,,,I,,,Cancelled,SE/ME,Tokens & infra,v8→v8.1: AOA cancelled.
+Engagement Type,"Convergence-Lite (upload-based, no AOD/AAM)",,,C,A/R,,R,demo,A/R,On Docket,ME,Greenfield M&A. GL upload. Farm processes. Maestra runs COFA chain. User story 1,v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Engagement Type,Engagement type switching (UI conditional rendering),,,,C,,,demo,A/R,On Docket,SE/ME,"SE hides Convergence UI elements. ME shows Merge tab, combining, cross-sell. Config-driven",v8.1→v8.2: Convergence provides ME engagement context.
+Engagement Type,Multi-entity engagement (Convergence),,,C,A/R,R,R,demo,A/R,On Docket,ME,"Two entities through same pipeline, tagged by entity_id. COFA unification, combining, full Convergence chain",v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Engagement Type,Single-entity engagement (ContextOS),R,R,R,,R,R,demo,A/R,On Docket,SE,Full pipeline: AOD→AAM→Farm→DCL→NLQ. One entity_id. No Convergence features. Platform orchestrates,"v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Execution,Fabric action routing,I,C,I,,,I,,,Cancelled,SE/ME,Writes routed via AAM,v8→v8.1: AOA cancelled.
+Execution,Transaction execution,I,R,I,,,I,,,Cancelled,SE/ME,Execution via adapters,v8→v8.1: AOA cancelled.
+Export,DCL Pipe Export,,A/R,R,,,I,,,Deprecated,SE/ME,Replaced by mapping.* triples written directly to PG. Kept running until EAV store verified as sole consumer. Removal is cleanup debt.,
+Export,Pipe Snapshot Export,,A/R,,,,I,,,Deprecated,SE/ME,Point-in-time pipe export. Part of old pipe export path. Pipe state is now readable from mapping.* triples in the triple store.,
+Fabric Detection,Connection Routing Logic,A/R,I,,,,,,,Live,SE/ME,Context for AAM Handoff,
+Fabric Detection,Evidence Lead Export to AAM,A/R,I,,,,I,,,Live,SE/ME,Passes connection hints in ConnectionCandidate handoff for AAM to validate against plane crawl,
+Fabric Detection,Evidence Lead Generation (Connection Hints),A/R,C,,,,C,,,Live,SE/ME,"Observation plane signals hinting at asset-to-fabric connections (Network traffic, IdP OAuth, CMDB deps)",
+Fabric Detection,Fabric Plane Identification,A/R,C,,,,,,,Live,SE/ME,Detects the Backbone,
+Fabric Mgmt,Fabric Plane Connection (The Backbone),,A/R,,,,I,,,Live,SE/ME,"Connects to Planes, not Apps",
+Fabric Mgmt,Routing Policy Enforcement,,A/R,,,,I,,,Live,SE/ME,Enforces 'Block Direct Access',
+Findings & Issues,CMDB gap detection,A/R,,,,,C,,,Live,SE/ME,,
+Findings & Issues,Data conflict detection,A/R,,,,,C,,,Live,SE/ME,,
+Findings & Issues,Finance gap detection,A/R,,,,,C,,,Live,SE/ME,,
+Findings & Issues,Identity gap detection,A/R,,,,,C,,,Live,SE/ME,,
+Governance,Auth Policy Enforcement,,A/R,,,,I,,,Live,SE/ME,Plane-level auth validation,
+Governance,PII Redaction (Edge),,A/R,,,,I,,,Live,SE/ME,Redacts before data enters DCL,
+Governance,Rate Limit Enforcement,,A/R,,,,I,,,Live,SE/ME,Plane-level rate limiting,
+Identity & Trust,Agent identity issuance,I,C,I,,,I,,,Cancelled,SE/ME,Separate from service identity,v8→v8.1: AOA cancelled.
+Identity & Trust,Trust tier enforcement,I,C,I,,,I,,,Cancelled,SE/ME,Native vs customer vs third-party,v8→v8.1: AOA cancelled.
+Ingest Pipeline,Drift Detection,,,A/R,,I,C,,,Deprecated,SE/ME,Part of old DCL pipe ingest pipeline (Structure/Dispatch/Content). Triple store integrity is now handled via AAM Layer 1 data drift and DCL per-triple validation gates.,
+Ingest Pipeline,Record Buffering,,,A/R,,I,I,,,Deprecated,SE/ME,Part of old DCL pipe ingest pipeline. Triples are written in atomic batches via execute_values — no record buffering needed.,
+Ingest Pipeline,Self-Healing Repair,,,A/R,,I,C,,,Deprecated,SE/ME,Part of old DCL pipe ingest pipeline. Triple write failures are handled by the triple write ledger (AAM) and atomic batch rollback (PG).,
+Ingest Pipeline,Stream Consumption (Sidecar),,,A/R,,I,C,,,Aspirational,SE/ME,Aspirational — no code implementation,
+Ingest Pipeline,Verification with Farm,,,C,,I,A/R,,,Live,SE/ME,,
+Ingestion,Fabric Pointer Buffering (Zero-Trust),,,A/R,,I,I,,,Deprecated,SE/ME,Part of old DCL pipe ingest path (Structure/Dispatch/Content). Farm/AOD/AAM bypass entirely via execute_values to PG.,
+Ingestion,Ingest Rejection Feedback,,I,A/R,,I,R,,,Deprecated,SE/ME,Farm no longer pushes through DCL ingest endpoint. push_results rejection path is dead. Triple validation (per-triple gates) is the active path.,
+Ingestion,Just-in-Time Payload Fetching,,C,A/R,,I,,,,Deprecated,SE/ME,Part of old pipe ingest model. Triples carry values directly — no deferred fetch.,
+Ingestion,Schema Drift Detection,,C,A/R,,I,C,,,Deprecated,SE/ME,Old pipe-ingest schema drift detection. Field-level drift on incoming records via pipe schemas. Replaced by AAM Layer 1 data drift (concept+property delta on triple store). See Drift Detection category for AAM-owned drift.,
+Ingestion,Schema-on-Write Validation (Ingest Guard),,,A/R,,I,I,,,Deprecated,SE/ME,"Old pipe-schema validation (HTTP 422 NO_MATCHING_PIPE). Replaced by per-triple validation gates on entity_id, concept, confidence_score, etc. See Triple Store → Triple ingest endpoint.",
+Inter-Service Contracts,AAM → DCL Pipe Export Contract,,A/R,R,,,,,,Deprecated,SE/ME,Old pipe export contract. AAM now writes mapping.* triples directly to PG. Contract not exercised. Removal is cleanup debt.,
+Inter-Service Contracts,AAM → Farm Dispatch Contract,,A/R,,,,R,,,Dormant,SE/ME,"Manifest format, auth_token_ref requirement, timeout policy. Dormant in SYNTHETIC mode — dispatch not exercised. Code retained. Superseded by transport shims in PRODUCTION_SE.",
+Inter-Service Contracts,AOD → AAM Handoff Protocol,A/R,R,,,,,,,Live,SE/ME,Underspecified — handoff.py is large module; contract doc needed,
+Inter-Service Contracts,DCL → NLQ Query Contract,,,A/R,,R,,,,Live,SE/ME,"Semantic catalog export, query endpoint, confidence propagation",
+Inter-Service Contracts,Farm → DCL Ingest Contract,,,A/R,,,R,,,Deprecated,SE/ME,Farm writes directly to PG via execute_values. Does not call DCL /ingest endpoint. Live contract is Farm → PG direct (see Triple Store → Triple conversion).,
+Lifecycle,Agent onboarding & versioning,I,I,I,,,I,,,Cancelled,SE/ME,Promotion & rollback,v8→v8.1: AOA cancelled.
+Lifecycle,Zombie agent detection,C,C,C,,,I,,,Cancelled,SE/ME,Sprawl control,v8→v8.1: AOA cancelled.
+Maestra,Constitution loading (Layers 0-4 + Orchestrator),,,,,,,demo,A/R,Live,SE/ME,"Static Markdown files loaded every invocation. Governs voice, boundaries, reasoning rules","v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra,Context assembly (prompt construction),,,C,,,,demo,A/R,Live,SE/ME,Assembles: base constitution + module doc + retrieved triples + engagement state + user message,"v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra,Domain keyword extraction,,,,,,,demo,A/R,Live,SE/ME,Maps user-language terms to concept domain prefixes via domain_keywords.yaml. 19 domains,"v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra,Entity detection (runtime DB query),,,C,,,,demo,A/R,Live,SE/ME,Queries DB for entity_ids at runtime. No hardcoded entity names,"v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra,Module knowledge doc loading (conditional),,,,,,,demo,A/R,Live,SE/ME,"One module doc per request based on module_context. 6 docs: aod, aam, farm, dcl, nlq, convergence","v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra,RACI boundary enforcement (module-scoped actions),,,,,,,demo,A/R,Live,SE/ME,Actions scoped to current module. Knowledge unrestricted. Injected by assembler per §3.1,"v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra,"Scenario variant loading (SE, ME, M&A, Portfolio)",,,,,,,demo,A/R,On Docket,SE/ME,Separate constitution variants per scenario type sharing common base. SE only for demo,"v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra,Streaming response (SSE via AI Gateway),,,,,,,demo,A/R,Live,SE/ME,POST /api/maestra/chat. Reuses existing Claude API integration. Temperature 0.3,"v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra,Triple retrieval via SQL (domain + entity filtering),,,R,,,,demo,A/R,Live,SE/ME,Direct SQL to DCL triple store. Postgres-native filtering. NLQ bypassed for demo,"v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra,Zero-result safeguard,,,,,,,demo,A/R,Live,SE/ME,"When SQL returns zero triples for a matched domain, injects explicit no-data signal. Prevents hallucination. §10.1","v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra COFA,COFA mapping write-back to DCL,,,C,A/R,,,demo,A/R,On Docket,ME,"Write mapping, conflict register, unified structure as triples. DCL validates via COFACompletionGate",v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Maestra COFA,COFA unification (two-CoA mapping),,,,A/R,,,demo,A/R,Live,ME,"Reads two CoAs, builds unified mapping with confidence. Understands economic substance. Stage 5 STRONG PASS",v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Maestra COFA,COFACompletionGate (orphan account validation),,,C,A/R,,,demo,C,Live,ME,DCL validates every source account appears in mapping. Rejects orphans. Self-correcting loop,v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Maestra COFA,Conflict detection and typing,,,,A/R,,,demo,A/R,Live,ME,"Types: recognition timing, measurement basis, classification, scope. Ranked by dollar impact",v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Maestra COFA,Materiality ranking (dollar impact sorting),,,,A/R,,,demo,A/R,Live,ME,Sorts conflicts by estimated annual dollar impact descending. Top 10 typically 90% of total,v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Maestra Engagement,CSAT instrumentation (incentive metric),,,,,,,demo,A/R,On Docket,SE/ME,Requires engagement persistence + feedback mechanism,"v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra Engagement,Engagement state persistence (per-customer),,,,,,,demo,A/R,On Docket,SE/ME,"Structured state in Supabase: steps completed, items flagged, outstanding issues. Survives across sessions","v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra Engagement,Run ledger (per-step audit trail),,,,,,,demo,A/R,On Docket,SE/ME,"engagement_id, step_name, model_version, constitution_version, validation result, timestamp. §3.6","v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra Human Review,Batch approve (human-initiated),,,C,A/R,,,demo,A/R,On Docket,ME,"CFO selects conflicts below self-determined threshold, applies bulk resolution. Audit trail",v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Maestra Human Review,Four-tier confidence classification,,,,,,,demo,A/R,On Docket,SE/ME,Compound confidence broken into components. Below medium: surface with explanation,"v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra Human Review,Resolution audit trail,,,C,A/R,,,demo,A/R,On Docket,ME,"conflict_id, decision, decided_by, reasoning, timestamp, materiality. Goes into Diligence Package",v8.1→v8.2: Convergence carveout complete. ME ownership transferred from DCL to Convergence repo.
+Maestra Human Review,Structured recommendation with evidence,,,,,,,demo,A/R,On Docket,SE/ME,For high-impact decisions. Maestra prepares; human confirms. §3.7,"v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra UI,Chat widget (MaestraChat component),,,,,,,demo,A/R,Live,SE/ME,"React component. Streaming, Markdown rendering, preset suggestions. 65/35 split layout","v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra UI,Global chat store (above router),,,,,,,demo,A/R,Live,SE/ME,MaestraChatProvider wraps entire app. Chat history persists across module navigation,"v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra UI,Module context switching,,,,,,,demo,A/R,Live,SE/ME,"Same widget in NLQ, AAM, DCL, AOD, Farm. Module doc and presets swap; history persists","v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra UI,Module-aware preset suggestions (config-driven),,,,,,,demo,A/R,Live,SE/ME,Presets stored in presets.ts. Per-module config. Adding presets requires no component changes,"v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Maestra UI,Onboarding walkthrough (guided first-time),,,C,,,,demo,A/R,Live,SE/ME,dcl-onboarding-agent. Separate demo scene. Can integrate as Maestra workflow mode,"v8→v8.1: Platform A/R→Console. Platform retains demo-only role, sunset pending."
+Observability,Cost tracking,,,,,,I,,,Cancelled,SE/ME,,v8→v8.1: AOA cancelled.
+Observability,Deterministic replay,I,I,C,,,C,,,Cancelled,SE/ME,Debug & audit,v8→v8.1: AOA cancelled.
+Observability,Execution trace & audit,I,I,C,,,C,,,Cancelled,SE/ME,"Who did what, when",v8→v8.1: AOA cancelled.
+Observability,Performance metrics,,,,,,C,,,Cancelled,SE/ME,,v8→v8.1: AOA cancelled.
+Observability,Vitals aggregation,,,,,,C,,,Cancelled,SE/ME,,v8→v8.1: AOA cancelled.
+Operator UI,AAM Controls Dashboard (composite page),,A/R,,,,,,,On Docket,SE/ME,"Single-page operator view served by AAM. Contains: mode indicator, triple write ledger, triple health, data drift, pipe inventory, connection health placeholder. Per AAM Controls Redesign v3.",
+Operator UI,Display Candidates,,A/R,,,,I,,,Live,SE/ME,,
+Operator UI,Display Drift Events,,A/R,,,,I,,,Live,SE/ME,,
+Operator UI,Display Operating Mode,,A/R,,,,I,,,On Docket,SE/ME,"Shows current AAM operating mode: SYNTHETIC, PRODUCTION_SE, PRODUCTION_ME. Indicates which controls are dormant/superseded and why.",
+Operator UI,Display Pipe Inventory,,A/R,,,,I,,,Live,SE/ME,,
+Operator UI,Display Triple Health,,A/R,,,,I,,,On Docket,SE/ME,"Shows AAM triple count, concept coverage (mapping.* domains present/missing), freshness (color-coded staleness), run-over-run delta.",
+Operator UI,Display Triple Write Ledger,,A/R,,,,I,,,On Docket,SE/ME,"Shows recent triple writes by AAM: run_id, trigger, write_path, concept_prefixes, triple_count, status, duration. Color-coded status. Error detail expandable.",
+Pipe Inference,Create DeclaredPipe,,A/R,,,,I,,,Live,SE/ME,,
+Pipe Inference,DeclaredPipe Creation,,A/R,I,,,I,,,Live,SE/ME,Writes mapping.pipe.* triples to PG via execute_values. Old DCL Pipe Export (POST /api/export) is deprecated.,
+Pipe Inference,Fabric Plane Inference,,A/R,,,,I,,,Live,SE/ME,WHERE pipes live,
+Pipe Inference,Infer Change Semantics,,A/R,,,,I,,,Live,SE/ME,,
+Pipe Inference,Infer Entity Scope,,A/R,,,,I,,,Live,SE/ME,,
+Pipe Inference,Infer Fabric Plane,,A/R,,,,I,,,Live,SE/ME,,
+Pipe Inference,Infer Identity Keys,,A/R,,,,I,,,Live,SE/ME,,
+Pipe Inference,Infer Modality,,A/R,,,,I,,,Live,SE/ME,,
+Pipe Inference,Infer Transport Kind,,A/R,,,,I,,,Live,SE/ME,,
+Pipe Inference,Modality Inference,,A/R,,,,I,,,Live,SE/ME,HOW pipes are accessed,
+Pipe Inference,Transport Kind Inference,,A/R,,,,I,,,Live,SE/ME,"API, EVENT_STREAM, TABLE, FILE",
+Pipe Registry,Compute Schema Hash,,A/R,,,,I,,,Live,SE/ME,,
+Pipe Registry,Serve Pipe Queries,,A/R,,,,I,,,Live,SE/ME,,
+Pipe Registry,Store Declared Pipes,,A/R,,,,I,,,Live,SE/ME,,
+Pipe Registry,Version Pipe Changes,,A/R,,,,I,,,Live,SE/ME,,
+Pipeline Execution,Graph Building,,,A/R,,I,I,,,Live,SE/ME,,
+Pipeline Execution,Narration Broadcasting,,,A/R,,I,I,,,Live,SE/ME,,
+Pipeline Execution,Persona Filtering,,,A/R,,I,I,,,Live,SE/ME,,
+Pipeline Execution,Run Metrics Collection,,,A/R,,I,I,,,Live,SE/ME,,
+Policy & Governance,Agent-level policy evaluation,I,C,C,,,I,,,Cancelled,SE/ME,"Autonomy, scope, cost",v8→v8.1: AOA cancelled.
+Policy & Governance,Autonomy bounds enforcement,I,C,I,,,I,,,Cancelled,SE/ME,Guardrails,v8→v8.1: AOA cancelled.
+Policy & Governance,HITL escalation,I,I,C,,,I,,,Cancelled,SE/ME,Confidence-based approval,v8→v8.1: AOA cancelled.
+Query Cache,Cache Learning (AI Mode),,,,,A/R,I,,,Live,SE/ME,Stores successful parses,
+Query Cache,LLM Call Tracking,,,,,A/R,I,,,Live,SE/ME,Per-session counts with Supabase,
+Query Cache,Query Cache Lookup,,,,,A/R,I,,,Live,SE/ME,EXACT/HIGH/MEDIUM thresholds,
+Query Cache,Query Learning Log,,,,,A/R,I,,,Live,SE/ME,Logs all queries with success/failure,
+Query Cache,Semantic Query Cache (Pinecone),,,,,A/R,I,,,Live,SE/ME,Vector similarity for query matching,
+Query Cache,Static/AI Mode Routing,,,,,A/R,I,,,Live,SE/ME,Mode toggle for speed vs learning,
+Query Engine,Answer Assembly & Formatting,,,,,A/R,I,,,Live,SE/ME,Structures response for consumers,
+Query Engine,Confidence Scoring,,,,,A/R,C,,,Live,SE/ME,"Bounded [0,1] with weighted factors",
+Query Engine,Grounding & Citation,,,,,A/R,I,,,Live,SE/ME,Attaches evidence to answers,
+Query Engine,"Intent Classification (POINT, COMPARISON, TREND, AGGREGATION, BREAKDOWN)",,,,,A/R,I,,,Live,SE/ME,5 intent types from natural language,
+Query Engine,LLM-Based Query Parsing,,,,,A/R,I,,,Live,SE/ME,Claude API extracts structured JSON,
+Query Engine,Metric/Dimension Extraction,,,,,A/R,I,,,Live,SE/ME,LLM extracts + synonym normalization,
+Query Engine,Pattern-Based Pre-parsing,,,,,A/R,I,,,Live,SE/ME,Regex before LLM for dashboards/viz,
+Query Engine,"Query Execution (Aggregation, Filtering)",,,R,,A,I,,,Live,SE/ME,"NLQ orchestrates, DCL provides data",
+Query Engine,Query Planning & Decomposition,,,,,A/R,I,,,Live,SE/ME,Breaks complex questions into steps,
+Query Engine,"Temporal Resolution (last year, Q3, etc.)",,,,,A/R,I,,,Live,SE/ME,Interprets time references,
+Reconciliation,Pipeline execution,C,,,,,A/R,,,Live,SE/ME,,
+Response Generation,Ambiguity Detection,,,,,A/R,I,,,Live,SE/ME,"Pattern-based, returns prompts",
+Response Generation,Graceful Fallbacks,,,,,A/R,I,,,Live,SE/ME,Never show raw errors,
+Response Generation,Off-Topic Handling,,,,,A/R,I,,,Live,SE/ME,"Easter eggs, polite redirects",
+Response Generation,Synonym Normalization,,,,,A/R,I,,,Live,SE/ME,100+ synonyms → canonical names,
+Response Generation,Text Response Formatting,,,,,A/R,I,,,Live,SE/ME,"Value, unit, period, confidence",
+Runner Dispatch,Content Push to DCL,,I,R,,I,A/R,,,Deprecated,SE/ME,Farm no longer pushes extracted data to DCL /ingest endpoint. Farm writes triples directly to PG.,
+Runner Dispatch,Manifest Dispatch to Farm,,A/R,,,I,R,,,Dormant,SE/ME,"Dormant in SYNTHETIC mode per AAM controls redesign. Code retained. Superseded by transport shims + flow controller in PRODUCTION_SE (Connectivity Architecture Blueprint WP-2, WP-8).",
+Runner Dispatch,Runner Execution (Data Extraction),,I,,,I,A/R,,,Dormant,SE/ME,"In SE SYNTHETIC mode, Farm generates from YAML configs — no manifest-driven extraction. Code retained for PRODUCTION_SE where transport shims handle extraction (Blueprint WP-2).",
+Runtime,Task Queue Management,,,,,,I,,A/R,Live,SE/ME,Moved from FARM (Ops) | AOA owns orchestration logic; Farm owns infra — see Scaling Infrastructure for Farm boundary,v8→v8.1: AOA→Console (orchestration). AOA cancelled.
+Runtime,Worker pool management,I,I,I,,,I,,,Live,SE/ME,Scalable execution | AOA owns worker dispatch logic; Farm owns worker pool infra — see Scaling Infrastructure,v8→v8.1: AOA cancelled. Farm retains infra.
+Scaling Infrastructure,Auto-recovery,,,,,,A/R,,,Live,SE/ME,,
+Scaling Infrastructure,Load balancing,,,,,,A/R,,,Live,SE/ME,,
+Scaling Infrastructure,Task queue management,,,,,,A/R,,,Live,SE/ME,Farm owns infra; AOA owns orchestration logic — see Runtime for AOA-managed scheduling,
+Scaling Infrastructure,Worker pool orchestration,,,,,,A/R,,,Live,SE/ME,Farm owns worker pool infra; AOA owns dispatch logic — see Runtime,
+Scheduling,Cron-based scheduling,,,,,,I,,A/R,On Docket,SE/ME,,v8→v8.1: AOA→Console. AOA cancelled.
+Scheduling,Event-driven triggers,,,,,,R,,A/R,On Docket,SE/ME,,v8→v8.1: AOA→Console. AOA cancelled.
+Scheduling,Webhook triggers,,,,,,R,,A,On Docket,SE/ME,,v8→v8.1: AOA→Console. AOA cancelled.
+Schema Ingestion,Demo Schema Loading,,,A/R,,I,I,,,Deprecated,SE/ME,fact_base.json and CSV demo schemas removed. Data enters via Farm → triple conversion → PG,
+Schema Ingestion,Farm Schema Fetching,,,A/R,,I,C,,,Live,SE/ME,From FARM_API_URL,
+Schema Ingestion,Stream Source Loading,,,A/R,,I,C,,,Live,SE/ME,Real-time sources from DB,
+Security,Context Sanitization,,,,,,C,,,Cancelled,SE/ME,Security layer before Agent Logic,v8→v8.1: AOA cancelled.
+Self-Healing,Connection/Fabric Drift Detection,,A/R,,,,I,,,Stub,SE/ME,Detects lost connectivity to Plane,
+Self-Healing,Consumer Lag Detection,,A/R,,,,I,,,Stub,SE/ME,Event Bus specific drift,
+Self-Healing,Execute Self-Heal (Restart Consumers),,A/R,,,,I,,,Stub,SE/ME,Restarts Consumers/Reconnects,
+Self-Healing,Heal History Logging,,A/R,,,,I,,,Stub,SE/ME,Audit trail of repairs,
+Self-Healing,Warehouse Suspend Detection,,A/R,,,,I,,,Stub,SE/ME,Warehouse specific drift,
+Semantic Catalog,Alias Resolution,,,A/R,,C,I,,,Live,SE/ME,"'AR' → 'ar', 'attainment' → 'quota_attainment'",
+Semantic Catalog,Dimension Definitions,,,A/R,,C,I,,,Live,SE/ME,"107 concepts across 9 enterprise domains (Business, Pipeline, Ops, Tech, HR, Finance, Sales, Product, Support)",
+Semantic Catalog,Metric Definitions,,,A/R,,C,I,,,Live,SE/ME,325 valid concept-dimension pairings across CFO/CRO/COO/CTO/CHRO persona packs,
+Semantic Catalog,Metric-Dimension Validation,,,A/R,,C,I,,,Live,SE/ME,Validates which dimensions apply to which concepts — 325 valid pairings enforced,
+Semantic Catalog,Semantic Export API,,,A/R,,C,I,,,Live,SE/ME,Full catalog for NLQ consumption,
+Semantic Intelligence,Concept Registry Management,,,A/R,,I,I,,,Live,SE/ME,107 concept nodes across 9 enterprise domains,
+Semantic Intelligence,Concept-Dimension Pairing Validation,,,A/R,,I,,,,Live,SE/ME,325 valid pairings — enforced at graph build and query time,
+Semantic Intelligence,Confidence Scoring,,,A/R,,C,,,,Live,SE/ME,0.0-1.0 confidence on concept-dimension mappings; propagated to NLQ answers,
+Semantic Intelligence,Inference Layer (Graph-based Discovery),,,A/R,,C,I,,,Live,SE/ME,Approach 5 Layer 2 — graph traversal discovers implicit relationships between concepts,
+Semantic Intelligence,Ontology Versioning,,,A/R,,I,,,,On Docket,SE/ME,Track ontology changes over time; not yet implemented,
+Semantic Intelligence,Runtime Resolution (LLM Pathfinding),,,A/R,,C,I,,,Live,SE/ME,Approach 5 Layer 3 — LLM resolves ambiguous queries through semantic graph at query time,
+Semantic Intelligence,Semantic Graph Build & Rebuild,,,A/R,,I,I,,,Live,SE/ME,POST /api/dcl/run — auto-trigger on ingest is On Docket (currently manual),
+Semantic Intelligence,Skeleton Layer (Curated Ontology),,,A/R,,C,I,,,Live,SE/ME,"Approach 5 Layer 1 — hand-curated concept-dimension pairings, authoritative",
+Semantic Mapping,Batch Mapping API,,,A/R,,I,I,,,Live,SE/ME,Bulk semantic mapping endpoint,
+Semantic Mapping,Heuristic Mapping (Dev Mode),,,A/R,,I,I,,,Live,SE/ME,Pattern matching ~1s,
+Semantic Mapping,LLM Refinement (Prod Mode),,,A/R,,I,I,,,Live,SE/ME,OpenAI + Pinecone RAG ~5s,
+Semantic Mapping,Mapping Persistence,,,A/R,,I,I,,,Live,SE/ME,PostgreSQL storage,
+Session Management,Row-Level Security,,,,,A/R,I,,,Live,SE/ME,Supabase RLS policies,
+Session Management,Session State (In-Memory),,,,,A/R,I,,,Live,SE/ME,"Dashboard state, 2hr TTL",
+Session Management,Session Stats Persistence,,,,,A/R,I,,,Live,SE/ME,Supabase storage,
+Session Management,Tenant Isolation,,,,,A/R,I,,,Live,SE/ME,tenant_id on all DB queries,
+SOR Identification,Data domain classification,A/R,,,,,C,,,Live,SE/ME,,
+SOR Identification,System of Record scoring,A/R,,,,,C,,,Live,SE/ME,,
+Source Normalization,Alias Resolution,,,A/R,,I,C,,,Live,SE/ME,,
+Source Normalization,Discovery Mode (New Sources),,,A/R,,I,C,,,Live,SE/ME,,
+Source Normalization,Pattern Matching,,,A/R,,I,I,,,Live,SE/ME,,
+Source Normalization,Registry Loading,,,A/R,,I,C,,,Live,SE/ME,,
+Tee Request Management,Approve/Reject Tee,,A/R,,,,I,,,Live,SE/ME,,
+Tee Request Management,Create Tee Request,,A/R,,,,I,,,Live,SE/ME,,
+Tee Request Management,Track Tee Status,,A/R,,,,I,,,Live,SE/ME,,
+Telemetry,Metrics Collection,,,A/R,,,I,,,Live,SE/ME,,
+Telemetry,Telemetry Broadcasting,,,A/R,,,I,,,Live,SE/ME,,
+Telemetry,TPS/Quality Calculation,,,A/R,,,C,,,Live,SE/ME,,
+Triage & Prioritization,Asset prioritization scoring,A/R,,,,,,,,Live,SE/ME,,
+Triage & Prioritization,Provisioning status assignment,A/R,,,,,,,,Live,SE/ME,,
+Triple Store,Domain-based organization (concept prefix),,,A/R,R,,,demo,C,Live,SE/ME,19 verified domains. First segment of concept name. Used for retrieval filtering,v8.1→v8.2: Convergence reads DCL-owned tables (SELECT only).
+Triple Store,Provenance tracking (per-triple),,,A/R,R,,C,,,Live,SE/ME,"source_system, source_field, confidence_score, confidence_tier, pipe_id, run_id, created_at",v8.1→v8.2: Convergence reads DCL-owned tables (SELECT only).
+Triple Store,"Semantic triple storage (entity, concept, property, value, period)",,,A/R,R,C,C,demo,C,Live,SE/ME,"All data as triples in Postgres. Dot-separated concept hierarchy. 9,350+ base + 124K BlueWave HR + 1,176 COFA",v8.1→v8.2: Convergence reads DCL-owned tables (SELECT only).
+Triple Store,Triple conversion (AAM output → PG),,A/R,C,,,,,,Live,SE/ME,"AAM converts pipe inference output (DeclaredPipes, connections, drift events, fabric planes) to mapping.* triples. Writes to PG via execute_values. Per SE Triples Conversion Build Plan.",
+Triple Store,Triple conversion (AOD output → PG),A/R,,C,,,,,,Live,SE/ME,"AOD converts discovery scan output (assets, governance, SOR scores, findings, fabric planes) to discovery.* triples. Writes to PG via execute_values. Per SE Triples Conversion Build Plan.",
+Triple Store,Triple conversion (Farm output → PG),,,C,C,,A/R,,,Live,SE/ME,Farm generates model data → converts to triples → writes to PG direct. Bypasses old DCL ingest,
+Triple Store,Triple ingest endpoint (POST /api/dcl/ingest-triples),,,A/R,R,,C,,,Live,SE/ME,Validates and writes triples to PG. Used for COFA write-back path,v8.1→v8.2: Convergence reads DCL-owned tables (SELECT only).
+Triple Store,V2 engine stack (8 engines on triple store),,,A/R,R,C,,,,Live,SE/ME,8 v2 engines reading from semantic triple store. Old JSON engines present via compat layer,v8.1→v8.2: Convergence reads DCL-owned tables (SELECT only).
+Trust & Security,Injection defense,,,,,,I,,,Cancelled,SE/ME,,v8→v8.1: AOA cancelled.
+Trust & Security,PII detection & redaction,,,,,,I,,,Cancelled,SE/ME,,v8→v8.1: AOA cancelled.
+Trust & Security,Policy enforcement,,,,,,C,,,Cancelled,SE/ME,,v8→v8.1: AOA cancelled.
+Verification,Accuracy Measurement,C,C,,,,A/R,,,Live,SE/ME,Consolidated from Truth/Reconciliation per G2,
+Verification,End-to-End Injection Tests,,I,I,,,A/R,,,Live,SE/ME,"Farm pushes to DCL, verifies at DCL",
+Verification,Generate Test Data,,I,,,,A/R,,,Live,SE/ME,,
+Verification,Ground Truth Validation,C,C,C,,,A/R,,,Live,SE/ME,FARM is Test Oracle,
+Verification,Provide Source of Truth,,C,,,,A/R,,,Live,SE/ME,,
+Verification,Verify Against Truth,,C,,,,A/R,,,Live,SE/ME,,
+Visualization,4-Layer Sankey Graph,,,A/R,,,I,,,Live,SE/ME,Pipeline→Sources→Ontology→Personas,
+Visualization,Chart Generation,,,,,A/R,I,,,Live,SE/ME,"Line, bar, area, pie, stacked, waterfall",
+Visualization,Dashboard Generation,,,,,A/R,I,,,Live,SE/ME,Dynamic widget schemas from intent,
+Visualization,Dashboard Refinement Actions,,,,,A/R,I,,,Live,SE/ME,"'Add a chart', 'Show by region'",
+Visualization,Galaxy Visualization,,,,,A/R,I,,,Live,SE/ME,Node-based with related metrics,
+Visualization,Monitor Dashboard,,,A/R,,,I,,,Live,SE/ME,Collapsible right panel,
+Visualization,Persona-Based Filtering,,,A/R,,,I,,,Live,SE/ME,CFO/CRO/COO/CTO buttons,
+Visualization,Telemetry Ribbon,,,A/R,,,I,,,Live,SE/ME,,
+Visualization,Terminal Narration,,,A/R,,,I,,,Live,SE/ME,Real-time processing log,
+Visualization,Topology API Exposure,,I,A/R,,,,,,Live,SE/ME,Backend for Graph UI,
+Workflow Orchestration,Run cancellation,,,,,,R,,,Live,SE/ME,,
+Workflow Orchestration,Run creation & tracking,,,,,,R,,A/R,Live,SE/ME,,v8→v8.1: AOA→Console (orchestration). AOA cancelled.
+Workflow Orchestration,Step sequencing,,,,,,C,,A/R,Live,SE/ME,,v8→v8.1: AOA→Console (orchestration). AOA cancelled.
+,,,,,,,,,,,,,
+,,,,,,,,,,,,,
+Console,Cron scheduler (background detection cycles),,,,,,,,A/R,Live,SE/ME/MA,asyncio background tasks. Per-module schedules. Configurable via console_config.,v8.1 NEW. Console-owned scheduling.
+Console,Change detection orchestration,,,,,,,,A/R,Live,SE/ME,"Calls AOD/AAM/DCL APIs, diffs against snapshots, writes change_events.",v8.1 NEW.
+Console,Change feed API (GET /api/changes),,,,,,,,A/R,Live,SE/ME,Unified time-ordered change events. Severity and module filtering. Acknowledge.,v8.1 NEW.
+Console,Health aggregation (GET /api/health),,,,,,,,A/R,Live,SE/ME/MA,Parallel health checks against all 5 modules. 10s timeout. Composite status.,v8.1 NEW.
+Console,Pipeline orchestration (POST /api/pipeline/run),,,,,,,,A/R,Live,SE/ME/MA,Sequential HTTP calls: AOD→AAM→Farm→DCL. Step timing. Run history. Replaces Platform console.,v8.1 NEW. Replaces Platform.
+Console,Module proxy routes (GET /api/proxy/{module}/*),,,,,,,,A/R,Live,SE/ME/MA,Forwards to module APIs. Solves CORS.,v8.1 NEW.
+Console,Upload/parser (M&A intake),,,,,,,,A/R,On Docket,MA,"GL+CoA upload, parse, validate, convert to triples. Stub parser; real parser separate.",v8.1 NEW.
+Console,Task queue (HITL execution),,,,,,,,A/R,On Docket,SE/ME/MA,"M proposes, operator approves, CC executes. Lifecycle: pending→approved→executing→done/failed.",v8.1 NEW.
+Console,Engagement state management,,,,,,,,A/R,Live,SE/ME/MA,"Per-deal persistent state. Directional: acquirer + target. Lifecycle, deliverables.",v8.1 NEW.
+Console,Deal cockpit (M&A command center),,,,,,,,A/R,Live,MA,"Lifecycle, conflict register, deliverables (10 items), combining preview, hard gates.",v8.1 NEW.
+Console,Constitution editor,,,,,,,,A/R,On Docket,SE/ME/MA,Editable layers L0-L4 + Orchestrator. Tool registry. Module docs. Version history.,v8.1 NEW.
+Console,Instrumentation (M run ledger + cost),,,,,,,,A/R,Live,SE/ME/MA,"Run durations, token counts, cost per run and per engagement.",v8.1 NEW.
+Console,E2e demo orchestration,,,,,,,,A/R,Live,SE/ME/MA,SE and ME demos from Console Pipeline screen. Replaces Platform.,v8.1 NEW. Replaces Platform.
+Console,Narrative editor (demo script),,,,,,,,A/R,On Docket,SE/ME/MA,YAML editor for tour steps/messages/timing. Reconstructed from Platform.,v8.1 NEW. Replaces Platform.
+Console,Entity switcher (top bar),,,,,,,,A/R,Live,ME/MA,Entity or combined view. Hidden for SE. Passes context to iframed apps.,v8.1 NEW.
+Console,Mode switching (SE/ME/MA + persona),,,,,,,,A/R,On Docket,SE/ME/MA,Future: product mode + persona determine nav. Not implemented in dev.,v8.1 NEW.
+Console,Inspect surface (native DCL views),,,C,,,,,A/R,Live,SE/ME/MA,"Coverage, sources, COFA merge native. Lineage iframes DCL.",v8.1 NEW.
+Console,Dashboards/Reports (iframe NLQ),,,,,C,,,A/R,Live,SE/ME/MA,Iframe NLQ for dashboards and reports. Entity context via query param.,v8.1 NEW.
+Convergence Service,"Convergence backend (FastAPI, port 8010)",,,,A/R,,,,,Live,ME/MA,"Standalone service carved from DCL. Owns all ME engines, engagement lifecycle, resolution workspaces.",v8.2 NEW. Convergence carveout.
+Convergence Service,"Convergence frontend (React, port 3010)",,,,A/R,,,,,Live,ME/MA,MergePanel and ME-specific UI. Standalone from DCL frontend.,v8.2 NEW. Convergence carveout.
+Convergence Service,Engagement API (GET /api/convergence/engagement/active),,,,A/R,,,,,Live,ME/MA,HTTP endpoint called by DCL maestra.py for engagement context. Replaces direct import.,v8.2 NEW. Convergence carveout.
+Convergence Service,Schema contract (SCHEMA_CONTRACT.md),,,A/R,R,,,,,Live,SE/ME,DCL owns semantic_triples schema. Convergence reads. Breaking changes require coordination.,v8.2 NEW. Convergence carveout.
+Convergence Service,Direct PG reads (SELECT only on DCL tables),,,,A/R,,,,,Live,ME/MA,"Convergence reads semantic_triples, dimension_values_v2, tenant_runs directly. No HTTP intermediary for report queries.",v8.2 NEW. Convergence carveout.
+Convergence Service,Triple writes via DCL HTTP only,,,A/R,C,,,,,Live,ME/MA,All Convergence triple writes go through POST /api/dcl/ingest-triples. Never direct INSERT.,v8.2 NEW. Convergence carveout.
+Pipeline Identity,Namespaced stage identifiers (run_id banned),,,,R,,,,A/R,Live,SE/ME,"run_id banned from all response payloads. Each stage uses namespaced ID (farm_manifest_id, aod_discovery_id, etc). Per pipeline_identity_architecture_v1.",v8.2 NEW. Identity architecture.
+Pipeline Identity,Identity pair on every stage response (tenant_id + entity_id),,,,R,,,,A/R,Live,SE/ME,"Every stage response carries tenant_id (UUID, never displayed) + entity_id (business key, always displayed). 422 on missing.",v8.2 NEW. Identity architecture.
+Pipeline Identity,Operator-facing run_name,,,,,,,,A/R,Live,SE/ME,SE: {entity_id}-{short_hash}. ME: {engagement_short_name}-{short_hash}. Visible on all operator surfaces.,v8.2 NEW. Identity architecture.
+Pipeline Identity,Dropdown-only operator input (no typed IDs),,,,,,,,A/R,Live,SE/ME,Operators never type or paste an ID. All selection via dropdown populated from what exists.,v8.2 NEW. Identity architecture.
+Pipeline Identity,"Expansion fields (source_rows, triples_written, expansion_factor)",,,C,C,,C,,A/R,Live,SE/ME,Every ingest response includes row expansion metrics. Transparency requirement.,v8.2 NEW. Identity architecture.
+Maestra Supervised Execution,Four-tier classification (Auto/Validate/Plan/Escalate),,,,,,,demo,A/R,Live,SE/ME,maestra_plans table (19 columns). Classification engine in Platform. 146+ tests zero regressions.,v8.2 NEW. Maestra Phase 1.
+Maestra Supervised Execution,"Operator feed (card-based, tier badges)",,,,,,,,A/R,Live,SE/ME,Console operator feed with 30-second polling. Card-based UI with tier badges.,v8.2 NEW. Maestra Phase 1.
+Maestra Supervised Execution,tenant_preferences table (12-key registry),,,,,,,,A/R,On Docket,SE/ME,CHECK constraint enforcing 12-key registry. Phase 2 in progress.,v8.2 NEW. Maestra Phase 2.
+Triple Store,Atomic run_id swap (tenant_runs pointer table),,,A/R,R,,,,,Live,SE/ME,O(1) UPSERT replaces O(n) bulk UPDATE. Post-swap purge step deletes stale rows.,v8.2 NEW. DCL identity hardening.

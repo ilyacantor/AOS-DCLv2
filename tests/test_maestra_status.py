@@ -3,7 +3,7 @@
 Maestra Status Endpoint — DCL Test Suite
 
 Tests GET /maestra/status per session1_module_status.md spec.
-All rules from tests/HARNESS_RULES.md apply.
+All rules from CLAUDE.md apply.
 """
 
 import os

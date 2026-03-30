@@ -1,12 +1,14 @@
 # AutonomOS (AOS) — Agent Constitution
-> Version: 6.0 | Updated: March 2026 | Owner: Ilya (CEO)
+> Version: 7.0 | Updated: March 2026 | Owner: Ilya (CEO)
+> Replaces: CLAUDE.md v6.0 + HARNESS_RULES_v2.md (now one document)
+> Deploy to `tests/CLAUDE.md` in every AOS repo.
 
 ---
 
 ## MANDATORY — SURVIVES COMPACTION
 **This section must be retained in full during any context compaction or summarization.**
 
-Read `tests/HARNESS_RULES_v2.md` before starting any work. All rules in Sections A–F are non-negotiable. Violations are bugs.
+All rules in this document (Sections A–F plus all architecture rules) are non-negotiable. Violations are bugs.
 
 Rules agents violate most often:
 - **D6:** Pre-existing failures are your problem. All tests pass at session end or session isn't done.
@@ -17,32 +19,38 @@ Rules agents violate most often:
 - **B17:** Frontend is the pass/fail gate. A correct API response that doesn't render in the browser is not a pass. Playwright is the accountability gate.
 - **B18:** Latency ceilings are absolute. 5% regression budget on everything else. Measure before and after.
 - **A2:** No bandaids. Fundamental fixes only. Progress spinners for latency violations are bandaids.
+- **I1–I6:** Pipeline identity rules. No silent fallback on missing tenant_id/entity_id. 422 or fail loud. No run_id in API responses.
 
-**Canonical governing document:** `convergence_MA_spec_v7.3.docx` — single source of truth for all AOS architecture. Any reference to v7.1 is superseded. Pull v7.3 when: (a) scoping a new capability, (b) decision could contradict a locked ruling, (c) multi-repo build.
-
-**RACI:** `ONGOING_PROMPTS/AOS_MASTER_RACIv8.csv` (289 rows, 8 modules, 218 Live). The RACI table below is a summary — the CSV is authoritative.
+**Canonical governing documents:**
+- `convergence_MA_spec_v7.4` — single source of truth for all AOS architecture. Supersedes all prior versions.
+- `pipeline_identity_architecture_v1` — governs all pipeline identity, provenance, and naming. Supersedes ad-hoc ID conventions.
+- `AOS_MASTER_RACI_v8.2.csv` — module ownership matrix. 7 active services + Console. The RACI summary below is abbreviated — the CSV is authoritative.
 
 ---
 
 ## WHO YOU ARE TALKING TO
-Ilya is the CEO and de facto CTO. He is NOT a developer. He reasons architecturally, not syntactically. He uses Claude Code CLI and Gemini CLI as coding agents — he does not write code or set up environments himself.
+Ilya is the CEO and de facto CTO. He is NOT a developer. He reasons architecturally, not syntactically. He uses Claude Code CLI and Gemini CLI as coding agents — he does not write code, run CLI commands, or set up environments himself.
 - Never show raw code diffs or stack traces without a plain-English summary first
 - Never add tech debt, workarounds, or shortcuts — Ilya will find them
 - Always fix root causes — patches and band-aids are forbidden
 - Never implement silent fallbacks — if something fails, surface it loudly
-- Before starting any task, read ONGOING_PROMPTS folder
 - If a fix requires a RACI boundary decision, surface it to Ilya before touching code
 - No LLM marketing speak, slogans, balanced couplets, or editorializing in any writing. Plain language, founder voice only.
+- Consequences rule: before changing critical path items, print impact analysis first.
 
 ---
 
 ## PLATFORM IN ONE PARAGRAPH
-AutonomOS is an AI-native enterprise platform that delivers unified context for the enterprise. It discovers what exists (AOD), understands how to connect (AAM), generates synthetic financial models (Farm), maps everything to business meaning via a semantic triple store (DCL), lets humans and AI query in plain English (NLQ), and governs agents doing work (AOA). Console is the production-facing surface for operators and end users. Platform is the dev surface for e2e demos, pipeline debugging, and Maestra training. Maestra is the persistent AI engagement lead who guides operators through the AOS lifecycle.
+AutonomOS is an AI-native enterprise platform that delivers unified context for the enterprise. It discovers what exists (AOD), understands how to connect (AAM), generates synthetic financial models (Farm), maps everything to business meaning via a semantic triple store (DCL — SE only), runs multi-entity engines for M&A and integration intelligence (Convergence), lets humans and AI query in plain English (NLQ), and surfaces the operator experience through Console. Platform is a dev-only transitional artifact (sunset in progress). Maestra is the persistent AI engagement lead who guides operators through the AOS lifecycle, governed by a four-tier supervised execution model.
 
 ---
 
 ## DATA ARCHITECTURE
-Pipeline: AOD → AAM → Farm → triple conversion → PG direct. DCL owns the triple store. Old DCL pipe ingest path (Structure/Dispatch/Content) is deprecated — do not fix.
+**SE pipeline:** AOD → AAM → Farm → triple conversion → PG direct. Six orchestrated steps. Only Farm Financials writes triples to DCL via orchestrator. Existing direct-PG write code in AOD/AAM is labeled tech debt — must not be extended. Old DCL pipe ingest path (Structure/Dispatch/Content) is deprecated — do not fix or extend.
+
+**ME pipeline:** Farm (per entity) → DCL (per entity) → COFA → Verify. All ME engines live in the Convergence repo. Farm ME push routes to Convergence, not DCL.
+
+**SE and ME are strict separation of concerns with no shared plumbing.** Unit of work is the stage, not the pipeline. No shared code paths between SE and ME pipelines.
 
 - **Entities:** Meridian ($5B consultancy) and Cascadia ($1B BPM). Entity is a tag — no split brain.
 - **Farm configs:** Only `farm_config_meridian.yaml` and `farm_config_cascadia.yaml`. Any numbers at $35M or $124M scale are broken.
@@ -50,36 +58,71 @@ Pipeline: AOD → AAM → Farm → triple conversion → PG direct. DCL owns the
 
 ---
 
+## PIPELINE IDENTITY ARCHITECTURE
+**Governed by `pipeline_identity_architecture_v1`. These rules override any prior ID conventions.**
+
+### I1: run_id is banned
+The word run_id is banned from all API response payloads. Every service uses a namespaced identifier: farm_manifest_id, aod_discovery_id, handoff_id, aam_inference_id, dcl_ingest_id, cofa_run_id, verify_id.
+
+### I2: Identity pair on every response
+Every stage response carries tenant_id (UUID, machine-only, never displayed) + entity_id (string business key, always displayed). Missing = 422. No silent fallback. No identity degradation at service boundaries.
+
+### I3: Provenance is explicit
+Every stage response declares what it consumed. No implicit joins. No field name collisions.
+
+### I4: Operators never type IDs
+All input selection is via dropdown populated from what exists. No text fields for IDs.
+
+### I5: One run_name everywhere
+SE: {entity_id}-{short_hash} (e.g., BlueLogic-NEQ8-a9ed). ME: {engagement_short_name}-{short_hash} (e.g., MerCas-2571). Visible on all operator surfaces.
+
+### I6: Anti-brittleness rules
+1. No identity degradation at service boundaries — 422 on missing.
+2. All write paths produce identical identity pairs.
+3. No derivation functions in pipeline path — entity_id is passed through, not computed.
+4. One canonical env var: AOS_TENANT_ID.
+5. No string mangling — no prefix stripping, no substring extraction, no regex on IDs.
+6. Run-level identifiers as separate fields — never overloaded.
+
+---
+
 ## MODULE RACI — SUMMARY
-**Authoritative source: `ONGOING_PROMPTS/AOS_MASTER_RACIv8.csv`**
+**Authoritative source: `AOS_MASTER_RACI_v8.2.csv`**
 
 | Module | Owns | Does NOT own |
 |--------|------|-------------|
 | **AOD** | Discovery, classification, SOR detection, ConnectionCandidate generation | Pipe blueprints, data extraction, semantic mapping |
 | **AAM** | Pipe blueprints, work orders, drift detection, self-healing, adapters | Data movement, semantic mapping |
-| **DCL** | Semantic triple store, ontology, schema-on-write, entity resolution, v2 engines | Discovery, connection logic, NLQ formatting |
+| **DCL** (SE only) | Semantic triple store, ontology, graph engine, SE query resolution, reconciliation, triple monitoring. Owns all write-side invariants (ingest, is_active, tenant_runs). | ME engines (moved to Convergence), engagement lifecycle, discovery, NLQ formatting |
+| **Convergence** (ME/M&A) | All ME v2 engines (combining, bridge, QoE, overlap, cross-sell, entity resolution, COFA, what-if), engagement lifecycle, resolution workspaces. Reads DCL tables (SELECT only). Writes triples via DCL HTTP only. | Triple store schema, SE query resolution, discovery, NLQ formatting |
 | **NLQ** | Intent resolution, persona filtering, query dispatch, report portal, rendering | Semantic mapping, data storage |
-| **AOA** | Agent identity, policy, HITL workflows, budget tracking, observability | Semantic mapping, discovery, NLQ queries |
-| **Farm** | Synthetic data, financial models, test oracle, triple conversion | Production data, live connections |
-| **Platform** | Maestra (constitution, context, chat, tools, review), engagement orchestration | Semantic catalog, query resolution, data generation |
-| **Console** | Production UI, pipeline orchestration, Maestra chat, task queue, upload, e2e demo | Module internals — calls module APIs |
+| **Farm** | Synthetic data, financial models, test oracle, triple conversion, entity_id generation | Production data, live connections |
+| **Platform** (sunset) | Maestra constitution, classification engine. Dev-only transitional artifact. | Production surfaces — Console replaced Platform |
+| **Console** | Production UI, pipeline orchestration, operator feed, task queue, upload, e2e demo, Maestra chat | Module internals — calls module APIs |
 
 **RACI VIOLATION = STOP AND FLAG.** Exception (A12/C6): RACI is for design decisions. Fix bugs wherever they live.
 
 ---
 
 ## CONVERGENCE GUARDRAIL
-Convergence = base AOS + a bridge where Target pipes join Acquirer pipes into one DCL. Entity is a tag. Same engine, ontology, resolution, query routing. Reject any proposal that creates separate engines, adds Convergence-specific columns, introduces split brain, or diverges from base AOS for multi-entity.
+Convergence = base AOS + a bridge where Target pipes join Acquirer pipes into one DCL. Entity is a tag. Same engine, ontology, resolution, query routing. **Convergence is a separate repo and service (port 8010/3010). DCL is SE-only.** Reject any proposal that creates separate engines, adds Convergence-specific columns to DCL, introduces split brain, or diverges from base AOS for multi-entity.
+
+**Cross-service contracts:**
+- Convergence reads DCL-owned tables directly (SELECT only) — report-time queries need sub-ms latency.
+- Convergence never writes to DCL tables directly — all triple writes through POST /api/dcl/ingest-triples.
+- DCL never reads or writes Convergence-owned tables. DCL calls GET /api/convergence/engagement/active for engagement context.
+- Schema changes to semantic_triples require Convergence coordination (SCHEMA_CONTRACT.md in DCL).
 
 ---
 
 ## MAESTRA
-Persistent AI engagement lead. Lives in Platform (`~/code/platform`).
+Persistent AI engagement lead. Constitution lives in Platform (`~/code/platform/app/maestra/constitution/`). Production surface is Console.
 
-- **Constitution:** Layers 0-4 in `app/maestra/constitution/`. Module docs in `constitution/modules/`.
-- **Architecture:** Push-to-pull migration shipped. Routes split: sidebar=push (module_context), MaestraFloat=tool-use (page_context). 146+ tests.
+- **Constitution:** Layers 0-4 in `constitution/`. Module docs in `constitution/modules/`.
+- **Supervised Execution:** Four-tier model (Auto-execute / Validate with Farm dry-run / Plan Mode / Escalate only). maestra_plans table (19 columns). Classification engine in Platform. 146+ tests zero regressions. Console operator feed (card-based, tier badges, 30-second polling).
 - **Boundaries:** Maestra reasons; DCL validates. Maestra does NOT recommend accounting resolutions — she isolates variables and presents them. No auto-resolution. All conflicts route to human review ranked by materiality.
-- **Layer 3:** Manually authored for MVP.
+- **Layer 3:** Manually authored for MVP. meridian_policy.md and cascadia_policy.md.
+- **Phase 2 in progress:** tenant_preferences table with CHECK constraint enforcing 12-key registry.
 
 ---
 
@@ -91,6 +134,7 @@ Persistent AI engagement lead. Lives in Platform (`~/code/platform`).
 5. **All tests pass** — including pre-existing failures (D6). 100% or not done.
 6. **No latency regression** — measure before and after (B18). Hard ceilings are absolute.
 7. **No new features** — unless explicitly requested (A6).
+8. **Identity intact** — tenant_id + entity_id present on every stage response. No run_id in payloads (I1–I2).
 
 ---
 
@@ -104,6 +148,8 @@ The most dangerous failure mode. They make broken features look working.
 - Returning HTTP 200 when the underlying operation failed
 - Logging a warning and continuing when the correct behavior is to stop
 - `getattr(obj, attr, 0.0)` as a default for schema-defined fields
+- Returning a response with missing tenant_id or entity_id instead of 422
+- Silently falling back when a downstream service is unreachable
 
 **Error messages must be informative:** "AAM could not reach DCL at http://localhost:8004/api/concepts — connection refused after 3 retries — NLQ intent resolution aborted" — not just "Connection failed."
 
@@ -111,44 +157,27 @@ The most dangerous failure mode. They make broken features look working.
 
 ## TECH STACK
 
-| Module | Backend | Frontend | DB |
-|--------|---------|----------|----|
-| AOD | FastAPI/Python | React 18 + Vite | Supabase PG |
-| AAM | FastAPI/Python | Server-rendered HTML | SQLite |
-| DCL | FastAPI/Python | React 18 + Vite | Supabase PG + Pinecone |
-| NLQ | FastAPI/Python | React 18 + Vite | Supabase PG |
-| Farm | FastAPI/Python | Jinja2/Tailwind | Supabase PG |
-| Platform | FastAPI/Python | React 18 + Vite | Supabase PG |
-| Console | FastAPI/Python | React 18 + Vite | Supabase PG |
+| Module | Backend | Frontend | DB | Port (BE/FE) |
+|--------|---------|----------|----|---------------|
+| AOD | FastAPI/Python | React 18 + Vite | Supabase PG | 8001 / 3001 |
+| AAM | FastAPI/Python | Server-rendered HTML | SQLite | 8002 / 8002 |
+| Farm | FastAPI/Python | Jinja2/Tailwind | Supabase PG | 8003 / 8003 |
+| DCL | FastAPI/Python | React 18 + Vite | Supabase PG + Pinecone | 8004 / 3004 |
+| NLQ | FastAPI/Python | React 18 + Vite | Supabase PG | 8005 / 3005 |
+| Platform (sunset) | FastAPI/Python | React 18 + Vite | Supabase PG | 8006 / 3006 |
+| Console | FastAPI + asyncpg | React 18 + TS + Vite + Tailwind | Supabase PG | 8009 / 3009 |
+| Convergence | FastAPI/Python | React 18 + Vite | Supabase PG (shared) | 8010 / 3010 |
 
-Separate repos per module.
+Separate repos per module. All repos branch from `dev`. No feature branches unless explicitly requested.
 
 ---
 
 ## LOCAL DEVELOPMENT
-
-| Service | Backend | Frontend |
-|---------|---------|----------|
-| AOD | 8001 | 3001 |
-| AAM | 8002 | UI on 8002 |
-| Farm | 8003 | UI on 8003 |
-| DCL | 8004 | 3004 |
-| NLQ | 8005 | 3005 |
-| Platform | 8006 | 3006 |
-| Console | 8009 | 3009 |
-
 - **Desktop:** Windows 11, repos at `C:\Users\ilyac\code\`
 - **Laptop:** Ubuntu (WSL), repos at `~/code/`
 - **Process manager:** pm2
 - **Launch:** `~/code/aos-launch.sh` (laptop) or `aos-start` (desktop)
-
----
-
-## AGENT INSTRUCTIONS
-- Declare which module you are working on at the start of every message
-- Before proposing any cross-module change, check the RACI CSV
-- All agents report RACI violations — do not silently implement workarounds
-- After compaction, re-read this file and `tests/HARNESS_RULES_v2.md` from the top
+- **Port-block strategy for parallel branch testing:** opus: 8004/3004, sonnet: 8014/3014
 
 ---
 
@@ -165,23 +194,36 @@ Separate repos per module.
 - Claiming "pre-existing" as an excuse (D6)
 - Dodging pre-commit hooks (C13)
 - Claiming "metadata only" or "we don't touch your data"
-- Claiming ContextOS delivers ontology — current truth is context through sophisticated semantics
-- Any reference to Replit
+- Claiming AOS delivers ontology — current truth is context through sophisticated semantics
+- Using bare run_id in any API response payload (I1)
+- Returning a stage response without tenant_id + entity_id (I2)
+- String-mangling or prefix-stripping IDs (I6)
+- Writing to DCL-owned tables from Convergence (bypass ingest-triples endpoint)
+- Importing Convergence engine code from DCL or vice versa (repos are separated)
+- Extending direct-PG write code in AOD/AAM (labeled tech debt, frozen)
+- Any reference to AOA (cancelled) or Replit
+- Any reference to fact_base.json
 
 ---
 
-# HARNESS & CODE CHANGE RULES (v2)
-> These rules are non-negotiable. They apply to every CC session, every test suite, every code change.
+## AGENT INSTRUCTIONS
+- Declare which module you are working on at the start of every message
+- Before proposing any cross-module change, check the RACI CSV
+- All agents report RACI violations — do not silently implement workarounds
+- After compaction, re-read this file from the top
+- Self-review every prompt against these rules before presenting to Ilya
+- Before changing critical path items, print impact analysis first (consequences rule)
+- If touching pipeline code, verify identity pair (tenant_id + entity_id) flows through all affected stages
 
 ---
 
-# SECTION A: CODE CHANGE RULES
+# CODE CHANGE RULES (Section A)
 
 ## A1: No silent fallbacks
 If something fails, it fails loudly with a clear error. Never degrade silently. Never return default/demo data when live data is unavailable. Never swallow exceptions.
 
 ## A2: No bandaids
-Fundamental fixes only. If the root cause is in module X, fix module X — don't add a workaround in module Y.
+Fundamental, scalable, architecturally sound fixes only. If the root cause is in module X, fix module X — don't add a workaround in module Y.
 
 ## A3: No tech debt
 Don't leave TODOs. Don't skip edge cases. Don't write code you'd want to rewrite.
@@ -199,23 +241,26 @@ Fix what's broken. Don't add capabilities, endpoints, UI elements, or behaviors 
 If you discover a bug while working on something else, fix it. Don't leave landmines for the next session.
 
 ## A8: State cross-module impact before implementing
-AOS is a tightly integrated chain. Before making a change, state what other modules it could affect.
+AOS is a tightly integrated chain (7 services + Console). Before making a change, state what other modules it could affect.
 
 ## A9: fact_base.json is dead
 Never fall back to fact_base.json. It is removed. Any reference to it, any fallback to it, any test against it is broken.
 
 ## A10: Respect module authority
-Farm owns tenant_id generation. AAM owns connection mapping. DCL owns semantic resolution. NLQ is not modified for pipeline data issues. Respect RACI boundaries for design decisions.
+Farm owns entity_id generation. AAM owns connection mapping. DCL owns semantic resolution and triple store writes. Convergence owns all ME engines. NLQ is not modified for pipeline data issues. Console orchestrates but does not own module internals. Respect RACI boundaries for design decisions.
 
-## A11: Read CLAUDE.md before starting
-It contains repo-specific rules that supplement these.
+## A11: Read this file before starting
+It contains all rules. After v7.0, HARNESS_RULES_v2.md is merged into this document.
 
 ## A12: You own all repos for bug fixes
-RACI describes ownership for design decisions. It is not a shield to avoid fixing bugs. If a test fails because DCL is wrong, fix DCL.
+RACI describes ownership for design decisions. It is not a shield to avoid fixing bugs. If a test fails because DCL is wrong, fix DCL. If Convergence is wrong, fix Convergence.
+
+## A13: Unscoped changes must be reverted
+If you change code outside the scope of what was asked, revert it unless the change fixes a bug discovered during the work (A7).
 
 ---
 
-# SECTION B: HARNESS TESTING RULES
+# HARNESS TESTING RULES (Section B)
 
 ## B1: Tests test what the USER sees
 Testing DCL directly is a unit test. The harness tests the product through user-facing endpoints. A correct API response that never reaches the user is not a pass.
@@ -233,7 +278,7 @@ Every test must assert the positive expected outcome. "Source is dcl" is a real 
 If the test requires data in DCL, data must be actually ingested through the real pipeline — not faked.
 
 ## B6: No cross-repo Python imports in tests
-Tests hit services via HTTP. No `from src.nlq...` in DCL test files.
+Tests hit services via HTTP. No `from src.nlq...` in DCL test files. No `from backend.engine.engagement` in DCL (that code now lives in Convergence).
 
 ## B7: Tests must be run, not just created
 Building test infrastructure and declaring done without executing is prohibited. Show the output.
@@ -273,7 +318,7 @@ More than 5% regression on any endpoint is a blocking issue. Hard latency ceilin
 
 ---
 
-# SECTION C: ANTI-CHEAT RULES
+# ANTI-CHEAT RULES (Section C)
 
 ## C1: No test-only endpoints to fake system state
 Agents create mode-set backdoors or test-only data endpoints. Prohibited.
@@ -316,7 +361,7 @@ Do not use `git commit --no-verify` to bypass hooks. Do not modify hook scripts 
 
 ---
 
-# SECTION D: EXECUTION RULES
+# EXECUTION RULES (Section D)
 
 ## D1: Test output format
 Print [PASS] or [FAIL] per test with expected vs got on failures. Show what the user would see.
@@ -341,7 +386,7 @@ If pre-commit hooks or CI checks are modified during a session, rerun the full t
 
 ---
 
-# SECTION E: COMPLIANCE CHECKLIST
+# COMPLIANCE CHECKLIST (Section E)
 
 After every harness run, verify:
 1. Does every passing test show source=dcl or source=Ingest?
@@ -350,12 +395,14 @@ After every harness run, verify:
 4. Run the harness a second time — same results?
 5. Did latency increase? (compare before/after)
 6. Were any new features introduced that weren't requested?
+7. Does every stage response carry tenant_id + entity_id? (I2)
+8. Is there any bare run_id in API responses? (I1)
 
 If any answer is wrong, the harness result is invalid.
 
 ---
 
-# SECTION F: AUTOMATED GUARDS
+# AUTOMATED GUARDS (Section F)
 
 ## F1: Pre-Commit Hook
 Installed at `.git/hooks/pre-commit`. Blocks commits containing:
@@ -364,5 +411,6 @@ Installed at `.git/hooks/pre-commit`. Blocks commits containing:
 - Hardcoded entity names ("meridian", "cascadia") in application code
 - Hardcoded seed UUIDs (400aa910, 6754a9d7)
 - References to fact_base.json
+- Bare `run_id` as a response field name (use namespaced identifiers)
 
 Do not bypass with `--no-verify` (C13).
