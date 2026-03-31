@@ -254,7 +254,7 @@ class DCLEngine:
             links=graph["links"],
             meta={
                 "mode": mode,
-                "runId": aod_run_id or run_id,
+                "dcl_ingest_id": aod_run_id or run_id,
                 "snapshotName": payload_kpis.get("snapshotName", "") if payload_kpis else (receipt_snapshot_name or ""),
                 "aodRunId": aod_run_id or "",
                 "generatedAt": utc_now(),
@@ -327,7 +327,7 @@ class DCLEngine:
                 links=[],
                 meta={
                     "mode": "Farm",
-                    "runId": run_id,
+                    "dcl_ingest_id": run_id,
                     "snapshotName": "",
                     "aodRunId": "",
                     "generatedAt": utc_now(),
@@ -409,8 +409,8 @@ class DCLEngine:
             links=graph["links"],
             meta={
                 "mode": "Farm",
-                "runId": run_id,
-                "sourceRunId": source_run_id,
+                "dcl_ingest_id": run_id,
+                "source_farm_manifest_id": source_run_id,
                 "snapshotName": snapshot_label,
                 "aodRunId": "",
                 "generatedAt": utc_now(),

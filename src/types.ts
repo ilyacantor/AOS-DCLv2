@@ -126,8 +126,8 @@ export interface GraphSnapshot {
   links: GraphLink[];
   meta: {
     mode: string;
-    runId: string;
-    sourceRunId?: string;
+    dcl_ingest_id: string;
+    source_farm_manifest_id?: string;
     snapshotName?: string;
     aodRunId?: string;
     generatedAt: string;

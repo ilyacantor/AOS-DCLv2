@@ -133,7 +133,7 @@ def get_sor_reconciliation():
                 detail="No snapshot_name available. Run DCL in AAM mode first so a snapshot name is established."
             )
         result["reconMeta"] = {
-            "dclRunId": sor_current_mode.last_run_id,
+            "dcl_ingest_id": sor_current_mode.last_run_id,
             "dclRunAt": sor_current_mode.last_updated,
             "reconAt": utc_now(),
             "dataMode": sor_current_mode.data_mode,
@@ -346,7 +346,7 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
             "fabricBreakdown": [], "inAamNotDcl": [], "inDclNotAam": [],
             "pushMeta": None,
             "reconMeta": {
-                "dclRunId": current_mode.last_run_id,
+                "dcl_ingest_id": current_mode.last_run_id,
                 "dclRunAt": current_mode.last_updated,
                 "reconAt": now, "aodRunId": None,
                 "dataMode": "Farm", "dclSourceCount": 0, "aamConnectionCount": 0,
@@ -471,7 +471,7 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
     }
 
     result["reconMeta"] = {
-        "dclRunId": current_mode.last_run_id,
+        "dcl_ingest_id": current_mode.last_run_id,
         "dclRunAt": current_mode.last_updated,
         "reconAt": now,
         "aodRunId": None,
@@ -648,7 +648,7 @@ def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
         )
 
     result["reconMeta"] = {
-        "dclRunId": current_mode.last_run_id,
+        "dcl_ingest_id": current_mode.last_run_id,
         "dclRunAt": current_mode.last_updated,
         "reconAt": utc_now(),
         "aodRunId": aod_run_id,

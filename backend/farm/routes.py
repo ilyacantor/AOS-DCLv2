@@ -260,7 +260,7 @@ def generate_business_data(request: GenerateRequest):
         )
         return {
             "status": "ok",
-            "farm_manifest_id": result.get("farm_manifest_id", result.get("run_id")),
+            "farm_manifest_id": result.get("farm_manifest_id"),
             "generation": result,
         }
     except Exception as e:
