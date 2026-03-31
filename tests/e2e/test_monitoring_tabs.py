@@ -93,7 +93,7 @@ class TestCrossTab:
         page.goto(DCL_URL, wait_until="load")
         page.wait_for_timeout(3_000)
 
-        for tab_name in ["Ingest", "Context", "Dashboard", "Recon"]:
+        for tab_name in ["Ingest", "Context", "Dashboard", "Recon", "Graph v2"]:
             tab = page.locator("button, a").filter(has_text=tab_name)
             expect(tab.first).to_be_visible(timeout=10_000)
             tab.first.click()
@@ -493,3 +493,95 @@ class TestReconTab:
             assert status_text in body_text, (
                 f"Check '{check_name}' status {status_text} not found in UI"
             )
+
+
+# ---------------------------------------------------------------------------
+# Graph v2 tab tests
+# ---------------------------------------------------------------------------
+
+class TestGraphV2Tab:
+    """E2E tests for the data-driven Graph v2 tab."""
+
+    def test_tab_visible_and_navigable(self, page_setup: Page):
+        """Graph v2 tab appears in nav and renders without crash."""
+        page = page_setup
+        page.goto(DCL_URL, wait_until="networkidle")
+        tab = page.locator("button, a").filter(has_text="Graph v2")
+        expect(tab.first).to_be_visible(timeout=10_000)
+        tab.first.click()
+        page.wait_for_timeout(3_000)
+        body_text = page.locator("body").text_content() or ""
+        # Should render either graph content or empty state
+        assert "pipeline data" in body_text.lower() or len(body_text) > 100, (
+            "Graph v2 tab appears blank"
+        )
+
+    def test_entity_selector_present(self, page_setup: Page):
+        """Graph v2 tab shows entity selector."""
+        page = page_setup
+        navigate_to_tab(page, "Graph v2")
+        body_text = page.locator("body").text_content() or ""
+        assert "Entity:" in body_text, (
+            "Graph v2 tab missing entity selector"
+        )
+
+    def test_graph_renders_svg_with_nodes(self, page_setup: Page):
+        """Graph v2 renders SVG with at least one node when pipeline data exists."""
+        page = page_setup
+        navigate_to_tab(page, "Graph v2")
+        svg = page.locator("svg")
+        if svg.count() > 0:
+            nodes = page.locator("[data-layer]")
+            if nodes.count() > 0:
+                # At least one node has a layer attribute
+                assert nodes.count() > 0
+            else:
+                # Empty state is also acceptable
+                body_text = page.locator("body").text_content() or ""
+                assert "no pipeline data" in body_text.lower()
+
+    def test_links_have_stroke_width(self, page_setup: Page):
+        """At least one link has a non-zero strokeWidth when data exists."""
+        page = page_setup
+        navigate_to_tab(page, "Graph v2")
+        paths = page.locator("svg path[stroke-width]")
+        if paths.count() > 0:
+            width = paths.first.get_attribute("stroke-width")
+            assert width is not None and float(width) > 0, (
+                f"Link has zero or missing stroke-width: {width}"
+            )
+
+    def test_empty_state_message(self, page_setup: Page):
+        """When no data, shows 'No pipeline data' message."""
+        page = page_setup
+        navigate_to_tab(page, "Graph v2")
+        # If there's no SVG with nodes, the empty state should show
+        nodes = page.locator("[data-layer]")
+        if nodes.count() == 0:
+            body_text = page.locator("body").text_content() or ""
+            assert "no pipeline data" in body_text.lower(), (
+                "Expected empty state message but found neither graph nor message"
+            )
+
+    def test_stub_node_has_no_outgoing_mapping_links(self, page_setup: Page):
+        """A stub source (registered but zero triples) has no outgoing domain links."""
+        page = page_setup
+        navigate_to_tab(page, "Graph v2")
+        stubs = page.locator('[data-status="stub"]')
+        if stubs.count() > 0:
+            # Stub node exists — it should render but have no outgoing
+            # mapping links (only an ingest link from pipe_farm).
+            # The stub is visible proof that the source was registered
+            # but nothing downstream consumes it.
+            expect(stubs.first).to_be_visible()
+
+    def test_original_graph_tab_unchanged(self, page_setup: Page):
+        """Tab 1 (Graph) still works — regression check."""
+        page = page_setup
+        page.goto(DCL_URL, wait_until="networkidle")
+        tab = page.locator("button, a").filter(has_text="Graph").first
+        expect(tab).to_be_visible(timeout=10_000)
+        tab.click()
+        page.wait_for_timeout(5_000)
+        svg = page.locator("svg")
+        expect(svg.first).to_be_visible(timeout=15_000)

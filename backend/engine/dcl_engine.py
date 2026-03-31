@@ -497,6 +497,33 @@ class DCLEngine:
                 info_summary=f"{total_count:,} triples from {src}",
             ))
 
+        # ── L1 (cont): Stub nodes for registered sources with zero triples ──
+        from backend.api.pipe_store import get_pipe_store
+        for defn in get_pipe_store().get_all_definitions():
+            if defn.source_name and defn.source_name not in source_systems:
+                stub_id = f"source_{defn.source_name}"
+                nodes.append(GraphNode(
+                    id=stub_id,
+                    label=defn.source_name,
+                    level="L1",
+                    kind="source",
+                    group="Farm",
+                    status="stub",
+                    metrics={
+                        "triple_count": 0,
+                        "vendor": defn.vendor,
+                        "category": defn.category,
+                    }
+                ))
+                links.append(GraphLink(
+                    id=f"link_pipe_{defn.source_name}",
+                    source=pipe_id,
+                    target=stub_id,
+                    value=0.0,
+                    flow_type="schema",
+                    info_summary=f"0 triples from {defn.source_name} (registered, no data)",
+                ))
+
         # ── L1→L2: Source→Domain mapping links ──
         # Aggregate by (source_system, domain) across entities
         source_domain_agg: Dict[tuple, int] = {}

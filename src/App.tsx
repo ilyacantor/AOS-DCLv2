@@ -14,9 +14,10 @@ import { IngestTab } from './components/IngestTab';
 import { ContextTab } from './components/ContextTab';
 import { DashboardTab } from './components/DashboardTab';
 import { ReconTab } from './components/ReconTab';
+import { GraphV2Tab } from './components/GraphV2Tab';
 import { useEntities } from './components/RunSelector';
 
-type MainView = 'graph' | 'dashboard' | 'context' | 'guide' | 'recon' | 'ingest';
+type MainView = 'graph' | 'graph_v2' | 'dashboard' | 'context' | 'guide' | 'recon' | 'ingest';
 
 const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO', 'CHRO'];
 
@@ -290,6 +291,7 @@ function App() {
   // Top-level navigation tabs
   const navTabs: { id: MainView; label: string }[] = [
     { id: 'graph', label: 'Graph' },
+    { id: 'graph_v2', label: 'Graph v2' },
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'context', label: 'Context' },
     { id: 'recon', label: 'Recon' },
@@ -430,6 +432,8 @@ function App() {
           <UserGuide />
         ) : mainView === 'dashboard' ? (
           <DashboardTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
+        ) : mainView === 'graph_v2' ? (
+          <GraphV2Tab graphData={graphData} entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
         ) : (
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel defaultSize={70} minSize={40}>
