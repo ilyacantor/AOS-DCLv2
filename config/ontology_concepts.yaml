@@ -3734,3 +3734,258 @@ concepts:
     calculation_methodology: null
     comparability_rules: "Date comparison requires timezone alignment. Different date semantics (transaction date vs posting date vs effective date) are not interchangeable. Fiscal calendar dates vs calendar dates require mapping when fiscal year-end differs from December."
 
+  # ─── Operational KPI Domains ─────────────────────────────
+  - id: workforce
+    concept_id: HR-014
+    name: Workforce
+    description: "Employee headcount, attrition, utilization, and hiring metrics"
+    domain: hr
+    cluster: People
+    example_fields:
+      - headcount
+      - fte_count
+      - attrition_rate
+      - turnover_rate
+      - utilization_rate
+      - open_reqs
+      - new_hires
+      - time_to_fill
+    aliases:
+      - staffing
+      - headcount_metrics
+      - workforce_planning
+      - talent_metrics
+    expected_type: float
+    typical_source_systems: [workday, bamboohr, adp, greenhouse]
+    persona_relevance:
+      chro: 1.0
+      coo: 0.8
+      cfo: 0.7
+    recognition_basis: "Derived from HRIS headcount snapshots, recruiting pipeline, and timesheet/utilization data. Attrition measured as trailing-12-month voluntary separations divided by average headcount."
+    timing_semantics: "Period-based for rates (attrition, utilization). Point-in-time for counts (headcount, open reqs). Typically reported monthly or quarterly."
+    scope_boundaries: "Includes all employees on payroll. Excludes contractors and contingent workers unless explicitly included. Attrition includes voluntary departures only by default; involuntary requires separate flag."
+    calculation_methodology: "Headcount = active employees at period-end. Attrition Rate = voluntary terms in period / avg headcount. Utilization = billable hours / available hours. Time-to-fill = days from req open to offer accept."
+    comparability_rules: "Headcount vs FTE distinction must be explicit. Attrition definitions vary (voluntary-only vs all separations). Utilization requires consistent billable/non-billable classification. Cross-entity comparison requires aligned reporting periods."
+
+  - id: sales
+    concept_id: SAL-015
+    name: Sales Metrics
+    description: "Pipeline, win rates, deal velocity, and quota metrics"
+    domain: sales
+    cluster: Growth
+    example_fields:
+      - pipeline_value
+      - win_rate
+      - deal_velocity
+      - quota_attainment
+      - average_deal_size
+      - sales_cycle_days
+      - conversion_rate
+      - bookings
+    aliases:
+      - sales_kpi
+      - sales_performance
+      - revenue_metrics
+      - go_to_market
+    expected_type: float
+    typical_source_systems: [salesforce, hubspot, clari, gong]
+    persona_relevance:
+      cro: 1.0
+      cfo: 0.8
+      coo: 0.5
+    recognition_basis: "Derived from CRM opportunity records, stage progression timestamps, and quota assignments. Win rate calculated from closed-won vs total closed opportunities."
+    timing_semantics: "Period-based for rates and velocity (monthly/quarterly). Pipeline value is point-in-time snapshot. Quota attainment measured against period targets."
+    scope_boundaries: "Includes all revenue-generating sales activity. Excludes renewals unless explicitly included. Partner/channel deals may require separate tracking. Pipeline value reflects weighted or unweighted depending on methodology."
+    calculation_methodology: "Win Rate = closed-won / (closed-won + closed-lost). Deal Velocity = (pipeline * win rate * avg deal size) / sales cycle. Quota Attainment = actual bookings / assigned quota."
+    comparability_rules: "Win rate denominator must match (some exclude disqualified). Pipeline weighting methodology must align. Quota attainment requires same quota-setting methodology. New business vs expansion bookings must be separated before comparison."
+
+  - id: efficiency
+    concept_id: OPS-012
+    name: Efficiency Ratios
+    description: "Business efficiency ratios — magic number, burn multiple, rule of 40"
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - magic_number
+      - burn_multiple
+      - rule_of_40
+      - ltv_cac_ratio
+      - payback_period_months
+      - cac
+      - net_dollar_retention
+    aliases:
+      - saas_efficiency
+      - unit_economics
+      - efficiency_metrics
+      - capital_efficiency
+    expected_type: float
+    typical_source_systems: [netsuite, salesforce, stripe, custom_analytics]
+    persona_relevance:
+      cfo: 1.0
+      ceo: 0.9
+      coo: 0.7
+    recognition_basis: "Calculated from financial and operational data. Magic number from net new ARR and S&M spend. Burn multiple from net burn and net new ARR. Rule of 40 from revenue growth rate plus profit margin."
+    timing_semantics: "Period-based, typically quarterly. Trailing calculations (e.g., trailing-4-quarter magic number) smooth seasonality. Point-in-time snapshots are misleading for efficiency ratios."
+    scope_boundaries: "Applies to SaaS and recurring-revenue businesses. Magic number uses net new ARR (not gross). Burn multiple uses net burn (cash out minus cash in). CAC includes fully-loaded sales and marketing costs."
+    calculation_methodology: "Magic Number = net new ARR / prior-period S&M spend. Burn Multiple = net burn / net new ARR. Rule of 40 = revenue growth % + EBITDA margin %. LTV/CAC = (ARPA * gross margin) / (churn rate * CAC)."
+    comparability_rules: "Magic number requires consistent S&M cost allocation. Burn multiple varies by net-burn definition (some include all opex, others only cash burn). Rule of 40 requires aligned growth-rate calculation (ARR vs revenue). Cross-company comparison requires normalized cost definitions."
+
+  - id: support
+    concept_id: CS-012
+    name: Customer Support
+    description: "Customer support tickets, CSAT, response and resolution times"
+    domain: customer_success
+    cluster: Ops
+    example_fields:
+      - ticket_count
+      - csat_score
+      - first_response_time
+      - resolution_time
+      - backlog_count
+      - escalation_rate
+      - reopen_rate
+    aliases:
+      - support_metrics
+      - helpdesk
+      - customer_care
+      - service_desk_kpi
+    expected_type: float
+    typical_source_systems: [zendesk, freshdesk, intercom, servicenow]
+    persona_relevance:
+      coo: 1.0
+      cco: 0.9
+      cfo: 0.5
+    recognition_basis: "Derived from helpdesk ticket lifecycle events. CSAT from post-resolution surveys. Response time from ticket-created to first-agent-reply. Resolution time from ticket-created to status-closed."
+    timing_semantics: "Period-based for volume and rates (daily/weekly/monthly). Point-in-time for backlog. Median preferred over mean for time-based metrics to reduce outlier skew."
+    scope_boundaries: "Includes all customer-facing support channels (email, chat, phone, portal). Excludes internal IT helpdesk unless explicitly included. CSAT response bias — only surveyed customers who respond."
+    calculation_methodology: "CSAT = positive responses / total responses. First Response Time = median(first_reply_at - created_at). Resolution Time = median(resolved_at - created_at). Escalation Rate = escalated tickets / total tickets."
+    comparability_rules: "CSAT scales differ (1-5 vs 1-10 vs binary). Response time SLAs vary by priority tier. Resolution time must exclude business-hours-only vs calendar-hours. Cross-tool comparison requires normalized ticket severity mapping."
+
+  - id: engineering
+    concept_id: PRD-011
+    name: Engineering Metrics
+    description: "Sprint velocity, story points, features shipped, tech debt"
+    domain: product_eng
+    cluster: Product
+    example_fields:
+      - velocity
+      - story_points
+      - features_shipped
+      - tech_debt_ratio
+      - cycle_time
+      - deployment_frequency
+      - lead_time
+      - change_failure_rate
+    aliases:
+      - eng_metrics
+      - dev_productivity
+      - dora_metrics
+      - sprint_metrics
+    expected_type: float
+    typical_source_systems: [jira, linear, github, gitlab, shortcut]
+    persona_relevance:
+      cto: 1.0
+      coo: 0.6
+      ceo: 0.5
+    recognition_basis: "Derived from issue tracker sprint data, version control commit/PR history, and CI/CD pipeline telemetry. DORA metrics from deployment logs and incident tracking."
+    timing_semantics: "Period-based, aligned to sprint cadence (typically 2-week). DORA metrics measured over rolling windows (weekly/monthly). Velocity stabilizes over 3+ sprints."
+    scope_boundaries: "Includes all engineering work tracked in the issue tracker. Excludes untracked work (ad-hoc fixes, meetings). Tech debt measured as percentage of sprint capacity allocated to non-feature work. DORA metrics scope to production deployments only."
+    calculation_methodology: "Velocity = completed story points per sprint. Cycle Time = median(done_at - in_progress_at). Deployment Frequency = deployments / period. Change Failure Rate = failed deployments / total deployments. Lead Time = median(deploy_at - commit_at)."
+    comparability_rules: "Story point scales are team-specific and not comparable across teams. DORA metrics require consistent deployment and failure definitions. Velocity trends within a team are meaningful; cross-team velocity comparison is not. Sprint length must match for velocity comparison."
+
+  - id: infrastructure
+    concept_id: IT-011
+    name: Infrastructure Metrics
+    description: "Cloud spend, incidents, MTTR, uptime"
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - cloud_spend
+      - uptime_pct
+      - mttr_minutes
+      - incident_count
+      - p1_incidents
+      - cost_per_unit
+      - resource_utilization
+      - availability
+    aliases:
+      - infra_metrics
+      - cloud_ops
+      - reliability
+      - site_reliability
+    expected_type: float
+    typical_source_systems: [aws, datadog, pagerduty, cloudwatch, gcp]
+    persona_relevance:
+      cto: 1.0
+      cfo: 0.7
+      coo: 0.6
+    recognition_basis: "Derived from cloud provider billing APIs, monitoring/observability platforms, and incident management systems. Uptime calculated from monitoring probe results. MTTR from incident lifecycle timestamps."
+    timing_semantics: "Cloud spend is period-based (monthly billing cycle). Uptime is rolling-window (30/90/365 day). MTTR is per-incident then aggregated over period. Incidents are event-driven with period rollups."
+    scope_boundaries: "Cloud spend includes all billable resources across providers. Uptime measured at service/endpoint level, not individual host. MTTR includes detection-to-resolution, not just response-to-resolution. Excludes planned maintenance windows from uptime calculation."
+    calculation_methodology: "Uptime = (total_minutes - downtime_minutes) / total_minutes. MTTR = mean(resolved_at - detected_at) for incidents in period. Cost per Unit = total cloud spend / unit of work (requests, users, transactions)."
+    comparability_rules: "Cloud spend comparison requires normalized unit costs (reserved vs on-demand). Uptime definitions must align on what counts as downtime (degraded service vs full outage). MTTR start point must match (alert-fired vs ticket-opened vs acknowledged). Multi-cloud comparison requires mapped service categories."
+
+  - id: arr
+    concept_id: FIN-040
+    name: ARR Waterfall
+    description: "ARR waterfall — beginning, new, expansion, churn, ending"
+    domain: finance
+    cluster: Finance
+    example_fields:
+      - beginning_arr
+      - new_arr
+      - expansion_arr
+      - contraction_arr
+      - churn_arr
+      - ending_arr
+      - net_new_arr
+      - gross_retention
+      - net_retention
+    aliases:
+      - arr_bridge
+      - arr_movement
+      - recurring_revenue
+      - mrr_waterfall
+    expected_type: float
+    typical_source_systems: [zuora, chargebee, stripe, netsuite, salesforce]
+    persona_relevance:
+      cfo: 1.0
+      cro: 0.9
+      ceo: 0.9
+    recognition_basis: "Derived from subscription billing system contract values. Beginning ARR is prior period ending ARR. Movements categorized by contract event type (new logo, upsell, downsell, cancellation)."
+    timing_semantics: "Period-based waterfall, typically quarterly. Beginning ARR = prior period ending ARR (must tie exactly). Movements allocated to the period when the contract change takes effect, not when signed."
+    scope_boundaries: "Includes all recurring subscription revenue on an annualized basis. Excludes one-time fees (setup, professional services). Contraction and churn must be separated (downsell vs full cancellation). Multi-year prepaid contracts annualized to ARR."
+    calculation_methodology: "Ending ARR = Beginning ARR + New + Expansion - Contraction - Churn. Gross Retention = (Beginning - Churn - Contraction) / Beginning. Net Retention = (Beginning + Expansion - Contraction - Churn) / Beginning. Net New ARR = New + Expansion - Contraction - Churn."
+    comparability_rules: "ARR vs MRR*12 may differ due to rounding and contract timing. Expansion must distinguish price increases from seat additions. Churn definition varies (logo churn vs revenue churn vs gross vs net). Cross-company ARR comparison requires aligned contract-term annualization methodology."
+
+  - id: operations
+    concept_id: OPS-013
+    name: Operations Metrics
+    description: "Operational metrics — automation rate, SLA attainment"
+    domain: operations
+    cluster: Ops
+    example_fields:
+      - automation_rate
+      - sla_attainment
+      - throughput
+      - error_rate
+      - process_cycle_time
+      - backlog_age
+      - on_time_delivery
+    aliases:
+      - ops_kpi
+      - process_metrics
+      - operational_efficiency
+      - business_operations
+    expected_type: float
+    typical_source_systems: [servicenow, netsuite, custom_workflow, zapier]
+    persona_relevance:
+      coo: 1.0
+      cfo: 0.6
+      cto: 0.5
+    recognition_basis: "Derived from workflow/process management systems, SLA tracking, and operational telemetry. Automation rate from process execution logs comparing automated vs manual steps."
+    timing_semantics: "Period-based for rates and throughput (weekly/monthly). SLA attainment measured per-commitment then aggregated. Backlog age is point-in-time with aging buckets."
+    scope_boundaries: "Includes all tracked operational processes. Excludes ad-hoc work not captured in workflow systems. SLA attainment scoped to contractual commitments only. Automation rate covers repeatable processes, not one-time tasks."
+    calculation_methodology: "Automation Rate = automated process executions / total executions. SLA Attainment = commitments met within target / total commitments. Throughput = units processed / period. Error Rate = failed processes / total processes."
+    comparability_rules: "SLA targets must match for attainment comparison. Automation rate depends on process granularity (coarse processes inflate the rate). Throughput requires normalized unit definitions. Cross-department comparison requires aligned process complexity weighting."
+

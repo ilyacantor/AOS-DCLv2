@@ -441,7 +441,7 @@ def test_graceful_no_sources():
     res = resolver.resolve(intent)
 
     assert res.can_answer is False
-    assert "No sources found" in res.reason
+    assert "Concept not recognized" in res.reason
     print("  PASS: Graceful — missing concept handled")
 
 

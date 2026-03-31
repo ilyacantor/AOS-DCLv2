@@ -196,6 +196,7 @@ def test_tier0_wins_over_heuristic():
 def test_tier0_transformed_edge():
     """Scenario 6: Edge has transformation → classified with transformation in provenance."""
     edge = _make_edge(
+        source_object="Contact",
         source_field="FirstName",
         target_field="full_name",
         edge_type="TRANSFORMED",

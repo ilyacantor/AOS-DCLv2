@@ -37,7 +37,6 @@ pairings:
     - legal_entity
     - division
     - cost_center
-    - department
     - geography
     - profit_center
     - segment
