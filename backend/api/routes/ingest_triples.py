@@ -30,6 +30,14 @@ router = APIRouter(tags=["Triple Ingest"])
 _triple_store = TripleStore()
 _concept_registry = ConceptRegistry()
 
+# Defense-in-depth: reject ME entity_ids at ingest boundary.
+# DCL is SE-only — ME data routes to Convergence (port 8010).
+# Parsed once at import time from comma-separated env var.
+_blocked_raw = os.environ.get("DCL_BLOCKED_ENTITY_IDS", "").strip()
+_BLOCKED_ENTITY_IDS: frozenset[str] = frozenset(
+    eid.strip().lower() for eid in _blocked_raw.split(",") if eid.strip()
+)
+
 
 # ---------------------------------------------------------------------------
 # Request / response models
@@ -219,6 +227,26 @@ def ingest_triples(
     # Validate every triple BEFORE any DB writes (batch atomicity)
     for i, t in enumerate(req.triples):
         _validate_triple(t, i)
+
+    # ME entity_id boundary guard — DCL is SE-only.
+    if _BLOCKED_ENTITY_IDS:
+        blocked_found = {
+            t.entity_id for t in req.triples
+            if t.entity_id.lower() in _BLOCKED_ENTITY_IDS
+        }
+        if blocked_found:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "ME_ENTITY_REJECTED",
+                    "message": (
+                        f"DCL rejected entity_ids {sorted(blocked_found)} — "
+                        f"ME data routes to Convergence (port 8010), not DCL (port 8004). "
+                        f"Check Farm routing config or Console pipeline orchestrator."
+                    ),
+                    "blocked_entity_ids": sorted(blocked_found),
+                },
+            )
 
     # Idempotency check — skipped when append=true (multi-batch ingestion)
     run_exists = _triple_store.run_exists(req.run_id)
