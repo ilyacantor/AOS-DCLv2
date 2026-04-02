@@ -15,7 +15,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 
 from backend.core.db import get_connection
@@ -63,12 +63,14 @@ class TriplePayload(BaseModel):
 
 
 class IngestRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     tenant_id: str
-    run_id: str
+    dcl_ingest_id: str = Field(..., alias="run_id")
     source_run_tag: Optional[str] = None
     source_farm_manifest_id: Optional[str] = None
     entity_id: Optional[str] = None
     source_rows: Optional[int] = None
+    snapshot_name: Optional[str] = None
     triples: list[TriplePayload]
 
 
@@ -213,7 +215,7 @@ def ingest_triples(
       across multiple requests (e.g. Farm pushing 18K triples in 1K batches).
     """
     _validate_uuid(req.tenant_id, "tenant_id")
-    _validate_uuid(req.run_id, "run_id")
+    _validate_uuid(req.dcl_ingest_id, "dcl_ingest_id")
 
     if not req.triples:
         raise HTTPException(
@@ -249,16 +251,16 @@ def ingest_triples(
             )
 
     # Idempotency check — skipped when append=true (multi-batch ingestion)
-    run_exists = _triple_store.run_exists(req.run_id)
+    run_exists = _triple_store.run_exists(req.dcl_ingest_id)
     if run_exists and not replace and not append:
         raise HTTPException(
             status_code=409,
             detail={
                 "error": "RUN_ALREADY_EXISTS",
-                "message": f"run_id {req.run_id} already has triples in the store. "
+                "message": f"dcl_ingest_id {req.dcl_ingest_id} already has triples in the store. "
                            "Use ?replace=true to deactivate old triples and re-ingest, "
                            "or ?append=true to add more triples to this run.",
-                "dcl_ingest_id": req.run_id,
+                "dcl_ingest_id": req.dcl_ingest_id,
             },
         )
 
@@ -267,7 +269,7 @@ def ingest_triples(
     # The tenant_runs pointer is updated after the replace completes.
     if run_exists and replace:
         logger.info(
-            f"[ingest-triples] replace=true for existing run_id={req.run_id}; "
+            f"[ingest-triples] replace=true for existing dcl_ingest_id={req.dcl_ingest_id}; "
             f"inserting new triples, pointer will be updated after insert"
         )
 
@@ -287,7 +289,7 @@ def ingest_triples(
             "source_table": t.source_table,
             "source_field": t.source_field,
             "pipe_id": t.pipe_id,
-            "run_id": req.run_id,  # DB column
+            "run_id": req.dcl_ingest_id,  # DB column
             "source_run_tag": req.source_run_tag,
             "confidence_score": t.confidence_score,
             "confidence_tier": t.confidence_tier,
@@ -311,7 +313,7 @@ def ingest_triples(
         duration_ms = int((time.monotonic() - start_ts) * 1000)
         logger.error(
             f"[ingest-triples] DB write failed after {duration_ms}ms for "
-            f"run_id={req.run_id}, tenant_id={req.tenant_id}, "
+            f"dcl_ingest_id={req.dcl_ingest_id}, tenant_id={req.tenant_id}, "
             f"triples_attempted={triples_received}: {db_err}",
             exc_info=True,
         )
@@ -346,25 +348,28 @@ def ingest_triples(
     # Not set for append=true (multi-batch ingest of the same run_id keeps
     # whatever pointer was set by the initial replace ingest).
     if not append:
-        previous_run_id = _triple_store.upsert_tenant_run(str(req.tenant_id), str(req.run_id))
+        previous_run_id = _triple_store.upsert_tenant_run(
+            str(req.tenant_id), str(req.dcl_ingest_id),
+            snapshot_name=req.snapshot_name,
+        )
         logger.info(
             f"[ingest-triples] tenant_runs updated: tenant_id={req.tenant_id} "
-            f"→ current_run_id={req.run_id} (previous={previous_run_id})"
+            f"→ current_run_id={req.dcl_ingest_id} (previous={previous_run_id})"
         )
         # Deactivate triples from the displaced run — is_active lifecycle.
         # Without this, old triples remain is_active=true and pollute
         # the unscoped count (now removed) and any is_active queries.
-        if previous_run_id and previous_run_id != str(req.run_id):
+        if previous_run_id and previous_run_id != str(req.dcl_ingest_id):
             deactivated = _triple_store.deactivate_run(previous_run_id)
             logger.info(
                 f"[ingest-triples] Deactivated {deactivated} triples from "
                 f"previous run {previous_run_id}"
             )
 
-    concept_summary = _triple_store.count_by_domain(req.tenant_id, run_id=req.run_id)
+    concept_summary = _triple_store.count_by_domain(req.tenant_id, run_id=req.dcl_ingest_id)
 
     logger.info(
-        f"[ingest-triples] Ingested {count} triples for run_id={req.run_id}, "
+        f"[ingest-triples] Ingested {count} triples for dcl_ingest_id={req.dcl_ingest_id}, "
         f"tenant_id={req.tenant_id}, concepts={concept_summary}, duration={duration_ms}ms"
     )
 
@@ -384,7 +389,7 @@ def ingest_triples(
 
     # Record to ingest_log — observability only, never fails the ingest
     _record_ingest_log(
-        run_id=req.run_id,
+        run_id=req.dcl_ingest_id,
         tenant_id=req.tenant_id,
         entity_id=entity_ids[0] if len(entity_ids) == 1 else None,
         source_systems=source_systems,
@@ -395,7 +400,7 @@ def ingest_triples(
 
     # On replace ingest, update seed_manifest.json so tests point at the live run
     if replace and not run_exists:
-        _update_seed_manifest(req.tenant_id, req.run_id, count, concept_summary)
+        _update_seed_manifest(req.tenant_id, req.dcl_ingest_id, count, concept_summary)
 
     # Determine batch-level entity_id: explicit request field takes priority,
     # then infer from triples if all share a single entity_id.
@@ -407,7 +412,7 @@ def ingest_triples(
     expansion = round(count / source_rows_val, 1) if source_rows_val > 0 else 0.0
 
     return IngestResponse(
-        dcl_ingest_id=req.run_id,
+        dcl_ingest_id=req.dcl_ingest_id,
         tenant_id=req.tenant_id,
         entity_id=batch_entity_id,
         source_farm_manifest_id=req.source_farm_manifest_id,

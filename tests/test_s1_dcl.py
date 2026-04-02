@@ -521,11 +521,11 @@ class TestIngestEndpoint:
     def test_18c_replace_same_entity(self):
         """Replace=true with same entity_id deletes old triples for that entity."""
         run_id = str(uuid.uuid4())
-        triples_v1 = [make_test_triple(entity_id="meridian", value=100)]
+        triples_v1 = [make_test_triple(entity_id="entity_alpha", value=100)]
         resp1, _ = self._post_triples(triples_v1, run_id=run_id)
         assert resp1.status_code == 201
 
-        triples_v2 = [make_test_triple(entity_id="meridian", value=999)]
+        triples_v2 = [make_test_triple(entity_id="entity_alpha", value=999)]
         resp2, _ = self._post_triples(triples_v2, run_id=run_id, replace=True)
         assert resp2.status_code == 201
 
@@ -535,25 +535,25 @@ class TestIngestEndpoint:
         assert rows[0]["value"] == 999, "Should have the replaced value"
 
     def test_18d_replace_preserves_other_entity(self):
-        """ME scenario: replacing meridian triples preserves cascadia triples."""
+        """Multi-entity scenario: replacing one entity's triples preserves the other."""
         run_id = str(uuid.uuid4())
         triples = [
-            make_test_triple(entity_id="meridian", concept="revenue.total", value=5_000),
-            make_test_triple(entity_id="cascadia", concept="revenue.total", value=1_000),
+            make_test_triple(entity_id="entity_alpha", concept="revenue.total", value=5_000),
+            make_test_triple(entity_id="entity_beta", concept="revenue.total", value=1_000),
         ]
         resp1, _ = self._post_triples(triples, run_id=run_id)
         assert resp1.status_code == 201
 
-        # Replace only meridian
-        new_meridian = [make_test_triple(entity_id="meridian", concept="revenue.total", value=5_500)]
-        resp2, _ = self._post_triples(new_meridian, run_id=run_id, replace=True)
+        # Replace only entity_alpha
+        new_alpha = [make_test_triple(entity_id="entity_alpha", concept="revenue.total", value=5_500)]
+        resp2, _ = self._post_triples(new_alpha, run_id=run_id, replace=True)
         assert resp2.status_code == 201
 
         store = TripleStore()
         rows = store.get_triples_by_run(run_id)
         by_entity = {r["entity_id"]: r["value"] for r in rows}
-        assert by_entity["meridian"] == 5_500, "Meridian should have new value"
-        assert by_entity["cascadia"] == 1_000, "Cascadia should be untouched"
+        assert by_entity["entity_alpha"] == 5_500, "Alpha should have new value"
+        assert by_entity["entity_beta"] == 1_000, "Beta should be untouched"
 
     def test_19_run_status_endpoint(self):
         """Ingest → GET status → correct count and summary."""

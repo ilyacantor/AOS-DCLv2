@@ -286,7 +286,10 @@ class TripleStore:
                 conn.commit()
                 return cur.rowcount
 
-    def upsert_tenant_run(self, tenant_id: str, new_run_id: str) -> str | None:
+    def upsert_tenant_run(
+        self, tenant_id: str, new_run_id: str,
+        snapshot_name: str | None = None,
+    ) -> str | None:
         """Atomically set current_run_id for a tenant. Returns the previous run_id.
 
         This is the O(1) replacement for deactivate_tenant_triples on the ingest
@@ -294,17 +297,20 @@ class TripleStore:
         Returns the displaced run_id so the caller can deactivate its triples.
         """
         sql = """
-            INSERT INTO tenant_runs (tenant_id, current_run_id, previous_run_id, updated_at)
-            VALUES (%s, %s, NULL, now())
+            INSERT INTO tenant_runs (tenant_id, current_run_id, previous_run_id,
+                                     current_snapshot_name, previous_snapshot_name, updated_at)
+            VALUES (%s, %s, NULL, %s, NULL, now())
             ON CONFLICT (tenant_id) DO UPDATE
-              SET previous_run_id = tenant_runs.current_run_id,
-                  current_run_id  = EXCLUDED.current_run_id,
-                  updated_at      = now()
+              SET previous_run_id          = tenant_runs.current_run_id,
+                  current_run_id           = EXCLUDED.current_run_id,
+                  previous_snapshot_name   = tenant_runs.current_snapshot_name,
+                  current_snapshot_name    = EXCLUDED.current_snapshot_name,
+                  updated_at              = now()
             RETURNING previous_run_id
         """
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, (tenant_id, new_run_id))
+                cur.execute(sql, (tenant_id, new_run_id, snapshot_name))
                 row = cur.fetchone()
                 conn.commit()
                 return str(row[0]) if row and row[0] else None
@@ -355,10 +361,13 @@ class TripleStore:
 
         Returns up to 2 snapshots (current + previous) enriched with
         triple counts and ingestion timestamps from semantic_triples.
-        Current snapshot first.
+        Current snapshot first. snapshot_name is the Farm-generated
+        provenance name; NULL for pre-migration data (consumer handles
+        fallback display).
         """
         sql = """
-            SELECT current_run_id, previous_run_id, updated_at
+            SELECT current_run_id, previous_run_id, updated_at,
+                   current_snapshot_name, previous_snapshot_name
             FROM tenant_runs WHERE tenant_id = %s
         """
         with get_connection() as conn:
@@ -369,14 +378,14 @@ class TripleStore:
         if row is None:
             return []
 
-        current_run_id, previous_run_id, updated_at = row
+        current_run_id, previous_run_id, updated_at, cur_snap_name, prev_snap_name = row
         snapshots = []
 
         if current_run_id:
             info = self.get_run_info(str(current_run_id))
             snapshots.append({
                 "dcl_ingest_id": str(current_run_id),
-                "snapshot_name": "Current",
+                "snapshot_name": cur_snap_name,
                 "run_timestamp": (
                     updated_at.isoformat() if updated_at
                     else (info["created_at"].isoformat() if info and info.get("created_at") else None)
@@ -389,7 +398,7 @@ class TripleStore:
             info = self.get_run_info(str(previous_run_id))
             snapshots.append({
                 "dcl_ingest_id": str(previous_run_id),
-                "snapshot_name": "Previous",
+                "snapshot_name": prev_snap_name,
                 "run_timestamp": (
                     info["created_at"].isoformat() if info and info.get("created_at") else None
                 ),
