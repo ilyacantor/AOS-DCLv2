@@ -1,5 +1,5 @@
 **AOS Convergence M&A Specification**  
-Version 7.4 — March 2026
+Version 7.4.1 — April 2026
 
 AutonomOS, Inc.
 
@@ -13,9 +13,9 @@ AOS (autonomOS) is an enterprise platform that delivers unified context across e
 
 **AOS.** Single-entity enterprise intelligence. Full pipeline: AOD (discovery) → AAM (connection mapping) → Farm (financial model generation) → DCL (semantic context layer) → NLQ (natural language query). Customer connects their systems, AOS builds contextual intelligence.
 
-**Convergence.** Multi-entity integration intelligence for organizations with multiple subsidiaries that need contextual integrated information. Ongoing operating rhythm, not deal-driven. Same engine as AOS and Convergence M&A: entity is a tag, same DCL, same resolution. Multiple entities flow through the pipeline tagged by entity_id into one semantic store. Unified reporting, cross-entity analytics, and continuous monitoring across persistent entities.
+**Convergence.** Multi-entity integration intelligence for organizations with multiple subsidiaries that need contextual integrated information. Ongoing operating rhythm, not deal-driven. Same engine as AOS and Convergence M&A: entity is a tag, same resolution, same ontology. Multiple entities flow through the pipeline tagged by entity_id into Convergence's own triple store (convergence_triples). Unified reporting, cross-entity analytics, and continuous monitoring across persistent entities. Convergence reads DCL-owned tables (SELECT only) for cross-reference.
 
-**Convergence M&A.** Multi-entity M&A integration intelligence. Deal-driven: diligence through post-integration. Acquirer and Target data flow into one DCL. Entity is a tag, not a separate brain. Same engines as base AOS, plus a bridge that joins Target pipes into Acquirer pipes. COFA unification, combining financial statements, entity resolution, overlap/concentration analysis, cross-sell, EBITDA bridge, QofE.
+**Convergence M&A.** Multi-entity M&A integration intelligence. Deal-driven: diligence through post-integration. Acquirer and Target data flow into one unified context via Convergence's convergence_triples. Entity is a tag, not a separate brain. Same engines as base AOS, plus a bridge that joins Target pipes into Acquirer pipes. COFA unification, combining financial statements, entity resolution, overlap/concentration analysis, cross-sell, EBITDA bridge, QofE.
 
 PE-specific portfolio product is deferred. The Convergence product line covers multi-entity operating use cases including fund-level visibility across portfolio companies.
 
@@ -82,7 +82,7 @@ Deliverables 1-7 are always produced (GL + CoA is sufficient). Deliverables 8-10
 | Testing | Two-tier: deterministic harness (Tier 1, built) + LLM-as-Judge (Tier 2, bounded) | CLAUDE.md Sections A–F with 26+ rules. 100% pass or not done. |
 | Document ingestion | CSV + Excel for MVP quantitative pipeline. Automated parsing of qualitative PDFs/Word docs is Phase 2. | For MVP, Layer 3 entity policies are manually authored Markdown files stored in the repo and injected at runtime. This is not deferred — it is a different authoring mode. |
 | Model routing | Sonnet for everything at MVP. Architecture supports dispatch per interaction type. | Model routing is a cost lever activated when volume justifies it. |
-| Convergence architecture | Same engine as base AOS. Entity is a tag. Bridge joins Target + Acquirer pipes into one DCL. | No split brain, no query-time composition, no new resolution logic. |
+| Convergence architecture | Same engine as base AOS. Entity is a tag. Bridge joins Target + Acquirer pipes into one unified context via Convergence. DCL is SE-only. ME triples write to convergence_triples. | No split brain, no query-time composition, no new resolution logic. |
 | Silent fallbacks | Prohibited. Fail loud or not at all. | Hard architectural rule across all repos. |
 | No GAAP fallback | Maestra must not infer from general GAAP when entity policy is missing | Output null with flag. LLMs default to GAAP reasoning; must be explicitly blocked. |
 | Data claims | Do not claim 'metadata only' or 'we don't touch your data' | Not architecturally validated. |
@@ -252,7 +252,7 @@ Concepts use dot-separated hierarchical naming (e.g., cofa.automation_capitaliza
 
 DCL owns all write-side invariants for the triple store: old-run deactivation, COPY-based bulk ingest, is_active flag management, tenant_runs.current_run_id updates, and the atomic run_id swap pattern (O(1) UPSERT via tenant_runs pointer table, replacing O(n) bulk UPDATE). Post-swap purge step deletes stale rows.
 
-Convergence reads DCL-owned tables directly (SELECT only) for report-time metric queries. Convergence never writes to DCL-owned tables directly — all triple writes go through DCL's POST /api/dcl/ingest-triples.
+Convergence reads DCL-owned tables directly (SELECT only) for report-time metric queries. Convergence never writes to DCL-owned tables. All ME triple writes go to Convergence's own convergence_triples table. If ME data (meridian, cascadia, combined, UUID-entity rows) appears in DCL's semantic_triples, that is a pipeline routing bug.
 
 ## **4.2 Current State**
 
@@ -270,7 +270,8 @@ Convergence reads DCL-owned tables directly (SELECT only) for report-time metric
 
 | Table | Owner | Who Reads | Who Writes | Migrations Live In |
 | :---- | :---- | :---- | :---- | :---- |
-| semantic_triples | DCL | DCL + Convergence | DCL only (via POST /api/dcl/ingest-triples) | dcl/migrations/ |
+| semantic_triples | DCL | DCL + Convergence (SELECT only) | DCL only (SE Farm financial triples via POST /api/dcl/ingest-triples) | dcl/migrations/ |
+| convergence_triples | Convergence | Convergence | Convergence only (ME Farm financial triples, COFA mappings, combining output) | convergence/migrations/ |
 | dimension_values_v2 | DCL | DCL + Convergence | DCL only | dcl/migrations/ |
 | tenant_runs | DCL | DCL + Convergence | DCL only | dcl/migrations/ |
 | tenant_registry | DCL | DCL | DCL only | dcl/migrations/ |
@@ -302,15 +303,15 @@ Two canonical Farm configs. No other configs are valid. fact_base.json and the d
 
 ## **4.6 Data Pipeline**
 
-Single-entity (AOS): AOD → AAM → Farm → triple conversion → PG direct. No DCL pipe ingest (Structure/Dispatch/Content path is deprecated). Only Farm Financials writes triples to DCL via orchestrator. Existing direct-PG write code in AOD/AAM is labeled tech debt, must not be extended.
+Single-entity (AOS): Full pipeline: Farm Snapshot → AOD Discovery → Handoff → AAM Inference → Farm Financials → DCL Ingest. Orchestrator calls Farm, then pushes financial triples to DCL via POST /api/dcl/ingest-triples → semantic_triples. Old Structure/Dispatch/Content pipe path is deprecated. AOD/AAM direct-PG write code is tech debt (see SE Triples Conversion Build Plan v2.2), must not be extended.
 
-Multi-entity (Convergence): Both entities' data flow through separate Farm configs → triple conversion → same PG store, tagged by entity_id. Convergence repo (§5A) runs COFA chain, combining engines, and all ME report generation. Farm ME push routes to Convergence, not DCL.
+Multi-entity (Convergence): Both entities' data flow through separate Farm configs → triple conversion → Convergence's convergence_triples table, tagged by entity_id. Convergence repo (§5A) runs COFA chain, combining engines, and all ME report generation. Farm ME push routes to Convergence backend (port 8010), not DCL. ME triples never write to DCL's semantic_triples.
 
 DCL Ingest/Recon tabs are legacy. Triples tab is the active monitoring surface.
 
 # **5. Convergence Architecture**
 
-Convergence = base AOS plus a bridge where Target pipes join Acquirer pipes into one DCL. Entity is a tag, same engine, no split brain, no query-time composition.
+Convergence = base AOS plus a bridge where Target pipes join Acquirer pipes into one unified context. Entity is a tag, same engine, no split brain, no query-time composition.
 
 ## **5.1 Invariants**
 
@@ -360,15 +361,17 @@ All ME v2 engines now live in convergence/backend/engine/:
 
 ### **5A.4 API Contracts**
 
-**Convergence → DCL (HTTP):**
-- POST /api/dcl/ingest-triples — COFA triple writes (DCL validates, writes)
-- GET /api/dcl/semantic-export — Semantic catalog
+**Convergence → DCL (HTTP, read only):**
+- GET /api/dcl/semantic-export — Semantic catalog for cross-reference
 
 **DCL → Convergence (HTTP):**
 - GET /api/convergence/engagement/active — maestra.py calls this for engagement context (replaces direct import)
 
-**Convergence → PG (Direct):**
-SELECT only against semantic_triples, dimension_values_v2, tenant_runs. No HTTP intermediary for report-time metric queries.
+**Convergence → Convergence PG (internal writes):**
+All ME triple writes (Farm ME financial triples, COFA mappings, conflict register, combining output) go to convergence_triples. Convergence owns its own write path. DCL is never in the ME write path.
+
+**Convergence → DCL PG (direct reads, SELECT only):**
+SELECT only against semantic_triples, dimension_values_v2, tenant_runs. No HTTP intermediary for report-time metric queries. Read-only cross-reference — Convergence never writes to DCL-owned tables.
 
 **Callers rerouted:**
 - Console: CONVERGENCE_API_URL routes combining/bridge/QoE/overlap/whatif calls
@@ -458,7 +461,7 @@ SE pipeline: Farm → AOD → Handoff → AAM → DCL → Verify. One entity, fi
 
 ## **6.4 ME Identifier Registry**
 
-ME pipeline: Farm (per entity) → DCL (per entity) → COFA → Verify. Multiple entities, engagement-driven.
+ME pipeline: Farm (per entity) → Convergence (per entity) → COFA → Verify. Multiple entities, engagement-driven. ME triples write to convergence_triples. DCL is not in the ME data path.
 
 | Identifier | Namespace | Function |
 | :---- | :---- | :---- |
@@ -469,8 +472,8 @@ ME pipeline: Farm (per entity) → DCL (per entity) → COFA → Verify. Multipl
 | tenant_id | Tenant | Machine-facing UUID. Never displayed. |
 | tenant_display_name | Tenant table | Human-readable label. Replaces raw UUID in all surfaces. |
 | farm_manifest_id | Farm | One per entity per generation. Dropdown-selectable. |
-| dcl_ingest_id | DCL | One per entity. Dropdown-selectable as COFA input. |
-| cofa_run_id | COFA | Declares which dcl_ingest_id(s) it consumed. |
+| convergence_ingest_id | Convergence | One per entity. Issued when Convergence persists Farm ME triples to convergence_triples. Dropdown-selectable as COFA input. |
+| cofa_run_id | COFA | Declares which convergence_ingest_id(s) it consumed. |
 | verify_id | Verify | Declares what it checked. Runs after COFA. Explicit DAG dependency. |
 
 ## **6.5 Operator UX Rules**
@@ -714,7 +717,7 @@ Every CC prompt must be reviewed against AOS guardrails before presenting. Check
 
 | Document | Scope |
 | :---- | :---- |
-| convergence_MA_spec_v7.4.md (this document) | Canonical M&A spec. All build decisions reference this. |
+| convergence_MA_spec_v7.4.1.md (this document) | Canonical M&A spec. All build decisions reference this. |
 | pipeline_identity_architecture_v1 | Pipeline identity, provenance, operator-facing naming across SE and ME. |
 | CONVERGENCE_CARVEOUT_BLUEPRINT_CANONICAL.md | Agent-executable plan for the Convergence carveout from DCL. Completed. |
 | SE_pipeline_modality.docx | SE stage definitions (Farm, AOD, Handoff, AAM, DCL, Verify). |
@@ -734,3 +737,4 @@ Every CC prompt must be reviewed against AOS guardrails before presenting. Check
 | v7.2 | Mar 2026 | Product line alignment: three product lines (AOS, Convergence, Convergence M&A). ContextOS renamed to AOS throughout. |
 | v7.3 | Mar 2026 | Two-Axis QofE Adjustment Model. Formalized temporal data model for adjustment triples. Bridge v2 DISTINCT ON replaced with lifecycle-aware grouping. |
 | **v7.4** | **Mar 2026** | **SE/ME separation formalized. Convergence carveout complete — new §5A documents standalone Convergence service (repo, engines, tables, API contracts, forked files). DCL §4 updated to SE-only scope. New §6 Pipeline Identity Architecture (identity pairs, namespaced IDs, run_id ban, anti-brittleness rules, SE/ME identifier registries, operator UX rules). §3.6 Supervised Execution added (four-tier model, maestra_plans, operator feed). Integration chain §5.2 updated with engine ownership. §9 milestones updated with carveout, identity architecture, Console build, ME pipeline fixes. §12 Development Environment updated to 7 repos + Console. §14 Governing Documents expanded. RACI bumped to v8.2.** |
+| **v7.4.1** | **Apr 2026** | **ME write path corrections. Eliminated all stale references to ME triples writing to DCL. §1.1: Convergence product line references convergence_triples, not "same DCL." §2.1: Convergence architecture decision updated — bridge joins into unified context via Convergence, not "one DCL." §4.3: Table ownership matrix adds convergence_triples row; semantic_triples write column scoped to SE only. §4.6: SE/ME data pipeline descriptions corrected — SE goes through DCL HTTP ingest, ME goes through Convergence backend. §5: "into one DCL" → "into one unified context." §5A.4: API contracts corrected — COFA writes to convergence_triples, not DCL. §6.4: ME identifier registry replaces dcl_ingest_id with convergence_ingest_id. RACI bumped to v8.3.** |
