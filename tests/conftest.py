@@ -31,6 +31,7 @@ _manifest = _load_manifest()
 TENANT_ID: str = _manifest["tenant_id"]
 RUN_ID: str = _manifest.get("dcl_ingest_id", _manifest.get("run_id", ""))
 FARM_RUN_ID: str = _manifest["farm_run_id"]
+ENTITIES: list[str] = _manifest.get("entities", [])
 
 
 def _fetch_ground_truth() -> dict:

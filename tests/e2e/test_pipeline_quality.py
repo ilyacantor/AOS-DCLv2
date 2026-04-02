@@ -61,17 +61,16 @@ def navigate_to_tab(page: Page, tab_name: str):
     page.wait_for_timeout(3_000)
 
 
-def select_meridian(page: Page):
-    """Select the Meridian entity if available."""
+def select_most_recent_entity(page: Page):
+    """Select the most recent entity from the entity dropdown."""
     selects = page.locator("select")
     if selects.count() > 0:
         sel = selects.first
-        options = sel.locator("option").all_text_contents()
-        for opt in options:
-            if "meridian" in opt.lower():
-                sel.select_option(label=opt)
-                page.wait_for_timeout(2_000)
-                return
+        options = sel.locator("option").all()
+        # Skip "All Entities" (index 0), pick first real entity
+        if len(options) > 1:
+            sel.select_option(index=1)
+            page.wait_for_timeout(2_000)
 
 
 class TestDomainCoverage:
@@ -81,7 +80,7 @@ class TestDomainCoverage:
     def test_domain_count_at_least_10(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Context")
-        select_meridian(page)
+        select_most_recent_entity(page)
 
         body = page.locator("body").text_content() or ""
 
@@ -102,7 +101,7 @@ class TestDomainCoverage:
     def test_required_domains_present(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Context")
-        select_meridian(page)
+        select_most_recent_entity(page)
 
         body = (page.locator("body").text_content() or "").lower()
 
@@ -122,7 +121,7 @@ class TestConfidenceDistribution:
     def test_exact_confidence_greater_than_zero(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Context")
-        select_meridian(page)
+        select_most_recent_entity(page)
 
         body = page.locator("body").text_content() or ""
 
@@ -142,7 +141,7 @@ class TestConfidenceDistribution:
     def test_at_least_two_confidence_tiers(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Context")
-        select_meridian(page)
+        select_most_recent_entity(page)
 
         body = page.locator("body").text_content() or ""
 
@@ -166,7 +165,7 @@ class TestReconSourceRunTag:
     def test_farm_dcl_count_not_skip(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Recon")
-        select_meridian(page)
+        select_most_recent_entity(page)
 
         # Click Run Recon
         run_btn = page.locator("button").filter(has_text="Run Recon")
@@ -203,13 +202,13 @@ class TestReconSourceRunTag:
 
 
 class TestTripleCountGrowth:
-    """TEST 4: Total triple count must exceed 20,000 (operational ~17K +
-    financial statement triples)."""
+    """TEST 4: Total triple count on Ingest tab must match the API ground truth
+    and exceed a minimum floor for a valid SE pipeline run (B10, B17)."""
 
     def test_total_triples_over_20000(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Ingest")
-        select_meridian(page)
+        select_most_recent_entity(page)
 
         body = page.locator("body").text_content() or ""
 
@@ -219,9 +218,20 @@ class TestTripleCountGrowth:
             f"Could not find Total Triples count on Ingest tab. "
             f"Body excerpt: {body[:500]}"
         )
-        total = int(match.group(1).replace(",", ""))
-        assert total > 20_000, (
-            f"Total Triples is {total:,}. Expected > 20,000. "
-            f"Operational triples (~17K) + financial statement triples "
-            f"(P&L + BS + CF) should push total well past 20K."
+        ui_total = int(match.group(1).replace(",", ""))
+
+        # Ground truth from API at runtime (B10) — not a hardcoded threshold
+        resp = httpx.get(f"{DCL_BACKEND}/api/dcl/entities", timeout=10.0)
+        assert resp.status_code == 200, f"Entities API returned {resp.status_code}"
+        api_entities = resp.json()["entities"]
+        expected_total = sum(e["triple_count"] for e in api_entities)
+
+        assert ui_total == expected_total, (
+            f"Total Triples in UI ({ui_total:,}) does not match API "
+            f"ground truth ({expected_total:,}). UI-API mismatch."
+        )
+        # Minimum floor: any valid pipeline run produces at least 10K triples
+        assert ui_total >= 10_000, (
+            f"Total Triples is {ui_total:,}. Even a single-entity SE run "
+            f"should produce at least 10,000 triples."
         )

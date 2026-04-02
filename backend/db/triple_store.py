@@ -286,11 +286,12 @@ class TripleStore:
                 conn.commit()
                 return cur.rowcount
 
-    def upsert_tenant_run(self, tenant_id: str, new_run_id: str) -> None:
-        """Atomically set current_run_id for a tenant. Saves previous run for rollback.
+    def upsert_tenant_run(self, tenant_id: str, new_run_id: str) -> str | None:
+        """Atomically set current_run_id for a tenant. Returns the previous run_id.
 
         This is the O(1) replacement for deactivate_tenant_triples on the ingest
         hot path. Single-row UPSERT — no table scan, no lock contention.
+        Returns the displaced run_id so the caller can deactivate its triples.
         """
         sql = """
             INSERT INTO tenant_runs (tenant_id, current_run_id, previous_run_id, updated_at)
@@ -299,11 +300,37 @@ class TripleStore:
               SET previous_run_id = tenant_runs.current_run_id,
                   current_run_id  = EXCLUDED.current_run_id,
                   updated_at      = now()
+            RETURNING previous_run_id
         """
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(sql, (tenant_id, new_run_id))
+                row = cur.fetchone()
                 conn.commit()
+                return str(row[0]) if row and row[0] else None
+
+    def resolve_single_tenant(self) -> str:
+        """Return tenant_id if exactly one tenant exists in tenant_runs.
+
+        Raises ValueError if zero or multiple tenants exist — no guessing.
+        Used by /api/dcl/run when caller omits tenant_id.
+        """
+        sql = "SELECT tenant_id FROM tenant_runs"
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                rows = cur.fetchall()
+        if len(rows) == 0:
+            raise ValueError(
+                "No tenants in tenant_runs. Run the ingest pipeline first."
+            )
+        if len(rows) > 1:
+            tenant_ids = [str(r[0]) for r in rows]
+            raise ValueError(
+                f"Multiple tenants in tenant_runs: {tenant_ids}. "
+                f"Specify tenant_id explicitly."
+            )
+        return str(rows[0][0])
 
     def get_current_run_id(self, tenant_id: str) -> str:
         """Return current_run_id for tenant.
@@ -322,6 +349,55 @@ class TripleStore:
                 f"Run the ingest pipeline first to populate tenant_runs."
             )
         return str(row[0])
+
+    def get_tenant_snapshots(self, tenant_id: str) -> list[dict]:
+        """Get available snapshots for a tenant from tenant_runs.
+
+        Returns up to 2 snapshots (current + previous) enriched with
+        triple counts and ingestion timestamps from semantic_triples.
+        Current snapshot first.
+        """
+        sql = """
+            SELECT current_run_id, previous_run_id, updated_at
+            FROM tenant_runs WHERE tenant_id = %s
+        """
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (tenant_id,))
+                row = cur.fetchone()
+
+        if row is None:
+            return []
+
+        current_run_id, previous_run_id, updated_at = row
+        snapshots = []
+
+        if current_run_id:
+            info = self.get_run_info(str(current_run_id))
+            snapshots.append({
+                "dcl_ingest_id": str(current_run_id),
+                "snapshot_name": "Current",
+                "run_timestamp": (
+                    updated_at.isoformat() if updated_at
+                    else (info["created_at"].isoformat() if info and info.get("created_at") else None)
+                ),
+                "total_rows": info["triple_count"] if info else 0,
+                "is_current": True,
+            })
+
+        if previous_run_id:
+            info = self.get_run_info(str(previous_run_id))
+            snapshots.append({
+                "dcl_ingest_id": str(previous_run_id),
+                "snapshot_name": "Previous",
+                "run_timestamp": (
+                    info["created_at"].isoformat() if info and info.get("created_at") else None
+                ),
+                "total_rows": info["triple_count"] if info else 0,
+                "is_current": False,
+            })
+
+        return snapshots
 
     def purge_old_runs(self, tenant_id: str, keep_runs: int = 2) -> int:
         """Hard-delete triples from old runs, keeping the N most recent run_ids.
@@ -452,22 +528,21 @@ class TripleStore:
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
-    def count_active(self, tenant_id: str | None = None) -> int:
-        """Count triples in the current run. With tenant_id uses current_run_id pointer."""
-        if tenant_id:
-            sql = (
-                "SELECT COUNT(*) FROM semantic_triples "
-                "WHERE tenant_id = %s "
-                "AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)"
-            )
-            params: tuple = (tenant_id, tenant_id)
-        else:
-            sql = "SELECT COUNT(*) FROM semantic_triples WHERE is_active = true"
-            params = ()
+    def count_active(self, tenant_id: str) -> int:
+        """Count triples in the current run for a specific tenant.
 
+        Uses the tenant_runs pointer (current_run_id) — the only correct
+        count source. The old is_active fallback is removed: it counted
+        across all tenants and drifted from the pointer-based count.
+        """
+        sql = (
+            "SELECT COUNT(*) FROM semantic_triples "
+            "WHERE tenant_id = %s "
+            "AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)"
+        )
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, params)
+                cur.execute(sql, (tenant_id, tenant_id))
                 return cur.fetchone()[0]
 
     def count_total_rows(self) -> int:
@@ -477,22 +552,22 @@ class TripleStore:
                 cur.execute("SELECT COUNT(*) FROM semantic_triples")
                 return cur.fetchone()[0]
 
-    def get_source_run_ids(self) -> list[dict]:
-        """Return run_ids that are current for at least one tenant, most recent first.
+    def get_source_run_ids(self, tenant_id: str) -> list[dict]:
+        """Return run_ids that are current for a specific tenant, most recent first.
 
         Each row: {run_id: str, created_at: datetime, triple_count: int}
-        Uses tenant_runs join to return only live runs, not all historical runs.
+        Scoped to the tenant's current_run_id via tenant_runs pointer.
         """
         sql = (
             "SELECT st.run_id, MIN(st.created_at) AS created_at, COUNT(*) AS triple_count "
             "FROM semantic_triples st "
-            "JOIN tenant_runs tr "
-            "  ON tr.tenant_id = st.tenant_id AND tr.current_run_id = st.run_id "
+            "WHERE st.tenant_id = %s "
+            "AND st.run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) "
             "GROUP BY st.run_id ORDER BY MIN(st.created_at) DESC"
         )
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql)
+                cur.execute(sql, (tenant_id, tenant_id))
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
@@ -578,38 +653,25 @@ class TripleStore:
 
         return result
 
-    def get_sankey_aggregation(self, tenant_id: str | None = None) -> list[dict]:
-        """Aggregate triples for Sankey visualization.
+    def get_sankey_aggregation(self, tenant_id: str) -> list[dict]:
+        """Aggregate triples for Sankey visualization, scoped to a tenant.
 
         Returns rows of {source_system, domain, entity_id, triple_count}
         grouped by source_system × root concept domain × entity_id.
+        Uses the tenant_runs pointer to scope to the current run only.
         """
-        if tenant_id:
-            sql = (
-                "SELECT source_system, split_part(concept, '.', 1) AS domain, "
-                "entity_id, COUNT(*) AS triple_count "
-                "FROM semantic_triples "
-                "WHERE tenant_id = %s "
-                "AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) "
-                "GROUP BY source_system, split_part(concept, '.', 1), entity_id "
-                "ORDER BY triple_count DESC"
-            )
-            params: list = [tenant_id, tenant_id]
-        else:
-            sql = (
-                "SELECT st.source_system, split_part(st.concept, '.', 1) AS domain, "
-                "st.entity_id, COUNT(*) AS triple_count "
-                "FROM semantic_triples st "
-                "JOIN tenant_runs tr "
-                "  ON tr.tenant_id = st.tenant_id AND tr.current_run_id = st.run_id "
-                "GROUP BY st.source_system, split_part(st.concept, '.', 1), st.entity_id "
-                "ORDER BY triple_count DESC"
-            )
-            params = []
-
+        sql = (
+            "SELECT source_system, split_part(concept, '.', 1) AS domain, "
+            "entity_id, COUNT(*) AS triple_count "
+            "FROM semantic_triples "
+            "WHERE tenant_id = %s "
+            "AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) "
+            "GROUP BY source_system, split_part(concept, '.', 1), entity_id "
+            "ORDER BY triple_count DESC"
+        )
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, params)
+                cur.execute(sql, [tenant_id, tenant_id])
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 

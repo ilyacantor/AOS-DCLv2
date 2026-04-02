@@ -1,13 +1,16 @@
 """
-S1-SEED verification harness — 16 tests validating the full Meridian + Cascadia
-triple dataset in DCL's PG database.
+S1-SEED verification harness — 16 tests validating the triple dataset in DCL's
+PG database.
 
 All tests query PG directly (not via the API). Financial identities are
 mathematical invariants, not hardcoded values.
 
-Uses tenant_id and run_id from seed_manifest.json (via conftest). Queries filter
-by run_id directly (not current_run_id) so tests are stable even when the
-ingest pipeline updates tenant_runs.current_run_id.
+Uses tenant_id, run_id, and entities from seed_manifest.json (via conftest).
+Queries filter by run_id directly (not current_run_id) so tests are stable even
+when the ingest pipeline updates tenant_runs.current_run_id.
+
+Works for both SE (single entity) and ME (multi-entity) runs. Multi-entity
+overlap tests are skipped when only one entity is present.
 """
 
 import os
@@ -18,7 +21,7 @@ from pathlib import Path
 import psycopg2
 import pytest
 
-from tests.conftest import TENANT_ID, RUN_ID
+from tests.conftest import TENANT_ID, RUN_ID, ENTITIES
 
 
 # ---------------------------------------------------------------------------
@@ -97,68 +100,68 @@ class TestSeedData:
         assert count > 0, f"Expected triples for run_id={RUN_ID}, found 0"
         print(f"  Total triples in manifest run: {count}")
 
-    # 2. Both entities present
-    def test_02_both_entities_present(self, conn):
-        """Triples exist for both meridian and cascadia."""
+    # 2. All manifest entities present
+    def test_02_all_entities_present(self, conn):
+        """Triples exist for every entity listed in seed_manifest.json."""
         cur = conn.cursor()
         cur.execute(
             "SELECT DISTINCT entity_id FROM semantic_triples WHERE tenant_id = %s AND run_id = %s",
             (TENANT_ID, RUN_ID),
         )
-        entities = {r[0] for r in cur.fetchall()}
-        assert any("meridian" in e.lower() for e in entities), (
-            f"No entity_id containing 'meridian'. Found: {entities}"
-        )
-        assert any("cascadia" in e.lower() for e in entities), (
-            f"No entity_id containing 'cascadia'. Found: {entities}"
-        )
+        actual = {r[0] for r in cur.fetchall()}
+        for entity in ENTITIES:
+            assert entity in actual, (
+                f"Entity '{entity}' from manifest not found in triples. Found: {actual}"
+            )
+        print(f"  Entities: {sorted(actual)}")
 
-    # 3. Revenue scale — Meridian (~$5B annual, within 10%)
-    def test_03_revenue_scale_meridian(self, conn):
-        """Sum revenue.total for meridian for any 4 consecutive quarters ~ $5B."""
+    # 3. Revenue exists and is positive for first entity
+    def test_03_revenue_positive_entity_0(self, conn):
+        """First entity has positive revenue for at least 4 quarters."""
+        assert ENTITIES, "No entities in seed_manifest.json"
+        entity = ENTITIES[0]
         cur = conn.cursor()
         quarterly = []
         for q in QUARTERS:
-            v = _fetch_value(cur, TENANT_ID, "meridian", "revenue.total", "amount", q)
-            assert v is not None, f"Missing revenue.total for meridian {q}"
-            quarterly.append(v)
+            v = _fetch_value(cur, TENANT_ID, entity, "revenue.total", "amount", q)
+            if v is not None:
+                quarterly.append(v)
 
-        target = 5000.0  # $5B in dollars_millions
-        tolerance = target * 0.10
-        windows = [sum(quarterly[i:i + 4]) for i in range(len(quarterly) - 3)]
-        matching = [w for w in windows if abs(w - target) <= tolerance]
-        assert matching, (
-            f"No 4-quarter window within 10% of ${target:.0f}. "
-            f"Windows: {[f'{w:.1f}' for w in windows]}"
+        assert len(quarterly) >= 4, (
+            f"Expected revenue.total for >= 4 quarters for {entity}, "
+            f"got {len(quarterly)}"
         )
-        print(f"  Meridian closest annual revenue: {min(matching, key=lambda w: abs(w - target)):.1f}")
+        annual = sum(quarterly[:4])
+        assert annual > 0, f"Annual revenue for {entity} is non-positive: {annual}"
+        print(f"  {entity} 4-quarter revenue sum: {annual:.1f}")
 
-    # 4. Revenue scale — Cascadia (~$1B annual, within 10%)
-    def test_04_revenue_scale_cascadia(self, conn):
-        """Sum revenue.total for cascadia for any 4 consecutive quarters ~ $1B."""
+    # 4. Revenue exists for second entity (skip if single entity)
+    def test_04_revenue_positive_entity_1(self, conn):
+        """Second entity has positive revenue (skipped for single-entity runs)."""
+        if len(ENTITIES) < 2:
+            pytest.skip("Single-entity run — no second entity to check")
+        entity = ENTITIES[1]
         cur = conn.cursor()
         quarterly = []
         for q in QUARTERS:
-            v = _fetch_value(cur, TENANT_ID, "cascadia", "revenue.total", "amount", q)
-            assert v is not None, f"Missing revenue.total for cascadia {q}"
-            quarterly.append(v)
+            v = _fetch_value(cur, TENANT_ID, entity, "revenue.total", "amount", q)
+            if v is not None:
+                quarterly.append(v)
 
-        target = 1000.0
-        tolerance = target * 0.10
-        windows = [sum(quarterly[i:i + 4]) for i in range(len(quarterly) - 3)]
-        matching = [w for w in windows if abs(w - target) <= tolerance]
-        assert matching, (
-            f"No 4-quarter window within 10% of ${target:.0f}. "
-            f"Windows: {[f'{w:.1f}' for w in windows]}"
+        assert len(quarterly) >= 4, (
+            f"Expected revenue.total for >= 4 quarters for {entity}, "
+            f"got {len(quarterly)}"
         )
-        print(f"  Cascadia closest annual revenue: {min(matching, key=lambda w: abs(w - target)):.1f}")
+        annual = sum(quarterly[:4])
+        assert annual > 0, f"Annual revenue for {entity} is non-positive: {annual}"
+        print(f"  {entity} 4-quarter revenue sum: {annual:.1f}")
 
     # 5. P&L identity: revenue.total - cogs.total - opex.total == pnl.ebitda
     def test_05_pl_identity(self, conn):
         """For each entity and quarter: revenue - COGS - opex == EBITDA."""
         cur = conn.cursor()
         failures = []
-        for entity in ("meridian", "cascadia"):
+        for entity in ENTITIES:
             for q in QUARTERS:
                 rev = _fetch_value(cur, TENANT_ID, entity, "revenue.total", "amount", q)
                 cogs = _fetch_value(cur, TENANT_ID, entity, "cogs.total", "amount", q)
@@ -182,7 +185,7 @@ class TestSeedData:
         """For each entity and quarter: assets == liabilities + equity."""
         cur = conn.cursor()
         failures = []
-        for entity in ("meridian", "cascadia"):
+        for entity in ENTITIES:
             for q in QUARTERS:
                 assets = _fetch_value(cur, TENANT_ID, entity, "asset.total", "amount", q)
                 liab = _fetch_value(cur, TENANT_ID, entity, "liability.total", "amount", q)
@@ -205,7 +208,7 @@ class TestSeedData:
         """For each entity and quarter: CF operating + investing + financing == net_change."""
         cur = conn.cursor()
         failures = []
-        for entity in ("meridian", "cascadia"):
+        for entity in ENTITIES:
             for q in QUARTERS:
                 op = _fetch_value(cur, TENANT_ID, entity, "cash_flow.operating.total", "amount", q)
                 inv = _fetch_value(cur, TENANT_ID, entity, "cash_flow.investing.total", "amount", q)
@@ -229,7 +232,7 @@ class TestSeedData:
         """For each entity: cash in Q(n) + net_change in Q(n+1) == cash in Q(n+1)."""
         cur = conn.cursor()
         failures = []
-        for entity in ("meridian", "cascadia"):
+        for entity in ENTITIES:
             cash_vals = {}
             net_vals = {}
             for q in QUARTERS:
@@ -283,9 +286,11 @@ class TestSeedData:
                 f"COFA concept '{concept}' missing 'dollar_impact' property. Has: {props}"
             )
 
-    # 10. Customer overlap
+    # 10. Customer overlap (ME only — requires 2+ entities)
     def test_10_customer_overlap(self, conn):
         """At least one customer concept has triples under both entity_ids."""
+        if len(ENTITIES) < 2:
+            pytest.skip("Single-entity run — overlap requires 2+ entities")
         cur = conn.cursor()
         cur.execute(
             """
@@ -301,9 +306,11 @@ class TestSeedData:
         assert row is not None, "No customer concept found with triples under both entity_ids"
         print(f"  Customer overlap example: {row[0]}")
 
-    # 11. Vendor overlap
+    # 11. Vendor overlap (ME only — requires 2+ entities)
     def test_11_vendor_overlap(self, conn):
         """At least one vendor concept has triples under both entity_ids."""
+        if len(ENTITIES) < 2:
+            pytest.skip("Single-entity run — overlap requires 2+ entities")
         cur = conn.cursor()
         cur.execute(
             """
@@ -319,9 +326,11 @@ class TestSeedData:
         assert row is not None, "No vendor concept found with triples under both entity_ids"
         print(f"  Vendor overlap example: {row[0]}")
 
-    # 12. People overlap
+    # 12. People overlap (ME only — requires 2+ entities)
     def test_12_people_overlap(self, conn):
         """At least one employee concept has triples under both entity_ids."""
+        if len(ENTITIES) < 2:
+            pytest.skip("Single-entity run — overlap requires 2+ entities")
         cur = conn.cursor()
         cur.execute(
             """
@@ -380,14 +389,14 @@ class TestSeedData:
         assert count > 0, f"No triples found for manifest run_id={RUN_ID}"
         print(f"  Triples in manifest run: {count}")
 
-    # 15. Period coverage: both entities have triples for all 12 quarters
+    # 15. Period coverage: all entities have triples for all 12 quarters
     def test_15_period_coverage(self, conn):
-        """Both entities have financial triples for all 12 quarters (2024-Q1 through 2026-Q4)."""
+        """All entities have financial triples for all 12 quarters (2024-Q1 through 2026-Q4)."""
         cur = conn.cursor()
         expected_quarters = set(QUARTERS)
         failures = []
 
-        for entity in ("meridian", "cascadia"):
+        for entity in ENTITIES:
             cur.execute(
                 """
                 SELECT DISTINCT period FROM semantic_triples

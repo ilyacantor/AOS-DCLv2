@@ -48,7 +48,8 @@ class DCLEngine:
         personas: List[Persona],
         run_id: str,
         source_limit: int = 1000,
-        aod_run_id: Optional[str] = None
+        aod_run_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
     ) -> tuple[GraphSnapshot, RunMetrics]:
 
         start_time = time.time()
@@ -64,6 +65,7 @@ class DCLEngine:
                 personas=personas,
                 start_time=start_time,
                 metrics=metrics,
+                tenant_id=tenant_id,
             )
 
         payload_kpis: Optional[Dict[str, Any]] = None
@@ -291,8 +293,9 @@ class DCLEngine:
         personas: List[Persona],
         start_time: float,
         metrics: RunMetrics,
+        tenant_id: Optional[str] = None,
     ) -> tuple[GraphSnapshot, RunMetrics]:
-        """Build the Sankey graph from semantic_triples in PG.
+        """Build the Sankey graph from semantic_triples in PG, scoped to tenant.
 
         If triples exist, builds the full 4-layer graph.
         If no triples exist, returns a diagnostic empty-state snapshot
@@ -300,9 +303,20 @@ class DCLEngine:
         """
         triple_store = TripleStore()
 
+        # Resolve tenant_id — required for all scoped queries.
+        if not tenant_id:
+            try:
+                tenant_id = triple_store.resolve_single_tenant()
+            except ValueError as e:
+                raise RuntimeError(
+                    f"Cannot build graph without tenant_id: {e}. "
+                    f"Pass tenant_id in the request or ensure exactly one tenant "
+                    f"exists in tenant_runs."
+                ) from e
+
         # Check for active triples
         try:
-            triple_count = triple_store.count_active()
+            triple_count = triple_store.count_active(tenant_id)
         except Exception as e:
             logger.error(f"Triple count check failed: {e}", exc_info=True)
             raise RuntimeError(
@@ -361,7 +375,7 @@ class DCLEngine:
         )
 
         try:
-            sankey_rows = triple_store.get_sankey_aggregation()
+            sankey_rows = triple_store.get_sankey_aggregation(tenant_id)
         except Exception as e:
             logger.error(f"Sankey aggregation query failed: {e}", exc_info=True)
             raise RuntimeError(
@@ -388,7 +402,7 @@ class DCLEngine:
         entities = sorted({r["entity_id"] for r in sankey_rows if r.get("entity_id")})
 
         # Resolve the Farm source run_id from semantic_triples for provenance
-        source_run_ids = triple_store.get_source_run_ids()
+        source_run_ids = triple_store.get_source_run_ids(tenant_id)
         if len(source_run_ids) == 1:
             source_run_id = str(source_run_ids[0]["run_id"])
         elif len(source_run_ids) > 1:

@@ -700,43 +700,37 @@ def triples_browse_batch(req: BrowseBatchRequest):
 
 @router.get("/api/dcl/triples/engagement")
 def triples_engagement():
-    """Current engagement state — proxied from Convergence service.
+    """Entity state from the SE triple store.
 
-    Engagement lifecycle is owned by convergence. DCL fetches it over HTTP.
-    Fails loudly if convergence is unreachable — no silent fallback.
+    DCL is SE-only. Returns distinct entity_ids from the current run's
+    triples. Does NOT proxy to Convergence — engagement lifecycle is
+    Convergence's concern, not DCL's.
     """
-    import httpx
+    from backend.db.triple_store import TripleStore
 
-    convergence_url = os.environ.get("CONVERGENCE_API_URL", "http://localhost:8010")
-    url = f"{convergence_url}/api/convergence/engagement/active"
+    store = TripleStore()
     try:
-        resp = httpx.get(url, timeout=5.0)
-        resp.raise_for_status()
-    except httpx.ConnectError as e:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Convergence service unreachable at {convergence_url} — "
-                   f"engagement data unavailable. Error: {e}",
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Failed to fetch engagement from Convergence: {e}",
-        )
+        tenant_id = store.resolve_single_tenant()
+        current_run_id = store.get_current_run_id(tenant_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
-    data = resp.json()
-    return {
-        "engagement_id": data["engagement_id"],
-        "entity_a": {
-            "id": data["entity_a"]["id"],
-            "display_name": data["entity_a"]["display_name"],
-        },
-        "entity_b": {
-            "id": data["entity_b"]["id"],
-            "display_name": data["entity_b"]["display_name"],
-        },
-        "status": "active",
-    }
+    entity_ids = store.get_run_entities(current_run_id)
+
+    result: dict = {"entity_a": None, "entity_b": None, "status": "active"}
+
+    if len(entity_ids) >= 1:
+        result["entity_a"] = {
+            "id": entity_ids[0],
+            "display_name": entity_ids[0],
+        }
+    if len(entity_ids) >= 2:
+        result["entity_b"] = {
+            "id": entity_ids[1],
+            "display_name": entity_ids[1],
+        }
+
+    return result
 
 
 # ---------------------------------------------------------------------------

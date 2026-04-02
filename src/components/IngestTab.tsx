@@ -3,7 +3,7 @@ import { EntitySelector, EntityInfo } from './RunSelector';
 
 interface IngestLogEntry {
   id: string;
-  run_id: string;
+  dcl_ingest_id: string;
   entity_id: string | null;
   tenant_id: string;
   triples_received: number;
@@ -100,7 +100,7 @@ export function IngestTab({ entities, selectedEntityId, onEntityChange, entities
         <MetricCard
           label="Last Ingest"
           value={lastLog ? formatTs(lastLog.created_at) : '—'}
-          detail={lastLog ? `${lastLog.run_id.slice(0, 8)} | ${lastLog.entity_id || 'multi'} | ${lastLog.duration_ms}ms` : undefined}
+          detail={lastLog ? `${lastLog.dcl_ingest_id.slice(0, 8)} | ${lastLog.entity_id || 'multi'} | ${lastLog.duration_ms}ms` : undefined}
         />
         <MetricCard
           label="Total Triples"
@@ -194,7 +194,7 @@ function IngestRow({
         onClick={hasRejections ? onToggle : undefined}
       >
         <td className="px-3 py-1.5">{formatTs(log.created_at)}</td>
-        <td className="px-3 py-1.5 font-mono">{log.run_id.slice(0, 8)}</td>
+        <td className="px-3 py-1.5 font-mono">{log.dcl_ingest_id.slice(0, 8)}</td>
         <td className="px-3 py-1.5">{log.entity_id || '—'}</td>
         <td className="px-3 py-1.5 text-right">{log.triples_received.toLocaleString()}</td>
         <td className="px-3 py-1.5 text-right">{log.triples_written.toLocaleString()}</td>

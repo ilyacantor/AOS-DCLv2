@@ -318,11 +318,20 @@ def ingest_triples(
     # Not set for append=true (multi-batch ingest of the same run_id keeps
     # whatever pointer was set by the initial replace ingest).
     if not append:
-        _triple_store.upsert_tenant_run(str(req.tenant_id), str(req.run_id))
+        previous_run_id = _triple_store.upsert_tenant_run(str(req.tenant_id), str(req.run_id))
         logger.info(
             f"[ingest-triples] tenant_runs updated: tenant_id={req.tenant_id} "
-            f"→ current_run_id={req.run_id}"
+            f"→ current_run_id={req.run_id} (previous={previous_run_id})"
         )
+        # Deactivate triples from the displaced run — is_active lifecycle.
+        # Without this, old triples remain is_active=true and pollute
+        # the unscoped count (now removed) and any is_active queries.
+        if previous_run_id and previous_run_id != str(req.run_id):
+            deactivated = _triple_store.deactivate_run(previous_run_id)
+            logger.info(
+                f"[ingest-triples] Deactivated {deactivated} triples from "
+                f"previous run {previous_run_id}"
+            )
 
     concept_summary = _triple_store.count_by_domain(req.tenant_id, run_id=req.run_id)
 
@@ -597,9 +606,9 @@ def _update_seed_manifest(
 
     Two-gate protection:
     1. Only overwrites if the new run has at least as many concept domains as
-       the existing manifest (prevents SE pipeline runs from stomping rich seed data).
+       the existing manifest (prevents thin pipeline runs from stomping richer data).
     2. Rejects runs whose entity_ids are all UUID-format strings — those are
-       pipeline runs with misconfigured entity_id (should be 'meridian'/'cascadia').
+       pipeline runs with misconfigured entity_id.
     """
     try:
         existing = {}
@@ -616,7 +625,7 @@ def _update_seed_manifest(
             return
 
         # Gate 2: reject runs where all entity_ids look like UUIDs.
-        # Valid seed runs have human-readable entity_ids like 'meridian'/'cascadia'.
+        # Valid runs have human-readable entity_ids (e.g. "CloudLabs-9OSV").
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(

@@ -425,6 +425,23 @@ def health():
     }
 
 
+@app.get("/api/dcl/snapshots")
+async def dcl_snapshots(tenant_id: Optional[str] = None):
+    """Available snapshots from tenant_runs, enriched with triple counts.
+
+    If tenant_id is omitted, auto-resolves (must be exactly one tenant).
+    Returns {snapshots: [{dcl_ingest_id, snapshot_name, run_timestamp, total_rows, is_current}], tenant_id}.
+    """
+    from backend.db.triple_store import TripleStore
+
+    store = TripleStore()
+    if not tenant_id:
+        tenant_id = store.resolve_single_tenant()
+
+    snapshots = store.get_tenant_snapshots(tenant_id)
+    return {"snapshots": snapshots, "tenant_id": tenant_id}
+
+
 class RunRequest(BaseModel):
     mode: Literal["Farm", "AAM"] = "Farm"
     run_mode: Literal["Dev", "Prod"] = "Dev"
@@ -432,6 +449,7 @@ class RunRequest(BaseModel):
     source_limit: Optional[int] = 1000
     aod_run_id: Optional[str] = Field(None, description="AOD run ID for AAM mode")
     force_refresh: bool = Field(False, description="Force clear all caches and fetch fresh data from AAM")
+    tenant_id: Optional[str] = Field(None, description="Tenant UUID. If omitted, resolved from tenant_runs (must be exactly one tenant).")
 
 
 class RunResponse(BaseModel):
@@ -453,6 +471,22 @@ async def run_dcl(request: RunRequest):
     if request.force_refresh:
         _invalidate_aam_caches()
 
+    # Resolve tenant_id: explicit from request, or single-tenant auto-resolve.
+    # Zero or multiple tenants without explicit tenant_id → 422.
+    resolved_tenant_id = request.tenant_id
+    if not resolved_tenant_id and request.mode == "Farm":
+        from backend.db.triple_store import TripleStore
+        try:
+            resolved_tenant_id = TripleStore().resolve_single_tenant()
+        except ValueError as e:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"tenant_id required but not provided and cannot auto-resolve: {e}. "
+                    f"Pass tenant_id in the request body."
+                ),
+            )
+
     personas = request.personas or [Persona.CFO, Persona.CRO, Persona.COO, Persona.CTO]
 
     loop = asyncio.get_running_loop()
@@ -466,6 +500,7 @@ async def run_dcl(request: RunRequest):
             run_id=run_id,
             source_limit=request.source_limit or 1000,
             aod_run_id=request.aod_run_id,
+            tenant_id=resolved_tenant_id,
         )
 
     try:
