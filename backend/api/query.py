@@ -685,7 +685,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
     # Provenance comes from ingest pipeline receipts only
     provenance_info = []
 
-    # Entity resolution and conflict detection moved to Convergence service.
+    # DCL is SE-only — no entity resolution or conflict detection.
     entity_info = None
     conflicts_info = None
 

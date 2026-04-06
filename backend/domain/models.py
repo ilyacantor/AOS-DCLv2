@@ -140,7 +140,7 @@ class MappingDetail(CamelCaseModel):
 class GraphNode(CamelCaseModel):
     id: str
     label: str
-    level: Literal["L0", "L1", "L2", "L3"]
+    level: Literal["L0", "L1", "L2", "L3", "L4"]
     kind: Literal["pipe", "source", "ontology", "bll", "fabric"]
     group: Optional[str] = None
     status: Optional[str] = "ok"

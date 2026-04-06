@@ -5,8 +5,6 @@ Unlike v1 (query_resolver.py) which resolves against the in-memory semantic grap
 v2 resolves directly against the semantic_triples fact store.
 """
 
-from concurrent.futures import ThreadPoolExecutor
-
 from backend.core.db import get_connection
 from backend.utils.log_utils import get_logger
 
@@ -307,24 +305,6 @@ class TripleQueryResolver:
                 result[parts[0]] = item["value"]
         return result
 
-    @staticmethod
-    def _add_statement_dicts(a: dict, b: dict) -> dict:
-        """Recursively add two statement dicts (for combining statements)."""
-        result: dict = {}
-        all_keys = set(a.keys()) | set(b.keys())
-        for key in sorted(all_keys):
-            av = a.get(key)
-            bv = b.get(key)
-            if isinstance(av, dict) and isinstance(bv, dict):
-                result[key] = TripleQueryResolver._add_statement_dicts(av, bv)
-            elif isinstance(av, dict):
-                result[key] = av.copy()
-            elif isinstance(bv, dict):
-                result[key] = bv.copy()
-            else:
-                result[key] = (av or 0.0) + (bv or 0.0)
-        return result
-
     # ------------------------------------------------------------------
     # Income statement
     # ------------------------------------------------------------------
@@ -472,100 +452,6 @@ class TripleQueryResolver:
             )
 
         return cf
-
-    # ------------------------------------------------------------------
-    # Combining statement
-    # ------------------------------------------------------------------
-
-    def get_combining_statement(self, statement_type: str, period: str) -> dict:
-        """
-        Get a combining statement (entity_a + entity_b + combined).
-        statement_type: "income_statement" | "balance_sheet" | "cash_flow"
-        Returns {"entity_a": {...}, "entity_b": {...}, "combined": {...}}.
-        Combined = simple sum (no COFA adjustments).
-        """
-        method_map = {
-            "income_statement": self.get_income_statement,
-            "balance_sheet": self.get_balance_sheet,
-            "cash_flow": self.get_cash_flow,
-        }
-        if statement_type not in method_map:
-            raise ValueError(
-                f"Invalid statement_type='{statement_type}'. "
-                f"Must be one of: {', '.join(method_map.keys())}"
-            )
-
-        entities = self._get_entities()
-        if len(entities) < 2:
-            raise ValueError(
-                f"Combining statement requires at least 2 entities, "
-                f"found {len(entities)}: {entities} for "
-                f"tenant_id='{self.tenant_id}', run_id='{self.run_id}'"
-            )
-
-        entity_a = entities[0]
-        entity_b = entities[1]
-        method = method_map[statement_type]
-
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            stmt_a_f = pool.submit(method, entity_a, period)
-            stmt_b_f = pool.submit(method, entity_b, period)
-            stmt_a = stmt_a_f.result()
-            stmt_b = stmt_b_f.result()
-        combined = self._add_statement_dicts(stmt_a, stmt_b)
-
-        return {
-            "entity_a": stmt_a,
-            "entity_b": stmt_b,
-            "combined": combined,
-        }
-
-    def _get_entities(self) -> list[str]:
-        """Get entity IDs from semantic_triples for the current tenant/run.
-
-        Post-carveout: engagement config is in convergence. DCL's SE copy
-        derives entity list from actual triple data. This method is only
-        called by get_combining_statement() which is ME-only and will be
-        removed in Phase 5.
-        """
-        sql = """
-            SELECT DISTINCT entity_id
-            FROM semantic_triples
-            WHERE tenant_id = %s AND run_id = %s
-              AND entity_id != 'combined'
-            ORDER BY entity_id
-        """
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(sql, [self.tenant_id, self.run_id])
-                return [row[0] for row in cur.fetchall()]
-
-    # ------------------------------------------------------------------
-    # Overlapping concepts
-    # ------------------------------------------------------------------
-
-    def get_overlapping_concepts(self, domain: str) -> list[str]:
-        """
-        Find concepts that appear under both entity_ids.
-        Domain: 'customer', 'vendor', 'employee'.
-        Returns list of entity-level concept names (domain.entity_name) that
-        have rows for both entities. Subcategory concepts like
-        customer.pipeline.closed_won are excluded — they represent structural
-        metadata, not actual entity overlaps.
-        """
-        sql = """
-            SELECT concept
-            FROM semantic_triples
-            WHERE tenant_id = %s
-              AND run_id = %s
-              AND concept LIKE %s
-              AND concept NOT LIKE %s
-            GROUP BY concept
-            HAVING COUNT(DISTINCT entity_id) > 1
-            ORDER BY concept
-        """
-        rows = self._query(sql, [self.tenant_id, self.run_id, f"{domain}.%", f"{domain}.%.%"])
-        return [r["concept"] for r in rows]
 
     # ------------------------------------------------------------------
     # Provenance

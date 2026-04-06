@@ -392,13 +392,11 @@ def _compare_values(
 
 
 def _get_dcl_detected_conflicts() -> List[Dict[str, Any]]:
-    """
-    Get conflicts detected by the Convergence service.
+    """Get conflicts detected by DCL.
 
-    Conflict detection moved to convergence in the ME carve-out.
-    Returns empty list — conflict verification should query convergence at port 8010.
+    DCL is SE-only. Conflict detection is not implemented in DCL.
+    Returns empty list — conflict verification is a no-op.
     """
-    logger.info("[verification] Conflict detection moved to Convergence service — returning empty list")
     return []
 
 

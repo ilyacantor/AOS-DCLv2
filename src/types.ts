@@ -23,7 +23,7 @@ export interface SourceMetrics {
 export interface GraphNode {
   id: string;
   label: string;
-  level: 'L0' | 'L1' | 'L2' | 'L3';
+  level: 'L0' | 'L1' | 'L2' | 'L3' | 'L4';
   kind: 'pipe' | 'source' | 'ontology' | 'bll' | 'fabric';
   group?: string;
   status?: string;

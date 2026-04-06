@@ -26,7 +26,7 @@ def _display_entity(entity_id: str) -> str:
     """Format entity_id for human-readable display.
 
     Preserves IDs that already contain uppercase or hyphens (e.g. SysHub-NUU2).
-    Title-cases plain lowercase IDs (e.g. meridian → Meridian).
+    Title-cases plain lowercase IDs (e.g. bluelogic → Bluelogic).
     """
     if not entity_id:
         return entity_id
@@ -401,6 +401,22 @@ class DCLEngine:
         domains = sorted({r["domain"] for r in sankey_rows})
         entities = sorted({r["entity_id"] for r in sankey_rows if r.get("entity_id")})
 
+        # Detect concept-level collisions (multiple sources for same concept)
+        from backend.engine.concept_authority import pick_primary
+        collision_rows = triple_store.get_concept_collisions(tenant_id)
+        collisions = []
+        for row in collision_rows:
+            sources_list = row["sources"].split(",")
+            primary, alternatives = pick_primary(row["concept"], sources_list)
+            collisions.append({
+                "entity_id": row["entity_id"],
+                "concept": row["concept"],
+                "property": row["property"],
+                "period": row["period"],
+                "primary_source": primary,
+                "alternative_sources": alternatives,
+            })
+
         # Resolve the Farm source run_id from semantic_triples for provenance
         source_run_ids = triple_store.get_source_run_ids(tenant_id)
         if len(source_run_ids) == 1:
@@ -438,7 +454,8 @@ class DCLEngine:
                 },
                 "sourceCanonicalIds": source_names,
                 "sourceNames": source_names,
-                "sourceFabricPlanes": [],
+                "sourceFabricPlanes": triple_store.get_fabric_planes(tenant_id),
+                "collisions": collisions,
             }
         )
 
@@ -452,30 +469,63 @@ class DCLEngine:
 
         return snapshot, metrics
 
+    @staticmethod
+    def _fabric_label(plane: str) -> str:
+        """Human-readable label for a fabric plane type."""
+        labels = {
+            "ipaas": "iPaaS",
+            "api_gateway": "API Gateway",
+            "event_bus": "Event Bus",
+            "data_warehouse": "Data Warehouse",
+            "unattributed": "Unattributed",
+        }
+        return labels.get(plane, plane.replace("_", " ").title())
+
     def _build_graph_from_triples(
         self,
         sankey_rows: List[Dict[str, Any]],
         personas: List[Persona],
         run_id: str,
     ) -> Dict[str, List]:
-        """Build the 4-layer Sankey graph from pre-aggregated triple data.
+        """Build the 5-layer Sankey graph from pre-aggregated triple data.
 
-        Each sankey_row has: source_system, domain, entity_id, triple_count.
+        Each sankey_row has: fabric_plane, fabric_product, source_system,
+        domain, entity_id, triple_count.
+
+        Layers:
+          L0  Pipeline root
+          L1  Fabric planes (iPaaS, API Gateway, etc.)
+          L2  SoR instances (netsuite, salesforce, etc.)
+          L3  Concept domains (revenue, opex, etc.)
+          L4  Persona consumers (CFO, CRO, etc.)
         """
         nodes: List[GraphNode] = []
         links: List[GraphLink] = []
 
-        # ── L0: Pipeline root ──
-        pipe_id = "pipe_farm"
-        source_systems: Dict[str, int] = {}  # source → total triple count
-        domains: Dict[str, int] = {}          # domain → total triple count
+        # ── Aggregate dimensions ──
+        fabrics: Dict[str, int] = {}            # fabric_plane → total
+        fabric_products: Dict[str, str] = {}    # fabric_plane → fabric_product
+        sources: Dict[str, int] = {}            # source_system → total
+        domains: Dict[str, int] = {}            # domain → total
+        fabric_source: Dict[tuple, int] = {}    # (fabric, source) → total
+        source_domain: Dict[tuple, int] = {}    # (source, domain) → total
+
         for row in sankey_rows:
+            fp = row["fabric_plane"]
+            fprod = row["fabric_product"]
             src = row["source_system"]
             dom = row["domain"]
             cnt = row["triple_count"]
-            source_systems[src] = source_systems.get(src, 0) + cnt
-            domains[dom] = domains.get(dom, 0) + cnt
 
+            fabrics[fp] = fabrics.get(fp, 0) + cnt
+            fabric_products[fp] = fprod
+            sources[src] = sources.get(src, 0) + cnt
+            domains[dom] = domains.get(dom, 0) + cnt
+            fabric_source[(fp, src)] = fabric_source.get((fp, src), 0) + cnt
+            source_domain[(src, dom)] = source_domain.get((src, dom), 0) + cnt
+
+        # ── L0: Pipeline root ──
+        pipe_id = "pipe_farm"
         nodes.append(GraphNode(
             id=pipe_id,
             label="Farm Pipeline",
@@ -483,74 +533,67 @@ class DCLEngine:
             kind="pipe",
             group="Farm",
             status="ok",
-            metrics={"source_count": len(source_systems)}
+            metrics={"source_count": len(sources)}
         ))
 
-        # ── L1: Source system nodes ──
-        for src, total_count in sorted(source_systems.items()):
+        # ── L1: Fabric plane nodes ──
+        for fp, total_count in sorted(fabrics.items()):
+            fabric_id = f"fabric_{fp}"
+            nodes.append(GraphNode(
+                id=fabric_id,
+                label=self._fabric_label(fp),
+                level="L1",
+                kind="fabric",
+                group="Fabric",
+                status="ok",
+                metrics={
+                    "triple_count": total_count,
+                    "fabric_product": fabric_products.get(fp, ""),
+                }
+            ))
+            links.append(GraphLink(
+                id=f"link_pipe_{fp}",
+                source=pipe_id,
+                target=fabric_id,
+                value=float(total_count),
+                flow_type="schema",
+                info_summary=f"{total_count:,} triples via {self._fabric_label(fp)}",
+            ))
+
+        # ── L2: SoR instance nodes ──
+        for src, total_count in sorted(sources.items()):
             source_id = f"source_{src}"
             nodes.append(GraphNode(
                 id=source_id,
                 label=src,
-                level="L1",
+                level="L2",
                 kind="source",
-                group="Farm",
+                group="Sources",
                 status="ok",
                 metrics={
                     "triple_count": total_count,
-                    "tables": 0,
-                    "fields": 0,
                 }
             ))
+
+        # ── L1→L2: Fabric→SoR links ──
+        for (fp, src), count in fabric_source.items():
+            fabric_id = f"fabric_{fp}"
+            source_id = f"source_{src}"
             links.append(GraphLink(
-                id=f"link_pipe_{src}",
-                source=pipe_id,
+                id=f"link_{fp}_{src}_{uuid.uuid4().hex[:8]}",
+                source=fabric_id,
                 target=source_id,
-                value=float(total_count),
-                flow_type="schema",
-                info_summary=f"{total_count:,} triples from {src}",
+                value=float(count),
+                flow_type="routing",
+                info_summary=f"{src} via {fabric_products.get(fp, fp)} ({count:,} triples)",
             ))
 
-        # ── L1 (cont): Stub nodes for registered sources with zero triples ──
-        from backend.api.pipe_store import get_pipe_store
-        for defn in get_pipe_store().get_all_definitions():
-            if defn.source_name and defn.source_name not in source_systems:
-                stub_id = f"source_{defn.source_name}"
-                nodes.append(GraphNode(
-                    id=stub_id,
-                    label=defn.source_name,
-                    level="L1",
-                    kind="source",
-                    group="Farm",
-                    status="stub",
-                    metrics={
-                        "triple_count": 0,
-                        "vendor": defn.vendor,
-                        "category": defn.category,
-                    }
-                ))
-                links.append(GraphLink(
-                    id=f"link_pipe_{defn.source_name}",
-                    source=pipe_id,
-                    target=stub_id,
-                    value=0.0,
-                    flow_type="schema",
-                    info_summary=f"0 triples from {defn.source_name} (registered, no data)",
-                ))
-
-        # ── L1→L2: Source→Domain mapping links ──
-        # Aggregate by (source_system, domain) across entities
-        source_domain_agg: Dict[tuple, int] = {}
-        for row in sankey_rows:
-            key = (row["source_system"], row["domain"])
-            source_domain_agg[key] = source_domain_agg.get(key, 0) + row["triple_count"]
-
-        for (src, dom), count in source_domain_agg.items():
+        # ── L2→L3: SoR→Domain links ──
+        for (src, dom), count in source_domain.items():
             source_id = f"source_{src}"
             concept_id = f"ontology_{dom}"
-            link_id = f"link_{src}_{dom}_{uuid.uuid4().hex[:8]}"
             links.append(GraphLink(
-                id=link_id,
+                id=f"link_{src}_{dom}_{uuid.uuid4().hex[:8]}",
                 source=source_id,
                 target=concept_id,
                 value=float(count),
@@ -559,10 +602,9 @@ class DCLEngine:
                 info_summary=f"{src} → {dom} ({count:,} triples)",
             ))
 
-        # ── L2: Concept domain nodes ──
+        # ── L3: Concept domain nodes ──
         for dom, total_count in sorted(domains.items()):
             concept_id = f"ontology_{dom}"
-            # Collect source hierarchy for this domain
             source_hierarchy: Dict[str, Dict] = {}
             for row in sankey_rows:
                 if row["domain"] == dom:
@@ -575,7 +617,7 @@ class DCLEngine:
             nodes.append(GraphNode(
                 id=concept_id,
                 label=dom.replace("_", " ").title(),
-                level="L2",
+                level="L3",
                 kind="ontology",
                 group="Ontology",
                 status="ok",
@@ -588,12 +630,9 @@ class DCLEngine:
                 }
             ))
 
-        # ── L3: Persona nodes + L2→L3 consumption links ──
+        # ── L4: Persona nodes + L3→L4 consumption links ──
         persona_concepts = self.persona_view.get_relevant_concepts(personas)
 
-        # Count how many personas consume each domain so we can split
-        # the flow proportionally and preserve the Sankey invariant:
-        # total flow into each L2 node == total flow out.
         domain_consumer_count: Dict[str, int] = {}
         for persona in personas:
             for concept_id in persona_concepts.get(persona.value, []):
@@ -604,8 +643,8 @@ class DCLEngine:
             bll_id = f"bll_{persona.value.lower()}"
             nodes.append(GraphNode(
                 id=bll_id,
-                label=f"BLL {persona.value}",
-                level="L3",
+                label=persona.value,
+                level="L4",
                 kind="bll",
                 group="Business Logic",
                 status="ok",
@@ -616,14 +655,13 @@ class DCLEngine:
             for concept_id in relevant_concepts:
                 if concept_id in domains:
                     split_value = float(domains[concept_id]) / domain_consumer_count[concept_id]
-                    link_id = f"link_{concept_id}_{persona.value}_{uuid.uuid4().hex[:8]}"
                     links.append(GraphLink(
-                        id=link_id,
+                        id=f"link_{concept_id}_{persona.value}_{uuid.uuid4().hex[:8]}",
                         source=f"ontology_{concept_id}",
                         target=bll_id,
                         value=split_value,
                         flow_type="consumption",
-                        info_summary=f"{concept_id} consumed by {persona.value} BLL",
+                        info_summary=f"{concept_id} consumed by {persona.value}",
                     ))
 
         return {"nodes": nodes, "links": links}
@@ -891,7 +929,7 @@ class DCLEngine:
             bll_id = f"bll_{persona.value.lower()}"
             nodes.append(GraphNode(
                 id=bll_id,
-                label=f"BLL {persona.value}",
+                label=persona.value,
                 level="L3",
                 kind="bll",
                 group="Business Logic",

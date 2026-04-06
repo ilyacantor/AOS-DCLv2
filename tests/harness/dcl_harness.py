@@ -16,7 +16,7 @@ Usage:
     python tests/harness/dcl_harness.py
     python tests/harness/dcl_harness.py --url http://localhost:8004
     python tests/harness/dcl_harness.py --verbose
-    python tests/harness/dcl_harness.py --test combining-is
+    python tests/harness/dcl_harness.py --test health
 """
 
 import argparse
@@ -119,158 +119,8 @@ class EndpointTest:
         self.validate = validate
 
 
-def _validate_combining_is(data: dict) -> Optional[str]:
-    err = _check_keys(data, ["line_items", "available_periods"], "combining-is")
-    if err:
-        return err
-    if not isinstance(data["line_items"], list):
-        return "combining-is: line_items must be a list"
-    if not isinstance(data["available_periods"], list):
-        return "combining-is: available_periods must be a list"
-    return None
-
-
-def _validate_entity_overlap(data: dict) -> Optional[str]:
-    err = _check_keys(
-        data,
-        ["customer_overlap", "vendor_overlap", "people_overlap"],
-        "entity-overlap",
-    )
-    return err
-
-
-def _validate_cross_sell(data: dict) -> Optional[str]:
-    err = _check_keys(data, ["m_to_c", "c_to_m"], "cross-sell")
-    if err:
-        return err
-    if not isinstance(data["m_to_c"], list):
-        return "cross-sell: m_to_c must be a list"
-    if not isinstance(data["c_to_m"], list):
-        return "cross-sell: c_to_m must be a list"
-    return None
-
-
-def _validate_ebitda_bridge(data: dict) -> Optional[str]:
-    return _check_keys(
-        data,
-        [
-            "reported_ebitda",
-            "entity_adjustments",
-            "combination_synergies",
-            "pro_forma_ebitda",
-        ],
-        "ebitda-bridge",
-    )
-
-
-def _validate_qoe(data: dict) -> Optional[str]:
-    err = _check_keys(data, ["summary"], "qoe")
-    if err:
-        return err
-    return _check_keys(
-        data["summary"],
-        ["sustainability_score", "sustainability_grade"],
-        "qoe.summary",
-    )
-
-
-def _validate_dashboard_cfo(data: dict) -> Optional[str]:
-    return _check_keys(data, ["kpis", "charts"], "dashboard/cfo")
-
-
-def _validate_what_if(data: dict) -> Optional[str]:
-    # what-if should return scenario results — at minimum a dict with keys
-    if not isinstance(data, dict):
-        return f"what-if: expected dict, got {type(data).__name__}"
-    if len(data) == 0:
-        return "what-if: response is empty dict"
-    return None
-
-
-def _validate_cross_entity(data: dict) -> Optional[str]:
-    err = _check_keys(data, ["candidates"], "cross-entity")
-    if err:
-        return err
-    if not isinstance(data["candidates"], list):
-        return "cross-entity: candidates must be a list"
-    return None
-
-
-def _validate_conflicts(data: dict) -> Optional[str]:
-    err = _check_keys(data, ["conflicts"], "conflicts")
-    if err:
-        return err
-    if not isinstance(data["conflicts"], list):
-        return "conflicts: conflicts must be a list"
-    return None
-
-
-# All tests in execution order
+# All tests in execution order (SE only — ME tests live in Convergence repo)
 ALL_TESTS = [
-    EndpointTest(
-        test_id="combining-is",
-        name="Combining Income Statement",
-        method="GET",
-        path="/api/reports/combining-is",
-        validate=_validate_combining_is,
-    ),
-    EndpointTest(
-        test_id="entity-overlap",
-        name="Entity Overlap",
-        method="GET",
-        path="/api/reports/entity-overlap",
-        validate=_validate_entity_overlap,
-    ),
-    EndpointTest(
-        test_id="cross-sell",
-        name="Cross-Sell Opportunities",
-        method="GET",
-        path="/api/reports/cross-sell",
-        validate=_validate_cross_sell,
-    ),
-    EndpointTest(
-        test_id="ebitda-bridge",
-        name="EBITDA Bridge",
-        method="GET",
-        path="/api/reports/ebitda-bridge",
-        validate=_validate_ebitda_bridge,
-    ),
-    EndpointTest(
-        test_id="qoe",
-        name="Quality of Earnings",
-        method="GET",
-        path="/api/reports/qoe",
-        validate=_validate_qoe,
-    ),
-    EndpointTest(
-        test_id="dashboard-cfo",
-        name="CFO Dashboard",
-        method="GET",
-        path="/api/reports/dashboard/cfo",
-        validate=_validate_dashboard_cfo,
-    ),
-    EndpointTest(
-        test_id="what-if",
-        name="What-If Scenario (base preset)",
-        method="POST",
-        path="/api/reports/what-if",
-        body={"preset": "base"},
-        validate=_validate_what_if,
-    ),
-    EndpointTest(
-        test_id="cross-entity",
-        name="Cross-Entity Matches",
-        method="GET",
-        path="/api/dcl/entities/cross-entity",
-        validate=_validate_cross_entity,
-    ),
-    EndpointTest(
-        test_id="conflicts",
-        name="Active Conflicts",
-        method="GET",
-        path="/api/dcl/conflicts",
-        validate=_validate_conflicts,
-    ),
 ]
 
 

@@ -17,7 +17,7 @@ class LineItem(BaseModel):
     element: Literal["asset", "liability", "equity", "revenue", "expense"]
     natural_balance: Literal["debit", "credit"]
     amount: Decimal
-    source: Literal["entity_a", "entity_b", "elimination", "adjustment"]
+    source: str
 
 
 class JournalLine(BaseModel):

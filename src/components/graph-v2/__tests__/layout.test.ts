@@ -10,7 +10,7 @@ const config: LayoutConfig = {
   maxNodeHeight: 70,
 };
 
-function makeNode(id: string, level: 'L0' | 'L1' | 'L2' | 'L3', kind: GraphNode['kind'] = 'source'): GraphNode {
+function makeNode(id: string, level: GraphNode['level'], kind: GraphNode['kind'] = 'source'): GraphNode {
   return { id, label: id, level, kind };
 }
 

@@ -4,7 +4,7 @@ Hierarchical Dimension Store — Supabase-backed dimension value hierarchy.
 Provides tree-structured dimension hierarchies with parent-child relationships,
 depth levels, materialized paths, and roll-up/drill-down support.
 
-Required dimensions (COFA foundation):
+Required dimensions:
   - geo: Geographic hierarchy (Region → Country → Sub-region)
   - segment: Business unit / practice / service line
   - cost_center: Organizational cost center hierarchy

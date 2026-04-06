@@ -4,7 +4,7 @@ Shared helpers for v2 route files — tenant_id and run_id resolution.
 Every v2 endpoint that needs a tenant_id or run_id must use these helpers.
 No hardcoded UUIDs anywhere in route handlers.
 
-Resolution order (DCL — SE only, engagement lookup removed in convergence carve-out):
+Resolution order (DCL — SE only):
 1. Explicit query parameter (?tenant_id=...)
 2. Most recent active tenant from semantic_triples
 3. HTTP 400 with actionable error message
@@ -109,7 +109,7 @@ def _get_latest_run(
     """Get the primary run_id for a tenant from semantic_triples.
 
     Picks the run_id with the most active triples, not just the newest
-    created_at. This prevents small supplementary runs (COFA conflicts,
+    created_at. This prevents small supplementary runs (e.g.
     HR imports) from shadowing the main financial ingest run.
 
     When domain_hint='financial', only counts triples whose concept

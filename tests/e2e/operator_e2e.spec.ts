@@ -44,14 +44,14 @@ async function blockExternalRequests(page: import("playwright/test").Page) {
   });
 }
 
-/** Navigate to Reports Portal and wait for entity selector to render */
+/** Navigate to Reports Portal and wait for it to render */
 async function openReportsPortal(page: import("playwright/test").Page) {
   await page.goto(NLQ_URL, { waitUntil: "load" });
   await expect(page.locator("#nav-tab-reports")).toBeVisible({ timeout: 15_000 });
   await page.locator("#nav-tab-reports").click();
-  // Wait for entity selector — "Combined" is always rendered as default
+  // Wait for entity selector — Meridian should be available
   await expect(
-    page.locator("button").filter({ hasText: /Combined/i }).first()
+    page.locator("button").filter({ hasText: /Meridian/i }).first()
   ).toBeVisible({ timeout: 20_000 });
 }
 
@@ -181,67 +181,6 @@ test.describe.serial("NLQ Reports Portal — Operator View", () => {
     expect(consoleErrors).toHaveLength(0);
   });
 
-  test("5. Overlap tab shows overlap data", async ({ page }) => {
-    const consoleErrors: string[] = [];
-    setupPage(page, consoleErrors);
-
-    await openReportsPortal(page);
-
-    // Combined is selected by default — Overlap tab should be visible
-    const overlapTab = page.locator("button").filter({ hasText: /^Overlap$/ });
-    await expect(overlapTab.first()).toBeVisible({ timeout: 10_000 });
-    await overlapTab.first().click();
-
-    // Wait for "Customer Overlap" header from OverlapReport component
-    await expect(page.locator("text=Customer Overlap").first()).toBeVisible({
-      timeout: 25_000,
-    });
-    await expect(page.locator("text=Vendor Overlap").first()).toBeVisible({
-      timeout: 5_000,
-    });
-
-    await page.screenshot({ path: "/tmp/e2e-reports-overlap.png", fullPage: true });
-    expect(consoleErrors).toHaveLength(0);
-  });
-
-  test("6. EBITDA Bridge tab shows adjustments", async ({ page }) => {
-    const consoleErrors: string[] = [];
-    setupPage(page, consoleErrors);
-
-    await openReportsPortal(page);
-
-    const bridgeTab = page.locator("button").filter({ hasText: "EBITDA Bridge" });
-    await expect(bridgeTab.first()).toBeVisible({ timeout: 10_000 });
-    await bridgeTab.first().click();
-
-    // Wait for EBITDA content to render
-    await expect(
-      page.locator("text=/EBITDA|Adjusted|Reported/i").first()
-    ).toBeVisible({ timeout: 25_000 });
-
-    await page.screenshot({ path: "/tmp/e2e-reports-bridge.png", fullPage: true });
-    expect(consoleErrors).toHaveLength(0);
-  });
-
-  test("7. Combining statement renders", async ({ page }) => {
-    const consoleErrors: string[] = [];
-    setupPage(page, consoleErrors);
-
-    await openReportsPortal(page);
-
-    const combiningTab = page.locator("button").filter({ hasText: "Combining" });
-    await expect(combiningTab.first()).toBeVisible({ timeout: 10_000 });
-    await combiningTab.first().click();
-
-    const table = page.locator("table");
-    await expect(table.first()).toBeVisible({ timeout: 25_000 });
-
-    const tableText = await table.first().textContent();
-    expect(tableText!.length).toBeGreaterThan(50);
-
-    await page.screenshot({ path: "/tmp/e2e-reports-combining.png", fullPage: true });
-    expect(consoleErrors).toHaveLength(0);
-  });
 });
 
 // ============================================================
@@ -348,21 +287,6 @@ test.describe("DCL Frontend — Engine Dashboard", () => {
     expect(consoleErrors).toHaveLength(0);
   });
 
-  test("11. Merge tab loads convergence view", async ({ page }) => {
-    const consoleErrors: string[] = [];
-    setupPage(page, consoleErrors);
-
-    await page.goto(DCL_URL, { waitUntil: "load" });
-
-    const mergeTab = page.locator("button, a").filter({ hasText: "Merge" });
-    await expect(mergeTab.first()).toBeVisible({ timeout: 10_000 });
-    await mergeTab.first().click();
-
-    await page.waitForTimeout(2_000);
-
-    await page.screenshot({ path: "/tmp/e2e-dcl-merge.png", fullPage: true });
-    expect(consoleErrors).toHaveLength(0);
-  });
 });
 
 // ============================================================

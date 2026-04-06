@@ -60,6 +60,8 @@ class TriplePayload(BaseModel):
     canonical_id: Optional[str] = None
     resolution_method: Optional[str] = None
     resolution_confidence: Optional[float] = None
+    fabric_plane: Optional[str] = None
+    fabric_product: Optional[str] = None
 
 
 class IngestRequest(BaseModel):
@@ -296,6 +298,8 @@ def ingest_triples(
             "canonical_id": t.canonical_id,
             "resolution_method": t.resolution_method,
             "resolution_confidence": t.resolution_confidence,
+            "fabric_plane": t.fabric_plane,
+            "fabric_product": t.fabric_product,
         })
 
     # --- Instrumentation: capture timing around the write ---

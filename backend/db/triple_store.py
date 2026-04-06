@@ -22,6 +22,7 @@ class TripleStore:
         "pipe_id", "run_id", "source_run_tag",
         "confidence_score", "confidence_tier",
         "canonical_id", "resolution_method", "resolution_confidence",
+        "fabric_plane", "fabric_product",
     ]
     _COPY_SQL = (
         f"COPY semantic_triples ({', '.join(_COPY_COLS)}) "
@@ -100,27 +101,16 @@ class TripleStore:
                 cur.execute(
                     f"SET LOCAL statement_timeout = {int(INGEST_STATEMENT_TIMEOUT_MS)}"
                 )
-                # Exclude COFA-process triples (cofa_conflict, cofa_mapping,
-                # cofa_unified) from the DELETE.  These are owned by the COFA
-                # mapping writer and have their own deactivation lifecycle via
-                # deactivate_cofa_triples().  Without this exclusion, every
-                # Farm re-ingest nukes conflict triples that Maestra wrote.
-                cofa_exclusion = (
-                    " AND split_part(concept, '.', 1) NOT IN "
-                    "('cofa', 'cofa_conflict', 'cofa_mapping', 'cofa_unified')"
-                )
                 if entity_ids:
                     placeholders = ", ".join(["%s"] * len(entity_ids))
                     cur.execute(
                         f"DELETE FROM semantic_triples "
-                        f"WHERE tenant_id = %s AND entity_id IN ({placeholders})"
-                        f"{cofa_exclusion}",
+                        f"WHERE tenant_id = %s AND entity_id IN ({placeholders})",
                         [tenant_id] + entity_ids,
                     )
                 else:
                     cur.execute(
-                        "DELETE FROM semantic_triples WHERE tenant_id = %s"
-                        f"{cofa_exclusion}",
+                        "DELETE FROM semantic_triples WHERE tenant_id = %s",
                         (tenant_id,),
                     )
                 deleted = cur.rowcount
@@ -179,32 +169,6 @@ class TripleStore:
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
-    def deactivate_cofa_triples(self, entity_ids: list[str]) -> int:
-        """Deactivate all active COFA triples for the given entity_ids.
-
-        This ensures a new COFA unification run replaces — not accumulates on —
-        prior runs' data.  Matches on concept prefix (cofa., cofa_mapping.,
-        cofa_conflict., cofa_unified.) rather than source_field, because
-        triples may originate from different writers with varying source_field
-        values (including NULL).
-        """
-        all_ids = list(set(entity_ids + ["combined"]))
-        placeholders = ", ".join(["%s"] * len(all_ids))
-        sql = (
-            "UPDATE semantic_triples SET is_active = false, updated_at = now() "
-            "WHERE is_active = true "
-            "  AND (   split_part(concept, '.', 1) = 'cofa' "
-            "       OR split_part(concept, '.', 1) = 'cofa_mapping' "
-            "       OR split_part(concept, '.', 1) = 'cofa_conflict' "
-            "       OR split_part(concept, '.', 1) = 'cofa_unified') "
-            f"  AND entity_id IN ({placeholders})"
-        )
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(sql, all_ids)
-                conn.commit()
-                return cur.rowcount
-
     def deactivate_entity_triples(self, entity_ids: list[str], tenant_id: str = "") -> int:
         """Deactivate all active triples for given entity_ids within a tenant.
 
@@ -223,13 +187,9 @@ class TripleStore:
                 "cross-tenant data corruption."
             )
         placeholders = ", ".join(["%s"] * len(entity_ids))
-        # Exclude COFA-process triples — their lifecycle is managed by
-        # deactivate_cofa_triples(), not by Farm ingest cycles.
         sql = (
             "UPDATE semantic_triples SET is_active = false, updated_at = now() "
-            f"WHERE is_active = true AND tenant_id = %s AND entity_id IN ({placeholders}) "
-            "AND split_part(concept, '.', 1) NOT IN "
-            "('cofa', 'cofa_conflict', 'cofa_mapping', 'cofa_unified')"
+            f"WHERE is_active = true AND tenant_id = %s AND entity_id IN ({placeholders})"
         )
         params = [tenant_id] + entity_ids
         with get_connection() as conn:
@@ -240,19 +200,16 @@ class TripleStore:
                 return cur.rowcount
 
     def deactivate_tenant_triples(self, tenant_id: str) -> int:
-        """Deactivate all active non-COFA triples for a tenant.
+        """Deactivate all active triples for a tenant.
 
         Used on full replacement ingest — kills financials, HR, etc. so the
-        new run is the sole active dataset.  Excludes COFA-process triples
-        whose lifecycle is managed by deactivate_cofa_triples().
+        new run is the sole active dataset.
         """
         if not tenant_id:
             raise ValueError("deactivate_tenant_triples requires tenant_id.")
         sql = (
             "UPDATE semantic_triples SET is_active = false, updated_at = now() "
-            "WHERE is_active = true AND tenant_id = %s "
-            "AND split_part(concept, '.', 1) NOT IN "
-            "('cofa', 'cofa_conflict', 'cofa_mapping', 'cofa_unified')"
+            "WHERE is_active = true AND tenant_id = %s"
         )
         with get_connection() as conn:
             with conn.cursor() as cur:
@@ -665,17 +622,21 @@ class TripleStore:
     def get_sankey_aggregation(self, tenant_id: str) -> list[dict]:
         """Aggregate triples for Sankey visualization, scoped to a tenant.
 
-        Returns rows of {source_system, domain, entity_id, triple_count}
-        grouped by source_system × root concept domain × entity_id.
+        Returns rows of {fabric_plane, fabric_product, source_system, domain,
+        entity_id, triple_count} grouped by fabric × source × domain × entity.
         Uses the tenant_runs pointer to scope to the current run only.
         """
         sql = (
-            "SELECT source_system, split_part(concept, '.', 1) AS domain, "
+            "SELECT COALESCE(fabric_plane, 'unattributed') AS fabric_plane, "
+            "COALESCE(fabric_product, 'unknown') AS fabric_product, "
+            "source_system, split_part(concept, '.', 1) AS domain, "
             "entity_id, COUNT(*) AS triple_count "
             "FROM semantic_triples "
             "WHERE tenant_id = %s "
             "AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) "
-            "GROUP BY source_system, split_part(concept, '.', 1), entity_id "
+            "GROUP BY COALESCE(fabric_plane, 'unattributed'), "
+            "COALESCE(fabric_product, 'unknown'), "
+            "source_system, split_part(concept, '.', 1), entity_id "
             "ORDER BY triple_count DESC"
         )
         with get_connection() as conn:
@@ -683,6 +644,56 @@ class TripleStore:
                 cur.execute(sql, [tenant_id, tenant_id])
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
+
+    def get_concept_collisions(self, tenant_id: str) -> list[dict]:
+        """Detect concepts written by multiple source_systems in the current run.
+
+        Returns rows of {entity_id, concept, property, period, sources} where
+        sources is a comma-separated list of all source_systems that wrote that
+        (entity_id, concept, property, period) combination. Only rows with
+        2+ distinct sources are returned.
+
+        The caller uses concept_authority.pick_primary() to rank these.
+        """
+        sql = (
+            "SELECT entity_id, concept, property, period, "
+            "string_agg(DISTINCT source_system, ',' ORDER BY source_system) AS sources, "
+            "COUNT(DISTINCT source_system) AS source_count "
+            "FROM semantic_triples "
+            "WHERE tenant_id = %s "
+            "AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) "
+            "GROUP BY entity_id, concept, property, period "
+            "HAVING COUNT(DISTINCT source_system) > 1 "
+            "ORDER BY concept, entity_id, period"
+        )
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, [tenant_id, tenant_id])
+                columns = [desc[0] for desc in cur.description]
+                return [dict(zip(columns, row)) for row in cur.fetchall()]
+
+    def get_fabric_planes(self, tenant_id: str) -> list[str]:
+        """Return distinct fabric_plane:fabric_product pairs for the current run.
+
+        Excludes rows where fabric_plane is NULL or 'none'.
+        Returns sorted list of 'plane:product' strings matching the
+        sourceFabricPlanes format used in GraphSnapshot.meta.
+        """
+        sql = (
+            "SELECT DISTINCT fabric_plane, fabric_product "
+            "FROM semantic_triples "
+            "WHERE tenant_id = %s "
+            "AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) "
+            "AND fabric_plane IS NOT NULL AND fabric_plane != 'none' "
+            "ORDER BY fabric_plane, fabric_product"
+        )
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, [tenant_id, tenant_id])
+                return sorted(
+                    f"{row[0]}:{row[1]}" for row in cur.fetchall()
+                    if row[0] and row[1]
+                )
 
     def delete_by_run(self, run_id: str) -> int:
         """Hard-delete all triples for a run (test cleanup only)."""

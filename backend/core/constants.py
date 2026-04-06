@@ -56,7 +56,7 @@ POOL_RETRY_COOLDOWN = float(os.getenv("DCL_POOL_RETRY_COOLDOWN", "30.0"))
 POOL_MIN_CONN = int(os.getenv("DCL_POOL_MIN_CONN", "2"))
 # POOL_MAX_CONN: Set via environment variable in production.
 # Default 20 accounts for Console's burst request patterns (concurrent
-# triples/browse + reports) on top of the combining engine's 6 worker threads.
+# triples/browse + reports) on top of the query engine's worker threads.
 # Tune based on the Postgres instance's max_connections (check Render dashboard
 # or: SELECT setting FROM pg_settings WHERE name = 'max_connections').
 # Leave headroom for admin/migration connections.

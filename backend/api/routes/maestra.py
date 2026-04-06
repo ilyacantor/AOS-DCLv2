@@ -7,7 +7,6 @@ Returns structured JSON for a given tenant describing:
   - valid pairings count
   - entities with list
   - extraction rules status
-  - entity resolution state
   - last update timestamp
   - health flag
 """
@@ -70,9 +69,6 @@ def maestra_status(tenant_id: str = Query("default")) -> Dict[str, Any]:
             "count": rule_count,
             "active": active_count,
             "errored": errored_count,
-        },
-        "entity_resolution": {
-            "note": "Entity resolution moved to Convergence service (port 8010)",
         },
         "last_update_at": last_update_at,
         "healthy": healthy,

@@ -134,7 +134,7 @@ def test_maestra_status_schema_fields():
     data = api_get("/maestra/status", params={"tenant_id": "default"}).json()
     required = [
         "module", "tenant_id", "concepts", "dimensions", "pairings",
-        "entities", "extraction_rules", "entity_resolution",
+        "entities", "extraction_rules",
         "last_update_at", "healthy",
     ]
     missing = [f for f in required if f not in data]
@@ -209,20 +209,6 @@ def test_maestra_status_extraction_rules_structure():
         t.fail("count > 0", f"count={er['count']}")
 
 
-def test_maestra_status_entity_resolution_structure():
-    """entity_resolution has configured (bool) and active_entities (list)."""
-    t = test("MAESTRA-012", "entity_resolution has configured + active_entities")
-    data = api_get("/maestra/status", params={"tenant_id": "default"}).json()
-    er = data.get("entity_resolution", {})
-    if "configured" not in er or "active_entities" not in er:
-        t.fail("configured + active_entities", f"keys: {list(er.keys())}")
-        return
-    if isinstance(er["configured"], bool) and isinstance(er["active_entities"], list):
-        t.pass_(f"configured={er['configured']}, active_entities count={len(er['active_entities'])}")
-    else:
-        t.fail("bool + list", f"configured={type(er['configured'])}, active_entities={type(er['active_entities'])}")
-
-
 def test_maestra_status_response_time():
     """Response time < 500ms."""
     t = test("MAESTRA-013", "Response time < 500ms")
@@ -269,7 +255,6 @@ def run_all():
     test_maestra_status_pairings_structure()
     test_maestra_status_entities_structure()
     test_maestra_status_extraction_rules_structure()
-    test_maestra_status_entity_resolution_structure()
     test_maestra_status_response_time()
     test_maestra_status_default_tenant()
 

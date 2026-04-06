@@ -149,7 +149,7 @@ class IngestRequest(BaseModel):
     row_count: int = Field(..., ge=0, description="Expected len(rows) — validated server-side")
     rows: List[Dict[str, Any]] = Field(..., description="Transformed records from Runner")
     runner_id: Optional[str] = None
-    entity_id: Optional[str] = None  # WS1.3: entity this data belongs to (e.g. "entity_a", "entity_b")
+    entity_id: Optional[str] = None  # WS1.3: entity this data belongs to
 
 
 class IngestResponse(BaseModel):

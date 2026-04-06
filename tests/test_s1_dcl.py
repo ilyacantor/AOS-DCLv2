@@ -94,11 +94,6 @@ def _cleanup_all():
                 "DELETE FROM resolution_workspaces WHERE tenant_id = %s",
                 (TEST_TENANT_ID,),
             )
-            # Engagement state
-            cur.execute(
-                "DELETE FROM engagement_state WHERE tenant_id = %s",
-                (TEST_TENANT_ID,),
-            )
             # Run ledger
             cur.execute(
                 "DELETE FROM run_ledger WHERE tenant_id = %s",
@@ -599,7 +594,6 @@ class TestConceptRegistry:
         assert registry.is_valid_concept("employee"), "'employee' should be valid"
 
         # New concepts added in S1
-        assert registry.is_valid_concept("cofa"), "'cofa' should be valid"
         assert registry.is_valid_concept("ebitda_adjustment"), "'ebitda_adjustment' should be valid"
         assert registry.is_valid_concept("service"), "'service' should be valid"
         assert registry.is_valid_concept("cash_flow"), "'cash_flow' should be valid"

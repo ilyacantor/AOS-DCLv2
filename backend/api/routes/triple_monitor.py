@@ -150,12 +150,6 @@ def triples_overview(
         f"FROM semantic_triples WHERE is_active = true{extra_filter} "
         f"GROUP BY run_id ORDER BY MIN(created_at) DESC LIMIT 1"
     )
-    # Conflict count: distinct conflict IDs from cofa_conflict.* triples
-    sql_conflicts = (
-        f"SELECT COUNT(DISTINCT split_part(concept, '.', 2)) "
-        f"FROM semantic_triples "
-        f"WHERE is_active = true AND split_part(concept, '.', 1) = 'cofa_conflict'{extra_filter}"
-    )
 
     try:
         with get_connection() as conn:
@@ -196,9 +190,6 @@ def triples_overview(
                         "timestamp": latest_row[1].isoformat() if latest_row[1] else None,
                         "triple_count": latest_row[2],
                     }
-
-                cur.execute(sql_conflicts, params)
-                conflict_count = cur.fetchone()[0]
     except PoolExhausted as e:
         raise HTTPException(
             status_code=503,
@@ -214,7 +205,6 @@ def triples_overview(
         "domains": domains,
         "periods": periods,
         "last_ingest": last_ingest,
-        "conflict_count": conflict_count,
     }
 
 
@@ -703,8 +693,7 @@ def triples_engagement():
     """Entity state from the SE triple store.
 
     DCL is SE-only. Returns distinct entity_ids from the current run's
-    triples. Does NOT proxy to Convergence — engagement lifecycle is
-    Convergence's concern, not DCL's.
+    triples. Engagement lifecycle is not DCL's concern.
     """
     from backend.db.triple_store import TripleStore
 
@@ -717,20 +706,13 @@ def triples_engagement():
 
     entity_ids = store.get_run_entities(current_run_id)
 
-    result: dict = {"entity_a": None, "entity_b": None, "status": "active"}
-
-    if len(entity_ids) >= 1:
-        result["entity_a"] = {
-            "id": entity_ids[0],
-            "display_name": entity_ids[0],
-        }
-    if len(entity_ids) >= 2:
-        result["entity_b"] = {
-            "id": entity_ids[1],
-            "display_name": entity_ids[1],
-        }
-
-    return result
+    return {
+        "entities": [
+            {"id": eid, "display_name": _entity_display_name(eid)}
+            for eid in entity_ids
+        ],
+        "status": "active",
+    }
 
 
 # ---------------------------------------------------------------------------
