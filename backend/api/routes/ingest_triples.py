@@ -348,27 +348,19 @@ def ingest_triples(
         )
     duration_ms = int((time.monotonic() - start_ts) * 1000)
 
-    # Atomic pointer swap — O(1), single-row UPSERT, no table scan.
+    # Atomic pointer swap + deactivation — single transaction.
     # Not set for append=true (multi-batch ingest of the same run_id keeps
     # whatever pointer was set by the initial replace ingest).
     if not append:
-        previous_run_id = _triple_store.upsert_tenant_run(
+        previous_run_id, deactivated = _triple_store.swap_and_deactivate(
             str(req.tenant_id), str(req.dcl_ingest_id),
             snapshot_name=req.snapshot_name,
         )
         logger.info(
             f"[ingest-triples] tenant_runs updated: tenant_id={req.tenant_id} "
-            f"→ current_run_id={req.dcl_ingest_id} (previous={previous_run_id})"
+            f"→ current_run_id={req.dcl_ingest_id} (previous={previous_run_id}, "
+            f"deactivated={deactivated})"
         )
-        # Deactivate triples from the displaced run — is_active lifecycle.
-        # Without this, old triples remain is_active=true and pollute
-        # the unscoped count (now removed) and any is_active queries.
-        if previous_run_id and previous_run_id != str(req.dcl_ingest_id):
-            deactivated = _triple_store.deactivate_run(previous_run_id)
-            logger.info(
-                f"[ingest-triples] Deactivated {deactivated} triples from "
-                f"previous run {previous_run_id}"
-            )
 
     concept_summary = _triple_store.count_by_domain(req.tenant_id, run_id=req.dcl_ingest_id)
 

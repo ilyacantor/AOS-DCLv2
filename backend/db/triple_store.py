@@ -272,6 +272,47 @@ class TripleStore:
                 conn.commit()
                 return str(row[0]) if row and row[0] else None
 
+    def swap_and_deactivate(
+        self, tenant_id: str, new_run_id: str,
+        snapshot_name: str | None = None,
+    ) -> tuple[str | None, int]:
+        """Atomically swap tenant_runs pointer AND deactivate the displaced run.
+
+        Single transaction: if either statement fails, both roll back.
+        Prevents the race condition where concurrent ingests leave orphaned
+        is_active=true triples from runs that are no longer current.
+
+        Returns (previous_run_id, deactivated_count).
+        """
+        upsert_sql = """
+            INSERT INTO tenant_runs (tenant_id, current_run_id, previous_run_id,
+                                     current_snapshot_name, previous_snapshot_name, updated_at)
+            VALUES (%s, %s, NULL, %s, NULL, now())
+            ON CONFLICT (tenant_id) DO UPDATE
+              SET previous_run_id          = tenant_runs.current_run_id,
+                  current_run_id           = EXCLUDED.current_run_id,
+                  previous_snapshot_name   = tenant_runs.current_snapshot_name,
+                  current_snapshot_name    = EXCLUDED.current_snapshot_name,
+                  updated_at              = now()
+            RETURNING previous_run_id
+        """
+        deactivate_sql = (
+            "UPDATE semantic_triples SET is_active = false, updated_at = now() "
+            "WHERE run_id = %s AND is_active = true"
+        )
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"SET LOCAL statement_timeout = {int(INGEST_STATEMENT_TIMEOUT_MS)}")
+                cur.execute(upsert_sql, (tenant_id, new_run_id, snapshot_name))
+                row = cur.fetchone()
+                previous_run_id = str(row[0]) if row and row[0] else None
+                deactivated = 0
+                if previous_run_id and previous_run_id != new_run_id:
+                    cur.execute(deactivate_sql, (previous_run_id,))
+                    deactivated = cur.rowcount
+                conn.commit()
+        return previous_run_id, deactivated
+
     def resolve_single_tenant(self) -> str:
         """Return tenant_id if exactly one tenant exists in tenant_runs.
 
