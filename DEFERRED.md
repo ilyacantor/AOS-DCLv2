@@ -42,13 +42,11 @@ originating sprint so future agents can trace the decision.
    (96 triples) is sufficient for fourth-plane objective but thin for
    real analytics coverage.
 
-9. **Event stream ontology concepts** (Phase C audit) — Populating
-   event_bus fabric plane requires new ontology concepts for streaming
-   infrastructure (candidates: event_stream.message_throughput,
-   event_stream.consumer_lag, event_stream.topic_count,
-   event_stream.partition_count, event_stream.event_volume). None exist
-   in config/ontology_concepts.yaml today. Routing table is ready
-   (FABRIC_VENDOR_INFO has confluent/kafka/eventbridge/rabbitmq/pulsar/
-   azure_event_hubs); blocker is ontology, not routing. Requires design
-   pass on concept names, units, temporal model, and which SoR manifest
-   fields feed them. Blocks Phase C event_bus generator.
+9. ~~**Event stream ontology concepts**~~ — **RESOLVED.** event_stream
+   concept (IT-012) added to ontology_concepts.yaml in both DCL and
+   Convergence. Farm generates 60 event_stream triples per entity
+   (topic_count, partition_count, message_throughput, consumer_lag,
+   event_volume) via EventStreamTripleGenerator. Routing table maps 6
+   streaming vendors to event_bus plane. Graph v2 now renders 4 fabric
+   planes (ipaas, api_gateway, data_warehouse, event_bus). Playwright
+   verified.

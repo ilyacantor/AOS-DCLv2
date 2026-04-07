@@ -3925,6 +3925,38 @@ concepts:
     calculation_methodology: "Uptime = (total_minutes - downtime_minutes) / total_minutes. MTTR = mean(resolved_at - detected_at) for incidents in period. Cost per Unit = total cloud spend / unit of work (requests, users, transactions)."
     comparability_rules: "Cloud spend comparison requires normalized unit costs (reserved vs on-demand). Uptime definitions must align on what counts as downtime (degraded service vs full outage). MTTR start point must match (alert-fired vs ticket-opened vs acknowledged). Multi-cloud comparison requires mapped service categories."
 
+  - id: event_stream
+    concept_id: IT-012
+    name: Event Stream Metrics
+    description: "Streaming infrastructure throughput, lag, and capacity"
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - message_throughput
+      - consumer_lag
+      - topic_count
+      - partition_count
+      - event_volume
+      - producer_rate
+      - consumer_rate
+      - retention_hours
+    aliases:
+      - streaming_metrics
+      - kafka_metrics
+      - event_bus_metrics
+      - message_bus
+    expected_type: float
+    typical_source_systems: [confluent, kafka, eventbridge, rabbitmq, pulsar, azure_event_hubs]
+    persona_relevance:
+      cto: 1.0
+      coo: 0.6
+      cfo: 0.4
+    recognition_basis: "Derived from event streaming platform control planes — Confluent Cloud metrics API, AWS EventBridge CloudWatch metrics, Kafka JMX/Prometheus exporters. Topic and partition counts from cluster metadata. Consumer lag from consumer group offset tracking."
+    timing_semantics: "Message throughput and consumer lag are real-time metrics aggregated to period averages. Topic and partition counts are point-in-time snapshots. Event volume is cumulative over the reporting period."
+    scope_boundaries: "Includes all managed event streaming infrastructure — Kafka clusters, EventBridge buses, RabbitMQ vhosts, Pulsar tenants. Excludes application-level message queues (SQS, Redis pub/sub) and batch ETL pipelines. Scoped to production clusters unless explicitly including staging."
+    calculation_methodology: "Message Throughput = messages produced / time window. Consumer Lag = latest offset - consumer committed offset, aggregated across all partitions. Event Volume = sum of messages across all topics in period. Partition Count = sum across all topics in cluster."
+    comparability_rules: "Throughput comparison requires matching time window granularity (per-second vs per-minute). Consumer lag units must align (messages vs seconds vs bytes). Cross-platform comparison (Kafka vs EventBridge) requires normalized event definitions. Partition counts reflect scaling strategy and are not directly comparable across different cluster architectures."
+
   - id: arr
     concept_id: FIN-040
     name: ARR Waterfall
