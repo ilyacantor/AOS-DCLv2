@@ -449,7 +449,8 @@ class RunRequest(BaseModel):
     source_limit: Optional[int] = 1000
     aod_run_id: Optional[str] = Field(None, description="AOD run ID for AAM mode")
     force_refresh: bool = Field(False, description="Force clear all caches and fetch fresh data from AAM")
-    tenant_id: Optional[str] = Field(None, description="Tenant UUID. If omitted, resolved from tenant_runs (must be exactly one tenant).")
+    tenant_id: Optional[str] = Field(None, description="Tenant UUID. If omitted, resolved from entity_id or tenant_runs.")
+    entity_id: Optional[str] = Field(None, description="Entity business key (e.g. NetCorp-G19H). Resolved to tenant_id via tenant_runs join.")
 
 
 class RunResponse(BaseModel):
@@ -471,9 +472,18 @@ async def run_dcl(request: RunRequest):
     if request.force_refresh:
         _invalidate_aam_caches()
 
-    # Resolve tenant_id: explicit from request, or single-tenant auto-resolve.
+    # Resolve tenant_id: explicit → from entity_id → single-tenant auto-resolve.
     # Zero or multiple tenants without explicit tenant_id → 422.
     resolved_tenant_id = request.tenant_id
+    if not resolved_tenant_id and request.entity_id and request.mode == "Farm":
+        from backend.db.triple_store import TripleStore
+        try:
+            resolved_tenant_id = TripleStore().resolve_tenant_for_entity(request.entity_id)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Cannot resolve tenant for entity_id={request.entity_id}: {e}",
+            )
     if not resolved_tenant_id and request.mode == "Farm":
         from backend.db.triple_store import TripleStore
         try:
@@ -483,7 +493,7 @@ async def run_dcl(request: RunRequest):
                 status_code=422,
                 detail=(
                     f"tenant_id required but not provided and cannot auto-resolve: {e}. "
-                    f"Pass tenant_id in the request body."
+                    f"Pass tenant_id or entity_id in the request body."
                 ),
             )
 

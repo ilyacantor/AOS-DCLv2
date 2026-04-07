@@ -336,6 +336,37 @@ class TripleStore:
             )
         return str(rows[0][0])
 
+    def resolve_tenant_for_entity(self, entity_id: str) -> str:
+        """Return tenant_id for a given entity_id via tenant_runs join.
+
+        Uses the authoritative tenant_runs.current_run_id pointer —
+        not is_active — to scope to the live run.
+
+        Raises ValueError if zero or multiple tenants match.
+        """
+        sql = (
+            "SELECT DISTINCT t.tenant_id "
+            "FROM tenant_runs t "
+            "JOIN semantic_triples s ON s.run_id = t.current_run_id "
+            "WHERE s.entity_id = %s "
+            "LIMIT 2"
+        )
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (entity_id,))
+                rows = cur.fetchall()
+        if not rows:
+            raise ValueError(
+                f"No active tenant found for entity_id={entity_id}. "
+                f"Ensure triples have been ingested for this entity."
+            )
+        if len(rows) > 1:
+            raise ValueError(
+                f"Multiple tenants found for entity_id={entity_id}: "
+                f"{[str(r[0]) for r in rows]}. Specify tenant_id explicitly."
+            )
+        return str(rows[0][0])
+
     def get_current_run_id(self, tenant_id: str) -> str:
         """Return current_run_id for tenant.
 
