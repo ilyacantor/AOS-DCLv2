@@ -194,8 +194,8 @@ export function DataDrivenSankey({ data }: DataDrivenSankeyProps) {
               x1={link.source.x1}
               x2={link.target.x0}
             >
-              <stop offset="0%" stopColor={srcColor} stopOpacity="0.8" />
-              <stop offset="100%" stopColor={tgtColor} stopOpacity="0.8" />
+              <stop offset="0%" stopColor={srcColor} stopOpacity="1" />
+              <stop offset="100%" stopColor={tgtColor} stopOpacity="1" />
             </linearGradient>
           ))}
 
@@ -230,8 +230,8 @@ export function DataDrivenSankey({ data }: DataDrivenSankeyProps) {
           {layout.links.map(link => {
             const isHovered = hoveredLinkId === link.id;
             const isZero = link.value === 0;
-            const baseOpacity = isZero ? 0.15 : 0.25;
-            const opacity = isHovered ? 0.65 : baseOpacity;
+            const baseOpacity = isZero ? 0.25 : 0.5;
+            const opacity = isHovered ? 0.85 : baseOpacity;
 
             return (
               <path

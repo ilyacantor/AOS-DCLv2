@@ -86,12 +86,11 @@ def resolve_tenant_and_run(
 
 
 def _get_latest_tenant() -> str | None:
-    """Get the most recent tenant_id from semantic_triples."""
+    """Get the most recent tenant_id from tenant_runs (authoritative source)."""
     sql = """
         SELECT tenant_id
-        FROM semantic_triples
-        WHERE is_active = true
-        ORDER BY created_at DESC
+        FROM tenant_runs
+        ORDER BY updated_at DESC
         LIMIT 1
     """
     with get_connection() as conn:

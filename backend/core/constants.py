@@ -64,6 +64,11 @@ POOL_MIN_CONN = int(os.getenv("DCL_POOL_MIN_CONN", "2"))
 POOL_MAX_CONN = int(os.getenv("DCL_POOL_MAX_CONN", "20"))
 DB_CONNECT_TIMEOUT = int(os.getenv("DCL_DB_CONNECT_TIMEOUT", "10"))
 POOL_GETCONN_TIMEOUT = float(os.getenv("DCL_POOL_GETCONN_TIMEOUT", "5.0"))
+# Default statement timeout for read queries — prevents connections from being
+# held indefinitely when Supabase is slow. Set at the session level via connection
+# options so every pool connection inherits it. Ingest methods override with
+# SET LOCAL (transaction-scoped) at INGEST_STATEMENT_TIMEOUT_MS.
+QUERY_STATEMENT_TIMEOUT_MS = int(os.getenv("DCL_QUERY_STATEMENT_TIMEOUT_MS", "15000"))
 # Ingest path statement timeout — prevents indefinite thread block when Supabase
 # is slow on bulk UPDATE (deactivate) or INSERT (triple write).
 # Must stay below Farm's 150s httpx timeout so failures propagate before Farm times out.

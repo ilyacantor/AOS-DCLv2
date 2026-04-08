@@ -435,10 +435,12 @@ async def dcl_snapshots(tenant_id: Optional[str] = None):
     from backend.db.triple_store import TripleStore
 
     store = TripleStore()
-    if not tenant_id:
-        tenant_id = store.resolve_single_tenant()
-
-    snapshots = store.get_tenant_snapshots(tenant_id)
+    try:
+        if not tenant_id:
+            tenant_id = store.resolve_single_tenant()
+        snapshots = store.get_tenant_snapshots(tenant_id)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     return {"snapshots": snapshots, "tenant_id": tenant_id}
 
 
@@ -497,7 +499,7 @@ async def run_dcl(request: RunRequest):
                 ),
             )
 
-    personas = request.personas or [Persona.CFO, Persona.CRO, Persona.COO, Persona.CTO]
+    personas = request.personas or [Persona.CFO, Persona.CRO, Persona.COO, Persona.CTO, Persona.CHRO]
 
     loop = asyncio.get_running_loop()
 

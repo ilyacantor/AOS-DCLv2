@@ -156,6 +156,7 @@ function App() {
   const autoLoadedRef = useRef(false);
   useEffect(() => {
     if (autoLoadedRef.current) return;
+    if (entitiesLoading) return; // Wait for entity list before auto-loading
     autoLoadedRef.current = true;
 
     // If we have cached data, show it immediately — no spinner needed
@@ -165,10 +166,17 @@ function App() {
       setElapsedTime(0);
     }
 
+    // Multi-tenant: include entity_id so the backend can resolve the correct tenant.
+    // Single-tenant: entity_id is optional, backend falls back to resolve_single_tenant.
+    const runBody: Record<string, unknown> = { mode: 'Farm', run_mode: 'Dev', personas: ALL_PERSONAS };
+    if (selectedEntityId) {
+      runBody.entity_id = selectedEntityId;
+    }
+
     const runPromise = fetch('/api/dcl/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: 'Farm', run_mode: 'Dev', personas: ALL_PERSONAS }),
+      body: JSON.stringify(runBody),
     }).then(async (r) => {
       if (!r.ok) {
         const errBody = await r.json().catch(() => null);
@@ -201,12 +209,11 @@ function App() {
       .catch((err) => {
         console.error('[App] Auto-load failed:', err);
         if (!hasCached) {
-          // No cached data and backend unavailable — show error
           setLoadError(`Auto-load failed: ${err instanceof Error ? err.message : 'Could not connect to DCL Engine'}. Start the backend and click Run.`);
         }
         setIsRunning(false);
       });
-  }, []);
+  }, [entitiesLoading, selectedEntityId]);
 
   // Auto re-render when snapshot selection changes
   const snapshotInitRef = useRef(true);
@@ -236,6 +243,7 @@ function App() {
             personas: selectedPersonas.length > 0 ? selectedPersonas : undefined,
             force_refresh: true,
             snapshot_name: selectedSnapshotName,
+            entity_id: selectedEntityId || undefined,
           }),
         }),
         fetchPersonaStats(),

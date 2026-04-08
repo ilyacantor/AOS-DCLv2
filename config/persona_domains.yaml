@@ -28,15 +28,16 @@ personas:
   COO:
     display_name: Chief Operating Officer
     domains:
-      - employee
-      - vendor
-      - bench
+      - workforce
+      - efficiency
+      - support
   CTO:
     display_name: Chief Technology Officer
     domains:
-      - service
-      - vendor
+      - infrastructure
+      - engineering
+      - event_stream
   CHRO:
     display_name: Chief Human Resources Officer
     domains:
-      - employee
+      - workforce

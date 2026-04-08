@@ -72,9 +72,11 @@ def _serialize_row(row: dict) -> dict:
 def list_entities():
     """Return distinct entities from semantic_triples with triple counts and recency."""
     sql = (
-        "SELECT entity_id, COUNT(*) AS triple_count, MAX(created_at) AS latest_ingest "
-        "FROM semantic_triples WHERE is_active = true "
-        "GROUP BY entity_id ORDER BY latest_ingest DESC"
+        "SELECT s.entity_id, COUNT(*) AS triple_count, MAX(s.created_at) AS latest_ingest "
+        "FROM semantic_triples s "
+        "JOIN tenant_runs t ON t.tenant_id = s.tenant_id AND t.current_run_id = s.run_id "
+        "WHERE s.is_active = true "
+        "GROUP BY s.entity_id ORDER BY latest_ingest DESC"
     )
 
     try:
@@ -689,17 +691,20 @@ def triples_browse_batch(req: BrowseBatchRequest):
 # ---------------------------------------------------------------------------
 
 @router.get("/api/dcl/triples/engagement")
-def triples_engagement():
+def triples_engagement(tenant_id: Optional[str] = Query(None)):
     """Entity state from the SE triple store.
 
     DCL is SE-only. Returns distinct entity_ids from the current run's
     triples. Engagement lifecycle is not DCL's concern.
+
+    When multiple tenants exist, caller must pass tenant_id explicitly.
     """
     from backend.db.triple_store import TripleStore
 
     store = TripleStore()
     try:
-        tenant_id = store.resolve_single_tenant()
+        if not tenant_id:
+            tenant_id = store.resolve_single_tenant()
         current_run_id = store.get_current_run_id(tenant_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
