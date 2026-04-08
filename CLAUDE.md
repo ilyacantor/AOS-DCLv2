@@ -42,7 +42,7 @@ Ilya is the CEO and de facto CTO. He is NOT a developer. He reasons architectura
 ---
 
 ## PLATFORM IN ONE PARAGRAPH
-AutonomOS is an AI-native enterprise platform that delivers unified context for the enterprise. It discovers what exists (AOD), understands how to connect (AAM), generates synthetic financial models (Farm), maps everything to business meaning via a semantic triple store (DCL — SE only), runs multi-entity engines for M&A and integration intelligence (Convergence), lets humans and AI query in plain English (NLQ), and surfaces the operator experience through Console. Platform is a dev-only transitional artifact (sunset in progress). Maestra is the persistent AI engagement lead who guides operators through the AOS lifecycle, governed by a four-tier supervised execution model.
+AutonomOS is an AI-native enterprise platform that delivers unified context for the enterprise. It discovers what exists (AOD), understands how to connect (AAM), generates synthetic financial models (Farm), maps everything to business meaning via a semantic triple store (DCL — SE only), runs multi-entity engines for M&A and integration intelligence (Convergence), lets humans and AI query in plain English (NLQ), and surfaces the operator experience through Console. Platform hosts the Maestra constitution and classification engine. Maestra is the persistent AI engagement lead who guides operators through the AOS lifecycle, governed by a four-tier supervised execution model.
 
 ---
 
@@ -98,7 +98,7 @@ SE: {entity_id}-{short_hash} (e.g., BlueLogic-NEQ8-a9ed). ME: {engagement_short_
 | **Convergence** (ME/M&A) | All ME v2 engines (combining, bridge, QoE, overlap, cross-sell, entity resolution, COFA, what-if), engagement lifecycle, resolution workspaces. Reads DCL tables (SELECT only). Writes triples via DCL HTTP only. | Triple store schema, SE query resolution, discovery, NLQ formatting |
 | **NLQ** | Intent resolution, persona filtering, query dispatch, report portal, rendering | Semantic mapping, data storage |
 | **Farm** | Synthetic data, financial models, test oracle, triple conversion, entity_id generation | Production data, live connections |
-| **Platform** (sunset) | Maestra constitution, classification engine. Dev-only transitional artifact. | Production surfaces — Console replaced Platform |
+| **Platform** | Maestra constitution, classification engine | Production operator UI (owned by Console) |
 | **Console** | Production UI, pipeline orchestration, operator feed, task queue, upload, e2e demo, Maestra chat | Module internals — calls module APIs |
 
 **RACI VIOLATION = STOP AND FLAG.** Exception (A12/C6): RACI is for design decisions. Fix bugs wherever they live.
@@ -165,7 +165,7 @@ The most dangerous failure mode. They make broken features look working.
 | Farm | FastAPI/Python | Jinja2/Tailwind | Supabase PG | 8003 / 8003 |
 | DCL | FastAPI/Python | React 18 + Vite | Supabase PG + Pinecone | 8004 / 3004 |
 | NLQ | FastAPI/Python | React 18 + Vite | Supabase PG | 8005 / 3005 |
-| Platform (sunset) | FastAPI/Python | React 18 + Vite | Supabase PG | 8006 / 3006 |
+| Platform | FastAPI/Python | React 18 + Vite | Supabase PG | 8006 / 3006 |
 | Console | FastAPI + asyncpg | React 18 + TS + Vite + Tailwind | Supabase PG | 8009 / 3009 |
 | Convergence | FastAPI/Python | React 18 + Vite | Supabase PG (shared) | 8010 / 3010 |
 
