@@ -640,43 +640,40 @@ class FarmV2TestHarness:
         )
 
     def _test_persona_concept_coverage(self):
-        """Test 6: Verify persona views include new concepts."""
+        """Test 6: Verify persona views cover real triple domain prefixes.
+
+        Source of truth is config/persona_domains.yaml — the prefixes
+        asserted here must match what Farm's generators actually emit.
+        """
         print("\n[Test 6] Persona concept coverage")
 
         from backend.engine.persona_view import PersonaView
 
         pv = PersonaView()
-        personas = [Persona.CFO, Persona.CRO, Persona.COO, Persona.CTO]
+        personas = [Persona.CFO, Persona.CRO, Persona.COO, Persona.CTO, Persona.CHRO]
         all_concepts = pv.get_all_relevant_concept_ids(personas)
 
-        # New concepts should be in the relevant set
-        new_concepts_expected = {
-            "subscription", "employee", "ticket",
-            "engineering_work", "incident",
+        # Core Farm-emitted domain prefixes that must land in some persona
+        required_prefixes = {
+            "arr", "gl", "coa", "sales", "vendor",
+            "employee", "operations", "customer_service",
         }
-        found = new_concepts_expected.intersection(all_concepts)
-
+        missing = required_prefixes - all_concepts
         self._assert(
-            len(found) >= 3,
-            "3+ new concepts in persona views",
-            f"found: {sorted(found)}"
+            not missing,
+            "all required domain prefixes routed to a persona",
+            f"missing: {sorted(missing)}"
         )
 
-        # CFO should see subscription
-        cfo_concepts = pv.get_relevant_concepts([Persona.CFO])
-        cfo_ids = set(cfo_concepts.get("CFO", []))
-        self._assert(
-            "subscription" in cfo_ids,
-            "CFO sees 'subscription'",
-        )
+        # CFO owns the financial metrics
+        cfo_ids = set(pv.get_relevant_concepts([Persona.CFO]).get("CFO", []))
+        self._assert("arr" in cfo_ids, "CFO sees 'arr'")
+        self._assert("gl" in cfo_ids, "CFO sees 'gl'")
 
-        # CTO should see incident and engineering_work
-        cto_concepts = pv.get_relevant_concepts([Persona.CTO])
-        cto_ids = set(cto_concepts.get("CTO", []))
-        self._assert(
-            "incident" in cto_ids,
-            "CTO sees 'incident'",
-        )
+        # CTO owns engineering and infrastructure
+        cto_ids = set(pv.get_relevant_concepts([Persona.CTO]).get("CTO", []))
+        self._assert("engineering" in cto_ids, "CTO sees 'engineering'")
+        self._assert("infrastructure" in cto_ids, "CTO sees 'infrastructure'")
 
 
 def main():

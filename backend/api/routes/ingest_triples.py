@@ -20,6 +20,7 @@ from typing import Optional
 
 from backend.core.db import get_connection
 from backend.db.triple_store import TripleStore
+from backend.engine.persona_view import get_persona_domain_mapping
 from backend.registry.concept_registry import ConceptRegistry
 from backend.utils.log_utils import get_logger
 
@@ -29,6 +30,16 @@ router = APIRouter(tags=["Triple Ingest"])
 
 _triple_store = TripleStore()
 _concept_registry = ConceptRegistry()
+
+# Union of every domain prefix mapped to a persona, built at import time.
+# Farm-emitted triples whose concept prefix is absent from this set are
+# mapping drift — the ingest refuses them with 422 so the error surfaces
+# at the seam between Farm and DCL, not downstream in graph build.
+_MAPPED_DOMAIN_PREFIXES: frozenset[str] = frozenset(
+    domain
+    for domains in get_persona_domain_mapping().values()
+    for domain in domains
+)
 
 # Defense-in-depth: reject ME entity_ids at ingest boundary.
 # DCL is SE-only — ME data routes to Convergence (port 8010).
@@ -137,6 +148,24 @@ def _validate_triple(t: TriplePayload, index: int) -> None:
                 "error": "INVALID_CONCEPT",
                 "message": f"Triple #{index}: concept '{t.concept}' is not a registered concept. "
                            f"Root segment must match a known ontology concept.",
+                "concept": t.concept,
+            },
+        )
+
+    domain_prefix = t.concept.split(".", 1)[0]
+    if domain_prefix not in _MAPPED_DOMAIN_PREFIXES:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "UNMAPPED_DOMAIN",
+                "message": (
+                    f"Triple #{index}: domain prefix '{domain_prefix}' from concept "
+                    f"'{t.concept}' is not mapped to any persona in "
+                    f"config/persona_domains.yaml. This is Farm generator drift — "
+                    f"add '{domain_prefix}' to the correct persona in the YAML "
+                    f"so the graph builder can route L3 nodes to L4 personas."
+                ),
+                "domain_prefix": domain_prefix,
                 "concept": t.concept,
             },
         )

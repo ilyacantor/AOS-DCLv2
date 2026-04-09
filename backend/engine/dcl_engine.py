@@ -22,6 +22,15 @@ from backend.core.constants import utc_now
 logger = get_logger(__name__)
 
 
+class UnmappedDomainError(RuntimeError):
+    """Raised when graph build encounters a triple domain prefix not present
+    in any persona's domain list in config/persona_domains.yaml.
+
+    Silent skip of unmapped prefixes is the root cause of L3 orphan bugs:
+    failing loud forces the mapping to stay in sync with Farm's generators.
+    """
+
+
 def _display_entity(entity_id: str) -> str:
     """Format entity_id for human-readable display.
 
@@ -632,6 +641,26 @@ class DCLEngine:
 
         # ── L4: Persona nodes + L3→L4 consumption links ──
         persona_concepts = self.persona_view.get_relevant_concepts(personas)
+
+        # Fail loud on unmapped domains. Any triple domain prefix present in
+        # the current run MUST be mapped to at least one persona in the full
+        # config/persona_domains.yaml (not just the personas the caller asked
+        # for — a narrow CFO-only query should still succeed for tenants that
+        # have customer_service data mapped to CRO). Silent skip here was the
+        # root cause of repeat L3 orphan bugs — see plan cosmic-watching-yao.
+        from backend.engine.persona_view import get_persona_domain_mapping
+        full_mapping = get_persona_domain_mapping()
+        all_mapped_domains: set = set()
+        for concepts in full_mapping.values():
+            all_mapped_domains.update(concepts)
+        unmapped = set(domains.keys()) - all_mapped_domains
+        if unmapped:
+            raise UnmappedDomainError(
+                f"Graph build found triple domain prefixes not mapped to any "
+                f"persona: {sorted(unmapped)}. Add each to an appropriate "
+                f"persona in config/persona_domains.yaml (Farm generator "
+                f"drift). Current run_id={run_id}."
+            )
 
         domain_consumer_count: Dict[str, int] = {}
         for persona in personas:

@@ -19,18 +19,33 @@ personas:
       - cash_flow
       - ebitda_adjustment
       - cofa
+      - arr
+      - coa
+      - gl
+      - sales
+      - vendor
+      - accounts_payable
+      - accounts_receivable
+      - invoice
+      - journal_entry
   CRO:
     display_name: Chief Revenue Officer
     domains:
       - revenue
       - customer
       - service
+      - arr
+      - sales
+      - customer_service
   COO:
     display_name: Chief Operating Officer
     domains:
       - workforce
       - efficiency
       - support
+      - operations
+      - vendor
+      - customer_service
   CTO:
     display_name: Chief Technology Officer
     domains:
@@ -41,3 +56,4 @@ personas:
     display_name: Chief Human Resources Officer
     domains:
       - workforce
+      - employee

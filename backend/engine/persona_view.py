@@ -1,5 +1,4 @@
 import os
-import time
 from typing import List, Dict, Set, Optional
 from backend.domain import Persona
 from backend.utils.log_utils import get_logger
@@ -57,100 +56,23 @@ def get_persona_domain_mapping() -> Dict[str, List[str]]:
 
 
 class PersonaView:
-    
-    _concepts_cache: Optional[Dict[str, List[str]]] = None
-    _cache_time: float = 0
-    CACHE_TTL: float = 300.0
+    """Read-only view of persona → triple-domain mapping.
 
-    def __init__(self):
-        self.database_url = os.getenv('DATABASE_URL')
-        if not self.database_url:
-            logger.warning("DATABASE_URL not set - using default persona concepts")
-            self._use_defaults = True
-        else:
-            self._use_defaults = False
-    
-    def _get_pool(self):
-        from backend.semantic_mapper.persist_mappings import MappingPersistence
-        try:
-            persistence = MappingPersistence()
-            return persistence
-        except Exception as e:
-            raise RuntimeError(
-                f"PersonaView failed to create MappingPersistence connection pool: {e}"
-            ) from e
+    Source of truth: config/persona_domains.yaml. No DB path, no cache,
+    no silent fallback — the YAML load either succeeds or raises.
+    """
 
     def get_relevant_concepts(
         self,
         personas: List[Persona],
         available_concepts: Optional[Set[str]] = None
     ) -> Dict[str, List[str]]:
-
         if not personas:
             return {}
-
-        if self._use_defaults:
-            return self._get_defaults(personas, available_concepts)
-        
-        now = time.time()
-        if PersonaView._concepts_cache is not None and (now - PersonaView._cache_time) < self.CACHE_TTL:
-            return self._filter_cached_concepts(personas, available_concepts)
-
-        try:
-            pool = self._get_pool()
-            with pool._get_connection() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute("""
-                        SELECT pp.persona_key, pcr.concept_id, pcr.relevance
-                        FROM persona_profiles pp
-                        JOIN persona_concept_relevance pcr ON pp.id = pcr.persona_id
-                        ORDER BY pp.persona_key, pcr.relevance DESC
-                    """)
-
-                    all_concepts: Dict[str, List[str]] = {}
-                    for row in cursor.fetchall():
-                        persona_key = row[0]
-                        concept_id = row[1]
-
-                        if persona_key not in all_concepts:
-                            all_concepts[persona_key] = []
-                        all_concepts[persona_key].append(concept_id)
-
-                    PersonaView._concepts_cache = all_concepts
-                    PersonaView._cache_time = time.time()
-                    logger.info(f"Cached persona concepts for {len(all_concepts)} personas")
-
-                    return self._filter_cached_concepts(personas, available_concepts)
-
-        except Exception as e:
-            logger.warning(f"Failed to load persona concepts from DB: {e}. Using defaults.")
-            return self._get_defaults(personas, available_concepts)
-    
-    def _get_defaults(
-        self,
-        personas: List[Persona],
-        available_concepts: Optional[Set[str]] = None
-    ) -> Dict[str, List[str]]:
-        result = {}
+        mapping = get_persona_domain_mapping()
+        result: Dict[str, List[str]] = {}
         for persona in personas:
-            concepts = get_persona_domain_mapping().get(persona.value, [])
-            if available_concepts is not None:
-                concepts = [c for c in concepts if c in available_concepts]
-            result[persona.value] = concepts
-        return result
-    
-    def _filter_cached_concepts(
-        self,
-        personas: List[Persona],
-        available_concepts: Optional[Set[str]] = None
-    ) -> Dict[str, List[str]]:
-        if PersonaView._concepts_cache is None:
-            return self._get_defaults(personas, available_concepts)
-        
-        result = {}
-        for persona in personas:
-            concepts = PersonaView._concepts_cache.get(persona.value, 
-                       get_persona_domain_mapping().get(persona.value, []))
+            concepts = mapping.get(persona.value, [])
             if available_concepts is not None:
                 concepts = [c for c in concepts if c in available_concepts]
             result[persona.value] = list(concepts)
@@ -161,13 +83,10 @@ class PersonaView:
         personas: List[Persona],
         available_concepts: Optional[Set[str]] = None
     ) -> Set[str]:
-
         persona_concepts = self.get_relevant_concepts(personas, available_concepts)
-
-        all_concepts = set()
+        all_concepts: Set[str] = set()
         for concepts in persona_concepts.values():
             all_concepts.update(concepts)
-
         return all_concepts
 
     def get_persona_relevance_score(
@@ -175,34 +94,5 @@ class PersonaView:
         persona: Persona,
         concept_id: str
     ) -> float:
-
-        if self._use_defaults:
-            concepts = get_persona_domain_mapping().get(persona.value, [])
-            return 0.8 if concept_id in concepts else 0.0
-        
-        if PersonaView._concepts_cache is not None:
-            concepts = PersonaView._concepts_cache.get(persona.value, [])
-            return 0.8 if concept_id in concepts else 0.0
-
-        try:
-            pool = self._get_pool()
-            with pool._get_connection() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute("""
-                        SELECT pcr.relevance
-                        FROM persona_profiles pp
-                        JOIN persona_concept_relevance pcr ON pp.id = pcr.persona_id
-                        WHERE pp.persona_key = %s AND pcr.concept_id = %s
-                    """, (persona.value, concept_id))
-
-                    row = cursor.fetchone()
-                    return row[0] if row else 0.0
-        except Exception as e:
-            logger.warning(f"Failed to get relevance score: {e}")
-            concepts = get_persona_domain_mapping().get(persona.value, [])
-            return 0.8 if concept_id in concepts else 0.0
-    
-    @classmethod
-    def clear_cache(cls):
-        cls._concepts_cache = None
-        cls._cache_time = 0
+        concepts = get_persona_domain_mapping().get(persona.value, [])
+        return 0.8 if concept_id in concepts else 0.0
