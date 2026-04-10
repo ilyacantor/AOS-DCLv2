@@ -377,16 +377,35 @@ def ingest_triples(
         )
     duration_ms = int((time.monotonic() - start_ts) * 1000)
 
+    # Resolve entity_id — from request envelope or first triple.
+    resolved_entity_id = req.entity_id
+    if not resolved_entity_id:
+        resolved_entity_id = req.triples[0].entity_id if req.triples else None
+    if not resolved_entity_id:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "ENTITY_ID_REQUIRED",
+                "message": (
+                    "entity_id missing from both request envelope and triples. "
+                    "Farm must send entity_id in the ingest-triples request (I2)."
+                ),
+            },
+        )
+
     # Atomic pointer swap + deactivation — single transaction.
+    # Entity-scoped: only deactivates the previous run for THIS entity.
     # Not set for append=true (multi-batch ingest of the same run_id keeps
     # whatever pointer was set by the initial replace ingest).
     if not append:
         previous_run_id, deactivated = _triple_store.swap_and_deactivate(
             str(req.tenant_id), str(req.dcl_ingest_id),
+            entity_id=resolved_entity_id,
             snapshot_name=req.snapshot_name,
         )
         logger.info(
             f"[ingest-triples] tenant_runs updated: tenant_id={req.tenant_id} "
+            f"entity_id={resolved_entity_id} "
             f"→ current_run_id={req.dcl_ingest_id} (previous={previous_run_id}, "
             f"deactivated={deactivated})"
         )

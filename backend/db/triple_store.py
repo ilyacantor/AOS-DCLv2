@@ -142,10 +142,17 @@ class TripleStore:
             clauses.append("period = %s")
             params.append(period)
         if active_only:
-            if tenant_id is not None:
-                # Use current_run_id pointer — tenant_id already in clauses above
+            if tenant_id is not None and entity_id is not None:
+                # Per-entity pointer — exact match
                 clauses.append(
-                    "run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)"
+                    "run_id = (SELECT current_run_id FROM tenant_runs "
+                    "WHERE tenant_id = %s AND entity_id = %s)"
+                )
+                params.extend([tenant_id, entity_id])
+            elif tenant_id is not None:
+                # Cross-entity — all active runs for tenant
+                clauses.append(
+                    "run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)"
                 )
                 params.append(tenant_id)
             else:
@@ -245,19 +252,19 @@ class TripleStore:
 
     def upsert_tenant_run(
         self, tenant_id: str, new_run_id: str,
+        entity_id: str,
         snapshot_name: str | None = None,
     ) -> str | None:
-        """Atomically set current_run_id for a tenant. Returns the previous run_id.
+        """Atomically set current_run_id for a (tenant, entity). Returns the previous run_id.
 
-        This is the O(1) replacement for deactivate_tenant_triples on the ingest
-        hot path. Single-row UPSERT — no table scan, no lock contention.
-        Returns the displaced run_id so the caller can deactivate its triples.
+        Entity-scoped: each (tenant_id, entity_id) pair has its own pointer.
+        Single-row UPSERT — no table scan, no lock contention.
         """
         sql = """
-            INSERT INTO tenant_runs (tenant_id, current_run_id, previous_run_id,
+            INSERT INTO tenant_runs (tenant_id, entity_id, current_run_id, previous_run_id,
                                      current_snapshot_name, previous_snapshot_name, updated_at)
-            VALUES (%s, %s, NULL, %s, NULL, now())
-            ON CONFLICT (tenant_id) DO UPDATE
+            VALUES (%s, %s, %s, NULL, %s, NULL, now())
+            ON CONFLICT (tenant_id, entity_id) DO UPDATE
               SET previous_run_id          = tenant_runs.current_run_id,
                   current_run_id           = EXCLUDED.current_run_id,
                   previous_snapshot_name   = tenant_runs.current_snapshot_name,
@@ -267,28 +274,29 @@ class TripleStore:
         """
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, (tenant_id, new_run_id, snapshot_name))
+                cur.execute(sql, (tenant_id, entity_id, new_run_id, snapshot_name))
                 row = cur.fetchone()
                 conn.commit()
                 return str(row[0]) if row and row[0] else None
 
     def swap_and_deactivate(
         self, tenant_id: str, new_run_id: str,
+        entity_id: str,
         snapshot_name: str | None = None,
     ) -> tuple[str | None, int]:
         """Atomically swap tenant_runs pointer AND deactivate the displaced run.
 
-        Single transaction: if either statement fails, both roll back.
-        Prevents the race condition where concurrent ingests leave orphaned
-        is_active=true triples from runs that are no longer current.
+        Entity-scoped: each (tenant_id, entity_id) pair has its own pointer.
+        Pushing entity B does not deactivate entity A's triples.
 
+        Single transaction: if either statement fails, both roll back.
         Returns (previous_run_id, deactivated_count).
         """
         upsert_sql = """
-            INSERT INTO tenant_runs (tenant_id, current_run_id, previous_run_id,
+            INSERT INTO tenant_runs (tenant_id, entity_id, current_run_id, previous_run_id,
                                      current_snapshot_name, previous_snapshot_name, updated_at)
-            VALUES (%s, %s, NULL, %s, NULL, now())
-            ON CONFLICT (tenant_id) DO UPDATE
+            VALUES (%s, %s, %s, NULL, %s, NULL, now())
+            ON CONFLICT (tenant_id, entity_id) DO UPDATE
               SET previous_run_id          = tenant_runs.current_run_id,
                   current_run_id           = EXCLUDED.current_run_id,
                   previous_snapshot_name   = tenant_runs.current_snapshot_name,
@@ -303,7 +311,7 @@ class TripleStore:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(f"SET LOCAL statement_timeout = {int(INGEST_STATEMENT_TIMEOUT_MS)}")
-                cur.execute(upsert_sql, (tenant_id, new_run_id, snapshot_name))
+                cur.execute(upsert_sql, (tenant_id, entity_id, new_run_id, snapshot_name))
                 row = cur.fetchone()
                 previous_run_id = str(row[0]) if row and row[0] else None
                 deactivated = 0
@@ -367,20 +375,31 @@ class TripleStore:
             )
         return str(rows[0][0])
 
-    def get_current_run_id(self, tenant_id: str) -> str:
-        """Return current_run_id for tenant.
+    def get_current_run_id(
+        self, tenant_id: str, entity_id: str | None = None,
+    ) -> str:
+        """Return current_run_id for a (tenant, entity) pair.
+
+        When entity_id is given, returns the exact pointer for that entity.
+        When omitted, returns the most recently updated pointer for the tenant.
 
         Raises ValueError if no entry exists — no silent empty returns.
         Callers that need a best-effort fallback should catch ValueError.
         """
-        sql = "SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s"
+        if entity_id:
+            sql = "SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s AND entity_id = %s"
+            params: tuple = (tenant_id, entity_id)
+        else:
+            sql = "SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s ORDER BY updated_at DESC LIMIT 1"
+            params = (tenant_id,)
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, (tenant_id,))
+                cur.execute(sql, params)
                 row = cur.fetchone()
         if row is None:
             raise ValueError(
-                f"No current_run_id registered for tenant {tenant_id}. "
+                f"No current_run_id registered for tenant {tenant_id}"
+                f"{f', entity {entity_id}' if entity_id else ''}. "
                 f"Run the ingest pipeline first to populate tenant_runs."
             )
         return str(row[0])
@@ -509,10 +528,10 @@ class TripleStore:
                 clauses.append("tenant_id = %s")
                 params.append(tenant_id)
         elif tenant_id is not None:
-            # Tenant-scoped: use current_run_id pointer (avoids counting stale runs)
+            # Tenant-scoped: all active entity runs for tenant
             clauses.append("tenant_id = %s")
             clauses.append(
-                "run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)"
+                "run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)"
             )
             params.extend([tenant_id, tenant_id])
         else:
@@ -596,16 +615,11 @@ class TripleStore:
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
     def count_active(self, tenant_id: str) -> int:
-        """Count triples in the current run for a specific tenant.
-
-        Uses the tenant_runs pointer (current_run_id) — the only correct
-        count source. The old is_active fallback is removed: it counted
-        across all tenants and drifted from the pointer-based count.
-        """
+        """Count triples across all active entity runs for a tenant."""
         sql = (
             "SELECT COUNT(*) FROM semantic_triples "
             "WHERE tenant_id = %s "
-            "AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)"
+            "AND run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)"
         )
         with get_connection() as conn:
             with conn.cursor() as cur:
@@ -623,13 +637,13 @@ class TripleStore:
         """Return run_ids that are current for a specific tenant, most recent first.
 
         Each row: {run_id: str, created_at: datetime, triple_count: int}
-        Scoped to the tenant's current_run_id via tenant_runs pointer.
+        Returns all active entity runs for the tenant.
         """
         sql = (
             "SELECT st.run_id, MIN(st.created_at) AS created_at, COUNT(*) AS triple_count "
             "FROM semantic_triples st "
             "WHERE st.tenant_id = %s "
-            "AND st.run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) "
+            "AND st.run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) "
             "GROUP BY st.run_id ORDER BY MIN(st.created_at) DESC"
         )
         with get_connection() as conn:
@@ -734,7 +748,7 @@ class TripleStore:
             "entity_id, COUNT(*) AS triple_count "
             "FROM semantic_triples "
             "WHERE tenant_id = %s "
-            "AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) "
+            "AND run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) "
             "GROUP BY COALESCE(fabric_plane, 'unattributed'), "
             "COALESCE(fabric_product, 'unknown'), "
             "source_system, split_part(concept, '.', 1), entity_id "
@@ -762,7 +776,7 @@ class TripleStore:
             "COUNT(DISTINCT source_system) AS source_count "
             "FROM semantic_triples "
             "WHERE tenant_id = %s "
-            "AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) "
+            "AND run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) "
             "GROUP BY entity_id, concept, property, period "
             "HAVING COUNT(DISTINCT source_system) > 1 "
             "ORDER BY concept, entity_id, period"
@@ -784,7 +798,7 @@ class TripleStore:
             "SELECT DISTINCT fabric_plane, fabric_product "
             "FROM semantic_triples "
             "WHERE tenant_id = %s "
-            "AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) "
+            "AND run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s) "
             "AND fabric_plane IS NOT NULL AND fabric_plane != 'none' "
             "ORDER BY fabric_plane, fabric_product"
         )

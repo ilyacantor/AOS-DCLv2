@@ -121,7 +121,7 @@ def _get_latest_run(
             SELECT run_id
             FROM semantic_triples
             WHERE tenant_id = %s AND is_active = true
-              AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)
+              AND run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)
               AND concept LIKE ANY(%s)
             GROUP BY run_id
             ORDER BY COUNT(*) DESC
@@ -133,7 +133,7 @@ def _get_latest_run(
             SELECT run_id
             FROM semantic_triples
             WHERE tenant_id = %s AND is_active = true
-              AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)
+              AND run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)
             GROUP BY run_id
             ORDER BY COUNT(*) DESC
             LIMIT 1

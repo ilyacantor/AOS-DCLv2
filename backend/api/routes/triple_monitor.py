@@ -125,7 +125,7 @@ def triples_overview(
     if tenant_id:
         extra_filter += " AND tenant_id = %s"
         params.append(tenant_id)
-        extra_filter += " AND run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)"
+        extra_filter += " AND run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)"
         params.append(tenant_id)
     if source_run_tag:
         extra_filter += " AND source_run_tag = %s"
@@ -705,11 +705,16 @@ def triples_engagement(tenant_id: Optional[str] = Query(None)):
     try:
         if not tenant_id:
             tenant_id = store.resolve_single_tenant()
-        current_run_id = store.get_current_run_id(tenant_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    entity_ids = store.get_run_entities(current_run_id)
+    # Read entity_ids directly from tenant_runs — one row per entity.
+    # Not filtered through a single current_run_id (the old bug).
+    sql = "SELECT entity_id FROM tenant_runs WHERE tenant_id = %s ORDER BY updated_at DESC"
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (tenant_id,))
+            entity_ids = [row[0] for row in cur.fetchall()]
 
     return {
         "entities": [
@@ -883,7 +888,7 @@ def contextualization_summary(
     if tenant_id:
         clauses.append("tenant_id = %s")
         params.append(tenant_id)
-        clauses.append("run_id = (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)")
+        clauses.append("run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)")
         params.append(tenant_id)
     if entity_id:
         clauses.append("entity_id = %s")

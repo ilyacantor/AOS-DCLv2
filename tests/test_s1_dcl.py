@@ -182,7 +182,7 @@ class TestTripleStore:
                     (TEST_TENANT_ID,),
                 )
                 conn.commit()
-        self.store.upsert_tenant_run(TEST_TENANT_ID, TEST_RUN_ID_A)
+        self.store.upsert_tenant_run(TEST_TENANT_ID, TEST_RUN_ID_A, "test_entity")
 
     def test_03_triple_round_trip(self):
         """Insert via TripleStore → read back → all fields match. JSONB numeric values survive."""
@@ -292,19 +292,21 @@ class TestTripleStore:
         assert by_period[0]["entity_id"] == "ent_b"
 
     def test_07_run_deactivation(self):
-        """Two runs. Swap pointer to run B. Verify tenant_runs.current_run_id reflects the swap."""
+        """Per-entity pointers: each entity gets its own current_run_id."""
         t_a = {**make_test_triple(entity_id="deact_a"), "tenant_id": TEST_TENANT_ID, "run_id": TEST_RUN_ID_A}
         t_b = {**make_test_triple(entity_id="deact_b"), "tenant_id": TEST_TENANT_ID, "run_id": TEST_RUN_ID_B}
         self.store.insert_triples([t_a])
         self.store.insert_triples([t_b])
 
-        # Atomic run swap: point tenant to run B. Run A triples remain is_active=True
-        # in the DB but are invisible to queries filtered by current_run_id.
-        self.store.upsert_tenant_run(TEST_TENANT_ID, TEST_RUN_ID_B)
+        # Register both entities — each gets its own pointer row
+        self.store.upsert_tenant_run(TEST_TENANT_ID, TEST_RUN_ID_A, "deact_a")
+        self.store.upsert_tenant_run(TEST_TENANT_ID, TEST_RUN_ID_B, "deact_b")
 
-        current = self.store.get_current_run_id(TEST_TENANT_ID)
-        assert current != TEST_RUN_ID_A, "Run A should not be current_run_id after swap"
-        assert current == TEST_RUN_ID_B, "Run B should be current_run_id after swap"
+        # Each entity points to its own run
+        current_a = self.store.get_current_run_id(TEST_TENANT_ID, "deact_a")
+        current_b = self.store.get_current_run_id(TEST_TENANT_ID, "deact_b")
+        assert current_a == TEST_RUN_ID_A, "Entity deact_a should point to run A"
+        assert current_b == TEST_RUN_ID_B, "Entity deact_b should point to run B"
 
 
 class TestRunLedgerStore:
