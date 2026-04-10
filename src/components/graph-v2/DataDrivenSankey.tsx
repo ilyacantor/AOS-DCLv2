@@ -11,7 +11,7 @@ import { computeDataDrivenLayout } from './layout';
 import { NodeLabel } from './NodeLabel';
 import { LinkTooltip, type TooltipState } from './LinkTooltip';
 import { DEFAULT_CONFIG } from './types';
-import type { GraphSnapshot, PersonaId } from '../../types';
+import type { GraphSnapshot, GraphNode, PersonaId } from '../../types';
 import type { LayoutNodeV2, LayoutLinkV2 } from './types';
 
 const BG_COLOR = '#080d18';
@@ -89,17 +89,17 @@ export function DataDrivenSankey({ data, selectedPersonas }: DataDrivenSankeyPro
     );
     if (allowedBll.size === 0) return { nodes: data.nodes, links: data.links };
 
+    const lid = (v: string | GraphNode): string => typeof v === 'string' ? v : v.id;
     const keepNodes = new Set(allowedBll);
     const links = data.links.filter(l => {
-      if (!keepNodes.has(l.target) && data.nodes.find(n => n.id === l.target)?.kind === 'bll') return false;
+      const tid = lid(l.target);
+      if (!keepNodes.has(tid) && data.nodes.find(n => n.id === tid)?.kind === 'bll') return false;
       return true;
     });
-    // Walk backwards: keep any node that is source or target of a surviving link
-    for (const l of links) { keepNodes.add(l.source); keepNodes.add(l.target); }
+    for (const l of links) { keepNodes.add(lid(l.source)); keepNodes.add(lid(l.target)); }
     const nodes = data.nodes.filter(n => keepNodes.has(n.id));
-    // Drop links whose source was pruned
     const nodeSet = new Set(nodes.map(n => n.id));
-    return { nodes, links: links.filter(l => nodeSet.has(l.source) && nodeSet.has(l.target)) };
+    return { nodes, links: links.filter(l => nodeSet.has(lid(l.source)) && nodeSet.has(lid(l.target))) };
   }, [data.nodes, data.links, selectedPersonas]);
 
   const layout = useMemo(() => {

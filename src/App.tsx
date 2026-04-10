@@ -1,14 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { GraphSnapshot, PersonaId, PersonaStats } from './types';
-import { MonitorPanel } from './components/MonitorPanel';
-import { SnapshotPanel } from './components/SnapshotPanel';
-import { SankeyGraph } from './components/SankeyGraph';
-import { ResizablePanelGroup, ResizablePanel } from './components/ui/resizable';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import { Toaster } from './components/ui/toaster';
 import { useToast } from './hooks/use-toast';
-import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
-import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import { UserGuide } from './components/UserGuide';
 import { IngestTab } from './components/IngestTab';
 import { ContextTab } from './components/ContextTab';
@@ -17,7 +10,7 @@ import { ReconTab } from './components/ReconTab';
 import { GraphV2Tab } from './components/GraphV2Tab';
 import { useEntities } from './components/RunSelector';
 
-type MainView = 'graph' | 'graph_v2' | 'dashboard' | 'context' | 'guide' | 'recon' | 'ingest';
+type MainView = 'graph' | 'graph_legacy' | 'dashboard' | 'context' | 'guide' | 'recon' | 'ingest';
 
 const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO', 'CHRO'];
 
@@ -48,15 +41,15 @@ function App() {
   const [graphData, setGraphData] = useState<GraphSnapshot | null>(cached.current?.graph ?? null);
   const [runMode, setRunMode] = useState<'Dev' | 'Prod'>('Dev');
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaId[]>(['CFO', 'CRO', 'COO', 'CTO', 'CHRO']);
-  const [runId, setRunId] = useState<string | undefined>(cached.current?.runId);
+  const [_runId, setRunId] = useState<string | undefined>(cached.current?.runId);
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [mainView, setMainView] = useState<MainView>('graph');
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [_loadError, setLoadError] = useState<string | null>(null);
   const [isCachedView, setIsCachedView] = useState(cached.current !== null);
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+
   const [personaDropdownOpen, setPersonaDropdownOpen] = useState(false);
-  const [selectedSnapshotName, setSelectedSnapshotName] = useState<string | undefined>(undefined);
+  const [selectedSnapshotName, _setSelectedSnapshotName] = useState<string | undefined>(undefined);
   const personaDropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -299,7 +292,7 @@ function App() {
   // Top-level navigation tabs
   const navTabs: { id: MainView; label: string }[] = [
     { id: 'graph', label: 'Graph' },
-    { id: 'graph_v2', label: 'Graph v2' },
+    { id: 'graph_legacy', label: 'Graph (Legacy)' },
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'context', label: 'Context' },
     { id: 'recon', label: 'Recon' },
@@ -440,65 +433,12 @@ function App() {
           <UserGuide />
         ) : mainView === 'dashboard' ? (
           <DashboardTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
-        ) : mainView === 'graph_v2' ? (
-          <GraphV2Tab graphData={graphData} entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} selectedPersonas={selectedPersonas} />
+        ) : mainView === 'graph_legacy' ? (
+          <div className="h-full flex items-center justify-center bg-card/30">
+            <p className="text-sm text-muted-foreground">Legacy graph — deprecated. Use Graph tab.</p>
+          </div>
         ) : (
-          <ResizablePanelGroup direction="horizontal">
-            <ResizablePanel defaultSize={70} minSize={40}>
-              <div className="h-full w-full relative">
-                <div className="absolute inset-0 p-4">
-                  <div className="h-full w-full rounded-xl border bg-card/30 overflow-hidden shadow-inner">
-                    {loadError && !graphData && (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center p-6 rounded-lg border border-destructive/30 bg-destructive/5 max-w-md">
-                          <p className="text-sm text-destructive font-medium">{loadError}</p>
-                        </div>
-                      </div>
-                    )}
-                    <SankeyGraph
-                      data={graphData}
-                      selectedPersonas={selectedPersonas}
-                    />
-                  </div>
-                </div>
-              </div>
-            </ResizablePanel>
-
-            <div className="relative flex h-full">
-              <button
-                onClick={() => setRightPanelCollapsed(!rightPanelCollapsed)}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-6 h-12 bg-sidebar border border-border rounded-md flex items-center justify-center hover:bg-accent transition-colors"
-                title={rightPanelCollapsed ? "Expand panel" : "Collapse panel"}
-              >
-                {rightPanelCollapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              </button>
-
-              <div className={`h-full border-l bg-sidebar flex flex-col min-h-0 transition-all duration-200 ${rightPanelCollapsed ? 'w-0 overflow-hidden' : 'w-80'}`}>
-                <Tabs defaultValue="monitor" className="flex-1 flex flex-col min-h-0">
-                   <div className="border-b px-4 pt-2 shrink-0">
-                     <TabsList className="w-full">
-                       <TabsTrigger value="monitor" className="flex-1">Monitor</TabsTrigger>
-                       <TabsTrigger value="snapshot" className="flex-1">Snapshot</TabsTrigger>
-                     </TabsList>
-                   </div>
-
-                   <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                     <TabsContent value="monitor" className="flex-1 flex flex-col mt-0 min-h-0">
-                       <MonitorPanel data={graphData} selectedPersonas={selectedPersonas} runId={runId} />
-                     </TabsContent>
-                     <TabsContent value="snapshot" className="flex-1 flex flex-col mt-0 min-h-0">
-                       <SnapshotPanel
-                         currentSnapshotName={graphData?.meta?.snapshotName}
-                         runMetrics={graphData?.meta?.runMetrics}
-                         aodRunId={graphData?.meta?.aodRunId}
-                         onSnapshotSelect={setSelectedSnapshotName}
-                       />
-                     </TabsContent>
-                   </div>
-                </Tabs>
-              </div>
-            </div>
-          </ResizablePanelGroup>
+          <GraphV2Tab graphData={graphData} entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} selectedPersonas={selectedPersonas} />
         )}
       </div>
       <Toaster />
