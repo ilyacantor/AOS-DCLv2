@@ -59,7 +59,7 @@ from backend.core.security_constraints import (
     assert_metadata_only_mode,
 )
 from backend.core.mode_state import set_current_mode
-from backend.core.constants import CORS_ORIGINS, API_VERSION, utc_now
+from backend.core.constants import CORS_ORIGINS, API_VERSION, AAM_API_URL, utc_now
 from backend.core.redis_client import is_redis_available
 
 # Route modules (SE only)
@@ -107,10 +107,53 @@ def _is_graph_required_endpoint(path: str) -> bool:
 # =============================================================================
 
 
+async def _probe_aam_at_boot() -> None:
+    """Probe AAM at boot — DNS + /health. Refuse to boot if unreachable.
+
+    DCL talks to AAM during graph warmup and on every recon endpoint. A
+    missing or unreachable AAM at boot is a deploy-time bug — surface it
+    here so Render marks the deploy failed instead of silently degrading
+    requests at runtime.
+    """
+    import socket
+    from urllib.parse import urlparse
+    import httpx
+
+    parsed = urlparse(AAM_API_URL)
+    host = parsed.hostname
+    if not host:
+        raise RuntimeError(f"DCL cannot start — cannot parse AAM hostname from {AAM_API_URL}")
+    try:
+        await asyncio.get_running_loop().run_in_executor(None, socket.gethostbyname, host)
+    except socket.gaierror as exc:
+        raise RuntimeError(
+            f"DCL cannot start — DNS resolution failed for AAM host {host}: {exc}"
+        )
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            resp = await client.get(f"{AAM_API_URL}/health")
+    except httpx.ConnectError as exc:
+        raise RuntimeError(
+            f"DCL cannot start — AAM connection refused at {AAM_API_URL}/health: {exc}"
+        )
+    except httpx.TimeoutException:
+        raise RuntimeError(
+            f"DCL cannot start — AAM probe timed out after 2s at {AAM_API_URL}/health"
+        )
+    if resp.status_code != 200:
+        raise RuntimeError(
+            f"DCL cannot start — AAM probe returned HTTP {resp.status_code} from {AAM_API_URL}/health"
+        )
+    logger.info("[Startup] AAM probe succeeded at %s", AAM_API_URL)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle for the DCL Engine."""
     global _startup_phase, _startup_error, _startup_ready
+
+    # ---- Boot-time downstream validation ----
+    await _probe_aam_at_boot()
 
     # ---- Fast startup (sync, <100ms) ----
     logger.info("=== DCL Database Migration Check ===")
