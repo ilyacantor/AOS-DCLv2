@@ -10,7 +10,7 @@ import { ReconTab } from './components/ReconTab';
 import { GraphV2Tab } from './components/GraphV2Tab';
 import { useEntities } from './components/RunSelector';
 
-type MainView = 'graph' | 'graph_legacy' | 'dashboard' | 'context' | 'guide' | 'recon' | 'ingest';
+type MainView = 'graph' | 'dashboard' | 'context' | 'guide' | 'recon' | 'ingest';
 
 const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO', 'CHRO'];
 
@@ -292,7 +292,6 @@ function App() {
   // Top-level navigation tabs
   const navTabs: { id: MainView; label: string }[] = [
     { id: 'graph', label: 'Graph' },
-    { id: 'graph_legacy', label: 'Graph (Legacy)' },
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'context', label: 'Context' },
     { id: 'recon', label: 'Recon' },
@@ -433,10 +432,6 @@ function App() {
           <UserGuide />
         ) : mainView === 'dashboard' ? (
           <DashboardTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
-        ) : mainView === 'graph_legacy' ? (
-          <div className="h-full flex items-center justify-center bg-card/30">
-            <p className="text-sm text-muted-foreground">Legacy graph — deprecated. Use Graph tab.</p>
-          </div>
         ) : (
           <GraphV2Tab graphData={graphData} entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} selectedPersonas={selectedPersonas} />
         )}
