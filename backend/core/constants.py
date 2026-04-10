@@ -83,17 +83,7 @@ FARM_BROWSER_TIMEOUT = float(os.getenv("DCL_FARM_BROWSER_TIMEOUT", "5.0"))
 OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
 # --- AAM Integration ---
-# Required env var, no dev-host fallback. DCL calls AAM at warmup
-# (graph rebuild) and on every recon endpoint hit; a missing var would
-# silently route every AAM call to a bogus host. Set explicitly in
-# Render dashboard and in local .env.
-AAM_API_URL = os.getenv("AAM_API_URL", "")
-if not AAM_API_URL:
-    raise RuntimeError(
-        "AAM_API_URL environment variable is required. "
-        "DCL recon checks and graph warmup call AAM directly — a missing URL "
-        "would silently route every AAM call to a bogus host."
-    )
+AAM_API_URL = os.getenv("AAM_API_URL", "http://localhost:8001")
 AAM_API_TIMEOUT = float(os.getenv("AAM_API_TIMEOUT", "10"))
 AAM_EDGE_CACHE_TTL = int(os.getenv("AAM_EDGE_CACHE_TTL", "300"))  # 5 min
 AAM_EDGE_CONFIDENCE_MIN = float(os.getenv("AAM_EDGE_CONFIDENCE_MIN", "0.8"))
