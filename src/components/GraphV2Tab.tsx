@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { GraphSnapshot } from '../types';
+import { GraphSnapshot, PersonaId } from '../types';
 import { EntitySelector, type EntityInfo } from './RunSelector';
 import { DataDrivenSankey } from './graph-v2';
 
@@ -17,6 +17,7 @@ interface GraphV2TabProps {
   onEntityChange: (id: string) => void;
   entitiesLoading: boolean;
   entitiesError: string | null;
+  selectedPersonas: PersonaId[];
 }
 
 export function GraphV2Tab({
@@ -26,6 +27,7 @@ export function GraphV2Tab({
   onEntityChange,
   entitiesLoading,
   entitiesError,
+  selectedPersonas,
 }: GraphV2TabProps) {
   const [entityGraphData, setEntityGraphData] = useState<GraphSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
@@ -118,7 +120,7 @@ export function GraphV2Tab({
               </div>
             </div>
           ) : hasData ? (
-            <DataDrivenSankey data={displayData} />
+            <DataDrivenSankey data={displayData} selectedPersonas={selectedPersonas} />
           ) : (
             <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#080d18' }}>
               <div className="text-center">

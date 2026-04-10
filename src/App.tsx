@@ -441,7 +441,7 @@ function App() {
         ) : mainView === 'dashboard' ? (
           <DashboardTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
         ) : mainView === 'graph_v2' ? (
-          <GraphV2Tab graphData={graphData} entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
+          <GraphV2Tab graphData={graphData} entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} selectedPersonas={selectedPersonas} />
         ) : (
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel defaultSize={70} minSize={40}>

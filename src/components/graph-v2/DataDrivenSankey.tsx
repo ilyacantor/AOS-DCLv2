@@ -11,7 +11,7 @@ import { computeDataDrivenLayout } from './layout';
 import { NodeLabel } from './NodeLabel';
 import { LinkTooltip, type TooltipState } from './LinkTooltip';
 import { DEFAULT_CONFIG } from './types';
-import type { GraphSnapshot } from '../../types';
+import type { GraphSnapshot, PersonaId } from '../../types';
 import type { LayoutNodeV2, LayoutLinkV2 } from './types';
 
 const BG_COLOR = '#080d18';
@@ -59,9 +59,10 @@ function buildNodeDetail(node: LayoutNodeV2): string {
 
 interface DataDrivenSankeyProps {
   data: GraphSnapshot;
+  selectedPersonas?: PersonaId[];
 }
 
-export function DataDrivenSankey({ data }: DataDrivenSankeyProps) {
+export function DataDrivenSankey({ data, selectedPersonas }: DataDrivenSankeyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const containerRectRef = useRef<DOMRect | null>(null);
 
@@ -78,10 +79,33 @@ export function DataDrivenSankey({ data }: DataDrivenSankeyProps) {
   });
   const [hoveredLinkId, setHoveredLinkId] = useState<string | null>(null);
 
+  const { nodes: filteredNodes, links: filteredLinks } = useMemo(() => {
+    const allBll = data.nodes.filter(n => n.kind === 'bll');
+    const allowedBll = new Set(
+      (selectedPersonas && selectedPersonas.length < allBll.length
+        ? selectedPersonas
+        : []
+      ).map(p => `bll_${p.toLowerCase()}`),
+    );
+    if (allowedBll.size === 0) return { nodes: data.nodes, links: data.links };
+
+    const keepNodes = new Set(allowedBll);
+    const links = data.links.filter(l => {
+      if (!keepNodes.has(l.target) && data.nodes.find(n => n.id === l.target)?.kind === 'bll') return false;
+      return true;
+    });
+    // Walk backwards: keep any node that is source or target of a surviving link
+    for (const l of links) { keepNodes.add(l.source); keepNodes.add(l.target); }
+    const nodes = data.nodes.filter(n => keepNodes.has(n.id));
+    // Drop links whose source was pruned
+    const nodeSet = new Set(nodes.map(n => n.id));
+    return { nodes, links: links.filter(l => nodeSet.has(l.source) && nodeSet.has(l.target)) };
+  }, [data.nodes, data.links, selectedPersonas]);
+
   const layout = useMemo(() => {
     if (size.width === 0 || size.height === 0) return null;
-    return computeDataDrivenLayout(data.nodes, data.links, size.width, size.height, DEFAULT_CONFIG);
-  }, [data.nodes, data.links, size.width, size.height]);
+    return computeDataDrivenLayout(filteredNodes, filteredLinks, size.width, size.height, DEFAULT_CONFIG);
+  }, [filteredNodes, filteredLinks, size.width, size.height]);
 
   const maxColumn = useMemo(() => {
     if (!layout) return 0;
