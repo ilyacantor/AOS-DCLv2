@@ -263,14 +263,18 @@ class TestTripleStore:
         triples = [
             {**make_test_triple(entity_id="ent_a", concept="revenue.total", period="2025-Q1"),
              "tenant_id": TEST_TENANT_ID, "run_id": TEST_RUN_ID_A},
-            {**make_test_triple(entity_id="ent_a", concept="cost.direct", period="2025-Q1"),
+            {**make_test_triple(entity_id="ent_a", concept="cogs.direct", period="2025-Q1"),
              "tenant_id": TEST_TENANT_ID, "run_id": TEST_RUN_ID_A},
             {**make_test_triple(entity_id="ent_b", concept="revenue.total", period="2025-Q2"),
              "tenant_id": TEST_TENANT_ID, "run_id": TEST_RUN_ID_A},
-            {**make_test_triple(entity_id="ent_b", concept="cost.direct", period="2025-Q2"),
+            {**make_test_triple(entity_id="ent_b", concept="cogs.direct", period="2025-Q2"),
              "tenant_id": TEST_TENANT_ID, "run_id": TEST_RUN_ID_A},
         ]
         self.store.insert_triples(triples)
+
+        # Set per-entity tenant_runs pointers so active_only queries resolve
+        self.store.upsert_tenant_run(TEST_TENANT_ID, TEST_RUN_ID_A, entity_id="ent_a")
+        self.store.upsert_tenant_run(TEST_TENANT_ID, TEST_RUN_ID_A, entity_id="ent_b")
 
         # By entity
         by_ent_a = self.store.get_triples(TEST_TENANT_ID, "revenue.total", entity_id="ent_a")
@@ -282,7 +286,7 @@ class TestTripleStore:
         assert len(by_rev) == 2
 
         # By entity + concept
-        by_both = self.store.get_triples(TEST_TENANT_ID, "cost.direct", entity_id="ent_b")
+        by_both = self.store.get_triples(TEST_TENANT_ID, "cogs.direct", entity_id="ent_b")
         assert len(by_both) == 1
         assert by_both[0]["entity_id"] == "ent_b"
 
@@ -497,7 +501,7 @@ class TestIngestEndpoint:
 
         triples_1 = [
             make_test_triple(entity_id="alpha", concept="revenue.total", value=111),
-            make_test_triple(entity_id="beta", concept="cost.direct", value=222),
+            make_test_triple(entity_id="beta", concept="cogs.direct", value=222),
         ]
         resp1, _ = self._post_triples(triples_1, run_id=run_id_1)
         assert resp1.status_code == 201
@@ -558,7 +562,7 @@ class TestIngestEndpoint:
         triples = [
             make_test_triple(concept="revenue.total"),
             make_test_triple(concept="revenue.consulting"),
-            make_test_triple(concept="cost.direct"),
+            make_test_triple(concept="cogs.direct"),
         ]
         resp, _ = self._post_triples(triples, run_id=run_id)
         assert resp.status_code == 201
@@ -568,7 +572,7 @@ class TestIngestEndpoint:
         body = status_resp.json()
         assert body["triple_count"] == 3
         assert body["concept_summary"]["revenue"] == 2
-        assert body["concept_summary"]["cost"] == 1
+        assert body["concept_summary"]["cogs"] == 1
         assert body["is_active"] is True
 
 
