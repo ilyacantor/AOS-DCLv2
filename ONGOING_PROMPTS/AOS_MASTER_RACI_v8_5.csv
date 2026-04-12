@@ -141,13 +141,13 @@ Maestra COFA,COFA unification (two-CoA mapping),,,,A/R,,,R,A/R,Live,ME,"Reads tw
 Maestra COFA,COFACompletionGate (orphan account validation),,,C,A/R,,,R,C,Live,ME,DCL validates every source account appears in mapping. Rejects orphans. Self-correcting loop,v8.2→v8.3: Platform restored as R (Maestra runs in Platform). Convergence retains A/R per carveout.
 Maestra COFA,Conflict detection and typing,,,,A/R,,,R,A/R,Live,ME,"Types: recognition timing, measurement basis, classification, scope. Ranked by dollar impact",v8.2→v8.3: Platform restored as R (Maestra runs in Platform). Convergence retains A/R per carveout.
 Maestra COFA,Materiality ranking (dollar impact sorting),,,,A/R,,,R,A/R,Live,ME,Sorts conflicts by estimated annual dollar impact descending. Top 10 typically 90% of total,v8.2→v8.3: Platform restored as R (Maestra runs in Platform). Convergence retains A/R per carveout.
-Maestra Engagement,CSAT instrumentation (incentive metric),,,,,,,A/R,C,On Docket,SE/ME,Requires engagement persistence + feedback mechanism,v8.2→v8.3: Platform restored as A/R. March 25 sunset ruling reversed March 28 per Maestra component inventory.
-Maestra Engagement,Engagement state persistence (per-customer),,,,,,,A/R,C,On Docket,SE/ME,"Structured state in Supabase: steps completed, items flagged, outstanding issues. Survives across sessions",v8.2→v8.3: Platform restored as A/R. March 25 sunset ruling reversed March 28 per Maestra component inventory.
-Maestra Engagement,Run ledger (per-step audit trail),,,,,,,A/R,C,On Docket,SE/ME,"engagement_id, step_name, model_version, constitution_version, validation result, timestamp. §3.6",v8.2→v8.3: Platform restored as A/R. March 25 sunset ruling reversed March 28 per Maestra component inventory.
-Maestra Human Review,Batch approve (human-initiated),,,C,A/R,,,A/R,C,On Docket,ME,"CFO selects conflicts below self-determined threshold, applies bulk resolution. Audit trail",v8.2→v8.3: Platform restored as A/R. March 25 sunset ruling reversed March 28 per Maestra component inventory.
-Maestra Human Review,Four-tier confidence classification,,,,,,,A/R,C,On Docket,SE/ME,Compound confidence broken into components. Below medium: surface with explanation,v8.2→v8.3: Platform restored as A/R. March 25 sunset ruling reversed March 28 per Maestra component inventory.
-Maestra Human Review,Resolution audit trail,,,C,A/R,,,A/R,C,On Docket,ME,"conflict_id, decision, decided_by, reasoning, timestamp, materiality. Goes into Diligence Package",v8.2→v8.3: Platform restored as A/R. March 25 sunset ruling reversed March 28 per Maestra component inventory.
-Maestra Human Review,Structured recommendation with evidence,,,,,,,A/R,C,On Docket,SE/ME,For high-impact decisions. Maestra prepares; human confirms. §3.7,v8.2→v8.3: Platform restored as A/R. March 25 sunset ruling reversed March 28 per Maestra component inventory.
+Maestra Engagement,CSAT instrumentation (incentive metric),,,,A/R,,,C,C,On Docket,SE/ME,Requires engagement persistence + feedback mechanism,v8.4→v8.5: Engagement state moved to Convergence. Platform reads via HTTP.
+Maestra Engagement,Engagement state persistence (per-customer),,,,A/R,,,C,C,Live,SE/ME,"Canonical engagements table in Convergence. Platform + Console read/write via HTTP. No local tables.",v8.4→v8.5: Engagement move. Console + Platform local tables removed.
+Maestra Engagement,Run ledger (per-step audit trail),,,,A/R,,,C,C,Live,SE/ME,"engagement_id, step_name, idempotency_key, inputs_hash, outputs_ref. Convergence run_ledger table.",v8.4→v8.5: Engagement move. Run ledger lives in Convergence.
+Maestra Human Review,Batch approve (human-initiated),,,C,A/R,,,C,C,On Docket,ME,"CFO selects conflicts below self-determined threshold, applies bulk resolution. Audit trail",v8.4→v8.5: Human reviews moved to Convergence. Platform classification engine unchanged.
+Maestra Human Review,Four-tier confidence classification,,,,A/R,,,C,C,On Docket,SE/ME,Compound confidence broken into components. Below medium: surface with explanation,v8.4→v8.5: Review storage in Convergence. Classification logic stays in Platform.
+Maestra Human Review,Resolution audit trail,,,C,A/R,,,C,C,On Docket,ME,"conflict_id, decision, decided_by, reasoning, timestamp, materiality. Goes into Diligence Package",v8.4→v8.5: human_reviews table in Convergence.
+Maestra Human Review,Structured recommendation with evidence,,,,A/R,,,C,C,On Docket,SE/ME,For high-impact decisions. Maestra prepares; human confirms. §3.7,v8.4→v8.5: Review storage in Convergence.
 Maestra UI,Chat widget (MaestraChat component),,,,,,,A/R,C,Live,SE/ME,"React component. Streaming, Markdown rendering, preset suggestions. 65/35 split layout",v8.2→v8.3: Platform restored as A/R. March 25 sunset ruling reversed March 28 per Maestra component inventory.
 Maestra UI,Global chat store (above router),,,,,,,A/R,C,Live,SE/ME,MaestraChatProvider wraps entire app. Chat history persists across module navigation,v8.2→v8.3: Platform restored as A/R. March 25 sunset ruling reversed March 28 per Maestra component inventory.
 Maestra UI,Module context switching,,,,,,,A/R,C,Live,SE/ME,"Same widget in NLQ, AAM, DCL, AOD, Farm. Module doc and presets swap; history persists",v8.2→v8.3: Platform restored as A/R. March 25 sunset ruling reversed March 28 per Maestra component inventory.
@@ -287,7 +287,7 @@ Visualization,Chart Generation,,,,,A/R,I,,,Live,SE/ME,"Line, bar, area, pie, sta
 Visualization,Dashboard Generation,,,,,A/R,I,,,Live,SE/ME,Dynamic widget schemas from intent,
 Visualization,Dashboard Refinement Actions,,,,,A/R,I,,,Live,SE/ME,"'Add a chart', 'Show by region'",
 Visualization,Galaxy Visualization,,,,,A/R,I,,,Live,SE/ME,Node-based with related metrics,
-Visualization,Monitor Dashboard,,,A/R,,,I,,,Live,SE/ME,Collapsible right panel,
+Visualization,Monitor Dashboard,,,,A/R,,I,,,Live,SE/ME,"Collapsible right panel. Engagement Monitor moved from Platform to Convergence frontend.",v8.4→v8.5: UI moved to Convergence.
 Visualization,Persona-Based Filtering,,,A/R,,,I,,,Live,SE/ME,CFO/CRO/COO/CTO buttons,
 Visualization,Telemetry Ribbon,,,A/R,,,I,,,Live,SE/ME,,
 Visualization,Terminal Narration,,,A/R,,,I,,,Live,SE/ME,Real-time processing log,
@@ -305,10 +305,10 @@ Console,Pipeline orchestration (POST /api/pipeline/run),,,,,,,,A/R,Live,SE/ME/MA
 Console,Module proxy routes (GET /api/proxy/{module}/*),,,,,,,,A/R,Live,SE/ME/MA,Forwards to module APIs. Solves CORS.,v8.1 NEW.
 Console,Upload/parser (M&A intake),,,,,,,,A/R,On Docket,MA,"GL+CoA upload, parse, validate, convert to triples. Stub parser; real parser separate.",v8.1 NEW.
 Console,Task queue (HITL execution),,,,,,,,A/R,On Docket,SE/ME/MA,"M proposes, operator approves, CC executes. Lifecycle: pending→approved→executing→done/failed.",v8.1 NEW.
-Console,Engagement state management,,,,,,,,A/R,Live,SE/ME/MA,"Per-deal persistent state. Directional: acquirer + target. Lifecycle, deliverables.",v8.1 NEW.
+Console,Engagement state management,,,,A/R,,,,C,Live,SE/ME/MA,"Canonical owner is Convergence. Console proxies CRUD via HTTP. No local engagement table.",v8.4→v8.5: Engagement move. Console local table removed.
 Console,Deal cockpit (M&A command center),,,,,,,,A/R,Live,MA,"Lifecycle, conflict register, deliverables (10 items), combining preview, hard gates.",v8.1 NEW.
 Console,Constitution editor,,,,,,,,A/R,On Docket,SE/ME/MA,Editable layers L0-L4 + Orchestrator. Tool registry. Module docs. Version history.,v8.1 NEW.
-Console,Instrumentation (M run ledger + cost),,,,,,,,A/R,Live,SE/ME/MA,"Run durations, token counts, cost per run and per engagement.",v8.1 NEW.
+Console,Instrumentation (M run ledger + cost),,,,A/R,,,,C,Live,SE/ME/MA,"Run ledger in Convergence. Console reads via HTTP. Cost aggregation TBD.",v8.4→v8.5: Run ledger moved to Convergence.
 Console,E2e demo orchestration,,,,,,,,A/R,Live,SE/ME/MA,SE and ME demos from Console Pipeline screen. Replaces Platform.,v8.1 NEW. Replaces Platform.
 Console,Narrative editor (demo script),,,,,,,,A/R,On Docket,SE/ME/MA,YAML editor for tour steps/messages/timing. Reconstructed from Platform.,v8.1 NEW. Replaces Platform.
 Console,Entity switcher (top bar),,,,,,,,A/R,Live,ME/MA,Entity or combined view. Hidden for SE. Passes context to iframed apps.,v8.1 NEW.
@@ -317,7 +317,7 @@ Console,Inspect surface (native DCL views),,,C,,,,,A/R,Live,SE/ME/MA,"Coverage, 
 Console,Dashboards/Reports (iframe NLQ),,,,,C,,,A/R,Live,SE/ME/MA,Iframe NLQ for dashboards and reports. Entity context via query param.,v8.1 NEW.
 Convergence Service,"Convergence backend (FastAPI, port 8010)",,,,A/R,,,,,Live,ME/MA,"Standalone service carved from DCL. Owns all ME engines, engagement lifecycle, resolution workspaces.",v8.2 NEW. Convergence carveout.
 Convergence Service,"Convergence frontend (React, port 3010)",,,,A/R,,,,,Live,ME/MA,MergePanel and ME-specific UI. Standalone from DCL frontend.,v8.2 NEW. Convergence carveout.
-Convergence Service,Engagement API (GET /api/convergence/engagement/active),,,,A/R,,,,,Live,ME/MA,HTTP endpoint called by DCL maestra.py for engagement context. Replaces direct import.,v8.2 NEW. Convergence carveout.
+Convergence Service,Engagement API (full CRUD + run ledger + reviews),,,,A/R,,,,,Live,ME/MA,"Canonical engagement CRUD, run_ledger, human_reviews. Platform + Console read/write via HTTP.",v8.4→v8.5: Expanded from GET active to full engagement lifecycle.
 Convergence Service,Schema contract (SCHEMA_CONTRACT.md),,,A/R,R,,,,,Live,SE/ME,DCL owns semantic_triples schema. Convergence reads. Breaking changes require coordination.,v8.2 NEW. Convergence carveout.
 Convergence Service,Direct PG reads (SELECT only on DCL tables),,,,A/R,,,,,Live,ME/MA,"Convergence reads semantic_triples, dimension_values_v2, tenant_runs directly. No HTTP intermediary for report queries.",v8.2 NEW. Convergence carveout.
 Convergence Service,Triple writes to convergence_triples,,,,A/R,,,,,Live,ME/MA,"Convergence writes ME triples (Farm ME financial triples, COFA mappings, conflict register, combining output) to convergence_triples in the Convergence schema. Never to DCL's semantic_triples. Convergence reads DCL-owned tables (SELECT only) for cross-reference.","v8.2→v8.3: Corrected — ME triples write to convergence_triples, not through DCL HTTP. DCL is SE-only per carveout ruling. Renamed from 'Triple writes via DCL HTTP only'."
