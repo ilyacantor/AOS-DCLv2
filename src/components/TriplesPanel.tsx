@@ -32,7 +32,6 @@ interface RunData {
   run_id: string;
   timestamp: string;
   triple_count: number;
-  is_active: boolean;
   domain_summary: Record<string, number>;
   entity_summary: Record<string, number>;
 }
@@ -200,18 +199,6 @@ export function TriplesPanel() {
   useEffect(() => {
     fetchBrowse(0);
   }, [fetchBrowse]);
-
-  const handleDeactivateRun = async (runId: string) => {
-    if (!window.confirm(`Deactivate all triples for run ${runId.slice(0, 8)}...? This marks them inactive.`)) return;
-    try {
-      const res = await fetch(`/api/dcl/triples/deactivate-run?run_id=${encodeURIComponent(runId)}`, { method: 'POST' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setChecks(null);
-      fetchAll();
-    } catch (e) {
-      console.error('[TriplesPanel] Deactivate failed:', e);
-    }
-  };
 
   // --- Helpers ---
 
@@ -512,9 +499,7 @@ export function TriplesPanel() {
                   <th className="text-left px-3 py-2 font-medium">Run ID</th>
                   <th className="text-left px-3 py-2 font-medium">Timestamp</th>
                   <th className="text-right px-3 py-2 font-medium">Triples</th>
-                  <th className="text-center px-3 py-2 font-medium">Active</th>
                   <th className="text-right px-3 py-2 font-medium">Domains</th>
-                  <th className="text-right px-3 py-2 font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -530,29 +515,13 @@ export function TriplesPanel() {
                         <td className="px-3 py-1.5 font-mono text-foreground/80">{shortId(run.run_id)}</td>
                         <td className="px-3 py-1.5 text-muted-foreground">{run.timestamp ? fmtDate(run.timestamp) : '-'}</td>
                         <td className="px-3 py-1.5 text-right font-mono text-foreground">{fmtNum(run.triple_count)}</td>
-                        <td className="px-3 py-1.5 text-center">
-                          {run.is_active
-                            ? <span className="text-emerald-400">&#10003;</span>
-                            : <span className="text-muted-foreground/40">-</span>
-                          }
-                        </td>
                         <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">
                           {Object.keys(run.domain_summary).length}
-                        </td>
-                        <td className="px-3 py-1.5 text-right">
-                          {run.is_active && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeactivateRun(run.run_id); }}
-                              className="px-2 py-0.5 text-xs rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
-                            >
-                              Deactivate
-                            </button>
-                          )}
                         </td>
                       </tr>
                       {isExpanded && (
                         <tr className="border-t border-border/10 bg-card/5">
-                          <td colSpan={6} className="px-3 py-2 pl-8">
+                          <td colSpan={5} className="px-3 py-2 pl-8">
                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-mono">
                               {Object.entries(run.domain_summary)
                                 .sort(([, a], [, b]) => b - a)

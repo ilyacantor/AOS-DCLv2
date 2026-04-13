@@ -29,12 +29,16 @@ export function IngestTab({ entities, selectedEntityId, onEntityChange, entities
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
-  // "Total Triples" is always the system-wide count (label says "Active in store").
-  // Per-entity latest_ingest is scoped to the selection.
-  const storeTotalTriples = useMemo(
-    () => entities.reduce((sum, e) => sum + e.triple_count, 0),
-    [entities],
+  // Post–store-rebuild there is no "store-wide" count to display: the UI
+  // works on one (tenant, entity) selection at a time. Read the selected
+  // entity's triple_count straight from the entities list so the label
+  // matches what the Context and Dashboard tabs show for the same entity.
+  const selectedEntity = useMemo(
+    () => entities.find((e) => e.entity_id === selectedEntityId) ?? null,
+    [entities, selectedEntityId],
   );
+  const entityTripleCount = selectedEntity?.triple_count ?? 0;
+  const entityLabel = selectedEntity?.entity_id ?? 'entity';
 
   const fetchData = async (entityId?: string) => {
     setLoading(true);
@@ -103,9 +107,9 @@ export function IngestTab({ entities, selectedEntityId, onEntityChange, entities
           detail={lastLog ? `${lastLog.dcl_ingest_id.slice(0, 8)} | ${lastLog.entity_id || 'multi'} | ${lastLog.duration_ms}ms` : undefined}
         />
         <MetricCard
-          label="Total Triples"
-          value={storeTotalTriples.toLocaleString()}
-          detail="Active in store"
+          label={`Current triples for ${entityLabel}`}
+          value={entityTripleCount.toLocaleString()}
+          detail={selectedEntity ? 'Live slice from current_triples' : 'Select an entity'}
         />
         <MetricCard
           label="Rejection Rate"

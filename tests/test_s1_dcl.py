@@ -214,7 +214,6 @@ class TestTripleStore:
         assert r["source_system"] == "test"
         assert float(r["confidence_score"]) == 0.95
         assert r["confidence_tier"] == "high"
-        assert r["is_active"] is True
 
     def test_04_batch_insert(self):
         """Insert 100 triples → count returned is 100 → read back count is 100."""
@@ -577,7 +576,6 @@ class TestIngestEndpoint:
         assert body["triple_count"] == 3
         assert body["concept_summary"]["revenue"] == 2
         assert body["concept_summary"]["cogs"] == 1
-        assert body["is_active"] is True
 
 
 # ---------------------------------------------------------------------------

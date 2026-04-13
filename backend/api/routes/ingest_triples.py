@@ -1,11 +1,10 @@
 """
 Semantic triple ingest endpoint.
 
-POST   /api/dcl/ingest-triples         — batch ingest triples
+POST   /api/dcl/ingest-triples          — batch ingest triples
 GET    /api/dcl/ingest-status/{run_id}  — run status
 GET    /api/dcl/ingest-status           — list all runs
 GET    /api/dcl/ingest-log              — ingest activity log
-DELETE /api/dcl/purge-inactive          — hard-delete deactivated triples
 """
 
 import json
@@ -492,7 +491,6 @@ def get_ingest_status(run_id: str):
         "triple_count": info["triple_count"],
         "concept_summary": concept_summary,
         "created_at": info["created_at"].isoformat() if info["created_at"] else None,
-        "is_active": info["is_active"],
     }
 
 
@@ -507,7 +505,6 @@ def list_ingest_status():
             "tenant_id": str(r["tenant_id"]),
             "triple_count": r["triple_count"],
             "created_at": r["created_at"].isoformat() if r["created_at"] else None,
-            "is_active": r["is_active"],
         })
     return result
 
@@ -593,34 +590,6 @@ def get_ingest_log(
                 rows.append(d)
 
     return rows
-
-
-# ---------------------------------------------------------------------------
-# Purge inactive triples
-# ---------------------------------------------------------------------------
-
-@router.delete("/api/dcl/purge-inactive")
-def purge_inactive(confirm: bool = Query(False)):
-    """Hard-delete all deactivated triples from the database.
-
-    Requires ?confirm=true as a safety gate — this is a maintenance operation
-    that permanently removes historical data.
-    """
-    if not confirm:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "CONFIRMATION_REQUIRED",
-                "message": (
-                    "This will permanently delete all inactive triples. "
-                    "Pass ?confirm=true to proceed."
-                ),
-            },
-        )
-
-    deleted = _triple_store.delete_inactive()
-    logger.info(f"[purge-inactive] Hard-deleted {deleted} inactive triples")
-    return {"deleted": deleted}
 
 
 # ---------------------------------------------------------------------------

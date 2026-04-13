@@ -9,7 +9,6 @@ POST /api/dcl/triples/browse-batch    — batch browse (multiple domains, one SQ
 GET /api/dcl/triples/engagement       — engagement state
 GET /api/dcl/triples/resolution-summary — resolution workspace stats
 GET /api/dcl/triples/persona-stats    — per-persona stats from triples
-POST /api/dcl/triples/deactivate-run  — deactivate a run
 """
 
 import json
@@ -279,7 +278,6 @@ def triples_runs():
             "tenant_label": label,
             "timestamp": r["updated_at"].isoformat() if r["updated_at"] else None,
             "triple_count": r["run_row_count"],
-            "is_active": True,
             "domain_summary": domain_by_key.get((tenant_id_str, entity_id), {}),
             "entity_summary": {entity_id: r["run_row_count"]} if entity_id else {},
         })
@@ -832,18 +830,6 @@ def triples_persona_stats():
 
 
 # ---------------------------------------------------------------------------
-# POST /api/dcl/triples/deactivate-run
-# ---------------------------------------------------------------------------
-
-@router.post("/api/dcl/triples/deactivate-run")
-def deactivate_run(run_id: str = Query(...)):
-    """Deactivate all triples for a specific run."""
-    count = _triple_store.deactivate_run(run_id)
-    logger.info(f"[triple-monitor] Deactivated {count} triples for run_id={run_id}")
-    return {"dcl_ingest_id": run_id, "deactivated_count": count}
-
-
-# ---------------------------------------------------------------------------
 # GET /api/dcl/contextualization-summary
 # ---------------------------------------------------------------------------
 
@@ -860,7 +846,7 @@ def contextualization_summary(
     """Contextualization quality summary — reads the flat current_triples mirror.
 
     current_triples holds exactly one row per live logical triple across all
-    (tenant, entity) pairs; no is_active or run_id filtering is needed.
+    (tenant, entity) pairs; no run_id filtering is needed.
     """
     clauses: list[str] = []
     params: list = []

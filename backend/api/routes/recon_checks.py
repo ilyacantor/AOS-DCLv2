@@ -259,57 +259,65 @@ def _check_domain_completeness(run_id: str, entity_id: str | None = None) -> dic
     }
 
 
+def _resolve_run_id(tenant_id: str, entity_id: str | None) -> str | None:
+    """Resolve the current_run_id to recon against.
+
+    Scoped to a single tenant so recon never leaks across tenants. When
+    entity_id is given, returns that entity's current_run_id. Otherwise
+    returns the most recently updated run for the tenant. Returns None
+    if tenant_runs has no matching row — callers surface that as a
+    "no active run" response, not a silent skip.
+    """
+    sql = "SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s"
+    params: list = [tenant_id]
+    if entity_id:
+        sql += " AND entity_id = %s"
+        params.append(entity_id)
+    sql += " ORDER BY updated_at DESC LIMIT 1"
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            row = cur.fetchone()
+    return str(row[0]) if row else None
+
+
 @router.get("/api/dcl/recon")
 def run_recon(
-    run_id: Optional[str] = Query(None, description="Run ID to validate. Defaults to latest active run."),
+    run_id: Optional[str] = Query(None, description="Run ID to validate. Defaults to tenant's latest run."),
     entity_id: Optional[str] = Query(None, description="Entity ID to scope recon checks."),
+    tenant_id: Optional[str] = Query(None, description="Tenant scope. Defaults to the sole tenant in tenant_runs."),
 ):
-    """Cross-module chain validation for a specific ingest run, optionally scoped by entity."""
+    """Cross-module chain validation for a specific ingest run, optionally scoped by entity.
+
+    Recon is always tenant-scoped: callers either pass tenant_id explicitly
+    or there must be exactly one tenant in tenant_runs. When tenant_id is
+    omitted and multiple tenants exist, the request fails with a 400 from
+    TripleStore.resolve_single_tenant rather than picking one silently.
+    """
     # Normalize empty-string entity_id to None (frontend sends "" for "All Entities")
     if entity_id is not None and entity_id.strip() == "":
         entity_id = None
 
-    # Resolve run_id when entity_id is provided without run_id
-    if entity_id and not run_id:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT current_run_id FROM tenant_runs "
-                    "WHERE entity_id = %s "
-                    "ORDER BY updated_at DESC LIMIT 1",
-                    (entity_id,),
-                )
-                row = cur.fetchone()
-                if not row:
-                    return {
-                        "dcl_ingest_id": None,
-                        "entity_id": entity_id,
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                        "overall": "fail",
-                        "checks": [],
-                        "detail": f"No active run found for entity_id={entity_id}",
-                    }
-                run_id = str(row[0])
-
-    # Default to latest active run if still not specified
+    # Resolve run_id from tenant_runs when the caller didn't pin one.
     if not run_id:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT current_run_id FROM tenant_runs "
-                    "ORDER BY updated_at DESC LIMIT 1"
-                )
-                row = cur.fetchone()
-                if not row:
-                    return {
-                        "dcl_ingest_id": None,
-                        "entity_id": entity_id,
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                        "overall": "fail",
-                        "checks": [],
-                        "detail": "No active runs in tenant_runs",
-                    }
-                run_id = str(row[0])
+        if not tenant_id:
+            tenant_id = _triple_store.resolve_single_tenant()
+        run_id = _resolve_run_id(tenant_id, entity_id)
+        if run_id is None:
+            detail = (
+                f"No active run for tenant={tenant_id} entity={entity_id}"
+                if entity_id
+                else f"No active runs for tenant={tenant_id}"
+            )
+            return {
+                "dcl_ingest_id": None,
+                "entity_id": entity_id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "overall": "fail",
+                "checks": [],
+                "detail": detail,
+            }
 
     checks = [
         _check_farm_dcl_count(run_id, entity_id),

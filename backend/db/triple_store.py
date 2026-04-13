@@ -27,7 +27,7 @@ class TripleStore:
         "pipe_id", "run_id", "source_run_tag",
         "confidence_score", "confidence_tier",
         "canonical_id", "resolution_method", "resolution_confidence",
-        "fabric_plane", "fabric_product", "is_active",
+        "fabric_plane", "fabric_product",
     ]
     _COPY_SQL = (
         f"COPY semantic_triples ({', '.join(_COPY_COLS)}) "
@@ -48,11 +48,7 @@ class TripleStore:
 
     @classmethod
     def _build_copy_buffer(cls, triples: list[dict]) -> io.StringIO:
-        """Build a COPY TEXT buffer from a list of triple dicts.
-
-        New rows are always written with is_active='t' — the column is vestigial
-        post–store-rebuild but persists so ME-side consumers keep working.
-        """
+        """Build a COPY TEXT buffer from a list of triple dicts."""
         escape = cls._copy_escape
         cols = cls._COPY_COLS
         buf = io.StringIO()
@@ -61,8 +57,6 @@ class TripleStore:
             for c in cols:
                 if c == "value":
                     row_vals.append(escape(json.dumps(t["value"])))
-                elif c == "is_active":
-                    row_vals.append("t")
                 else:
                     row_vals.append(escape(t.get(c)))
             buf.write("\t".join(row_vals))
@@ -148,13 +142,8 @@ class TripleStore:
         concept: str,
         entity_id: str | None = None,
         period: str | None = None,
-        active_only: bool = True,
     ) -> list[dict]:
-        """Query by concept against the flat current_triples mirror.
-
-        Every returned dict carries is_active=True — current_triples is by
-        definition the live slice, so any row present is active.
-        """
+        """Query by concept against the flat current_triples mirror."""
         clauses = ["tenant_id = %s", "concept = %s"]
         params: list = [tenant_id, concept]
 
@@ -172,12 +161,7 @@ class TripleStore:
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 columns = [desc[0] for desc in cur.description]
-                result = []
-                for row in cur.fetchall():
-                    d = dict(zip(columns, row))
-                    d["is_active"] = True
-                    result.append(d)
-                return result
+                return [dict(zip(columns, row)) for row in cur.fetchall()]
 
     def get_triples_by_run(self, run_id: str) -> list[dict]:
         """All triples from a run."""
@@ -187,80 +171,6 @@ class TripleStore:
                 cur.execute(sql, (run_id,))
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
-
-    def deactivate_entity_triples(self, entity_ids: list[str], tenant_id: str = "") -> int:
-        """Deactivate all active triples for given entity_ids within a tenant.
-
-        Used when a new Farm generation replaces all prior data for those entities.
-        This prevents triple compounding across runs.
-
-        Args:
-            entity_ids: Entity IDs to deactivate triples for.
-            tenant_id: Required tenant scope — prevents cross-tenant data corruption.
-        """
-        if not entity_ids:
-            return 0
-        if not tenant_id:
-            raise ValueError(
-                "deactivate_entity_triples requires tenant_id to prevent "
-                "cross-tenant data corruption."
-            )
-        placeholders = ", ".join(["%s"] * len(entity_ids))
-        sql = (
-            "UPDATE semantic_triples SET is_active = false, updated_at = now() "
-            f"WHERE is_active = true AND tenant_id = %s AND entity_id IN ({placeholders})"
-        )
-        params = [tenant_id] + entity_ids
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(f"SET LOCAL statement_timeout = {int(INGEST_STATEMENT_TIMEOUT_MS)}")
-                cur.execute(sql, params)
-                conn.commit()
-                return cur.rowcount
-
-    def deactivate_tenant_triples(self, tenant_id: str) -> int:
-        """Deactivate all active triples for a tenant.
-
-        Used on full replacement ingest — kills financials, HR, etc. so the
-        new run is the sole active dataset.
-        """
-        if not tenant_id:
-            raise ValueError("deactivate_tenant_triples requires tenant_id.")
-        sql = (
-            "UPDATE semantic_triples SET is_active = false, updated_at = now() "
-            "WHERE is_active = true AND tenant_id = %s"
-        )
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(f"SET LOCAL statement_timeout = {int(INGEST_STATEMENT_TIMEOUT_MS)}")
-                cur.execute(sql, (tenant_id,))
-                conn.commit()
-                return cur.rowcount
-
-    def delete_inactive(self) -> int:
-        """Hard-delete all inactive triples across all tenants.
-
-        Maintenance operation to purge deactivated runs and reclaim space.
-        """
-        sql = "DELETE FROM semantic_triples WHERE is_active = false"
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(sql)
-                conn.commit()
-                return cur.rowcount
-
-    def deactivate_run(self, run_id: str) -> int:
-        """Set is_active=false for all triples in a run. Returns count affected."""
-        sql = (
-            "UPDATE semantic_triples SET is_active = false, updated_at = now() "
-            "WHERE run_id = %s AND is_active = true"
-        )
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(f"SET LOCAL statement_timeout = {int(INGEST_STATEMENT_TIMEOUT_MS)}")
-                cur.execute(sql, (run_id,))
-                conn.commit()
-                return cur.rowcount
 
     def upsert_tenant_run(
         self, tenant_id: str, new_run_id: str,
@@ -713,8 +623,7 @@ class TripleStore:
         """Get summary info for a run."""
         sql = (
             "SELECT run_id, COUNT(*) as triple_count, "
-            "MIN(created_at) as created_at, "
-            "bool_and(is_active) as is_active "
+            "MIN(created_at) as created_at "
             "FROM semantic_triples WHERE run_id = %s "
             "GROUP BY run_id"
         )
@@ -732,8 +641,7 @@ class TripleStore:
         if tenant_id:
             sql = (
                 "SELECT run_id, tenant_id, COUNT(*) as triple_count, "
-                "MIN(created_at) as created_at, "
-                "bool_and(is_active) as is_active "
+                "MIN(created_at) as created_at "
                 "FROM semantic_triples WHERE tenant_id = %s "
                 "GROUP BY run_id, tenant_id ORDER BY MIN(created_at) DESC"
             )
@@ -741,8 +649,7 @@ class TripleStore:
         else:
             sql = (
                 "SELECT run_id, tenant_id, COUNT(*) as triple_count, "
-                "MIN(created_at) as created_at, "
-                "bool_and(is_active) as is_active "
+                "MIN(created_at) as created_at "
                 "FROM semantic_triples "
                 "GROUP BY run_id, tenant_id ORDER BY MIN(created_at) DESC"
             )

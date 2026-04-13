@@ -424,3 +424,45 @@ Do not bypass with `--no-verify` (C13).
 - Unmerged branches at session end are a B17 failure and must be reported.
 - `--no-verify` is banned. If a hook blocks a legitimate change, fix the hook scope, then commit.
 - Session start: run `git fetch --all --prune && git branch -a` and report stale branches before new work.
+
+---
+
+# Destructive-action contract (B19)
+
+Destructive actions touch state the user or another tenant cannot get back
+without recovery effort. In DCL that list is narrow but high-cost:
+
+- `TRUNCATE` / `DROP TABLE` / `DROP COLUMN` against any live table.
+- `DELETE FROM semantic_triples | current_triples | tenant_runs | semantic_triples_archive`
+  outside the `swap_and_delete` path.
+- Running a migration that rewrites or rebuilds the store (014/015/016, or any
+  successor).
+- Killing or restarting dcl-backend while an in-flight ingest or migration
+  holds an open transaction.
+- `git reset --hard`, `git push --force`, branch deletion on unmerged work.
+
+Before any destructive action:
+
+1. State the blast radius in one sentence — which table, how many rows, which
+   tenants, and whether the change is reversible.
+2. Check for in-flight transactions. `apply_mig015` survived a compaction once
+   because its txn was still open; killing dcl-backend would have rolled back
+   hours of scan work. If you cannot prove the write path is idle, wait.
+3. Confirm with the user before executing. One-time approval stands for the
+   scope stated in that approval, nothing more. "Apply mig016" does not
+   authorize "also drop ingest_log."
+4. Inside one transaction wherever possible. Partial rollback is safer than
+   partial commit.
+5. Never use `--no-verify`, `DROP … CASCADE`, `TRUNCATE … CASCADE`, or
+   `DELETE … WHERE true` as a shortcut. If a hook or constraint blocks you,
+   it is pointing at a real problem. Fix the underlying code instead.
+
+Non-destructive equivalents exist for most debugging: query the state, run
+`EXPLAIN`, take a schema-only dump, or spin up a fresh database. Use them.
+
+After any destructive action:
+
+- Verify the post-state by counting rows and re-running store invariants
+  (`tests/test_store_invariants.py`).
+- Record what ran, against which environment, and the pre/post row counts in
+  the session report.
