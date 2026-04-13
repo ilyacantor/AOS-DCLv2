@@ -70,13 +70,14 @@ def _serialize_row(row: dict) -> dict:
 
 @router.get("/api/dcl/entities")
 def list_entities():
-    """Return distinct entities from semantic_triples with triple counts and recency."""
+    """Return distinct live entities from tenant_runs with triple counts and recency.
+
+    Post–store-rebuild, run_row_count on tenant_runs is the authoritative
+    per-(tenant, entity) count — no semantic_triples scan needed.
+    """
     sql = (
-        "SELECT s.entity_id, COUNT(*) AS triple_count, MAX(s.created_at) AS latest_ingest "
-        "FROM semantic_triples s "
-        "JOIN tenant_runs t ON t.tenant_id = s.tenant_id AND t.current_run_id = s.run_id "
-        "WHERE s.is_active = true "
-        "GROUP BY s.entity_id ORDER BY latest_ingest DESC"
+        "SELECT tenant_id, entity_id, run_row_count AS triple_count, updated_at AS latest_ingest "
+        "FROM tenant_runs ORDER BY updated_at DESC"
     )
 
     try:
@@ -93,8 +94,9 @@ def list_entities():
         raise HTTPException(status_code=503, detail=str(e))
 
     entities = []
-    for i, (entity_id, triple_count, latest_ingest) in enumerate(rows):
+    for i, (tenant_id, entity_id, triple_count, latest_ingest) in enumerate(rows):
         entities.append({
+            "tenant_id": str(tenant_id),
             "entity_id": entity_id,
             "display_name": _entity_display_name(entity_id),
             "triple_count": triple_count,
@@ -120,38 +122,45 @@ def triples_overview(
     - tenant_id: scope to a single deal/tenant (required for multi-tenant accuracy)
     - source_run_tag: scope to triples from a specific Farm run
     """
-    extra_filter = ""
+    clauses: list[str] = []
     params: list = []
     if tenant_id:
-        extra_filter += " AND tenant_id = %s"
-        params.append(tenant_id)
-        extra_filter += " AND run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)"
+        clauses.append("tenant_id = %s")
         params.append(tenant_id)
     if source_run_tag:
-        extra_filter += " AND source_run_tag = %s"
+        clauses.append("source_run_tag = %s")
         params.append(source_run_tag)
 
-    sql_total = f"SELECT COUNT(*) FROM semantic_triples WHERE is_active = true{extra_filter}"
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+
+    sql_total = f"SELECT COUNT(*) FROM current_triples{where}"
     sql_entities = (
         f"SELECT entity_id, COUNT(*) AS triple_count "
-        f"FROM semantic_triples WHERE is_active = true{extra_filter} "
+        f"FROM current_triples{where} "
         f"GROUP BY entity_id ORDER BY triple_count DESC"
     )
     sql_domains = (
         f"SELECT split_part(concept, '.', 1) AS domain, entity_id, COUNT(*) AS cnt "
-        f"FROM semantic_triples WHERE is_active = true{extra_filter} "
+        f"FROM current_triples{where} "
         f"GROUP BY domain, entity_id ORDER BY domain, entity_id"
     )
-    sql_periods = (
-        f"SELECT DISTINCT period FROM semantic_triples "
-        f"WHERE is_active = true AND period IS NOT NULL{extra_filter} "
-        f"ORDER BY period"
-    )
-    sql_latest = (
-        f"SELECT run_id, MIN(created_at) AS timestamp, COUNT(*) AS triple_count "
-        f"FROM semantic_triples WHERE is_active = true{extra_filter} "
-        f"GROUP BY run_id ORDER BY MIN(created_at) DESC LIMIT 1"
-    )
+    period_where = where + (" AND " if where else " WHERE ") + "period IS NOT NULL"
+    sql_periods = f"SELECT DISTINCT period FROM current_triples{period_where} ORDER BY period"
+
+    # Latest ingest comes from tenant_runs (current_triples has no run_id).
+    if tenant_id:
+        sql_latest = (
+            "SELECT current_run_id, updated_at, run_row_count "
+            "FROM tenant_runs WHERE tenant_id = %s "
+            "ORDER BY updated_at DESC LIMIT 1"
+        )
+        latest_params = [tenant_id]
+    else:
+        sql_latest = (
+            "SELECT current_run_id, updated_at, run_row_count "
+            "FROM tenant_runs ORDER BY updated_at DESC LIMIT 1"
+        )
+        latest_params = []
 
     try:
         with get_connection() as conn:
@@ -183,14 +192,14 @@ def triples_overview(
                 cur.execute(sql_periods, params)
                 periods = [r[0] for r in cur.fetchall()]
 
-                cur.execute(sql_latest, params)
+                cur.execute(sql_latest, latest_params)
                 latest_row = cur.fetchone()
                 last_ingest = None
                 if latest_row:
                     last_ingest = {
-                        "dcl_ingest_id": str(latest_row[0]),
+                        "dcl_ingest_id": str(latest_row[0]) if latest_row[0] else None,
                         "timestamp": latest_row[1].isoformat() if latest_row[1] else None,
-                        "triple_count": latest_row[2],
+                        "triple_count": latest_row[2] or 0,
                     }
     except PoolExhausted as e:
         raise HTTPException(
@@ -216,31 +225,22 @@ def triples_overview(
 
 @router.get("/api/dcl/triples/runs")
 def triples_runs():
-    """List all ingest runs with per-run summary.
+    """List all current entity runs with per-run summary.
 
-    Uses a single connection for all 3 queries to avoid pool exhaustion
-    under concurrent load (N+1 pattern previously opened 2 connections
-    per run, exhausting the 10-connection pool).
+    Each tenant_runs row is one (tenant, entity, current_run_id). Domain
+    summaries are computed from current_triples grouped per entity.
     """
     runs_sql = (
-        "SELECT run_id, tenant_id, COUNT(*) AS triple_count, "
-        "MIN(created_at) AS created_at, "
-        "bool_and(is_active) AS is_active "
-        "FROM semantic_triples "
-        "GROUP BY run_id, tenant_id "
-        "ORDER BY MIN(created_at) DESC"
+        "SELECT current_run_id, tenant_id, entity_id, run_row_count, updated_at "
+        "FROM tenant_runs ORDER BY updated_at DESC"
     )
 
     domain_sql = (
-        "SELECT run_id, split_part(concept, '.', 1) AS domain, COUNT(*) AS cnt "
-        "FROM semantic_triples WHERE is_active = true "
-        "GROUP BY run_id, domain ORDER BY run_id, domain"
-    )
-
-    entity_sql = (
-        "SELECT run_id, entity_id, COUNT(*) AS cnt "
-        "FROM semantic_triples "
-        "GROUP BY run_id, entity_id"
+        "SELECT tenant_id, entity_id, split_part(concept, '.', 1) AS domain, "
+        "COUNT(*) AS cnt "
+        "FROM current_triples "
+        "GROUP BY tenant_id, entity_id, domain "
+        "ORDER BY tenant_id, entity_id, domain"
     )
 
     try:
@@ -252,9 +252,6 @@ def triples_runs():
 
                 cur.execute(domain_sql)
                 domain_rows = cur.fetchall()
-
-                cur.execute(entity_sql)
-                entity_rows = cur.fetchall()
     except PoolExhausted as e:
         raise HTTPException(
             status_code=503,
@@ -263,38 +260,28 @@ def triples_runs():
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
-    # Index domain summaries by run_id
-    domain_by_run: dict[str, dict[str, int]] = {}
-    for run_id_val, domain, cnt in domain_rows:
-        rid = str(run_id_val)
-        domain_by_run.setdefault(rid, {})[domain] = cnt
-
-    # Index entity summaries by run_id
-    entity_by_run: dict[str, dict[str, int]] = {}
-    for run_id_val, entity_id, cnt in entity_rows:
-        rid = str(run_id_val)
-        entity_by_run.setdefault(rid, {})[entity_id] = cnt
+    # Index domain summaries by (tenant_id, entity_id)
+    domain_by_key: dict[tuple[str, str], dict[str, int]] = {}
+    for tid, eid, domain, cnt in domain_rows:
+        key = (str(tid), eid)
+        domain_by_key.setdefault(key, {})[domain] = cnt
 
     runs = []
     for r in raw_runs:
-        run_id_str = str(r["run_id"])
+        run_id_str = str(r["current_run_id"]) if r["current_run_id"] else None
         tenant_id_str = str(r["tenant_id"])
-        entity_ids = list(entity_by_run.get(run_id_str, {}).keys())
-        real = [e for e in entity_ids if e and e != "combined"]
-        label = (
-            " · ".join(_entity_display_name(e) for e in sorted(real))
-            if real else tenant_id_str[:8]
-        )
+        entity_id = r["entity_id"]
+        label = _entity_display_name(entity_id) if entity_id and entity_id != "combined" else tenant_id_str[:8]
 
         runs.append({
             "dcl_ingest_id": run_id_str,
             "tenant_id": tenant_id_str,
             "tenant_label": label,
-            "timestamp": r["created_at"].isoformat() if r["created_at"] else None,
-            "triple_count": r["triple_count"],
-            "is_active": r["is_active"],
-            "domain_summary": domain_by_run.get(run_id_str, {}),
-            "entity_summary": entity_by_run.get(run_id_str, {}),
+            "timestamp": r["updated_at"].isoformat() if r["updated_at"] else None,
+            "triple_count": r["run_row_count"],
+            "is_active": True,
+            "domain_summary": domain_by_key.get((tenant_id_str, entity_id), {}),
+            "entity_summary": {entity_id: r["run_row_count"]} if entity_id else {},
         })
 
     return {"runs": runs}
@@ -346,12 +333,10 @@ def _build_identity_lookup(cur) -> tuple[dict, list[str], list[str]]:
     like_params = [p + "%" for p in _CONCEPT_PREFIXES]
 
     sql = (
-        "SELECT DISTINCT ON (entity_id, period, concept) "
-        "  entity_id, concept, period, value "
-        "FROM semantic_triples "
-        "WHERE is_active = true AND property = 'amount' "
-        f"  AND ({like_clauses}) "
-        "ORDER BY entity_id, period, concept"
+        "SELECT entity_id, concept, period, value "
+        "FROM current_triples "
+        "WHERE property = 'amount' "
+        f"  AND ({like_clauses})"
     )
     cur.execute(sql, like_params)
     rows = cur.fetchall()
@@ -543,7 +528,7 @@ def triples_browse(
     offset: int = Query(0, ge=0),
 ):
     """Browse raw triples with filtering and pagination."""
-    clauses = ["is_active = true"]
+    clauses: list[str] = []
     params: list = []
 
     if domain:
@@ -561,19 +546,12 @@ def triples_browse(
         clauses.append("property = %s")
         params.append(property)
 
-    where = " AND ".join(clauses)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
 
-    # Deduplicate triples that differ only by run_id or source_run_tag
-    # (multiple pipeline runs produce duplicates). Keep the most recent
-    # triple per (entity_id, concept, property, period).
-    count_sql = (
-        f"SELECT COUNT(DISTINCT (entity_id, concept, property, period)) "
-        f"FROM semantic_triples WHERE {where}"
-    )
+    count_sql = f"SELECT COUNT(*) FROM current_triples{where}"
     data_sql = (
-        f"SELECT DISTINCT ON (entity_id, concept, property, period) * "
-        f"FROM semantic_triples WHERE {where} "
-        f"ORDER BY entity_id, concept, property, period, created_at DESC "
+        f"SELECT * FROM current_triples{where} "
+        f"ORDER BY entity_id, concept, property, period "
         f"LIMIT %s OFFSET %s"
     )
 
@@ -630,7 +608,7 @@ def triples_browse_batch(req: BrowseBatchRequest):
     Returns triples grouped by domain. Replaces N individual browse calls with
     one SQL query, eliminating HTTP round-trip overhead for reports.
     """
-    clauses = ["is_active = true"]
+    clauses: list[str] = []
     params: list = []
 
     # Domain filter: concept LIKE 'domain1.%' OR concept LIKE 'domain2.%' ...
@@ -652,9 +630,8 @@ def triples_browse_batch(req: BrowseBatchRequest):
     where = " AND ".join(clauses)
 
     data_sql = (
-        f"SELECT DISTINCT ON (entity_id, concept, property, period) * "
-        f"FROM semantic_triples WHERE {where} "
-        f"ORDER BY entity_id, concept, property, period, created_at DESC"
+        f"SELECT * FROM current_triples WHERE {where} "
+        f"ORDER BY entity_id, concept, property, period"
     )
 
     try:
@@ -878,26 +855,24 @@ _concept_registry = ConceptRegistry()
 @router.get("/api/dcl/contextualization-summary")
 def contextualization_summary(
     entity_id: Optional[str] = Query(None),
-    run_id: Optional[str] = Query(None),
     tenant_id: Optional[str] = Query(None, description="Filter by tenant_id (deal scope)"),
 ):
-    """Contextualization quality summary: domain coverage, confidence, resolution, sources."""
-    clauses = ["is_active = true"]
+    """Contextualization quality summary — reads the flat current_triples mirror.
+
+    current_triples holds exactly one row per live logical triple across all
+    (tenant, entity) pairs; no is_active or run_id filtering is needed.
+    """
+    clauses: list[str] = []
     params: list = []
 
     if tenant_id:
         clauses.append("tenant_id = %s")
         params.append(tenant_id)
-        clauses.append("run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)")
-        params.append(tenant_id)
     if entity_id:
         clauses.append("entity_id = %s")
         params.append(entity_id)
-    if run_id:
-        clauses.append("run_id = %s")
-        params.append(run_id)
 
-    where = " AND ".join(clauses)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
 
     # Query 1: per-domain aggregation
     domain_sql = (
@@ -910,7 +885,7 @@ def contextualization_summary(
         f"COUNT(*) FILTER (WHERE confidence_tier = 'high') AS tier_high, "
         f"COUNT(*) FILTER (WHERE confidence_tier = 'medium') AS tier_medium, "
         f"COUNT(*) FILTER (WHERE confidence_tier = 'low') AS tier_low "
-        f"FROM semantic_triples WHERE {where} "
+        f"FROM current_triples{where} "
         f"GROUP BY domain ORDER BY triple_count DESC"
     )
 
@@ -918,7 +893,7 @@ def contextualization_summary(
     source_sql = (
         f"SELECT source_system, COUNT(*) AS triple_count, "
         f"AVG(confidence_score) AS avg_confidence "
-        f"FROM semantic_triples WHERE {where} "
+        f"FROM current_triples{where} "
         f"GROUP BY source_system ORDER BY triple_count DESC"
     )
 
@@ -1023,24 +998,28 @@ def contextualization_summary(
 
 @router.get("/api/dcl/dashboard-data")
 def dashboard_data(
+    tenant_id: Optional[str] = Query(None, description="Filter by tenant_id (deal scope)"),
     entity_id: Optional[str] = Query(None),
     domain: Optional[str] = Query(None),
     source_system: Optional[str] = Query(None),
     period: Optional[str] = Query(None),
-    run_id: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
 ):
-    """Paginated, filterable triple data with aggregations for the Dashboard tab."""
-    clauses = ["is_active = true"]
+    """Paginated, filterable triple data for the Dashboard tab.
+
+    Reads from current_triples — one row per live logical triple, no dedup
+    needed, counts match ingest and context tabs by construction.
+    """
+    clauses: list[str] = []
     params: list = []
 
+    if tenant_id:
+        clauses.append("tenant_id = %s")
+        params.append(tenant_id)
     if entity_id:
         clauses.append("entity_id = %s")
         params.append(entity_id)
-    if run_id:
-        clauses.append("run_id = %s")
-        params.append(run_id)
     if domain:
         clauses.append("concept LIKE %s")
         params.append(f"{domain}.%")
@@ -1051,42 +1030,33 @@ def dashboard_data(
         clauses.append("period = %s")
         params.append(period)
 
-    where = " AND ".join(clauses)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
     offset = (page - 1) * page_size
 
-    # Count query (deduplicated)
-    count_sql = (
-        f"SELECT COUNT(DISTINCT (entity_id, concept, property, period)) "
-        f"FROM semantic_triples WHERE {where}"
-    )
+    count_sql = f"SELECT COUNT(*) FROM current_triples{where}"
 
-    # Paginated data query (deduplicated)
     data_sql = (
-        f"SELECT DISTINCT ON (entity_id, concept, property, period) "
-        f"id, entity_id, concept, property, value, period, "
-        f"source_system, confidence_score, confidence_tier, pipe_id, run_id "
-        f"FROM semantic_triples WHERE {where} "
-        f"ORDER BY entity_id, concept, property, period, created_at DESC "
+        f"SELECT id, entity_id, concept, property, value, period, "
+        f"source_system, confidence_score, confidence_tier, pipe_id "
+        f"FROM current_triples{where} "
+        f"ORDER BY entity_id, concept, property, period "
         f"LIMIT %s OFFSET %s"
     )
 
-    # Aggregation queries (ignore pagination, apply same filters)
     agg_domain_sql = (
-        f"SELECT split_part(concept, '.', 1) AS domain, "
-        f"COUNT(DISTINCT (entity_id, concept, property, period)) AS cnt "
-        f"FROM semantic_triples WHERE {where} "
+        f"SELECT split_part(concept, '.', 1) AS domain, COUNT(*) AS cnt "
+        f"FROM current_triples{where} "
         f"GROUP BY domain ORDER BY cnt DESC"
     )
     agg_source_sql = (
-        f"SELECT source_system, "
-        f"COUNT(DISTINCT (entity_id, concept, property, period)) AS cnt "
-        f"FROM semantic_triples WHERE {where} "
+        f"SELECT source_system, COUNT(*) AS cnt "
+        f"FROM current_triples{where} "
         f"GROUP BY source_system ORDER BY cnt DESC"
     )
+    period_where = where + (" AND " if where else " WHERE ") + "period IS NOT NULL"
     agg_period_sql = (
-        f"SELECT period, "
-        f"COUNT(DISTINCT (entity_id, concept, property, period)) AS cnt "
-        f"FROM semantic_triples WHERE {where} AND period IS NOT NULL "
+        f"SELECT period, COUNT(*) AS cnt "
+        f"FROM current_triples{period_where} "
         f"GROUP BY period ORDER BY period"
     )
 

@@ -304,10 +304,12 @@ def ingest_triples(
             f"inserting new triples, pointer will be updated after insert"
         )
 
-    # Build triple dicts for insertion
-    rows = []
+    # Build triple dicts grouped by entity — each entity gets its own swap call.
+    # Farm ingests one entity per batch today; the grouping generalization keeps
+    # us safe against future multi-entity batches without adding a separate code path.
+    by_entity: dict[str, list[dict]] = {}
     for t in req.triples:
-        rows.append({
+        by_entity.setdefault(t.entity_id, []).append({
             "tenant_id": req.tenant_id,
             "entity_id": t.entity_id,
             "concept": t.concept,
@@ -330,18 +332,58 @@ def ingest_triples(
             "fabric_plane": t.fabric_plane,
             "fabric_product": t.fabric_product,
         })
+    # Envelope entity_id must match the batch when it is single-entity.
+    # For multi-entity batches, envelope entity_id is treated as a rollup label
+    # and is echoed back in the response without constraint.
+    if req.entity_id and len(by_entity) == 1 and req.entity_id not in by_entity:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "ENTITY_ID_MISMATCH",
+                "message": (
+                    f"Envelope entity_id={req.entity_id} does not match the single "
+                    f"batch entity {sorted(by_entity.keys())[0]}."
+                ),
+            },
+        )
+    entity_ids = sorted(by_entity.keys())
+    source_systems = sorted({t.source_system for t in req.triples if t.source_system})
 
     # --- Instrumentation: capture timing around the write ---
-    triples_received = len(rows)
-    entity_ids = list({r["entity_id"] for r in rows if r.get("entity_id")})
-    source_systems = sorted({r["source_system"] for r in rows if r.get("source_system")})
-
+    triples_received = sum(len(v) for v in by_entity.values())
+    count = 0
+    previous_run_ids: dict[str, str | None] = {}
+    archived_totals = 0
     start_ts = time.monotonic()
     try:
-        if replace:
-            count = _triple_store.replace_tenant_triples(str(req.tenant_id), rows)
-        else:
-            count = _triple_store.insert_triples(rows)
+        for eid in entity_ids:
+            erows = by_entity[eid]
+            if append:
+                n = _triple_store.append_rows_for_entity(
+                    tenant_id=str(req.tenant_id),
+                    entity_id=eid,
+                    new_run_id=str(req.dcl_ingest_id),
+                    new_rows=erows,
+                )
+                count += n
+                previous_run_ids[eid] = None
+            else:
+                prev_run, archived, _new_row_count = _triple_store.swap_and_delete(
+                    tenant_id=str(req.tenant_id),
+                    entity_id=eid,
+                    new_run_id=str(req.dcl_ingest_id),
+                    snapshot_name=req.snapshot_name,
+                    new_rows=erows,
+                    replace=replace,
+                )
+                count += len(erows)
+                previous_run_ids[eid] = prev_run
+                archived_totals += archived
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=422,
+            detail={"error": "INGEST_VALIDATION", "message": str(ve)},
+        )
     except Exception as db_err:
         duration_ms = int((time.monotonic() - start_ts) * 1000)
         logger.error(
@@ -377,38 +419,13 @@ def ingest_triples(
         )
     duration_ms = int((time.monotonic() - start_ts) * 1000)
 
-    # Resolve entity_id — from request envelope or first triple.
-    resolved_entity_id = req.entity_id
-    if not resolved_entity_id:
-        resolved_entity_id = req.triples[0].entity_id if req.triples else None
-    if not resolved_entity_id:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "error": "ENTITY_ID_REQUIRED",
-                "message": (
-                    "entity_id missing from both request envelope and triples. "
-                    "Farm must send entity_id in the ingest-triples request (I2)."
-                ),
-            },
-        )
-
-    # Atomic pointer swap + deactivation — single transaction.
-    # Entity-scoped: only deactivates the previous run for THIS entity.
-    # Not set for append=true (multi-batch ingest of the same run_id keeps
-    # whatever pointer was set by the initial replace ingest).
-    if not append:
-        previous_run_id, deactivated = _triple_store.swap_and_deactivate(
-            str(req.tenant_id), str(req.dcl_ingest_id),
-            entity_id=resolved_entity_id,
-            snapshot_name=req.snapshot_name,
-        )
-        logger.info(
-            f"[ingest-triples] tenant_runs updated: tenant_id={req.tenant_id} "
-            f"entity_id={resolved_entity_id} "
-            f"→ current_run_id={req.dcl_ingest_id} (previous={previous_run_id}, "
-            f"deactivated={deactivated})"
-        )
+    logger.info(
+        f"[ingest-triples] tenant_id={req.tenant_id} "
+        f"run_id={req.dcl_ingest_id} entities={entity_ids} "
+        f"mode={'append' if append else 'swap'} inserted={count} "
+        f"archived={archived_totals} previous_run_ids={previous_run_ids} "
+        f"duration={duration_ms}ms"
+    )
 
     concept_summary = _triple_store.count_by_domain(req.tenant_id, run_id=req.dcl_ingest_id)
 
@@ -416,20 +433,6 @@ def ingest_triples(
         f"[ingest-triples] Ingested {count} triples for dcl_ingest_id={req.dcl_ingest_id}, "
         f"tenant_id={req.tenant_id}, concepts={concept_summary}, duration={duration_ms}ms"
     )
-
-    # Safety warning: flag if table is growing beyond expected bounds
-    if replace:
-        try:
-            total = _triple_store.count_total_rows()
-            if total > 200_000:
-                logger.warning(
-                    "[ingest-triples] semantic_triples has %s total rows "
-                    "(threshold: 200,000). Consider running POST /api/dcl/purge-old-runs "
-                    "for tenant_id=%s.",
-                    f"{total:,}", req.tenant_id,
-                )
-        except Exception:
-            logger.warning("[ingest-triples] Failed to check total row count", exc_info=True)
 
     # Record to ingest_log — observability only, never fails the ingest
     _record_ingest_log(
@@ -618,52 +621,6 @@ def purge_inactive(confirm: bool = Query(False)):
     deleted = _triple_store.delete_inactive()
     logger.info(f"[purge-inactive] Hard-deleted {deleted} inactive triples")
     return {"deleted": deleted}
-
-
-@router.post("/api/dcl/purge-old-runs")
-def purge_old_runs(tenant_id: str, keep_runs: int = 2):
-    """Hard-delete triples from old runs for a tenant, keeping the N most recent.
-
-    The current run (pointed to by tenant_runs.current_run_id) is always among
-    the kept runs — it is the most recent by definition.
-
-    Args:
-        tenant_id: Tenant UUID.
-        keep_runs: Number of most recent run_ids to keep (default 2).
-    """
-    _validate_uuid(tenant_id, "tenant_id")
-    if keep_runs < 1:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "INVALID_PARAM", "message": "keep_runs must be >= 1"},
-        )
-    deleted = _triple_store.purge_old_runs(tenant_id, keep_runs)
-    logger.info(
-        f"[purge-old-runs] Deleted {deleted} triples for tenant_id={tenant_id}, "
-        f"kept_runs={keep_runs}"
-    )
-    return {"deleted": deleted, "tenant_id": tenant_id, "kept_runs": keep_runs}
-
-
-@router.post("/api/dcl/admin/purge-stale")
-def purge_stale_all_tenants():
-    """Hard-delete all non-current-run triples across every known tenant.
-
-    Iterates all tenant_ids from tenant_runs, calls purge_old_runs(keep_runs=1)
-    for each. Current run data is always preserved.
-    """
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT tenant_id FROM tenant_runs")
-            tenant_ids = [str(row[0]) for row in cur.fetchall()]
-    total_deleted = 0
-    for tid in tenant_ids:
-        total_deleted += _triple_store.purge_old_runs(tid, keep_runs=1)
-    logger.warning(
-        "[purge-stale-all] Deleted %d stale triples across %d tenant(s)",
-        total_deleted, len(tenant_ids),
-    )
-    return {"deleted": total_deleted, "tenants_purged": len(tenant_ids)}
 
 
 # ---------------------------------------------------------------------------

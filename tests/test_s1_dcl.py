@@ -79,22 +79,26 @@ def _cleanup_all():
     """Remove all test data from all tables."""
     with get_connection() as conn:
         with conn.cursor() as cur:
-            # Triples
             cur.execute(
                 "DELETE FROM semantic_triples WHERE tenant_id = %s",
                 (TEST_TENANT_ID,),
             )
-            # Tenant run pointer
+            cur.execute(
+                "DELETE FROM current_triples WHERE tenant_id = %s",
+                (TEST_TENANT_ID,),
+            )
+            cur.execute(
+                "DELETE FROM semantic_triples_archive WHERE tenant_id = %s",
+                (TEST_TENANT_ID,),
+            )
             cur.execute(
                 "DELETE FROM tenant_runs WHERE tenant_id = %s",
                 (TEST_TENANT_ID,),
             )
-            # Resolution workspaces
             cur.execute(
                 "DELETE FROM resolution_workspaces WHERE tenant_id = %s",
                 (TEST_TENANT_ID,),
             )
-            # Run ledger
             cur.execute(
                 "DELETE FROM run_ledger WHERE tenant_id = %s",
                 (TEST_TENANT_ID,),

@@ -61,6 +61,14 @@ def _do_cleanup():
                 (TEST_TENANT_ID,),
             )
             cur.execute(
+                "DELETE FROM current_triples WHERE tenant_id = %s",
+                (TEST_TENANT_ID,),
+            )
+            cur.execute(
+                "DELETE FROM semantic_triples_archive WHERE tenant_id = %s",
+                (TEST_TENANT_ID,),
+            )
+            cur.execute(
                 "DELETE FROM tenant_runs WHERE tenant_id = %s",
                 (TEST_TENANT_ID,),
             )

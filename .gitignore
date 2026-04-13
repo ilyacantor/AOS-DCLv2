@@ -62,6 +62,7 @@ data/history.json
 backend/cache/
 test_results_*.txt
 test-results/
+tests/e2e/artifacts/
 
 # Claude Code
 .claude/

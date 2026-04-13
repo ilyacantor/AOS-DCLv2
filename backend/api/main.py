@@ -427,20 +427,46 @@ def health():
 
 @app.get("/api/dcl/snapshots")
 async def dcl_snapshots(tenant_id: Optional[str] = None):
-    """Available snapshots from tenant_runs, enriched with triple counts.
+    """Available snapshots from tenant_runs — one row per live (tenant, entity).
 
-    If tenant_id is omitted, auto-resolves (must be exactly one tenant).
-    Returns {snapshots: [{dcl_ingest_id, snapshot_name, run_timestamp, total_rows, is_current}], tenant_id}.
+    Post–store-rebuild there is exactly one live run per (tenant, entity).
+    Historical runs are in semantic_triples_archive and are not returned here.
+
+    Returns {snapshots: [{entity_id, dcl_ingest_id, snapshot_name, run_timestamp,
+    total_rows, is_current}], tenant_id}. Shape matches NLQ's expected
+    nlq/src/nlq/config.py contract.
     """
     from backend.db.triple_store import TripleStore
+    from backend.core.db import get_connection
 
     store = TripleStore()
     try:
         if not tenant_id:
             tenant_id = store.resolve_single_tenant()
-        snapshots = store.get_tenant_snapshots(tenant_id)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+    sql = (
+        "SELECT entity_id, current_run_id, current_snapshot_name, "
+        "run_row_count, updated_at "
+        "FROM tenant_runs WHERE tenant_id = %s "
+        "ORDER BY updated_at DESC"
+    )
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (tenant_id,))
+            rows = cur.fetchall()
+    snapshots = [
+        {
+            "entity_id": r[0],
+            "dcl_ingest_id": str(r[1]) if r[1] else None,
+            "snapshot_name": r[2],
+            "run_timestamp": r[4].isoformat() if r[4] else None,
+            "total_rows": r[3] or 0,
+            "is_current": True,
+        }
+        for r in rows
+    ]
     return {"snapshots": snapshots, "tenant_id": tenant_id}
 
 

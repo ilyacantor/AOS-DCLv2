@@ -105,40 +105,37 @@ def _get_latest_tenant() -> str | None:
 def _get_latest_run(
     tenant_id: str, domain_hint: str | None = None,
 ) -> str | None:
-    """Get the primary run_id for a tenant from semantic_triples.
+    """Get the primary current_run_id for a tenant.
 
-    Picks the run_id with the most active triples, not just the newest
-    created_at. This prevents small supplementary runs (e.g.
-    HR imports) from shadowing the main financial ingest run.
+    Picks the entity run with the most live triples so small supplementary
+    runs (e.g. HR imports) don't shadow the main financial ingest.
 
-    When domain_hint='financial', only counts triples whose concept
-    matches financial domain prefixes (revenue.%, cogs.%, etc.).  This
-    prevents non-financial runs (e.g. 124K HR triples) from being
-    selected when a financial report endpoint needs the financial run.
+    When domain_hint='financial', only counts triples whose concept matches
+    financial domain prefixes (revenue.%, cogs.%, etc.).
     """
     if domain_hint == "financial":
         sql = """
-            SELECT run_id
-            FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
-              AND run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)
-              AND concept LIKE ANY(%s)
-            GROUP BY run_id
+            SELECT t.current_run_id
+            FROM tenant_runs t
+            JOIN current_triples c
+              ON c.tenant_id = t.tenant_id
+             AND c.entity_id = t.entity_id
+            WHERE t.tenant_id = %s
+              AND c.concept LIKE ANY(%s)
+            GROUP BY t.current_run_id
             ORDER BY COUNT(*) DESC
             LIMIT 1
         """
-        params: list = [tenant_id, tenant_id, _FINANCIAL_PREFIXES]
+        params: list = [tenant_id, _FINANCIAL_PREFIXES]
     else:
         sql = """
-            SELECT run_id
-            FROM semantic_triples
-            WHERE tenant_id = %s AND is_active = true
-              AND run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)
-            GROUP BY run_id
-            ORDER BY COUNT(*) DESC
+            SELECT current_run_id
+            FROM tenant_runs
+            WHERE tenant_id = %s
+            ORDER BY run_row_count DESC
             LIMIT 1
         """
-        params = [tenant_id, tenant_id]
+        params = [tenant_id]
 
     with get_connection() as conn:
         with conn.cursor() as cur:

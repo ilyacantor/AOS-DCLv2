@@ -274,9 +274,9 @@ def run_recon(
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT run_id FROM semantic_triples "
-                    "WHERE is_active = true AND entity_id = %s "
-                    "GROUP BY run_id ORDER BY MIN(created_at) DESC LIMIT 1",
+                    "SELECT current_run_id FROM tenant_runs "
+                    "WHERE entity_id = %s "
+                    "ORDER BY updated_at DESC LIMIT 1",
                     (entity_id,),
                 )
                 row = cur.fetchone()
@@ -287,7 +287,7 @@ def run_recon(
                         "timestamp": datetime.now(timezone.utc).isoformat(),
                         "overall": "fail",
                         "checks": [],
-                        "detail": f"No active triples found for entity_id={entity_id}",
+                        "detail": f"No active run found for entity_id={entity_id}",
                     }
                 run_id = str(row[0])
 
@@ -296,9 +296,8 @@ def run_recon(
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT run_id FROM semantic_triples "
-                    "WHERE is_active = true "
-                    "GROUP BY run_id ORDER BY MIN(created_at) DESC LIMIT 1"
+                    "SELECT current_run_id FROM tenant_runs "
+                    "ORDER BY updated_at DESC LIMIT 1"
                 )
                 row = cur.fetchone()
                 if not row:
@@ -308,7 +307,7 @@ def run_recon(
                         "timestamp": datetime.now(timezone.utc).isoformat(),
                         "overall": "fail",
                         "checks": [],
-                        "detail": "No active triples in the store",
+                        "detail": "No active runs in tenant_runs",
                     }
                 run_id = str(row[0])
 
