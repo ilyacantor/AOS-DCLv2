@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 load_dotenv(_repo / ".env")
 
 from backend.core.db import get_connection
+from backend.db.triple_store import TENANT_RUNS_CAP
 
 
 @pytest.fixture(scope="module")
@@ -125,4 +126,22 @@ def test_semantic_equals_current_per_entity(db_cursor):
     assert not drifted, (
         f"{len(drifted)} (tenant, entity) pairs diverged between "
         f"semantic_triples and current_triples. First five: {drifted[:5]}"
+    )
+
+
+def test_tenant_runs_per_tenant_cap(db_cursor):
+    """Every tenant must have at most TENANT_RUNS_CAP entries in tenant_runs.
+
+    Enforced atomically inside swap_and_delete; this test catches regressions
+    where the cap-enforcement step is bypassed or skipped.
+    """
+    db_cursor.execute(
+        "SELECT tenant_id, COUNT(*) FROM tenant_runs "
+        "GROUP BY tenant_id HAVING COUNT(*) > %s",
+        (TENANT_RUNS_CAP,),
+    )
+    over_cap = db_cursor.fetchall()
+    assert not over_cap, (
+        f"{len(over_cap)} tenant(s) exceed the per-tenant cap of "
+        f"{TENANT_RUNS_CAP}: {over_cap}"
     )

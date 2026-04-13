@@ -12,6 +12,11 @@ from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
+# Per-tenant LIFO cap on tenant_runs. Enforced atomically in swap_and_delete
+# and applied one-time via scripts/prune_tenant_runs_cap.py. Per-tenant (not
+# global) so the test tenant's entities cannot evict production entities.
+TENANT_RUNS_CAP = 10
+
 
 class TripleStore:
 
@@ -336,6 +341,57 @@ class TripleStore:
                 conn.commit()
                 return len(new_rows)
 
+    @staticmethod
+    def _enforce_tenant_cap(
+        cur, tenant_id: str, cap: int = TENANT_RUNS_CAP
+    ) -> list[dict]:
+        """Evict tenant_runs rows beyond the per-tenant cap, LIFO by updated_at.
+
+        Keeps the `cap` most-recently-updated entries for `tenant_id` and hard-
+        deletes older ones from tenant_runs, semantic_triples, and current_triples.
+        Must run inside the same transaction as the swap so the cap is atomic.
+        Returns a list of eviction descriptors for logging.
+        """
+        cur.execute(
+            """
+            SELECT tenant_id, entity_id, run_row_count, updated_at
+            FROM tenant_runs
+            WHERE tenant_id = %s
+            ORDER BY updated_at DESC
+            OFFSET %s
+            """,
+            (tenant_id, cap),
+        )
+        evicted_rows = cur.fetchall()
+        if not evicted_rows:
+            return []
+
+        evictions: list[dict] = []
+        for (ev_tenant, ev_entity, ev_rowcount, ev_updated) in evicted_rows:
+            cur.execute(
+                "DELETE FROM semantic_triples WHERE tenant_id = %s AND entity_id = %s",
+                (ev_tenant, ev_entity),
+            )
+            semantic_deleted = cur.rowcount
+            cur.execute(
+                "DELETE FROM current_triples WHERE tenant_id = %s AND entity_id = %s",
+                (ev_tenant, ev_entity),
+            )
+            current_deleted = cur.rowcount
+            cur.execute(
+                "DELETE FROM tenant_runs WHERE tenant_id = %s AND entity_id = %s",
+                (ev_tenant, ev_entity),
+            )
+            evictions.append({
+                "tenant_id": str(ev_tenant),
+                "entity_id": ev_entity,
+                "run_row_count": ev_rowcount,
+                "updated_at": ev_updated.isoformat() if ev_updated else None,
+                "semantic_deleted": semantic_deleted,
+                "current_deleted": current_deleted,
+            })
+        return evictions
+
     def swap_and_delete(
         self,
         tenant_id: str,
@@ -507,6 +563,16 @@ class TripleStore:
                     """,
                     (tenant_id, entity_id, new_run_id),
                 )
+
+                # Step 6: enforce per-tenant LIFO cap on tenant_runs (atomic
+                # with the swap). Only evicts rows for the inserting tenant
+                # so concurrent tenants never collide.
+                evictions = self._enforce_tenant_cap(cur, tenant_id)
+                if evictions:
+                    logger.info(
+                        "tenant_runs cap=%d enforced for tenant=%s evicted=%d",
+                        TENANT_RUNS_CAP, tenant_id, len(evictions),
+                    )
 
                 conn.commit()
 

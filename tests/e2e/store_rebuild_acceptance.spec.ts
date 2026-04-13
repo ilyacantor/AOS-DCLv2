@@ -17,6 +17,7 @@ const DCL_URL = "http://localhost:3004";
 const DCL_BACKEND = "http://localhost:8004";
 const SNAPSHOT_BUDGET_MS = 500;
 const PRIMARY_TENANT_ID = "69688df3-fc8e-51f8-a77c-9c13f9b3a784";
+const TENANT_RUNS_CAP = 10;
 
 type EntityRow = { tenant_id: string; entity_id: string; triple_count: number };
 
@@ -90,6 +91,24 @@ test.describe.serial("Store rebuild — acceptance gate", () => {
         `Entity ${e.entity_id} is missing tenant_id (I2 violation)`
       ).toBeTruthy();
     }
+  });
+
+  test("tenant_runs cap: each tenant has at most 10 entities (LIFO by updated_at)", async ({ request }) => {
+    const entities = await fetchEntities(request);
+    const byTenant = new Map<string, number>();
+    for (const e of entities) {
+      byTenant.set(e.tenant_id, (byTenant.get(e.tenant_id) ?? 0) + 1);
+    }
+    const overCap: string[] = [];
+    for (const [tenant, count] of byTenant) {
+      if (count > TENANT_RUNS_CAP) {
+        overCap.push(`${tenant}: ${count} > ${TENANT_RUNS_CAP}`);
+      }
+    }
+    expect(
+      overCap,
+      `Tenants exceeding per-tenant cap of ${TENANT_RUNS_CAP}:\n  ${overCap.join("\n  ")}`
+    ).toHaveLength(0);
   });
 
   test("count invariant: Ingest == Context == Dashboard per (tenant, entity)", async ({ request }) => {
