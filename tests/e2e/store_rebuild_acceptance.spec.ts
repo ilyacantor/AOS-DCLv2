@@ -297,6 +297,89 @@ test.describe.serial("Store rebuild — acceptance gate", () => {
     ).toBe("object");
   });
 
+  // ───────────────────────────────────────────────────────────────────────
+  // NLQ data chain regression gate. NLQ calls GET /api/dcl/semantic-export
+  // with NO query params and POST /api/dcl/query with tenant_id=null but
+  // entity_id populated. Phase 5 (f4e3a97) broke both paths by tenant-scoping
+  // ingest_summary and by letting _resolve_tenant_id fall through ambiguously.
+  // These three tests lock the restored contract.
+  // ───────────────────────────────────────────────────────────────────────
+
+  test("/api/dcl/semantic-export without any params returns populated catalog ingest_summary", async ({ request }) => {
+    const res = await request.get(`${DCL_BACKEND}/api/dcl/semantic-export`);
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(
+      body.ingest_summary,
+      "ingest_summary missing — NLQ catalog load degrades to 'no live data'"
+    ).toBeTruthy();
+    const summary = body.ingest_summary;
+    expect(summary.available, "ingest_summary.available must be true when current_triples has rows").toBe(true);
+    expect(summary.total_rows, "ingest_summary.total_rows must be > 0").toBeGreaterThan(0);
+    expect(
+      Array.isArray(summary.source_systems),
+      "ingest_summary.source_systems must be an array"
+    ).toBe(true);
+    expect(
+      summary.source_systems.length,
+      "ingest_summary.source_systems is empty — catalog-level aggregation failed"
+    ).toBeGreaterThan(0);
+    expect(
+      Array.isArray(summary.tenant_names),
+      "ingest_summary.tenant_names (entity names) must be an array"
+    ).toBe(true);
+    expect(
+      summary.tenant_names.length,
+      "ingest_summary.tenant_names is empty — no entities discovered"
+    ).toBeGreaterThan(0);
+  });
+
+  test("POST /api/dcl/query with entity_id and no tenant_id resolves via tenant_runs", async ({ request }) => {
+    // NLQ's call path: entity_id from context, tenant_id=null. DCL must
+    // resolve tenant from entity_id via tenant_runs and serve the query.
+    const entities = await fetchEntities(request);
+    const target = entities[0];
+    const res = await request.post(`${DCL_BACKEND}/api/dcl/query`, {
+      data: {
+        metric: "revenue",
+        entity_id: target.entity_id,
+      },
+    });
+    expect(
+      res.status(),
+      `NLQ-style query (entity_id only, no tenant_id) failed with HTTP ${res.status()}`
+    ).toBe(200);
+    const body = await res.json();
+    expect(
+      body?.metadata?.source,
+      "metadata.source must be 'ingest' (B12: source check on every data test)"
+    ).toBe("ingest");
+    expect(
+      body?.metadata?.dcl_ingest_id,
+      "metadata.dcl_ingest_id must be present (I1: namespaced identifier)"
+    ).toBeTruthy();
+    expect(
+      body?.metadata?.tenant_id,
+      "metadata.tenant_id must echo the resolved tenant (I2)"
+    ).toBeTruthy();
+  });
+
+  test("POST /api/dcl/query with neither tenant_id nor entity_id returns 422 IDENTITY_MISSING", async ({ request }) => {
+    // I2 negative control: no silent fallback when no identity is resolvable.
+    const res = await request.post(`${DCL_BACKEND}/api/dcl/query`, {
+      data: { metric: "revenue" },
+    });
+    expect(
+      res.status(),
+      "Query with no tenant_id and no entity_id must return 422 (I2)"
+    ).toBe(422);
+    const body = await res.json();
+    expect(
+      body?.detail?.code,
+      "422 must carry code=IDENTITY_MISSING"
+    ).toBe("IDENTITY_MISSING");
+  });
+
   test("Entity selector dropdown lists every live entity from tenant_runs", async ({ page, request }) => {
     // The RunSelector <select> in the top bar is the live entity picker the
     // user sees — it drives every tab (Ingest/Context/Dashboard). If an
@@ -320,6 +403,23 @@ test.describe.serial("Store rebuild — acceptance gate", () => {
       .locator("xpath=following-sibling::select[1]")
       .first();
     await expect(entitySelect).toBeVisible({ timeout: 15_000 });
+
+    // useEntities fetches asynchronously; wait until the dropdown actually
+    // populates past the "All Entities" sentinel before reading options.
+    await expect
+      .poll(
+        async () =>
+          await entitySelect.locator("option").evaluateAll(
+            (opts) =>
+              (opts as HTMLOptionElement[]).filter((o) => o.value.length > 0)
+                .length
+          ),
+        {
+          message: "Entity dropdown never populated past the 'All Entities' sentinel",
+          timeout: 15_000,
+        }
+      )
+      .toBeGreaterThan(0);
 
     // Read every <option> value. Skip the "All Entities" sentinel.
     const optionValues = await entitySelect.locator("option").evaluateAll(

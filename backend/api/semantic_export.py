@@ -110,7 +110,7 @@ class SemanticExport(BaseModel):
     persona_concepts: Dict[str, List[str]] = Field(default_factory=dict)
     bindings: List[BindingSummary] = Field(default_factory=list)
     metric_entity_matrix: Dict[str, List[str]] = Field(default_factory=dict)
-    ingest_summary: Optional[IngestSummary] = None
+    ingest_summary: IngestSummary = Field(default_factory=IngestSummary)
 
 
 CONFIG_DIR = Path(__file__).parent.parent / "config" / "definitions"
@@ -357,57 +357,52 @@ def search_entities(query: str, limit: int = 5) -> List[EntityDefinition]:
     return [item for _, item in scored[:limit]]
 
 
-def _build_ingest_summary(tenant_id: Optional[str] = None) -> Optional[IngestSummary]:
-    """Build an NLQ catalog summary from ``current_triples`` + ``tenant_runs``.
+def _build_ingest_summary() -> IngestSummary:
+    """Build an NLQ catalog summary from ``current_triples``.
 
-    Returns None when the tenant is unresolved or current_triples is empty —
-    NLQ treats None as "no catalog available" rather than an error. When the
-    tenant is resolved and has rows, we emit row/source counts and the list
-    of source_systems and distinct entity_ids.
+    Catalog-level (not tenant-scoped): NLQ loads this once at startup to
+    discover which metrics/entities/sources have live data. Aggregates
+    across ALL tenants — NLQ serves multi-tenant from one catalog.
+
+    Always returns an ``IngestSummary``. Empty table → ``available=False``
+    with zero counts. Never returns None (A1: no silent fallback).
     """
     from backend.core.db import get_connection
-    from backend.db.triple_store import TripleStore
-
-    store = TripleStore()
-    if not tenant_id:
-        try:
-            tenant_id = store.resolve_single_tenant()
-        except ValueError:
-            return None
 
     summary_sql = (
         "SELECT COUNT(*) AS total_rows, "
         "COUNT(DISTINCT source_system) AS total_sources, "
         "COUNT(DISTINCT pipe_id) AS total_pipes "
-        "FROM current_triples WHERE tenant_id = %s"
+        "FROM current_triples"
     )
     source_sql = (
         "SELECT DISTINCT source_system FROM current_triples "
-        "WHERE tenant_id = %s AND source_system IS NOT NULL "
+        "WHERE source_system IS NOT NULL "
         "ORDER BY source_system"
     )
     entity_sql = (
         "SELECT DISTINCT entity_id FROM current_triples "
-        "WHERE tenant_id = %s ORDER BY entity_id"
+        "WHERE entity_id IS NOT NULL "
+        "ORDER BY entity_id"
     )
 
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(summary_sql, (tenant_id,))
+            cur.execute(summary_sql)
             totals = cur.fetchone()
-            if not totals or (totals[0] or 0) == 0:
-                return None
-            total_rows, total_sources, total_pipes = totals
-            cur.execute(source_sql, (tenant_id,))
+            total_rows = int(totals[0] or 0) if totals else 0
+            total_sources = int(totals[1] or 0) if totals else 0
+            total_pipes = int(totals[2] or 0) if totals else 0
+            cur.execute(source_sql)
             source_systems = [row[0] for row in cur.fetchall() if row[0]]
-            cur.execute(entity_sql, (tenant_id,))
+            cur.execute(entity_sql)
             entity_names = [row[0] for row in cur.fetchall() if row[0]]
 
     return IngestSummary(
-        available=True,
-        total_rows=int(total_rows),
-        total_sources=int(total_sources or 0),
-        total_pipes=int(total_pipes or 0),
+        available=total_rows > 0,
+        total_rows=total_rows,
+        total_sources=total_sources,
+        total_pipes=total_pipes,
         source_systems=source_systems,
         tenant_names=entity_names,
     )
@@ -429,8 +424,7 @@ def get_semantic_export(tenant_id: str = "default") -> SemanticExport:
 
     enriched_metrics = _enrich_metrics_with_version_history(PUBLISHED_METRICS)
 
-    resolved_tenant = tenant_id if tenant_id and tenant_id != "default" else None
-    ingest_summary = _build_ingest_summary(resolved_tenant)
+    ingest_summary = _build_ingest_summary()
 
     return SemanticExport(
         version="1.0.0",

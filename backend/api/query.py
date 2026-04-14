@@ -246,16 +246,19 @@ def _resolve_tenant_id(
 ) -> str:
     """Resolve tenant_id per I2.
 
-    Raises ValueError (→ 422) when no tenant can be determined. Never returns
-    a sentinel string like ``'default'`` — that was the silent-fallback the
-    store rebuild removed.
+    Order: explicit_tenant_id → resolve_tenant_for_entity(entity_id) → raise.
+    Raises ValueError (→ 422 IDENTITY_MISSING) when no tenant can be
+    determined from the request. No ambiguous ``resolve_single_tenant``
+    fallthrough — that was a silent-fallback surrogate for multi-tenant DBs.
     """
-    store = TripleStore()
     if explicit_tenant_id:
         return explicit_tenant_id
     if entity_id:
-        return store.resolve_tenant_for_entity(entity_id)
-    return store.resolve_single_tenant()
+        return TripleStore().resolve_tenant_for_entity(entity_id)
+    raise ValueError(
+        "tenant_id is required, or pass entity_id so DCL can resolve the "
+        "tenant from tenant_runs. I2: no silent-fallback resolution."
+    )
 
 
 def _tenant_has_triples(tenant_id: str) -> bool:
