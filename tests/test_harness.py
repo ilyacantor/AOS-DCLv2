@@ -689,6 +689,8 @@ def _run_yaml_test(tc: Dict) -> None:
             kwargs["json"] = tc["body"]
         if tc.get("headers"):
             kwargs["headers"] = tc["headers"]
+        if tc.get("params"):
+            kwargs["params"] = tc["params"]
 
         r = req_fn(tc["path"], **kwargs)
 

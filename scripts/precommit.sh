@@ -185,8 +185,6 @@ is_semantic_triples_whitelisted() {
     case "$file" in
         backend/api/routes/ingest_triples.py) return 0 ;;
         backend/db/triple_store.py) return 0 ;;
-        backend/engine/materialized_views.py) return 0 ;;
-        backend/engine/query_resolver_v2.py) return 0 ;;
         backend/engine/dcl_engine.py) return 0 ;;
         backend/api/routes/recon_checks.py) return 0 ;;
         backend/api/routes/v2_helpers.py) return 0 ;;
@@ -202,7 +200,6 @@ is_semantic_triples_whitelisted() {
         tests/test_s1_seed.py) return 0 ;;
         tests/test_pipeline_identity.py) return 0 ;;
         tests/test_identity_preservation.py) return 0 ;;
-        backend/tests/test_farm_v2_integration.py) return 0 ;;
     esac
     return 1
 }
@@ -213,7 +210,6 @@ is_is_active_whitelisted() {
         migrations/*) return 0 ;;
         scripts/apply_mig*.py) return 0 ;;
         tests/test_identity_preservation.py) return 0 ;;
-        backend/tests/test_farm_v2_integration.py) return 0 ;;
         config/ontology_concepts.yaml) return 0 ;;
         *.md) return 0 ;;
     esac

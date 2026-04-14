@@ -1,5 +1,6 @@
 /**
- * Store rebuild acceptance gate — B17 accountability for migrations 014/015.
+ * Store rebuild acceptance gate — B17 accountability for migrations 014/015/016
+ * and the Phase 5 read-path migration (plan drifting-nibbling-graham).
  *
  * Proves:
  *  - /api/dcl/snapshots returns 200 in <500ms (Task 10 curl budget).
@@ -7,6 +8,12 @@
  *  - The three tabs (Ingest, Context, Dashboard) return identical counts per
  *    entity — this is the post-rebuild invariant, mirrored into the UI.
  *  - Each tab renders numeric content (not skeleton) for the live entities.
+ *  - Read-path migration: every Farm-pushed entity is visible in the
+ *    SnapshotPanel dropdown, /api/dcl/query serves it with source="ingest",
+ *    and /api/dcl/semantic-export.ingest_summary is populated from
+ *    current_triples (not the legacy IngestStore). Regression gate for the
+ *    "ApexEdge invisible" bug: any entity that lands in tenant_runs MUST
+ *    surface through all three read surfaces.
  *
  * Entities are resolved at runtime from the live backend — no hardcoded IDs.
  */
@@ -200,6 +207,138 @@ test.describe.serial("Store rebuild — acceptance gate", () => {
 
     await page.screenshot({
       path: "tests/e2e/artifacts/store_rebuild_ingest.png",
+      fullPage: true,
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────
+  // Phase 5 read-path migration gate (B11/B17).
+  // If any of these regress, the "ApexEdge invisible" bug is back.
+  // ───────────────────────────────────────────────────────────────────────
+
+  test("/api/dcl/snapshots exposes enrichment fields from current_triples (not legacy IngestStore)", async ({ request }) => {
+    const res = await request.get(
+      `${DCL_BACKEND}/api/dcl/snapshots?tenant_id=${PRIMARY_TENANT_ID}`
+    );
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    const snapshots = (body.snapshots ?? []) as Array<Record<string, unknown>>;
+    expect(snapshots.length, "No snapshots returned").toBeGreaterThan(0);
+
+    for (const s of snapshots) {
+      expect(s.entity_id, "snapshot row missing entity_id").toBeTruthy();
+      expect(s.dcl_ingest_id, `${s.entity_id}: missing dcl_ingest_id (I1)`).toBeTruthy();
+      expect(
+        Array.isArray(s.source_systems),
+        `${s.entity_id}: source_systems is not an array — handler regressed to legacy IngestStore`
+      ).toBe(true);
+      expect(
+        Array.isArray(s.fabric_plane_vendors),
+        `${s.entity_id}: fabric_plane_vendors missing`
+      ).toBe(true);
+      expect(
+        Array.isArray(s.pipe_source_names),
+        `${s.entity_id}: pipe_source_names missing`
+      ).toBe(true);
+      expect(
+        (s.source_systems as string[]).length,
+        `${s.entity_id}: source_systems is empty — current_triples aggregation failed`
+      ).toBeGreaterThan(0);
+      expect(
+        s.total_rows,
+        `${s.entity_id}: total_rows is zero`
+      ).toBeTruthy();
+    }
+  });
+
+  test("/api/dcl/query serves every live entity with source=ingest from current_triples", async ({ request }) => {
+    const entities = await fetchEntities(request);
+    const misses: string[] = [];
+    for (const e of entities) {
+      const res = await request.post(`${DCL_BACKEND}/api/dcl/query`, {
+        data: {
+          metric: "revenue",
+          entity_id: e.entity_id,
+          tenant_id: e.tenant_id,
+        },
+      });
+      if (res.status() !== 200) {
+        misses.push(`${e.entity_id}: HTTP ${res.status()}`);
+        continue;
+      }
+      const body = await res.json();
+      const source = body?.metadata?.source;
+      const recordCount = body?.metadata?.record_count ?? 0;
+      if (source !== "ingest") {
+        misses.push(`${e.entity_id}: source=${source} (expected 'ingest')`);
+      } else if (recordCount <= 0) {
+        misses.push(`${e.entity_id}: record_count=${recordCount}`);
+      }
+    }
+    expect(
+      misses,
+      `Entities not served by /api/dcl/query from current_triples:\n  ${misses.join("\n  ")}`
+    ).toHaveLength(0);
+  });
+
+  test("/api/dcl/semantic-export.ingest_summary is populated from current_triples", async ({ request }) => {
+    const res = await request.get(
+      `${DCL_BACKEND}/api/dcl/semantic-export?tenant_id=${PRIMARY_TENANT_ID}`
+    );
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(
+      body.ingest_summary,
+      "semantic-export.ingest_summary is null — handler regressed to silent-fallback (A1 violation)"
+    ).toBeTruthy();
+    expect(
+      typeof body.ingest_summary,
+      "ingest_summary must be an object"
+    ).toBe("object");
+  });
+
+  test("Entity selector dropdown lists every live entity from tenant_runs", async ({ page, request }) => {
+    // The RunSelector <select> in the top bar is the live entity picker the
+    // user sees — it drives every tab (Ingest/Context/Dashboard). If an
+    // entity landed in tenant_runs but is missing from this dropdown, the
+    // "ApexEdge invisible" bug is back.
+    const entities = await fetchEntities(request);
+    expect(
+      entities.length,
+      "No live entities in /api/dcl/entities"
+    ).toBeGreaterThan(0);
+
+    await page.goto(DCL_URL, { waitUntil: "load" });
+    const runButton = page.locator('button[data-role="run-primary"]');
+    await expect(runButton).toBeVisible({ timeout: 15_000 });
+    await expect(runButton).not.toHaveText("Running...", { timeout: 60_000 });
+
+    // The entity select lives next to the "Entity:" label in RunSelector.
+    const entitySelect = page
+      .locator("label, span")
+      .filter({ hasText: /^Entity:$/ })
+      .locator("xpath=following-sibling::select[1]")
+      .first();
+    await expect(entitySelect).toBeVisible({ timeout: 15_000 });
+
+    // Read every <option> value. Skip the "All Entities" sentinel.
+    const optionValues = await entitySelect.locator("option").evaluateAll(
+      (opts) =>
+        (opts as HTMLOptionElement[])
+          .map((o) => o.value)
+          .filter((v) => v.length > 0)
+    );
+    const optionSet = new Set(optionValues);
+    const missing = entities
+      .map((e) => e.entity_id)
+      .filter((id) => !optionSet.has(id));
+    expect(
+      missing,
+      `Entity selector is missing live entities: ${missing.join(", ")}`
+    ).toHaveLength(0);
+
+    await page.screenshot({
+      path: "tests/e2e/artifacts/store_rebuild_entity_dropdown.png",
       fullPage: true,
     });
   });

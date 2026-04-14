@@ -23,8 +23,6 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 from backend.farm.client import get_farm_client
-from backend.farm.ingest_bridge import get_ingest_summary
-from backend.farm.verification import verify_against_ground_truth
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -269,54 +267,6 @@ def generate_business_data(request: GenerateRequest):
             status_code=502,
             detail=f"Farm generation failed: {str(e)}"
         )
-
-
-@router.post("/v2/verify/{farm_run_id}")
-def verify_farm_run(farm_run_id: str, dcl_run_id: Optional[str] = None):
-    """
-    Run the full ground truth verification loop for a Farm generation run.
-
-    POST /api/farm/v2/verify/{farm_run_id}
-
-    DCL's verification loop:
-    1. Check ingestion completeness (20 pipes received?)
-    2. Fetch ground truth manifest from Farm (89 metrics/quarter)
-    3. Compare DCL's unified data against each metric
-    4. Verify DCL detected the 3 intentional cross-system conflicts
-    5. Check 13 dimensional breakdowns
-
-    Returns:
-        - overall_grade: A/B/C/D/F
-        - ingestion: completeness stats
-        - metrics: accuracy per metric
-        - conflicts: detection results
-        - dimensional: breakdown accuracy
-    """
-    try:
-        report = verify_against_ground_truth(farm_run_id, dcl_run_id)
-        return report.to_dict()
-    except Exception as e:
-        logger.error(f"Verification failed for {farm_run_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Verification failed: {str(e)}"
-        )
-
-
-@router.get("/v2/ingest-status")
-def get_farm_ingest_status():
-    """
-    Get the current state of Farm data ingested into DCL.
-
-    GET /api/farm/v2/ingest-status
-
-    Shows how many pipes, sources, and records have been received.
-    """
-    summary = get_ingest_summary()
-    return {
-        "status": "ok",
-        **summary,
-    }
 
 
 @router.get("/v2/runs")

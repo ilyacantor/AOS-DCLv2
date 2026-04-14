@@ -45,13 +45,17 @@
 
 - id: PI_003
   category: pipeline_ingest
-  description: "Ingest store has run history"
+  description: "Snapshots endpoint returns current_triples runs for primary tenant"
   method: get
-  path: /api/dcl/ingest/stats
+  path: /api/dcl/snapshots
+  params:
+    tenant_id: "69688df3-fc8e-51f8-a77c-9c13f9b3a784"
   assertions:
-    - field: total_runs
-      op: greater_than
-      value: 0
+    - field: status_code
+      op: equals
+      value: 200
+    - field: snapshots
+      op: not_null
 
 # ─── Fact-Base Gating ────────────────────────────────────────────────────
 # Precondition: PI tests ran, global mode is Ingest.

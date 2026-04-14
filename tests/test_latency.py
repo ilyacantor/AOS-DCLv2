@@ -98,18 +98,16 @@ def test_lat_009():
 
 
 def test_lat_010():
-    """Ingest stats endpoint — warm latency (cached)."""
-    t = TestResult("LAT_010", "Ingest stats warm latency")
+    """Snapshots endpoint — warm latency."""
+    t = TestResult("LAT_010", "Snapshots warm latency")
     results.append(t)
 
-    # Cold call to build cache
-    resp = requests.get(f"{BASE_URL}/api/dcl/ingest/stats", timeout=TIMEOUT)
+    resp = requests.get(f"{BASE_URL}/api/dcl/snapshots", timeout=TIMEOUT)
     if resp.status_code != 200:
         t.fail("HTTP 200", f"HTTP {resp.status_code}: {resp.text[:200]}")
         return
 
-    # Warm call
-    resp, elapsed = _timed_get(f"{BASE_URL}/api/dcl/ingest/stats")
+    resp, elapsed = _timed_get(f"{BASE_URL}/api/dcl/snapshots")
     t.latency_ms = elapsed
 
     if resp.status_code != 200:
@@ -117,8 +115,8 @@ def test_lat_010():
         return
 
     data = resp.json()
-    if "total_runs" not in data:
-        t.fail("response with 'total_runs' key", f"keys: {list(data.keys())}")
+    if "runs" not in data:
+        t.fail("response with 'runs' key", f"keys: {list(data.keys())}")
         return
 
     if elapsed > WARM_THRESHOLD_MS:

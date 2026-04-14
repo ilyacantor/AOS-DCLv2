@@ -357,25 +357,60 @@ def search_entities(query: str, limit: int = 5) -> List[EntityDefinition]:
     return [item for _, item in scored[:limit]]
 
 
-def _build_ingest_summary() -> Optional[IngestSummary]:
-    """Build ingest summary from the ingest store. Returns None if no data."""
-    try:
-        from backend.api.ingest import get_ingest_store
-        store = get_ingest_store()
-        stats = store.get_stats()
-        if stats.get("total_rows_buffered", 0) > 0:
-            return IngestSummary(
-                available=True,
-                total_rows=stats["total_rows_buffered"],
-                total_sources=stats["unique_sources"],
-                total_pipes=stats["pipes_tracked"],
-                source_systems=stats.get("source_system_names", []),
-                tenant_names=stats.get("tenant_names", []),
-            )
-        return None
-    except Exception as e:
-        logger.warning(f"[SemanticExport] Failed to build ingest summary: {e}")
-        return None
+def _build_ingest_summary(tenant_id: Optional[str] = None) -> Optional[IngestSummary]:
+    """Build an NLQ catalog summary from ``current_triples`` + ``tenant_runs``.
+
+    Returns None when the tenant is unresolved or current_triples is empty —
+    NLQ treats None as "no catalog available" rather than an error. When the
+    tenant is resolved and has rows, we emit row/source counts and the list
+    of source_systems and distinct entity_ids.
+    """
+    from backend.core.db import get_connection
+    from backend.db.triple_store import TripleStore
+
+    store = TripleStore()
+    if not tenant_id:
+        try:
+            tenant_id = store.resolve_single_tenant()
+        except ValueError:
+            return None
+
+    summary_sql = (
+        "SELECT COUNT(*) AS total_rows, "
+        "COUNT(DISTINCT source_system) AS total_sources, "
+        "COUNT(DISTINCT pipe_id) AS total_pipes "
+        "FROM current_triples WHERE tenant_id = %s"
+    )
+    source_sql = (
+        "SELECT DISTINCT source_system FROM current_triples "
+        "WHERE tenant_id = %s AND source_system IS NOT NULL "
+        "ORDER BY source_system"
+    )
+    entity_sql = (
+        "SELECT DISTINCT entity_id FROM current_triples "
+        "WHERE tenant_id = %s ORDER BY entity_id"
+    )
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(summary_sql, (tenant_id,))
+            totals = cur.fetchone()
+            if not totals or (totals[0] or 0) == 0:
+                return None
+            total_rows, total_sources, total_pipes = totals
+            cur.execute(source_sql, (tenant_id,))
+            source_systems = [row[0] for row in cur.fetchall() if row[0]]
+            cur.execute(entity_sql, (tenant_id,))
+            entity_names = [row[0] for row in cur.fetchall() if row[0]]
+
+    return IngestSummary(
+        available=True,
+        total_rows=int(total_rows),
+        total_sources=int(total_sources or 0),
+        total_pipes=int(total_pipes or 0),
+        source_systems=source_systems,
+        tenant_names=entity_names,
+    )
 
 
 def get_semantic_export(tenant_id: str = "default") -> SemanticExport:
@@ -394,7 +429,8 @@ def get_semantic_export(tenant_id: str = "default") -> SemanticExport:
 
     enriched_metrics = _enrich_metrics_with_version_history(PUBLISHED_METRICS)
 
-    ingest_summary = _build_ingest_summary()
+    resolved_tenant = tenant_id if tenant_id and tenant_id != "default" else None
+    ingest_summary = _build_ingest_summary(resolved_tenant)
 
     return SemanticExport(
         version="1.0.0",

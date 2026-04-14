@@ -4,13 +4,11 @@ DCL Ingestion routes — Runner push endpoint + query helpers.
 Handles:
   GET  /api/dcl/ingest              — connectivity ping
   POST /api/dcl/ingest              — accept data push from Farm
-  GET  /api/dcl/ingest/runs         — list all run receipts
-  GET  /api/dcl/ingest/batches      — list batches by snapshot
-  GET  /api/dcl/ingest/runs/{id}    — detail for one run
   GET  /api/dcl/ingest/drift        — schema drift events
-  GET  /api/dcl/ingest/stats        — store summary
-  GET  /api/dcl/ingest/dispatches   — dispatches list
-  GET  /api/dcl/ingest/dispatches/X — dispatch detail
+  GET  /api/dcl/ingest/activity     — 3-phase activity log
+  GET  /api/dcl/ingest/drops        — drop log
+  POST /api/dcl/ingest/flush        — admin flush
+  POST /api/dcl/ingest/seed         — dev seed from snapshot
 """
 
 import asyncio
@@ -411,12 +409,9 @@ def _record_ingest_activity(
 @router.get("")
 def dcl_ingest_ping():
     """Connectivity check — Farm can GET this to verify the ingest endpoint is reachable."""
-    store = get_ingest_store()
-    stats = store.get_stats()
     return {
         "status": "ready",
         "message": "POST payloads to this URL. GET is for connectivity testing only.",
-        "ingest_stats": stats,
     }
 
 
@@ -732,69 +727,6 @@ async def dcl_ingest(request: Request):
 # Query helpers
 # ---------------------------------------------------------------------------
 
-@router.get("/runs")
-def list_ingest_runs():
-    """List all ingestion run receipts (metadata only)."""
-    store = get_ingest_store()
-    receipts = store.get_all_receipts()
-    return {
-        "runs": [
-            {
-                "dcl_ingest_id": r.run_id,
-                "dispatch_id": r.dispatch_id,
-                "pipe_id": r.pipe_id,
-                "source_system": r.source_system,
-                "canonical_source_id": r.canonical_source_id,
-                "tenant_id": r.tenant_id,
-                "snapshot_name": r.snapshot_name,
-                "run_timestamp": r.run_timestamp,
-                "received_at": r.received_at,
-                "schema_version": r.schema_version,
-                "row_count": r.row_count,
-                "schema_drift": r.schema_drift,
-                "drift_fields": r.drift_fields,
-                "runner_id": r.runner_id,
-            }
-            for r in receipts
-        ],
-        "stats": store.get_stats(),
-    }
-
-
-@router.get("/batches")
-def list_ingest_batches():
-    """List ingestion batches grouped by snapshot_name."""
-    store = get_ingest_store()
-    return {"batches": store.get_batches()}
-
-
-@router.get("/runs/{run_id}")
-def get_ingest_run(run_id: str):
-    """Get all pipe receipts for a Farm run_id."""
-    store = get_ingest_store()
-    receipts = store.get_receipts_by_run(run_id)
-    if not receipts:
-        raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
-    pipes = []
-    for receipt in receipts:
-        rows = store.get_rows(receipt.run_id, receipt.pipe_id)
-        pipes.append({
-            "dcl_ingest_id": receipt.run_id,
-            "pipe_id": receipt.pipe_id,
-            "source_system": receipt.source_system,
-            "canonical_source_id": receipt.canonical_source_id,
-            "row_count": receipt.row_count,
-            "rows_buffered": len(rows),
-            "schema_drift": receipt.schema_drift,
-        })
-    return {
-        "dcl_ingest_id": run_id,
-        "pipe_count": len(pipes),
-        "total_rows": sum(p["row_count"] for p in pipes),
-        "pipes": pipes,
-    }
-
-
 @router.get("/drift")
 def list_schema_drift():
     """List all schema drift events."""
@@ -815,25 +747,6 @@ def list_schema_drift():
         ],
         "total": len(events),
     }
-
-
-# Module-level cache for ingest stats.
-_stats_cache: Optional[dict] = None
-_stats_cache_gen: int = -1
-
-
-@router.get("/stats")
-def get_ingest_stats():
-    """Quick summary of what's in the ingest store."""
-    global _stats_cache, _stats_cache_gen
-    store = get_ingest_store()
-    current_gen = store.generation
-    if _stats_cache is not None and _stats_cache_gen == current_gen:
-        return _stats_cache
-    result = store.get_stats()
-    _stats_cache = result
-    _stats_cache_gen = current_gen
-    return result
 
 
 @router.get("/activity")
@@ -882,126 +795,6 @@ def list_drops(snapshot_name: Optional[str] = None):
         "by_snapshot": grouped,
         "total": len(entries),
     }
-
-
-@router.get("/dispatches")
-def list_dispatches(snapshot_name: Optional[str] = None):
-    """List all Farm dispatches — each dispatch groups pipes from one manifest push.
-
-    Optional ?snapshot_name= filter to show only dispatches from a specific
-    Farm generation (e.g. 'cloudedge-a1b2').
-    """
-    store = get_ingest_store()
-    return {"dispatches": store.get_dispatches(snapshot_name=snapshot_name)}
-
-
-@router.get("/dispatches/{dispatch_id}")
-def get_dispatch_detail(dispatch_id: str):
-    """Get detailed breakdown for a single Farm dispatch."""
-    store = get_ingest_store()
-    summary = store.get_dispatch_summary(dispatch_id)
-    if not summary:
-        raise HTTPException(status_code=404, detail=f"Dispatch {dispatch_id} not found")
-    return summary
-
-
-# ---------------------------------------------------------------------------
-# Materialization endpoints
-# ---------------------------------------------------------------------------
-
-@router.post("/materialize")
-def backfill_materialize():
-    """Re-run materialization on all existing buffered rows.
-
-    Use this to backfill materialized data points for rows that were
-    ingested before the materializer was deployed. Safe to run multiple
-    times — overwrites previous materialization for each key.
-    """
-    from backend.engine.metric_materializer import get_materializer
-
-    store = get_ingest_store()
-    materializer = get_materializer()
-
-    total_points = 0
-    total_keys = 0
-    metrics_found: set = set()
-
-    all_receipts = store.get_all_receipts()
-    for receipt in all_receipts:
-        key = f"{receipt.run_id}:{receipt.pipe_id}"
-        rows = store.get_rows(receipt.run_id, receipt.pipe_id)
-        if not rows:
-            continue
-
-        points = materializer.materialize(
-            pipe_id=receipt.pipe_id,
-            source_system=receipt.source_system,
-            rows=rows,
-            dispatch_id=receipt.dispatch_id,
-        )
-        if points:
-            store.store_materialized(key, points)
-            total_points += len(points)
-            total_keys += 1
-            for pt in points:
-                metrics_found.add(pt["metric"])
-
-    store._save_to_disk()
-
-    logger.info(
-        f"[Materialize] Backfill complete: {total_points} points "
-        f"from {total_keys} pipe pushes, {len(metrics_found)} metrics"
-    )
-
-    return {
-        "status": "complete",
-        "total_points": total_points,
-        "total_keys": total_keys,
-        "metrics": sorted(metrics_found),
-        "receipts_scanned": len(all_receipts),
-    }
-
-
-@router.get("/materialized/stats")
-def get_materialized_stats():
-    """Show materialized metric counts, period ranges, source systems."""
-    store = get_ingest_store()
-    return store.get_materialized_stats()
-
-
-@router.get("/sample")
-def sample_rows(pipe_id: Optional[str] = None, limit: int = 3):
-    """Sample raw rows from the ingest buffer for debugging.
-
-    Optional ?pipe_id= to filter by pipe. Returns up to `limit` rows
-    from matching receipts.
-    """
-    store = get_ingest_store()
-    all_receipts = store.get_all_receipts()
-
-    samples = []
-    for receipt in reversed(all_receipts):
-        if pipe_id and receipt.pipe_id != pipe_id:
-            continue
-        rows = store.get_rows(receipt.run_id, receipt.pipe_id)
-        if not rows:
-            continue
-        sample_rows = rows[:limit]
-        # Strip internal tags for readability
-        cleaned = [
-            {k: v for k, v in row.items() if not k.startswith("_")}
-            for row in sample_rows
-        ]
-        samples.append({
-            "pipe_id": receipt.pipe_id,
-            "source_system": receipt.source_system,
-            "total_rows": len(rows),
-            "sample": cleaned,
-        })
-        if len(samples) >= 3:
-            break
-
-    return {"samples": samples}
 
 
 # ---------------------------------------------------------------------------

@@ -43,19 +43,17 @@ pytest backend/tests/test_graph_traversal.py -v
 | File | What it covers |
 |------|----------------|
 | `backend/tests/test_tier0_aam_edges.py` | Tier 0 AAM edge classification — high/low confidence edges, fallthrough to Tier 1, transformed edges, alias resolution, EdgeIndex coverage stats, backward compatibility |
-| `backend/tests/test_farm_v2_integration.py` | Farm v2 to DCL pipeline — ingests 20 synthetic pipes from 8 source systems, verifies IngestStore, ingest bridge, DCL engine graph build, ontology mapping coverage, persona filtering |
 
 Run integration tests only:
 
 ```bash
-pytest backend/tests/test_tier0_aam_edges.py backend/tests/test_farm_v2_integration.py -v
+pytest backend/tests/test_tier0_aam_edges.py -v
 ```
 
 These tests can also run standalone (outside pytest):
 
 ```bash
 python backend/tests/test_tier0_aam_edges.py
-python backend/tests/test_farm_v2_integration.py
 ```
 
 ### Utilities (not tests)

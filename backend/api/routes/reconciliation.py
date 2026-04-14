@@ -16,8 +16,10 @@ from typing import List, Optional, Dict, Any
 
 from backend.api.ingest import get_ingest_store
 from backend.api.pipe_store import get_pipe_store
+from backend.core.db import get_connection
 from backend.core.mode_state import get_current_mode
 from backend.core.constants import utc_now
+from backend.db.triple_store import TripleStore
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -90,21 +92,43 @@ def get_sor_reconciliation():
 
         result = reconcile_sor(bindings, metrics_list, entities_list, loaded_sources)
 
-        # --- AOD SOR pipeline coverage (Fix 10) ---
+        # --- AOD SOR pipeline coverage ---
         # Show which AOD-identified SORs have complete pipeline coverage
-        # (AOD → AAM → Farm → DCL). Uses sor_tagging from pipe definitions.
+        # (AOD → AAM → Farm → DCL). Post–store-rebuild, DCL presence is
+        # determined by scanning current_triples.source_system for a live
+        # row; Farm receipts come from ingest_log.
         pipe_store = get_pipe_store()
-        ingest_store = get_ingest_store()
         all_pipe_defs = pipe_store.get_all_definitions()
-        all_receipts = ingest_store.get_all_receipts()
-        receipt_pipe_ids = set(r.pipe_id for r in all_receipts)
         loaded_canonical_set = set(loaded_sources)
+
+        sor_store = TripleStore()
+        try:
+            sor_tenant_id = sor_store.resolve_single_tenant()
+        except ValueError:
+            sor_tenant_id = None
+
+        live_sources_lower: set = set()
+        log_sources_lower: set = set()
+        if sor_tenant_id:
+            live_sql = (
+                "SELECT DISTINCT LOWER(source_system) FROM current_triples "
+                "WHERE tenant_id = %s AND source_system IS NOT NULL"
+            )
+            log_sources_sql = (
+                "SELECT DISTINCT LOWER(src) FROM ingest_log, "
+                "UNNEST(source_systems) AS src WHERE tenant_id::text = %s"
+            )
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(live_sql, (sor_tenant_id,))
+                    live_sources_lower = {r[0] for r in cur.fetchall() if r[0]}
+                    cur.execute(log_sources_sql, (sor_tenant_id,))
+                    log_sources_lower = {r[0] for r in cur.fetchall() if r[0]}
 
         aod_sor_coverage = []
         for pipe_def in all_pipe_defs:
             if not pipe_def.sor_tagging:
                 continue
-            # Parse sor_tagging to extract confidence
             import json as _json
             sor_confidence = "unknown"
             try:
@@ -112,16 +136,23 @@ def get_sor_reconciliation():
                 if isinstance(parsed, dict):
                     sor_confidence = parsed.get("confidence", "unknown")
             except (ValueError, TypeError):
-                sor_confidence = "tagged"  # legacy string format
+                sor_confidence = "tagged"
+
+            vendor_lower = (pipe_def.vendor or "").lower()
+            dcl_has_data = bool(vendor_lower) and (
+                vendor_lower in live_sources_lower
+                or vendor_lower in {s.lower() for s in loaded_canonical_set}
+            )
+            farm_has_receipt = bool(vendor_lower) and vendor_lower in log_sources_lower
 
             aod_sor_coverage.append({
                 "pipe_id": pipe_def.pipe_id,
                 "vendor": pipe_def.vendor,
                 "category": pipe_def.category,
                 "aod_confidence": sor_confidence,
-                "aam_has_pipe": True,  # it's in the export, so AAM has it
-                "farm_has_receipt": pipe_def.pipe_id in receipt_pipe_ids,
-                "dcl_has_data": pipe_def.vendor.lower() in {s.lower() for s in loaded_canonical_set} if pipe_def.vendor else False,
+                "aam_has_pipe": True,
+                "farm_has_receipt": farm_has_receipt,
+                "dcl_has_data": dcl_has_data,
             })
         result["aodSorCoverage"] = aod_sor_coverage
 
@@ -321,91 +352,101 @@ def _invalidate_aam_caches():
 
 
 def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
-    """Reconcile Farm push receipts against DCL loaded sources — per dispatch."""
+    """Reconcile Farm pushes against DCL ``current_triples``.
+
+    Post-store-rebuild:
+    - Push receipts live in ``ingest_log`` (one row per
+      POST /api/dcl/ingest-triples call) — triples_received/written plus
+      source_systems and duration_ms.
+    - Content lives in ``current_triples`` — source_system + entity_id give
+      a live row count per source.
+    - There is no concept of dispatch in Farm mode; the parameter is
+      accepted for backward compatibility but ignored.
+    """
     from backend.aam.ingress import NormalizedPipe
-    from backend.api.pipe_store import get_pipe_store
     from backend.engine.reconciliation import reconcile
     from backend.api.main import app
 
-    store = get_ingest_store()
-    all_receipts = store.get_all_receipts()
     current_mode = get_current_mode()
     now = utc_now()
 
-    if not all_receipts:
-        return {
-            "status": "empty",
-            "summary": {
-                "aamConnections": 0, "dclLoadedSources": 0, "matched": 0,
-                "inAamNotDcl": 0, "inDclNotAam": 0, "unmappedCount": 0,
-            },
-            "diffCauses": [{
-                "cause": "NO_PUSH", "severity": "info", "count": 0,
-                "description": "No Farm data received — push from Farm first",
-            }],
-            "fabricBreakdown": [], "inAamNotDcl": [], "inDclNotAam": [],
-            "pushMeta": None,
-            "reconMeta": {
-                "dcl_ingest_id": current_mode.last_run_id,
-                "dclRunAt": current_mode.last_updated,
-                "reconAt": now, "aodRunId": None,
-                "dataMode": "Farm", "dclSourceCount": 0, "aamConnectionCount": 0,
-            },
-            "trace": {
-                "aamPipeNames": [], "dclLoadedSourceNames": [],
-                "exportPipeCount": 0, "pushPipeCount": 0, "unmappedCount": 0,
-            },
-        }
+    store = TripleStore()
+    try:
+        tenant_id = store.resolve_single_tenant()
+    except ValueError:
+        tenant_id = None
 
-    # Isolate by dispatch
-    if dispatch_id:
-        receipts = store.get_receipts_by_dispatch(dispatch_id)
-        logger.info(f"[FarmRecon] Using dispatch_id={dispatch_id} ({len(receipts)} pipes)")
-    else:
-        dispatches = store.get_dispatches()
-        if dispatches:
-            latest_dispatch = dispatches[0]
-            dispatch_id = latest_dispatch["dispatch_id"]
-            receipts = store.get_receipts_by_dispatch(dispatch_id)
-            logger.info(
-                f"[FarmRecon] Auto-selected latest dispatch={dispatch_id} "
-                f"({len(receipts)} pipes, {latest_dispatch['total_rows']:,} rows)"
-            )
-        else:
-            latest = max(all_receipts, key=lambda r: r.received_at)
-            receipts = [r for r in all_receipts if r.run_id == latest.run_id]
-            logger.info(f"[FarmRecon] Fallback: latest run_id={latest.run_id} ({len(receipts)} pipes)")
+    empty_shell = {
+        "status": "empty",
+        "summary": {
+            "aamConnections": 0, "dclLoadedSources": 0, "matched": 0,
+            "inAamNotDcl": 0, "inDclNotAam": 0, "unmappedCount": 0,
+        },
+        "diffCauses": [{
+            "cause": "NO_PUSH", "severity": "info", "count": 0,
+            "description": "No Farm data in current_triples — push from Farm first",
+        }],
+        "fabricBreakdown": [], "inAamNotDcl": [], "inDclNotAam": [],
+        "pushMeta": None,
+        "reconMeta": {
+            "dcl_ingest_id": current_mode.last_run_id,
+            "dclRunAt": current_mode.last_updated,
+            "reconAt": now, "aodRunId": None,
+            "dataMode": "Farm", "dclSourceCount": 0, "aamConnectionCount": 0,
+        },
+        "trace": {
+            "aamPipeNames": [], "dclLoadedSourceNames": [],
+            "exportPipeCount": 0, "pushPipeCount": 0, "unmappedCount": 0,
+        },
+    }
 
-    # Group receipts by canonical source via pipe_store
-    pipe_store = get_pipe_store()
+    if not tenant_id:
+        return empty_shell
+
+    sources_sql = (
+        "SELECT source_system, "
+        "ARRAY_AGG(DISTINCT entity_id) FILTER (WHERE entity_id IS NOT NULL) AS entities, "
+        "ARRAY_AGG(DISTINCT COALESCE(fabric_plane, '')) FILTER (WHERE fabric_plane IS NOT NULL) AS planes, "
+        "COUNT(*) AS total_rows "
+        "FROM current_triples WHERE tenant_id = %s "
+        "GROUP BY source_system"
+    )
+    log_sql = (
+        "SELECT run_id::text, entity_id, triples_received, triples_written, "
+        "triples_rejected, source_systems, duration_ms, created_at "
+        "FROM ingest_log WHERE tenant_id::text = %s "
+        "ORDER BY created_at DESC"
+    )
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sources_sql, (tenant_id,))
+            source_rows = cur.fetchall()
+            cur.execute(log_sql, (tenant_id,))
+            log_rows = cur.fetchall()
+
+    if not source_rows and not log_rows:
+        return empty_shell
+
     source_groups: Dict[str, Dict[str, Any]] = {}
-    unmapped_pipes: List[str] = []
-    schema_registry = store.get_schema_registry()
     total_records = 0
-
-    for receipt in receipts:
-        total_records += receipt.row_count
-        pipe_def = pipe_store.lookup(receipt.pipe_id)
-        if not pipe_def:
-            unmapped_pipes.append(receipt.pipe_id)
+    for source_system, entities, planes, row_count in source_rows:
+        if not source_system:
             continue
-        canonical_id = pipe_def.source_name.lower().strip().replace(" ", "_").replace("-", "_")
-        display_name = pipe_def.source_name or canonical_id
-        category = pipe_def.category or "unknown"
-        grp = source_groups.setdefault(canonical_id, {
-            "canonical_id": canonical_id, "display_name": display_name,
+        canonical_id = source_system.lower().strip().replace(" ", "_").replace("-", "_")
+        category = (planes or ["unknown"])[0] or "unknown"
+        source_groups[canonical_id] = {
+            "canonical_id": canonical_id,
+            "display_name": source_system,
             "category": category,
-            "trust_score": pipe_def.trust_score,
-            "data_quality_score": pipe_def.data_quality_score,
-            "pipes": [], "total_records": 0, "fields": set(),
-        })
-        grp["pipes"].append(receipt.pipe_id)
-        grp["total_records"] += receipt.row_count
-        schema = schema_registry.get(receipt.pipe_id)
-        if schema:
-            grp["fields"].update(f for f in schema.field_names if not f.startswith("_"))
+            "trust_score": None,
+            "data_quality_score": None,
+            "pipes": list(entities or []),
+            "total_records": int(row_count or 0),
+            "fields": set(),
+        }
+        total_records += int(row_count or 0)
 
-    # Build NormalizedPipe objects so we can reuse reconcile()
     farm_pipes: List[NormalizedPipe] = []
     for canonical_id, grp in source_groups.items():
         farm_pipes.append(NormalizedPipe(
@@ -414,61 +455,50 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
             pipe_id=canonical_id,
             fabric_plane=grp["category"],
             vendor=grp["display_name"],
-            fields=sorted(grp["fields"]),
-            field_count=len(grp["fields"]),
+            fields=[],
+            field_count=0,
             category=grp["category"],
             governance_status="canonical",
             trust_score=grp["trust_score"],
             data_quality_score=grp["data_quality_score"],
         ))
 
-    # DCL side: what was actually loaded
     dcl_ids = list(app.state.loaded_source_ids) if app.state.loaded_source_ids else list(app.state.loaded_sources)
+    if not dcl_ids:
+        dcl_ids = sorted(source_groups.keys())
 
     result = reconcile(farm_pipes, dcl_ids)
 
-    # Extra diff causes for Farm-specific issues
-    if unmapped_pipes:
-        result["diffCauses"].append({
-            "cause": "UNMAPPED_PIPES",
-            "description": f"{len(unmapped_pipes)} pipes have no entry in pipe_store: {', '.join(unmapped_pipes)}",
-            "severity": "warning",
-            "count": len(unmapped_pipes),
-        })
-    drift_events = store.get_drift_events()
-    if drift_events:
-        result["diffCauses"].append({
-            "cause": "SCHEMA_DRIFT",
-            "description": f"{len(drift_events)} schema drift events detected across pushes",
-            "severity": "info",
-            "count": len(drift_events),
-        })
-
-    # Source breakdown with record counts
     result["sourceBreakdown"] = [
         {
             "sourceName": grp["display_name"], "canonicalId": cid,
             "category": grp["category"],
             "trustScore": grp["trust_score"],
-            "pipeCount": len(grp["pipes"]), "recordCount": grp["total_records"],
-            "fieldCount": len(grp["fields"]), "loaded": cid in set(dcl_ids),
+            "pipeCount": len(grp["pipes"]),
+            "recordCount": grp["total_records"],
+            "fieldCount": 0,
+            "loaded": cid in set(dcl_ids),
         }
         for cid, grp in sorted(source_groups.items())
     ]
 
-    # Push metadata
-    latest_receipt = max(receipts, key=lambda r: r.received_at)
-    first_receipt = min(receipts, key=lambda r: r.received_at)
-    result["pushMeta"] = {
-        "dispatchId": dispatch_id,
-        "pushId": latest_receipt.run_id,
-        "pushedAt": latest_receipt.received_at,
-        "firstReceivedAt": first_receipt.received_at,
-        "pipeCount": len(receipts),
-        "totalRows": total_records,
-        "payloadHash": None,
-        "aodRunId": None,
-    }
+    latest_log = log_rows[0] if log_rows else None
+    first_log = log_rows[-1] if log_rows else None
+    total_triples_received = sum(int(r[2] or 0) for r in log_rows)
+    push_count = len(log_rows)
+    if latest_log:
+        result["pushMeta"] = {
+            "dispatchId": None,
+            "pushId": latest_log[0],
+            "pushedAt": latest_log[7].isoformat() if latest_log[7] else None,
+            "firstReceivedAt": first_log[7].isoformat() if first_log and first_log[7] else None,
+            "pipeCount": push_count,
+            "totalRows": total_triples_received or total_records,
+            "payloadHash": None,
+            "aodRunId": None,
+        }
+    else:
+        result["pushMeta"] = None
 
     result["reconMeta"] = {
         "dcl_ingest_id": current_mode.last_run_id,
@@ -476,7 +506,7 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
         "reconAt": now,
         "aodRunId": None,
         "dataMode": "Farm",
-        "dispatchId": dispatch_id,
+        "dispatchId": None,
         "dclSourceCount": len(dcl_ids),
         "aamConnectionCount": len(farm_pipes),
     }
@@ -485,9 +515,9 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
     result["trace"] = {
         "aamPipeNames": farm_pipe_names,
         "dclLoadedSourceNames": dcl_ids,
-        "exportPipeCount": len(receipts),
-        "pushPipeCount": len(receipts),
-        "unmappedCount": len(unmapped_pipes),
+        "exportPipeCount": push_count,
+        "pushPipeCount": push_count,
+        "unmappedCount": 0,
     }
 
     return result
@@ -681,72 +711,57 @@ _xsys_cache_gen: int = -1
 
 
 def _get_revenue_2025(snapshot_name: Optional[str] = None) -> Optional[float]:
-    """Return 2025 annual revenue scoped to a specific snapshot.
+    """Return 2025 annual revenue from ``current_triples``.
 
-    Filters materialized revenue points to only those whose dispatch_id
-    matches a dispatch belonging to the given snapshot.  Each snapshot
-    represents a distinct pipeline run with its own set of pipes and
-    data — revenue varies by snapshot.
-
-    Deduplicates by (period, source_system, pipe_id), then sums Q1..Q4.
-    Returns None if no 2025 revenue data exists for the snapshot.
+    Reads rows where ``split_part(concept,'.',1) = 'revenue'`` for any period
+    starting with '2025' and returns the summed value across quarters.
+    snapshot_name is accepted for compatibility but ignored — current_triples
+    is already scoped to the live run per (tenant, entity).
     """
+    store = TripleStore()
     try:
-        store = get_ingest_store()
+        tenant_id = store.resolve_single_tenant()
+    except ValueError:
+        return None
 
-        # Build the set of dispatch_ids for this snapshot
-        allowed_dispatch_ids: Optional[set] = None
-        if snapshot_name:
-            dispatches = store.get_dispatches()
-            allowed_dispatch_ids = set()
-            for d in dispatches:
-                d_snap = d.get("snapshot_name", "")
-                if d_snap == snapshot_name:
-                    allowed_dispatch_ids.add(d.get("dispatch_id", ""))
+    sql = (
+        "SELECT period, value FROM current_triples "
+        "WHERE tenant_id = %s "
+        "AND split_part(concept, '.', 1) = 'revenue' "
+        "AND period LIKE '2025%%'"
+    )
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (tenant_id,))
+            rows = cur.fetchall()
 
-        # Get all revenue points for 2025
-        all_points = store.get_materialized_points(
-            metric="revenue",
-            time_range={"start": "2025-Q1", "end": "2025-Q4"},
-        )
-        if not all_points:
-            return None
+    if not rows:
+        return None
 
-        # Filter to snapshot's dispatch_ids if scoped
-        if allowed_dispatch_ids is not None:
-            points = [
-                pt for pt in all_points
-                if pt.get("dispatch_id", "") in allowed_dispatch_ids
-            ]
-        else:
-            points = all_points
+    total = 0.0
+    counted = 0
+    for _period, raw in rows:
+        num = None
+        if isinstance(raw, (int, float)):
+            num = float(raw)
+        elif isinstance(raw, dict):
+            for key in ("amount", "value", "number"):
+                inner = raw.get(key)
+                if isinstance(inner, (int, float)):
+                    num = float(inner)
+                    break
+        elif isinstance(raw, str):
+            try:
+                num = float(raw)
+            except ValueError:
+                num = None
+        if num is not None:
+            total += num
+            counted += 1
 
-        if not points:
-            return None
-
-        # Deduplicate by (period, source_system, pipe_id) — keep latest
-        dedup: dict = {}
-        for pt in points:
-            period = pt.get("period", "")
-            if not period.startswith("2025"):
-                continue
-            key = (period, pt.get("source_system", ""), pt.get("pipe_id", ""))
-            existing = dedup.get(key)
-            if existing is None or pt.get("materialized_at", "") > existing.get("materialized_at", ""):
-                dedup[key] = pt
-
-        if not dedup:
-            return None
-
-        # Aggregate by period (sum across sources), then sum quarters
-        period_totals: Dict[str, float] = {}
-        for (period, _, _), pt in dedup.items():
-            period_totals[period] = period_totals.get(period, 0) + float(pt["value"])
-
-        total = sum(period_totals.values())
-        return round(total, 2) if total > 0 else None
-    except Exception as e:
-        raise RuntimeError(f"Failed to compute aggregate total for recon: {e}") from e
+    if counted == 0:
+        return None
+    return round(total, 2) if total > 0 else None
 
 
 @router.get("/api/dcl/reconciliation/cross-system")
@@ -816,55 +831,89 @@ def get_cross_system_reconciliation(
         code = d.get("error_code", "UNKNOWN")
         drops_by_error[code] = drops_by_error.get(code, 0) + 1
 
-    # --- Content phase (from receipts) ---
-    all_receipts = store.get_all_receipts()
-    dispatches = store.get_dispatches()
+    # --- Content phase (post-rebuild: from current_triples + ingest_log) ---
+    # Store rebuild eliminated the multi-dispatch/multi-snapshot model. Every
+    # row in current_triples is the live state for its tenant; ingest_log keeps
+    # the push receipts. receipt_pipe_id_set = pipe_ids that landed in the
+    # mirror; content_rows / content_sources come from the same table.
+    try:
+        tenant_id = TripleStore().resolve_single_tenant()
+    except ValueError:
+        tenant_id = None
 
-    # Determine the snapshot to scope receipt counting.
-    # If ?snapshot= query param is provided, use that instead of latest export.
     snapshot_name_filter = snapshot if snapshot else (latest_export.snapshot_name if latest_export else None)
 
-    # Count unique receipt pipe_ids matching this snapshot across Farm dispatches.
-    # This is the ground truth — each receipt is proof DCL accepted and stored data
-    # for that pipe_id. The activity log accumulates across dispatches and overcounts.
-    # Exclude aam_ dispatches (structure metadata pushes, not Farm content).
     receipt_pipe_id_set: set = set()
     content_rows = 0
     content_sources: List[str] = []
     dispatch_id = ""
-    for d in dispatches:
-        # Skip AAM structure dispatches — these are metadata pushes, not Farm content
-        if d.get("dispatch_id", "").startswith("aam_"):
-            continue
-        d_snapshot = d.get("snapshot_name", "")
-        # Match by snapshot if available, else include all
-        if snapshot_name_filter:
-            if isinstance(d_snapshot, str) and d_snapshot != snapshot_name_filter:
-                continue
-            if isinstance(d_snapshot, list) and snapshot_name_filter not in d_snapshot:
-                continue
-        for pid in d.get("pipe_ids", []):
-            receipt_pipe_id_set.add(pid)
-        content_rows += d["total_rows"]
-        content_sources.extend(d["unique_sources"])
-        if not dispatch_id:
-            dispatch_id = d["dispatch_id"]  # use first matching dispatch for identity
-    content_sources = sorted(set(content_sources))
-
-    # --- Cross-snapshot receipt lookup (for per-pipe failure classification) ---
-    # Build pipe_id → list of snapshot_names across ALL receipts, not just
-    # the current snapshot. This lets us distinguish "receipt under different
-    # snapshot" (not a failure) from "never received" (real failure).
     all_receipt_pipe_ids: Dict[str, list] = {}
-    for d in dispatches:
-        if d.get("dispatch_id", "").startswith("aam_"):
-            continue
-        d_snapshot = d.get("snapshot_name", "")
-        snap_label = d_snapshot if isinstance(d_snapshot, str) else str(d_snapshot)
-        for pid in d.get("pipe_ids", []):
-            all_receipt_pipe_ids.setdefault(pid, [])
-            if snap_label and snap_label not in all_receipt_pipe_ids[pid]:
-                all_receipt_pipe_ids[pid].append(snap_label)
+    snapshot_pipe_counts: Dict[str, int] = {}
+
+    if tenant_id:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT DISTINCT pipe_id::text FROM current_triples "
+                    "WHERE tenant_id = %s AND pipe_id IS NOT NULL",
+                    (tenant_id,),
+                )
+                receipt_pipe_id_set = {row[0] for row in cur.fetchall() if row[0]}
+
+                cur.execute(
+                    "SELECT COUNT(*) FROM current_triples WHERE tenant_id = %s",
+                    (tenant_id,),
+                )
+                content_rows = int((cur.fetchone() or [0])[0] or 0)
+
+                cur.execute(
+                    "SELECT DISTINCT source_system FROM current_triples "
+                    "WHERE tenant_id = %s AND source_system IS NOT NULL "
+                    "ORDER BY source_system",
+                    (tenant_id,),
+                )
+                content_sources = [row[0] for row in cur.fetchall() if row[0]]
+
+                cur.execute(
+                    "SELECT run_id::text FROM ingest_log "
+                    "WHERE tenant_id::text = %s "
+                    "ORDER BY created_at DESC LIMIT 1",
+                    (tenant_id,),
+                )
+                row = cur.fetchone()
+                dispatch_id = row[0] if row and row[0] else ""
+
+                cur.execute(
+                    "SELECT tr.current_snapshot_name, "
+                    "  COUNT(DISTINCT ct.pipe_id) "
+                    "FROM tenant_runs tr "
+                    "LEFT JOIN current_triples ct "
+                    "  ON ct.tenant_id = tr.tenant_id::text "
+                    " AND ct.entity_id = tr.entity_id "
+                    " AND ct.pipe_id IS NOT NULL "
+                    "WHERE tr.tenant_id::text = %s "
+                    "  AND tr.current_snapshot_name IS NOT NULL "
+                    "GROUP BY tr.current_snapshot_name",
+                    (tenant_id,),
+                )
+                for snap_label, pipe_count in cur.fetchall():
+                    key = snap_label or "(unnamed)"
+                    snapshot_pipe_counts[key] = int(pipe_count or 0)
+
+    # Every pipe_id in current_triples belongs to the one active snapshot per
+    # entity (post-rebuild invariant). If snapshot_name_filter does not match
+    # the active snapshot, treat the scoped receipt set as empty — that matches
+    # the pre-rebuild "snapshot did not match" branch.
+    if snapshot_name_filter and snapshot_name_filter not in snapshot_pipe_counts:
+        receipt_pipe_id_set = set()
+
+    snapshot_label_for_lookup = snapshot_name_filter or (
+        next(iter(snapshot_pipe_counts.keys()), "") if snapshot_pipe_counts else ""
+    )
+    for pid in receipt_pipe_id_set:
+        all_receipt_pipe_ids.setdefault(pid, [])
+        if snapshot_label_for_lookup and snapshot_label_for_lookup not in all_receipt_pipe_ids[pid]:
+            all_receipt_pipe_ids[pid].append(snapshot_label_for_lookup)
 
     # Build pipe_id → drop entries lookup
     drops_by_pipe: Dict[str, list] = {}
@@ -1056,21 +1105,7 @@ def get_cross_system_reconciliation(
         aod_run_id = latest_export.aod_run_id or ""
 
     # --- Snapshot provenance ---
-    # Build per-snapshot pipe counts across ALL dispatches so the caller can
-    # see which snapshots hold data and how many pipes each has.
-    snapshot_pipe_counts: Dict[str, int] = {}
-    for d in dispatches:
-        if d.get("dispatch_id", "").startswith("aam_"):
-            continue
-        d_snapshot = d.get("snapshot_name", "")
-        snap_label = d_snapshot if isinstance(d_snapshot, str) else str(d_snapshot)
-        if not snap_label:
-            snap_label = "(unnamed)"
-        pipe_count_in_dispatch = len(d.get("pipe_ids", []))
-        snapshot_pipe_counts[snap_label] = (
-            snapshot_pipe_counts.get(snap_label, 0) + pipe_count_in_dispatch
-        )
-
+    # snapshot_pipe_counts is computed above from tenant_runs + current_triples.
     other_snapshots: List[Dict[str, Any]] = []
     for snap, count in sorted(snapshot_pipe_counts.items()):
         if snap == snapshot_name_filter:

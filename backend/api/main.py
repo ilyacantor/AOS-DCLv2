@@ -425,49 +425,111 @@ def health():
     }
 
 
+_SOR_PLANE_TYPES = {"crm", "erp", "hcm", "billing", "ticketing"}
+
+
 @app.get("/api/dcl/snapshots")
 async def dcl_snapshots(tenant_id: Optional[str] = None):
-    """Available snapshots from tenant_runs — one row per live (tenant, entity).
+    """Live snapshots from tenant_runs — one row per (tenant, entity).
 
     Post–store-rebuild there is exactly one live run per (tenant, entity).
-    Historical runs are in semantic_triples_archive and are not returned here.
+    Each row carries the enrichment fields the SnapshotPanel and
+    IngestionPanel used to pull from the legacy IngestStore:
+      - source_systems, pipe_source_names, unique_sources, unique_pipes
+      - fabric_plane_vendors (``plane:vendor``) and fabric_count
+      - sor_vendors and sor_count (fabric_plane ∈ crm/erp/hcm/…)
+      - first_received_at / latest_received_at from current_triples.created_at
 
-    Returns {snapshots: [{entity_id, dcl_ingest_id, snapshot_name, run_timestamp,
-    total_rows, is_current}], tenant_id}. Shape matches NLQ's expected
-    nlq/src/nlq/config.py contract.
+    If ``tenant_id`` is omitted, all tenant_runs rows are returned — the
+    SE operator view is tenant-agnostic and shows whatever DCL currently
+    holds. Supplying ``tenant_id`` narrows the scan.
     """
-    from backend.db.triple_store import TripleStore
     from backend.core.db import get_connection
 
-    store = TripleStore()
-    try:
-        if not tenant_id:
-            tenant_id = store.resolve_single_tenant()
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
-
-    sql = (
-        "SELECT entity_id, current_run_id, current_snapshot_name, "
-        "run_row_count, updated_at "
-        "FROM tenant_runs WHERE tenant_id = %s "
-        "ORDER BY updated_at DESC"
+    # Trivial tenant_runs scan — all enrichment aggregates are maintained by
+    # the write path (append_rows_for_entity / swap_and_delete) via
+    # _compute_entity_enrichment, so reads do not re-aggregate current_triples
+    # at request time (mig017, B18).
+    base_sql = (
+        "SELECT tenant_id::text, entity_id, current_run_id::text AS dcl_ingest_id, "
+        "       current_snapshot_name, run_row_count, updated_at, "
+        "       source_systems, fabric_pairs, unique_pipes, "
+        "       first_received_at, latest_received_at "
+        "FROM tenant_runs "
     )
+    if tenant_id:
+        sql = base_sql + "WHERE tenant_id::text = %s ORDER BY updated_at DESC"
+        params: tuple = (tenant_id,)
+    else:
+        sql = base_sql + "ORDER BY updated_at DESC"
+        params = ()
+
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql, (tenant_id,))
+            cur.execute(sql, params)
             rows = cur.fetchall()
-    snapshots = [
-        {
-            "entity_id": r[0],
-            "dcl_ingest_id": str(r[1]) if r[1] else None,
-            "snapshot_name": r[2],
-            "run_timestamp": r[4].isoformat() if r[4] else None,
-            "total_rows": r[3] or 0,
+
+    snapshots = []
+    for row in rows:
+        (
+            row_tenant_id,
+            entity_id,
+            dcl_ingest_id,
+            snapshot_name,
+            run_row_count,
+            updated_at,
+            source_list_val,
+            fabric_pairs_val,
+            unique_pipes_val,
+            first_received_at,
+            latest_received_at,
+        ) = row
+
+        source_systems = list(source_list_val or [])
+
+        fabric_plane_vendors: List[str] = []
+        fabrics_set: set = set()
+        sor_vendors_set: set = set()
+        for pair in fabric_pairs_val or []:
+            parts = pair.split("|", 2)
+            plane = parts[0] if len(parts) > 0 else ""
+            vendor = parts[1] if len(parts) > 1 else ""
+            plane_source = parts[2] if len(parts) > 2 else ""
+            if not plane:
+                continue
+            fabrics_set.add(plane)
+            vendor_label = vendor or plane_source or ""
+            if vendor_label:
+                fabric_plane_vendors.append(f"{plane}:{vendor_label}")
+            if plane.lower() in _SOR_PLANE_TYPES and plane_source:
+                sor_vendors_set.add(plane_source)
+
+        fabric_plane_vendors = sorted(set(fabric_plane_vendors))
+        fabrics_list = sorted(fabrics_set)
+        sor_vendors = sorted(sor_vendors_set)
+
+        snapshots.append({
+            "tenant_id": row_tenant_id,
+            "entity_id": entity_id,
+            "dcl_ingest_id": dcl_ingest_id,
+            "snapshot_name": snapshot_name,
+            "run_timestamp": updated_at.isoformat() if updated_at else None,
+            "total_rows": int(run_row_count or 0),
             "is_current": True,
-        }
-        for r in rows
-    ]
-    return {"snapshots": snapshots, "tenant_id": tenant_id}
+            "source_systems": source_systems,
+            "unique_sources": len(source_systems),
+            "pipe_source_names": source_systems,
+            "unique_pipes": int(unique_pipes_val or 0),
+            "fabric_plane_vendors": fabric_plane_vendors,
+            "fabric_count": len(fabric_plane_vendors) or len(fabrics_list),
+            "fabrics": fabrics_list,
+            "sor_vendors": sor_vendors,
+            "sor_count": len(sor_vendors),
+            "first_received_at": first_received_at.isoformat() if first_received_at else None,
+            "latest_received_at": latest_received_at.isoformat() if latest_received_at else None,
+        })
+
+    return {"snapshots": snapshots, "tenant_id": tenant_id or ""}
 
 
 class RunRequest(BaseModel):
@@ -806,14 +868,15 @@ def search_semantic_catalog(q: str, limit: int = 5):
 
 @app.post("/api/dcl/query")
 def execute_dcl_query(request: QueryRequest):
-    """Execute a data query against DCL's ingest store."""
+    """Execute a metric query against current_triples."""
     result = handle_query(request)
 
     if isinstance(result, QueryError):
         if result.code == "METRIC_NOT_FOUND":
             raise HTTPException(status_code=404, detail=result.model_dump())
-        else:
-            raise HTTPException(status_code=400, detail=result.model_dump())
+        if result.code == "IDENTITY_MISSING":
+            raise HTTPException(status_code=422, detail=result.model_dump())
+        raise HTTPException(status_code=400, detail=result.model_dump())
 
     return result
 

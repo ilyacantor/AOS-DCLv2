@@ -1,13 +1,17 @@
 """
-DCL Query Endpoint - executes data queries against the ingest buffer.
+DCL query endpoint — executes metric queries against the triple store.
 
-This module handles:
-- Query validation against the semantic catalog
-- Data retrieval from the ingest buffer (Runner-pushed data)
-- Filtering and aggregation based on dimensions and time ranges
+Post–store-rebuild, the only read path is ``current_triples`` scoped by
+``tenant_id`` (+ optional ``entity_id``). The metric→concept mapping follows
+the ConceptRegistry: metric id matches the root segment of ``concept`` (so
+metric ``revenue`` hits every triple where ``split_part(concept,'.',1) =
+'revenue'``).
 
-Data path: ingest buffer only (rows pushed by AAM Runners via POST /api/dcl/ingest).
-If no data has been ingested, queries return status="no_data" with an explicit message.
+Identity contract (I1/I2):
+- tenant_id is required. If missing, we try to auto-resolve from entity_id
+  or a single-tenant store; on failure we raise ValueError so the FastAPI
+  wrapper returns 422.
+- No ``run_id`` leaks out — ``QueryMetadata`` carries ``dcl_ingest_id``.
 """
 
 import logging
@@ -19,7 +23,9 @@ logger = logging.getLogger(__name__)
 from pydantic import BaseModel, Field
 
 from backend.api.semantic_export import PUBLISHED_METRICS, resolve_metric
+from backend.core.db import get_connection
 from backend.core.mode_state import get_current_mode
+from backend.db.triple_store import TripleStore
 
 
 class QueryRequest(BaseModel):
@@ -89,9 +95,9 @@ class QueryMetadata(BaseModel):
     mode: str
     record_count: int
     source: str = "ingest"
-    run_id: Optional[str] = None
+    dcl_ingest_id: Optional[str] = None
     entity_id: Optional[str] = None
-    tenant_id: str = "default"
+    tenant_id: Optional[str] = None
     snapshot_name: Optional[str] = None
     run_timestamp: Optional[str] = None
     total_count: Optional[int] = None
@@ -229,330 +235,218 @@ def _period_in_range(period: str, start: str, end: str) -> bool:
     return True
 
 
-def _query_ingest_store(
+_NON_ADDITIVE_UNITS = {
+    "percent", "pct", "ratio", "score", "days", "hours", "months", "index",
+}
+
+
+def _resolve_tenant_id(
+    explicit_tenant_id: Optional[str],
+    entity_id: Optional[str],
+) -> str:
+    """Resolve tenant_id per I2.
+
+    Raises ValueError (→ 422) when no tenant can be determined. Never returns
+    a sentinel string like ``'default'`` — that was the silent-fallback the
+    store rebuild removed.
+    """
+    store = TripleStore()
+    if explicit_tenant_id:
+        return explicit_tenant_id
+    if entity_id:
+        return store.resolve_tenant_for_entity(entity_id)
+    return store.resolve_single_tenant()
+
+
+def _tenant_has_triples(tenant_id: str) -> bool:
+    """Return True if the tenant has any rows in current_triples.
+
+    Used to distinguish ``no_data`` (store empty for this tenant) from
+    ``no_results`` (store populated but the specific query matched zero).
+    """
+    sql = "SELECT 1 FROM current_triples WHERE tenant_id = %s LIMIT 1"
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (tenant_id,))
+            return cur.fetchone() is not None
+
+
+def _extract_numeric(v: Any) -> Optional[float]:
+    """Pull a numeric out of a JSONB value field.
+
+    current_triples.value is JSONB; Farm writes either a raw number or an
+    object like {"amount": N}. We tolerate both and return None when the
+    payload is non-numeric (e.g. string metadata).
+    """
+    if v is None:
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, dict):
+        for k in ("amount", "value", "number"):
+            inner = v.get(k)
+            if isinstance(inner, (int, float)):
+                return float(inner)
+        return None
+    if isinstance(v, str):
+        try:
+            return float(v)
+        except ValueError:
+            return None
+    return None
+
+
+def _query_current_triples(
     metric: str,
-    dimensions: List[str],
-    filters: Dict[str, Union[str, List[str]]],
     time_range: Optional[Dict[str, str]],
-    tenant_id: Optional[str] = None,
-    entity_id: Optional[str] = None,
-    consolidate: bool = False,
-) -> Tuple[List[QueryDataPoint], Optional["RunReceipt"]]:
+    tenant_id: str,
+    entity_id: Optional[str],
+    consolidate: bool,
+    is_additive: bool,
+) -> Tuple[List[QueryDataPoint], Dict[str, Any]]:
+    """Read metric data points from current_triples for a resolved tenant.
+
+    Mirrors ``triple_monitor.get_sankey_aggregation``:
+    - WHERE tenant_id + ``split_part(concept,'.',1) = metric`` + optional
+      entity_id and period range
+    - Aggregates by period (and entity_id when multiple entities are
+      present and ``consolidate`` is False)
+    - SUM for additive metrics; AVG for rate/percentage/score metrics
+
+    Returns ``(data_points, meta)``. ``meta`` carries ``dcl_ingest_id``,
+    ``snapshot_name``, ``run_timestamp``, ``source_system``, ``source_list``,
+    ``entity_id``, and ``tenant_id``. When zero rows match, returns an empty
+    list plus a meta dict with tenant_id/entity_id only.
     """
-    Query the materialized metric data points from the ingest buffer.
+    where = ["tenant_id = %s", "split_part(concept, '.', 1) = %s"]
+    params: List[Any] = [tenant_id, metric]
 
-    The MetricMaterializer transforms raw source-system rows (Salesforce
-    Amount, NetSuite amount, etc.) into canonical metric data points
-    using ontology concepts. This function reads those materialized
-    points.
+    if entity_id:
+        where.append("entity_id = %s")
+        params.append(entity_id)
 
-    Falls back to direct raw-row scanning if no materialized data
-    exists (backward compat for any pre-aggregated rows).
+    if time_range:
+        start = (time_range.get("start") or "").strip()
+        end = (time_range.get("end") or "").strip()
+        if start:
+            if len(start) == 4 and start.isdigit():
+                where.append("LEFT(period, 4) >= %s")
+            else:
+                where.append("period >= %s")
+            params.append(start)
+        if end:
+            if len(end) == 4 and end.isdigit():
+                where.append("LEFT(period, 4) <= %s")
+            else:
+                where.append("period <= %s")
+            params.append(end)
 
-    Returns:
-        (data_points, receipt) — receipt is the most-recent run that
-        contributed rows, or None if no ingested data matches.
-    """
-    from backend.api.ingest import get_ingest_store, RunReceipt, get_canonical_sources
-    from backend.aam.ingress import normalize_source_id as _norm_src
-
-    import logging as _log
-    _logger = _log.getLogger(__name__)
-
-    store = get_ingest_store()
-    all_receipts = store.get_all_receipts()
-    if not all_receipts:
-        return [], None
-
-    # --- Tenant isolation ---
-    if tenant_id and tenant_id != "default":
-        all_receipts = [r for r in all_receipts if r.tenant_id == tenant_id]
-        if not all_receipts:
-            return [], None
-    elif tenant_id == "default" or not tenant_id:
-        unique_tenants = sorted({r.tenant_id for r in all_receipts})
-        if len(unique_tenants) == 1:
-            _logger.warning(
-                f"tenant_id='default' with single tenant '{unique_tenants[0]}' — auto-selecting. "
-                f"Set tenant_id explicitly to suppress this warning."
-            )
-        elif len(unique_tenants) > 1 and entity_id:
-            # entity_id provided — query across all tenants and let the
-            # entity_id filter (below) narrow the results.  The entity's
-            # rows carry _entity_id so they will self-select.
-            _logger.info(
-                f"Multiple tenants {unique_tenants} but entity_id='{entity_id}' — "
-                f"querying across all tenants; entity_id filter will narrow results."
-            )
-        elif len(unique_tenants) > 1:
-            raise ValueError(
-                f"Multiple tenants found: {unique_tenants}. "
-                f"Specify entity_id or tenant_id to select one."
-            )
-
-    # --- Primary path: materialized data points ---
-    mat_points = store.get_materialized_points(
-        metric=metric,
-        dimensions=dimensions if dimensions else None,
-        filters=filters if filters else None,
-        time_range=time_range,
-        tenant_id=tenant_id,
+    sql = (
+        "SELECT period, entity_id, source_system, value, "
+        "confidence_score, confidence_tier "
+        "FROM current_triples WHERE " + " AND ".join(where)
     )
 
-    # Filter to canonical sources only — reject AAM demo data
-    if mat_points:
-        mat_points = [
-            pt for pt in mat_points
-            if _norm_src(pt.get("source_system", "")) in get_canonical_sources()
-        ]
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
 
-    # WS1.3: Filter materialized points by entity_id when specified.
-    # When entity_id is None, all points pass through (backward compatible).
-    # When entity_id IS specified: strict filter — only points tagged with
-    # that entity_id pass. Unscoped data (_entity_id=None) is rejected to
-    # prevent cross-entity contamination.
-    if mat_points and entity_id:
-        mat_points = [
-            pt for pt in mat_points
-            if pt.get("_entity_id") == entity_id
-        ]
+    if not rows:
+        return [], {"tenant_id": tenant_id, "entity_id": entity_id}
 
-    if mat_points:
-        # --- Deduplicate across pipeline runs ---
-        # Multiple runs produce separate materialized keys (run_id:pipe_id).
-        # Without dedup, the same metric/period/source gets summed N times
-        # (once per run), inflating values by Nx.
-        #
-        # Dedup key: (period, source_system, dim_key)
-        # If same key appears from multiple runs or pipes, keep the LATEST
-        # (by materialized_at timestamp).  Different source_systems for the
-        # same metric/period are kept — they represent genuinely different
-        # data (e.g. netsuite revenue + salesforce revenue).
-        # pipe_id is intentionally excluded: multiple pipes from the same
-        # source_system for the same metric/period are duplicates (e.g.,
-        # two financial_summary pushes under different pipe_ids).
-        _dedup: dict = {}
-        for pt in mat_points:
-            period = pt.get("period", "current")
-            src = pt.get("source_system", "")
-            dim_key = tuple(sorted(pt.get("dimensions", {}).items()))
-            # Include _tenant_id in dedup key to prevent cross-tenant overwrites.
-            # Without this, data from different tenants for the same entity_id
-            # would dedup by timestamp, letting stale AAM pipe data overwrite
-            # correct Farm multi-entity data.
-            tid = pt.get("_tenant_id", "")
-            dedup_key = (period, src, dim_key, tid)
-            existing = _dedup.get(dedup_key)
-            if existing is None:
-                _dedup[dedup_key] = pt
-            else:
-                # Keep the point with the later materialized_at timestamp
-                if pt.get("materialized_at", "") > existing.get("materialized_at", ""):
-                    _dedup[dedup_key] = pt
-        mat_points = list(_dedup.values())
+    unique_entities = {r[1] for r in rows if r[1]}
+    group_by_entity = len(unique_entities) > 1 and not consolidate
 
-        # Aggregate across pipes: group by (period, dim_key).
-        # Each pipe's materialization already aggregated its own rows;
-        # this step combines the same metric from multiple source pipes.
-        #
-        # Additive metrics (revenue, headcount, etc.) → SUM
-        # Non-additive metrics (_pct, _ratio, _score, _days, etc.) → AVERAGE
-        from collections import defaultdict as _dd
-        _NON_ADDITIVE_UNITS = {"percent", "pct", "ratio", "score", "days", "hours", "months", "index"}
-        _metric_unit = None
-        _metric_unit_error = None
-        try:
-            _mdef = resolve_metric(metric)
-            if _mdef and _mdef.unit:
-                _metric_unit = _mdef.unit.lower()
-        except Exception as e:
-            logger.warning(f"[query] Metric unit resolution failed for metric={metric}: {e}", exc_info=True)
-            _metric_unit_error = "Unit detection unavailable"
-        _is_additive = _metric_unit not in _NON_ADDITIVE_UNITS
+    agg_sum: Dict[Tuple[str, Optional[str]], float] = {}
+    agg_count: Dict[Tuple[str, Optional[str]], int] = {}
+    agg_conf: Dict[Tuple[str, Optional[str]], Tuple[Optional[float], Optional[str]]] = {}
+    sources_by_key: Dict[Tuple[str, Optional[str]], set] = {}
 
-        # WS1.3: Determine unique entity IDs in the result set.
-        # When consolidate=False and multiple entities exist, group by entity.
-        # When consolidate=True or only one entity, aggregate across entities.
-        _unique_entities = {pt.get("_entity_id") for pt in mat_points}
-        _unique_entities.discard(None)
-        _multi_entity = len(_unique_entities) > 1
-        _group_by_entity = _multi_entity and not consolidate
-
-        # ── Prevent total+regional double-counting ──────────────────
-        # Farm's financial_summary pipe pushes a total row (no dimensions)
-        # plus regional rows (with territory dimension) per period.  When
-        # the query requests no dimensions, both kinds collapse to the same
-        # aggregation key and get summed → 2× the real value.
-        #
-        # Fix: when no dimensions are requested, prefer undimensioned
-        # (pre-aggregated total) points.  Only fall through to dimensioned
-        # points if no totals exist for a given period.
-        if not dimensions:
-            _has_total: set = set()   # periods that have an undimensioned point
-            _has_detail: set = set()  # periods that have dimensioned points
-            for pt in mat_points:
-                period = pt.get("period", "current")
-                if pt.get("dimensions"):
-                    _has_detail.add(period)
-                else:
-                    _has_total.add(period)
-            # For periods where BOTH exist, drop the dimensioned rows
-            _overlapping = _has_total & _has_detail
-            if _overlapping:
-                mat_points = [
-                    pt for pt in mat_points
-                    if pt.get("dimensions") is None
-                    or not pt.get("dimensions")
-                    or pt.get("period", "current") not in _overlapping
-                ]
-
-        agg: dict = _dd(float)
-        agg_count: dict = _dd(int)
-        agg_entity: dict = {}  # track entity_id per aggregation key
-        # Track mapping metadata per aggregation key (use min confidence across merged points)
-        agg_confidence: dict = {}  # key → (score, tier, source, status)
-        for pt in mat_points:
-            if dimensions:
-                # Only keep the requested dimensions in the grouping key
-                pt_dims = pt.get("dimensions", {})
-                dim_vals = {d: pt_dims[d] for d in dimensions if d in pt_dims}
-            else:
-                # No dimensions requested → aggregate ALL into a single total per period
-                dim_vals = {}
-            period = pt.get("period", "current")
-            pt_entity = pt.get("_entity_id")
-
-            # WS1.3: Include entity_id in grouping key when not consolidating across entities
-            if _group_by_entity:
-                key = (period, tuple(sorted(dim_vals.items())), pt_entity)
-            else:
-                key = (period, tuple(sorted(dim_vals.items())), None)
-            agg[key] += float(pt["value"])
-            agg_count[key] += 1
-            # Track entity for single-entity results (carry provenance even when not grouping)
-            if pt_entity and key not in agg_entity:
-                agg_entity[key] = pt_entity
-
-            # Propagate mapping metadata — use min confidence when merging
-            pt_conf = pt.get("confidence_score")
-            if pt_conf is not None:
-                existing = agg_confidence.get(key)
-                if existing is None or pt_conf < existing[0]:
-                    agg_confidence[key] = (
-                        pt_conf,
-                        pt.get("confidence_tier"),
-                        pt.get("mapping_source"),
-                        pt.get("mapping_status"),
-                    )
-
-        def _build_point(k, value):
-            conf = agg_confidence.get(k)
-            return QueryDataPoint(
-                period=k[0], value=round(value, 6), dimensions=dict(k[1]),
-                entity_id=k[2] or agg_entity.get(k),
-                confidence_score=conf[0] if conf else None,
-                confidence_tier=conf[1] if conf else None,
-                mapping_source=conf[2] if conf else None,
-                mapping_status=conf[3] if conf else None,
-            )
-
-        if _is_additive:
-            data_points = [
-                _build_point(k, v)
-                for k, v in sorted(agg.items())
-            ]
-        else:
-            # Average for rate/percentage/score metrics
-            data_points = [
-                _build_point(k, agg[k] / agg_count[k])
-                for k in sorted(agg.keys())
-            ]
-
-        # Pick the receipt whose source actually contributed data (not just
-        # the most-recent receipt from any source).  Materialized points carry
-        # source_system — match against receipts.
-        _contributing_sources = {pt.get("source_system") for pt in mat_points if pt.get("source_system")}
-        _candidate_receipts = [r for r in all_receipts if r.source_system in _contributing_sources]
-        if _candidate_receipts:
-            contributing_receipt = max(_candidate_receipts, key=lambda r: r.received_at)
-        else:
-            contributing_receipt = max(all_receipts, key=lambda r: r.received_at)
-        return data_points, contributing_receipt
-
-    # --- Fallback: scan raw rows (legacy path) ---
-    # Kept for backward compat with any rows that were pushed with
-    # canonical field names (e.g. {"revenue": 50.0, "period": "2026-Q4"})
-    data_points: List[QueryDataPoint] = []
-    contributing_receipt: Optional[RunReceipt] = None
-
-    for receipt in reversed(all_receipts):
-        # Skip non-canonical sources in fallback path too
-        if _norm_src(receipt.source_system) not in get_canonical_sources():
+    for period, row_entity, source_system, raw_value, conf_score, conf_tier in rows:
+        num = _extract_numeric(raw_value)
+        if num is None:
             continue
-        rows = store.get_rows(receipt.run_id, receipt.pipe_id)
-        for row in rows:
-            if metric not in row:
-                continue
+        period_key = period or "current"
+        key = (period_key, row_entity if group_by_entity else None)
+        agg_sum[key] = agg_sum.get(key, 0.0) + num
+        agg_count[key] = agg_count.get(key, 0) + 1
+        score_f = float(conf_score) if conf_score is not None else None
+        existing = agg_conf.get(key)
+        if existing is None or (
+            score_f is not None
+            and (existing[0] is None or score_f < existing[0])
+        ):
+            agg_conf[key] = (score_f, conf_tier)
+        if source_system:
+            sources_by_key.setdefault(key, set()).add(source_system)
 
-            # WS1.3: entity_id filter in fallback path
-            if entity_id and row.get("_entity_id") != entity_id:
-                continue
+    if not agg_sum:
+        return [], {"tenant_id": tenant_id, "entity_id": entity_id}
 
-            value = row[metric]
-            if not isinstance(value, (int, float)):
-                continue
+    data_points: List[QueryDataPoint] = []
+    for key in sorted(agg_sum.keys(), key=lambda k: (k[0], k[1] or "")):
+        value = agg_sum[key] if is_additive else agg_sum[key] / agg_count[key]
+        conf = agg_conf.get(key, (None, None))
+        data_points.append(QueryDataPoint(
+            period=key[0],
+            value=round(value, 6),
+            dimensions={},
+            entity_id=key[1],
+            confidence_score=conf[0],
+            confidence_tier=conf[1],
+        ))
 
-            period = row.get("period", "current")
+    meta_sql = (
+        "SELECT entity_id, current_run_id::text, current_snapshot_name, "
+        "updated_at FROM tenant_runs "
+        "WHERE tenant_id::text = %s "
+    )
+    meta_params: List[Any] = [tenant_id]
+    if entity_id:
+        meta_sql += "AND entity_id = %s "
+        meta_params.append(entity_id)
+    meta_sql += "ORDER BY updated_at DESC LIMIT 1"
 
-            if time_range:
-                start = time_range.get("start", "")
-                end = time_range.get("end", "")
-                if start and period < start:
-                    continue
-                if end and period > end:
-                    continue
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(meta_sql, meta_params)
+            meta_row = cur.fetchone()
 
-            dim_vals: Dict[str, str] = {}
-            skip = False
-            for dim in dimensions:
-                dv = row.get(dim)
-                if dv is None:
-                    skip = True
-                    break
-                dim_vals[dim] = str(dv)
+    all_sources: set = set()
+    for srcs in sources_by_key.values():
+        all_sources.update(srcs)
+    source_list = sorted(s for s in all_sources if s)
+    primary_source = source_list[0] if source_list else None
 
-                fv = filters.get(dim)
-                if fv:
-                    if isinstance(fv, list) and str(dv) not in fv:
-                        skip = True
-                        break
-                    elif isinstance(fv, str) and str(dv) != fv:
-                        skip = True
-                        break
-            if skip:
-                continue
-
-            data_points.append(QueryDataPoint(
-                period=period,
-                value=float(value),
-                dimensions=dim_vals,
-                entity_id=row.get("_entity_id"),  # WS1.3: carry entity provenance
-            ))
-            contributing_receipt = receipt
-
-    return data_points, contributing_receipt
+    meta: Dict[str, Any] = {
+        "tenant_id": tenant_id,
+        "entity_id": entity_id,
+        "source_system": primary_source,
+        "source_list": source_list,
+    }
+    if meta_row:
+        tr_entity, tr_ingest_id, tr_snapshot, tr_updated = meta_row
+        meta["entity_id"] = entity_id or tr_entity
+        meta["dcl_ingest_id"] = tr_ingest_id
+        meta["snapshot_name"] = tr_snapshot
+        meta["run_timestamp"] = tr_updated.isoformat() if tr_updated else None
+    return data_points, meta
 
 
 def execute_query(request: QueryRequest) -> QueryResponse:
-    """Execute a validated query against the ingest buffer.
+    """Execute a validated query against ``current_triples``.
 
-    WS1.3 Entity behavior:
+    Entity behavior:
     - entity_id=None, single entity → backward compatible
-    - entity_id="xyz" → filter ingest by entity
+    - entity_id="xyz" → filter to that entity's rows
     - consolidate=False (default) → per-entity results when multiple entities exist
     - consolidate=True → sum across entities (requires explicit opt-in)
+
+    Identity:
+    - tenant_id must be resolvable; if not, raises ValueError → 422 (I2).
+    - Response metadata carries ``dcl_ingest_id`` (I1), never bare run_id.
     """
-    _metric_unit_error = None
     metric_def = resolve_metric(request.metric)
 
     if metric_def is None:
@@ -562,43 +456,36 @@ def execute_query(request: QueryRequest) -> QueryResponse:
     grain = request.grain or metric_def.default_grain or "quarter"
     unit = _resolve_unit(metric_def)
 
-    # ------------------------------------------------------------------
-    # Query ingest buffer — the only data path
-    # ------------------------------------------------------------------
-    data_points, ingest_receipt = _query_ingest_store(
+    metric_unit = (getattr(metric_def, "unit", None) or "").lower()
+    is_additive = metric_unit not in _NON_ADDITIVE_UNITS
+
+    tenant_id = _resolve_tenant_id(request.tenant_id, request.entity_id)
+
+    data_points, meta = _query_current_triples(
         metric=resolved_id,
-        dimensions=request.dimensions,
-        filters=request.filters,
         time_range=request.time_range,
-        tenant_id=request.tenant_id,
+        tenant_id=tenant_id,
         entity_id=request.entity_id,
         consolidate=request.consolidate,
+        is_additive=is_additive,
     )
 
-    # ------------------------------------------------------------------
-    # No data — determine if store is empty (no_data) or query matched
-    # nothing (no_results), and return explicit status
-    # ------------------------------------------------------------------
-    if not data_points:
-        from backend.api.ingest import get_ingest_store
-        store = get_ingest_store()
-        store_stats = store.get_stats()
-        total_rows = store_stats.get("total_rows_buffered", 0)
-        current_mode = get_current_mode()
+    current_mode = get_current_mode()
 
-        if total_rows == 0:
+    if not data_points:
+        has_any = _tenant_has_triples(tenant_id)
+        if not has_any:
             status = "no_data"
             error_msg = (
-                f"No ingested data available. The ingest buffer is empty "
-                f"(mode='{current_mode.data_mode}'). "
+                f"No triples in current_triples for tenant_id={tenant_id}. "
                 f"Run the Farm→DCL pipeline to ingest data."
             )
         else:
             status = "no_results"
             error_msg = (
                 f"No results for metric='{request.metric}', "
-                f"entity_id='{request.entity_id}'. "
-                f"The ingest buffer has {total_rows} rows but none matched this query."
+                f"entity_id='{request.entity_id}', tenant_id='{tenant_id}'. "
+                f"current_triples has rows for this tenant but none match the query."
             )
 
         logger.warning(error_msg)
@@ -617,12 +504,12 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                 mode=current_mode.data_mode,
                 record_count=0,
                 source="ingest",
+                tenant_id=tenant_id,
                 entity_id=request.entity_id,
                 error=error_msg,
             ),
         )
 
-    # Apply persona-contextual definitions
     persona_label = None
     persona_definition_text = None
     if request.persona:
@@ -634,9 +521,7 @@ def execute_query(request: QueryRequest) -> QueryResponse:
         if pcd_def:
             persona_definition_text = pcd_def.definition
 
-            # Apply value adjustments
             if pcd_def.value_override is not None:
-                # For override metrics like "customers", replace all data points
                 if data_points:
                     for dp in data_points:
                         dp.value = pcd_def.value_override
@@ -649,14 +534,6 @@ def execute_query(request: QueryRequest) -> QueryResponse:
             elif pcd_def.value_multiplier is not None and pcd_def.value_multiplier != 1.0:
                 for dp in data_points:
                     dp.value = round(dp.value * pcd_def.value_multiplier, 2)
-
-    mode = get_current_mode()
-
-    run_id = ingest_receipt.run_id
-    run_timestamp = ingest_receipt.run_timestamp
-    snapshot_name = ingest_receipt.snapshot_name
-    tenant_id = ingest_receipt.tenant_id
-    source_label = ingest_receipt.source_system
 
     total_count = len(data_points)
     ranking_type = None
@@ -677,19 +554,11 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                 ranking_type = "top_n" if reverse else "bottom_n"
             data_points = data_points[:request.limit]
 
-    # Build enriched response fields
     enrichment_errors: Dict[str, str] = {}
-    if _metric_unit_error:
-        enrichment_errors["metric_unit"] = _metric_unit_error
-
-    # Provenance comes from ingest pipeline receipts only
-    provenance_info = []
-
-    # DCL is SE-only — no entity resolution or conflict detection.
+    provenance_info: List[ProvenanceInfo] = []
     entity_info = None
     conflicts_info = None
 
-    # Temporal warning
     temporal_warning = None
     if request.time_range:
         try:
@@ -705,8 +574,14 @@ def execute_query(request: QueryRequest) -> QueryResponse:
                     message=warning.message,
                 )
         except Exception as e:
-            logger.warning(f"[query] Temporal warning check failed for metric={request.metric}: {e}", exc_info=True)
+            logger.warning(
+                f"[query] Temporal warning check failed for metric={request.metric}: {e}",
+                exc_info=True,
+            )
             enrichment_errors["temporal"] = "Temporal analysis unavailable"
+
+    source_list = meta.get("source_list") or []
+    sources_for_metadata = source_list if source_list else ["ingest"]
 
     return QueryResponse(
         status="ok",
@@ -717,17 +592,17 @@ def execute_query(request: QueryRequest) -> QueryResponse:
         unit=unit,
         data=data_points,
         metadata=QueryMetadata(
-            sources=[source_label] if source_label else ["ingest"],
+            sources=sources_for_metadata,
             freshness=datetime.utcnow().isoformat() + "Z",
             quality_score=1.0,
-            mode=mode.data_mode,
+            mode=current_mode.data_mode,
             record_count=len(data_points),
             source="ingest",
-            run_id=run_id,
-            entity_id=request.entity_id,
-            tenant_id=tenant_id,
-            snapshot_name=snapshot_name,
-            run_timestamp=run_timestamp,
+            dcl_ingest_id=meta.get("dcl_ingest_id"),
+            entity_id=meta.get("entity_id") or request.entity_id,
+            tenant_id=meta.get("tenant_id"),
+            snapshot_name=meta.get("snapshot_name"),
+            run_timestamp=meta.get("run_timestamp"),
             total_count=total_count if request.order_by else None,
             ranking_type=ranking_type,
             order=order,
@@ -743,7 +618,11 @@ def execute_query(request: QueryRequest) -> QueryResponse:
 
 
 def handle_query(request: QueryRequest) -> Union[QueryResponse, QueryError]:
-    """Main entry point for query handling."""
+    """Main entry point for query handling.
+
+    ValueError from _resolve_tenant_id surfaces as code=IDENTITY_MISSING so
+    the FastAPI layer maps it to 422 (I2: no silent tenant fallback).
+    """
     error = validate_query(request)
     if error:
         return error
@@ -753,5 +632,5 @@ def handle_query(request: QueryRequest) -> Union[QueryResponse, QueryError]:
     except ValueError as exc:
         return QueryError(
             error=str(exc),
-            code="QUERY_ERROR",
+            code="IDENTITY_MISSING",
         )

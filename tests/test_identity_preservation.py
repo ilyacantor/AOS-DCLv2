@@ -149,7 +149,6 @@ def test_i6_no_id_string_mangling():
 # ---------------------------------------------------------------------------
 
 _IS_ACTIVE_WHITELIST = {
-    "backend/tests/test_farm_v2_integration.py",  # Salesforce synthetic user field
     "config/ontology_concepts.yaml",              # HR worker_status schema
 }
 
@@ -176,8 +175,6 @@ def test_mig016_no_is_active_in_code():
 _SEMANTIC_WHITELIST = {
     "backend/api/routes/ingest_triples.py",
     "backend/db/triple_store.py",
-    "backend/engine/materialized_views.py",
-    "backend/engine/query_resolver_v2.py",
     "backend/engine/dcl_engine.py",
     "backend/api/routes/recon_checks.py",
     "backend/api/routes/v2_helpers.py",

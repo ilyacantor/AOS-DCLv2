@@ -304,9 +304,11 @@ class TripleStore:
                     (tenant_id, entity_id, new_run_id),
                 )
 
-                # 3. Re-count the slice and upsert tenant_runs.run_row_count.
-                #    Using an authoritative COUNT keeps the invariant intact even
-                #    if a prior batch inserted rows that are still present.
+                # 3. Re-count the slice and upsert tenant_runs with denormalized
+                #    enrichment aggregates computed over the (tenant, entity)
+                #    slice of current_triples. tenant_runs is the per-entity
+                #    summary row — keeping these up-to-date on every batch lets
+                #    /api/dcl/snapshots answer with a trivial 10-row read (B18).
                 cur.execute(
                     "SELECT COUNT(*) FROM semantic_triples "
                     "WHERE tenant_id = %s AND entity_id = %s AND run_id = %s",
@@ -314,19 +316,41 @@ class TripleStore:
                 )
                 new_row_count = cur.fetchone()[0]
 
+                enrichment = self._compute_entity_enrichment(
+                    cur, tenant_id, entity_id
+                )
+
                 cur.execute(
                     """
                     INSERT INTO tenant_runs (
                         tenant_id, entity_id, current_run_id, previous_run_id,
                         current_snapshot_name, previous_snapshot_name,
-                        run_row_count, previous_run_row_count, updated_at
+                        run_row_count, previous_run_row_count, updated_at,
+                        source_systems, fabric_pairs, unique_pipes,
+                        first_received_at, latest_received_at
                     )
-                    VALUES (%s, %s, %s, NULL, NULL, NULL, %s, NULL, now())
+                    VALUES (%s, %s, %s, NULL, NULL, NULL, %s, NULL, now(),
+                            %s, %s, %s, %s, %s)
                     ON CONFLICT (tenant_id, entity_id) DO UPDATE
-                      SET run_row_count = EXCLUDED.run_row_count,
-                          updated_at    = now()
+                      SET run_row_count      = EXCLUDED.run_row_count,
+                          updated_at         = now(),
+                          source_systems     = EXCLUDED.source_systems,
+                          fabric_pairs       = EXCLUDED.fabric_pairs,
+                          unique_pipes       = EXCLUDED.unique_pipes,
+                          first_received_at  = EXCLUDED.first_received_at,
+                          latest_received_at = EXCLUDED.latest_received_at
                     """,
-                    (tenant_id, entity_id, new_run_id, new_row_count),
+                    (
+                        tenant_id,
+                        entity_id,
+                        new_run_id,
+                        new_row_count,
+                        enrichment["source_systems"],
+                        enrichment["fabric_pairs"],
+                        enrichment["unique_pipes"],
+                        enrichment["first_received_at"],
+                        enrichment["latest_received_at"],
+                    ),
                 )
 
                 # 4. Enforce per-tenant LIFO cap atomically, same as swap_and_delete.
@@ -339,6 +363,54 @@ class TripleStore:
 
                 conn.commit()
                 return len(new_rows)
+
+    @staticmethod
+    def _compute_entity_enrichment(cur, tenant_id: str, entity_id: str) -> dict:
+        """Compute denormalized aggregates for a single (tenant, entity) slice.
+
+        Scoped to one entity so the query hits idx_current_triples_entity
+        (tenant_id, entity_id) and touches only that slice's rows — cheap even
+        when the tenant has hundreds of thousands of rows total. Results are
+        written into tenant_runs so /api/dcl/snapshots can read them without
+        re-aggregating at request time (B18 budget).
+        """
+        cur.execute(
+            """
+            SELECT
+                COALESCE(
+                    ARRAY_AGG(DISTINCT source_system) FILTER (WHERE source_system IS NOT NULL),
+                    ARRAY[]::text[]
+                ),
+                COALESCE(
+                    ARRAY_AGG(DISTINCT fabric_plane || '|' || COALESCE(fabric_product, '') || '|' || COALESCE(source_system, ''))
+                        FILTER (WHERE fabric_plane IS NOT NULL),
+                    ARRAY[]::text[]
+                ),
+                COUNT(DISTINCT pipe_id),
+                MIN(created_at),
+                MAX(created_at)
+            FROM current_triples
+            WHERE tenant_id = %s AND entity_id = %s
+            """,
+            (tenant_id, entity_id),
+        )
+        row = cur.fetchone()
+        if row is None:
+            return {
+                "source_systems": [],
+                "fabric_pairs": [],
+                "unique_pipes": 0,
+                "first_received_at": None,
+                "latest_received_at": None,
+            }
+        source_systems, fabric_pairs, unique_pipes, first_at, last_at = row
+        return {
+            "source_systems": list(source_systems or []),
+            "fabric_pairs": list(fabric_pairs or []),
+            "unique_pipes": int(unique_pipes or 0),
+            "first_received_at": first_at,
+            "latest_received_at": last_at,
+        }
 
     @staticmethod
     def _enforce_tenant_cap(
@@ -458,7 +530,10 @@ class TripleStore:
                         f"tenant={tenant_id} entity={entity_id} run={new_run_id}"
                     )
 
-                # Step 3: UPSERT tenant_runs — atomic pointer swap
+                # Step 3: UPSERT tenant_runs — atomic pointer swap. The
+                #    enrichment aggregates (source_systems, fabric_pairs, etc.)
+                #    are computed AFTER current_triples is rebuilt in Step 5,
+                #    so we placeholder them here and re-UPDATE at the end.
                 cur.execute(
                     """
                     INSERT INTO tenant_runs (
@@ -561,6 +636,33 @@ class TripleStore:
                     ON CONFLICT (id) DO NOTHING
                     """,
                     (tenant_id, entity_id, new_run_id),
+                )
+
+                # Step 5b: refresh denormalized enrichment aggregates now that
+                # current_triples reflects the new slice. Kept in tenant_runs
+                # so /api/dcl/snapshots answers via a trivial 10-row read (B18).
+                enrichment = self._compute_entity_enrichment(
+                    cur, tenant_id, entity_id
+                )
+                cur.execute(
+                    """
+                    UPDATE tenant_runs
+                       SET source_systems     = %s,
+                           fabric_pairs       = %s,
+                           unique_pipes       = %s,
+                           first_received_at  = %s,
+                           latest_received_at = %s
+                     WHERE tenant_id = %s AND entity_id = %s
+                    """,
+                    (
+                        enrichment["source_systems"],
+                        enrichment["fabric_pairs"],
+                        enrichment["unique_pipes"],
+                        enrichment["first_received_at"],
+                        enrichment["latest_received_at"],
+                        tenant_id,
+                        entity_id,
+                    ),
                 )
 
                 # Step 6: enforce per-tenant LIFO cap on tenant_runs (atomic
