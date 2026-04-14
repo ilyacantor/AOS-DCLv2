@@ -230,10 +230,18 @@ class TripleStore:
         new_run_id: str,
         new_rows: list[dict],
     ) -> int:
-        """Append rows for an in-progress entity run without swapping the pointer.
+        """Append rows for an in-progress entity run, maintaining the store invariant.
 
-        Used for multi-batch ingest — caller must finalize with swap_and_delete
-        once all batches have been submitted. Validates identity on every row.
+        Every batch keeps semantic_triples, current_triples, and
+        tenant_runs.run_row_count in lockstep for the (tenant, entity, run_id)
+        slice — no finalizing swap_and_delete is required. Callers that forget
+        to call a final swap no longer leave the store drifted.
+
+        Transitions (a different current_run_id already exists for the entity)
+        must go through swap_and_delete so the prior run is archived; this
+        method raises ValueError in that case instead of silently creating an
+        untracked run. Enforces the per-tenant LIFO cap atomically, same as
+        swap_and_delete.
         """
         if not tenant_id or not entity_id or not new_run_id:
             raise ValueError(
@@ -247,7 +255,88 @@ class TripleStore:
                 cur.execute(
                     f"SET LOCAL statement_timeout = {int(INGEST_STATEMENT_TIMEOUT_MS)}"
                 )
+
+                # Reject transitions — archive lives in swap_and_delete.
+                cur.execute(
+                    "SELECT current_run_id FROM tenant_runs "
+                    "WHERE tenant_id = %s AND entity_id = %s",
+                    (tenant_id, entity_id),
+                )
+                existing = cur.fetchone()
+                if existing and str(existing[0]) != str(new_run_id):
+                    raise ValueError(
+                        f"append_rows_for_entity: cannot transition from "
+                        f"run_id={existing[0]} to {new_run_id} on entity "
+                        f"{entity_id}. Use swap_and_delete for transitions."
+                    )
+
+                # 1. COPY new rows into semantic_triples
                 self._copy_triples_into(cur, new_rows)
+
+                # 2. Mirror the newly-COPYed rows into current_triples.
+                #    NOT EXISTS filters out rows already mirrored by prior batches
+                #    in this run so the re-ingest-safe invariant holds even if a
+                #    caller replays the same batch.
+                cur.execute(
+                    """
+                    INSERT INTO current_triples (
+                        id, tenant_id, entity_id, concept, property, value, period,
+                        currency, unit, source_system, source_table, source_field,
+                        pipe_id, source_run_tag,
+                        confidence_score, confidence_tier,
+                        canonical_id, resolution_method, resolution_confidence,
+                        fabric_plane, fabric_product, created_at
+                    )
+                    SELECT
+                        st.id, st.tenant_id, st.entity_id, st.concept, st.property,
+                        st.value, st.period, st.currency, st.unit,
+                        st.source_system, st.source_table, st.source_field,
+                        st.pipe_id, st.source_run_tag,
+                        st.confidence_score, st.confidence_tier,
+                        st.canonical_id, st.resolution_method, st.resolution_confidence,
+                        st.fabric_plane, st.fabric_product, st.created_at
+                    FROM semantic_triples st
+                    WHERE st.tenant_id = %s AND st.entity_id = %s AND st.run_id = %s
+                      AND NOT EXISTS (
+                          SELECT 1 FROM current_triples ct WHERE ct.id = st.id
+                      )
+                    """,
+                    (tenant_id, entity_id, new_run_id),
+                )
+
+                # 3. Re-count the slice and upsert tenant_runs.run_row_count.
+                #    Using an authoritative COUNT keeps the invariant intact even
+                #    if a prior batch inserted rows that are still present.
+                cur.execute(
+                    "SELECT COUNT(*) FROM semantic_triples "
+                    "WHERE tenant_id = %s AND entity_id = %s AND run_id = %s",
+                    (tenant_id, entity_id, new_run_id),
+                )
+                new_row_count = cur.fetchone()[0]
+
+                cur.execute(
+                    """
+                    INSERT INTO tenant_runs (
+                        tenant_id, entity_id, current_run_id, previous_run_id,
+                        current_snapshot_name, previous_snapshot_name,
+                        run_row_count, previous_run_row_count, updated_at
+                    )
+                    VALUES (%s, %s, %s, NULL, NULL, NULL, %s, NULL, now())
+                    ON CONFLICT (tenant_id, entity_id) DO UPDATE
+                      SET run_row_count = EXCLUDED.run_row_count,
+                          updated_at    = now()
+                    """,
+                    (tenant_id, entity_id, new_run_id, new_row_count),
+                )
+
+                # 4. Enforce per-tenant LIFO cap atomically, same as swap_and_delete.
+                evictions = self._enforce_tenant_cap(cur, tenant_id)
+                if evictions:
+                    logger.info(
+                        "tenant_runs cap=%d enforced for tenant=%s evicted=%d",
+                        TENANT_RUNS_CAP, tenant_id, len(evictions),
+                    )
+
                 conn.commit()
                 return len(new_rows)
 

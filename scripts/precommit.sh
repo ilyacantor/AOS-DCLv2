@@ -197,6 +197,7 @@ is_semantic_triples_whitelisted() {
         scripts/prune_tenant_runs_cap.py) return 0 ;;
         scripts/seed_database.py) return 0 ;;
         tests/test_store_invariants.py) return 0 ;;
+        tests/test_append_invariant.py) return 0 ;;
         tests/test_s1_dcl.py) return 0 ;;
         tests/test_s1_seed.py) return 0 ;;
         tests/test_pipeline_identity.py) return 0 ;;
