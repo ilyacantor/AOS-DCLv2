@@ -2,6 +2,13 @@
 -- Tables: semantic_triples, dimension_values_v2, resolution_workspaces,
 --         engagement_state, run_ledger
 -- Idempotent: safe to re-run.
+--
+-- NOTE (2026-04): is_active column and idx_triples_active predicate removed
+-- here. The column is dropped by mig016; leaving its definition in this
+-- file broke re-runs because CREATE INDEX parse-time validation happens
+-- before CREATE INDEX IF NOT EXISTS's name check, so subsequent deploys
+-- failed with "column is_active does not exist". mig016 now recreates
+-- idx_triples_active unpredicated on (tenant_id).
 
 -- =============================================================================
 -- semantic_triples — core fact store (§3.1)
@@ -34,8 +41,7 @@ CREATE TABLE IF NOT EXISTS semantic_triples (
 
     -- Housekeeping
     created_at      TIMESTAMPTZ DEFAULT now(),
-    updated_at      TIMESTAMPTZ DEFAULT now(),
-    is_active       BOOLEAN DEFAULT true
+    updated_at      TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_triples_entity_concept ON semantic_triples (tenant_id, entity_id, concept);
@@ -43,7 +49,6 @@ CREATE INDEX IF NOT EXISTS idx_triples_concept_period ON semantic_triples (tenan
 CREATE INDEX IF NOT EXISTS idx_triples_run ON semantic_triples (run_id);
 CREATE INDEX IF NOT EXISTS idx_triples_canonical ON semantic_triples (canonical_id) WHERE canonical_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_triples_entity_period ON semantic_triples (tenant_id, entity_id, period);
-CREATE INDEX IF NOT EXISTS idx_triples_active ON semantic_triples (tenant_id, is_active) WHERE is_active = true;
 
 -- =============================================================================
 -- dimension_values_v2 — hierarchical dimension store

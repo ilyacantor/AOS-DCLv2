@@ -34,8 +34,9 @@ Owner: DCL. Convergence reads via SELECT only.
 | `resolution_confidence` | NUMERIC(3,2) | NULL | — | `>= 0 AND <= 1 OR NULL` |
 | `created_at` | TIMESTAMPTZ | NULL | `now()` | — |
 | `updated_at` | TIMESTAMPTZ | NULL | `now()` | — |
-| `is_active` | BOOLEAN | NULL | `true` | — |
 | `source_run_tag` | TEXT | NULL | — | — (added in migration 004) |
+
+> `is_active` was dropped by migration 016 (phase 4 store rebuild). `current_triples` is the live slice; `semantic_triples_archive` holds displaced rows.
 
 ### Indexes
 
@@ -46,11 +47,11 @@ Owner: DCL. Convergence reads via SELECT only.
 | `idx_triples_run` | `(run_id)` | — |
 | `idx_triples_canonical` | `(canonical_id)` | `WHERE canonical_id IS NOT NULL` |
 | `idx_triples_entity_period` | `(tenant_id, entity_id, period)` | — |
-| `idx_triples_active` | `(tenant_id, is_active)` | `WHERE is_active = true` |
+| `idx_triples_active` | `(tenant_id)` | — |
 | `idx_triples_tenant_run` | `(tenant_id, run_id)` | — |
 | `idx_triples_source_run_tag` | `(source_run_tag)` | `WHERE source_run_tag IS NOT NULL` |
-| `idx_triples_concept_domain` | `(split_part(concept, '.', 1), entity_id)` | `WHERE is_active = true` |
-| `idx_triples_canonical_entity` | `(canonical_id, entity_id)` | `WHERE canonical_id IS NOT NULL AND is_active = true` |
+| `idx_triples_concept_domain` | `(split_part(concept, '.', 1), entity_id)` | — |
+| `idx_triples_canonical_entity` | `(canonical_id, entity_id)` | `WHERE canonical_id IS NOT NULL` |
 
 ---
 
