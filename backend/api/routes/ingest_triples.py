@@ -11,6 +11,7 @@ import json
 import os
 import time
 import uuid
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
@@ -426,7 +427,13 @@ def ingest_triples(
         f"duration={duration_ms}ms"
     )
 
-    concept_summary = _triple_store.count_by_domain(req.tenant_id, run_id=req.dcl_ingest_id)
+    # concept_summary is derived from the already-validated in-memory batch,
+    # not a post-txn SELECT. The request has authoritative ground truth for
+    # what we just wrote — a round-trip to semantic_triples to re-count
+    # domains is pure overhead in the hot path.
+    concept_summary = dict(
+        Counter(t.concept.split(".", 1)[0] for t in req.triples)
+    )
 
     logger.info(
         f"[ingest-triples] Ingested {count} triples for dcl_ingest_id={req.dcl_ingest_id}, "
@@ -444,8 +451,17 @@ def ingest_triples(
         duration_ms=duration_ms,
     )
 
-    # On replace ingest, update seed_manifest.json so tests point at the live run
-    if replace and not run_exists:
+    # On replace ingest, update seed_manifest.json so tests point at the live run.
+    # Gated off in the live Farm/Console loop — the file is a diagnostic pointer
+    # used by tests/test_s1_seed.py and scripts/seed_database.py, not a hot-path
+    # artifact. Running file I/O + an extra SELECT per chunked POST is pure
+    # overhead. Operators that want live manifest updates set
+    # DCL_AUTO_UPDATE_SEED_MANIFEST=1 in the dcl-backend env.
+    if (
+        replace
+        and not run_exists
+        and os.environ.get("DCL_AUTO_UPDATE_SEED_MANIFEST") == "1"
+    ):
         _update_seed_manifest(req.tenant_id, req.dcl_ingest_id, count, concept_summary)
 
     # Determine batch-level entity_id: explicit request field takes priority,
