@@ -54,7 +54,7 @@ function App() {
   const { toast } = useToast();
 
   // Shared entity state — all 4 monitoring tabs use this
-  const { entities, selectedEntityId, setSelectedEntityId, loading: entitiesLoading, error: entitiesError } = useEntities();
+  const { entities, selectedEntityId, setSelectedEntityId, loading: entitiesLoading, error: entitiesError, refetch: refetchEntities } = useEntities();
 
   useEffect(() => {
     if (!isRunning) return;
@@ -269,6 +269,7 @@ function App() {
       setIsCachedView(false);
       setIsRunning(false);
       saveCachedRun(graphWithViews, data.run_id);
+      await refetchEntities();
       toast({ title: 'Pipeline Complete', description: `${data.graph.nodes.length} nodes, ${data.graph.links.length} links` });
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to run pipeline';

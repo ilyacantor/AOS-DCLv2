@@ -83,5 +83,5 @@ export function useEntities() {
 
   useEffect(() => { fetchEntities(); }, []);
 
-  return { entities, selectedEntityId, setSelectedEntityId, loading, error };
+  return { entities, selectedEntityId, setSelectedEntityId, loading, error, refetch: fetchEntities };
 }
