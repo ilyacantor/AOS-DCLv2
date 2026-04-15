@@ -83,11 +83,11 @@ test.describe.serial("DCL All Tabs — No Errors", () => {
     ).toHaveLength(0);
   });
 
-  test("3. Graph v2 tab — entity selection renders graph", async ({ page }) => {
+  test("3. Graph tab — entity selection renders graph", async ({ page }) => {
     const consoleErrors: string[] = [];
     setupConsoleCapture(page, consoleErrors);
 
-    await page.goto(DCL_URL, { waitUntil: "load" });
+    await page.goto(DCL_URL, { waitUntil: "domcontentloaded" });
 
     // Wait for auto-load to settle (it fires on mount)
     const runButton = page.locator('button[data-role="run-primary"]');
@@ -95,7 +95,7 @@ test.describe.serial("DCL All Tabs — No Errors", () => {
     await expect(runButton).not.toHaveText("Running...", { timeout: 60_000 });
 
     // Navigate to Graph v2
-    const graphV2Button = page.locator("button").filter({ hasText: "Graph v2" });
+    const graphV2Button = page.locator("button").filter({ hasText: /^Graph$/ });
     await graphV2Button.click();
 
     // Wait for entity selector to populate
@@ -144,7 +144,7 @@ test.describe.serial("DCL All Tabs — No Errors", () => {
       }
     }
 
-    await page.screenshot({ path: "tests/e2e/artifacts/verify_graph_v2.png", fullPage: true });
+    await page.screenshot({ path: "tests/e2e/artifacts/verify_graph_v2.png" });
 
     const appErrors = consoleErrors.filter(
       (e) => !e.includes("ERR_NAME_NOT_RESOLVED") && !e.includes("ERR_BLOCKED_BY_CLIENT")

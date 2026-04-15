@@ -45,7 +45,7 @@ test.describe.serial("Graph v2 — L3 orphan gate", () => {
     await page.evaluate(() => localStorage.clear());
     await page.goto(FRONTEND, { waitUntil: "load" });
 
-    const graphV2Button = page.locator("button").filter({ hasText: "Graph v2" });
+    const graphV2Button = page.locator("button").filter({ hasText: /^Graph$/ });
     await expect(graphV2Button).toBeVisible({ timeout: 15_000 });
     await graphV2Button.click();
 
