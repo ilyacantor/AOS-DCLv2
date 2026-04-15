@@ -36,6 +36,7 @@ item: number, date, chat-ref, file:line, severity, blocking, reason.
 - severity: degraded
 - blocking: clean RACI boundary between DCL and Convergence
 - reason: (Day 0 sprint) engagement_state table is defined in DCL migration 001_semantic_triple_store.sql:93 but is Convergence-owned per RACI v8.3. Pre-commit hook exempts test_s1_dcl.py from this pattern as a marker. The migration itself is the constitutional violation, not the test.
+- TOUCHED 2026-04-15 brain-A: NOT RESOLVED. Plan called for physical drop of engagement_state in Brain-A Part 3 (`dcl/migrations/018_drop_engagement_state_run_ledger.sql`). Pre-audit found engagement_state actively written by `farm/scripts/e2e_convergence.py:241` and seeded by `convergence/migrations/006_seed_engagement.sql`; run_ledger has 12 active rows shared with Convergence reads. Drop would break the demo. import_engagements.py ran (0+2 rows merged into Convergence). Full ownership transfer requires Farm e2e refactor + convergence migration 006 rewrite + DCL test update + hook scope update — see `platform_deferred_work.md` entry #7.
 
 ## 5. HITL collision review UI
 - date: 2026-04-15
