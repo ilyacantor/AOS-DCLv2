@@ -5,7 +5,7 @@ Latency regression tests — DCL SE endpoints.
 Verifies that SE report/engine endpoints return within acceptable latency
 bounds.  Tests run through the API (same path as the UI) using requests.
 
-ME latency tests (cross-sell, EBITDA bridge, QoE, dashboards, Maestra,
+ME latency tests (cross-sell, EBITDA bridge, QoE, dashboards, Mai,
 what-if) removed — those live in the Convergence repo.
 
 Latency thresholds:
