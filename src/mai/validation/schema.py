@@ -1,5 +1,5 @@
 """
-Maestra Layer 0 — Financial output schema and validation result types.
+Mai Layer 0 — Financial output schema and validation result types.
 
 All monetary values use Decimal. Never float.
 """

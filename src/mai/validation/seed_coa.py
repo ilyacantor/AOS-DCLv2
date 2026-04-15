@@ -1,5 +1,5 @@
 """
-Maestra CoA Seeding — populates a Chart of Accounts lookup table.
+Mai CoA Seeding — populates a Chart of Accounts lookup table.
 
 Maps each account_code to its element (asset, liability, equity, revenue, expense).
 The lookup is used by validation rule V-002 to verify element classification.
@@ -116,7 +116,7 @@ class CoALookup:
         except ImportError as e:
             raise RuntimeError(
                 f"supabase-py is required for CoA seeding from Supabase. "
-                f"Install it in src/maestra/requirements.txt. Import error: {e}"
+                f"Install it in src/mai/requirements.txt. Import error: {e}"
             ) from e
 
         try:
