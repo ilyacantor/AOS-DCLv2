@@ -466,3 +466,23 @@ After any destructive action:
   (`tests/test_store_invariants.py`).
 - Record what ran, against which environment, and the pre/post row counts in
   the session report.
+
+## Deferred work
+
+Any item you defer, park, flag as separate, classify as out-of-scope, or otherwise do not fix in the current session must be appended to `dcl_deferred_work.md` at repo root before declaring done. This repo's file: `dcl_deferred_work.md`.
+
+Required fields per entry, single pipe-delimited line:
+
+  N. YYYY-MM-DD | chat-ref | file:line | reason | severity: blocker/degraded/cosmetic | blocking: <what>
+
+Rules:
+- Chat-only parking is not parking. If it is not in the file, it does not exist.
+- "Pre-existing," "out of scope," "separate workstream," "environmental," "not caused by this refactor" all require an entry. These phrases are the trigger, not the excuse.
+- Append only. Do not rename, reorder, or renumber existing entries.
+- Do not delete resolved entries. Mark `RESOLVED YYYY-MM-DD` inline and leave in place.
+- chat-ref values must not contain the canonical filename (breaks self-reference greps).
+- Cross-repo items: reference the canonical entry, do not duplicate (e.g., `see dcl_deferred_work.md#12`).
+- Before starting any session, read the open entries. If the task touches one of them, stop and ask.
+- "Logged" said in chat is a claim, not a confirmation. The write must produce a file diff and a commit. Otherwise it didn't happen.
+
+Filename is fixed: `dcl_deferred_work.md`. Do not create `DEFERRED.md`, `TODO.md`, `FOLLOWUPS.md`, `project_deferred_work.md`, or any other variant.
