@@ -24,7 +24,7 @@ filter_excluded() {
         case "$file" in
             "$HOOK_FILE") continue ;;
             scripts/precommit.sh) continue ;;
-            CLAUDE.md|README.md|DEFERRED.md) continue ;;
+            CLAUDE.md|README.md|dcl_deferred_work.md) continue ;;
             docs/*) continue ;;
             attached_assets/*) continue ;;
             ONGOING_PROMPTS/*) continue ;;
