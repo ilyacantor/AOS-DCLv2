@@ -19,7 +19,7 @@ Every capability the platform delivers, listed once, in pipeline order. Status r
 | A.1 | Environment scan | Scan an entity's IT environment. Identify all assets: sources of record, integration layers, data stores, APIs. Classify by type and role. | |
 | A.2 | Dual-entity scan | Parallel scans for both entities. Separate inventories, each tagged to its entity of origin. | |
 | A.3 | Asset catalog | Structured inventory with classification status, fabric plane assignment, and connection count per asset. | |
-| A.4 | Data quality signals | Per-source quality assessment: completeness, freshness, consistency. Available to Maestra during context pre-load. | |
+| A.4 | Data quality signals | Per-source quality assessment: completeness, freshness, consistency. Available to Mai during context pre-load. | |
 | A.5 | Scope assessment | What systems exist, what data is available, what gaps are visible — before any mapping or resolution begins. | |
 
 ## B. Connection Mapping
@@ -52,7 +52,7 @@ Every capability the platform delivers, listed once, in pipeline order. Status r
 | C.2.2 | Parallel matching signals | Trigram name similarity, domain hash matching, shared contacts, address proximity. Pre-built indexes for performance. | |
 | C.2.3 | Resolution workspaces | Candidates and evidence packaged into structured workspaces for review. Status: pending / reviewed / resolved. | |
 | C.2.4 | Resolution persistence | Decisions survive across sessions, snapshots, and pipeline reruns. Full provenance: who decided, when, reasoning, confidence. | |
-| C.2.5 | Human override | Any automated or Maestra decision can be overridden by a human. Override logged with new evidence. | |
+| C.2.5 | Human override | Any automated or Mai decision can be overridden by a human. Override logged with new evidence. | |
 | C.2.6 | Cross-reference tables | Post-resolution lookup: a single customer record linked to source records from both entities. | |
 
 ### C.3 Domain Boundary Constraints
@@ -198,17 +198,17 @@ Every capability the platform delivers, listed once, in pipeline order. Status r
 | K.4 | Confidence surfacing | Every answer shows confidence tier and source system. | |
 | K.5 | Ambiguity resolution | Ambiguous queries trigger clarification rather than guessing. | |
 
-## L. Maestra
+## L. Mai
 
 ### L.1 Core Capabilities
 
 | ID | Capability | Description | Status |
 |----|-----------|-------------|--------|
-| L.1.1 | Context pre-loading | On engagement start, Maestra consumes full discovery, connection mapping, and semantic layer state. She enters the first conversation with full company context. | |
+| L.1.1 | Context pre-loading | On engagement start, Mai consumes full discovery, connection mapping, and semantic layer state. She enters the first conversation with full company context. | |
 | L.1.2 | Constitution | Identity, behavioral constraints, domain playbooks, workflow definitions, quality gates, escalation criteria. | |
-| L.1.3 | Query as tool | Maestra decides what to query, interprets results in business context, communicates findings. NLQ handles translation and execution. | |
-| L.1.4 | Portal navigation | When Maestra references a report or data point, the portal navigates to the relevant view. | |
-| L.1.5 | Exact figures | Maestra's cited numbers match engine outputs. Missing data reported as missing. | |
+| L.1.3 | Query as tool | Mai decides what to query, interprets results in business context, communicates findings. NLQ handles translation and execution. | |
+| L.1.4 | Portal navigation | When Mai references a report or data point, the portal navigates to the relevant view. | |
+| L.1.5 | Exact figures | Mai's cited numbers match engine outputs. Missing data reported as missing. | |
 
 ### L.2 Integration Chain Execution
 
@@ -242,10 +242,10 @@ Every capability the platform delivers, listed once, in pipeline order. Status r
 
 | ID | Capability | Description | Status |
 |----|-----------|-------------|--------|
-| L.5.1 | Auto-approve with log | Maestra decides. Decision logged with full provenance. (Deterministic key matches, high-confidence same-domain mappings.) | |
-| L.5.2 | Auto-approve with noted risk | Maestra decides. Risk flag visible in review surfaces. (High-confidence fuzzy matches with agreeing evidence.) | |
-| L.5.3 | Human confirmation required | Maestra prepares structured recommendation. Human approves, modifies, or rejects. (Medium-confidence, conflicting signals, domain boundary classifications.) | |
-| L.5.4 | Human decision required | Maestra surfaces evidence and options. Human makes the call. (Low-confidence, novel patterns, material impact above threshold.) | |
+| L.5.1 | Auto-approve with log | Mai decides. Decision logged with full provenance. (Deterministic key matches, high-confidence same-domain mappings.) | |
+| L.5.2 | Auto-approve with noted risk | Mai decides. Risk flag visible in review surfaces. (High-confidence fuzzy matches with agreeing evidence.) | |
+| L.5.3 | Human confirmation required | Mai prepares structured recommendation. Human approves, modifies, or rejects. (Medium-confidence, conflicting signals, domain boundary classifications.) | |
+| L.5.4 | Human decision required | Mai surfaces evidence and options. Human makes the call. (Low-confidence, novel patterns, material impact above threshold.) | |
 | L.5.5 | Confidence decomposition | Compound confidence broken into components (field mapping, entity resolution, source data quality). Each component routed to review independently. | |
 
 ## M. Report Portal
@@ -264,7 +264,7 @@ Every capability the platform delivers, listed once, in pipeline order. Status r
 | M.10 | EBITDA bridge view | Bridge with expandable adjustment details, confidence grades, supporting references. | |
 | M.11 | What-if view | Slider panel with real-time P&L / EBITDA / EV update. Preset scenario buttons. | |
 | M.12 | Executive dashboards | Persona selector (CFO / CRO / COO / CTO / CHRO) with five dashboard views. | |
-| M.13 | Maestra chat interface | Always available. Scripted narration and live Q&A. | |
+| M.13 | Mai chat interface | Always available. Scripted narration and live Q&A. | |
 | M.14 | QofE view | Current period QofE, adjustment lifecycle, revenue quality, sustainability score. | |
 | M.15 | IT landscape view | System inventory comparison across entities. | |
 
@@ -285,6 +285,6 @@ Every capability the platform delivers, listed once, in pipeline order. Status r
 | I. What-If / Sensitivity | 5 |
 | J. Executive Dashboards | 5 |
 | K. Natural Language Query | 5 |
-| L. Maestra | 23 |
+| L. Mai | 23 |
 | M. Report Portal | 15 |
 | **Total** | **125** |

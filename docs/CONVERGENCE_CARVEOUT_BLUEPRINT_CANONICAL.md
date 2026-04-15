@@ -28,7 +28,7 @@ Both services share the same Supabase Postgres instance. The architectural invar
 
 - Convergence reads DCL-owned tables directly (SELECT only). ME report engines issue dozens of metric queries per report — HTTP round-trips per metric would blow latency ceilings. Direct PG reads from the same database are sub-millisecond.
 - Convergence never writes to DCL-owned tables directly. All triple writes go through DCL's `POST /api/dcl/ingest-triples`. This preserves DCL's write-side invariants: old-run deactivation, COPY-based bulk ingest, `is_active` flag management, `tenant_runs.current_run_id` updates.
-- DCL never reads or writes convergence-owned tables. If DCL needs engagement context (e.g., `maestra.py`), it calls convergence over HTTP.
+- DCL never reads or writes convergence-owned tables. If DCL needs engagement context (e.g., `mai.py`), it calls convergence over HTTP.
 
 ### Pool Sizing
 
@@ -62,7 +62,7 @@ Create `SCHEMA_CONTRACT.md` in the DCL repo documenting the `semantic_triples` c
 
 | Endpoint | Purpose | New |
 |----------|---------|-----|
-| `GET /api/convergence/engagement/active` | `maestra.py` calls this instead of importing `engagement.py` | Yes (Phase 2) |
+| `GET /api/convergence/engagement/active` | `mai.py` calls this instead of importing `engagement.py` | Yes (Phase 2) |
 
 ### Convergence → PG (Direct)
 
@@ -154,7 +154,7 @@ Fork header format:
 - `backend/api/routes/triple_monitor.py` — triple monitoring (patched in Phase 3, not moved)
 - `backend/api/routes/reconciliation.py`, `recon_checks.py` — source reconciliation
 - `backend/api/routes/temporal.py` — temporal versioning
-- `backend/api/routes/maestra.py` — Maestra MCP (rewired in Phase 3, not moved)
+- `backend/api/routes/mai.py` — Mai MCP (rewired in Phase 3, not moved)
 - `backend/api/routes/export_pipes.py` — semantic export
 - `backend/api/routes/deprecated.py` — deprecated routes (SE)
 - `backend/api/routes/compat.py` — deleted in Phase 5, NOT moved to convergence
@@ -166,7 +166,7 @@ Fork header format:
 - `backend/engine/query_resolver.py` — v1 NLQ query resolution (SE)
 - `backend/engine/ontology.py` — concept definitions
 - `backend/engine/graph_store.py` — graph singleton
-- `backend/engine/maestra.py` — Maestra tools (rewired in Phase 3)
+- `backend/engine/mai.py` — Mai tools (rewired in Phase 3)
 - `backend/engine/narration_service.py`, `rag_service.py`, `persona_view.py`
 - `backend/engine/schema_loader.py`, `mapping_service.py`, `source_normalizer.py`
 - `backend/engine/edge_index.py`, `graph_types.py`
@@ -280,7 +280,7 @@ BACKEND_PORT=8007              # note: internal port, Render maps externally
 ### Added to DCL
 
 ```
-CONVERGENCE_API_URL=http://localhost:8010   # maestra.py HTTP calls to engagement endpoint
+CONVERGENCE_API_URL=http://localhost:8010   # mai.py HTTP calls to engagement endpoint
 ```
 
 ### Added to Platform
@@ -350,7 +350,7 @@ done
 echo ""
 echo "=== NEGATIVE INVENTORY: VERIFY THESE HAVE NO ME COUPLING ==="
 for module in \
-  dcl_engine semantic_graph ontology graph_store maestra \
+  dcl_engine semantic_graph ontology graph_store mai \
   narration_service rag_service persona_view schema_loader \
   mapping_service source_normalizer; do
   echo "--- $module ---"
@@ -500,7 +500,7 @@ Pattern: use the same proxy pattern already present in DCL's `main.py` for `/api
 **Action 3 — Engagement endpoint:**
 Create `convergence/backend/api/routes/engagement_api.py`:
 - `GET /api/convergence/engagement/active` → returns `EngagementConfig` JSON from `engagement.py`
-- This is what DCL's `maestra.py` will call in Phase 3
+- This is what DCL's `mai.py` will call in Phase 3
 
 **Action 4 — aos-launch.sh:**
 Add convergence to the local launch script:
@@ -531,8 +531,8 @@ Add `CONVERGENCE_API_URL=http://localhost:8010` to `.env` files in:
 
 **Goal:** Break DCL's internal dependencies on engagement logic. This is DCL-internal work only — no caller changes.
 
-**Action 1 — maestra.py rewire:**
-In `~/code/dcl/backend/engine/maestra.py`:
+**Action 1 — mai.py rewire:**
+In `~/code/dcl/backend/engine/mai.py`:
 - Remove all `from backend.engine.engagement import get_active_engagement` imports
 - Remove all `from backend.db.engagement_store import EngagementStore` imports
 - Add an HTTP client function:
@@ -596,8 +596,8 @@ grep -rn "get_active_engagement" ~/code/dcl/backend/
 
 **Action 1 — Platform:**
 In `~/code/platform`:
-- `app/maestra/tool_executor.py`: route all merge/COFA tool calls to `CONVERGENCE_API_URL + /api/convergence/*`
-- `app/maestra/routes.py`: update any proxy routes for `/api/dcl/merge/*` or `/api/dcl/cofa/*` to point to convergence
+- `app/mai/tool_executor.py`: route all merge/COFA tool calls to `CONVERGENCE_API_URL + /api/convergence/*`
+- `app/mai/routes.py`: update any proxy routes for `/api/dcl/merge/*` or `/api/dcl/cofa/*` to point to convergence
 - Verify: run Platform's test suite (146+ tests)
 - Verify: Playwright `e2e/cofa-merge.spec.ts` passes against convergence URLs
 
@@ -792,9 +792,9 @@ echo "=== HTTP Contract ==="
 curl http://localhost:8010/api/convergence/engagement/active
 # Expect: 200 with valid EngagementConfig JSON
 
-echo "=== Maestra degradation ==="
-# Stop convergence, then verify maestra fails loudly:
-# maestra engagement tools should return RuntimeError, not empty/None
+echo "=== Mai degradation ==="
+# Stop convergence, then verify mai fails loudly:
+# mai engagement tools should return RuntimeError, not empty/None
 # SE tools (graph metrics, triple counts) should still work
 ```
 
@@ -866,7 +866,7 @@ Add these to the existing cleanup debt list:
 2. Convergence URL prefix standardization: decide whether routes are `/api/convergence/*` or `/api/me/*` and make consistent.
 3. DCL CI schema contract check: automated diff of current `semantic_triples` schema against `SCHEMA_CONTRACT.md`, fail on breaking changes.
 4. Convergence connection pool tuning: monitor `pg_stat_activity` under load and adjust `CONVERGENCE_POOL_MAX_CONN` and `CONVERGENCE_STATEMENT_TIMEOUT`.
-5. Maestra HTTP client resilience: add retry with backoff for convergence calls (not in initial carveout — keep it simple, fail loudly first).
+5. Mai HTTP client resilience: add retry with backoff for convergence calls (not in initial carveout — keep it simple, fail loudly first).
 
 ---
 
@@ -879,7 +879,7 @@ Add these to the existing cleanup debt list:
 | **Codebase size** | Loses ~30 backend files, 3 frontend components, 7 test files, 3 migrations. Significant reduction in surface area. | Positive |
 | **main.py** | Drops 12 router imports and mounts. Clearer separation of what DCL actually owns. | Positive |
 | **Connection pool** | ME queries no longer compete for DCL's pool. Pool sizing can be tightened. | Positive |
-| **maestra.py** | 12 calls to `get_active_engagement()` become HTTP calls to convergence. New failure mode: if convergence is down, Maestra's engagement-specific tools fail. Must fail loudly per AOS rules (no silent fallback). | Medium risk |
+| **mai.py** | 12 calls to `get_active_engagement()` become HTTP calls to convergence. New failure mode: if convergence is down, Mai's engagement-specific tools fail. Must fail loudly per AOS rules (no silent fallback). | Medium risk |
 | **triple_monitor.py** | Loses engagement-view endpoint. Entity browsing that shows engagement context must either proxy to convergence or drop the engagement decorator. | Low risk |
 | **v2_helpers.py** | Simplified: drops engagement_state lookup. Tenant resolution becomes direct-to-PG only. Faster, fewer moving parts. | Positive |
 | **query_resolver_v2.py** | Drops engagement import. Engagement context already arrives as params — this is cleanup, not a behavior change. | Positive |
@@ -904,13 +904,13 @@ Add these to the existing cleanup debt list:
 | **Entity resolution queries** | If NLQ asks "which entities overlap on customer X?", that resolution logic is now in convergence. NLQ would need to call convergence, not DCL. | Low risk (likely unused today) |
 | **Conflict-aware answers** | If NLQ surfaces M&A conflict data in natural language answers, the conflict detection endpoint moves to convergence. | Low risk |
 
-### Platform / Maestra
+### Platform / Mai
 
 | Area | Consequence | Severity |
 |------|------------|----------|
-| **Maestra MCP tools** | DCL's `maestra.py` provides 10+ tools to Maestra. Tools that return engagement context (deal status, synergy tracker, workstream overview, milestones, entity metadata) now depend on convergence being up. | Medium risk |
-| **COFA chat** | Maestra's COFA mapping submission (`POST /api/dcl/cofa-mapping`) moves to convergence. Platform must update the endpoint URL. | Required change |
-| **Degraded mode** | If convergence is down but DCL is up, Maestra's SE tools (graph metrics, triple counts, ontology info) still work. Only engagement-specific tools fail. This is correct behavior — partial degradation, not total failure. | Acceptable |
+| **Mai MCP tools** | DCL's `mai.py` provides 10+ tools to Mai. Tools that return engagement context (deal status, synergy tracker, workstream overview, milestones, entity metadata) now depend on convergence being up. | Medium risk |
+| **COFA chat** | Mai's COFA mapping submission (`POST /api/dcl/cofa-mapping`) moves to convergence. Platform must update the endpoint URL. | Required change |
+| **Degraded mode** | If convergence is down but DCL is up, Mai's SE tools (graph metrics, triple counts, ontology info) still work. Only engagement-specific tools fail. This is correct behavior — partial degradation, not total failure. | Acceptable |
 | **Constitution modules** | Platform's `constitution/modules/dcl.md` describes both SE and ME capabilities. Needs updating to reflect the split: DCL module doc covers SE, new convergence module doc covers ME. | Required change |
 
 ### Farm
@@ -950,7 +950,7 @@ Add these to the existing cleanup debt list:
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| **Convergence down → Maestra engagement tools fail** | Medium (new service = new failure point) | Medium (SE tools still work) | Maestra HTTP client fails loudly: "Convergence service at 8010 unreachable — engagement tools unavailable" |
+| **Convergence down → Mai engagement tools fail** | Medium (new service = new failure point) | Medium (SE tools still work) | Mai HTTP client fails loudly: "Convergence service at 8010 unreachable — engagement tools unavailable" |
 | **Schema drift on semantic_triples** | Low (stable schema) | High (silent breakage in convergence reports) | SCHEMA_CONTRACT.md as versioned API contract. DCL CI checks for breaking changes. |
 | **Pool exhaustion from two services** | Low (can tune) | High (query failures) | Size pools conservatively. Monitor with `pg_stat_activity`. |
 | **Dual-running period confusion** | Medium (Phase 1-2) | Low (no behavior change) | Clear ONGOING_PROMPTS doc stating which repo is authoritative during transition. |

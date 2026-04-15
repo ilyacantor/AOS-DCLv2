@@ -114,8 +114,8 @@ Inline the engagement JSON read (5 lines) directly into `triple_monitor.py`, the
 
 ### Platform (`~/code/platform`)
 - Add `ME_API_URL` env var
-- `app/maestra/tool_executor.py`: route merge/COFA calls to `ME_API_URL` + `/api/me/*`
-- `app/maestra/routes.py`: update proxy routes for `/api/dcl/merge/*` or `/api/dcl/cofa/*`
+- `app/mai/tool_executor.py`: route merge/COFA calls to `ME_API_URL` + `/api/me/*`
+- `app/mai/routes.py`: update proxy routes for `/api/dcl/merge/*` or `/api/dcl/cofa/*`
 - Playwright E2E `e2e/cofa-merge.spec.ts`: update base URLs
 
 ### NLQ (`~/code/nlq`)
@@ -220,9 +220,9 @@ All work happens on `convergence-sonnet`. PRs merge to `dev` when each phase is 
 
 ### Platform
 
-**Callers affected:** Maestra tool calls to COFA mapping, merge overview, conflict resolution, combining statements — currently hitting `DCL_BASE_URL + /api/dcl/cofa/*` and `/api/dcl/merge/*`.
+**Callers affected:** Mai tool calls to COFA mapping, merge overview, conflict resolution, combining statements — currently hitting `DCL_BASE_URL + /api/dcl/cofa/*` and `/api/dcl/merge/*`.
 
-**Consequence of delay:** If Platform is not updated before Phase 4 DCL strip, Maestra's COFA and merge tools 404. No silent failure — AOS rules prohibit swallowing errors.
+**Consequence of delay:** If Platform is not updated before Phase 4 DCL strip, Mai's COFA and merge tools 404. No silent failure — AOS rules prohibit swallowing errors.
 
 **Risk:** `tool_executor.py` may have ME-bound calls beyond the obvious merge/COFA routes (e.g., overlap or cross-sell). Full audit required before Phase 3.
 
@@ -284,7 +284,7 @@ Add ME module row in `ONGOING_PROMPTS/AOS_MASTER_RACIv8.csv`:
 | `dcl/src/components/MergePanel.tsx` | Delete; move to me/src/components/ |
 | `dcl/backend/engine/combining_v2.py` | Move to me/backend/engine/ |
 | `dcl/backend/api/routes/merge_overview.py` | Move to me/backend/api/routes/ |
-| `platform/app/maestra/tool_executor.py` | Add ME_API_URL routing for merge/COFA |
+| `platform/app/mai/tool_executor.py` | Add ME_API_URL routing for merge/COFA |
 | `nlq/dcl_proxy.py` | Route /api/reports/* calls to ME_API_URL |
 | `console/client.ts` (or equiv) | Route combining/bridge calls to ME_API_URL |
 | `aos-launch.sh` | Add ME process (port 8007/3007) |

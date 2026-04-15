@@ -24,7 +24,7 @@ item: number, date, chat-ref, file:line, severity, blocking, reason.
 ## 3. Test parameterization
 - date: 2026-04-15
 - chat-ref: migrated from legacy DEFERRED
-- file:line: tests/e2e/operator_e2e.spec.ts, tests/test_maestra_status.py
+- file:line: tests/e2e/operator_e2e.spec.ts, tests/test_mai_status.py
 - severity: degraded
 - blocking: dynamic entity test support; removal of tests/* hook exemption
 - reason: (Day 0 sprint) Tests hardcode the two default entity names from the early demo set. Pre-commit hook exempts tests/ from these patterns as a temporary measure. Tests predate dynamic entity support.

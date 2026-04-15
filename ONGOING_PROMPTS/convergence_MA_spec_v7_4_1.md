@@ -23,7 +23,7 @@ PE-specific portfolio product is deferred. The Convergence product line covers m
 
 | Story | Entry Point | Pipeline | Commercial Path |
 | :---- | :---- | :---- | :---- |
-| 1. Convergence-Lite | Greenfield M&A, upload-based (GL minimum) | No AOD/AAM. Maestra ingests GLs + CoAs, runs full integration chain. | Lands diligence (Explore) → Resolve |
+| 1. Convergence-Lite | Greenfield M&A, upload-based (GL minimum) | No AOD/AAM. Mai ingests GLs + CoAs, runs full integration chain. | Lands diligence (Explore) → Resolve |
 | 2. AOS Single-Entity | Enterprise connects systems | Full AOD→AAM→Farm→DCL→NLQ | Standalone entry, enables Story 3 |
 | 3. AOS→Convergence | Acquirer already on platform | Target onboarded via upload or discovery. Convergence runs across both. | Upsell to Resolve, then Operate |
 | 3.5 Don't Migrate, Converge | Post-close, target stays on own systems | Target gets AOS + persistent Convergence replaces system migration | Operate tier (persistent monitoring) |
@@ -54,8 +54,8 @@ This is the deliverable the customer pays for. Produced from GL + CoA inputs. Re
 
 | # | Deliverable | Content | Source Engine |
 | :---- | :---- | :---- | :---- |
-| 1 | COFA Mapping Table | Every GL account from both entities mapped to a unified structure. Confidence scores. Mapping basis (exact match, semantic similarity, hierarchy). Entity of origin. | Maestra (LLM-driven) |
-| 2 | Conflict Register | Every conflict typed (recognition timing, measurement basis, classification, scope). Severity (high/medium/low). Estimated dollar impact from GL actuals. Resolution status. | Maestra + DCL domain gates |
+| 1 | COFA Mapping Table | Every GL account from both entities mapped to a unified structure. Confidence scores. Mapping basis (exact match, semantic similarity, hierarchy). Entity of origin. | Mai (LLM-driven) |
+| 2 | Conflict Register | Every conflict typed (recognition timing, measurement basis, classification, scope). Severity (high/medium/low). Estimated dollar impact from GL actuals. Resolution status. | Mai + DCL domain gates |
 | 3 | Combining P&L | Four columns: Entity A | Entity B | Adjustments | Combined. Preserves industry-specific line structure. Every adjustment links to a conflict register entry. Quarterly and annual. | combining_v2 |
 | 4 | Combining Balance Sheet | Same four-column format. Fair value adjustments in Adjustments column. Balance sheet identity enforced (A = L + E). | combining_v2 |
 | 5 | Combining Cash Flow | Operating, investing, financing. Derived from P&L + BS changes. Cash flow identity enforced. | combining_v2 |
@@ -63,9 +63,9 @@ This is the deliverable the customer pays for. Produced from GL + CoA inputs. Re
 | 7 | Quality of Earnings | Recurring vs non-recurring classification. Normalization adjustments. Period-over-period trending. Quality score per earnings line. | qoe_v2 |
 | 8 | Entity Resolution (if enrichment data provided) | Cross-entity matches for customers, vendors, people. Confidence scores. Ambiguous pairs surfaced for human review. | entity_resolution |
 | 9 | Overlap & Concentration (if enrichment data provided) | Shared counterparties. Revenue concentration by customer. Risk flags for single-customer dependency. | overlap_v2 |
-| 10 | Cross-Sell Pipeline (if enrichment data provided) | Named accounts, propensity scores, ACV estimates, direction (A→B and B→A). | Maestra + overlap_v2 |
+| 10 | Cross-Sell Pipeline (if enrichment data provided) | Named accounts, propensity scores, ACV estimates, direction (A→B and B→A). | Mai + overlap_v2 |
 
-Deliverables 1-7 are always produced (GL + CoA is sufficient). Deliverables 8-10 require optional enrichment inputs. Maestra tells the customer which deliverables are available based on what was uploaded — no silent omission.
+Deliverables 1-7 are always produced (GL + CoA is sufficient). Deliverables 8-10 require optional enrichment inputs. Mai tells the customer which deliverables are available based on what was uploaded — no silent omission.
 
 # **2. Architecture Decisions** 
 
@@ -74,7 +74,7 @@ Deliverables 1-7 are always produced (GL + CoA is sufficient). Deliverables 8-10
 | Decision | Ruling | Rationale |
 | :---- | :---- | :---- |
 | Storage engine | Postgres (Supabase) for MVP | EAV at two-entity scale is fine. Evaluate columnar/graph at 10+ entities. |
-| Maestra execution role | Maestra reasons through integration chain. DCL validates outputs. Deterministic gates own replayable/exact checks. | No separate orchestration framework for MVP. Not 'no deterministic anything.' |
+| Mai execution role | Mai reasons through integration chain. DCL validates outputs. Deterministic gates own replayable/exact checks. | No separate orchestration framework for MVP. Not 'no deterministic anything.' |
 | Context management | Staged processing with stored work products between stages | RAG deferred. Each stage independently fits within context window. Full chain is never in one prompt. |
 | Workflow engine | Prompt-driven, not LangGraph/Temporal | Discrete steps with stored work products give effective resumability. |
 | Entity resolution scale | Deterministic keys first, LLM for fuzzy residue, batched by business impact | O(n²) is a portfolio problem, not MVP. Add blocking/clustering at 10+ entities. |
@@ -84,19 +84,19 @@ Deliverables 1-7 are always produced (GL + CoA is sufficient). Deliverables 8-10
 | Model routing | Sonnet for everything at MVP. Architecture supports dispatch per interaction type. | Model routing is a cost lever activated when volume justifies it. |
 | Convergence architecture | Same engine as base AOS. Entity is a tag. Bridge joins Target + Acquirer pipes into one unified context via Convergence. DCL is SE-only. ME triples write to convergence_triples. | No split brain, no query-time composition, no new resolution logic. |
 | Silent fallbacks | Prohibited. Fail loud or not at all. | Hard architectural rule across all repos. |
-| No GAAP fallback | Maestra must not infer from general GAAP when entity policy is missing | Output null with flag. LLMs default to GAAP reasoning; must be explicitly blocked. |
+| No GAAP fallback | Mai must not infer from general GAAP when entity policy is missing | Output null with flag. LLMs default to GAAP reasoning; must be explicitly blocked. |
 | Data claims | Do not claim 'metadata only' or 'we don't touch your data' | Not architecturally validated. |
 | Ontology claims | Do not claim AOS delivers ontology | Current: sophisticated semantics. Ontology is aspirational/roadmap. |
 | QofE adjustment model | Two-axis: fiscal period attribution + diligence lifecycle stage on every adjustment triple. Triple key becomes (entity_id, concept, property, lifecycle_stage). DISTINCT ON pattern replaced with lifecycle-aware grouping. | v1 QoE had the right schema (diligence_amount, prior_amount, trend) but wrong data source. Formalizing in triples enables H.1, H.5, H.6, G.6, M.14. |
 | **SE/ME pipeline separation** | **SE and ME are strict separation of concerns with no shared plumbing. Unit of work is the stage, not the pipeline. Convergence repo owns all ME engines. DCL is SE-only.** | **Shared code paths declared unsustainable after ME pipeline fixes exposed coupling. Pipeline isolation spec v1/v2 produced. Convergence carveout blueprint executed.** |
 | **Pipeline identity architecture** | **run_id banned from all API response payloads. Replaced with namespaced stage identifiers (farm_manifest_id, aod_discovery_id, etc). Identity pair (tenant_id + entity_id) required on every stage response. 422 on missing — no silent fallbacks, no identity degradation at service boundaries.** | **Audit of actual pipeline JSON showed run_id collision, orphaned IDs, missing tenant_id, opaque row expansion, and stale source references across both SE and ME modes. Per pipeline_identity_architecture_v1.** |
-| **Maestra supervised execution** | **Four-tier model: Auto-execute, Validate with Farm dry-run, Plan Mode, Escalate only. maestra_plans table (19 columns). Classification engine with 15+ test cases 100% pass, 146+ total tests zero regressions.** | **Maestra actions require operator oversight proportional to risk. Console operator feed (card-based, tier badges, 30-second polling) is the review surface.** |
+| **Mai supervised execution** | **Four-tier model: Auto-execute, Validate with Farm dry-run, Plan Mode, Escalate only. mai_plans table (19 columns). Classification engine with 15+ test cases 100% pass, 146+ total tests zero regressions.** | **Mai actions require operator oversight proportional to risk. Console operator feed (card-based, tier badges, 30-second polling) is the review surface.** |
 
-# **3. Maestra**
+# **3. Mai**
 
-## **3.1 What Maestra Is**
+## **3.1 What Mai Is**
 
-Maestra is a prompt-engineered persona running on a frontier LLM (Claude) with structured context injection. She is the persistent AI engagement lead across all AOS modules and deployment scenarios. She is not a fine-tuned model, not a separate deployed service (for now), not entangled with NLQ internals. She does not bypass RACI module boundaries.
+Mai is a prompt-engineered persona running on a frontier LLM (Claude) with structured context injection. She is the persistent AI engagement lead across all AOS modules and deployment scenarios. She is not a fine-tuned model, not a separate deployed service (for now), not entangled with NLQ internals. She does not bypass RACI module boundaries.
 
 CSAT is her incentive metric. Architecture sits above NLQ. She is the operational interface to AOS — the way users interact with the platform.
 
@@ -105,25 +105,25 @@ CSAT is her incentive metric. Architecture sits above NLQ. She is the operationa
 | Step | Action | Source |
 | :---- | :---- | :---- |
 | 1 | Customer sends message via report portal / chat surface | UI layer |
-| 2 | Context assembler pulls Maestra constitution (scenario variant) | Static document |
-| 3 | Context assembler pulls engagement state for this customer | Supabase: maestra schema |
+| 2 | Context assembler pulls Mai constitution (scenario variant) | Static document |
+| 3 | Context assembler pulls engagement state for this customer | Supabase: mai schema |
 | 4 | Context assembler pulls live module state (cached, event-driven) | Module REST endpoints via state cache |
 | 5 | Assembled prompt sent to LLM with customer message | Claude API (model per routing tier) |
-| 6 | LLM responds as Maestra; response may include structured action blocks | LLM output |
+| 6 | LLM responds as Mai; response may include structured action blocks | LLM output |
 | 7 | If action block present: dispatch to module endpoint (read) or generate plan (write) | Action dispatch layer |
-| 8 | Update engagement state with interaction record | Supabase: maestra schema |
+| 8 | Update engagement state with interaction record | Supabase: mai schema |
 
 ## **3.3 Three Knowledge Sources**
 
-**The Maestra Constitution (static, versioned).** Her identity, voice, role boundaries, action catalog, scenario variants. Separate constitution variants per scenario type (single entity, multi-entity, M&A, portfolio) sharing a common base.
+**The Mai Constitution (static, versioned).** Her identity, voice, role boundaries, action catalog, scenario variants. Separate constitution variants per scenario type (single entity, multi-entity, M&A, portfolio) sharing a common base.
 
 **Engagement State (persistent, per-customer).** Structured data in Supabase tracking: onboarding steps completed, questions asked, items flagged, outstanding issues. Not conversation history. Structured state that survives across sessions.
 
-**Live Module State (dynamic, cached).** Current state from each AOS module. Modules publish state changes to a cache layer. Maestra reads from cache. Modules push; Maestra never waits.
+**Live Module State (dynamic, cached).** Current state from each AOS module. Modules publish state changes to a cache layer. Mai reads from cache. Modules push; Mai never waits.
 
 ## **3.4 Constitution Layer Architecture**
 
-Maestra's behavior is governed by a layered constitution. Higher layers cannot contradict lower layers.
+Mai's behavior is governed by a layered constitution. Higher layers cannot contradict lower layers.
 
 | Layer | Name | Content | Loaded When |
 | :---- | :---- | :---- | :---- |
@@ -138,7 +138,7 @@ Implementation model: Layers 0-2 hardcoded into agent system prompts (static tem
 
 ## **3.5 Build Status (Constitution)**
 
-All 6 phases built on branch 'maestra' across Platform repo. Stage 5 COFA truth test: STRONG PASS. Ready for integration testing and merge to dev.
+All 6 phases built on branch 'mai' across Platform repo. Stage 5 COFA truth test: STRONG PASS. Ready for integration testing and merge to dev.
 
 | Phase | Content | Status |
 | :---- | :---- | :---- |
@@ -146,21 +146,21 @@ All 6 phases built on branch 'maestra' across Platform repo. Stage 5 COFA truth 
 | 2 — P&L Agent | Layer 1 P&L constitution + agent | Built |
 | 3 — BS Agent + Handshake | Layer 1 BS constitution, net income handshake | Built |
 | 4 — Context Injection | Layer 3 + 4 runtime loading | Built |
-| 5 — COFA | Layer 2 COFA unification via Maestra | Built, STRONG PASS |
+| 5 — COFA | Layer 2 COFA unification via Mai | Built, STRONG PASS |
 | 6 — Orchestrator | Top-level persona, agent sequencing, flag aggregation | Built |
 
 ## **3.6 Supervised Execution (Phase 1 Complete)**
 
-Maestra actions are classified into four tiers based on risk and reversibility. The classification engine runs in Platform (constitution module, classify_change tool). Console provides the operator review surface.
+Mai actions are classified into four tiers based on risk and reversibility. The classification engine runs in Platform (constitution module, classify_change tool). Console provides the operator review surface.
 
 | Tier | Name | Behavior | Example |
 | :---- | :---- | :---- | :---- |
-| 1 | Auto-execute | Maestra executes immediately. Logged but no human gate. | Read-only queries, status checks |
-| 2 | Validate | Maestra executes with Farm dry-run validation. Operator sees result, can revert. | Triple writes with low blast radius |
-| 3 | Plan Mode | Maestra produces a plan. Operator reviews and approves before execution. | COFA unification, combining FS |
-| 4 | Escalate Only | Maestra surfaces the issue. No execution proposed. Human decides everything. | Cross-domain reclassification, material adjustments |
+| 1 | Auto-execute | Mai executes immediately. Logged but no human gate. | Read-only queries, status checks |
+| 2 | Validate | Mai executes with Farm dry-run validation. Operator sees result, can revert. | Triple writes with low blast radius |
+| 3 | Plan Mode | Mai produces a plan. Operator reviews and approves before execution. | COFA unification, combining FS |
+| 4 | Escalate Only | Mai surfaces the issue. No execution proposed. Human decides everything. | Cross-domain reclassification, material adjustments |
 
-**maestra_plans table** (19 columns): stores every proposed plan with classification tier, inputs hash, proposed actions, operator decision, execution result, and audit trail.
+**mai_plans table** (19 columns): stores every proposed plan with classification tier, inputs hash, proposed actions, operator decision, execution result, and audit trail.
 
 **Console operator feed**: card-based UI with tier badges. 30-second polling. Operators see pending plans, approve/reject, and view execution history.
 
@@ -168,26 +168,26 @@ Maestra actions are classified into four tiers based on risk and reversibility. 
 
 ## **3.7 Engagement Run Ledger**
 
-Every Maestra engagement step emits a ledger entry: engagement_id, step_name, inputs (or hash), model_version, constitution_version, intermediate output, validation result, human override (if any), timestamp. Stored in maestra schema. Required for debugging customer incidents.
+Every Mai engagement step emits a ledger entry: engagement_id, step_name, inputs (or hash), model_version, constitution_version, intermediate output, validation result, human override (if any), timestamp. Stored in mai schema. Required for debugging customer incidents.
 
 ## **3.8 Human Review Pipeline**
 
-For high-impact decisions (entity resolution involving material revenue, COFA mappings affecting reported EBITDA, cross-domain reclassifications), Maestra prepares a structured recommendation with evidence and business implications. Human confirms. Decision recorded with provenance. This is the primary workflow, not a fallback.
+For high-impact decisions (entity resolution involving material revenue, COFA mappings affecting reported EBITDA, cross-domain reclassifications), Mai prepares a structured recommendation with evidence and business implications. Human confirms. Decision recorded with provenance. This is the primary workflow, not a fallback.
 
-Four-tier classification. Confidence decomposition: compound confidence broken into components, each evaluated independently. Below medium threshold: Maestra must surface the number with plain-language explanation of which input drove it down, link to underlying workspace or mapping, and format the conflict for human review. Maestra does not recommend an accounting resolution — she isolates the variables and presents them. The human decides.
+Four-tier classification. Confidence decomposition: compound confidence broken into components, each evaluated independently. Below medium threshold: Mai must surface the number with plain-language explanation of which input drove it down, link to underlying workspace or mapping, and format the conflict for human review. Mai does not recommend an accounting resolution — she isolates the variables and presents them. The human decides.
 
-## **3.9 COFA Unification (How Maestra Does It)**
+## **3.9 COFA Unification (How Mai Does It)**
 
-Maestra reads two CoAs. She understands economic substance, not just label matching. She builds a mapping table: source account → unified account, with confidence scores. Where one entity has granularity the other lacks, the unified CoA keeps the granular structure. Where entities use different treatments for the same substance, she flags it as a typed conflict (recognition timing, measurement basis, classification, scope). She asks questions on judgment calls. She writes the mapping, conflict register, and unified structure to DCL as triples.
+Mai reads two CoAs. She understands economic substance, not just label matching. She builds a mapping table: source account → unified account, with confidence scores. Where one entity has granularity the other lacks, the unified CoA keeps the granular structure. Where entities use different treatments for the same substance, she flags it as a typed conflict (recognition timing, measurement basis, classification, scope). She asks questions on judgment calls. She writes the mapping, conflict register, and unified structure to DCL as triples.
 
-DCL validates via COFACompletionGate: every source account must appear in the output. If orphaned, DCL rejects and tells Maestra which accounts are missing. Self-correcting loop.
+DCL validates via COFACompletionGate: every source account must appear in the output. If orphaned, DCL rejects and tells Mai which accounts are missing. Self-correcting loop.
 
 ### **3.9.1 Domain Boundary Constraints**
 
 | Constraint | Type | Description |
 | :---- | :---- | :---- |
 | Asset/Liability/Equity/Revenue/Expense | Hard gate | Mutually exclusive. DCL rejects cross-domain mappings. |
-| Revenue cannot map to OpEx | Hard gate | DCL rejects with explanation. Maestra cannot override. |
+| Revenue cannot map to OpEx | Hard gate | DCL rejects with explanation. Mai cannot override. |
 | COGS/OpEx boundary | Soft gate | Flag + human confirmation instead of hard rejection. |
 | Contra-account handling | Rule | Accumulated depreciation handled by parent account's domain (Asset), not by credit sign. |
 
@@ -213,32 +213,32 @@ Decision gate result: STRONG PASS. Proceed as designed.
 
 ### **3.9.4 Materiality and Conflict Resolution Workflow**
 
-Maestra is a reporter, not an authority. She identifies conflicts, types them, estimates dollar impact from GL data, and ranks them by materiality. She does not resolve them. Humans resolve. The workflow is designed to make that human decision-making efficient at scale.
+Mai is a reporter, not an authority. She identifies conflicts, types them, estimates dollar impact from GL data, and ranks them by materiality. She does not resolve them. Humans resolve. The workflow is designed to make that human decision-making efficient at scale.
 
-**Conflict ranking.** Maestra sorts all identified conflicts by estimated annual dollar impact, descending. The CFO sees the $50M revenue recognition difference before the $200K depreciation method difference. This is the primary mechanism for managing volume — at 200 conflicts, the top 10 typically represent 90% of total impact.
+**Conflict ranking.** Mai sorts all identified conflicts by estimated annual dollar impact, descending. The CFO sees the $50M revenue recognition difference before the $200K depreciation method difference. This is the primary mechanism for managing volume — at 200 conflicts, the top 10 typically represent 90% of total impact.
 
-**No auto-resolution.** Every conflict routes to human review regardless of materiality. Maestra does not apply a materiality threshold to skip conflicts or silently resolve them. Low-materiality conflicts still appear in the queue — they are ranked last, not hidden. This is a deliberate design choice: no accounting decision, however small, is made by the LLM.
+**No auto-resolution.** Every conflict routes to human review regardless of materiality. Mai does not apply a materiality threshold to skip conflicts or silently resolve them. Low-materiality conflicts still appear in the queue — they are ranked last, not hidden. This is a deliberate design choice: no accounting decision, however small, is made by the LLM.
 
-**Batch approve.** The Human Review Queue supports batch actions. After reviewing the top material conflicts individually, the CFO can select all remaining conflicts below a self-determined threshold and apply a bulk resolution (e.g., 'accept acquirer treatment for all selected'). This is a human action with an audit trail — the system records who approved, when, what threshold they applied, and which conflicts were included. Maestra does not set the threshold or suggest the batch action.
+**Batch approve.** The Human Review Queue supports batch actions. After reviewing the top material conflicts individually, the CFO can select all remaining conflicts below a self-determined threshold and apply a bulk resolution (e.g., 'accept acquirer treatment for all selected'). This is a human action with an audit trail — the system records who approved, when, what threshold they applied, and which conflicts were included. Mai does not set the threshold or suggest the batch action.
 
 **Resolution options per conflict.** For each conflict, the human selects one of: (1) normalize to acquirer treatment, (2) normalize to target treatment, (3) keep both and show adjustment in combining column, (4) flag for post-close harmonization (no adjustment now, tracked as open item). The decision is recorded with reasoning and linked to the conflict register entry. The combining engine reads the resolution and applies it.
 
 **Audit trail.** Every resolution records: conflict_id, decision (which option), decided_by (human:user_id), reasoning (free text), timestamp, materiality at time of decision (dollar impact). Batch approvals record the same fields plus the selection criteria used. This trail is a deliverable — it goes into the Diligence Integration Package as evidence of how each difference was addressed.
 
-Future (Resolve tier): engagement-level materiality threshold set by the CFO at scoping. Conflicts below threshold auto-resolve to a default treatment specified by the CFO, with full audit trail. This is the CFO's policy applied deterministically, not Maestra's judgment. Deferred until batch approve proves the workflow at MVP scale.
+Future (Resolve tier): engagement-level materiality threshold set by the CFO at scoping. Conflicts below threshold auto-resolve to a default treatment specified by the CFO, with full audit trail. This is the CFO's policy applied deterministically, not Mai's judgment. Deferred until batch approve proves the workflow at MVP scale.
 
 ## **3.10 Layer 3 Entity Policies (MVP)**
 
-Per §3.4, Layer 3 entity policies are manually authored Markdown files for MVP. Automated parsing of uploaded PDFs/Word docs is Phase 2. Two policy documents exist, stored in Platform at app/maestra/constitution/policies/:
+Per §3.4, Layer 3 entity policies are manually authored Markdown files for MVP. Automated parsing of uploaded PDFs/Word docs is Phase 2. Two policy documents exist, stored in Platform at app/mai/constitution/policies/:
 
 | File | Entity | Sections | Key Policy Elections |
 | :---- | :---- | :---- | :---- |
 | meridian_policy.md | Meridian Partners (Acquirer) | Revenue recognition, COGS, OpEx, D&A, BS policies, Explicit Gaps | Gross revenue recognition. Benefits in OpEx (not COGS). Recruiting expensed immediately. R&D expensed below $10M threshold. Straight-line depreciation. |
 | cascadia_policy.md | Cascadia Process Solutions (Target) | Revenue recognition, COGS, OpEx, Capitalization policy, D&A, BS policies, Explicit Gaps | Net revenue recognition. Benefits in COGS for delivery staff. Recruiting capitalized above $50K/hire. Automation capitalized above $2M/project. Accelerated depreciation for delivery equipment. |
 
-Each document includes an Explicit Gaps section listing items NOT covered. Maestra must output null with a flag for any gap item — she must not infer from general GAAP training data. This is the no-GAAP-fallback constraint enforced at the document level.
+Each document includes an Explicit Gaps section listing items NOT covered. Mai must output null with a flag for any gap item — she must not infer from general GAAP training data. This is the no-GAAP-fallback constraint enforced at the document level.
 
-For a real customer engagement (Convergence-Lite, §1.2 Story 1), these documents would be authored by the customer's finance team during onboarding or extracted manually from their accounting policy manual. Maestra's scoping conversation can guide the customer through what's needed.
+For a real customer engagement (Convergence-Lite, §1.2 Story 1), these documents would be authored by the customer's finance team during onboarding or extracted manually from their accounting policy manual. Mai's scoping conversation can guide the customer through what's needed.
 
 # **4. DCL (Data Context Layer) — SE Only**
 
@@ -288,8 +288,8 @@ The DCL restructure replaced the old JSON-based in-memory engine stack with a Po
 | 1 — DCL Core | Ingest, query resolver reads from PG, entity resolution in PG | Done |
 | 2 — Engine Re-plumb | Each v2 engine reads from triples. NLQ de-hardcoded. | Done |
 | 3 — Missing Capabilities | Combining BS/CF, revenue variance bridge, scenario comparison | Done |
-| 4 — Maestra Foundation | Engagement lifecycle, constitution, tools, chat, human review | Done |
-| 5 — Integration Chain | COFA truth test, combining financials via Maestra | STRONG PASS |
+| 4 — Mai Foundation | Engagement lifecycle, constitution, tools, chat, human review | Done |
+| 5 — Integration Chain | COFA truth test, combining financials via Mai | STRONG PASS |
 | **6 — Convergence Carveout** | **ME engines, engagement lifecycle, resolution workspaces extracted to Convergence repo. DCL becomes SE-only.** | **Done** |
 
 ## **4.5 Farm Configurations**
@@ -365,7 +365,7 @@ All ME v2 engines now live in convergence/backend/engine/:
 - GET /api/dcl/semantic-export — Semantic catalog for cross-reference
 
 **DCL → Convergence (HTTP):**
-- GET /api/convergence/engagement/active — maestra.py calls this for engagement context (replaces direct import)
+- GET /api/convergence/engagement/active — mai.py calls this for engagement context (replaces direct import)
 
 **Convergence → Convergence PG (internal writes):**
 All ME triple writes (Farm ME financial triples, COFA mappings, conflict register, combining output) go to convergence_triples. Convergence owns its own write path. DCL is never in the ME write path.
@@ -398,22 +398,22 @@ These files exist in both DCL and Convergence with dated fork headers. Divergenc
 | Step | Engine | Owner | Output | Gate |
 | :---- | :---- | :---- | :---- | :---- |
 | 1. Dual CoA ingestion | cofa_engine | Convergence | Two sets of COFA triples in store | Both entities have cofa-domain triples |
-| 2. COFA unification | Maestra (LLM-driven) | Convergence | Mapping table, conflict register, unified structure | COFACompletionGate (no orphans) |
+| 2. COFA unification | Mai (LLM-driven) | Convergence | Mapping table, conflict register, unified structure | COFACompletionGate (no orphans) |
 | 3. Combining FS | combining_v2 | Convergence | P&L, BS, SOCF in four-column format | DR=CR, revenue identity, balance sheet identity |
 | 4. Entity resolution | entity_resolution | Convergence | Resolution workspaces with confidence | Deterministic keys first, LLM for residue |
 | 5. Overlap/concentration | overlap_v2 | Convergence | Shared counterparties, risk flags | Data exists for both entities |
-| 6. Cross-sell | Maestra + overlap_v2 | Convergence | Pipeline, propensity, ACV estimates | Overlap step complete |
+| 6. Cross-sell | Mai + overlap_v2 | Convergence | Pipeline, propensity, ACV estimates | Overlap step complete |
 | 7. EBITDA bridge | bridge_v2 | Convergence | Adjustments with confidence grades | Combining FS step complete |
 | 8. QofE | qoe_v2 | Convergence | Quality adjustments, trending | EBITDA bridge complete |
 | 9. What-if | whatif_v2 | Convergence | Parameterized scenarios | All prior steps complete |
 
 ## **5.3 Hard Accounting Gates (Deterministic, DCL-Enforced)**
 
-DR = CR (trial balance nets to zero pre and post mapping). Revenue identity (combined = sum of standalones). Asset identity (combined = sum ± intercompany). Balance sheet identity (A = L + E for each entity and combined). These are not negotiable. Maestra cannot override. Convergence calls DCL for validation; DCL enforces.
+DR = CR (trial balance nets to zero pre and post mapping). Revenue identity (combined = sum of standalones). Asset identity (combined = sum ± intercompany). Balance sheet identity (A = L + E for each entity and combined). These are not negotiable. Mai cannot override. Convergence calls DCL for validation; DCL enforces.
 
 ## **5.4 COFA Merge Tab (Convergence Frontend)**
 
-Top-level view in Convergence frontend (port 3010) displaying COFA merge status. Five sections: Merge Overview (entity stats), Side-by-Side COFA Comparison (acquirer left, target right), Account Match Table (resolution data if exists), Unmatched/Orphan Accounts, Raw COFA Triple Browser. Read-only display of what's in the store. Merge engine is Maestra, not a coded pipeline.
+Top-level view in Convergence frontend (port 3010) displaying COFA merge status. Five sections: Merge Overview (entity stats), Side-by-Side COFA Comparison (acquirer left, target right), Account Match Table (resolution data if exists), Unmatched/Orphan Accounts, Raw COFA Triple Browser. Read-only display of what's in the store. Merge engine is Mai, not a coded pipeline.
 
 # **6. Pipeline Identity Architecture**
 
@@ -592,7 +592,7 @@ The canonical functionality map (functionality_map.xlsx) is the official AOS bui
 | J | What-If Scenarios | Parameterized modeling, scenario comparison, saved scenarios |
 | K | Executive Dashboards | CFO, CRO, CHRO, COO, CTO persona views |
 | L | NLQ (Natural Language Query) | Intent recognition, entity detection, query routing, provenance display |
-| M | Maestra | Engagement lifecycle, constitution, tools, chat, human review, run ledger |
+| M | Mai | Engagement lifecycle, constitution, tools, chat, human review, run ledger |
 
 Note: Sections D–J engine code now lives in Convergence repo. DCL retains Section C (SE semantic layer).
 
@@ -614,7 +614,7 @@ Note: Sections D–J engine code now lives in Convergence repo. DCL retains Sect
 | :---- | :---- | :---- |
 | DCL restructure (Phases 0–5) | Mar 2026 | 131 integration tests passing, 8 v2 engines, STRONG PASS |
 | Stage 5 COFA truth test | Mar 2026 | PASS, 100% completeness, 6/6 conflicts |
-| Maestra constitution (6 phases) | Mar 2026 | Layers 0–4 + Orchestrator built on maestra branch |
+| Mai constitution (6 phases) | Mar 2026 | Layers 0–4 + Orchestrator built on mai branch |
 | Farm triple conversion | Mar 2026 | Meridian + Cascadia configs output semantic triples |
 | NLQ de-hardcoding | Mar 2026 | One query path, no demo/live branching |
 | Triple monitoring surfaces | Mar 2026 | DCL Triples tab, Farm Triples tab, Sankey from triples |
@@ -623,7 +623,7 @@ Note: Sections D–J engine code now lives in Convergence repo. DCL retains Sect
 | **Convergence carveout (DCL Phase 6)** | **Mar 2026** | **ME engines, engagement lifecycle, resolution workspaces extracted to standalone Convergence repo. DCL is SE-only. All callers rerouted (Console, NLQ, Platform). Per CONVERGENCE_CARVEOUT_BLUEPRINT_CANONICAL.** |
 | **SE/ME pipeline separation** | **Mar 2026** | **Strict separation of concerns. No shared plumbing. Pipeline isolation spec v1/v2 produced and executed.** |
 | **Pipeline identity architecture v1** | **Mar 2026** | **run_id banned. Namespaced stage IDs. Identity pair on every response. Operator dropdown-only input. Per pipeline_identity_architecture_v1.** |
-| **Maestra supervised execution (Phase 1)** | **Mar 2026** | **Four-tier model. maestra_plans table (19 columns). Classification engine 15+ test cases 100% pass, 146+ total tests zero regressions. Console operator feed shipped.** |
+| **Mai supervised execution (Phase 1)** | **Mar 2026** | **Four-tier model. mai_plans table (19 columns). Classification engine 15+ test cases 100% pass, 146+ total tests zero regressions. Console operator feed shipped.** |
 | **DCL atomic run_id swap** | **Mar 2026** | **tenant_runs pointer table. O(1) UPSERT replaces O(n) bulk UPDATE. Post-swap purge step. COFA exclusion guards audited (Bug A/B/C).** |
 | **Console build** | **Mar 2026** | **React 18 + TypeScript + Vite + Tailwind, FastAPI + asyncpg backend. Mode-based structure (SE, MA, ME, ALL). Pipeline orchestrator, entity switcher, sidebar. Production surface replacing Platform.** |
 | **ME pipeline fixes** | **Mar 2026** | **Console ME pipeline shipped. Platform engagement ID replaces Console UUID in COFA step. DCL DELETE scoped to entity_id. Farm batch size 5000/concurrency 2. Successful ME run (51 unified accounts, 10 COFA conflicts).** |
@@ -633,7 +633,7 @@ Note: Sections D–J engine code now lives in Convergence repo. DCL retains Sect
 | Item | Status | Dependency |
 | :---- | :---- | :---- |
 | Pipeline identity cleanup (SE/ME) | Active sprint | Pipeline identity architecture v1 governs. Console tenant_id threading in progress. |
-| Maestra supervised execution Phase 2 | In progress | tenant_preferences table with 12-key CHECK constraint |
+| Mai supervised execution Phase 2 | In progress | tenant_preferences table with 12-key CHECK constraint |
 | SE triples conversion (AOD + AAM) | Build plan v2.1 produced | Deferred from v2.0 — confirmed working SE pipeline is six orchestrated steps with only Farm Financials writing triples to DCL via orchestrator |
 | Triple store accumulation cleanup | In progress | semantic_triples table accumulation diagnosed |
 | aos-common package extraction | Cleanup debt | Forked infra files in DCL + Convergence with dated headers |
@@ -649,11 +649,11 @@ Two rounds of external review (Claude, ChatGPT, Gemini). 15 items debated. Summa
 
 | Item | Ruling | Spec Change |
 | :---- | :---- | :---- |
-| Maestra execution role language | Replace 'no new deterministic engines' with honest description | Maestra reasons; DCL validates; deterministic gates own exact checks |
+| Mai execution role language | Replace 'no new deterministic engines' with honest description | Mai reasons; DCL validates; deterministic gates own exact checks |
 | COFA spike scope | Include adversarial inputs, define pass criteria before running | Done — degraded CoA test added, rubric defined, STRONG PASS achieved |
 | Run ledger | New requirement accepted | engagement_id, step_name, model_version, constitution_version, validation result, timestamp |
-| Human review as product | Reframe from fallback to primary workflow | High-impact decisions: Maestra prepares, human confirms, decision recorded |
-| Confidence degradation | Add constitution rule for plain-language explanation below medium threshold | Maestra must surface which input drove confidence down, link to evidence, recommend action |
+| Human review as product | Reframe from fallback to primary workflow | High-impact decisions: Mai prepares, human confirms, decision recorded |
+| Confidence degradation | Add constitution rule for plain-language explanation below medium threshold | Mai must surface which input drove confidence down, link to evidence, recommend action |
 | Cost model | Measure both token consumption and human adjudication time | $1.49/engagement validated for token cost. Human time not yet measured. |
 | Scale boundary | Explicit MVP scope: single entity + two-entity Convergence | Portfolio scale (10+ entities) needs blocking/clustering, storage eval, context evolution |
 
@@ -730,11 +730,11 @@ Every CC prompt must be reviewed against AOS guardrails before presenting. Check
 
 | Version | Date | Changes |
 | :---- | :---- | :---- |
-| v5 | Mar 2026 | Initial Maestra platform spec. Architecture, capability layers, runtime pattern. |
+| v5 | Mar 2026 | Initial Mai platform spec. Architecture, capability layers, runtime pattern. |
 | v6 | Mar 2026 | Tier definitions enriched per advisor synthesis. Portfolio deferred as standalone product. COFA spike scope amended. Run ledger added. Human review reframed. |
 | v7.0 | Mar 2026 | Consolidated governing document. Merged all doctrine into single source of truth. Three contradictions resolved. |
 | v7.1 | Mar 2026 | Added §1.3 Convergence-Lite input/output spec. Diligence Integration Package defined (10 deliverables). Added materiality and conflict resolution workflow. Added Layer 3 entity policies. |
 | v7.2 | Mar 2026 | Product line alignment: three product lines (AOS, Convergence, Convergence M&A). ContextOS renamed to AOS throughout. |
 | v7.3 | Mar 2026 | Two-Axis QofE Adjustment Model. Formalized temporal data model for adjustment triples. Bridge v2 DISTINCT ON replaced with lifecycle-aware grouping. |
-| **v7.4** | **Mar 2026** | **SE/ME separation formalized. Convergence carveout complete — new §5A documents standalone Convergence service (repo, engines, tables, API contracts, forked files). DCL §4 updated to SE-only scope. New §6 Pipeline Identity Architecture (identity pairs, namespaced IDs, run_id ban, anti-brittleness rules, SE/ME identifier registries, operator UX rules). §3.6 Supervised Execution added (four-tier model, maestra_plans, operator feed). Integration chain §5.2 updated with engine ownership. §9 milestones updated with carveout, identity architecture, Console build, ME pipeline fixes. §12 Development Environment updated to 7 repos + Console. §14 Governing Documents expanded. RACI bumped to v8.2.** |
+| **v7.4** | **Mar 2026** | **SE/ME separation formalized. Convergence carveout complete — new §5A documents standalone Convergence service (repo, engines, tables, API contracts, forked files). DCL §4 updated to SE-only scope. New §6 Pipeline Identity Architecture (identity pairs, namespaced IDs, run_id ban, anti-brittleness rules, SE/ME identifier registries, operator UX rules). §3.6 Supervised Execution added (four-tier model, mai_plans, operator feed). Integration chain §5.2 updated with engine ownership. §9 milestones updated with carveout, identity architecture, Console build, ME pipeline fixes. §12 Development Environment updated to 7 repos + Console. §14 Governing Documents expanded. RACI bumped to v8.2.** |
 | **v7.4.1** | **Apr 2026** | **ME write path corrections. Eliminated all stale references to ME triples writing to DCL. §1.1: Convergence product line references convergence_triples, not "same DCL." §2.1: Convergence architecture decision updated — bridge joins into unified context via Convergence, not "one DCL." §4.3: Table ownership matrix adds convergence_triples row; semantic_triples write column scoped to SE only. §4.6: SE/ME data pipeline descriptions corrected — SE goes through DCL HTTP ingest, ME goes through Convergence backend. §5: "into one DCL" → "into one unified context." §5A.4: API contracts corrected — COFA writes to convergence_triples, not DCL. §6.4: ME identifier registry replaces dcl_ingest_id with convergence_ingest_id. RACI bumped to v8.3.** |
