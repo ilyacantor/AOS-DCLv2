@@ -84,3 +84,7 @@ item: number, date, chat-ref, file:line, severity, blocking, reason.
 - severity: degraded
 - blocking: any commit that trips legacy whitelist patterns until manually re-synced via `cp scripts/precommit.sh .git/hooks/pre-commit`
 - reason: installed pre-commit hook drifted from scripts/precommit.sh (4 extra whitelist entries around 188/205/216, still references DEFERRED.md at line 27). Hook installation is manual — needs to become a make target or post-checkout automation so source/installed never diverge.
+
+11. 2026-04-14 | https://claude.ai/chat/e6b5a4e3-8e6b-4ddb-a626-2c9b34618784 | scripts/precommit.sh:170 + main.py:549,649 | F1c regex `(^|[^a-z_])"run_id"[[:space:]]*:` only matches JSON-literal key form; misses Pydantic field declarations (`run_id: str`) and kwargs. main.py:549 and main.py:649 contain bare run_id violations that slipped through. Hook itself needs regex broadened to catch Pydantic and kwarg forms. Severity: degraded. Blocking: pipeline identity architecture I1 enforcement is incomplete; future API responses can re-introduce bare run_id without hook catching them.
+
+12. 2026-04-14 | https://claude.ai/chat/e6b5a4e3-8e6b-4ddb-a626-2c9b34618784 | tenant_runs table, tenant 69688df3 | tenant_runs cap is set to 10 but observed 11 rows under canonical tenant 69688df3 — race condition in `swap_and_deactivate` / `upsert_tenant_run` allowing cap overflow. Not investigated further at the time. Severity: degraded. Blocking: cap invariant is not enforced; downstream "latest active run" assumptions can read stale or duplicate state.
