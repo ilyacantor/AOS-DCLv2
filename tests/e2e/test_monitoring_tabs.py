@@ -12,9 +12,12 @@ Install (once):
 """
 
 import json
+import re
 import pytest
 import httpx
 from playwright.sync_api import Page, expect
+
+GRAPH_TAB = re.compile(r"^Graph$")
 
 DCL_URL = "http://localhost:3004"
 DCL_BACKEND = "http://localhost:8004"
@@ -67,7 +70,7 @@ def page_setup(page: Page):
     return page
 
 
-def navigate_to_tab(page: Page, tab_name: str):
+def navigate_to_tab(page: Page, tab_name):
     """Navigate to DCL frontend and click a tab.
 
     Uses networkidle to ensure async API calls (runs, tab data) complete
@@ -93,7 +96,7 @@ class TestCrossTab:
         page.goto(DCL_URL, wait_until="load")
         page.wait_for_timeout(3_000)
 
-        for tab_name in ["Ingest", "Context", "Dashboard", "Recon", "Graph v2"]:
+        for tab_name in ["Ingest", "Context", "Dashboard", "Recon", GRAPH_TAB]:
             tab = page.locator("button, a").filter(has_text=tab_name)
             expect(tab.first).to_be_visible(timeout=10_000)
             tab.first.click()
@@ -506,7 +509,7 @@ class TestGraphV2Tab:
         """Graph v2 tab appears in nav and renders without crash."""
         page = page_setup
         page.goto(DCL_URL, wait_until="networkidle")
-        tab = page.locator("button, a").filter(has_text="Graph v2")
+        tab = page.locator("button, a").filter(has_text=GRAPH_TAB)
         expect(tab.first).to_be_visible(timeout=10_000)
         tab.first.click()
         page.wait_for_timeout(3_000)
@@ -519,7 +522,7 @@ class TestGraphV2Tab:
     def test_entity_selector_present(self, page_setup: Page):
         """Graph v2 tab shows entity selector."""
         page = page_setup
-        navigate_to_tab(page, "Graph v2")
+        navigate_to_tab(page, GRAPH_TAB)
         body_text = page.locator("body").text_content() or ""
         assert "Entity:" in body_text, (
             "Graph v2 tab missing entity selector"
@@ -528,7 +531,7 @@ class TestGraphV2Tab:
     def test_graph_renders_svg_with_nodes(self, page_setup: Page):
         """Graph v2 renders SVG with at least one node when pipeline data exists."""
         page = page_setup
-        navigate_to_tab(page, "Graph v2")
+        navigate_to_tab(page, GRAPH_TAB)
         svg = page.locator("svg")
         if svg.count() > 0:
             nodes = page.locator("[data-layer]")
@@ -543,7 +546,7 @@ class TestGraphV2Tab:
     def test_links_have_stroke_width(self, page_setup: Page):
         """At least one link has a non-zero strokeWidth when data exists."""
         page = page_setup
-        navigate_to_tab(page, "Graph v2")
+        navigate_to_tab(page, GRAPH_TAB)
         paths = page.locator("svg path[stroke-width]")
         if paths.count() > 0:
             width = paths.first.get_attribute("stroke-width")
@@ -554,7 +557,7 @@ class TestGraphV2Tab:
     def test_empty_state_message(self, page_setup: Page):
         """When no data, shows 'No pipeline data' message."""
         page = page_setup
-        navigate_to_tab(page, "Graph v2")
+        navigate_to_tab(page, GRAPH_TAB)
         # If there's no SVG with nodes, the empty state should show
         nodes = page.locator("[data-layer]")
         if nodes.count() == 0:
@@ -566,7 +569,7 @@ class TestGraphV2Tab:
     def test_stub_node_has_no_outgoing_mapping_links(self, page_setup: Page):
         """A stub source (registered but zero triples) has no outgoing domain links."""
         page = page_setup
-        navigate_to_tab(page, "Graph v2")
+        navigate_to_tab(page, GRAPH_TAB)
         stubs = page.locator('[data-status="stub"]')
         if stubs.count() > 0:
             # Stub node exists — it should render but have no outgoing
