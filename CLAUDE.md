@@ -486,3 +486,16 @@ Rules:
 - "Logged" said in chat is a claim, not a confirmation. The write must produce a file diff and a commit. Otherwise it didn't happen.
 
 Filename is fixed: `dcl_deferred_work.md`. Do not create `DEFERRED.md`, `TODO.md`, `FOLLOWUPS.md`, `project_deferred_work.md`, or any other variant.
+
+## Deferred work — pre-session check
+
+Before starting any task in this repo, read the open entries in `dcl_deferred_work.md`. For each open entry, note whether the file:line or subject area falls within the scope of the task you are about to execute.
+
+If yes:
+- State upfront in your response which deferred items your work plausibly touches, by number.
+- At end of session, for each one: verify whether your changes resolved it. If yes, append `RESOLVED YYYY-MM-DD (commit <sha>)` inline on that item. If no, state why not.
+- Do not delete resolved items. Do not renumber.
+
+If no items overlap, say so in one line ("Pre-session check: no open deferred items in scope") and proceed.
+
+Skipping the pre-session check is the same class of failure as chat-only parking — it lets the file drift from reality.
