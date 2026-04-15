@@ -42,7 +42,7 @@ Ilya is the CEO and de facto CTO. He is NOT a developer. He reasons architectura
 ---
 
 ## PLATFORM IN ONE PARAGRAPH
-AutonomOS is an AI-native enterprise platform that delivers unified context for the enterprise. It discovers what exists (AOD), understands how to connect (AAM), generates synthetic financial models (Farm), maps everything to business meaning via a semantic triple store (DCL — SE only), runs multi-entity engines for M&A and integration intelligence (Convergence), lets humans and AI query in plain English (NLQ), and surfaces the operator experience through Console. Platform hosts the Maestra constitution and classification engine. Maestra is the persistent AI engagement lead who guides operators through the AOS lifecycle, governed by a four-tier supervised execution model.
+AutonomOS is an AI-native enterprise platform that delivers unified context for the enterprise. It discovers what exists (AOD), understands how to connect (AAM), generates synthetic financial models (Farm), maps everything to business meaning via a semantic triple store (DCL — SE only), runs multi-entity engines for M&A and integration intelligence (Convergence), lets humans and AI query in plain English (NLQ), and surfaces the operator experience through Console. Platform hosts the Mai constitution and classification engine. Mai is the persistent AI engagement lead who guides operators through the AOS lifecycle, governed by a four-tier supervised execution model.
 
 ---
 
@@ -98,8 +98,8 @@ SE: {entity_id}-{short_hash} (e.g., BlueLogic-NEQ8-a9ed). ME: {engagement_short_
 | **Convergence** (ME/M&A) | All ME v2 engines (combining, bridge, QoE, overlap, cross-sell, entity resolution, COFA, what-if), engagement lifecycle, resolution workspaces. Reads DCL tables (SELECT only). Writes triples via DCL HTTP only. | Triple store schema, SE query resolution, discovery, NLQ formatting |
 | **NLQ** | Intent resolution, persona filtering, query dispatch, report portal, rendering | Semantic mapping, data storage |
 | **Farm** | Synthetic data, financial models, test oracle, triple conversion, entity_id generation | Production data, live connections |
-| **Platform** | Maestra constitution, classification engine | Production operator UI (owned by Console) |
-| **Console** | Production UI, pipeline orchestration, operator feed, task queue, upload, e2e demo, Maestra chat | Module internals — calls module APIs |
+| **Platform** | Mai constitution, classification engine | Production operator UI (owned by Console) |
+| **Console** | Production UI, pipeline orchestration, operator feed, task queue, upload, e2e demo, Mai chat | Module internals — calls module APIs |
 
 **RACI VIOLATION = STOP AND FLAG.** Exception (A12/C6): RACI is for design decisions. Fix bugs wherever they live.
 
@@ -116,12 +116,12 @@ Convergence = base AOS + a bridge where Target pipes join Acquirer pipes into on
 
 ---
 
-## MAESTRA
-Persistent AI engagement lead. Constitution lives in Platform (`~/code/platform/app/maestra/constitution/`). Production surface is Console.
+## MAI
+Persistent AI engagement lead. Constitution lives in Platform (`~/code/platform/app/mai/constitution/`). Production surface is Console.
 
 - **Constitution:** Layers 0-4 in `constitution/`. Module docs in `constitution/modules/`.
-- **Supervised Execution:** Four-tier model (Auto-execute / Validate with Farm dry-run / Plan Mode / Escalate only). maestra_plans table (19 columns). Classification engine in Platform. 146+ tests zero regressions. Console operator feed (card-based, tier badges, 30-second polling).
-- **Boundaries:** Maestra reasons; DCL validates. Maestra does NOT recommend accounting resolutions — she isolates variables and presents them. No auto-resolution. All conflicts route to human review ranked by materiality.
+- **Supervised Execution:** Four-tier model (Auto-execute / Validate with Farm dry-run / Plan Mode / Escalate only). mai_plans table (19 columns). Classification engine in Platform. 146+ tests zero regressions. Console operator feed (card-based, tier badges, 30-second polling).
+- **Boundaries:** Mai reasons; DCL validates. Mai does NOT recommend accounting resolutions — she isolates variables and presents them. No auto-resolution. All conflicts route to human review ranked by materiality.
 - **Layer 3:** Manually authored for MVP. meridian_policy.md and cascadia_policy.md.
 - **Phase 2 in progress:** tenant_preferences table with CHECK constraint enforcing 12-key registry.
 

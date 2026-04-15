@@ -3289,7 +3289,7 @@ concepts:
   - id: cofa_mapping
     name: COFA Mapping
     domain: cofa
-    description: "Chart of accounts mapping between entities produced by Maestra"
+    description: "Chart of accounts mapping between entities produced by Mai"
     data_type: text
     comparable: false
 

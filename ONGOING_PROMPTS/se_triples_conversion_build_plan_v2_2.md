@@ -29,7 +29,7 @@ The critical detail: only Step 5 writes triples to DCL. AOD and AAM do their job
 
 ## **0.2 What v1 Proposed**
 
-v1 of this plan proposed two work packages (WP-AOD, WP-AAM) that would add triple conversion to AOD and AAM, so they also write discovery.\* and mapping.\* triples to the semantic store. The idea: Maestra could then answer questions like “what systems were discovered?” and “how are systems connected?” from triples, not just from AOD/AAM’s internal data models.
+v1 of this plan proposed two work packages (WP-AOD, WP-AAM) that would add triple conversion to AOD and AAM, so they also write discovery.\* and mapping.\* triples to the semantic store. The idea: Mai could then answer questions like “what systems were discovered?” and “how are systems connected?” from triples, not just from AOD/AAM’s internal data models.
 
 v1 also instructed AOD and AAM to write triples directly to Postgres via execute\_values, bypassing DCL’s HTTP ingest endpoint entirely.
 
@@ -43,7 +43,7 @@ v2.0 corrected the write path: if AOD and AAM write triples, they must go throug
 
 The SE pipeline works today without AOD or AAM writing triples. Their value in the SE chain is in the pipeline flow: AOD discovers, hands off to AAM, AAM infers pipes, the orchestrator dispatches Farm to generate financials, and Farm’s output goes to DCL. That chain delivers financial context. AOD and AAM contribute by feeding the chain, not by writing their own triples.
 
-Adding discovery.\* and mapping.\* triples to DCL is a feature that enables richer Maestra queries. It is not required for the SE pipeline to function, and it is not on the critical path for Convergence, production deployment, or the WP-8 transition.
+Adding discovery.\* and mapping.\* triples to DCL is a feature that enables richer Mai queries. It is not required for the SE pipeline to function, and it is not on the critical path for Convergence, production deployment, or the WP-8 transition.
 
 ## **0.5 What v2.2 Corrects: ME Write Path and SE/ME Routing**
 
@@ -57,7 +57,7 @@ Governing doc references updated: convergence_MA_spec_v7.4.1, AOS_MASTER_RACI_v8
 
 Revisit WP-AOD and WP-AAM triple conversion when:
 
-* Maestra needs to answer discovery or connectivity questions from triples rather than from AOD/AAM’s internal APIs.
+* Mai needs to answer discovery or connectivity questions from triples rather than from AOD/AAM’s internal APIs.
 
 * NLQ needs to query across discovery, mapping, and financial domains in a single query.
 
@@ -114,7 +114,7 @@ The DCL triple store uses an EAV (Entity-Attribute-Value) schema. Every fact in 
 | run\_id | Provenance | Which execution run produced this | Stage’s namespaced ID per identity spec |
 | created\_at | Provenance | When this triple was written | 2026-03-29T15:26:00Z |
 
-Today, all triples in the SE store are financial triples from Farm (compensation.\*, revenue.\*, ebitda.\*, service\_catalog.\*, etc.). The concept column’s first segment is the domain, used by Maestra for retrieval filtering and NLQ for query routing.
+Today, all triples in the SE store are financial triples from Farm (compensation.\*, revenue.\*, ebitda.\*, service\_catalog.\*, etc.). The concept column’s first segment is the domain, used by Mai for retrieval filtering and NLQ for query routing.
 
 ## **2.1 Domain Prefixes — Current and Future**
 
@@ -151,7 +151,7 @@ Do not mix their plumbing. ME data never writes to DCL’s semantic\_triples tab
 | Governing specs | pipeline\_identity\_architecture\_v1, convergence\_MA\_spec\_v7.4.1 |
 | Status | DEFERRED. Not on critical path. |
 
-What it will do when built: Add a triple conversion step to AOD that runs after a discovery scan. Converts assets, governance classifications, SOR scores, findings, and fabric plane detections into discovery.\* EAV triples. The orchestrator pushes those triples to DCL’s HTTP ingest endpoint (same as Step 5 in the SE pipeline). This enables Maestra to answer discovery questions from triples.
+What it will do when built: Add a triple conversion step to AOD that runs after a discovery scan. Converts assets, governance classifications, SOR scores, findings, and fabric plane detections into discovery.\* EAV triples. The orchestrator pushes those triples to DCL’s HTTP ingest endpoint (same as Step 5 in the SE pipeline). This enables Mai to answer discovery questions from triples.
 
 Conversion rules by business object:
 
@@ -182,7 +182,7 @@ Hard constraints when built:
 | Governing specs | pipeline\_identity\_architecture\_v1, convergence\_MA\_spec\_v7.4.1 |
 | Status | DEFERRED. Not on critical path. |
 
-What it will do when built: Add a triple conversion step to AAM that runs after pipe inference and drift detection. Converts DeclaredPipes, connections, drift events, and fabric plane connections into mapping.\* EAV triples. The orchestrator pushes those triples to DCL’s HTTP ingest endpoint. This enables Maestra to answer connectivity questions from triples.
+What it will do when built: Add a triple conversion step to AAM that runs after pipe inference and drift detection. Converts DeclaredPipes, connections, drift events, and fabric plane connections into mapping.\* EAV triples. The orchestrator pushes those triples to DCL’s HTTP ingest endpoint. This enables Mai to answer connectivity questions from triples.
 
 Conversion rules by business object:
 
@@ -210,8 +210,8 @@ Hard constraints when built:
 | Now | SE E2E pipeline working. Farm financial triples in DCL via HTTP ingest. AOD and AAM contribute to the pipeline chain but do not write triples. | Done. |
 | Now | Clean stale ME data from DCL. Delete meridian, cascadia, combined, UUID-entity rows. | In progress. |
 | Phase 2 | Pipeline identity retrofit. Namespaced IDs, run\_name, provenance per identity spec. Additive to existing pipeline. | Planned. |
-| Deferred | WP-AOD \+ WP-AAM: AOD and AAM write discovery.\*/mapping.\* triples. Orchestrator pushes to DCL HTTP. Enables richer Maestra queries. | Deferred. |
-| Deferred | Maestra domain\_keywords.yaml update to include discovery.\* and mapping.\* domains. | Blocked by WP-AOD/WP-AAM. |
+| Deferred | WP-AOD \+ WP-AAM: AOD and AAM write discovery.\*/mapping.\* triples. Orchestrator pushes to DCL HTTP. Enables richer Mai queries. | Deferred. |
+| Deferred | Mai domain\_keywords.yaml update to include discovery.\* and mapping.\* domains. | Blocked by WP-AOD/WP-AAM. |
 | Future | WP-8: Production ingest endpoint on DCL. Accepts raw enterprise records from transport shims. Converts using DeclaredPipe schemas. | Per AAM Blueprint. |
 
 Each phase is independently deployable. No big-bang migration. The SE pipeline keeps working throughout.

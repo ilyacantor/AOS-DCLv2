@@ -1,5 +1,5 @@
 """
-Maestra Layer 0 — Reprompt loop for LLM agent output validation.
+Mai Layer 0 — Reprompt loop for LLM agent output validation.
 
 When validation fails, constructs an error payload from the ValidationResult,
 appends it to the original prompt, and resubmits to the same LLM agent.
