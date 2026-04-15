@@ -72,7 +72,7 @@ test.describe.serial("Graph v2 — NetCorp-G19H Render", () => {
     await page.goto(DCL_URL, { waitUntil: "load" });
 
     // Wait for nav to render
-    const graphV2Button = page.locator("button").filter({ hasText: /^Graph$/ });
+    const graphV2Button = page.locator("button").filter({ hasText: "Graph v2" });
     await expect(graphV2Button).toBeVisible({ timeout: 15_000 });
 
     // Navigate to Graph v2 tab

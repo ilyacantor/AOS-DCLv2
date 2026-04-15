@@ -292,7 +292,7 @@ function App() {
 
   // Top-level navigation tabs
   const navTabs: { id: MainView; label: string }[] = [
-    { id: 'graph', label: 'Graph' },
+    { id: 'graph', label: 'Graph v2' },
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'context', label: 'Context' },
     { id: 'recon', label: 'Recon' },

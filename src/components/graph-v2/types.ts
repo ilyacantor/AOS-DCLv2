@@ -47,6 +47,6 @@ export interface LayoutConfig {
 export const DEFAULT_CONFIG: LayoutConfig = {
   margin: { top: 52, right: 50, bottom: 20, left: 50 },
   node: { width: 18, padding: 14 },
-  link: { minStrokeWidth: 3, maxStrokeWidth: 48 },
+  link: { minStrokeWidth: 3, maxStrokeWidth: 12 },
   maxNodeHeight: 70,
 };
