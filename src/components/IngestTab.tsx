@@ -15,19 +15,44 @@ interface IngestLogEntry {
   created_at: string;
 }
 
+interface RefreshIngested {
+  entity_id: string;
+  tenant_id: string;
+  farm_manifest_id: string;
+  dcl_ingest_id: string | null;
+  triples_written: number | null;
+  farm_timestamp: string | null;
+}
+
+interface RefreshSkipped {
+  entity_id: string;
+  tenant_id: string | null;
+  farm_manifest_id: string | null;
+  reason: string;
+}
+
+interface RefreshResponse {
+  ingested: RefreshIngested[];
+  skipped: RefreshSkipped[];
+  message: string;
+}
+
 interface IngestTabProps {
   entities: EntityInfo[];
   selectedEntityId: string;
   onEntityChange: (id: string) => void;
   entitiesLoading?: boolean;
   entitiesError?: string | null;
+  refetchEntities: () => Promise<void>;
 }
 
-export function IngestTab({ entities, selectedEntityId, onEntityChange, entitiesLoading, entitiesError }: IngestTabProps) {
+export function IngestTab({ entities, selectedEntityId, onEntityChange, entitiesLoading, entitiesError, refetchEntities }: IngestTabProps) {
   const [logs, setLogs] = useState<IngestLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshSummary, setRefreshSummary] = useState<string | null>(null);
 
   // Post–store-rebuild there is no "store-wide" count to display: the UI
   // works on one (tenant, entity) selection at a time. Read the selected
@@ -59,6 +84,37 @@ export function IngestTab({ entities, selectedEntityId, onEntityChange, entities
 
   useEffect(() => { fetchData(selectedEntityId || undefined); }, [selectedEntityId]);
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setError(null);
+    setRefreshSummary(null);
+    try {
+      const res = await fetch('/api/dcl/refresh-from-farm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        const detail = body?.detail || `HTTP ${res.status}`;
+        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+      }
+      const data = (await res.json()) as RefreshResponse;
+      await refetchEntities();
+      await fetchData(selectedEntityId || undefined);
+      const ingestedSummary = data.ingested.length
+        ? data.ingested.map((i) => `${i.entity_id} (${(i.triples_written ?? 0).toLocaleString()} triples)`).join(', ')
+        : '';
+      const skippedSummary = data.skipped.length
+        ? ` Skipped ${data.skipped.length}: ${data.skipped.map((s) => `${s.entity_id} — ${s.reason}`).join('; ')}`
+        : '';
+      setRefreshSummary(`${data.message}${ingestedSummary ? ' ' + ingestedSummary + '.' : ''}${skippedSummary}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Refresh failed');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const lastLog = logs[0] || null;
   const totalReceived = logs.reduce((s, l) => s + l.triples_received, 0);
   const totalRejected = logs.reduce((s, l) => s + l.triples_rejected, 0);
@@ -87,17 +143,24 @@ export function IngestTab({ entities, selectedEntityId, onEntityChange, entities
         <EntitySelector entities={entities} selectedEntityId={selectedEntityId} onEntityChange={onEntityChange} loading={entitiesLoading} error={entitiesError} />
         <div className="ml-auto flex items-center gap-2">
           <button
-            onClick={() => fetchData(selectedEntityId || undefined)}
-            disabled={loading}
+            onClick={handleRefresh}
+            disabled={loading || refreshing}
+            title="Pull newer Farm runs into DCL and refresh the dropdown"
             className="px-2 py-1 text-xs rounded border border-border hover:bg-accent disabled:opacity-50"
           >
-            {loading ? 'Loading...' : 'Refresh'}
+            {refreshing ? 'Refreshing…' : loading ? 'Loading…' : 'Refresh'}
           </button>
           <span className="text-xs text-muted-foreground">
             {logs.length} entries
           </span>
         </div>
       </div>
+
+      {refreshSummary && (
+        <div className="shrink-0 rounded border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          {refreshSummary}
+        </div>
+      )}
 
       {/* Top metric row */}
       <div className="shrink-0 grid grid-cols-4 gap-3">

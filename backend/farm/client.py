@@ -493,6 +493,56 @@ class FarmClient:
         response.raise_for_status()
         return response.json()
 
+    def list_manifest_runs(self, limit: int = 200) -> List[Dict[str, Any]]:
+        """
+        List SE manifest runs — the real SE feed backed by manifest_runs.
+
+        GET /api/runs?limit=...
+
+        Each row carries farm_run_id, run_id, aam_run_id, pipe_id, tenant_id,
+        entity_id, snapshot_name, source_system, category, status, rows_*,
+        dcl_run_id, created_at, elapsed_ms. This is the SE feed by construction
+        — Convergence-overlay manifests live elsewhere (triple-runs) and are
+        not the Refresh-from-Farm surface.
+        """
+        url = f"{self.base_url}/api/runs"
+        response = self._get_client().get(url, params={"limit": limit}, timeout=30.0)
+        response.raise_for_status()
+        return response.json()
+
+    def push_run_to_dcl(self, farm_run_id: str) -> Dict[str, Any]:
+        """
+        Trigger Farm to replay an SE manifest run and push fresh triples to DCL.
+
+        POST /api/runs/{farm_run_id}/push-to-dcl
+
+        Farm reconstructs the JobManifest from the manifest_runs row,
+        re-runs generate with deterministic seed, and pushes to
+        /api/dcl/ingest-triples with skip_idempotency_guard=True.
+        Identity pair (tenant_id, entity_id) propagates unchanged.
+        """
+        url = f"{self.base_url}/api/runs/{farm_run_id}/push-to-dcl"
+        logger.info(f"[FarmClient] Replay-pushing Farm SE run to DCL: farm_run_id={farm_run_id}")
+        try:
+            response = self._get_client().post(url, timeout=300.0)
+            response.raise_for_status()
+            data = response.json()
+            logger.info(
+                f"[FarmClient] push-to-dcl complete: farm_run_id={farm_run_id} "
+                f"dcl_ingest_id={data.get('dcl_ingest_id')} "
+                f"rows_accepted={data.get('rows_accepted', 'unknown')}"
+            )
+            return data
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"[FarmClient] push-to-dcl failed: HTTP {e.response.status_code} "
+                f"body={e.response.text[:500]}"
+            )
+            raise
+        except Exception as e:
+            logger.error(f"[FarmClient] push-to-dcl error: {e}")
+            raise
+
     def close(self):
         """Close the HTTP client."""
         if self._client:

@@ -426,7 +426,7 @@ function App() {
         {mainView === 'context' ? (
           <ContextTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
         ) : mainView === 'ingest' ? (
-          <IngestTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
+          <IngestTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} refetchEntities={refetchEntities} />
         ) : mainView === 'recon' ? (
           <ReconTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
         ) : mainView === 'guide' ? (

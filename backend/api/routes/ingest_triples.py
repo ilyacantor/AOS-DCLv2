@@ -14,13 +14,16 @@ import uuid
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
+
+import httpx
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 
-from backend.core.db import get_connection
+from backend.core.db import get_connection, PoolExhausted
 from backend.db.triple_store import TripleStore
 from backend.engine.persona_view import get_persona_domain_mapping
+from backend.farm.client import get_farm_client
 from backend.registry.concept_registry import ConceptRegistry
 from backend.utils.log_utils import get_logger
 
@@ -523,6 +526,321 @@ def list_ingest_status():
             "created_at": r["created_at"].isoformat() if r["created_at"] else None,
         })
     return result
+
+
+# ---------------------------------------------------------------------------
+# POST /api/dcl/refresh-from-farm
+#
+# Compare DCL's per-entity `tenant_runs.updated_at` against Farm's triple-run
+# timestamps. For each (tenant, entity) pair where Farm has a newer SE run
+# (mode != multi_entity), trigger Farm's existing push-to-dcl endpoint so
+# Farm streams the triples through the normal /api/dcl/ingest-triples write
+# path (swap_and_delete, cap enforcement). Sequential per-entity to keep
+# tenant_runs cap enforcement atomic (deferred item #12).
+# ---------------------------------------------------------------------------
+
+class RefreshIngestedEntity(BaseModel):
+    entity_id: str
+    tenant_id: str
+    farm_manifest_id: str
+    dcl_ingest_id: Optional[str] = None
+    triples_written: Optional[int] = None
+    farm_timestamp: Optional[str] = None
+
+
+class RefreshSkippedEntity(BaseModel):
+    entity_id: str
+    tenant_id: Optional[str] = None
+    farm_manifest_id: Optional[str] = None
+    reason: str
+
+
+class RefreshFromFarmResponse(BaseModel):
+    ingested: list[RefreshIngestedEntity]
+    skipped: list[RefreshSkippedEntity]
+    message: str
+
+
+def _read_dcl_tenant_runs_state() -> dict[tuple[str, str], datetime]:
+    """Return {(tenant_id, entity_id): updated_at} for every live row."""
+    sql = "SELECT tenant_id, entity_id, updated_at FROM tenant_runs"
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                rows = cur.fetchall()
+    except PoolExhausted as e:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                f"DCL database pool exhausted while reading tenant_runs — "
+                f"too many concurrent requests. {e}"
+            ),
+        )
+    state: dict[tuple[str, str], datetime] = {}
+    for tenant_id, entity_id, updated_at in rows:
+        if not entity_id or updated_at is None:
+            continue
+        state[(str(tenant_id), str(entity_id))] = updated_at
+    return state
+
+
+def _parse_farm_timestamp(raw: Optional[str]) -> Optional[datetime]:
+    """Parse Farm's ISO timestamp to an aware datetime, or None."""
+    if not raw:
+        return None
+    value = raw.replace("Z", "+00:00") if raw.endswith("Z") else raw
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _select_newer_farm_runs(
+    farm_runs: list[dict],
+    dcl_state: dict[tuple[str, str], datetime],
+) -> tuple[list[dict], list[RefreshSkippedEntity]]:
+    """Pick the newest completed Farm manifest run per (tenant, entity) that
+    beats DCL's updated_at.
+
+    `farm_runs` is Farm's `/api/runs` feed — manifest_runs rows with single
+    entity_id per row (SE by construction). Non-completed rows are skipped
+    silently. The row with the largest created_at wins per (tenant, entity),
+    identified by its `farm_run_id` (which is the key Farm's push-to-dcl
+    endpoint expects).
+
+    Refresh updates entities DCL already knows about; it does not backfill
+    arbitrary history. An entity absent from DCL's tenant_runs is recorded as
+    skipped with a clear reason so the operator sees it in the UI summary
+    — introducing new entities into DCL is the pipeline's job, not Refresh's.
+    """
+    candidates: dict[tuple[str, str], dict] = {}
+    skipped: list[RefreshSkippedEntity] = []
+    unknown_to_dcl: set[tuple[str, str]] = set()
+
+    for run in farm_runs:
+        status = run.get("status")
+        if status != "completed":
+            continue  # Only replay successful runs.
+
+        farm_run_id = run.get("farm_run_id")
+        tenant_id = run.get("tenant_id")
+        entity_id = run.get("entity_id")
+        run_id_logical = run.get("run_id")
+
+        if not farm_run_id or not tenant_id or not entity_id:
+            continue
+
+        farm_ts = _parse_farm_timestamp(run.get("created_at"))
+        if farm_ts is None:
+            skipped.append(RefreshSkippedEntity(
+                entity_id=str(entity_id),
+                tenant_id=str(tenant_id),
+                farm_manifest_id=str(farm_run_id),
+                reason="Farm manifest_runs row is missing a parseable created_at.",
+            ))
+            continue
+
+        key = (str(tenant_id), str(entity_id))
+        dcl_ts = dcl_state.get(key)
+        if dcl_ts is None:
+            # Unknown to DCL — deduped; recorded once in the outer pass.
+            unknown_to_dcl.add(key)
+            continue
+        if farm_ts <= dcl_ts:
+            continue
+        existing = candidates.get(key)
+        if existing is None or farm_ts > existing["farm_ts"]:
+            candidates[key] = {
+                "farm_run_id": str(farm_run_id),
+                "run_id": str(run_id_logical) if run_id_logical else str(farm_run_id),
+                "tenant_id": str(tenant_id),
+                "entity_id": str(entity_id),
+                "farm_ts": farm_ts,
+            }
+
+    for tenant_id, entity_id in unknown_to_dcl:
+        skipped.append(RefreshSkippedEntity(
+            entity_id=entity_id,
+            tenant_id=tenant_id,
+            farm_manifest_id=None,
+            reason=(
+                "Entity is present in Farm but not in DCL tenant_runs. "
+                "Refresh only updates entities DCL already tracks; run the "
+                "full pipeline to introduce this entity to DCL."
+            ),
+        ))
+
+    return list(candidates.values()), skipped
+
+
+def _extract_ingest_summary(push_result: dict) -> tuple[Optional[str], Optional[int]]:
+    """Pull dcl_ingest_id and triples_written out of Farm's push-to-dcl response.
+
+    Farm returns a flat object with `dcl_ingest_id` (UUID string) and
+    `rows_accepted`/`pushed` (count of triples actually written).
+    """
+    if not isinstance(push_result, dict):
+        return None, None
+    dcl_ingest_id = push_result.get("dcl_ingest_id") or push_result.get("dcl_run_id")
+    # Prefer rows_accepted (DCL-confirmed write count) over pushed (Farm-sent).
+    count = push_result.get("rows_accepted")
+    if count is None:
+        count = push_result.get("pushed")
+    if count is None:
+        count = push_result.get("rows_pushed")
+    triples_written: Optional[int] = None
+    if count is not None:
+        try:
+            triples_written = int(count)
+        except (TypeError, ValueError):
+            triples_written = None
+    return (
+        str(dcl_ingest_id) if dcl_ingest_id is not None else None,
+        triples_written,
+    )
+
+
+@router.post("/api/dcl/refresh-from-farm", response_model=RefreshFromFarmResponse)
+def refresh_from_farm():
+    """Pull Farm SE manifest runs newer than DCL's per-entity updated_at and
+    re-ingest them.
+
+    Flow:
+      1. SELECT (tenant_id, entity_id, updated_at) FROM tenant_runs.
+      2. GET Farm /api/runs — SE manifest_runs feed. No mode filter needed;
+         /api/runs is SE by construction (per-row entity_id). ME manifests
+         live in /api/business-data/triple-runs and route to Convergence.
+      3. For each completed run, if Farm created_at > DCL updated_at for that
+         (tenant, entity), keep it as a candidate. Newest wins per key.
+      4. Sequentially POST Farm /api/runs/{farm_run_id}/push-to-dcl. Farm
+         reconstructs the JobManifest, regenerates (deterministic seed), and
+         pushes to DCL /api/dcl/ingest-triples (swap_and_delete + LIFO cap).
+      5. Return a summary of ingested + skipped entities.
+
+    Sequential per-entity pushes avoid the tenant_runs cap race (deferred #12).
+    Farm unreachable / malformed responses surface as 502 with plain-English
+    messages — no silent fallback (A1).
+    """
+    farm_client = get_farm_client()
+
+    try:
+        # Pull a wide window. The selector keys off DCL's tenant_runs, so
+        # rows for entities DCL doesn't track are filtered out cheaply and
+        # don't cause churn. The limit just bounds how far back we'll look
+        # for each DCL-known entity's latest Farm run.
+        farm_payload = farm_client.list_manifest_runs(limit=500)
+    except httpx.ConnectError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                f"DCL could not reach Farm at {farm_client.base_url}/api/runs "
+                f"— connection refused ({e}). Start the Farm service (port 8003) and retry."
+            ),
+        )
+    except httpx.TimeoutException as e:
+        raise HTTPException(
+            status_code=504,
+            detail=(
+                f"DCL timed out waiting for Farm at {farm_client.base_url}/api/runs "
+                f"({e}). Retry once Farm responds."
+            ),
+        )
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                f"Farm returned HTTP {e.response.status_code} for /api/runs: "
+                f"{e.response.text[:300]}"
+            ),
+        )
+
+    # /api/runs returns a bare list of manifest_run rows.
+    if not isinstance(farm_payload, list):
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                f"Farm /api/runs returned malformed payload "
+                f"(expected list of manifest_runs rows, got {type(farm_payload).__name__})."
+            ),
+        )
+    farm_runs = farm_payload
+
+    dcl_state = _read_dcl_tenant_runs_state()
+    candidates, skipped = _select_newer_farm_runs(farm_runs, dcl_state)
+
+    if not candidates:
+        return RefreshFromFarmResponse(
+            ingested=[],
+            skipped=skipped,
+            message="No Farm runs newer than DCL — nothing to ingest.",
+        )
+
+    ingested: list[RefreshIngestedEntity] = []
+
+    for candidate in candidates:
+        try:
+            push_result = farm_client.push_run_to_dcl(candidate["farm_run_id"])
+        except httpx.HTTPStatusError as e:
+            skipped.append(RefreshSkippedEntity(
+                entity_id=candidate["entity_id"],
+                tenant_id=candidate["tenant_id"],
+                farm_manifest_id=candidate["farm_run_id"],
+                reason=(
+                    f"Farm push-to-dcl returned HTTP {e.response.status_code}: "
+                    f"{e.response.text[:200]}"
+                ),
+            ))
+            continue
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
+            skipped.append(RefreshSkippedEntity(
+                entity_id=candidate["entity_id"],
+                tenant_id=candidate["tenant_id"],
+                farm_manifest_id=candidate["farm_run_id"],
+                reason=f"Farm push-to-dcl transport error: {e}",
+            ))
+            continue
+        except Exception as e:  # noqa: BLE001 — surface any push failure in skipped, do not swallow
+            logger.error(
+                f"[refresh-from-farm] unexpected error pushing farm_run_id={candidate['farm_run_id']}: {e}",
+                exc_info=True,
+            )
+            skipped.append(RefreshSkippedEntity(
+                entity_id=candidate["entity_id"],
+                tenant_id=candidate["tenant_id"],
+                farm_manifest_id=candidate["farm_run_id"],
+                reason=f"Farm push-to-dcl raised {type(e).__name__}: {str(e)[:200]}",
+            ))
+            continue
+
+        dcl_ingest_id, triples_written = _extract_ingest_summary(push_result)
+        ingested.append(RefreshIngestedEntity(
+            entity_id=candidate["entity_id"],
+            tenant_id=candidate["tenant_id"],
+            farm_manifest_id=candidate["farm_run_id"],
+            dcl_ingest_id=dcl_ingest_id,
+            triples_written=triples_written,
+            farm_timestamp=candidate["farm_ts"].isoformat(),
+        ))
+
+    parts = [f"Ingested {len(ingested)} new Farm run(s)."]
+    if skipped:
+        parts.append(f"{len(skipped)} skipped — see details.")
+    message = " ".join(parts)
+
+    logger.info(
+        f"[refresh-from-farm] candidates={len(candidates)} ingested={len(ingested)} "
+        f"skipped={len(skipped)}"
+    )
+
+    return RefreshFromFarmResponse(
+        ingested=ingested,
+        skipped=skipped,
+        message=message,
+    )
 
 
 # ---------------------------------------------------------------------------
