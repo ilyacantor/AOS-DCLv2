@@ -285,4 +285,75 @@ if [ $EXIT_CODE -ne 0 ]; then
     exit 1
 fi
 
+# ============================================================================
+# Playwright Acceptance enforcement (extends B17) — see CLAUDE.md.
+# Scopes:
+#   - Banned patterns: ADDED lines only in staged *.spec.ts / *.spec.js
+#     files, via git diff --cached --unified=0. Not whole files. Existing
+#     lines not retroactively blocked.
+#   - Header rule: first-line '// Operator-visible outcome: ...' required
+#     on NEW spec files only (git diff --cached --diff-filter=A).
+# Pattern list source of truth: .playwright-banned-patterns at repo root.
+# ============================================================================
+PW_PATTERNS_FILE=".playwright-banned-patterns"
+if [ -f "$PW_PATTERNS_FILE" ]; then
+    PW_FOUND=""
+
+    PW_NEW=$(git diff --cached --name-only --diff-filter=A | grep -E '\.spec\.(ts|js)$' || true)
+    for spec in $PW_NEW; do
+        [ -f "$spec" ] || continue
+        FIRST_LINE=$(git show :"$spec" 2>/dev/null | head -n1)
+        if ! printf '%s' "$FIRST_LINE" | grep -qE '^//[[:space:]]*Operator-visible outcome:'; then
+            PW_FOUND+="  $spec:1 (missing-operator-outcome-header) — NEW spec files must begin with '// Operator-visible outcome: <specific values>'"$'\n'
+        fi
+    done
+
+    PW_STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.spec\.(ts|js)$' || true)
+    for spec in $PW_STAGED; do
+        [ -f "$spec" ] || continue
+
+        ADDED=$(git diff --cached --unified=0 -- "$spec" 2>/dev/null | awk '
+            /^@@ / {
+                s = $0
+                sub(/^.* \+/, "", s)
+                sub(/[^0-9].*$/, "", s)
+                newline = s + 0
+                in_hunk = 1
+                next
+            }
+            /^\+\+\+ / { next }
+            /^\+/ && in_hunk {
+                printf "%d\t%s\n", newline, substr($0, 2)
+                newline++
+                next
+            }
+        ')
+
+        [ -z "$ADDED" ] && continue
+
+        while IFS='|' read -r pw_name pw_regex; do
+            case "$pw_name" in
+                ''|'#'*) continue ;;
+            esac
+            [ -z "$pw_regex" ] && continue
+
+            while IFS=$'\t' read -r lineno content; do
+                [ -z "$content" ] && continue
+                if printf '%s' "$content" | grep -qE "$pw_regex"; then
+                    PW_FOUND+="  $spec:$lineno ($pw_name)"$'\n'
+                fi
+            done <<< "$ADDED"
+        done < "$PW_PATTERNS_FILE"
+    done
+
+    if [ -n "$PW_FOUND" ]; then
+        echo ""
+        echo "BLOCKED: Playwright Acceptance violations on added lines."
+        echo "See CLAUDE.md § Playwright Acceptance for the contract."
+        echo "Offending locations (file:line + pattern):"
+        printf '%s' "$PW_FOUND"
+        exit 1
+    fi
+fi
+
 exit 0

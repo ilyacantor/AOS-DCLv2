@@ -1,0 +1,17 @@
+# Playwright banned-pattern list — always-wrong assertions only.
+# Format: <name>|<ERE regex>
+# Blank lines and lines starting with '#' are ignored.
+# Hook matches against ADDED lines in staged *.spec.ts / *.spec.js files
+# (git diff --cached --unified=0). Whole files are not scanned.
+# Context-dependent patterns (bare toBeVisible, toHaveCount(n) without
+# ground truth, toHaveLength(n) without ground truth) are covered by
+# CLAUDE.md § Playwright Acceptance agent self-review — not enforced here
+# to avoid over-firing on legitimate uses.
+#
+toBeTruthy|toBeTruthy\(\)
+not-toBeNull|\.not\.toBeNull\(\)
+length-greater-than-zero|\.length[[:space:]]*>[[:space:]]*0
+length-greater-equal-one|\.length[[:space:]]*>=[[:space:]]*1
+toContain-success|toContain\([[:space:]]*['"`]success['"`]\)
+toContain-ok|toContain\([[:space:]]*['"`]ok['"`]\)
+status-eq-200|status[[:space:]]*===?[[:space:]]*200

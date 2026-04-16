@@ -87,6 +87,30 @@ SE: {entity_id}-{short_hash} (e.g., BlueLogic-NEQ8-a9ed). ME: {engagement_short_
 
 ---
 
+## Playwright Acceptance (extends B17)
+
+No feature is done until the agent states in plain English what a working version looks like on screen — specific counts, specific entity names, specific rendered text — and the test asserts exactly that. "Banner appears" means the agent does not understand the feature.
+
+Acceptance specificity:
+1. Assertions compare against ground truth pulled from the source system at test time. Expected values are never hardcoded and never agent-authored. Farm exposes the ground-truth endpoint; the test fetches and compares.
+2. Mutative features require before/after state capture: capture rendered state, perform action, capture again, assert delta matches the claim.
+3. Weak assertions fail acceptance even when green. Always-wrong (pre-commit enforced on added lines): `toBeTruthy()`, `.not.toBeNull()`, `length > 0`, `length >= 1`, `toContain('success')`, `toContain('ok')`, `status === 200` as sole assertion. Context-dependent (agent self-review, not hook-enforced): bare `toBeVisible()`, `toHaveCount(n)` not tied to ground truth, `toHaveLength(n)` not tied to ground truth.
+
+Reporting:
+4. Every UI test captures a screenshot. Thumbnails embedded in the agent's completion report.
+5. Agent runs the test headed once before declaring done. Not required in CI; required in the completion handoff.
+
+Taxonomy:
+6. Live-services run against real Farm / DCL / NLQ / pm2 = acceptance. Mocked Playwright = regression only, labeled as such. Both required. A PR with only one is incomplete.
+7. Every feature with a visible failure surface ships with a paired negative test asserting the readable error, not the status code.
+
+Prompt-time requirement:
+Every CC feature prompt opens with a one-sentence operator-visible outcome statement with specific values before writing code. If the agent cannot write that sentence, it does not understand the feature and does not write the test.
+
+Hook scope (scripts/precommit.sh, sourced from `.playwright-banned-patterns`): inspects ADDED/MODIFIED lines only in staged `*.spec.ts`/`*.spec.js`; enforces the `// Operator-visible outcome: <specific values>` first-line header on NEW spec files only. Existing specs are not retroactively blocked. Rewriting existing specs to satisfy Rules 1 and 2 is tracked as catalog-pass entries in `dcl_deferred_work.md`.
+
+---
+
 ## MODULE RACI — SUMMARY
 **Authoritative source: `AOS_MASTER_RACI_v8.5.csv`**
 
