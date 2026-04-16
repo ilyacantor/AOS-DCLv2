@@ -367,6 +367,7 @@ def ingest_triples(
                     entity_id=eid,
                     new_run_id=str(req.dcl_ingest_id),
                     new_rows=erows,
+                    last_farm_run_id=req.source_farm_manifest_id,
                 )
                 count += n
                 previous_run_ids[eid] = None
@@ -378,6 +379,7 @@ def ingest_triples(
                     snapshot_name=req.snapshot_name,
                     new_rows=erows,
                     replace=replace,
+                    last_farm_run_id=req.source_farm_manifest_id,
                 )
                 count += len(erows)
                 previous_run_ids[eid] = prev_run
@@ -561,9 +563,16 @@ class RefreshFromFarmResponse(BaseModel):
     message: str
 
 
-def _read_dcl_tenant_runs_state() -> dict[tuple[str, str], datetime]:
-    """Return {(tenant_id, entity_id): updated_at} for every live row."""
-    sql = "SELECT tenant_id, entity_id, updated_at FROM tenant_runs"
+def _read_dcl_tenant_runs_state() -> dict[tuple[str, str], Optional[str]]:
+    """Return {(tenant_id, entity_id): last_farm_run_id} for every tracked row.
+
+    NULL `last_farm_run_id` means this DCL row was not ingested via Farm's
+    push-to-dcl replay (legacy direct path, or a row not yet touched by
+    migration 018's backfill). Refresh treats NULL as "not this Farm run" —
+    any Farm run for the entity becomes a candidate and the next replay
+    populates the column.
+    """
+    sql = "SELECT tenant_id, entity_id, last_farm_run_id FROM tenant_runs"
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
@@ -577,11 +586,13 @@ def _read_dcl_tenant_runs_state() -> dict[tuple[str, str], datetime]:
                 f"too many concurrent requests. {e}"
             ),
         )
-    state: dict[tuple[str, str], datetime] = {}
-    for tenant_id, entity_id, updated_at in rows:
-        if not entity_id or updated_at is None:
+    state: dict[tuple[str, str], Optional[str]] = {}
+    for tenant_id, entity_id, last_farm_run_id in rows:
+        if not entity_id:
             continue
-        state[(str(tenant_id), str(entity_id))] = updated_at
+        state[(str(tenant_id), str(entity_id))] = (
+            str(last_farm_run_id) if last_farm_run_id else None
+        )
     return state
 
 
@@ -601,35 +612,34 @@ def _parse_farm_timestamp(raw: Optional[str]) -> Optional[datetime]:
 
 def _select_newer_farm_runs(
     farm_runs: list[dict],
-    dcl_state: dict[tuple[str, str], datetime],
+    dcl_state: dict[tuple[str, str], Optional[str]],
 ) -> tuple[list[dict], list[RefreshSkippedEntity]]:
-    """Pick the newest completed Farm manifest run per (tenant, entity) that
-    beats DCL's updated_at.
+    """Pick Farm manifest runs whose farm_run_id differs from DCL's stored
+    `tenant_runs.last_farm_run_id` for the same (tenant, entity).
+
+    Identity-based, not timestamp-based. Farm's `created_at` is pipeline
+    start; DCL's `updated_at` is ingest finish — comparing them mixes two
+    different events. Identity compares the one value Farm and DCL both
+    own about a run: its `farm_run_id`.
 
     `farm_runs` is Farm's `/api/runs` feed — manifest_runs rows with single
     entity_id per row (SE by construction). Non-completed rows are skipped
-    silently. The row with the largest created_at wins per (tenant, entity),
-    identified by its `farm_run_id` (which is the key Farm's push-to-dcl
-    endpoint expects).
+    silently. The newest completed run per (tenant, entity) wins, by
+    Farm's `created_at` (used only to tiebreak within one entity's runs,
+    not across systems).
 
-    Refresh is **update-only**: it only re-ingests entities DCL already tracks.
-    Entities present in Farm but absent from DCL's tenant_runs are entirely
-    out of scope — they are not candidates, not skipped, and not surfaced to
-    the operator. They enter DCL only via a new SE pipeline run with explicit
-    dropdown selection, which is a separate workflow.
+    Refresh is **update-only**: it only re-ingests entities DCL already
+    tracks. Entities present in Farm but absent from DCL's tenant_runs are
+    out of scope — not candidates, not skipped, not surfaced.
 
-    `skipped[]` carries only tracked entities whose latest Farm run was not
-    newer than DCL's current ingest — the legitimate "nothing new" signal.
+    A tracked entity whose newest Farm `farm_run_id` matches DCL's
+    `last_farm_run_id` is silently skipped (no `skipped[]` entry) — that
+    is the expected steady state after a successful ingest.
     """
-    candidates: dict[tuple[str, str], dict] = {}
-    skipped: list[RefreshSkippedEntity] = []
-    # For tracked entities we saw but had no newer Farm run, record the
-    # newest Farm timestamp seen so the skip reason cites concrete data.
-    tracked_latest_farm_ts: dict[tuple[str, str], datetime] = {}
+    newest_per_key: dict[tuple[str, str], dict] = {}
 
     for run in farm_runs:
-        status = run.get("status")
-        if status != "completed":
+        if run.get("status") != "completed":
             continue  # Only replay successful runs.
 
         farm_run_id = run.get("farm_run_id")
@@ -640,37 +650,19 @@ def _select_newer_farm_runs(
         if not farm_run_id or not tenant_id or not entity_id:
             continue
 
-        farm_ts = _parse_farm_timestamp(run.get("created_at"))
-        if farm_ts is None:
-            # Only surface parse failures for entities DCL already tracks —
-            # out-of-scope entities are silent, not skipped.
-            key = (str(tenant_id), str(entity_id))
-            if key in dcl_state:
-                skipped.append(RefreshSkippedEntity(
-                    entity_id=str(entity_id),
-                    tenant_id=str(tenant_id),
-                    farm_manifest_id=str(farm_run_id),
-                    reason="Farm manifest_runs row is missing a parseable created_at.",
-                ))
-            continue
-
         key = (str(tenant_id), str(entity_id))
-        dcl_ts = dcl_state.get(key)
-        if dcl_ts is None:
-            # Entity is not tracked by DCL → out of scope for Refresh. Drop.
-            continue
+        if key not in dcl_state:
+            continue  # Untracked entity → out of scope for Refresh.
 
-        # Entity is tracked. Record the newest Farm timestamp so the skip
-        # reason (if this entity ends up with no newer run) is informative.
-        prev = tracked_latest_farm_ts.get(key)
-        if prev is None or farm_ts > prev:
-            tracked_latest_farm_ts[key] = farm_ts
-
-        if farm_ts <= dcl_ts:
-            continue
-        existing = candidates.get(key)
-        if existing is None or farm_ts > existing["farm_ts"]:
-            candidates[key] = {
+        farm_ts = _parse_farm_timestamp(run.get("created_at"))
+        existing = newest_per_key.get(key)
+        # Tiebreak within one entity's runs by created_at when available;
+        # fall back to first-seen if the row is missing a parseable ts.
+        if existing is None or (
+            farm_ts is not None
+            and (existing["farm_ts"] is None or farm_ts > existing["farm_ts"])
+        ):
+            newest_per_key[key] = {
                 "farm_run_id": str(farm_run_id),
                 "run_id": str(run_id_logical) if run_id_logical else str(farm_run_id),
                 "tenant_id": str(tenant_id),
@@ -678,25 +670,19 @@ def _select_newer_farm_runs(
                 "farm_ts": farm_ts,
             }
 
-    # For every tracked entity with a seen Farm run but no newer candidate,
-    # emit one skipped entry. Entities with no Farm runs at all are silent
-    # (Refresh has nothing to say about them).
-    for key, latest_farm_ts in tracked_latest_farm_ts.items():
-        if key in candidates:
-            continue
-        tenant_id, entity_id = key
-        dcl_ts = dcl_state[key]
-        skipped.append(RefreshSkippedEntity(
-            entity_id=entity_id,
-            tenant_id=tenant_id,
-            farm_manifest_id=None,
-            reason=(
-                f"Farm's latest run for this entity ({latest_farm_ts.isoformat()}) "
-                f"is not newer than DCL's current ingest ({dcl_ts.isoformat()})."
-            ),
-        ))
+    candidates: list[dict] = []
+    for key, newest in newest_per_key.items():
+        dcl_last_farm_run_id = dcl_state[key]
+        if dcl_last_farm_run_id == newest["farm_run_id"]:
+            continue  # Steady state — DCL already has this exact Farm run.
+        candidates.append(newest)
 
-    return list(candidates.values()), skipped
+    # No verbose skipped[] for the "already have it" case. Matching is the
+    # expected steady state; it is not an error and does not need a reason
+    # string. `skipped[]` is reserved for entries that fail DURING replay
+    # (push-to-dcl errors, transport errors) — those are appended in
+    # `refresh_from_farm`, not here.
+    return candidates, []
 
 
 def _extract_ingest_summary(push_result: dict) -> tuple[Optional[str], Optional[int]]:
@@ -795,22 +781,10 @@ def refresh_from_farm():
     candidates, skipped = _select_newer_farm_runs(farm_runs, dcl_state)
 
     if not candidates:
-        # Two empty-result states:
-        #   - skipped[] has entries: tracked entities had Farm runs but none
-        #     newer than DCL. Emit the richer "nothing new for tracked" msg.
-        #   - skipped[] is empty: no tracked entity had any Farm run worth
-        #     mentioning. Report plainly — the UI will show this in one line.
-        if skipped:
-            msg = (
-                f"No new runs for {len(skipped)} tracked "
-                f"entit{'y' if len(skipped) == 1 else 'ies'}."
-            )
-        else:
-            msg = "No new runs for tracked entities."
         return RefreshFromFarmResponse(
             ingested=[],
-            skipped=skipped,
-            message=msg,
+            skipped=[],
+            message="No new snapshots found.",
         )
 
     ingested: list[RefreshIngestedEntity] = []

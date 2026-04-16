@@ -8,7 +8,9 @@ live-but-idle system.
 
 Commands (all via --command flag):
   list_tracked          → JSON list of (tenant_id, entity_id, updated_at)
-  seed-stale EIDS...    → set updated_at = 2025-01-01Z for the named entities
+  seed-stale EIDS...    → set updated_at = 2025-01-01Z AND last_farm_run_id =
+                          NULL for the named entities (forces candidacy under
+                          identity-based Refresh detection)
   entity-count EID      → print current_triples COUNT(*) for an entity
   run-row-count EID     → print tenant_runs.run_row_count for an entity
   all-entity-counts     → JSON {entity_id: {run_row_count, current_count}}
@@ -24,8 +26,8 @@ Running this helper from a spec:
     const HELPER = "/home/ilyac/code/dcl/tests/e2e/helpers/seed_stale_tenant_runs.py";
     execSync(`${PY} ${HELPER} seed-stale VeloCorp-KY0F InfoWave-CTXD ...`);
 
-The helper only writes to tenant_runs.updated_at. It reads current_triples
-for count assertions. It does not touch any other table or column.
+The helper only writes to tenant_runs.updated_at and tenant_runs.last_farm_run_id.
+It reads current_triples for count assertions. It does not touch any other table.
 """
 
 from __future__ import annotations
@@ -98,10 +100,14 @@ def cmd_seed_stale(entity_ids: list[str]) -> None:
     if not entity_ids:
         sys.stderr.write("seed-stale requires at least one entity_id\n")
         raise SystemExit(2)
+    # Clear last_farm_run_id alongside updated_at. Identity-based Refresh
+    # detection (mig018) ignores timestamps — candidacy hinges on whether
+    # last_farm_run_id matches Farm's newest farm_run_id. NULL forces the
+    # seeded entities into the candidate set on the next Refresh.
     with _connect() as conn, conn.cursor() as cur:
         cur.execute(
             "UPDATE tenant_runs "
-            "SET updated_at = %s::timestamptz "
+            "SET updated_at = %s::timestamptz, last_farm_run_id = NULL "
             "WHERE entity_id = ANY(%s) "
             "RETURNING tenant_id, entity_id, updated_at",
             (STALE_TIMESTAMP, list(entity_ids)),

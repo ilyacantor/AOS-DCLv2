@@ -229,6 +229,7 @@ class TripleStore:
         entity_id: str,
         new_run_id: str,
         new_rows: list[dict],
+        last_farm_run_id: str | None = None,
     ) -> int:
         """Append rows for an in-progress entity run (hot path).
 
@@ -358,10 +359,11 @@ class TripleStore:
                         current_snapshot_name, previous_snapshot_name,
                         run_row_count, previous_run_row_count, updated_at,
                         source_systems, fabric_pairs, unique_pipes,
-                        first_received_at, latest_received_at
+                        first_received_at, latest_received_at,
+                        last_farm_run_id
                     )
                     VALUES (%s, %s, %s, NULL, NULL, NULL, %s, NULL, now(),
-                            %s::text[], %s::text[], %s, now(), now())
+                            %s::text[], %s::text[], %s, now(), now(), %s)
                     ON CONFLICT (tenant_id, entity_id) DO UPDATE
                       SET run_row_count = tenant_runs.run_row_count + EXCLUDED.run_row_count,
                           source_systems = (
@@ -383,13 +385,15 @@ class TripleStore:
                           unique_pipes = EXCLUDED.unique_pipes,
                           first_received_at = COALESCE(tenant_runs.first_received_at, now()),
                           latest_received_at = now(),
-                          updated_at = now()
+                          updated_at = now(),
+                          last_farm_run_id = COALESCE(EXCLUDED.last_farm_run_id, tenant_runs.last_farm_run_id)
                     """,
                     (
                         tenant_id, entity_id, new_run_id, len(new_rows),
                         sorted(batch_sources),
                         sorted(batch_fabric_pairs),
                         unique_pipes_total,
+                        last_farm_run_id,
                     ),
                 )
 
@@ -503,6 +507,7 @@ class TripleStore:
         snapshot_name: str | None,
         new_rows: list[dict],
         replace: bool = False,
+        last_farm_run_id: str | None = None,
     ) -> tuple[str | None, int, int]:
         """Atomic per-entity run swap — insert new rows, hard-delete prior, rebuild current_triples.
 
@@ -571,9 +576,10 @@ class TripleStore:
                     INSERT INTO tenant_runs (
                         tenant_id, entity_id, current_run_id, previous_run_id,
                         current_snapshot_name, previous_snapshot_name,
-                        run_row_count, previous_run_row_count, updated_at
+                        run_row_count, previous_run_row_count, updated_at,
+                        last_farm_run_id
                     )
-                    VALUES (%s, %s, %s, NULL, %s, NULL, %s, NULL, now())
+                    VALUES (%s, %s, %s, NULL, %s, NULL, %s, NULL, now(), %s)
                     ON CONFLICT (tenant_id, entity_id) DO UPDATE
                       SET previous_run_id        = tenant_runs.current_run_id,
                           previous_run_row_count = tenant_runs.run_row_count,
@@ -581,10 +587,14 @@ class TripleStore:
                           current_run_id         = EXCLUDED.current_run_id,
                           run_row_count          = EXCLUDED.run_row_count,
                           current_snapshot_name  = EXCLUDED.current_snapshot_name,
-                          updated_at             = now()
+                          updated_at             = now(),
+                          last_farm_run_id       = COALESCE(EXCLUDED.last_farm_run_id, tenant_runs.last_farm_run_id)
                     RETURNING previous_run_id
                     """,
-                    (tenant_id, entity_id, new_run_id, snapshot_name, new_row_count),
+                    (
+                        tenant_id, entity_id, new_run_id, snapshot_name,
+                        new_row_count, last_farm_run_id,
+                    ),
                 )
                 row = cur.fetchone()
                 previous_run_id = str(row[0]) if row and row[0] else None

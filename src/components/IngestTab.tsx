@@ -104,6 +104,9 @@ export function IngestTab({ entities, selectedEntityId, onEntityChange, entities
       const ingestedSummary = data.ingested.length
         ? data.ingested.map((i) => `${i.entity_id} (${(i.triples_written ?? 0).toLocaleString()} triples)`).join(', ')
         : '';
+      // skipped[] now only carries real push-to-dcl failures (identity-based
+      // detection — the old "nothing new" noise is gone). Surface them so
+      // operator-visible errors never hide behind a green banner.
       const skippedSummary = data.skipped.length
         ? ` Skipped ${data.skipped.length}: ${data.skipped.map((s) => `${s.entity_id} — ${s.reason}`).join('; ')}`
         : '';
