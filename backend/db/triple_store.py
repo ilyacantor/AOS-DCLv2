@@ -278,10 +278,14 @@ class TripleStore:
                 )
 
                 # Reject transitions — archive lives in swap_and_delete.
-                # We also read run_row_count here so the UPSERT below can
-                # derive the new count without a second round-trip.
+                # NOTE: we do NOT pre-read run_row_count here. Concurrent
+                # append batches for the same entity used to read the same
+                # prev value, each compute prev + batch_size in Python, then
+                # each overwrite with EXCLUDED.run_row_count, losing one
+                # batch's contribution. The UPSERT below now increments
+                # run_row_count atomically under the row lock (see step 5).
                 cur.execute(
-                    "SELECT current_run_id, run_row_count FROM tenant_runs "
+                    "SELECT current_run_id FROM tenant_runs "
                     "WHERE tenant_id = %s AND entity_id = %s",
                     (tenant_id, entity_id),
                 )
@@ -292,7 +296,6 @@ class TripleStore:
                         f"run_id={existing[0]} to {new_run_id} on entity "
                         f"{entity_id}. Use swap_and_delete for transitions."
                     )
-                prev_row_count = existing[1] if existing else 0
 
                 # 1. COPY new rows into semantic_triples
                 self._copy_triples_into(cur, new_rows)
@@ -328,11 +331,7 @@ class TripleStore:
                     (tenant_id, entity_id, new_run_id),
                 )
 
-                # 3. Derive the new run_row_count from the pre-read previous
-                #    count plus the batch size, avoiding a second SELECT.
-                new_row_count = prev_row_count + len(new_rows)
-
-                # 4. Narrow unique_pipes recount — the only aggregate we cannot
+                # 3. Narrow unique_pipes recount — the only aggregate we cannot
                 #    derive from the in-memory batch (we do not store the full
                 #    pipe_id set on tenant_runs). Scoped to one entity slice
                 #    via idx_current_triples_entity.
@@ -344,9 +343,14 @@ class TripleStore:
                 pipe_count_row = cur.fetchone()
                 unique_pipes_total = int(pipe_count_row[0] or 0) if pipe_count_row else 0
 
-                # 5. UPSERT tenant_runs with the incremental enrichment merge.
-                #    ON CONFLICT path UNIONs the existing source_systems and
-                #    fabric_pairs arrays with the batch's values via unnest.
+                # 4. UPSERT tenant_runs with the incremental enrichment merge.
+                #    CRITICAL: run_row_count is an ATOMIC INCREMENT on the
+                #    conflict path — concurrent append batches under the same
+                #    (tenant, entity) serialize on the row lock acquired by
+                #    the UPSERT, so each batch's contribution accrues.
+                #    batch_delta = len(new_rows) (passed via EXCLUDED).
+                #    On INSERT (fresh row), EXCLUDED.run_row_count IS the
+                #    initial count which is equivalent.
                 cur.execute(
                     """
                     INSERT INTO tenant_runs (
@@ -359,7 +363,7 @@ class TripleStore:
                     VALUES (%s, %s, %s, NULL, NULL, NULL, %s, NULL, now(),
                             %s::text[], %s::text[], %s, now(), now())
                     ON CONFLICT (tenant_id, entity_id) DO UPDATE
-                      SET run_row_count = EXCLUDED.run_row_count,
+                      SET run_row_count = tenant_runs.run_row_count + EXCLUDED.run_row_count,
                           source_systems = (
                               SELECT COALESCE(array_agg(DISTINCT s ORDER BY s), ARRAY[]::text[])
                               FROM unnest(
@@ -382,7 +386,7 @@ class TripleStore:
                           updated_at = now()
                     """,
                     (
-                        tenant_id, entity_id, new_run_id, new_row_count,
+                        tenant_id, entity_id, new_run_id, len(new_rows),
                         sorted(batch_sources),
                         sorted(batch_fabric_pairs),
                         unique_pipes_total,
