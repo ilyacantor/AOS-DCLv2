@@ -31,9 +31,16 @@ interface RefreshSkipped {
   reason: string;
 }
 
+interface RefreshEvicted {
+  tenant_id: string;
+  entity_id: string;
+}
+
 interface RefreshResponse {
   ingested: RefreshIngested[];
   skipped: RefreshSkipped[];
+  evicted_sample: RefreshEvicted[];
+  evicted_total: number;
   message: string;
 }
 
@@ -52,7 +59,7 @@ export function IngestTab({ entities, selectedEntityId, onEntityChange, entities
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [refreshSummary, setRefreshSummary] = useState<string | null>(null);
+  const [refreshResult, setRefreshResult] = useState<RefreshResponse | null>(null);
 
   // Post–store-rebuild there is no "store-wide" count to display: the UI
   // works on one (tenant, entity) selection at a time. Read the selected
@@ -87,7 +94,7 @@ export function IngestTab({ entities, selectedEntityId, onEntityChange, entities
   const handleRefresh = async () => {
     setRefreshing(true);
     setError(null);
-    setRefreshSummary(null);
+    setRefreshResult(null);
     try {
       const res = await fetch('/api/dcl/refresh-from-farm', {
         method: 'POST',
@@ -101,16 +108,7 @@ export function IngestTab({ entities, selectedEntityId, onEntityChange, entities
       const data = (await res.json()) as RefreshResponse;
       await refetchEntities();
       await fetchData(selectedEntityId || undefined);
-      const ingestedSummary = data.ingested.length
-        ? data.ingested.map((i) => `${i.entity_id} (${(i.triples_written ?? 0).toLocaleString()} triples)`).join(', ')
-        : '';
-      // skipped[] now only carries real push-to-dcl failures (identity-based
-      // detection — the old "nothing new" noise is gone). Surface them so
-      // operator-visible errors never hide behind a green banner.
-      const skippedSummary = data.skipped.length
-        ? ` Skipped ${data.skipped.length}: ${data.skipped.map((s) => `${s.entity_id} — ${s.reason}`).join('; ')}`
-        : '';
-      setRefreshSummary(`${data.message}${ingestedSummary ? ' ' + ingestedSummary + '.' : ''}${skippedSummary}`);
+      setRefreshResult(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Refresh failed');
     } finally {
@@ -159,9 +157,40 @@ export function IngestTab({ entities, selectedEntityId, onEntityChange, entities
         </div>
       </div>
 
-      {refreshSummary && (
-        <div className="shrink-0 rounded border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-          {refreshSummary}
+      {refreshResult && (
+        <div className="shrink-0 rounded border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground space-y-2">
+          <div data-role="refresh-message">{refreshResult.message}</div>
+          {refreshResult.ingested.length > 0 && (
+            <div data-role="refresh-ingested">
+              <div className="font-medium text-foreground">Ingested ({refreshResult.ingested.length})</div>
+              <div className="mt-1">
+                {refreshResult.ingested
+                  .map((i) => `${i.entity_id} (${(i.triples_written ?? 0).toLocaleString()} triples)`)
+                  .join(', ')}
+              </div>
+            </div>
+          )}
+          {refreshResult.evicted_total > 0 && (
+            <div data-role="refresh-evicted">
+              <div className="font-medium text-foreground">
+                Evicted ({refreshResult.evicted_total})
+                {refreshResult.evicted_total > refreshResult.evicted_sample.length
+                  ? ` — showing first ${refreshResult.evicted_sample.length}`
+                  : ''}
+              </div>
+              <div className="mt-1">
+                {refreshResult.evicted_sample.map((e) => e.entity_id).join(', ')}
+              </div>
+            </div>
+          )}
+          {refreshResult.skipped.length > 0 && (
+            <div data-role="refresh-skipped">
+              <div className="font-medium text-foreground">Skipped ({refreshResult.skipped.length})</div>
+              <div className="mt-1">
+                {refreshResult.skipped.map((s) => `${s.entity_id} — ${s.reason}`).join('; ')}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -557,9 +557,16 @@ class RefreshSkippedEntity(BaseModel):
     reason: str
 
 
+class RefreshEvictedEntity(BaseModel):
+    tenant_id: str
+    entity_id: str
+
+
 class RefreshFromFarmResponse(BaseModel):
     ingested: list[RefreshIngestedEntity]
     skipped: list[RefreshSkippedEntity]
+    evicted_sample: list[RefreshEvictedEntity] = []
+    evicted_total: int = 0
     message: str
 
 
@@ -628,9 +635,14 @@ def _select_newer_farm_runs(
     Farm's `created_at` (used only to tiebreak within one entity's runs,
     not across systems).
 
-    Refresh is **update-only**: it only re-ingests entities DCL already
-    tracks. Entities present in Farm but absent from DCL's tenant_runs are
-    out of scope — not candidates, not skipped, not surfaced.
+    Every Farm (tenant, entity) whose newest `farm_run_id` differs from
+    (or is absent in) DCL's `tenant_runs` is a candidate. Previously the
+    selector filtered out entities DCL didn't track — that silent scope
+    filter violated A1 and dropped 169 legit SE entities on a fresh DCL.
+    ME entities don't need a selector-level guard here: they route to
+    Convergence upstream, and if one ever does reach DCL's ingest
+    endpoint it returns `ME_ENTITY_REJECTED` loudly (caught in
+    `skipped[]` by the push loop).
 
     A tracked entity whose newest Farm `farm_run_id` matches DCL's
     `last_farm_run_id` is silently skipped (no `skipped[]` entry) — that
@@ -651,9 +663,6 @@ def _select_newer_farm_runs(
             continue
 
         key = (str(tenant_id), str(entity_id))
-        if key not in dcl_state:
-            continue  # Untracked entity → out of scope for Refresh.
-
         farm_ts = _parse_farm_timestamp(run.get("created_at"))
         existing = newest_per_key.get(key)
         # Tiebreak within one entity's runs by created_at when available;
@@ -672,7 +681,7 @@ def _select_newer_farm_runs(
 
     candidates: list[dict] = []
     for key, newest in newest_per_key.items():
-        dcl_last_farm_run_id = dcl_state[key]
+        dcl_last_farm_run_id = dcl_state.get(key)
         if dcl_last_farm_run_id == newest["farm_run_id"]:
             continue  # Steady state — DCL already has this exact Farm run.
         candidates.append(newest)
@@ -784,10 +793,20 @@ def refresh_from_farm():
         return RefreshFromFarmResponse(
             ingested=[],
             skipped=[],
+            evicted_sample=[],
+            evicted_total=0,
             message="No new snapshots found.",
         )
 
+    # Pre-refresh tenant_runs keys; post-refresh diff surfaces cap evictions.
+    # tenant_runs enforces a per-tenant cap (10, deferred #12) via LIFO
+    # eviction inside `swap_and_delete`. Evicted = any key that was either
+    # already in DCL OR successfully ingested during this Refresh but is
+    # absent from tenant_runs afterward. Pre-set-only subtraction misses
+    # in-refresh churn when multiple new entities overflow the cap.
+    pre_keys = set(dcl_state.keys())
     ingested: list[RefreshIngestedEntity] = []
+    ingested_keys: set[tuple[str, str]] = set()
 
     for candidate in candidates:
         try:
@@ -833,20 +852,34 @@ def refresh_from_farm():
             triples_written=triples_written,
             farm_timestamp=candidate["farm_ts"].isoformat(),
         ))
+        ingested_keys.add((str(candidate["tenant_id"]), str(candidate["entity_id"])))
+
+    post_keys = set(_read_dcl_tenant_runs_state().keys())
+    evicted_keys = sorted((pre_keys | ingested_keys) - post_keys)
+    evicted_sample = [
+        RefreshEvictedEntity(tenant_id=tid, entity_id=eid)
+        for (tid, eid) in evicted_keys[:50]
+    ]
 
     parts = [f"Ingested {len(ingested)} new Farm run(s)."]
+    if evicted_keys:
+        parts.append(
+            f"Evicted {len(evicted_keys)} entity/entities from tenant_runs cap."
+        )
     if skipped:
         parts.append(f"{len(skipped)} skipped — see details.")
     message = " ".join(parts)
 
     logger.info(
         f"[refresh-from-farm] candidates={len(candidates)} ingested={len(ingested)} "
-        f"skipped={len(skipped)}"
+        f"skipped={len(skipped)} evicted={len(evicted_keys)}"
     )
 
     return RefreshFromFarmResponse(
         ingested=ingested,
         skipped=skipped,
+        evicted_sample=evicted_sample,
+        evicted_total=len(evicted_keys),
         message=message,
     )
 
