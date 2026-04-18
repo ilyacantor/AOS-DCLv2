@@ -68,10 +68,19 @@ export function useEntities() {
       const data = await res.json();
       const list: EntityInfo[] = data.entities || [];
       setEntities(list);
-      // Auto-select the most recent entity
+      // Auto-select the most recent entity. Also switch selection when the
+      // current selection is no longer in the list (e.g., evicted by the
+      // per-tenant cap during Refresh) or when a newer entity has taken the
+      // most-recent slot — without this, Refresh updates the `*` marker in
+      // the dropdown but leaves the operator stranded on stale data.
       const mostRecent = list.find((e) => e.is_most_recent);
       if (mostRecent) {
-        setSelectedEntityId((prev) => prev || mostRecent.entity_id);
+        setSelectedEntityId((prev) => {
+          if (!prev) return mostRecent.entity_id;
+          const stillPresent = list.some((e) => e.entity_id === prev);
+          if (!stillPresent) return mostRecent.entity_id;
+          return prev;
+        });
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to load entities';
