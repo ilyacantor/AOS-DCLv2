@@ -37,6 +37,9 @@ personas:
       - arr
       - sales
       - customer_service
+      - account
+      - opportunity
+      - subscription
   COO:
     display_name: Chief Operating Officer
     domains:
@@ -46,14 +49,22 @@ personas:
       - operations
       - vendor
       - customer_service
+      - ticket
   CTO:
     display_name: Chief Technology Officer
     domains:
       - infrastructure
       - engineering
       - event_stream
+      - aws_resource
+      - cost
+      - engineering_work
+      - health
+      - it_asset
   CHRO:
     display_name: Chief Human Resources Officer
     domains:
       - workforce
       - employee
+      - compensation
+      - position
