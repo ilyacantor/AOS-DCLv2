@@ -617,8 +617,8 @@ def _process_ingest_sync(
 
     # Auto-promote mode from Empty → Ingest when real data arrives.
     if get_current_mode().data_mode == "Empty":
-        set_current_mode("Ingest", run_id=run_id)
-        logger.info(f"[Ingest] Mode auto-promoted: Empty → Ingest (run_id={run_id})")
+        set_current_mode("Ingest")
+        logger.info(f"[Ingest] Mode auto-promoted: Empty → Ingest")
 
     matched_schema = pipe_def is not None
     schema_fields = pipe_def.fields if pipe_def else []

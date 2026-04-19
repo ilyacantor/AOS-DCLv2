@@ -29,11 +29,13 @@ class ModeState(BaseModel):
       "Farm"    — triggered via POST /api/dcl/run with mode=Farm
       "AAM"     — triggered via POST /api/dcl/run with mode=AAM
       "Ingest"  — live data exists in the ingest buffer (auto-promoted from Empty)
+
+    Per-entity run metadata (run_id, snapshot_name, updated_at) lives in
+    tenant_runs, not here. This model tracks system-wide mode only.
     """
     data_mode: Literal["Empty", "Farm", "AAM", "Ingest"] = "Empty"
     run_mode: Literal["Dev", "Prod"] = "Dev"
     last_updated: Optional[str] = None
-    last_run_id: Optional[str] = None
 
 
 _current_state = ModeState()
@@ -72,18 +74,17 @@ def get_current_mode() -> ModeState:
 def set_current_mode(
     data_mode: Literal["Empty", "Farm", "AAM", "Ingest"],
     run_mode: Literal["Dev", "Prod"] = "Dev",
-    run_id: Optional[str] = None
 ) -> ModeState:
     """Update the current DCL mode state.
 
     Writes through to Redis so all workers see the change immediately.
+    Per-entity run metadata lives in tenant_runs, not here.
     """
     global _current_state
     _current_state = ModeState(
         data_mode=data_mode,
         run_mode=run_mode,
         last_updated=datetime.utcnow().isoformat() + "Z",
-        last_run_id=run_id
     )
     r = _get_redis()
     if r:

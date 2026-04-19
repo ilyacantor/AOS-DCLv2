@@ -769,6 +769,34 @@ class TripleStore:
             )
         return str(rows[0][0])
 
+    def get_entity_run_meta(
+        self, tenant_id: str, entity_id: str,
+    ) -> dict:
+        """Return run metadata for a (tenant, entity) pair from tenant_runs.
+
+        Raises ValueError if no row exists — no silent empty returns.
+        """
+        sql = (
+            "SELECT current_run_id::text, current_snapshot_name, updated_at "
+            "FROM tenant_runs "
+            "WHERE tenant_id::text = %s AND entity_id = %s"
+        )
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (tenant_id, entity_id))
+                row = cur.fetchone()
+        if not row:
+            raise ValueError(
+                f"No tenant_runs entry for tenant_id={tenant_id}, "
+                f"entity_id={entity_id}. "
+                f"Run the ingest pipeline first to populate tenant_runs."
+            )
+        return {
+            "current_run_id": row[0],
+            "current_snapshot_name": row[1],
+            "updated_at": row[2].isoformat() + "Z" if row[2] else None,
+        }
+
     def get_current_run_id(
         self, tenant_id: str, entity_id: str | None = None,
     ) -> str:

@@ -131,17 +131,12 @@ def receive_export_pipes(request: ExportPipesRequest, http_request: Request):
 
     resolved_snapshot = request.snapshot_name
     if resolved_snapshot:
-        http_request.app.state.aam_snapshot_name = resolved_snapshot
         logger.info(f"[ExportPipes] snapshot_name from payload: '{resolved_snapshot}'")
     else:
-        resolved_snapshot = getattr(http_request.app.state, "aam_snapshot_name", None)
-        if resolved_snapshot:
-            logger.info(f"[ExportPipes] snapshot_name from app.state: '{resolved_snapshot}'")
-        else:
-            logger.warning(
-                "[ExportPipes] No snapshot_name in payload or app.state — "
-                "activity will show aod_run_id as identifier"
-            )
+        logger.warning(
+            "[ExportPipes] No snapshot_name in payload — "
+            "activity will show aod_run_id as identifier"
+        )
     definitions = []
 
     for plane in request.fabric_planes:

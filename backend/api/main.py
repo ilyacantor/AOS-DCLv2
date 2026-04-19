@@ -420,7 +420,6 @@ def health():
         "postgres_available": pg_ok,
         "error": _startup_error,
         "data_mode": mode.data_mode,
-        "last_run_id": mode.last_run_id,
         "last_updated": mode.last_updated,
     }
 
@@ -556,7 +555,6 @@ async def run_dcl(request: RunRequest):
     set_current_mode(
         data_mode=request.mode,
         run_mode=request.run_mode,
-        run_id=run_id,
     )
 
     if request.force_refresh:
@@ -635,7 +633,6 @@ async def run_dcl(request: RunRequest):
                 kpis=aam_kpis,
                 fabric_planes=fabric_planes,
             )
-            app.state.aam_snapshot_name = aam_snap
             logger.info(f"[{request.mode}] Recorded {aam_count} AAM pull receipts as '{aam_snap}'")
         except Exception as e:
             logger.warning(f"[{request.mode}] Failed to record AAM pull in IngestStore: {e}")

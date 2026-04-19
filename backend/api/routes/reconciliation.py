@@ -27,6 +27,52 @@ logger = get_logger(__name__)
 router = APIRouter(tags=["Reconciliation"])
 
 
+def _resolve_entity_run_meta(entity_id: Optional[str] = None) -> Dict[str, Any]:
+    """Resolve per-entity run metadata from tenant_runs.
+
+    Returns dict with dcl_ingest_id, snapshot_name, updated_at.
+    Raises HTTPException(422) if entity_id is required but absent.
+    """
+    store = TripleStore()
+
+    if not entity_id:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT DISTINCT entity_id FROM tenant_runs "
+                    "LIMIT 2",
+                )
+                entities = [r[0] for r in cur.fetchall()]
+
+        if len(entities) == 0:
+            return {"dcl_ingest_id": None, "snapshot_name": None, "updated_at": None}
+        if len(entities) > 1:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "entity_id required — multiple entities exist in tenant_runs. "
+                    "Pass entity_id as a query parameter."
+                ),
+            )
+        entity_id = entities[0]
+
+    try:
+        resolved_tenant = store.resolve_tenant_for_entity(entity_id)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    try:
+        meta = store.get_entity_run_meta(resolved_tenant, entity_id)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    return {
+        "dcl_ingest_id": meta["current_run_id"],
+        "snapshot_name": meta["current_snapshot_name"],
+        "updated_at": meta["updated_at"],
+    }
+
+
 # ---------------------------------------------------------------------------
 # GET /api/dcl/reconciliation
 # ---------------------------------------------------------------------------
@@ -35,13 +81,14 @@ router = APIRouter(tags=["Reconciliation"])
 def get_reconciliation(
     aod_run_id: Optional[str] = None,
     dispatch_id: Optional[str] = None,
+    entity_id: Optional[str] = None,
 ):
     """Mode-aware reconciliation — Farm uses IngestStore, AAM uses AAM client."""
     try:
         current_mode = get_current_mode()
         if current_mode.data_mode == "Farm":
-            return _farm_reconciliation(dispatch_id=dispatch_id)
-        return _aam_reconciliation(aod_run_id)
+            return _farm_reconciliation(dispatch_id=dispatch_id, entity_id=entity_id)
+        return _aam_reconciliation(aod_run_id, entity_id=entity_id)
     except HTTPException:
         raise
     except Exception as e:
@@ -54,7 +101,7 @@ def get_reconciliation(
 # ---------------------------------------------------------------------------
 
 @router.get("/api/dcl/reconciliation/sor")
-def get_sor_reconciliation():
+def get_sor_reconciliation(entity_id: Optional[str] = None):
     try:
         import yaml
         from backend.engine.sor_reconciliation import reconcile_sor
@@ -157,19 +204,14 @@ def get_sor_reconciliation():
         result["aodSorCoverage"] = aod_sor_coverage
 
         sor_current_mode = get_current_mode()
-        sor_snapshot_name = getattr(app.state, "aam_snapshot_name", None)
-        if not sor_snapshot_name:
-            raise HTTPException(
-                status_code=500,
-                detail="No snapshot_name available. Run DCL in AAM mode first so a snapshot name is established."
-            )
+        entity_meta = _resolve_entity_run_meta(entity_id)
         result["reconMeta"] = {
-            "dcl_ingest_id": sor_current_mode.last_run_id,
-            "dclRunAt": sor_current_mode.last_updated,
+            "dcl_ingest_id": entity_meta["dcl_ingest_id"],
+            "dclRunAt": entity_meta["updated_at"],
             "reconAt": utc_now(),
             "dataMode": sor_current_mode.data_mode,
             "loadedSourceCount": len(loaded_sources),
-            "snapshotName": sor_snapshot_name,
+            "snapshotName": entity_meta["snapshot_name"],
         }
 
         return result
@@ -351,7 +393,10 @@ def _invalidate_aam_caches():
     logger.info("[AAM] All stale caches invalidated for fresh AAM run")
 
 
-def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
+def _farm_reconciliation(
+    dispatch_id: Optional[str] = None,
+    entity_id: Optional[str] = None,
+) -> Dict[str, Any]:
     """Reconcile Farm pushes against DCL ``current_triples``.
 
     Post-store-rebuild:
@@ -367,7 +412,6 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
     from backend.engine.reconciliation import reconcile
     from backend.api.main import app
 
-    current_mode = get_current_mode()
     now = utc_now()
 
     store = TripleStore()
@@ -389,8 +433,8 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
         "fabricBreakdown": [], "inAamNotDcl": [], "inDclNotAam": [],
         "pushMeta": None,
         "reconMeta": {
-            "dcl_ingest_id": current_mode.last_run_id,
-            "dclRunAt": current_mode.last_updated,
+            "dcl_ingest_id": None,
+            "dclRunAt": None,
             "reconAt": now, "aodRunId": None,
             "dataMode": "Farm", "dclSourceCount": 0, "aamConnectionCount": 0,
         },
@@ -500,9 +544,10 @@ def _farm_reconciliation(dispatch_id: Optional[str] = None) -> Dict[str, Any]:
     else:
         result["pushMeta"] = None
 
+    entity_meta = _resolve_entity_run_meta(entity_id)
     result["reconMeta"] = {
-        "dcl_ingest_id": current_mode.last_run_id,
-        "dclRunAt": current_mode.last_updated,
+        "dcl_ingest_id": entity_meta["dcl_ingest_id"],
+        "dclRunAt": entity_meta["updated_at"],
         "reconAt": now,
         "aodRunId": None,
         "dataMode": "Farm",
@@ -614,12 +659,14 @@ def _classify_failure(
     return "never_received"
 
 
-def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
+def _aam_reconciliation(
+    aod_run_id: Optional[str] = None,
+    entity_id: Optional[str] = None,
+) -> Dict[str, Any]:
     """Original AAM reconciliation — fetches from AAM fresh each time."""
     from backend.aam.client import get_aam_client
     from backend.aam.ingress import AAMIngressAdapter
     from backend.engine.reconciliation import reconcile
-    from backend.api.main import app
 
     _invalidate_aam_caches()
 
@@ -670,16 +717,21 @@ def _aam_reconciliation(aod_run_id: Optional[str] = None) -> Dict[str, Any]:
     result["pushMeta"] = push_meta
 
     current_mode = get_current_mode()
-    snapshot_name = payload.snapshot_name or getattr(app.state, "aam_snapshot_name", None)
+    entity_meta = _resolve_entity_run_meta(entity_id)
+    snapshot_name = payload.snapshot_name or entity_meta.get("snapshot_name")
     if not snapshot_name:
         raise HTTPException(
-            status_code=500,
-            detail="No snapshot_name available. AAM payload must include snapshot_name, or run DCL in AAM mode first."
+            status_code=422,
+            detail=(
+                "No snapshot_name available. AAM payload must include "
+                "snapshot_name, or entity must have a current_snapshot_name "
+                "in tenant_runs."
+            ),
         )
 
     result["reconMeta"] = {
-        "dcl_ingest_id": current_mode.last_run_id,
-        "dclRunAt": current_mode.last_updated,
+        "dcl_ingest_id": entity_meta["dcl_ingest_id"],
+        "dclRunAt": entity_meta["updated_at"],
         "reconAt": utc_now(),
         "aodRunId": aod_run_id,
         "dataMode": current_mode.data_mode,

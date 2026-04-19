@@ -19,7 +19,6 @@ from fastapi.testclient import TestClient
 
 from backend.api.pipe_store import get_pipe_store, ExportReceipt
 from backend.api.ingest import get_ingest_store
-from backend.core.mode_state import set_current_mode
 
 
 def _ingest_headers(**extra) -> dict:
