@@ -25,6 +25,7 @@ filter_excluded() {
             "$HOOK_FILE") continue ;;
             scripts/precommit.sh) continue ;;
             CLAUDE.md|README.md|dcl_deferred_work.md) continue ;;
+            mai_blueprint_master.md|convergence_blueprint_master.md|convergence_transition_master.md|AOS_MASTER_RACI_v8_6.csv) continue ;;
             docs/*) continue ;;
             attached_assets/*) continue ;;
             ONGOING_PROMPTS/*) continue ;;
