@@ -1,4 +1,4 @@
-# Playwright banned-pattern list — always-wrong assertions only.
+# Playwright banned-pattern list — always-wrong assertions + UI-bypass shortcuts.
 # Format: <name>|<ERE regex>
 # Blank lines and lines starting with '#' are ignored.
 # Hook matches against ADDED lines in staged *.spec.ts / *.spec.js files
@@ -8,6 +8,12 @@
 # CLAUDE.md § Playwright Acceptance agent self-review — not enforced here
 # to avoid over-firing on legitimate uses.
 #
+# UI-bypass family: the test runner driving the backend instead of clicking.
+# Acceptance is operator clicks driving sequences. Mutative API calls and
+# raw fetch() from inside specs are API tests, not acceptance. Read-only
+# reads (Farm ground-truth, health) must use page.request.get() so they
+# share browser context and are visible as "test setup" not "test action".
+#
 toBeTruthy|toBeTruthy\(\)
 not-toBeNull|\.not\.toBeNull\(\)
 length-greater-than-zero|\.length[[:space:]]*>[[:space:]]*0
@@ -15,3 +21,6 @@ length-greater-equal-one|\.length[[:space:]]*>=[[:space:]]*1
 toContain-success|toContain\([[:space:]]*['"`]success['"`]\)
 toContain-ok|toContain\([[:space:]]*['"`]ok['"`]\)
 status-eq-200|status[[:space:]]*===?[[:space:]]*200
+ui-bypass-page-request-mutate|page\.request\.(post|put|patch|delete)\(
+ui-bypass-fetch-call|(^|[^a-zA-Z0-9_.])fetch\(
+ui-bypass-axios-mutate|axios\.(post|put|patch|delete)\(

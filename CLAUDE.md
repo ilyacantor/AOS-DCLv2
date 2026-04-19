@@ -91,6 +91,12 @@ SE: {entity_id}-{short_hash} (e.g., BlueLogic-NEQ8-a9ed). ME: {engagement_short_
 
 No feature is done until the agent states in plain English what a working version looks like on screen — specific counts, specific entity names, specific rendered text — and the test asserts exactly that. "Banner appears" means the agent does not understand the feature.
 
+UI-driven only:
+- Tests drive the operator path through real UI events — `locator.click()`, `locator.fill()`, `selectOption()`, file pickers, keyboard. The test sits in the operator's seat: open the page, click what they click, type what they type, wait for what they see.
+- Calling backend endpoints from the test (`page.request.post()`/`put()`/`patch()`/`delete()`, `fetch()`, `axios`, `curl`, the SDK, route stubs that bypass the user's input) to trigger the feature under test is an API test, not acceptance. API-only paths do not count toward the B17 gate even when green.
+- Actual clicks must trigger the sequence. No test-only triggers, no harness-side POSTs that simulate the click, no orchestration calls that bypass the button. If the user's first action is a click, the test's first action is a click.
+- Allowed exception: `page.request.get()` to read-only endpoints (Farm ground-truth, health) for fetching expected values. Any mutative call from the test runner is a violation.
+
 Acceptance specificity:
 1. Assertions compare against ground truth pulled from the source system at test time. Expected values are never hardcoded and never agent-authored. Farm exposes the ground-truth endpoint; the test fetches and compares.
 2. Mutative features require before/after state capture: capture rendered state, perform action, capture again, assert delta matches the claim.
@@ -336,7 +342,7 @@ The harness is only valid after a fresh pipeline run. Verify pipeline freshness 
 Every test hits the live system fresh. No memoization, no response caching.
 
 ## B17: Frontend is the pass/fail gate
-Backend queries and API responses are diagnostic tools, not proof of correctness. The UI rendering the correct data in the browser is the real test. A correct API response that doesn't render is not a pass. Open the browser, look at the screen, verify what the user would see. Playwright is the accountability gate — tests are not complete without it.
+Backend queries and API responses are diagnostic tools, not proof of correctness. The UI rendering the correct data in the browser is the real test. A correct API response that doesn't render is not a pass. Open the browser, look at the screen, verify what the user would see. Playwright is the accountability gate — tests are not complete without it. Tests must drive the operator path through real UI events — `locator.click()`, `locator.fill()`, `selectOption()`, file pickers, keyboard. Backend calls from inside the test (`page.request.post()`, `fetch()`, `curl`, the SDK, route stubs that bypass user input) are API tests, not acceptance. Actual clicks must trigger the sequence — never POSTs from the test runner.
 
 ## B18: 5% latency budget
 More than 5% regression on any endpoint is a blocking issue. Hard latency ceilings stated in prompts are absolute and non-negotiable. Latency ceilings mean the operation COMPLETES in time, not ABORTS in time. Timeouts are not performance fixes.
