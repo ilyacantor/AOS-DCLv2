@@ -922,12 +922,16 @@ class TripleStore:
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
-    def count_active(self, tenant_id: str) -> int:
-        """Count triples across all entity runs for a tenant."""
+    def count_active(self, tenant_id: str, entity_id: str | None = None) -> int:
+        """Count triples for a tenant, optionally scoped to one entity."""
         sql = "SELECT COUNT(*) FROM current_triples WHERE tenant_id = %s"
+        params: list = [tenant_id]
+        if entity_id:
+            sql += " AND entity_id = %s"
+            params.append(entity_id)
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, (tenant_id,))
+                cur.execute(sql, params)
                 return cur.fetchone()[0]
 
     def count_total_rows(self) -> int:
@@ -1032,11 +1036,12 @@ class TripleStore:
 
         return result
 
-    def get_sankey_aggregation(self, tenant_id: str) -> list[dict]:
+    def get_sankey_aggregation(self, tenant_id: str, entity_id: str | None = None) -> list[dict]:
         """Aggregate triples for Sankey visualization, scoped to a tenant.
 
         Returns rows of {fabric_plane, fabric_product, source_system, domain,
         entity_id, triple_count} grouped by fabric × source × domain × entity.
+        When entity_id is provided, only that entity's triples are aggregated.
         """
         sql = (
             "SELECT COALESCE(fabric_plane, 'unattributed') AS fabric_plane, "
@@ -1045,6 +1050,12 @@ class TripleStore:
             "entity_id, COUNT(*) AS triple_count "
             "FROM current_triples "
             "WHERE tenant_id = %s "
+        )
+        params: list = [tenant_id]
+        if entity_id:
+            sql += "AND entity_id = %s "
+            params.append(entity_id)
+        sql += (
             "GROUP BY COALESCE(fabric_plane, 'unattributed'), "
             "COALESCE(fabric_product, 'unknown'), "
             "source_system, split_part(concept, '.', 1), entity_id "
@@ -1052,11 +1063,11 @@ class TripleStore:
         )
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, [tenant_id])
+                cur.execute(sql, params)
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
-    def get_concept_collisions(self, tenant_id: str) -> list[dict]:
+    def get_concept_collisions(self, tenant_id: str, entity_id: str | None = None) -> list[dict]:
         """Detect concepts written by multiple source_systems in the current run.
 
         Returns rows of {entity_id, concept, property, period, sources} where
@@ -1072,13 +1083,19 @@ class TripleStore:
             "COUNT(DISTINCT source_system) AS source_count "
             "FROM current_triples "
             "WHERE tenant_id = %s "
+        )
+        params: list = [tenant_id]
+        if entity_id:
+            sql += "AND entity_id = %s "
+            params.append(entity_id)
+        sql += (
             "GROUP BY entity_id, concept, property, period "
             "HAVING COUNT(DISTINCT source_system) > 1 "
             "ORDER BY concept, entity_id, period"
         )
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, [tenant_id])
+                cur.execute(sql, params)
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 

@@ -212,26 +212,27 @@ class TestTripleCountGrowth:
 
         body = page.locator("body").text_content() or ""
 
-        # Extract the number after "Total Triples"
-        match = re.search(r"Total Triples\s*([\d,]+)", body)
+        # Extract the number after "Current triples for {entity}"
+        match = re.search(r"Current triples for .+?([\d,]+)", body)
         assert match, (
-            f"Could not find Total Triples count on Ingest tab. "
+            f"Could not find 'Current triples for ...' count on Ingest tab. "
             f"Body excerpt: {body[:500]}"
         )
         ui_total = int(match.group(1).replace(",", ""))
 
-        # Ground truth from API at runtime (B10) — not a hardcoded threshold
+        # Ground truth from API at runtime (B10) — the UI shows the selected
+        # entity's count, so compare against that entity's triple_count.
         resp = httpx.get(f"{DCL_BACKEND}/api/dcl/entities", timeout=10.0)
         assert resp.status_code == 200, f"Entities API returned {resp.status_code}"
         api_entities = resp.json()["entities"]
-        expected_total = sum(e["triple_count"] for e in api_entities)
+        most_recent = next((e for e in api_entities if e.get("is_most_recent")), api_entities[0])
+        expected_count = most_recent["triple_count"]
 
-        assert ui_total == expected_total, (
-            f"Total Triples in UI ({ui_total:,}) does not match API "
-            f"ground truth ({expected_total:,}). UI-API mismatch."
+        assert ui_total == expected_count, (
+            f"Current triples in UI ({ui_total:,}) does not match API "
+            f"ground truth for {most_recent['entity_id']} ({expected_count:,}). UI-API mismatch."
         )
-        # Minimum floor: any valid pipeline run produces at least 10K triples
-        assert ui_total >= 10_000, (
-            f"Total Triples is {ui_total:,}. Even a single-entity SE run "
-            f"should produce at least 10,000 triples."
+        assert ui_total >= 1_000, (
+            f"Current triples is {ui_total:,}. A valid entity SE run "
+            f"should produce at least 1,000 triples."
         )

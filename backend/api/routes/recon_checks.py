@@ -302,7 +302,24 @@ def run_recon(
     # Resolve run_id from tenant_runs when the caller didn't pin one.
     if not run_id:
         if not tenant_id:
-            tenant_id = _triple_store.resolve_single_tenant()
+            sql = (
+                "SELECT tenant_id::text FROM tenant_runs "
+                "ORDER BY updated_at DESC LIMIT 1"
+            )
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql)
+                    row = cur.fetchone()
+            if not row:
+                return {
+                    "dcl_ingest_id": None,
+                    "entity_id": entity_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "overall": "fail",
+                    "checks": [],
+                    "detail": "No runs in tenant_runs — ingest data first",
+                }
+            tenant_id = row[0]
         run_id = _resolve_run_id(tenant_id, entity_id)
         if run_id is None:
             detail = (
