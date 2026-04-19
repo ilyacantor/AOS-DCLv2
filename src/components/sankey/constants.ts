@@ -8,8 +8,8 @@ export const SE_CONFIG = {
   link: {
     strokeWidth: 2.5,
     internalStrokeWidth: 1.5,
-    minStrokeWidth: 1.5,
-    maxStrokeWidth: 6,
+    minStrokeWidth: 3,
+    maxStrokeWidth: 24,
     restOpacity: 0.25,
     hoverOpacity: 0.65,
     internalRestOpacity: 0.15,
@@ -82,7 +82,7 @@ export const SANKEY_CONFIG = {
   layerPositions: { L0: 0, L1: 0.33, L2: 0.66, L3: 1.0 },
   label: SE_CONFIG.label,
   link: {
-    minStrokeWidth: 1,
+    minStrokeWidth: 2,
     defaultOpacity: SE_CONFIG.link.restOpacity,
     hoverOpacity: SE_CONFIG.link.hoverOpacity,
     transitionDuration: SE_CONFIG.link.transitionMs,

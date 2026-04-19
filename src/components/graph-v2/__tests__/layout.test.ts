@@ -6,7 +6,7 @@ import type { GraphNode, GraphLink } from '../../../types';
 const config: LayoutConfig = {
   margin: { top: 50, right: 50, bottom: 20, left: 50 },
   node: { width: 18, padding: 14 },
-  link: { minStrokeWidth: 1.5, maxStrokeWidth: 6 },
+  link: { minStrokeWidth: 3, maxStrokeWidth: 24 },
   maxNodeHeight: 70,
 };
 
