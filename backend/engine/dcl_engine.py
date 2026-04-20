@@ -59,6 +59,7 @@ class DCLEngine:
         source_limit: int = 1000,
         aod_run_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        entity_id: Optional[str] = None,
     ) -> tuple[GraphSnapshot, RunMetrics]:
 
         start_time = time.time()
@@ -75,6 +76,7 @@ class DCLEngine:
                 start_time=start_time,
                 metrics=metrics,
                 tenant_id=tenant_id,
+                entity_id=entity_id,
             )
 
         payload_kpis: Optional[Dict[str, Any]] = None
@@ -303,6 +305,7 @@ class DCLEngine:
         start_time: float,
         metrics: RunMetrics,
         tenant_id: Optional[str] = None,
+        entity_id: Optional[str] = None,
     ) -> tuple[GraphSnapshot, RunMetrics]:
         """Build the Sankey graph from semantic_triples in PG, scoped to tenant.
 
@@ -325,7 +328,7 @@ class DCLEngine:
 
         # Check for active triples
         try:
-            triple_count = triple_store.count_active(tenant_id)
+            triple_count = triple_store.count_active(tenant_id, entity_id)
         except Exception as e:
             logger.error(f"Triple count check failed: {e}", exc_info=True)
             raise RuntimeError(
@@ -384,7 +387,7 @@ class DCLEngine:
         )
 
         try:
-            sankey_rows = triple_store.get_sankey_aggregation(tenant_id)
+            sankey_rows = triple_store.get_sankey_aggregation(tenant_id, entity_id)
         except Exception as e:
             logger.error(f"Sankey aggregation query failed: {e}", exc_info=True)
             raise RuntimeError(
@@ -412,7 +415,7 @@ class DCLEngine:
 
         # Detect concept-level collisions (multiple sources for same concept)
         from backend.engine.concept_authority import pick_primary
-        collision_rows = triple_store.get_concept_collisions(tenant_id)
+        collision_rows = triple_store.get_concept_collisions(tenant_id, entity_id)
         collisions = []
         for row in collision_rows:
             sources_list = row["sources"].split(",")
@@ -435,8 +438,11 @@ class DCLEngine:
         else:
             source_run_id = ""
 
-        # Build provenance scoped to the current (latest) source run
-        if source_run_id:
+        # Build provenance scoped to the selected entity (or all entities from run)
+        if entity_id:
+            run_entities = [entity_id]
+            snapshot_label = _display_entity(entity_id)
+        elif source_run_id:
             run_entities = triple_store.get_run_entities(source_run_id)
             snapshot_label = " · ".join(_display_entity(e) for e in run_entities) if run_entities else ""
         else:

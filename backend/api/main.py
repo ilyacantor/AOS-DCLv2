@@ -513,6 +513,7 @@ async def run_dcl(request: RunRequest):
             source_limit=request.source_limit or 1000,
             aod_run_id=request.aod_run_id,
             tenant_id=resolved_tenant_id,
+            entity_id=request.entity_id,
         )
 
     try:
