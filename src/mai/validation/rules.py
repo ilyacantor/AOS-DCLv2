@@ -1,5 +1,5 @@
 """
-Maestra Layer 0 — Deterministic validation rules.
+Mai Layer 0 — Deterministic validation rules.
 
 Each rule is a standalone function that takes a FinancialOutput and returns
 a list of ValidationError. The validate() orchestrator runs all rules and

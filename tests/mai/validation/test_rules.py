@@ -1,5 +1,5 @@
 """
-Unit tests for Maestra Layer 0 validation rules.
+Unit tests for Mai Layer 0 validation rules.
 
 Covers V-001 through V-007, multiple simultaneous violations,
 and the reprompt loop (success + exhaustion).
@@ -18,14 +18,14 @@ import os
 # Ensure src/ is importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
-from maestra.validation.schema import (
+from mai.validation.schema import (
     FinancialOutput,
     Flag,
     JournalEntry,
     JournalLine,
     LineItem,
 )
-from maestra.validation.rules import (
+from mai.validation.rules import (
     v001_journal_balance,
     v002_element_matches_coa,
     v003_accounting_equation,
@@ -35,8 +35,8 @@ from maestra.validation.rules import (
     v007_period_start,
     validate,
 )
-from maestra.validation.seed_coa import CoALookup
-from maestra.validation.reprompt import reprompt_loop
+from mai.validation.seed_coa import CoALookup
+from mai.validation.reprompt import reprompt_loop
 
 
 def _run_async(coro):

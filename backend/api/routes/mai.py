@@ -1,5 +1,5 @@
 """
-Maestra status endpoint — read-only window into DCL semantic layer state.
+Mai status endpoint — read-only window into DCL semantic layer state.
 
 Returns structured JSON for a given tenant describing:
   - concepts (metrics) count
@@ -18,12 +18,12 @@ from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
-router = APIRouter(tags=["Maestra"])
+router = APIRouter(tags=["Mai"])
 
 
-@router.get("/maestra/status")
-def maestra_status(tenant_id: str = Query("default")) -> Dict[str, Any]:
-    """Return structured DCL semantic layer state for Maestra."""
+@router.get("/mai/status")
+def mai_status(tenant_id: str = Query("default")) -> Dict[str, Any]:
+    """Return structured DCL semantic layer state for Mai."""
     from backend.api.semantic_export import (
         PUBLISHED_METRICS,
         PUBLISHED_ENTITIES,
