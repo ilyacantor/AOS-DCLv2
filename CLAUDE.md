@@ -230,6 +230,17 @@ Separate repos per module. All repos branch from `dev`. No feature branches unle
 
 ---
 
+## Dev/Prod Database Separation
+
+- `.env` = production Supabase credentials. Never use for local development.
+- `.env.development` = aos-dev Supabase credentials. Always load this for local runs and testing.
+- Before any DB-touching work, confirm which env file is active.
+- Never write seed scripts, migrations, or test data against `.env` directly.
+- aos-dev project: `glmeqbnuahlkkbolkent` (Supabase). Schema prefixes separate prod projects: `shared_gdbmdr`, `shared_yuxrdo`, `shared_jhvxtl`, plus `console`, `maestra`, `mai_memory`, `aod`.
+- Connection strings in `.env.development` set `search_path` via the `options` query param so apps resolve tables transparently.
+
+---
+
 ## FORBIDDEN PATTERNS
 - Tests that pass while the real feature fails
 - **Silent fallbacks** — #1 most forbidden pattern

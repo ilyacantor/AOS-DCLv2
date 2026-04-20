@@ -68,3 +68,4 @@ test-results/
 
 # Binary documents
 *.xlsx
+.env.development
