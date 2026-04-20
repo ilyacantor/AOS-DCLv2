@@ -1945,7 +1945,63 @@ concepts:
     calculation_methodology: null
     comparability_rules: "Entitlement definitions vary across product tiers and editions. Named-user vs concurrent-user licensing produces different utilization metrics. Overage handling (hard cap vs soft cap vs usage-based billing) affects comparison."
 
-  # ─── IT & Infrastructure ─────────────────────────────────
+  - id: pipeline
+    concept_id: PRD-012
+    name: Pipeline
+    description: "CI/CD or data pipeline stage"
+    domain: product_eng
+    cluster: Engineering
+    example_fields:
+      - pipeline_id
+      - pipeline_name
+      - stage
+      - status
+      - duration
+      - trigger
+    aliases:
+      - ci_cd
+      - build_pipeline
+      - deploy_pipeline
+    expected_type: string
+    typical_source_systems: [github_actions, jenkins, gitlab_ci, circleci]
+    persona_relevance:
+      cto: 0.9
+      cro: 0.5
+    recognition_basis: "Created when a CI/CD or data pipeline definition is registered."
+    timing_semantics: "Event-based. Each pipeline run is a point-in-time execution with start, end, and duration."
+    scope_boundaries: "Includes build, test, deploy, and data pipelines. Excludes ad-hoc scripts and manual deployments."
+    calculation_methodology: null
+    comparability_rules: "Pipeline duration and success rates depend on codebase size, test coverage, and infrastructure. Cross-tool comparison requires normalizing stage definitions."
+
+  - id: jira
+    concept_id: PRD-013
+    name: Jira
+    description: "Project tracking issue or ticket from Jira"
+    domain: product_eng
+    cluster: Engineering
+    example_fields:
+      - issue_key
+      - issue_type
+      - status
+      - priority
+      - assignee
+      - sprint
+      - story_points
+    aliases:
+      - jira_issue
+      - jira_ticket
+      - project_ticket
+    expected_type: string
+    typical_source_systems: [jira, jira_cloud, jira_server]
+    persona_relevance:
+      cto: 0.9
+    recognition_basis: "Created when an issue is filed in a Jira project."
+    timing_semantics: "Point-in-time entity with lifecycle states (open, in progress, done). Sprint assignment defines period."
+    scope_boundaries: "Includes all Jira issue types — stories, bugs, tasks, epics. Excludes sub-tasks unless explicitly tracked."
+    calculation_methodology: null
+    comparability_rules: "Story point scales vary across teams. Velocity comparison requires consistent estimation practices."
+
+  # ─── IT & Infrastructure ���──────��─────────────────────────
   - id: it_asset
     concept_id: IT-001
     name: IT Asset
@@ -2255,6 +2311,90 @@ concepts:
     scope_boundaries: "Includes API integrations, file-based transfers, database replication, and webhook connections. Excludes manual data entry and spreadsheet uploads."
     calculation_methodology: null
     comparability_rules: "Integration counts depend on definition granularity (connection-level vs flow-level vs endpoint-level). Sync success rates must control for data volume and complexity. Real-time vs batch integrations have different reliability profiles."
+
+  - id: aws_cost
+    concept_id: IT-013
+    name: AWS Cost
+    description: "Cloud infrastructure cost record from AWS Cost Explorer"
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - service
+      - usage_type
+      - cost
+      - currency
+      - account_id
+      - region
+      - period
+    aliases:
+      - cloud_cost
+      - aws_cost_explorer
+      - cloud_spend
+    expected_type: float
+    typical_source_systems: [aws_cost_explorer, aws, cloudhealth]
+    persona_relevance:
+      cfo: 0.8
+      cto: 0.9
+    recognition_basis: "Generated from AWS billing data, typically aggregated daily or monthly."
+    timing_semantics: "Period-based. Costs accrue over billing periods aligned to calendar months."
+    scope_boundaries: "Includes all AWS service costs — compute, storage, networking, managed services. Covers reserved instances, savings plans, and on-demand. Excludes third-party marketplace charges unless explicitly included."
+    calculation_methodology: null
+    comparability_rules: "Cost comparison requires consistent time periods, currency, and discount treatment (RI amortization vs cash). Cross-cloud comparison requires service-level normalization."
+
+  - id: datadog
+    concept_id: IT-014
+    name: Datadog
+    description: "Observability metric or monitor from Datadog"
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - monitor_id
+      - metric_name
+      - host
+      - service
+      - status
+      - value
+    aliases:
+      - datadog_monitor
+      - datadog_metric
+      - observability
+    expected_type: string
+    typical_source_systems: [datadog]
+    persona_relevance:
+      cto: 0.9
+    recognition_basis: "Created when a Datadog monitor or metric is configured and begins collecting data."
+    timing_semantics: "Point-in-time for alerts; period-based for aggregated metrics (hourly, daily)."
+    scope_boundaries: "Includes infrastructure metrics, APM traces, log-based metrics, and synthetic monitors. Excludes raw log events."
+    calculation_methodology: null
+    comparability_rules: "Metric granularity (host-level vs service-level) affects aggregation. Monitor thresholds vary by team. Cross-tool comparison (Datadog vs New Relic vs Grafana) requires metric name normalization."
+
+  - id: event
+    concept_id: IT-015
+    name: Event
+    description: "Discrete business or system event"
+    domain: it_infra
+    cluster: Infra
+    example_fields:
+      - event_id
+      - event_type
+      - source
+      - timestamp
+      - payload
+      - severity
+    aliases:
+      - system_event
+      - business_event
+      - audit_event
+    expected_type: string
+    typical_source_systems: [eventbridge, kafka, segment, mixpanel]
+    persona_relevance:
+      cto: 0.8
+      cro: 0.5
+    recognition_basis: "Created when a discrete occurrence is captured — user action, system state change, or external trigger."
+    timing_semantics: "Point-in-time. Each event has a single timestamp. Event streams are ordered by time."
+    scope_boundaries: "Includes user events, system events, audit events, and webhook events. Excludes continuous telemetry streams (use event_stream for those)."
+    calculation_methodology: null
+    comparability_rules: "Event volume depends on instrumentation coverage. Different event schemas require normalization before aggregation. Deduplication rules vary by source system."
 
   # ─── Operations & Supply Chain ─────────────────────────────
   - id: project

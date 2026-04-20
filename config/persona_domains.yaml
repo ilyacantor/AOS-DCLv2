@@ -28,6 +28,7 @@ personas:
       - accounts_receivable
       - invoice
       - journal_entry
+      - aws_cost
   CRO:
     display_name: Chief Revenue Officer
     domains:
@@ -37,6 +38,8 @@ personas:
       - arr
       - sales
       - customer_service
+      - pipeline
+      - event
   COO:
     display_name: Chief Operating Officer
     domains:
@@ -52,6 +55,12 @@ personas:
       - infrastructure
       - engineering
       - event_stream
+      - aws_cost
+      - pipeline
+      - jira
+      - datadog
+      - event
+      - it_asset
   CHRO:
     display_name: Chief Human Resources Officer
     domains:
