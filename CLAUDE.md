@@ -22,10 +22,12 @@ Rules agents violate most often:
 - **I1–I6:** Pipeline identity rules. No silent fallback on missing tenant_id/entity_id. 422 or fail loud. No run_id in API responses.
 
 **Canonical governing documents:**
-- `convergence_MA_spec_v7.4.1` — single source of truth for all AOS architecture. Supersedes all prior versions.
-- `pipeline_identity_architecture_v1` — governs all pipeline identity, provenance, and naming. Supersedes ad-hoc ID conventions.
-- `AOS_MASTER_RACI_v8.3.csv` — module ownership matrix. 7 active services + Console. The RACI summary below is abbreviated — the CSV is authoritative.
-- `se_triples_conversion_build_plan_v2.2.md` — SE/ME triple write paths, deferred AOD/AAM conversion specs, EAV data model.
+- `convergence_blueprint_master` — Convergence product architecture, workflow pattern, engines, pipeline identity. Supersedes all convergence_MA_spec versions (v5–v8).
+- `mai_blueprint_master` — Mai concierge runtime, constitution, memory, surfaces, build phases. Supersedes all Maestra/Mai specs and Omnipresence Blueprint.
+- `convergence_transition_master` — fixture eradication, identity resolver, AOS catalog generalization. Supersedes ME v2 Blueprint.
+- `pipeline_identity_architecture_v1` — governs all pipeline identity, provenance, and naming.
+- `AOS_MASTER_RACI_v8.6.csv` — module ownership matrix. 8 active services + Console. The RACI summary below is abbreviated — the CSV is authoritative.
+- `se_triples_conversion_build_plan_v2.2.md` — AOS/Convergence triple write paths, deferred AOD/AAM conversion specs, EAV data model.
 
 ---
 
@@ -42,20 +44,27 @@ Ilya is the CEO and de facto CTO. He is NOT a developer. He reasons architectura
 ---
 
 ## PLATFORM IN ONE PARAGRAPH
-AutonomOS is an AI-native enterprise platform that delivers unified context for the enterprise. It discovers what exists (AOD), understands how to connect (AAM), generates synthetic financial models (Farm), maps everything to business meaning via a semantic triple store (DCL — SE only), runs multi-entity engines for M&A and integration intelligence (Convergence), lets humans and AI query in plain English (NLQ), and surfaces the operator experience through Console. Platform hosts the Maestra constitution and classification engine. Maestra is the persistent AI engagement lead who guides operators through the AOS lifecycle, governed by a four-tier supervised execution model.
+AutonomOS is an AI-native enterprise platform that delivers unified context for the enterprise. It discovers what exists (AOD), understands how to connect (AAM), generates synthetic financial models (Farm), maps everything to business meaning via a semantic triple store (DCL — AOS only), runs multi-entity workflows for M&A and integration intelligence (Convergence), lets humans and AI query in plain English (NLQ), and surfaces the operator experience through Console. Platform hosts the Mai concierge agent and the supervised execution classification engine. Mai is the concierge — she reads broadly, writes to admin surfaces only, and does not execute operational workflows. Convergence owns operational workflow execution (COFA merge, combining, entity resolution, QofE) via code-driven control flow with bounded LLM reasoning steps.
 
 ---
 
 ## DATA ARCHITECTURE
-**SE pipeline:** AOD → AAM → Farm → triple conversion → PG direct. Six orchestrated steps. Only Farm Financials writes triples to DCL via orchestrator. Existing direct-PG write code in AOD/AAM is labeled tech debt — must not be extended. Old DCL pipe ingest path (Structure/Dispatch/Content) is deprecated — do not fix or extend.
+**AOS pipeline:** AOD → AAM → Farm → triple conversion → PG direct. Six orchestrated steps. Only Farm Financials writes triples to DCL via orchestrator. Existing direct-PG write code in AOD/AAM is labeled tech debt — must not be extended. Old DCL pipe ingest path (Structure/Dispatch/Content) is deprecated — do not fix or extend.
 
-**ME pipeline:** Farm (per entity) → DCL (per entity) → COFA → Verify. All ME engines live in the Convergence repo. Farm ME push routes to Convergence, not DCL.
+**Convergence pipeline:** Farm (per entity) → Convergence (per entity) → COFA merge → Verify. All Convergence engines live in the Convergence repo. Farm Convergence push routes to Convergence backend (port 8010), not DCL. Convergence triples write to convergence_triples. DCL is never in the Convergence write path.
 
-**SE and ME are strict separation of concerns with no shared plumbing.** Unit of work is the stage, not the pipeline. No shared code paths between SE and ME pipelines.
+**AOS and Convergence are strict separation of concerns with no shared plumbing.** Unit of work is the stage, not the pipeline. No shared code paths between AOS and Convergence pipelines.
 
-- **Entities:** Meridian ($5B consultancy) and Cascadia ($1B BPM). Entity is a tag — no split brain.
-- **Farm configs:** Only `farm_config_meridian.yaml` and `farm_config_cascadia.yaml`. Any numbers at $35M or $124M scale are broken.
+- **Entities:** Transitional fixture configs (Meridian, Cascadia) are superseded by convergence_transition_master WP2. Entity is a tag — no split brain.
+- **Farm configs:** Current fixture configs will be eradicated per convergence_transition_master. Any numbers at $35M or $124M scale are broken.
 - **No demo mode.** fact_base.json is removed. If data is missing, fail loudly.
+
+### Terminology
+- AOS = single-entity product (codebase: SE)
+- Convergence = multi-entity product (codebase: ME)
+- Convergence M&A = deal-driven engagement workflow (codebase: MA)
+- Mai = concierge agent (codebase: maestra pre-rename, mai post-rename)
+- Product names (AOS, Convergence) in specs and operator surfaces. Code identifiers (SE, ME) retained until code cleanup phase.
 
 ---
 
@@ -87,43 +96,81 @@ SE: {entity_id}-{short_hash} (e.g., BlueLogic-NEQ8-a9ed). ME: {engagement_short_
 
 ---
 
+## Playwright Acceptance (extends B17)
+
+No feature is done until the agent states in plain English what a working version looks like on screen — specific counts, specific entity names, specific rendered text — and the test asserts exactly that. "Banner appears" means the agent does not understand the feature.
+
+UI-driven only:
+- Tests drive the operator path through real UI events — `locator.click()`, `locator.fill()`, `selectOption()`, file pickers, keyboard. The test sits in the operator's seat: open the page, click what they click, type what they type, wait for what they see.
+- Calling backend endpoints from the test (`page.request.post()`/`put()`/`patch()`/`delete()`, `fetch()`, `axios`, `curl`, the SDK, route stubs that bypass the user's input) to trigger the feature under test is an API test, not acceptance. API-only paths do not count toward the B17 gate even when green.
+- Actual clicks must trigger the sequence. No test-only triggers, no harness-side POSTs that simulate the click, no orchestration calls that bypass the button. If the user's first action is a click, the test's first action is a click.
+- Allowed exception: `page.request.get()` to read-only endpoints (Farm ground-truth, health) for fetching expected values. Any mutative call from the test runner is a violation.
+
+Acceptance specificity:
+1. Assertions compare against ground truth pulled from the source system at test time. Expected values are never hardcoded and never agent-authored. Farm exposes the ground-truth endpoint; the test fetches and compares.
+2. Mutative features require before/after state capture: capture rendered state, perform action, capture again, assert delta matches the claim.
+3. Weak assertions fail acceptance even when green. Always-wrong (pre-commit enforced on added lines): `toBeTruthy()`, `.not.toBeNull()`, `length > 0`, `length >= 1`, `toContain('success')`, `toContain('ok')`, `status === 200` as sole assertion. Context-dependent (agent self-review, not hook-enforced): bare `toBeVisible()`, `toHaveCount(n)` not tied to ground truth, `toHaveLength(n)` not tied to ground truth.
+
+Reporting:
+4. Every UI test captures a screenshot. Thumbnails embedded in the agent's completion report.
+5. Agent runs the test headed once before declaring done. Not required in CI; required in the completion handoff.
+
+Taxonomy:
+6. Live-services run against real Farm / DCL / NLQ / pm2 = acceptance. Mocked Playwright = regression only, labeled as such. Both required. A PR with only one is incomplete.
+7. Every feature with a visible failure surface ships with a paired negative test asserting the readable error, not the status code.
+
+Prompt-time requirement:
+Every CC feature prompt opens with a one-sentence operator-visible outcome statement with specific values before writing code. If the agent cannot write that sentence, it does not understand the feature and does not write the test.
+
+Hook scope (scripts/precommit.sh, sourced from `.playwright-banned-patterns`): inspects ADDED/MODIFIED lines only in staged `*.spec.ts`/`*.spec.js`; enforces the `// Operator-visible outcome: <specific values>` first-line header on NEW spec files only. Existing specs are not retroactively blocked. Rewriting existing specs to satisfy Rules 1 and 2 is tracked as catalog-pass entries in `dcl_deferred_work.md`.
+
+---
+
 ## MODULE RACI — SUMMARY
-**Authoritative source: `AOS_MASTER_RACI_v8.3.csv`**
+**Authoritative source: `AOS_MASTER_RACI_v8.6.csv`**
 
 | Module | Owns | Does NOT own |
 |--------|------|-------------|
 | **AOD** | Discovery, classification, SOR detection, ConnectionCandidate generation | Pipe blueprints, data extraction, semantic mapping |
 | **AAM** | Pipe blueprints, work orders, drift detection, self-healing, adapters | Data movement, semantic mapping |
 | **DCL** (SE only) | Semantic triple store, ontology, graph engine, SE query resolution, reconciliation, triple monitoring. Owns all write-side invariants (ingest, is_active, tenant_runs). | ME engines (moved to Convergence), engagement lifecycle, discovery, NLQ formatting |
-| **Convergence** (ME/M&A) | All ME v2 engines (combining, bridge, QoE, overlap, cross-sell, entity resolution, COFA, what-if), engagement lifecycle, resolution workspaces. Reads DCL tables (SELECT only). Writes triples via DCL HTTP only. | Triple store schema, SE query resolution, discovery, NLQ formatting |
+| **Convergence** (M&A product) | All Convergence v2 engines (combining, bridge, QoE, overlap, cross-sell, entity resolution, COFA, what-if), engagement lifecycle, resolution workspaces, entity policies, model_client (Anthropic SDK direct), workflow execution. Reads DCL tables (SELECT only). Writes to convergence_triples (own table). | Triple store schema, AOS query resolution, discovery, NLQ formatting, Mai concierge |
 | **NLQ** | Intent resolution, persona filtering, query dispatch, report portal, rendering | Semantic mapping, data storage |
 | **Farm** | Synthetic data, financial models, test oracle, triple conversion, entity_id generation | Production data, live connections |
-| **Platform** | Maestra constitution, classification engine | Production operator UI (owned by Console) |
-| **Console** | Production UI, pipeline orchestration, operator feed, task queue, upload, e2e demo, Maestra chat | Module internals — calls module APIs |
+| **Platform** | Mai concierge runtime, constitution, classification engine, supervised execution, admin tool registry, guided tour | Operational workflow execution (owned by Convergence), production operator UI (owned by Console) |
+| **Console** | Production UI, pipeline orchestration, operator feed, task queue, upload, e2e demo, Mai chat | Module internals — calls module APIs |
 
 **RACI VIOLATION = STOP AND FLAG.** Exception (A12/C6): RACI is for design decisions. Fix bugs wherever they live.
 
 ---
 
 ## CONVERGENCE GUARDRAIL
-Convergence = base AOS + a bridge where Target pipes join Acquirer pipes into one DCL. Entity is a tag. Same engine, ontology, resolution, query routing. **Convergence is a separate repo and service (port 8010/3010). DCL is SE-only.** Reject any proposal that creates separate engines, adds Convergence-specific columns to DCL, introduces split brain, or diverges from base AOS for multi-entity.
+Convergence = base AOS + a bridge where Target pipes join Acquirer pipes into one unified context via Convergence's convergence_triples. Entity is a tag. Same engine, ontology, resolution, query routing. **Convergence is a separate repo and service (port 8010/3010). DCL is AOS-only.** Reject any proposal that creates separate engines, adds Convergence-specific columns to DCL, introduces split brain, or diverges from base AOS for multi-entity.
 
 **Cross-service contracts:**
 - Convergence reads DCL-owned tables directly (SELECT only) — report-time queries need sub-ms latency.
-- Convergence never writes to DCL tables directly — all triple writes through POST /api/dcl/ingest-triples.
+- Convergence writes to its own convergence_triples table. Convergence never writes to DCL-owned tables.
 - DCL never reads or writes Convergence-owned tables. DCL calls GET /api/convergence/engagement/active for engagement context.
 - Schema changes to semantic_triples require Convergence coordination (SCHEMA_CONTRACT.md in DCL).
 
+**Workflow vs Agent category rule:**
+- **Agent** (Mai): LLM decides control flow. Concierge scope only. Read-broad, write-admin-only.
+- **Workflow** (Convergence): code decides control flow. LLM is a bounded reasoning step inside one node. Convergence calls Anthropic SDK directly via model_client — no dependency on Platform Mai for LLM access.
+- Operational tasks (COFA merge, combining, entity resolution, QofE review) route through Convergence workflow endpoints (POST /api/convergence/workflow/*/run), not through Mai's chat endpoint.
+- Operational tools (write_cofa_mapping, write_combining_output, write_resolution_decision) are NOT registered in Mai's tool registry. They exist inside Convergence workflow handlers.
+- Do not ship operational execution through Mai. Do not register operational tools in Mai's catalog. This is a permanent exclusion.
+
 ---
 
-## MAESTRA
-Persistent AI engagement lead. Constitution lives in Platform (`~/code/platform/app/maestra/constitution/`). Production surface is Console.
+## MAI
+Concierge agent. Reads broadly, writes narrowly to admin surfaces only. Does NOT execute operational workflows. Constitution lives in Platform (`~/code/platform/app/mai/constitution/`). Full spec: mai_blueprint_master.
 
-- **Constitution:** Layers 0-4 in `constitution/`. Module docs in `constitution/modules/`.
-- **Supervised Execution:** Four-tier model (Auto-execute / Validate with Farm dry-run / Plan Mode / Escalate only). maestra_plans table (19 columns). Classification engine in Platform. 146+ tests zero regressions. Console operator feed (card-based, tier badges, 30-second polling).
-- **Boundaries:** Maestra reasons; DCL validates. Maestra does NOT recommend accounting resolutions — she isolates variables and presents them. No auto-resolution. All conflicts route to human review ranked by materiality.
-- **Layer 3:** Manually authored for MVP. meridian_policy.md and cascadia_policy.md.
-- **Phase 2 in progress:** tenant_preferences table with CHECK constraint enforcing 12-key registry.
+- **Scope:** Onboarding guidance, admin (tenant/user/engagement metadata), tech support, navigation, explanation of platform state, observability queries over workflow runs.
+- **Constitution:** Layer 0 (Identity, voice, generalization charter), Layer 1 (Scenario Variant), Layer 2 (Observability grammar, escalation criteria), Layer 3 (Quality gates). Accounting axioms and entity policies are NOT in Mai's constitution — they live in Convergence workflow prompts.
+- **Supervised Execution:** Four-tier model governs Convergence workflow invocations (not Mai concierge actions). Classification engine in Platform. Console operator feed (card-based, tier badges, 30-second polling).
+- **Entity policies:** Manually authored Markdown, hosted in `convergence/backend/policies/`. Read by Convergence workflow pre-flight. Not part of Mai's constitution.
+- **Does NOT:** Execute operational workflows. Route COFA merge, combining, entity resolution, or QofE through her chat endpoint. Register operational tools in her tool catalog. Recommend accounting resolutions.
+- **Observability:** Mai reads workflow run summaries via GET /api/convergence/runs. She explains results by reading structured data, not by re-reasoning over accounting rules.
 
 ---
 
@@ -136,6 +183,7 @@ Persistent AI engagement lead. Constitution lives in Platform (`~/code/platform/
 6. **No latency regression** — measure before and after (B18). Hard ceilings are absolute.
 7. **No new features** — unless explicitly requested (A6).
 8. **Identity intact** — tenant_id + entity_id present on every stage response. No run_id in payloads (I1–I2).
+9. **Workflow routing intact** — no operational execution through Mai's chat endpoint or tool registry.
 
 ---
 
@@ -202,6 +250,8 @@ Separate repos per module. All repos branch from `dev`. No feature branches unle
 - Writing to DCL-owned tables from Convergence (bypass ingest-triples endpoint)
 - Importing Convergence engine code from DCL or vice versa (repos are separated)
 - Extending direct-PG write code in AOD/AAM (labeled tech debt, frozen)
+- Routing operational workflow execution through Mai's chat endpoint or tool registry (workflow-through-chat)
+- Registering operational tools (write_cofa_mapping, write_combining_output, write_resolution_decision) in Mai's tool catalog
 - Any reference to AOA (cancelled) or Replit
 - Any reference to fact_base.json
 
@@ -215,6 +265,7 @@ Separate repos per module. All repos branch from `dev`. No feature branches unle
 - Self-review every prompt against these rules before presenting to Ilya
 - Before changing critical path items, print impact analysis first (consequences rule)
 - If touching pipeline code, verify identity pair (tenant_id + entity_id) flows through all affected stages
+- If touching Mai code, verify no operational workflow execution routes through Mai's chat endpoint or tool registry
 
 ---
 
@@ -312,7 +363,7 @@ The harness is only valid after a fresh pipeline run. Verify pipeline freshness 
 Every test hits the live system fresh. No memoization, no response caching.
 
 ## B17: Frontend is the pass/fail gate
-Backend queries and API responses are diagnostic tools, not proof of correctness. The UI rendering the correct data in the browser is the real test. A correct API response that doesn't render is not a pass. Open the browser, look at the screen, verify what the user would see. Playwright is the accountability gate — tests are not complete without it.
+Backend queries and API responses are diagnostic tools, not proof of correctness. The UI rendering the correct data in the browser is the real test. A correct API response that doesn't render is not a pass. Open the browser, look at the screen, verify what the user would see. Playwright is the accountability gate — tests are not complete without it. Tests must drive the operator path through real UI events — `locator.click()`, `locator.fill()`, `selectOption()`, file pickers, keyboard. Backend calls from inside the test (`page.request.post()`, `fetch()`, `curl`, the SDK, route stubs that bypass user input) are API tests, not acceptance. Actual clicks must trigger the sequence — never POSTs from the test runner.
 
 ## B18: 5% latency budget
 More than 5% regression on any endpoint is a blocking issue. Hard latency ceilings stated in prompts are absolute and non-negotiable. Latency ceilings mean the operation COMPLETES in time, not ABORTS in time. Timeouts are not performance fixes.
@@ -415,3 +466,87 @@ Installed at `.git/hooks/pre-commit`. Blocks commits containing:
 - Bare `run_id` as a response field name (use namespaced identifiers)
 
 Do not bypass with `--no-verify` (C13).
+
+---
+
+# Branch hygiene (B17)
+
+- Feature branches are merged to dev and deleted in the same session they are created.
+- Unmerged branches at session end are a B17 failure and must be reported.
+- `--no-verify` is banned. If a hook blocks a legitimate change, fix the hook scope, then commit.
+- Session start: run `git fetch --all --prune && git branch -a` and report stale branches before new work.
+
+---
+
+# Destructive-action contract (B19)
+
+Destructive actions touch state the user or another tenant cannot get back
+without recovery effort. In DCL that list is narrow but high-cost:
+
+- `TRUNCATE` / `DROP TABLE` / `DROP COLUMN` against any live table.
+- `DELETE FROM semantic_triples | current_triples | tenant_runs | semantic_triples_archive`
+  outside the `swap_and_delete` path.
+- Running a migration that rewrites or rebuilds the store (014/015/016, or any
+  successor).
+- Killing or restarting dcl-backend while an in-flight ingest or migration
+  holds an open transaction.
+- `git reset --hard`, `git push --force`, branch deletion on unmerged work.
+
+Before any destructive action:
+
+1. State the blast radius in one sentence — which table, how many rows, which
+   tenants, and whether the change is reversible.
+2. Check for in-flight transactions. `apply_mig015` survived a compaction once
+   because its txn was still open; killing dcl-backend would have rolled back
+   hours of scan work. If you cannot prove the write path is idle, wait.
+3. Confirm with the user before executing. One-time approval stands for the
+   scope stated in that approval, nothing more. "Apply mig016" does not
+   authorize "also drop ingest_log."
+4. Inside one transaction wherever possible. Partial rollback is safer than
+   partial commit.
+5. Never use `--no-verify`, `DROP … CASCADE`, `TRUNCATE … CASCADE`, or
+   `DELETE … WHERE true` as a shortcut. If a hook or constraint blocks you,
+   it is pointing at a real problem. Fix the underlying code instead.
+
+Non-destructive equivalents exist for most debugging: query the state, run
+`EXPLAIN`, take a schema-only dump, or spin up a fresh database. Use them.
+
+After any destructive action:
+
+- Verify the post-state by counting rows and re-running store invariants
+  (`tests/test_store_invariants.py`).
+- Record what ran, against which environment, and the pre/post row counts in
+  the session report.
+
+## Deferred work
+
+Any item you defer, park, flag as separate, classify as out-of-scope, or otherwise do not fix in the current session must be appended to `dcl_deferred_work.md` at repo root before declaring done. This repo's file: `dcl_deferred_work.md`.
+
+Required fields per entry, single pipe-delimited line:
+
+  N. YYYY-MM-DD | chat-ref | file:line | reason | severity: blocker/degraded/cosmetic | blocking: <what>
+
+Rules:
+- Chat-only parking is not parking. If it is not in the file, it does not exist.
+- "Pre-existing," "out of scope," "separate workstream," "environmental," "not caused by this refactor" all require an entry. These phrases are the trigger, not the excuse.
+- Append only. Do not rename, reorder, or renumber existing entries.
+- Do not delete resolved entries. Mark `RESOLVED YYYY-MM-DD` inline and leave in place.
+- chat-ref values must not contain the canonical filename (breaks self-reference greps).
+- Cross-repo items: reference the canonical entry, do not duplicate (e.g., `see dcl_deferred_work.md#12`).
+- Before starting any session, read the open entries. If the task touches one of them, stop and ask.
+- "Logged" said in chat is a claim, not a confirmation. The write must produce a file diff and a commit. Otherwise it didn't happen.
+
+Filename is fixed: `dcl_deferred_work.md`. Do not create `DEFERRED.md`, `TODO.md`, `FOLLOWUPS.md`, `project_deferred_work.md`, or any other variant.
+
+## Deferred work — pre-session check
+
+Before starting any task in this repo, read the open entries in `dcl_deferred_work.md`. For each open entry, note whether the file:line or subject area falls within the scope of the task you are about to execute.
+
+If yes:
+- State upfront in your response which deferred items your work plausibly touches, by number.
+- At end of session, for each one: verify whether your changes resolved it. If yes, append `RESOLVED YYYY-MM-DD (commit <sha>)` inline on that item. If no, state why not.
+- Do not delete resolved items. Do not renumber.
+
+If no items overlap, say so in one line ("Pre-session check: no open deferred items in scope") and proceed.
+
+Skipping the pre-session check is the same class of failure as chat-only parking — it lets the file drift from reality.
