@@ -13,21 +13,6 @@ interface OverviewData {
   last_ingest: { run_id: string; timestamp: string; triple_count: number } | null;
 }
 
-interface IdentityCheck {
-  name: string;
-  description: string;
-  results: { entity_id: string; period: string; status: string; lhs: number; rhs: number }[];
-  overall: string;
-  pass_count: number;
-  fail_count: number;
-}
-
-interface IdentityChecksData {
-  checks: IdentityCheck[];
-  all_pass: boolean;
-  timestamp: string;
-}
-
 interface RunData {
   run_id: string;
   timestamp: string;
@@ -66,13 +51,6 @@ interface BrowseData {
   filters_applied: Record<string, string>;
 }
 
-interface ResolutionData {
-  total_workspaces: number;
-  by_status: Record<string, number>;
-  by_type: Record<string, number>;
-  recent_decisions: { workspace_id: string; type: string; decision: string; decided_by: string | null; decided_at: string | null }[];
-}
-
 const POLL_INTERVAL_MS = 5000;
 
 // ---------------------------------------------------------------------------
@@ -81,16 +59,10 @@ const POLL_INTERVAL_MS = 5000;
 
 export function TriplesPanel() {
   const [overview, setOverview] = useState<OverviewData | null>(null);
-  const [checks, setChecks] = useState<IdentityChecksData | null>(null);
   const [runs, setRuns] = useState<RunData[]>([]);
-  const [resolution, setResolution] = useState<ResolutionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
-
-  // Identity gates expand
-  const [expandedCheck, setExpandedCheck] = useState<string | null>(null);
-  const [checksLoading, setChecksLoading] = useState(false);
 
   // Runs expand
   const [expandedRun, setExpandedRun] = useState<string | null>(null);
@@ -107,9 +79,6 @@ export function TriplesPanel() {
   const [expandedTriple, setExpandedTriple] = useState<string | null>(null);
   const BROWSE_LIMIT = 50;
 
-  // Resolution open
-  const [resolutionOpen, setResolutionOpen] = useState(false);
-
   // --- Data fetching ---
 
   const fetchOverview = async () => {
@@ -125,19 +94,6 @@ export function TriplesPanel() {
     }
   };
 
-  const fetchChecks = async () => {
-    setChecksLoading(true);
-    try {
-      const res = await fetch('/api/dcl/triples/identity-checks');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setChecks(await res.json());
-    } catch (e) {
-      console.error('[TriplesPanel] Failed to fetch identity checks:', e);
-    } finally {
-      setChecksLoading(false);
-    }
-  };
-
   const fetchRuns = async () => {
     try {
       const res = await fetch('/api/dcl/triples/runs');
@@ -146,16 +102,6 @@ export function TriplesPanel() {
       setRuns(data.runs ?? []);
     } catch (e) {
       console.error('[TriplesPanel] Failed to fetch runs:', e);
-    }
-  };
-
-  const fetchResolution = async () => {
-    try {
-      const res = await fetch('/api/dcl/triples/resolution-summary');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setResolution(await res.json());
-    } catch (e) {
-      console.error('[TriplesPanel] Failed to fetch resolution:', e);
     }
   };
 
@@ -183,7 +129,6 @@ export function TriplesPanel() {
   const fetchAll = useCallback(() => {
     fetchOverview();
     fetchRuns();
-    fetchResolution();
   }, []);
 
   useEffect(() => {
@@ -206,7 +151,6 @@ export function TriplesPanel() {
     try {
       const res = await fetch(`/api/dcl/triples/deactivate-run?run_id=${encodeURIComponent(runId)}`, { method: 'POST' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setChecks(null);
       fetchAll();
     } catch (e) {
       console.error('[TriplesPanel] Deactivate failed:', e);
@@ -346,101 +290,7 @@ export function TriplesPanel() {
         )}
 
         {/* ================================================================
-            Section 2: Identity Gates
-            ================================================================ */}
-        <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/50">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Identity Gates</h3>
-            <button
-              onClick={fetchChecks}
-              disabled={checksLoading}
-              className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            >
-              {checksLoading ? 'Checking...' : 'Run Checks'}
-            </button>
-          </div>
-
-          {checks ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4">
-              {checks.checks.map((check) => {
-                const isFail = check.overall === 'FAIL';
-                const isNA = check.overall === 'N/A';
-                const isExpanded = expandedCheck === check.name;
-                const total = check.pass_count + check.fail_count;
-
-                return (
-                  <div
-                    key={check.name}
-                    onClick={() => setExpandedCheck(isExpanded ? null : check.name)}
-                    className={`rounded-lg border p-3 cursor-pointer transition-colors ${
-                      isFail
-                        ? 'border-red-500/40 bg-red-500/10 hover:bg-red-500/15'
-                        : isNA
-                          ? 'border-border bg-card/20 hover:bg-card/30'
-                          : 'border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold text-sm text-foreground">{check.name}</span>
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${
-                        isFail
-                          ? 'bg-red-500/30 text-red-300'
-                          : isNA
-                            ? 'bg-muted/30 text-muted-foreground'
-                            : 'bg-emerald-500/30 text-emerald-300'
-                      }`}>
-                        {check.overall}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-2">{check.description}</p>
-                    <span className="text-xs font-mono text-muted-foreground">
-                      {check.pass_count}/{total}
-                    </span>
-
-                    {/* Expanded: per-entity-period results */}
-                    {isExpanded && check.results.length > 0 && (
-                      <div className="mt-3 border-t border-border/30 pt-2">
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="text-muted-foreground/60">
-                              <th className="text-left py-0.5">Entity</th>
-                              <th className="text-left py-0.5">Period</th>
-                              <th className="text-right py-0.5">LHS</th>
-                              <th className="text-right py-0.5">RHS</th>
-                              <th className="text-right py-0.5">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {check.results.map((r, i) => (
-                              <tr key={i} className="border-t border-border/10">
-                                <td className="py-0.5 font-mono text-foreground/80">{r.entity_id}</td>
-                                <td className="py-0.5 text-muted-foreground">{r.period}</td>
-                                <td className="py-0.5 text-right font-mono text-foreground/80">{r.lhs.toLocaleString()}</td>
-                                <td className="py-0.5 text-right font-mono text-foreground/80">{r.rhs.toLocaleString()}</td>
-                                <td className="py-0.5 text-right">
-                                  <span className={r.status === 'PASS' ? 'text-emerald-400' : 'text-red-400'}>
-                                    {r.status}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="p-4 text-center text-muted-foreground text-sm">
-              {checksLoading ? 'Running identity checks...' : 'Click "Run Checks" to verify accounting identities'}
-            </div>
-          )}
-        </div>
-
-        {/* ================================================================
-            Section 3: Domain Breakdown
+            Section 2: Domain Breakdown
             ================================================================ */}
         {overview && overview.domains.length > 0 && (
           <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
@@ -737,101 +587,6 @@ export function TriplesPanel() {
           ) : (
             <div className="p-4 text-center text-muted-foreground text-sm">
               No triples match the current filters
-            </div>
-          )}
-        </div>
-
-        {/* ================================================================
-            Section 6: Resolution Summary
-            ================================================================ */}
-        <div className="rounded-lg border border-border bg-card/30 overflow-hidden">
-          <button
-            onClick={() => setResolutionOpen(!resolutionOpen)}
-            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-card/20 transition-colors"
-          >
-            <svg
-              className={`w-2.5 h-2.5 shrink-0 transition-transform duration-150 text-muted-foreground ${resolutionOpen ? 'rotate-90' : ''}`}
-              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-            <span className="font-semibold uppercase tracking-wider text-muted-foreground text-sm">Resolution</span>
-            {resolution && (
-              <span className="text-muted-foreground/70 font-mono">{resolution.total_workspaces} workspaces</span>
-            )}
-          </button>
-          {resolutionOpen && resolution && (
-            <div className="px-4 py-3 border-t border-border/30">
-              {/* Stats cards */}
-              <div className="flex items-center gap-4 mb-3 font-mono text-sm flex-wrap">
-                <span>
-                  <span className="text-foreground font-semibold">{resolution.total_workspaces}</span>
-                  <span className="text-muted-foreground ml-1">total</span>
-                </span>
-                {Object.entries(resolution.by_status).map(([status, count]) => (
-                  <span key={status}>
-                    <span className={`font-semibold ${
-                      status === 'pending' ? 'text-amber-400' :
-                      status === 'resolved' || status === 'confirmed' ? 'text-emerald-400' :
-                      status === 'escalated' ? 'text-red-400' :
-                      'text-foreground'
-                    }`}>{count}</span>
-                    <span className="text-muted-foreground ml-1">{status}</span>
-                  </span>
-                ))}
-              </div>
-
-              {/* By type */}
-              {Object.keys(resolution.by_type).length > 0 && (
-                <div className="flex items-center gap-4 mb-3 font-mono text-sm flex-wrap">
-                  <span className="text-muted-foreground/60">by type:</span>
-                  {Object.entries(resolution.by_type).map(([type, count]) => (
-                    <span key={type}>
-                      <span className="text-foreground/80">{count}</span>
-                      <span className="text-muted-foreground ml-1">{type}</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Recent decisions */}
-              {resolution.recent_decisions.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1">Recent Decisions</h4>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-muted-foreground/60 uppercase tracking-wider text-xs">
-                        <th className="text-left px-2 py-1 font-medium">Workspace</th>
-                        <th className="text-left px-2 py-1 font-medium">Type</th>
-                        <th className="text-left px-2 py-1 font-medium">Decision</th>
-                        <th className="text-left px-2 py-1 font-medium">By</th>
-                        <th className="text-left px-2 py-1 font-medium">When</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {resolution.recent_decisions.map((d) => (
-                        <tr key={d.workspace_id} className="border-t border-border/10">
-                          <td className="px-2 py-1 font-mono text-foreground/80">{shortId(d.workspace_id)}</td>
-                          <td className="px-2 py-1 text-muted-foreground">{d.type}</td>
-                          <td className="px-2 py-1">
-                            <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold border ${
-                              d.decision === 'resolved' || d.decision === 'confirmed'
-                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                                : d.decision === 'escalated'
-                                  ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                                  : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                            }`}>
-                              {d.decision}
-                            </span>
-                          </td>
-                          <td className="px-2 py-1 text-muted-foreground">{d.decided_by || '-'}</td>
-                          <td className="px-2 py-1 text-muted-foreground">{d.decided_at ? fmtDate(d.decided_at) : '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </div>
           )}
         </div>
