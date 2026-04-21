@@ -4161,3 +4161,73 @@ concepts:
     calculation_methodology: "Automation Rate = automated process executions / total executions. SLA Attainment = commitments met within target / total commitments. Throughput = units processed / period. Error Rate = failed processes / total processes."
     comparability_rules: "SLA targets must match for attainment comparison. Automation rate depends on process granularity (coarse processes inflate the rate). Throughput requires normalized unit definitions. Cross-department comparison requires aligned process complexity weighting."
 
+  - id: pipeline
+    concept_id: SAL-100
+    name: Sales Pipeline
+    description: "Aggregate sales pipeline metrics — stages, ACV, velocity, conversion"
+    domain: sales
+    cluster: Sales
+    example_fields: [total_acv, stage_count, avg_deal_size, pipeline_velocity]
+    aliases: [sales_pipeline, pipeline_metrics]
+    expected_type: float
+    typical_source_systems: [salesforce, hubspot, dynamics]
+    persona_relevance:
+      cro: 1.0
+      cfo: 0.7
+
+  - id: event
+    concept_id: IT-101
+    name: Event Stream
+    description: "Application and infrastructure event telemetry"
+    domain: it_infra
+    cluster: Infra
+    example_fields: [event_count, error_rate, throughput]
+    aliases: [events, telemetry, event_data]
+    expected_type: float
+    typical_source_systems: [datadog, splunk, cloudwatch]
+    persona_relevance:
+      cto: 1.0
+      coo: 0.5
+
+  - id: datadog
+    concept_id: IT-102
+    name: Datadog Observability
+    description: "APM, infrastructure, and log metrics from Datadog"
+    domain: it_infra
+    cluster: Infra
+    example_fields: [latency_p99, error_rate, host_count, log_volume]
+    aliases: [datadog_metrics, apm_metrics]
+    expected_type: float
+    typical_source_systems: [datadog]
+    persona_relevance:
+      cto: 1.0
+      coo: 0.4
+
+  - id: aws_cost
+    concept_id: IT-103
+    name: AWS Cost
+    description: "AWS cloud spend, resource utilization, and cost allocation"
+    domain: it_infra
+    cluster: Infra
+    example_fields: [monthly_spend, compute_cost, storage_cost, data_transfer_cost]
+    aliases: [cloud_cost, aws_spend, cloud_spend]
+    expected_type: float
+    typical_source_systems: [aws, aws_cost_explorer]
+    persona_relevance:
+      cfo: 0.9
+      cto: 0.8
+
+  - id: jira
+    concept_id: ENG-101
+    name: Jira Project Metrics
+    description: "Issue tracking, sprint velocity, and backlog metrics from Jira"
+    domain: product_eng
+    cluster: Engineering
+    example_fields: [story_points, sprint_velocity, backlog_count, cycle_time]
+    aliases: [jira_metrics, issue_tracking]
+    expected_type: float
+    typical_source_systems: [jira, jira_cloud]
+    persona_relevance:
+      cto: 1.0
+      coo: 0.5
+
