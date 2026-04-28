@@ -272,22 +272,34 @@ class TestTripleStore:
         ]
         self.store.insert_triples(triples)
 
+        # active_only=False: this test exercises filter clauses only and
+        # bypasses the API so tenant_runs is never populated. Without that
+        # opt-out, the active-pointer subquery returns NULL → 0 rows.
+
         # By entity
-        by_ent_a = self.store.get_triples(TEST_TENANT_ID, "revenue.total", entity_id="ent_a")
+        by_ent_a = self.store.get_triples(
+            TEST_TENANT_ID, "revenue.total", entity_id="ent_a", active_only=False,
+        )
         assert len(by_ent_a) == 1
         assert by_ent_a[0]["entity_id"] == "ent_a"
 
         # By concept
-        by_rev = self.store.get_triples(TEST_TENANT_ID, "revenue.total")
+        by_rev = self.store.get_triples(
+            TEST_TENANT_ID, "revenue.total", active_only=False,
+        )
         assert len(by_rev) == 2
 
         # By entity + concept
-        by_both = self.store.get_triples(TEST_TENANT_ID, "cost.direct", entity_id="ent_b")
+        by_both = self.store.get_triples(
+            TEST_TENANT_ID, "cost.direct", entity_id="ent_b", active_only=False,
+        )
         assert len(by_both) == 1
         assert by_both[0]["entity_id"] == "ent_b"
 
         # By period
-        by_period = self.store.get_triples(TEST_TENANT_ID, "revenue.total", period="2025-Q2")
+        by_period = self.store.get_triples(
+            TEST_TENANT_ID, "revenue.total", period="2025-Q2", active_only=False,
+        )
         assert len(by_period) == 1
         assert by_period[0]["entity_id"] == "ent_b"
 

@@ -42,6 +42,21 @@ originating sprint so future agents can trace the decision.
    (96 triples) is sufficient for fourth-plane objective but thin for
    real analytics coverage.
 
+10. **RAG call instrumentation** (Prod-mode AI/RAG wiring sprint, 2026-04-28) —
+    `_apply_prod_mode_ai` (`backend/engine/dcl_engine.py`) reports nothing
+    operator-visible about LLM validation activity. No counter for validator
+    invocations, no latency histogram, no per-run summary of corrections
+    applied vs proposed. Stubbed due to in-flight graph rebuild work that
+    consumes the same narration / metrics surface. Until lifted, an operator
+    running Prod cannot tell from the UI whether AI fired or how it behaved.
+
+11. **RAG learn instrumentation** (Prod-mode AI/RAG wiring sprint, 2026-04-28) —
+    `RAGService.store_mapping_lessons` (`backend/engine/rag_service.py`)
+    reports lesson counts via narration only; no operator-visible aggregate
+    of Pinecone writes per run, dedupe rate, embedding latency, or vector
+    growth over time. Same root cause as #10: instrumentation surface is
+    stubbed during graph rebuild. Resolve alongside #10.
+
 9. ~~**Event stream ontology concepts**~~ — **RESOLVED.** event_stream
    concept (IT-012) added to ontology_concepts.yaml in both DCL and
    Convergence. Farm generates 60 event_stream triples per entity

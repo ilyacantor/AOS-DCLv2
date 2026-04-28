@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
-from typing import Optional
+from typing import Literal, Optional
 
 from backend.core.db import get_connection
 from backend.db.triple_store import TripleStore
@@ -84,6 +84,7 @@ class IngestRequest(BaseModel):
     entity_id: Optional[str] = None
     source_rows: Optional[int] = None
     snapshot_name: Optional[str] = None
+    run_mode: Literal["Dev", "Prod"] = "Dev"
     triples: list[TriplePayload]
 
 
@@ -303,6 +304,57 @@ def ingest_triples(
             f"[ingest-triples] replace=true for existing dcl_ingest_id={req.dcl_ingest_id}; "
             f"inserting new triples, pointer will be updated after insert"
         )
+
+    # Prod-mode AI: LLM concept validation + RAG lesson storage. Shared with
+    # /api/dcl/run AAM-mode block via _apply_prod_mode_ai. Missing keys → 503.
+    if req.run_mode == "Prod":
+        from backend.domain import Mapping
+        from backend.engine.dcl_engine import _apply_prod_mode_ai, ProdModeKeysMissing
+        from backend.engine.narration_service import NarrationService
+        from backend.engine.ontology import get_ontology
+
+        seen: dict[tuple, Mapping] = {}
+        for t in req.triples:
+            key = (t.source_system, t.source_table or "", t.source_field or "")
+            if key in seen:
+                continue
+            seen[key] = Mapping(
+                id=f"{t.source_system}_{t.source_table}_{t.source_field}_{t.concept}",
+                source_field=t.source_field or "",
+                source_table=t.source_table or "",
+                source_system=t.source_system,
+                ontology_concept=t.concept,
+                confidence=t.confidence_score,
+                method=t.resolution_method or "heuristic",
+                status="ok",
+            )
+        field_mappings = list(seen.values())
+
+        try:
+            corrected_mappings, _lessons, _llm_stats = _apply_prod_mode_ai(
+                mappings=field_mappings,
+                ontology=get_ontology(),
+                narration=NarrationService(),
+                run_id=req.dcl_ingest_id,
+            )
+        except ProdModeKeysMissing as e:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "PROD_MODE_KEYS_MISSING",
+                    "message": str(e),
+                },
+            )
+
+        correction_by_key = {
+            (m.source_system, m.source_table, m.source_field): m.ontology_concept
+            for m in corrected_mappings
+        }
+        for t in req.triples:
+            key = (t.source_system, t.source_table or "", t.source_field or "")
+            new_concept = correction_by_key.get(key)
+            if new_concept and new_concept != t.concept:
+                t.concept = new_concept
 
     # Build triple dicts for insertion
     rows = []

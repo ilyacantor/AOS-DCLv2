@@ -408,8 +408,23 @@ function App() {
                   </span>
                 )}
                 {!isRunning && graphData?.meta.runMetrics && (
-                  <span className="text-xs text-muted-foreground">
+                  <span
+                    className="text-xs text-muted-foreground"
+                    data-role="run-metrics"
+                  >
                     {(graphData.meta.runMetrics.processingMs / 1000).toFixed(1)}s
+                    {graphData.meta.runMetrics.llmCalls > 0 && (
+                      <span data-role="llm-calls">
+                        {' · '}
+                        {graphData.meta.runMetrics.llmCalls} LLM
+                      </span>
+                    )}
+                    {graphData.meta.runMetrics.ragWrites > 0 && (
+                      <span data-role="rag-writes">
+                        {' · '}
+                        {graphData.meta.runMetrics.ragWrites} RAG
+                      </span>
+                    )}
                   </span>
                 )}
                 {isCachedView && !isRunning && (

@@ -768,6 +768,37 @@ class TripleStore:
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
+    def get_distinct_field_mappings(
+        self, tenant_id: str, entity_id: str | None = None,
+    ) -> list[dict]:
+        """Return distinct (source_system, source_table, source_field, concept,
+        confidence) tuples from the active triple set, scoped to a tenant
+        and optional entity. Used by Prod-mode AI validation: the validator
+        re-evaluates field-to-concept mappings, so each distinct field is the
+        unit of work — multiple triples sharing a field produce one row.
+
+        DISTINCT ON keeps the lowest-confidence representative per field so
+        the validator focuses on the worst case.
+        """
+        sub = "SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s"
+        params: list = [tenant_id, tenant_id]
+        if entity_id:
+            sub += " AND entity_id = %s"
+            params.append(entity_id)
+        sql = (
+            "SELECT DISTINCT ON (source_system, source_table, source_field) "
+            "source_system, source_table, source_field, concept, confidence_score "
+            "FROM semantic_triples "
+            f"WHERE tenant_id = %s AND run_id IN ({sub}) "
+            "AND source_field IS NOT NULL "
+            "ORDER BY source_system, source_table, source_field, confidence_score ASC"
+        )
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                columns = [desc[0] for desc in cur.description]
+                return [dict(zip(columns, row)) for row in cur.fetchall()]
+
     def get_concept_collisions(self, tenant_id: str, entity_id: str | None = None) -> list[dict]:
         """Detect concepts written by multiple source_systems in the current run.
 

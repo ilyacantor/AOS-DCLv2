@@ -11,6 +11,7 @@ personas:
     domains:
       - revenue
       - cogs
+      - cost
       - opex
       - pnl
       - asset

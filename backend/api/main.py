@@ -528,6 +528,15 @@ async def run_dcl(request: RunRequest):
             detail="Graph build timed out after 120s. Check Supabase/AAM connectivity.",
         )
     except Exception as e:
+        from backend.engine.dcl_engine import ProdModeKeysMissing
+        if isinstance(e, ProdModeKeysMissing):
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "PROD_MODE_KEYS_MISSING",
+                    "message": str(e),
+                },
+            )
         logger.error(f"DCL run failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 

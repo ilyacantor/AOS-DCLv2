@@ -31,6 +31,94 @@ class UnmappedDomainError(RuntimeError):
     """
 
 
+class ProdModeKeysMissing(RuntimeError):
+    """Raised when run_mode='Prod' is explicit but required AI keys are absent.
+
+    Both write paths share the same gate via _apply_prod_mode_ai, so the
+    loud-failure contract is symmetric: route layer translates to 503,
+    engine path lets it propagate. The message names the missing env var.
+    """
+
+
+def _apply_prod_mode_ai(
+    mappings: List[Mapping],
+    ontology: List[OntologyConcept],
+    narration: NarrationService,
+    run_id: str,
+) -> tuple[List[Mapping], int, Dict[str, Any]]:
+    """Prod-mode AI sequence: LLM concept validation + RAG lesson storage.
+
+    Single shared helper called from both Prod write paths
+    (POST /api/dcl/ingest-triples and /api/dcl/run mode=AAM) so AI behavior
+    cannot drift between them.
+
+    Returns (corrected_mappings, lessons_stored, llm_stats). Raises
+    ProdModeKeysMissing when keys are absent — no silent skip.
+    """
+    openai_key = os.getenv("OPENAI_API_KEY") or os.getenv("AI_INTEGRATIONS_OPENAI_API_KEY")
+    if not openai_key:
+        raise ProdModeKeysMissing(
+            "run_mode='Prod' requires OPENAI_API_KEY (or AI_INTEGRATIONS_OPENAI_API_KEY) "
+            "for LLM concept validation. Set the env var on the DCL backend, or pass "
+            "run_mode='Dev' to skip AI validation."
+        )
+    if not os.getenv("PINECONE_API_KEY"):
+        raise ProdModeKeysMissing(
+            "run_mode='Prod' requires PINECONE_API_KEY for RAG lesson storage. "
+            "Set the env var on the DCL backend, or pass run_mode='Dev' to skip "
+            "AI validation."
+        )
+
+    narration.add_message(
+        run_id, "LLM",
+        f"Prod mode: validating {len(mappings)} mappings against ontology"
+    )
+
+    mapping_dicts = [
+        {
+            "source_id": m.source_system,
+            "table_name": m.source_table,
+            "field_name": m.source_field,
+            "concept_id": m.ontology_concept,
+            "confidence": m.confidence,
+        }
+        for m in mappings
+    ]
+    ontology_dicts = [
+        {"id": c.id, "name": c.name, "description": c.description}
+        for c in ontology
+    ]
+
+    def _narration_cb(msg: str) -> None:
+        narration.add_message(run_id, "LLM", msg)
+
+    from backend.llm.mapping_validator import validate_mappings_prod_mode
+    corrected_dicts, llm_stats = validate_mappings_prod_mode(
+        mapping_dicts, ontology_dicts, _narration_cb,
+    )
+
+    if llm_stats.get("corrections_made", 0) > 0:
+        corrected: List[Mapping] = []
+        for d in corrected_dicts:
+            concept_id = d.get("concept_id", d.get("ontology_concept"))
+            corrected.append(Mapping(
+                id=f"{d['source_id']}_{d['table_name']}_{d['field_name']}_{concept_id}",
+                source_field=d["field_name"],
+                source_table=d["table_name"],
+                source_system=d["source_id"],
+                ontology_concept=concept_id,
+                confidence=d["confidence"],
+                method=d.get("method", "llm_validated"),
+                status="ok",
+            ))
+        mappings = corrected
+
+    rag_service = RAGService(run_mode="Prod", run_id=run_id, narration=narration)
+    lessons_stored = rag_service.store_mapping_lessons(mappings)
+
+    return mappings, lessons_stored, llm_stats
+
+
 def _display_entity(entity_id: str) -> str:
     """Format entity_id for human-readable display.
 
@@ -189,61 +277,27 @@ class DCLEngine:
             self.narration.add_message(run_id, "Eval", "Mapping evaluation: All mappings passed validation")
         
         if run_mode == "Prod":
-            llm_available = bool(os.getenv('OPENAI_API_KEY') or os.getenv('AI_INTEGRATIONS_OPENAI_API_KEY'))
-            
-            if llm_available:
-                self.narration.add_message(run_id, "LLM", "Prod mode: Running LLM validation on low-confidence mappings...")
-                
-                try:
-                    from backend.llm.mapping_validator import validate_mappings_prod_mode
-                    
-                    ontology_dicts = [
-                        {'id': c.id, 'name': c.name, 'description': c.description}
-                        for c in ontology
-                    ]
-                    
-                    def narration_callback(msg):
-                        self.narration.add_message(run_id, "LLM", msg)
-                    
-                    corrected_dicts, llm_stats = validate_mappings_prod_mode(
-                        mapping_dicts, ontology_dicts, narration_callback
-                    )
-                    
-                    metrics.llm_calls = llm_stats.get('total_validated', 0)
-                    
-                    if llm_stats.get('corrections_made', 0) > 0:
-                        corrected_mappings = []
-                        for m_dict in corrected_dicts:
-                            corrected_mappings.append(Mapping(
-                                id=f"{m_dict['source_id']}_{m_dict['table_name']}_{m_dict['field_name']}_{m_dict.get('concept_id', m_dict.get('ontology_concept'))}",
-                                source_field=m_dict['field_name'],
-                                source_table=m_dict['table_name'],
-                                source_system=m_dict['source_id'],
-                                ontology_concept=m_dict.get('concept_id', m_dict.get('ontology_concept')),
-                                confidence=m_dict['confidence'],
-                                method=m_dict.get('method', 'llm_validated'),
-                                status="ok"
-                            ))
-                        mappings = corrected_mappings
-                        
-                except Exception as e:
-                    logger.error(f"LLM validation failed for run {run_id}: {e}", exc_info=True)
-                    self.narration.add_message(run_id, "LLM", f"LLM validation error: {str(e)}")
-                    metrics.llm_fallback = True
-            else:
-                self.narration.add_message(
-                    run_id, "LLM", 
-                    "Prod mode: LLM validation skipped - OPENAI_API_KEY not configured"
+            try:
+                mappings, lessons_stored, llm_stats = _apply_prod_mode_ai(
+                    mappings=mappings,
+                    ontology=ontology,
+                    narration=self.narration,
+                    run_id=run_id,
                 )
-        
-        # Store mapping lessons in RAG (both Dev and Prod modes)
-        rag_service = RAGService(run_mode, run_id, self.narration)
-        lessons_stored = rag_service.store_mapping_lessons(mappings)
-        metrics.rag_writes = lessons_stored
-        
-        if run_mode == "Prod" and lessons_stored > 0:
-            # OpenAI embeddings count as additional LLM calls
-            metrics.llm_calls += lessons_stored
+                metrics.llm_calls = llm_stats.get('total_validated', 0)
+                metrics.rag_writes = lessons_stored
+                if lessons_stored > 0:
+                    metrics.llm_calls += lessons_stored
+            except ProdModeKeysMissing:
+                raise
+            except Exception as e:
+                logger.error(f"LLM/RAG runtime failure for run {run_id}: {e}", exc_info=True)
+                self.narration.add_message(run_id, "LLM", f"LLM/RAG runtime error: {str(e)}")
+                metrics.llm_fallback = True
+        else:
+            rag_service = RAGService(run_mode, run_id, self.narration)
+            lessons_stored = rag_service.store_mapping_lessons(mappings)
+            metrics.rag_writes = lessons_stored
         
         metrics.total_mappings = len(mappings)
         
@@ -401,6 +455,51 @@ class DCLEngine:
                 f"DCL found {triple_count} active triples but Sankey aggregation returned 0 rows. "
                 f"Possible data inconsistency in semantic_triples table."
             )
+
+        # Prod-mode AI: re-validate active field mappings via the shared helper
+        # so the operator-visible Farm graph build path participates in
+        # unification when run_mode='Prod'. Same gate, same helper as the
+        # ingest-triples and AAM-mode write paths. Missing keys → caller
+        # translates ProdModeKeysMissing into 503 at the route boundary.
+        if run_mode == "Prod":
+            field_rows = triple_store.get_distinct_field_mappings(tenant_id, entity_id)
+            if field_rows:
+                field_mappings = [
+                    Mapping(
+                        id=f"{r['source_system']}_{r['source_table']}_{r['source_field']}_{r['concept']}",
+                        source_field=r["source_field"] or "",
+                        source_table=r["source_table"] or "",
+                        source_system=r["source_system"],
+                        ontology_concept=r["concept"],
+                        confidence=float(r["confidence_score"]),
+                        method="heuristic",
+                        status="ok",
+                    )
+                    for r in field_rows
+                ]
+                try:
+                    _, lessons_stored, llm_stats = _apply_prod_mode_ai(
+                        mappings=field_mappings,
+                        ontology=get_ontology(),
+                        narration=self.narration,
+                        run_id=run_id,
+                    )
+                    metrics.llm_calls = llm_stats.get("total_validated", 0)
+                    metrics.rag_writes = lessons_stored
+                    if lessons_stored > 0:
+                        metrics.llm_calls += lessons_stored
+                except ProdModeKeysMissing:
+                    raise
+                except Exception as e:
+                    logger.error(
+                        f"LLM/RAG runtime failure during Farm graph build "
+                        f"for run {run_id}: {e}",
+                        exc_info=True,
+                    )
+                    self.narration.add_message(
+                        run_id, "LLM", f"LLM/RAG runtime error: {str(e)}"
+                    )
+                    metrics.llm_fallback = True
 
         graph = self._build_graph_from_triples(sankey_rows, personas, run_id)
 
