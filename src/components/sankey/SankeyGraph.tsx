@@ -178,9 +178,14 @@ export function SankeyGraph({ data }: SankeyGraphProps) {
           {layout.links.map(link => {
             const isHovered = hoveredLinkId === link.id;
             const isInternal = link.type === 'internal';
+            // Value-weighted opacity: high-flow visible at rest, low-flow recedes; floor 0.15 keeps thin links visible.
+            const wRange = SE_CONFIG.link.maxStrokeWidth - SE_CONFIG.link.minStrokeWidth;
+            const norm = wRange > 0
+              ? Math.max(0, Math.min(1, (link.width - SE_CONFIG.link.minStrokeWidth) / wRange))
+              : 0;
             const baseOpacity = isInternal
               ? SE_CONFIG.link.internalRestOpacity
-              : SE_CONFIG.link.restOpacity;
+              : Math.min(0.6, 0.15 + 0.45 * norm);
             const opacity = isHovered ? SE_CONFIG.link.hoverOpacity : baseOpacity;
 
             return (

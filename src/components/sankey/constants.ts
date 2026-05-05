@@ -35,29 +35,29 @@ export const LAYER_LABELS = [
 ] as const;
 
 export const NODE_COLORS: Record<string, string> = {
-  source: '#14b8a6',
-  dcl: '#8b5cf6',
-  persona: '#3b82f6',
+  source: '#1e3a8a',
+  dcl: '#3730a3',
+  persona: '#a5b4fc',
 };
 
 export const DOMAIN_COLORS: Record<string, string> = {
-  financial: '#f59e0b',
-  hr: '#14b8a6',
-  crm: '#3b82f6',
-  ops: '#6b7280',
+  financial: '#0e7490',
+  hr: '#0f766e',
+  crm: '#1d4ed8',
+  ops: '#475569',
 };
 
 export const NODE_TEXT_COLORS: Record<string, string> = {
-  source: '#ccfbf1',
-  dcl: '#ede9fe',
-  financial: '#fef3c7',
+  source: '#c7d2fe',
+  dcl: '#ddd6fe',
+  financial: '#cffafe',
   hr: '#ccfbf1',
   crm: '#dbeafe',
-  ops: '#e5e7eb',
-  persona: '#dbeafe',
+  ops: '#e2e8f0',
+  persona: '#1e1b4b',
 };
 
-export const BG_COLOR = '#080d18';
+export const BG_COLOR = '#060a14';
 
 // Backward-compat aliases (index.ts re-exports everything)
 export type LayerLevel = 'L0' | 'L1' | 'L2' | 'L3';

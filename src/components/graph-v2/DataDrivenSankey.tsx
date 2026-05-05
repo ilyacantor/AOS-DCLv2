@@ -14,7 +14,7 @@ import { DEFAULT_CONFIG } from './types';
 import type { GraphSnapshot, GraphNode, PersonaId } from '../../types';
 import type { LayoutNodeV2, LayoutLinkV2 } from './types';
 
-const BG_COLOR = '#080d18';
+const BG_COLOR = '#060a14';
 const TOOLTIP_OFFSET_Y = -12;
 const DEBOUNCE_MS = 150;
 const INITIAL_DELAY_MS = 50;
@@ -22,21 +22,21 @@ const INITIAL_DELAY_MS = 50;
 /** Node color by kind — no hardcoded domain names. */
 function getNodeColor(node: LayoutNodeV2): string {
   switch (node.kind) {
-    case 'pipe': return '#8b5cf6';
-    case 'source': return node.status === 'stub' ? '#475569' : '#14b8a6';
-    case 'ontology': return '#f59e0b';
-    case 'bll': return '#3b82f6';
-    default: return '#6b7280';
+    case 'pipe': return '#3730a3';
+    case 'source': return node.status === 'stub' ? '#334155' : '#1e3a8a';
+    case 'ontology': return '#0e7490';
+    case 'bll': return '#a5b4fc';
+    default: return '#475569';
   }
 }
 
 function getNodeTextColor(node: LayoutNodeV2): string {
   switch (node.kind) {
-    case 'pipe': return '#ede9fe';
-    case 'source': return node.status === 'stub' ? '#94a3b8' : '#ccfbf1';
-    case 'ontology': return '#fef3c7';
-    case 'bll': return '#dbeafe';
-    default: return '#e5e7eb';
+    case 'pipe': return '#ddd6fe';
+    case 'source': return node.status === 'stub' ? '#94a3b8' : '#c7d2fe';
+    case 'ontology': return '#cffafe';
+    case 'bll': return '#1e1b4b';
+    default: return '#e2e8f0';
   }
 }
 
