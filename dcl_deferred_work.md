@@ -65,3 +65,21 @@ originating sprint so future agents can trace the decision.
    streaming vendors to event_bus plane. Graph v2 now renders 4 fabric
    planes (ipaas, api_gateway, data_warehouse, event_bus). Playwright
    verified.
+
+12. ~~**Filename alignment with constitution**~~ — **RESOLVED 2026-05-05.**
+    Renamed `DEFERRED.md` → `dcl_deferred_work.md` via `git mv`. Repo grep
+    shows no remaining references to the old name except (a) the
+    constitution itself forbidding it (CLAUDE.md:550, correct), and (b)
+    this entry's own historical text. Pending commit in same session as
+    rename.
+
+13. **Split shared secrets between `.env` and `.env.development`** (env config
+    session, 2026-05-05) — Redis URL, OpenAI/Anthropic/Pinecone keys, Render
+    API key, INTERNAL_SERVICE_KEY, and DCL_INGEST_KEY are byte-identical
+    across prod and dev env files. Risks: dev evicting prod Redis keys, no
+    cost attribution per env, single revocation kills both, dev token
+    unlocks prod services. Defer until a triggering event: multi-user prod
+    traffic, cost attribution becomes needed, leak/incident, or a second
+    engineer joins. At that point provision dev-scoped keys, rotate prod-
+    first to keep prod live, and split. severity: degraded | blocking:
+    nothing today.
