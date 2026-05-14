@@ -117,6 +117,37 @@ originating sprint so future agents can trace the decision.
     example_fields into the canonical entries, or wire the rename into
     persona_domains and Farm generators. severity: degraded | blocking:
     nothing today; the loader works.
+    NOT RESOLVED 2026-05-13 — investigated as a clean-rename caller sweep.
+    Findings argue against a sweep: both old and new ids are valid concept
+    ids in the post-d91a9e2 ontology. The OLD ids resolve to the canonical
+    (earlier) entries with distinct semantics — `pipeline` is PRD-012 CI/CD
+    pipeline, `sales_pipeline_metrics` is SAL-100 sales pipeline; `aws_cost`
+    is IT-013 single billing line item, `aws_cost_aggregate` is IT-103 roll-
+    up; `event` is IT-015 discrete event, `event_stream_metrics` is IT-101
+    aggregate metric; `datadog` is IT-014 monitor record, `datadog_observ-
+    ability` is IT-102 APM aggregate; `jira` is PRD-013 ticket, `jira_pro-
+    ject_metrics` is ENG-101 sprint/backlog roll-up. Production prod-DB
+    semantic_triples row counts under each root (gdbmdrouocxjxiohpixr):
+    `pipeline.*`=150, `event.*`=75, `datadog.*`=75, `aws_cost.*`=75,
+    `jira.*`=75 (total 450 active triples). All 5 new ids have 0 rows.
+    Farm generators (src/generators/triples/aws_cost_triples.py and
+    siblings), DCL `backend/farm/ingest_bridge.py` source-pipe mapping,
+    DCL `config/source_aliases.yaml`, and DCL `config/persona_domains.yaml`
+    all reference the OLD ids and emit/validate triples against the
+    canonical entries — those references are correct and must not be moved.
+    Mai/Convergence/AAM/AOD/NLQ/Platform/Console: no code references to
+    either old or new ids outside ontology YAML copies and deferred-work
+    entries. No caller sweep performed. Decision required before any code
+    change: (a) keep duplicate-info entries dormant (status quo, low risk,
+    accepts having two "datadog" concepts in the YAML), (b) merge SAL-100/
+    IT-101/IT-102/IT-103/ENG-101 example_fields into the canonical entries
+    and delete the renamed duplicate-info concepts (cleanest, but loses the
+    aggregate-metrics framing the WP2 entries added), or (c) rewire persona-
+    domains + Farm generators to the new ids, then run an UPDATE on
+    semantic_triples to migrate 450 prod rows to new concept roots (most
+    disruptive, requires a coordinated multi-repo change + production
+    migration). The wp2-cloud-spend cloud_spend concept block is unaffected
+    by this question.
 
 16. 2026-05-13 | seed-manifest-regen-session |
     backend/api/routes/ingest_triples.py:_update_seed_manifest |
