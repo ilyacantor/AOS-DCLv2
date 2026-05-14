@@ -130,3 +130,32 @@ originating sprint so future agents can trace the decision.
     drop `total_triples` from the schema since the per-run row count is
     already queryable from semantic_triples. severity: cosmetic |
     blocking: nothing today.
+
+17. 2026-05-13 | dev-prod-separation-bootstrap | conftest.py:6,
+    tests/test_s1_dcl.py:21, tests/test_pipeline_identity.py:22,
+    tests/test_prod_mode_ingest.py:24, tests/test_cloud_spend_ontology.py:33
+    | Five test-bootstrap sites load `.env` (prod Supabase
+    `gdbmdrouocxjxiohpixr`) instead of `.env.development` (aos-dev
+    `glmeqbnuahlkkbolkent`), violating the dev/prod separation rule in
+    CLAUDE.md "Dev/Prod Database Separation". The swap to load_dotenv with
+    `.env.development` is straightforward — but blocked because the
+    aos-dev Supabase host `db.glmeqbnuahlkkbolkent.supabase.co` resolves
+    only to AAAA (IPv6 `2600:1f18:...`) from this WSL2 environment with
+    no IPv6 egress; psycopg2 fails with "Network is unreachable". The
+    prod host resolves IPv4 (`100.20.171.89`) and works. Same applies to
+    Farm: `/home/ilyac/code/farm/.env.development` does not exist at all,
+    so even if DCL bootstrap is fixed, the seed manifest cannot be
+    regenerated against dev because Farm cannot run against dev to
+    produce the upstream triples. Resolution requires either (a) adding
+    Supabase Session Pooler URLs (IPv4) to both `.env.development` files
+    via the Supabase dashboard, or (b) provisioning IPv6 routing on the
+    laptop. Then: create `farm/.env.development`, restart Farm+DCL pm2
+    processes against `.env.development`, swap the five bootstrap sites,
+    re-run Farm push-triples to regenerate `data/seed_manifest.json`
+    against dev, and verify 143/0/1 against dev. NOT auto-resolved this
+    session per constitution rule "no fallback `.env.development → .env`".
+    No code change was committed because making the bootstrap swap
+    without dev DB reachability would break all 143 tests (D6/B7
+    violation worse than the underlying separation violation).
+    severity: degraded | blocking: real dev/prod separation for the test
+    harness; current state lets tests run, but they run against prod.
