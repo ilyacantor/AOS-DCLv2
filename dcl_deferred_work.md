@@ -196,3 +196,53 @@ originating sprint so future agents can trace the decision.
     violation worse than the underlying separation violation).
     severity: degraded | blocking: real dev/prod separation for the test
     harness; current state lets tests run, but they run against prod.
+
+18. 2026-05-14 | wp5-mcp-real | backend/api/mcp_auth.py:* + Platform
+    token-issuance gap | The wire-protocol MCP server (Plan B WP5, §11.4)
+    currently uses a v1 shim: DCL mints and verifies opaque tokens locally
+    with HMAC-SHA256 over DCL_MCP_TOKEN_SECRET. Token issuance is supposed
+    to live in Platform (POST /api/mai/mcp-tokens/issue + a
+    mai_mcp_tokens table with revocation, scope, audit). Platform has no
+    token-issuance infrastructure today — searched `/home/ilyac/code/
+    platform` for `issue.*token|mint.*token|tenant.*token|mcp.*token`
+    and found only fixture JWTs. Implementing it in Platform was out of
+    scope for WP5 (would require new table, migration, two routes, RACI
+    re-check, second PR). v2 work: (a) add mai_mcp_tokens table to
+    Platform; (b) add issue/verify endpoints; (c) DCL's verify_token()
+    becomes an HTTP call to Platform with a 60s cache; (d) revoke the
+    shim secret in DCL. severity: degraded | blocking: prod-grade token
+    issuance and revocation; current shim cannot revoke individual
+    tokens — secret rotation invalidates all.
+
+19. 2026-05-14 | wp5-mcp-real |
+    backend/api/mcp_rate_limit.py:TenantRateLimiter | In-memory per-
+    process token bucket. Single uvicorn worker today, so the limiter
+    holds. If we ever scale DCL horizontally (multiple Render instances
+    or multiple uvicorn workers), each process has its own bucket and
+    the per-tenant ceiling becomes effectively N×rpm. Resolution: move
+    to Redis-backed sliding window (DCL already has Redis as a hard
+    dependency for narration). Deferred because v1 deployment is one
+    worker. severity: degraded | blocking: horizontal scaling of DCL
+    while keeping accurate per-tenant rpm.
+
+20. 2026-05-14 | wp5-mcp-real | tests/test_mcp_wp5.py:test_t4 | Rate-
+    limit test drives the in-process MCP server (HTTP+SSE path) rather
+    than stdio because the stdio child has its own limiter instance and
+    set_tenant_rpm() on the parent doesn't reach it. The test still
+    exercises the same Server + limiter wiring used by HTTP+SSE in
+    production; the stdio subprocess limiter is exercised implicitly
+    via T2/T3 success paths (under their default 60 rpm). severity:
+    cosmetic | blocking: nothing — the rate-limit logic is the same
+    object in both transports inside a single process.
+
+21. 2026-05-14 | wp5-mcp-real |
+    backend/api/mcp_server_real.py:tool_concept_lookup,
+    tool_semantic_export | The two ontology-only tools (concept_lookup,
+    semantic_export) accept tenant_id='' from the legacy HTTP path so
+    Mai's existing calls (which run against a DCL process that does NOT
+    set AOS_TENANT_ID) keep working. The real wire-protocol MCP path
+    still requires tenant_id (it's bound to the session's token). When
+    Mai is migrated to the real MCP transport (per §11.4 last
+    paragraph), tighten the tools to reject empty tenant_id everywhere.
+    severity: cosmetic | blocking: tightening I2 to "all calls carry
+    tenant_id, no exceptions" once Mai uses tokens.

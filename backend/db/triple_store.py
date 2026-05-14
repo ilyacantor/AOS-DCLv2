@@ -861,3 +861,142 @@ class TripleStore:
                 cur.execute(sql, (run_id,))
                 conn.commit()
                 return cur.rowcount
+
+    # =========================================================================
+    # MCP wire-protocol queries (Plan B WP5 §11.4)
+    # =========================================================================
+
+    def mcp_query_triples(
+        self,
+        tenant_id: str,
+        *,
+        domain: str | None = None,
+        concept: str | None = None,
+        entity_id: str | None = None,
+        period: str | None = None,
+        limit: int = 100,
+        active_only: bool = True,
+    ) -> list[dict]:
+        """Query triples for a tenant. Used by the external MCP server.
+
+        Returns dicts with JSON-safe values (UUIDs as strings, datetimes
+        as ISO strings). Filters by domain (concept root) or full concept.
+        """
+        clauses = ["tenant_id = %s"]
+        params: list = [tenant_id]
+        if concept is not None:
+            clauses.append("concept = %s")
+            params.append(concept)
+        if domain is not None:
+            clauses.append("(concept = %s OR concept LIKE %s)")
+            params.extend([domain, f"{domain}.%"])
+        if entity_id is not None:
+            clauses.append("entity_id = %s")
+            params.append(entity_id)
+        if period is not None:
+            clauses.append("period = %s")
+            params.append(period)
+        if active_only:
+            clauses.append("is_active = true")
+
+        safe_limit = max(1, min(int(limit), 1000))
+        where = " AND ".join(clauses)
+        sql = (
+            "SELECT id, tenant_id, entity_id, concept, property, value, period, "
+            "       currency, unit, source_system, source_field, pipe_id, "
+            "       run_id, confidence_score, confidence_tier, is_active, "
+            "       created_at "
+            f"FROM semantic_triples WHERE {where} "
+            f"ORDER BY created_at DESC LIMIT {safe_limit}"
+        )
+        rows: list[dict] = []
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                cols = [d[0] for d in cur.description]
+                for r in cur.fetchall():
+                    d = dict(zip(cols, r))
+                    for k in ("id", "tenant_id", "pipe_id", "run_id"):
+                        if d.get(k) is not None:
+                            d[k] = str(d[k])
+                    if d.get("created_at") is not None:
+                        d["created_at"] = d["created_at"].isoformat()
+                    if d.get("confidence_score") is not None:
+                        d["confidence_score"] = float(d["confidence_score"])
+                    rows.append(d)
+        return rows
+
+    def mcp_list_domains(self, tenant_id: str) -> list[dict]:
+        """Distinct concept-root domains visible to the tenant, with counts."""
+        sql = (
+            "SELECT split_part(concept, '.', 1) AS domain, COUNT(*) AS cnt "
+            "FROM semantic_triples "
+            "WHERE tenant_id = %s AND is_active = true "
+            "GROUP BY domain ORDER BY cnt DESC"
+        )
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (tenant_id,))
+                return [
+                    {"domain": row[0], "triple_count": int(row[1])}
+                    for row in cur.fetchall()
+                ]
+
+    def mcp_provenance_lookup(
+        self,
+        tenant_id: str,
+        *,
+        triple_id: str | None = None,
+        concept: str | None = None,
+        entity_id: str | None = None,
+        period: str | None = None,
+    ) -> dict | None:
+        """Return one triple's provenance fields. Tenant-scoped lookup
+        either by triple_id or by (concept, entity_id, period)."""
+        clauses = ["tenant_id = %s"]
+        params: list = [tenant_id]
+        if triple_id is not None:
+            clauses.append("id = %s")
+            params.append(triple_id)
+        else:
+            clauses.append("concept = %s")
+            params.append(concept)
+            if entity_id is not None:
+                clauses.append("entity_id = %s")
+                params.append(entity_id)
+            if period is not None:
+                clauses.append("period = %s")
+                params.append(period)
+            clauses.append("is_active = true")
+
+        where = " AND ".join(clauses)
+        sql = (
+            "SELECT id, concept, entity_id, period, value, "
+            "       source_system, source_field, source_table, "
+            "       pipe_id, run_id, confidence_score, confidence_tier "
+            f"FROM semantic_triples WHERE {where} "
+            "ORDER BY created_at DESC LIMIT 1"
+        )
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                row = cur.fetchone()
+                if row is None:
+                    return None
+                cols = [d[0] for d in cur.description]
+                r = dict(zip(cols, row))
+                return {
+                    "triple_id": str(r["id"]),
+                    "concept": r["concept"],
+                    "entity_id": r["entity_id"],
+                    "period": r.get("period"),
+                    "source_system": r.get("source_system"),
+                    "source_field": r.get("source_field"),
+                    "source_table": r.get("source_table"),
+                    "pipe_id": str(r["pipe_id"]) if r.get("pipe_id") else None,
+                    # Per I1: run_id is banned in response payloads. We
+                    # expose it under a namespaced key (dcl_ingest_id).
+                    "dcl_ingest_id": str(r["run_id"]) if r.get("run_id") else None,
+                    "confidence_score": float(r["confidence_score"]) if r.get("confidence_score") is not None else None,
+                    "confidence_tier": r.get("confidence_tier"),
+                }

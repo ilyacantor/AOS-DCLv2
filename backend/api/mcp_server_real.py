@@ -1,0 +1,250 @@
+"""
+Real wire-protocol MCP server for DCL (Plan B WP5, §11.4).
+
+Uses the Anthropic `mcp` SDK. Two transports:
+  - stdio: launched via `python -m backend.api.mcp_stdio`
+  - HTTP+SSE: mounted on FastAPI at /api/mcp/sse and /api/mcp/messages
+
+Tool surface: query_triples, list_domains, concept_lookup, semantic_export,
+provenance — read-only, tenant-scoped. The tool bodies live in
+`backend/engine/mcp_tools.py` and are shared with the legacy HTTP path.
+
+Auth: each session is bound to a tenant_id derived from the caller's
+verified token. tenant_id is never an argument. Per-tenant rate limit
+applies. Every call is written to mai_mcp_audit.
+"""
+
+from __future__ import annotations
+
+import contextvars
+import json
+from typing import Any
+
+from mcp import types
+from mcp.server import NotificationOptions, Server
+from mcp.server.models import InitializationOptions
+
+from backend.api.mcp_audit import (
+    AuditRow,
+    hash_arguments,
+    time_call,
+    write_audit,
+)
+from backend.api.mcp_auth import TokenError, VerifiedToken, verify_token
+from backend.api.mcp_rate_limit import global_limiter
+from backend.engine.mcp_tools import (
+    PUBLIC_TOOLS,
+    TOOL_SCHEMAS,
+    MCPToolError,
+    dispatch,
+)
+from backend.utils.log_utils import get_logger
+
+logger = get_logger(__name__)
+
+
+# Per-session context: token info + transport label. anyio task locals.
+_current_token: contextvars.ContextVar[VerifiedToken | None] = contextvars.ContextVar(
+    "_current_token", default=None
+)
+_current_transport: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "_current_transport", default="stdio"
+)
+
+
+SERVER_NAME = "dcl-mcp"
+SERVER_VERSION = "1.0.0"
+
+
+def build_server() -> Server:
+    """Build a fresh MCP Server instance with the 5 tools wired."""
+    server = Server(SERVER_NAME)
+
+    @server.list_tools()
+    async def _list_tools() -> list[types.Tool]:
+        return [
+            types.Tool(
+                name=name,
+                description=schema["description"],
+                inputSchema=schema["inputSchema"],
+            )
+            for name, schema in TOOL_SCHEMAS.items()
+        ]
+
+    @server.call_tool()
+    async def _call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextContent]:
+        token = _current_token.get()
+        transport = _current_transport.get()
+
+        # Guard: tool must be in the public surface.
+        if name not in PUBLIC_TOOLS:
+            audit = AuditRow(
+                tenant_id=(token.tenant_id if token else "00000000-0000-0000-0000-000000000000"),
+                tool_name=name,
+                caller_token_id=(token.token_id if token else "anonymous"),
+                arguments_hash=hash_arguments(arguments),
+                latency_ms=0,
+                outcome="error",
+                error_summary=f"Unknown tool: {name}",
+                transport=transport,
+            )
+            write_audit(audit)
+            raise MCPToolError(f"Unknown tool: {name}")
+
+        # Token must exist.
+        if token is None:
+            audit = AuditRow(
+                tenant_id="00000000-0000-0000-0000-000000000000",
+                tool_name=name,
+                caller_token_id="anonymous",
+                arguments_hash=hash_arguments(arguments),
+                latency_ms=0,
+                outcome="unauthorized",
+                error_summary="No MCP token bound to this session.",
+                transport=transport,
+            )
+            write_audit(audit)
+            raise MCPToolError(
+                "MCP session is not authenticated — no tenant-scoped token."
+            )
+
+        # Scope check.
+        if token.scope and name not in token.scope:
+            audit = AuditRow(
+                tenant_id=token.tenant_id,
+                tool_name=name,
+                caller_token_id=token.token_id,
+                arguments_hash=hash_arguments(arguments),
+                latency_ms=0,
+                outcome="unauthorized",
+                error_summary=f"Token scope does not permit {name}.",
+                transport=transport,
+            )
+            write_audit(audit)
+            raise MCPToolError(
+                f"Token scope does not permit tool {name!r}."
+            )
+
+        # Rate limit check.
+        decision = global_limiter().check(token.tenant_id)
+        if not decision.allowed:
+            audit = AuditRow(
+                tenant_id=token.tenant_id,
+                tool_name=name,
+                caller_token_id=token.token_id,
+                arguments_hash=hash_arguments(arguments),
+                latency_ms=0,
+                outcome="rate_limited",
+                error_summary=(
+                    f"Tenant rpm exceeded; retry after "
+                    f"{decision.retry_after_seconds:.1f}s."
+                ),
+                transport=transport,
+            )
+            write_audit(audit)
+            raise MCPToolError(
+                f"Rate limit exceeded for tenant — retry after "
+                f"{decision.retry_after_seconds:.1f}s."
+            )
+
+        # Dispatch.
+        with time_call() as t:
+            try:
+                result = dispatch(token.tenant_id, name, arguments)
+                outcome = "success"
+                error_summary: str | None = None
+            except MCPToolError as exc:
+                outcome = "error"
+                error_summary = str(exc)
+                audit = AuditRow(
+                    tenant_id=token.tenant_id,
+                    tool_name=name,
+                    caller_token_id=token.token_id,
+                    arguments_hash=hash_arguments(arguments),
+                    latency_ms=t["latency_ms"],
+                    outcome=outcome,
+                    error_summary=error_summary,
+                    transport=transport,
+                )
+                write_audit(audit)
+                raise
+            except Exception as exc:
+                outcome = "error"
+                error_summary = f"{type(exc).__name__}: {exc}"
+                audit = AuditRow(
+                    tenant_id=token.tenant_id,
+                    tool_name=name,
+                    caller_token_id=token.token_id,
+                    arguments_hash=hash_arguments(arguments),
+                    latency_ms=t["latency_ms"],
+                    outcome=outcome,
+                    error_summary=error_summary,
+                    transport=transport,
+                )
+                write_audit(audit)
+                raise MCPToolError(error_summary) from exc
+
+        # Success audit.
+        audit = AuditRow(
+            tenant_id=token.tenant_id,
+            tool_name=name,
+            caller_token_id=token.token_id,
+            arguments_hash=hash_arguments(arguments),
+            latency_ms=t["latency_ms"],
+            outcome=outcome,
+            error_summary=None,
+            transport=transport,
+        )
+        write_audit(audit)
+
+        # MCP expects TextContent[] back — JSON-encode the result.
+        body = json.dumps(result, default=str)
+        return [types.TextContent(type="text", text=body)]
+
+    return server
+
+
+def build_init_options(server: Server) -> InitializationOptions:
+    """Build InitializationOptions for an already-built Server.
+
+    Capabilities reflect the handlers registered on this server instance.
+    """
+    return InitializationOptions(
+        server_name=SERVER_NAME,
+        server_version=SERVER_VERSION,
+        capabilities=server.get_capabilities(
+            notification_options=NotificationOptions(),
+            experimental_capabilities={},
+        ),
+    )
+
+
+def bind_token_to_session(token: VerifiedToken) -> contextvars.Token:
+    """Bind a verified token to the current async task. Returns the
+    contextvars reset token; pass it to release_token when the session
+    ends."""
+    return _current_token.set(token)
+
+
+def release_token(reset_token: contextvars.Token) -> None:
+    _current_token.reset(reset_token)
+
+
+def bind_transport(label: str) -> contextvars.Token:
+    return _current_transport.set(label)
+
+
+def release_transport(reset_token: contextvars.Token) -> None:
+    _current_transport.reset(reset_token)
+
+
+def verify_bearer(header_value: str | None) -> VerifiedToken:
+    """Parse an Authorization: Bearer <token> header and verify the token."""
+    if not header_value:
+        raise TokenError("Authorization header is required for HTTP+SSE transport.")
+    parts = header_value.split(None, 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise TokenError(
+            "Authorization header must be 'Bearer <token>'."
+        )
+    return verify_token(parts[1].strip())

@@ -350,6 +350,18 @@ app.include_router(ingest_triples_router)
 app.include_router(triple_monitor_router)
 app.include_router(recon_checks_router)
 
+# Plan B WP5 — real wire-protocol MCP server (HTTP+SSE transport).
+# The stdio transport runs in a separate process: `python -m backend.api.mcp_stdio`.
+try:
+    from backend.api.mcp_sse import router as mcp_sse_router
+    app.include_router(mcp_sse_router)
+except Exception as _mcp_sse_exc:  # noqa: BLE001 — mount is optional in CI envs
+    import logging as _log
+    _log.getLogger(__name__).warning(
+        "MCP HTTP+SSE router not mounted (mcp SDK unavailable?): %s",
+        _mcp_sse_exc,
+    )
+
 
 # =============================================================================
 # Cache invalidation helper (used by run_dcl and reconciliation)

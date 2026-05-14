@@ -1,21 +1,55 @@
 """
-MCP (Model Context Protocol) Server for DCL.
+Legacy HTTP "MCP" surface for DCL — kept stable for Mai's internal client
+(app/mai/tools/mcp_client.py).
 
-Wraps existing REST endpoints as MCP tools so any external LLM or AI agent
-can query everything DCL knows.
+WP5 refactor: tool bodies moved to backend/engine/mcp_tools.py and are now
+shared between this HTTP path and the real MCP server in
+backend/api/mcp_server_real.py. The wire-protocol MCP server is the
+canonical surface for external consumers; this HTTP surface stays only
+because Mai already speaks it. Migration of Mai to the real MCP transport
+is a separate follow-on (§11.4 last paragraph).
 
-Auth: API keys for v1.
+Auth is shared-secret API key (legacy). The real MCP surface uses opaque
+tenant-scoped tokens (see backend/api/mcp_auth.py).
 """
 
 import os
-import json
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
+from backend.engine.mcp_tools import (
+    PUBLIC_TOOLS,
+    TOOL_SCHEMAS,
+    MCPToolError,
+    dispatch,
+)
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
+
+
+_ONTOLOGY_ONLY_TOOLS = {"concept_lookup", "semantic_export"}
+
+
+def _legacy_tenant_id(tool_name: str) -> str:
+    """Tenant for the legacy HTTP path. Per §11.4 the real MCP exposure
+    uses tokens; this internal HTTP path stays unchanged for Mai, which
+    forwards AOS_TENANT_ID.
+
+    Ontology-only tools (concept_lookup, semantic_export) accept '' when
+    no tenant is set — the ontology is shared across tenants. Tenant-
+    scoped tools (query_triples, list_domains, provenance) raise loudly
+    so Mai surfaces the missing env (A1: no silent fallback)."""
+    tenant = os.environ.get("AOS_TENANT_ID") or ""
+    if not tenant and tool_name not in _ONTOLOGY_ONLY_TOOLS:
+        raise MCPToolError(
+            "Legacy MCP HTTP path requires AOS_TENANT_ID in env for "
+            f"tool {tool_name!r} — tenant identity must be present for "
+            "triple-store queries (I2)."
+        )
+    return tenant
+
 
 # Valid API keys (in production, these would be in a secure store)
 VALID_API_KEYS = {
@@ -54,48 +88,52 @@ def validate_api_key(api_key: Optional[str]) -> bool:
 
 
 def get_server_info() -> MCPServerInfo:
-    """Get MCP server information and available tools."""
+    """Get MCP server information and available tools.
+
+    The advertised tool list now reflects the shared registry in
+    backend/engine/mcp_tools.py plus the legacy 'query' alias.
+    """
+    tools: list[dict[str, Any]] = []
+    for name, schema in TOOL_SCHEMAS.items():
+        # Surface a compact parameters dict so the legacy /api/mcp/info
+        # contract (consumed by old clients) is not broken.
+        props = schema["inputSchema"].get("properties", {})
+        tools.append(
+            {
+                "name": name,
+                "description": schema["description"],
+                "parameters": {
+                    pname: {
+                        "type": pspec.get("type", "string"),
+                        "description": pspec.get("description", ""),
+                    }
+                    for pname, pspec in props.items()
+                },
+            }
+        )
+    # Legacy alias retained for Mai's existing call sites.
+    tools.append(
+        {
+            "name": "query",
+            "description": "Execute a data query against DCL's fact base (legacy alias of metric query path)",
+            "parameters": {
+                "metric": {"type": "string", "description": "Metric to query"},
+                "dimensions": {"type": "array", "description": "Dimensions to group by"},
+                "grain": {"type": "string", "description": "Time grain"},
+                "time_range": {"type": "object", "description": "Time range filter {start, end}"},
+            },
+        }
+    )
     return MCPServerInfo(
         name="dcl-mcp-server",
         version="1.0.0",
-        tools=[
-            {
-                "name": "concept_lookup",
-                "description": "Look up an ontology concept or metric by name or alias",
-                "parameters": {
-                    "query": {"type": "string", "description": "Concept name or alias to look up"},
-                },
-            },
-            {
-                "name": "semantic_export",
-                "description": "Export the full semantic catalog (metrics, entities, bindings)",
-                "parameters": {},
-            },
-            {
-                "name": "query",
-                "description": "Execute a data query against DCL's fact base",
-                "parameters": {
-                    "metric": {"type": "string", "description": "Metric to query"},
-                    "dimensions": {"type": "array", "description": "Dimensions to group by"},
-                    "grain": {"type": "string", "description": "Time grain (day, week, month, quarter, year)"},
-                    "time_range": {"type": "object", "description": "Time range filter {start, end}"},
-                },
-            },
-            {
-                "name": "provenance",
-                "description": "Get provenance trace for a metric",
-                "parameters": {
-                    "metric": {"type": "string", "description": "Metric to trace"},
-                },
-            },
-        ],
+        tools=tools,
     )
 
 
 def handle_tool_call(tool_call: MCPToolCall) -> MCPToolResult:
-    """Handle an MCP tool call by routing to the appropriate DCL endpoint."""
+    """Handle an MCP tool call by routing to the appropriate DCL function."""
 
-    # Auth check
     if not validate_api_key(tool_call.api_key):
         return MCPToolResult(
             tool=tool_call.tool,
@@ -104,20 +142,36 @@ def handle_tool_call(tool_call: MCPToolCall) -> MCPToolResult:
         )
 
     try:
-        if tool_call.tool == "concept_lookup":
-            return _handle_concept_lookup(tool_call)
-        elif tool_call.tool == "semantic_export":
-            return _handle_semantic_export(tool_call)
-        elif tool_call.tool == "query":
-            return _handle_query(tool_call)
-        elif tool_call.tool == "provenance":
-            return _handle_provenance(tool_call)
-        else:
+        if tool_call.tool == "query":
+            # Legacy metric-based query — stays separate from the real
+            # MCP query_triples surface. Used by Mai's existing chat path.
+            return _handle_legacy_query(tool_call)
+        if tool_call.tool == "provenance" and (
+            "metric" in tool_call.arguments or "metric_id" in tool_call.arguments
+        ):
+            # Legacy metric-trace provenance (ProvenanceTrace shape).
+            # The wire-protocol MCP server returns triple-level provenance;
+            # Mai-internal callers still want the older metric-trace shape.
+            return _handle_legacy_metric_provenance(tool_call)
+        if tool_call.tool not in PUBLIC_TOOLS:
             return MCPToolResult(
                 tool=tool_call.tool,
                 success=False,
                 error=f"Unknown tool: {tool_call.tool}",
             )
+        tenant_id = _legacy_tenant_id(tool_call.tool)
+        result = dispatch(tenant_id, tool_call.tool, tool_call.arguments)
+        return MCPToolResult(
+            tool=tool_call.tool,
+            success=True,
+            result=result,
+        )
+    except MCPToolError as exc:
+        return MCPToolResult(
+            tool=tool_call.tool,
+            success=False,
+            error=str(exc),
+        )
     except Exception as e:
         logger.error(f"MCP tool call failed: {e}", exc_info=True)
         return MCPToolResult(
@@ -127,72 +181,37 @@ def handle_tool_call(tool_call: MCPToolCall) -> MCPToolResult:
         )
 
 
-def _handle_concept_lookup(tool_call: MCPToolCall) -> MCPToolResult:
-    """Handle concept_lookup tool."""
-    from backend.api.semantic_export import resolve_metric, resolve_entity
+def _handle_legacy_metric_provenance(tool_call: MCPToolCall) -> MCPToolResult:
+    """Handle the legacy metric-trace `provenance` shape that Mai's chat
+    path still consumes (ProvenanceTrace with .sources list)."""
+    from backend.engine.provenance_service import get_provenance
 
-    query = tool_call.arguments.get("query") or tool_call.arguments.get("concept", "")
-    if not query:
+    metric = (
+        tool_call.arguments.get("metric")
+        or tool_call.arguments.get("metric_id")
+    )
+    if not metric:
         return MCPToolResult(
-            tool="concept_lookup",
+            tool="provenance",
             success=False,
-            error="Missing 'query' argument",
+            error="Missing 'metric' argument for legacy metric-trace provenance.",
         )
-
-    # Try metric first
-    metric = resolve_metric(query)
-    if metric:
+    trace = get_provenance(metric)
+    if not trace:
         return MCPToolResult(
-            tool="concept_lookup",
-            success=True,
-            result={
-                "type": "metric",
-                "id": metric.id,
-                "name": metric.name,
-                "definition": metric.description,
-                "aliases": metric.aliases,
-                "pack": metric.pack.value,
-                "allowed_dims": metric.allowed_dims,
-                "allowed_grains": [g.value for g in metric.allowed_grains],
-            },
+            tool="provenance",
+            success=False,
+            error=f"Metric '{metric}' not found.",
         )
-
-    # Try entity
-    entity = resolve_entity(query)
-    if entity:
-        return MCPToolResult(
-            tool="concept_lookup",
-            success=True,
-            result={
-                "type": "entity",
-                "id": entity.id,
-                "name": entity.name,
-                "definition": entity.description,
-                "aliases": entity.aliases,
-            },
-        )
-
     return MCPToolResult(
-        tool="concept_lookup",
-        success=False,
-        error=f"No concept found for '{query}'",
-    )
-
-
-def _handle_semantic_export(tool_call: MCPToolCall) -> MCPToolResult:
-    """Handle semantic_export tool."""
-    from backend.api.semantic_export import get_semantic_export
-
-    export = get_semantic_export()
-    return MCPToolResult(
-        tool="semantic_export",
+        tool="provenance",
         success=True,
-        result=export.model_dump(),
+        result=trace.model_dump(),
     )
 
 
-def _handle_query(tool_call: MCPToolCall) -> MCPToolResult:
-    """Handle query tool."""
+def _handle_legacy_query(tool_call: MCPToolCall) -> MCPToolResult:
+    """Handle the legacy metric-based `query` tool (Mai-internal path)."""
     from backend.api.query import QueryRequest, handle_query, QueryError
 
     metric = tool_call.arguments.get("metric")
@@ -227,31 +246,4 @@ def _handle_query(tool_call: MCPToolCall) -> MCPToolResult:
         tool="query",
         success=True,
         result=result.model_dump(),
-    )
-
-
-def _handle_provenance(tool_call: MCPToolCall) -> MCPToolResult:
-    """Handle provenance tool."""
-    from backend.engine.provenance_service import get_provenance
-
-    metric = tool_call.arguments.get("metric") or tool_call.arguments.get("metric_id")
-    if not metric:
-        return MCPToolResult(
-            tool="provenance",
-            success=False,
-            error="Missing 'metric' argument",
-        )
-
-    trace = get_provenance(metric)
-    if not trace:
-        return MCPToolResult(
-            tool="provenance",
-            success=False,
-            error=f"Metric '{metric}' not found",
-        )
-
-    return MCPToolResult(
-        tool="provenance",
-        success=True,
-        result=trace.model_dump(),
     )
