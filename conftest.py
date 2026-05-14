@@ -1,6 +1,6 @@
-"""Root conftest — loads .env so DATABASE_URL is available to the connection pool."""
+"""Root conftest — loads .env.development so DATABASE_URL points at aos-dev (not prod)."""
 
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).parent / ".env")
+load_dotenv(Path(__file__).parent / ".env.development")

@@ -196,6 +196,24 @@ originating sprint so future agents can trace the decision.
     violation worse than the underlying separation violation).
     severity: degraded | blocking: real dev/prod separation for the test
     harness; current state lets tests run, but they run against prod.
+    RESOLVED 2026-05-14 — pooler URL constructed for aos-dev
+    (`dev_user.glmeqbnuahlkkbolkent` on `aws-1-us-east-1.pooler.supabase.com:5432`
+    with `?options=-c%20search_path%3Dshared_gdbmdr`; IPv4 reachable from
+    WSL2). 5 bootstrap sites swapped to load `.env.development`, plus a
+    6th site discovered via C12 audit (`tests/test_s1_seed.py:31-41` was
+    parsing `.env` via raw file open, not load_dotenv). Farm
+    `.env.development` created pointing at the same pooler; `dev` schema
+    created in aos-dev and granted to `dev_user`. DCL migrations 001-014
+    applied via Supabase MCP (postgres role has DDL rights; `dev_user`
+    only has DML), filling in `mai_mcp_audit`, missing indexes, and
+    explicit CHECK/UNIQUE constraints that pre-dated the migration on
+    the existing tables. Two hardcoded `schemaname = 'public'` filters
+    in `test_s1_dcl.py:test_01/test_02` generalized to
+    `current_schema()` so the assertions hold across both topologies
+    (prod uses `public`, aos-dev uses `shared_gdbmdr`). Result vs dev:
+    154 PASS / 0 FAIL / 1 SKIP, two consecutive identical runs (B14).
+    Production runtime `backend/api/main.py:11` retained on bare
+    `load_dotenv()` per prompt instruction.
 
 18. 2026-05-14 | wp5-mcp-real | backend/api/mcp_auth.py:* + Platform
     token-issuance gap | The wire-protocol MCP server (Plan B WP5, §11.4)

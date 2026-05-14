@@ -16,9 +16,9 @@ from pathlib import Path
 _repo = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_repo))
 
-# Load .env for DATABASE_URL
+# Load .env.development for DATABASE_URL (aos-dev, not prod)
 from dotenv import load_dotenv
-load_dotenv(_repo / ".env")
+load_dotenv(_repo / ".env.development")
 
 from backend.core.db import get_connection
 from backend.db.triple_store import TripleStore
@@ -123,7 +123,7 @@ class TestSchema:
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT table_name FROM information_schema.tables "
-                    "WHERE table_schema = 'public' AND table_name = ANY(%s)",
+                    "WHERE table_schema = current_schema() AND table_name = ANY(%s)",
                     (expected_tables,),
                 )
                 found = {row[0] for row in cur.fetchall()}
@@ -154,7 +154,7 @@ class TestSchema:
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT indexname FROM pg_indexes "
-                    "WHERE schemaname = 'public' AND indexname = ANY(%s)",
+                    "WHERE schemaname = current_schema() AND indexname = ANY(%s)",
                     (expected_indexes,),
                 )
                 found = {row[0] for row in cur.fetchall()}

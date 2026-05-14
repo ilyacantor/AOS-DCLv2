@@ -30,7 +30,7 @@ _repo = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_repo))
 
 from dotenv import load_dotenv
-load_dotenv(_repo / ".env")
+load_dotenv(_repo / ".env.development")
 
 from fastapi.testclient import TestClient
 

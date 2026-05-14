@@ -1,11 +1,11 @@
 {
   "seed_date": "2026-05-14",
-  "dcl_ingest_id": "c8cea60d-cbe2-4748-9f70-c0a826e4e862",
-  "farm_run_id": "snapshot_push_9b1f726e-a79_6e98df96",
+  "dcl_ingest_id": "fb33d637-9c1f-4cc9-ba0b-0dc73c97b506",
+  "farm_run_id": "snapshot_push_f511edfc-079_873be688",
   "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
   "total_triples": 1228,
   "entities": [
-    "NetHub-N5IU"
+    "VeloWorks-GQFR"
   ],
   "concept_summary": {
     "arr": 156,

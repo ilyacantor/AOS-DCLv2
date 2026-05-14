@@ -29,16 +29,16 @@ from tests.conftest import TENANT_ID, RUN_ID, ENTITIES
 # ---------------------------------------------------------------------------
 
 def _load_db_url() -> str:
-    """Load DATABASE_URL from .env file."""
-    env_path = Path(__file__).resolve().parent.parent / ".env"
+    """Load DATABASE_URL from .env.development (aos-dev, not prod)."""
+    env_path = Path(__file__).resolve().parent.parent / ".env.development"
     if not env_path.exists():
-        raise RuntimeError(f"No .env file at {env_path}")
+        raise RuntimeError(f"No .env.development file at {env_path}")
     with open(env_path) as f:
         for line in f:
             line = line.strip()
             if line.startswith("DATABASE_URL="):
                 return line.split("=", 1)[1].strip().strip('"').strip("'")
-    raise RuntimeError("DATABASE_URL not found in .env")
+    raise RuntimeError("DATABASE_URL not found in .env.development")
 
 
 @pytest.fixture(scope="module")
