@@ -15,10 +15,52 @@ logger = get_logger(__name__)
 
 _YAML_PATH = Path(__file__).parent.parent.parent / "config" / "ontology_concepts.yaml"
 
-VALID_DOMAINS = {
+# Fallback floor used only when the YAML file is missing. The authoritative
+# domain list is the top-level `domains:` block in
+# `config/ontology_concepts.yaml`, loaded by `_load_valid_domains_from_yaml()`
+# at import time. Treat _FALLBACK_DOMAINS as a last-resort safety net, not as
+# the source of truth.
+_FALLBACK_DOMAINS: frozenset[str] = frozenset({
     "finance", "sales", "hr", "customer_success",
     "product_eng", "it_infra", "operations", "marketing", "compliance",
-}
+    "cofa", "cloud_spend",
+})
+
+
+def _load_valid_domains_from_yaml() -> frozenset[str]:
+    """Read the top-level `domains:` block from the ontology YAML.
+
+    The YAML is the single source of truth for domains. If the file is missing
+    or the `domains:` block is empty/absent, fall back to `_FALLBACK_DOMAINS`
+    and log a warning — failing here would break every downstream import.
+    """
+    if not _YAML_PATH.exists():
+        logger.warning(
+            f"[Ontology] YAML not found at {_YAML_PATH}; using fallback domain set"
+        )
+        return _FALLBACK_DOMAINS
+    try:
+        import yaml as _yaml
+        with open(_YAML_PATH) as _f:
+            _data = _yaml.safe_load(_f) or {}
+        declared = _data.get("domains")
+        if not declared or not isinstance(declared, list):
+            logger.warning(
+                f"[Ontology] `domains:` block missing or empty in "
+                f"{_YAML_PATH.name}; using fallback domain set"
+            )
+            return _FALLBACK_DOMAINS
+        return frozenset(str(d) for d in declared if d)
+    except Exception as _exc:
+        logger.error(
+            f"[Ontology] Failed to read `domains:` from {_YAML_PATH.name}: "
+            f"{_exc}; using fallback domain set",
+            exc_info=True,
+        )
+        return _FALLBACK_DOMAINS
+
+
+VALID_DOMAINS: frozenset[str] = _load_valid_domains_from_yaml()
 
 # Minimal fallback — only used if YAML file is missing
 _FALLBACK_ONTOLOGY: List[OntologyConcept] = [

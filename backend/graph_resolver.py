@@ -71,7 +71,8 @@ def _resolve_concepts(
     Resolve requested concept names against the ontology and semantic catalog.
 
     Returns (found_concepts, not_found, avg_confidence).
-    Uses both the ontology (107 concepts) and the published metrics catalog.
+    Uses both the ontology (concept set defined in `config/ontology_concepts.yaml`)
+    and the published metrics catalog.
     """
     ontology_mod = _import_engine_module("ontology")
     from backend.api.semantic_export import resolve_metric, PUBLISHED_METRICS

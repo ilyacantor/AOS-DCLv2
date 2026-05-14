@@ -83,3 +83,34 @@ originating sprint so future agents can trace the decision.
     engineer joins. At that point provision dev-scoped keys, rotate prod-
     first to keep prod live, and split. severity: degraded | blocking:
     nothing today.
+
+14. 2026-05-13 | wp2-cloud-spend | tests/test_s1_seed.py:* | seven seed-data
+    tests (test_02_all_entities_present, test_03_revenue_positive_entity_0,
+    test_05_pl_identity, test_06_bs_identity, test_07_cf_identity,
+    test_08_cash_continuity, test_15_period_coverage) assert against
+    data/seed_manifest.json which references `ManualProbe-SE01` and farm_run
+    `farm_manifest_20260401_161114_461543b5`. The DCL DB has 89 different
+    entities (AeroEdge, ApexFlow, etc.) — the manifest is stale relative to
+    the active DB. Same 7 failures present before WP2 changes (verified by
+    `git stash && pytest tests/test_s1_seed.py`). Root cause is upstream
+    seed pipeline drift, not ontology. Resolve by re-running the seed
+    pipeline (Farm + AAM + DCL ingest) and writing a fresh
+    seed_manifest.json. severity: degraded | blocking: nothing in WP2 scope;
+    blocks any future change that requires tests/test_s1_seed.py clean.
+
+15. 2026-05-13 | wp2-cloud-spend | config/ontology_concepts.yaml:4180-4250 |
+    Five concept entries added in commit 8869f47 reused existing ids
+    (`pipeline`, `event`, `datadog`, `aws_cost`, `jira`) with new
+    concept_ids (SAL-100, IT-101/102/103, ENG-101). The
+    `_load_from_yaml()` enforcer rejected the duplicate ids and the engine
+    silently fell back to a 3-entry stub for months. WP2 renamed the five
+    later entries to unique ids (`sales_pipeline_metrics`,
+    `event_stream_metrics`, `datadog_observability`, `aws_cost_aggregate`,
+    `jira_project_metrics`) to unblock the loader. Persona-domains entries
+    still reference the canonical root ids (`pipeline`, `event`, `datadog`,
+    `aws_cost`, `jira`) which now map to the original PRD-/IT-coded
+    entries — the second set is mappable but currently unreferenced by any
+    persona. Decide whether to keep the duplicate-info entries, merge their
+    example_fields into the canonical entries, or wire the rename into
+    persona_domains and Farm generators. severity: degraded | blocking:
+    nothing today; the loader works.

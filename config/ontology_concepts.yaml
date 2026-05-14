@@ -1,8 +1,24 @@
 # DCL Enterprise Ontology — Single Source of Truth
-# 9 domains, expanding to ~107 concepts
+# Domains and concept counts are defined in this file. Do not encode them
+# as constants elsewhere — derive from this YAML at load time.
 # Each concept: id, concept_id, name, description, domain, cluster,
 #   example_fields, aliases, expected_type, typical_source_systems, persona_relevance,
 #   recognition_basis, timing_semantics, scope_boundaries, calculation_methodology, comparability_rules
+
+# Declared domains. Loader derives VALID_DOMAINS from this list at import time
+# so adding a domain to this list is the only change needed to register one.
+domains:
+  - finance
+  - sales
+  - hr
+  - customer_success
+  - product_eng
+  - it_infra
+  - operations
+  - marketing
+  - compliance
+  - cofa
+  - cloud_spend
 
 concepts:
   # ─── Finance ──────────────────────────────────────────────
@@ -3474,7 +3490,7 @@ concepts:
     comparability_rules: "EBITDA adjustments are subjective and vary by preparer. Comparable only when adjustment categories and criteria are consistently defined."
 
   - id: service
-    concept_id: OPS-010
+    concept_id: OPS-014
     name: Service
     description: "Service catalog entry representing a deliverable service offering"
     domain: operations
@@ -4161,7 +4177,7 @@ concepts:
     calculation_methodology: "Automation Rate = automated process executions / total executions. SLA Attainment = commitments met within target / total commitments. Throughput = units processed / period. Error Rate = failed processes / total processes."
     comparability_rules: "SLA targets must match for attainment comparison. Automation rate depends on process granularity (coarse processes inflate the rate). Throughput requires normalized unit definitions. Cross-department comparison requires aligned process complexity weighting."
 
-  - id: pipeline
+  - id: sales_pipeline_metrics
     concept_id: SAL-100
     name: Sales Pipeline
     description: "Aggregate sales pipeline metrics — stages, ACV, velocity, conversion"
@@ -4175,7 +4191,7 @@ concepts:
       cro: 1.0
       cfo: 0.7
 
-  - id: event
+  - id: event_stream_metrics
     concept_id: IT-101
     name: Event Stream
     description: "Application and infrastructure event telemetry"
@@ -4189,7 +4205,7 @@ concepts:
       cto: 1.0
       coo: 0.5
 
-  - id: datadog
+  - id: datadog_observability
     concept_id: IT-102
     name: Datadog Observability
     description: "APM, infrastructure, and log metrics from Datadog"
@@ -4203,7 +4219,7 @@ concepts:
       cto: 1.0
       coo: 0.4
 
-  - id: aws_cost
+  - id: aws_cost_aggregate
     concept_id: IT-103
     name: AWS Cost
     description: "AWS cloud spend, resource utilization, and cost allocation"
@@ -4217,7 +4233,7 @@ concepts:
       cfo: 0.9
       cto: 0.8
 
-  - id: jira
+  - id: jira_project_metrics
     concept_id: ENG-101
     name: Jira Project Metrics
     description: "Issue tracking, sprint velocity, and backlog metrics from Jira"
@@ -4230,4 +4246,239 @@ concepts:
     persona_relevance:
       cto: 1.0
       coo: 0.5
+
+  # ─── Cloud Spend (FinOps) ──────────────────────────────────
+  # Cross-cutting FinOps domain. The root concept `cloud_spend` is the umbrella
+  # that lets stored triples use the `cloud_spend.<satellite>.<property>` shape
+  # (e.g., `cloud_spend.cloud_resource.cost_usd`). Each satellite is a separately
+  # mappable concept root as well. The pre-existing `cost_center` concept
+  # (FIN-003, finance domain) remains the source of truth for cost-center
+  # identity — cloud_spend triples that need a cost-center attribution reference
+  # it via the cost_center root, no duplicate concept is introduced here.
+  - id: cloud_spend
+    concept_id: CSP-001
+    name: Cloud Spend
+    description: "Umbrella concept for FinOps cloud spend telemetry — resources, accounts, services, billing periods, and utilization. Root for the cloud_spend.* concept namespace."
+    domain: cloud_spend
+    cluster: FinOps
+    example_fields:
+      - cloud_spend
+      - finops_spend
+      - cloud_bill
+      - cost_usd
+      - amount_usd
+      - period
+      - account_id
+      - service
+      - resource_id
+    aliases:
+      - finops
+      - cloud_cost
+      - cloud_bill
+      - cloud_spending
+    expected_type: float
+    typical_source_systems: [aws_cost_explorer, azure_cost_management, gcp_billing, cloudhealth, vantage]
+    persona_relevance:
+      cfo: 0.9
+      cto: 1.0
+      coo: 0.5
+    recognition_basis: "Generated from cloud provider billing exports (AWS Cost & Usage Report, Azure Cost Management exports, GCP billing exports) and FinOps platform aggregations. Costs accrue against tagged resources and accounts as usage occurs."
+    timing_semantics: "Period-based. Costs aggregate over billing periods (typically calendar month). Utilization is snapshot or rolling-window. Account and resource attributes are point-in-time with audit history."
+    scope_boundaries: "Includes all billable cloud provider line items — compute, storage, network, managed services, data egress, support. Includes reserved-instance amortization, savings-plan attribution, and credits when modeled. Excludes SaaS subscriptions (those belong to operations or it_infra) and non-billed internal allocations."
+    calculation_methodology: "Per-resource cost = sum(billable line items tagged with resource_id) over period. Per-account cost = sum across resources. Per-service cost = sum across resources of the same service. Utilization metrics use platform-native definitions (CloudWatch CPUUtilization, Azure Monitor Percentage CPU, etc.)."
+    comparability_rules: "Cross-provider comparison requires normalized service categories (compute, storage, db, network, ml, other). RI/SP-amortized vs cash spend must be distinguished. Currency normalization required for multi-currency billing. Untagged spend distorts per-owner attribution and must be reported separately."
+
+  - id: cloud_resource
+    concept_id: CSP-002
+    name: Cloud Resource
+    description: "Discrete cloud resource — EC2 instance, S3 bucket, RDS database, Lambda function, etc. The unit of attribution for cloud spend and utilization."
+    domain: cloud_spend
+    cluster: FinOps
+    example_fields:
+      - resource_id
+      - resource_arn
+      - resource_name
+      - resource_type
+      - service
+      - account_id
+      - region
+      - owner_email
+      - cost_center
+      - created_at
+      - status
+      - tags
+    aliases:
+      - cloud_asset
+      - infra_resource
+      - instance
+      - asset
+    expected_type: string
+    typical_source_systems: [aws, azure, gcp, terraform_state, cloud_custodian]
+    persona_relevance:
+      cto: 1.0
+      cfo: 0.6
+    recognition_basis: "Created when a cloud resource is provisioned via console, IaC (Terraform, CloudFormation), CLI, SDK, or API. Discovered through provider config services (AWS Config, Azure Resource Graph, GCP Asset Inventory)."
+    timing_semantics: "Point-in-time entity with lifecycle states (pending, running, stopped, terminated). Cost is metered per second/hour/usage. Lifecycle events are auditable."
+    scope_boundaries: "Includes all billable provider resources — compute, storage, network, managed services. Includes terminated resources for cost-attribution history. Excludes infrastructure-as-code definitions that have not been applied."
+    calculation_methodology: null
+    comparability_rules: "Resource counts across providers require type normalization (EC2 instance vs Azure VM vs GCE instance). Tagging completeness governs attribution accuracy. Resources without an owner tag fall into the 'untagged' bucket."
+
+  - id: cloud_account
+    concept_id: CSP-003
+    name: Cloud Account
+    description: "Billing or organizational unit at the cloud provider — AWS account, Azure subscription, GCP project. The container that owns cloud resources and receives the bill."
+    domain: cloud_spend
+    cluster: FinOps
+    example_fields:
+      - account_id
+      - account_name
+      - subscription_id
+      - project_id
+      - provider
+      - parent_org
+      - owner_team
+      - environment
+      - root_email
+    aliases:
+      - aws_account
+      - azure_subscription
+      - gcp_project
+      - billing_account
+    expected_type: string
+    typical_source_systems: [aws_organizations, azure_management_groups, gcp_organization, cloudhealth]
+    persona_relevance:
+      cto: 0.9
+      cfo: 0.8
+    recognition_basis: "Created when a cloud account is provisioned within the organization hierarchy. Tracked through provider management APIs (AWS Organizations, Azure Management Groups, GCP Cloud Resource Manager)."
+    timing_semantics: "Point-in-time entity with creation date and lifecycle status. Ownership and environment classification are mutable and audited."
+    scope_boundaries: "Includes all production, staging, development, and sandbox accounts under the organization. Includes acquired-entity accounts under consolidation. Excludes personal sandbox accounts not enrolled in the org."
+    calculation_methodology: null
+    comparability_rules: "Account counts vary by provider model (AWS uses many accounts; GCP often uses fewer projects with folders). Cross-provider account aggregation requires normalized environment tags (prod/stage/dev). Consolidated billing accounts hide per-account spend unless drilled down."
+
+  - id: cloud_service
+    concept_id: CSP-004
+    name: Cloud Service
+    description: "Abstract cloud service offered by a provider — EC2, S3, RDS, Lambda, BigQuery, etc. Resources belong to exactly one service; spend rolls up by service."
+    domain: cloud_spend
+    cluster: FinOps
+    example_fields:
+      - service_id
+      - service_name
+      - service_code
+      - provider
+      - category
+      - subcategory
+    aliases:
+      - aws_service
+      - cloud_offering
+      - service_code
+    expected_type: string
+    typical_source_systems: [aws_pricing_api, azure_retail_prices, gcp_billing_catalog, cloudhealth]
+    persona_relevance:
+      cto: 0.8
+      cfo: 0.7
+    recognition_basis: "Defined by the cloud provider catalog. New services appear when providers launch them. Service taxonomy is maintained by FinOps platforms for cross-provider normalization."
+    timing_semantics: "Point-in-time reference entity. Service definitions are versioned by provider; deprecated services retain attribution for historical billing periods."
+    scope_boundaries: "Includes all billable services across all providers in scope. Excludes free-tier-only services and partner/marketplace services unless explicitly included."
+    calculation_methodology: null
+    comparability_rules: "Service categorization is provider-specific (AWS calls it 'compute', Azure 'compute', GCP 'compute', but the boundary differs). Cross-provider comparison requires mapping to a canonical category set (compute/storage/db/network/ml_ai/other)."
+
+  - id: cloud_spend_period
+    concept_id: CSP-005
+    name: Cloud Spend Period
+    description: "A billing period record — month, day, or rolling window — aggregating cloud spend by resource, account, or service. The atomic unit of FinOps reporting."
+    domain: cloud_spend
+    cluster: FinOps
+    example_fields:
+      - period_id
+      - period_start
+      - period_end
+      - granularity
+      - currency
+      - resource_id
+      - account_id
+      - service
+      - amount_usd
+      - amount_native
+      - usage_quantity
+      - usage_unit
+    aliases:
+      - billing_period
+      - spend_record
+      - cur_line
+      - usage_record
+    expected_type: float
+    typical_source_systems: [aws_cur, azure_billing_exports, gcp_billing_exports, cloudhealth, vantage]
+    persona_relevance:
+      cfo: 1.0
+      cto: 0.9
+    recognition_basis: "Generated from provider billing exports (Cost & Usage Report, Azure cost exports, GCP billing exports). Each record represents one resource, one service, and one time bucket."
+    timing_semantics: "Period-based with explicit start and end. Granularity is daily, monthly, or custom. Late-arriving adjustments (credits, RI true-ups) revise prior periods."
+    scope_boundaries: "Includes all billable line items in scope. Includes pre-tax, tax, and total amounts when provided. Excludes forecasted spend (those belong to budget). Excludes internal showback allocations unless explicitly modeled."
+    calculation_methodology: "Per-period spend = sum(billable line items where billing_period overlaps). RI-amortized view = unblended cost minus RI amortization plus RI upfront amortization spread. Savings-plan attribution follows provider rules."
+    comparability_rules: "Period comparison requires matching granularity and equal-length windows. Currency normalization required across non-USD billing. Amortized vs unblended cost are not directly comparable. Includes-credits vs excludes-credits must be stated."
+
+  - id: cloud_utilization
+    concept_id: CSP-006
+    name: Cloud Utilization
+    description: "Resource utilization snapshot — CPU, memory, network, request volume, active state. Pairs with spend to identify waste and rightsizing opportunities."
+    domain: cloud_spend
+    cluster: FinOps
+    example_fields:
+      - utilization_id
+      - resource_id
+      - period_start
+      - period_end
+      - cpu_pct
+      - memory_pct
+      - network_gb
+      - requests_count
+      - active
+      - idle_pct
+      - sample_count
+    aliases:
+      - resource_utilization
+      - usage_metrics
+      - rightsizing_signal
+    expected_type: float
+    typical_source_systems: [cloudwatch, azure_monitor, gcp_monitoring, datadog, cloudhealth]
+    persona_relevance:
+      cto: 1.0
+      cfo: 0.5
+    recognition_basis: "Collected from provider monitoring services (CloudWatch metrics, Azure Monitor metrics, GCP Cloud Monitoring) or third-party observability. Aggregated to the period that matches spend reporting."
+    timing_semantics: "Period-based. Samples are point-in-time; aggregates are averages, percentiles, or sums over the period. Active flag is derived from non-zero utilization or running state."
+    scope_boundaries: "Includes all measurable utilization signals for resources in scope. Excludes resources with no monitoring agent or no native metrics. Idle vs active threshold is configurable; default is <5% average CPU for the period."
+    calculation_methodology: "CPU % = mean(CPUUtilization) over period. Memory % = mean(MemoryUtilization). Network GB = sum(NetworkIn + NetworkOut). Idle % = fraction of samples below threshold. Active = at least one non-zero sample."
+    comparability_rules: "Utilization comparison requires matching sample period and aggregation method. Cross-provider metric definitions differ (AWS CPUUtilization is host-level; container metrics differ). Idle thresholds vary by workload class (batch vs interactive)."
+
+  - id: cloud_owner
+    concept_id: CSP-007
+    name: Cloud Owner
+    description: "The human or team accountable for cloud spend attached to one or more resources or accounts. Cost-attribution endpoint for chargeback and showback."
+    domain: cloud_spend
+    cluster: FinOps
+    example_fields:
+      - owner_id
+      - owner_email
+      - owner_name
+      - team
+      - cost_center
+      - manager_email
+      - org_unit
+      - role
+    aliases:
+      - resource_owner
+      - cost_owner
+      - tag_owner
+    expected_type: string
+    typical_source_systems: [okta, azure_ad, google_workspace, cloud_resource_tags, finops_platform]
+    persona_relevance:
+      cfo: 0.9
+      cto: 0.8
+      coo: 0.4
+    recognition_basis: "Established through resource tags (owner, owner_email, team), account ownership records, or FinOps platform attribution. Resolved against identity provider for authoritative employee identity."
+    timing_semantics: "Point-in-time attribute. Ownership changes are auditable. Historical spend retains the owner at time of spend (or untagged if attribution failed)."
+    scope_boundaries: "Includes individual owners, team owners, and cost-center owners. Excludes service principals and machine identities (those are sources, not owners). Untagged spend rolls up to an 'untagged' synthetic owner for visibility."
+    calculation_methodology: null
+    comparability_rules: "Owner identity resolution depends on tag completeness. Cross-account ownership requires consistent tag schema. Untagged-spend rate is a tagging-hygiene metric, not a real owner."
 

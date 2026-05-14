@@ -30,6 +30,7 @@ personas:
       - invoice
       - journal_entry
       - aws_cost
+      - cloud_spend
   CRO:
     display_name: Chief Revenue Officer
     domains:
@@ -62,6 +63,7 @@ personas:
       - datadog
       - event
       - it_asset
+      - cloud_spend
   CHRO:
     display_name: Chief Human Resources Officer
     domains:
