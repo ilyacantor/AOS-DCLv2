@@ -1,18 +1,19 @@
 {
-  "seed_date": "2026-04-24",
-  "dcl_ingest_id": "c45d841b-e54e-4c49-8d2c-daa72bc59afd",
-  "farm_run_id": "farm_manifest_20260401_161114_461543b5",
+  "seed_date": "2026-05-14",
+  "dcl_ingest_id": "c8cea60d-cbe2-4748-9f70-c0a826e4e862",
+  "farm_run_id": "snapshot_push_9b1f726e-a79_6e98df96",
   "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
-  "total_triples": 2309,
+  "total_triples": 1228,
   "entities": [
-    "ManualProbe-SE01"
+    "NetHub-N5IU"
   ],
   "concept_summary": {
     "arr": 156,
     "asset": 105,
     "aws_cost": 1,
     "cash_flow": 169,
-    "cogs": 13,
+    "coa": 249,
+    "cogs": 21,
     "customer": 315,
     "datadog": 1,
     "ebitda_adjustment": 80,
@@ -21,16 +22,19 @@
     "equity": 40,
     "event": 1,
     "event_stream": 60,
+    "gl": 3451,
     "infrastructure": 336,
     "jira": 1,
     "liability": 65,
-    "opex": 49,
+    "operations": 24,
+    "opex": 73,
     "pipeline": 2,
-    "pnl": 61,
-    "revenue": 397,
+    "pnl": 77,
+    "revenue": 405,
     "sales": 108,
+    "service": 31,
     "support": 48,
-    "workforce": 145
+    "workforce": 253
   },
   "identity_checks": {}
 }

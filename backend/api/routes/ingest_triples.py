@@ -494,9 +494,18 @@ def ingest_triples(
         duration_ms=duration_ms,
     )
 
-    # On replace ingest, update seed_manifest.json so tests point at the live run
-    if replace and not run_exists:
-        _update_seed_manifest(req.tenant_id, req.dcl_ingest_id, count, concept_summary)
+    # Update seed_manifest.json so tests point at the live run.
+    # Triggers on every successful batch ingest (replace + append) so that
+    # multi-batch pushes do not leave the manifest at the post-batch-0
+    # concept count. Idempotent: the function gates against regression.
+    _update_seed_manifest(
+        req.tenant_id,
+        req.dcl_ingest_id,
+        count,
+        concept_summary,
+        entity_ids=entity_ids,
+        farm_run_id=req.source_farm_manifest_id,
+    )
 
     # Determine batch-level entity_id: explicit request field takes priority,
     # then infer from triples if all share a single entity_id.
@@ -730,8 +739,17 @@ def _update_seed_manifest(
     run_id: str,
     triple_count: int,
     concept_summary: dict,
+    entity_ids: list[str] | None = None,
+    farm_run_id: str | None = None,
 ) -> None:
     """Update data/seed_manifest.json with current active run info.
+
+    Writes all consumer-visible identity fields: ``dcl_ingest_id``,
+    ``tenant_id``, ``entities``, ``farm_run_id``, ``total_triples``,
+    ``concept_summary``, ``seed_date``. Stale fields from prior runs are
+    NOT preserved when newer values are supplied — that is the bug class
+    that left ``entities=["ManualProbe-SE01"]`` glued to the manifest while
+    real ingests rotated the active entity.
 
     Two-gate protection:
     1. Only overwrites if the new run has at least as many concept domains as
@@ -755,14 +773,16 @@ def _update_seed_manifest(
 
         # Gate 2: reject runs where all entity_ids look like UUIDs.
         # Valid runs have human-readable entity_ids (e.g. "CloudLabs-9OSV").
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT DISTINCT entity_id FROM semantic_triples "
-                    "WHERE run_id = %s AND entity_id IS NOT NULL LIMIT 20",
-                    (run_id,),
-                )
-                entity_ids = [str(r[0]) for r in cur.fetchall()]
+        # Use caller-supplied entity_ids when available; otherwise query the DB.
+        if not entity_ids:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT DISTINCT entity_id FROM semantic_triples "
+                        "WHERE run_id = %s AND entity_id IS NOT NULL LIMIT 20",
+                        (run_id,),
+                    )
+                    entity_ids = [str(r[0]) for r in cur.fetchall()]
 
         _UUID_RE = __import__("re").compile(
             r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -776,16 +796,23 @@ def _update_seed_manifest(
             )
             return
 
-        existing.update({
+        updates = {
             "seed_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
             "dcl_ingest_id": run_id,
             "tenant_id": tenant_id,
             "total_triples": triple_count,
             "concept_summary": concept_summary,
-        })
+            "entities": list(entity_ids) if entity_ids else [],
+        }
+        if farm_run_id is not None:
+            updates["farm_run_id"] = farm_run_id
+        existing.update(updates)
 
         _MANIFEST_PATH.write_text(json.dumps(existing, indent=2) + "\n")
-        logger.info(f"[ingest-triples] Updated seed_manifest.json: run_id={run_id}")
+        logger.info(
+            f"[ingest-triples] Updated seed_manifest.json: run_id={run_id}, "
+            f"entities={existing['entities']}, farm_run_id={existing.get('farm_run_id')}"
+        )
     except Exception as e:
         # Manifest update is informational — log but don't fail the ingest
         logger.warning(f"[ingest-triples] Failed to update seed_manifest.json: {e}")
