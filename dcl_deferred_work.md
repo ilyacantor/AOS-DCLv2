@@ -148,6 +148,12 @@ originating sprint so future agents can trace the decision.
     disruptive, requires a coordinated multi-repo change + production
     migration). The wp2-cloud-spend cloud_spend concept block is unaffected
     by this question.
+    RESOLVED 2026-05-14 — Ilya selected path (a): the 5 renamed entries
+    (SAL-100, IT-101/102/103, ENG-101) remain dormant in the YAML. No code,
+    persona, or Farm generator references them; 0 prod rows. Accepted cost:
+    two YAML entries per concept root (canonical + renamed), with the
+    renamed set inert. Reopen only if a future caller needs the aggregate-
+    metrics framing the renamed entries capture.
 
 16. 2026-05-13 | seed-manifest-regen-session |
     backend/api/routes/ingest_triples.py:_update_seed_manifest |
