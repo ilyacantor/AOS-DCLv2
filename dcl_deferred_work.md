@@ -117,3 +117,16 @@ originating sprint so future agents can trace the decision.
     example_fields into the canonical entries, or wire the rename into
     persona_domains and Farm generators. severity: degraded | blocking:
     nothing today; the loader works.
+
+16. 2026-05-13 | seed-manifest-regen-session |
+    backend/api/routes/ingest_triples.py:_update_seed_manifest |
+    seed_manifest.json `total_triples` field is written from the per-batch
+    `count` passed by the ingest handler, not the run-cumulative count.
+    With Farm's two-batch push (replace=true then append=true), the final
+    manifest reports the last batch's count (e.g. 1228) instead of the run
+    total (6228). Tests do not assert on this value (test_01 reads from
+    the DB), so the failure is cosmetic. Fix: pass the run-cumulative
+    count to the function (`_triple_store.count_run_total(run_id)`) or
+    drop `total_triples` from the schema since the per-run row count is
+    already queryable from semantic_triples. severity: cosmetic |
+    blocking: nothing today.
