@@ -69,3 +69,7 @@ test-results/
 # Binary documents
 *.xlsx
 .env.development
+
+# Test artifacts
+tests/e2e/screenshots/
+tests/e2e/artifacts/*.png
