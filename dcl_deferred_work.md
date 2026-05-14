@@ -97,6 +97,9 @@ originating sprint so future agents can trace the decision.
     pipeline (Farm + AAM + DCL ingest) and writing a fresh
     seed_manifest.json. severity: degraded | blocking: nothing in WP2 scope;
     blocks any future change that requires tests/test_s1_seed.py clean.
+    RESOLVED 2026-05-13 (commit 0b15111) — fixed _update_seed_manifest
+    producer bug (preserved stale entities/farm_run_id across runs) and
+    regenerated the manifest via Farm push-triples; 143 PASS / 0 FAIL.
 
 15. 2026-05-13 | wp2-cloud-spend | config/ontology_concepts.yaml:4180-4250 |
     Five concept entries added in commit 8869f47 reused existing ids
