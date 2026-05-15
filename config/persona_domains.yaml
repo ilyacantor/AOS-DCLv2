@@ -31,6 +31,10 @@ personas:
       - journal_entry
       - aws_cost
       - cloud_spend
+      - cloud_spend_monthly_total
+      - cloud_spend_by_service
+      - cloud_spend_by_team
+      - cloud_savings_opportunities_amount
   CRO:
     display_name: Chief Revenue Officer
     domains:
@@ -64,6 +68,16 @@ personas:
       - event
       - it_asset
       - cloud_spend
+      - uptime_pct
+      - incident_count
+      - deploy_frequency
+      - sprint_velocity
+      - uptime_by_service
+      - uptime_trend
+      - cloud_spend_monthly_total
+      - cloud_spend_by_service
+      - cloud_spend_by_team
+      - cloud_savings_opportunities_amount
   CHRO:
     display_name: Chief Human Resources Officer
     domains:

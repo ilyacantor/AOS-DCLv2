@@ -1,9 +1,11 @@
 {
   "seed_date": "2026-05-15",
-  "dcl_ingest_id": "2286f724-ec6b-4285-aafa-377fc1317d9e",
+  "dcl_ingest_id": "5cc3ee47-65aa-4214-abb3-7f7858151d1c",
   "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
-  "total_triples": 1228,
+  "total_triples": 1838,
   "concept_summary": {
+    "accounts_payable": 109,
+    "accounts_receivable": 109,
     "arr": 156,
     "asset": 105,
     "aws_cost": 1,
@@ -12,6 +14,7 @@
     "cogs": 21,
     "customer": 315,
     "datadog": 1,
+    "deploy_frequency": 13,
     "ebitda_adjustment": 80,
     "efficiency": 60,
     "engineering": 96,
@@ -19,8 +22,11 @@
     "event": 1,
     "event_stream": 60,
     "gl": 3451,
+    "incident_count": 37,
     "infrastructure": 336,
+    "invoice": 73,
     "jira": 1,
+    "journal_entry": 85,
     "liability": 65,
     "operations": 24,
     "opex": 73,
@@ -29,11 +35,15 @@
     "revenue": 405,
     "sales": 108,
     "service": 31,
+    "sprint_velocity": 13,
     "support": 48,
+    "uptime_by_service": 73,
+    "uptime_pct": 85,
+    "uptime_trend": 13,
     "workforce": 253
   },
   "entities": [
-    "HelixCorp-C2K4"
+    "TechEdge-25KH"
   ],
-  "farm_run_id": "snapshot_push_e62e6cfc-fc1_6c165fc5"
+  "farm_run_id": "snapshot_push_370b61c0-d4c_e4d64636"
 }

@@ -264,3 +264,5 @@ originating sprint so future agents can trace the decision.
     paragraph), tighten the tools to reject empty tenant_id everywhere.
     severity: cosmetic | blocking: tightening I2 to "all calls carry
     tenant_id, no exceptions" once Mai uses tokens.
+
+22. 2026-05-15 | wp10-11-finops-farm-session | tests/e2e/test_monitoring_tabs.py:98 | TestCrossTab::test_all_tabs_navigate_without_crash[chromium] expects a "Graph v2" tab label but src/App.tsx:294 renders the tab as just "Graph". Mismatch is pre-existing — predates this session's WP10/11 finops-spend work and is unrelated to the ontology/persona/metric additions. Severity: cosmetic | blocking: e2e UI navigation test green.

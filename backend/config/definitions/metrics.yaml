@@ -2514,3 +2514,136 @@ metrics:
       - quarter
     measure_op: sum
     default_grain: quarter
+
+  # ─── Cloud Cost Optimization (WP11b) ──────────────────────────────
+  - id: cloud_spend_monthly_total
+    name: Total Monthly Cloud Spend
+    description: Total cloud infrastructure cost per month across all services
+    aliases:
+      - monthly cloud spend
+      - total cloud spend
+      - total monthly cloud spend
+    pack: cto
+    unit: usd
+    allowed_dims:
+      - service
+      - team
+      - account
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: month
+    best_direction: low
+    rankable_dimensions:
+      - service
+      - team
+
+  - id: cloud_spend_by_service
+    name: Cloud Spend by Service
+    description: Cloud cost attributed to each AWS service
+    aliases:
+      - spend by service
+      - top services by spend
+      - service spend
+    pack: cto
+    unit: usd
+    allowed_dims:
+      - service
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: year
+    best_direction: low
+    rankable_dimensions:
+      - service
+
+  - id: cloud_spend_by_team
+    name: Cloud Spend by Team
+    description: Cloud cost attributed to each engineering team
+    aliases:
+      - spend by team
+      - team cost attribution
+    pack: cto
+    unit: usd
+    allowed_dims:
+      - team
+    allowed_grains:
+      - month
+      - quarter
+      - year
+    measure_op: sum
+    default_grain: year
+    best_direction: low
+    rankable_dimensions:
+      - team
+
+  - id: cloud_underutilized_count
+    name: Underutilized Resource Count
+    description: Number of cloud resources operating below the utilization threshold
+    aliases:
+      - underutilized resources
+      - idle resource count
+      - underutilized resource count
+    pack: cto
+    unit: count
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: avg
+    default_grain: month
+    best_direction: low
+
+  - id: cloud_savings_opportunities_count
+    name: Identified Savings Opportunities
+    description: Count of rightsizing / commitment / waste-elimination opportunities
+    aliases:
+      - savings opportunities
+      - rightsizing count
+      - identified savings opportunities
+    pack: cto
+    unit: count
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: month
+    best_direction: high
+
+  - id: cloud_savings_opportunities_amount
+    name: Identified Savings Amount
+    description: Estimated USD savings from identified optimization opportunities
+    aliases:
+      - identified savings
+      - potential savings
+      - savings amount
+    pack: cto
+    unit: usd
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: month
+    best_direction: high
+
+  - id: cloud_spend_trend
+    name: Cloud Spend Trend
+    description: Monthly cloud spend trend for trend line rendering
+    aliases:
+      - cloud spend trend
+      - monthly spend trend
+      - cloud spend over time
+    pack: cto
+    unit: usd
+    allowed_dims: []
+    allowed_grains:
+      - month
+      - quarter
+    measure_op: sum
+    default_grain: month
+    best_direction: low

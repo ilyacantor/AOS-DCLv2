@@ -19,6 +19,7 @@ domains:
   - compliance
   - cofa
   - cloud_spend
+  - engineering_metrics
 
 concepts:
   # ─── Finance ──────────────────────────────────────────────
@@ -4482,3 +4483,278 @@ concepts:
     calculation_methodology: null
     comparability_rules: "Owner identity resolution depends on tag completeness. Cross-account ownership requires consistent tag schema. Untagged-spend rate is a tagging-hygiene metric, not a real owner."
 
+
+  # ─── Engineering Metrics (platform/SRE health surfaced to CTO) ──────────
+  - id: uptime_pct
+    concept_id: EM-001
+    name: Service Uptime Percentage
+    description: "Period uptime ratio for a service or platform, expressed as a rate (0.0–1.0). Anchored to monitoring SLOs."
+    domain: engineering_metrics
+    cluster: Platform Health
+    example_fields:
+      - monitor_id
+      - host
+      - service_name
+      - metric_name
+      - value
+      - timestamp
+      - slo_target
+    aliases:
+      - uptime_percent
+      - availability_pct
+      - service_uptime
+    expected_type: float
+    typical_source_systems: [datadog, pagerduty, new_relic, cloudwatch]
+    persona_relevance:
+      cto: 1.0
+      coo: 0.5
+    recognition_basis: "Observed by the monitoring system. Uptime is recognized when probes return healthy for the period. Sourced from synthetic monitors, real-user monitoring, or status-check probes."
+    timing_semantics: "Period-based aggregation. Sub-second probes are aggregated to the reporting period (commonly daily, weekly, monthly, quarterly)."
+    scope_boundaries: "Includes monitored services with active probes. Excludes services without instrumentation. Planned maintenance windows treated per SLA definition."
+    calculation_methodology: "uptime_pct = total_up_seconds / total_observed_seconds. Reported as ratio (0–1)."
+    comparability_rules: "Comparable across services only when probe frequency and SLA definition match. Synthetic-only and RUM-based measurements are not directly comparable."
+
+  - id: incident_count
+    concept_id: EM-002
+    name: Incident Count
+    description: "Number of triggered incidents in the period, by severity. Sourced from the incident management system or alerting platform."
+    domain: engineering_metrics
+    cluster: Platform Health
+    example_fields:
+      - incident_id
+      - severity
+      - service
+      - opened_at
+      - resolved_at
+      - acknowledged_at
+      - duration_minutes
+    aliases:
+      - incidents
+      - p1_incidents
+      - alert_count
+    expected_type: int
+    typical_source_systems: [pagerduty, opsgenie, datadog, victorops]
+    persona_relevance:
+      cto: 1.0
+      coo: 0.6
+    recognition_basis: "Recognized when the incident is acknowledged in the incident management system. Severity assigned at creation; reassignments tracked in history."
+    timing_semantics: "Counted in the period the incident opened. Multi-period incidents counted in the open period only."
+    scope_boundaries: "Includes customer-impacting and internal-impacting incidents. Excludes auto-resolved noise and synthetic test alerts."
+    calculation_methodology: "count(incidents WHERE opened_at IN period AND severity IN selected)."
+    comparability_rules: "Severity definitions vary by org. Cross-team comparison requires shared severity rubric."
+
+  - id: deploy_frequency
+    concept_id: EM-003
+    name: Deployment Frequency
+    description: "Count of production deployments per period. DORA metric — primary indicator of delivery throughput."
+    domain: engineering_metrics
+    cluster: Delivery
+    example_fields:
+      - build_id
+      - deploy_id
+      - environment
+      - service
+      - status
+      - duration
+      - started_at
+      - completed_at
+    aliases:
+      - deployment_frequency
+      - deploys_per_period
+      - release_count
+    expected_type: int
+    typical_source_systems: [github_actions, jenkins, argocd, circleci, gitlab_ci]
+    persona_relevance:
+      cto: 1.0
+      coo: 0.3
+    recognition_basis: "Recognized on successful production deploy completion. Failed and rolled-back deploys excluded from the count but tracked separately."
+    timing_semantics: "Period-based count. Aggregated daily, weekly, or quarterly."
+    scope_boundaries: "Production-only. Excludes staging, preview, and ephemeral environments. Multi-service monorepo deploys counted per service."
+    calculation_methodology: "count(deploys WHERE environment='production' AND status='success' AND completed_at IN period)."
+    comparability_rules: "Cross-team comparison requires matched environment scope and deploy-event definition."
+
+  - id: sprint_velocity
+    concept_id: EM-004
+    name: Sprint Velocity
+    description: "Story points completed per sprint by an engineering team. Used to measure delivery throughput."
+    domain: engineering_metrics
+    cluster: Delivery
+    example_fields:
+      - sprint_id
+      - sprint_name
+      - team
+      - points_committed
+      - points_completed
+      - issues_completed
+      - start_date
+      - end_date
+    aliases:
+      - velocity
+      - team_velocity
+      - sprint_throughput
+    expected_type: float
+    typical_source_systems: [jira, linear, shortcut, azure_devops]
+    persona_relevance:
+      cto: 1.0
+      coo: 0.4
+    recognition_basis: "Recognized at sprint close. Only issues in 'Done' state at close count toward velocity."
+    timing_semantics: "Per-sprint. Sprint duration typically 2 weeks; period roll-up to quarterly is a sum across sprints in the quarter."
+    scope_boundaries: "Includes one team's sprint. Excludes cross-team initiatives unless scoped to the team."
+    calculation_methodology: "velocity = sum(story_points) of issues completed in sprint."
+    comparability_rules: "NOT comparable across teams — point scales differ. Within-team trend is comparable."
+
+  - id: uptime_by_service
+    concept_id: EM-005
+    name: Uptime by Service
+    description: "Per-service uptime ratio breakdown for a period. Service-level distribution used for SLO compliance reporting."
+    domain: engineering_metrics
+    cluster: Platform Health
+    example_fields:
+      - service_name
+      - monitor_id
+      - host
+      - metric_name
+      - uptime_value
+      - period_start
+      - period_end
+    aliases:
+      - service_uptime_breakdown
+      - per_service_availability
+    expected_type: float
+    typical_source_systems: [datadog, new_relic, cloudwatch]
+    persona_relevance:
+      cto: 1.0
+      coo: 0.5
+    recognition_basis: "Sampled by monitoring probes per service. Aggregated by service identifier."
+    timing_semantics: "Period-based. Each service has one uptime value per period."
+    scope_boundaries: "One row per monitored service. Excludes services without instrumentation."
+    calculation_methodology: "Per service: up_seconds / observed_seconds."
+    comparability_rules: "Comparable within an org when probe definitions are consistent. SLA-tier-aware comparison required for cross-tier readouts."
+
+  - id: uptime_trend
+    concept_id: EM-006
+    name: Uptime Trend
+    description: "Period-over-period uptime ratio used to render a trend line. Anchored to monitoring data."
+    domain: engineering_metrics
+    cluster: Platform Health
+    example_fields:
+      - monitor_id
+      - service_name
+      - period
+      - uptime_value
+      - period_start
+      - period_end
+    aliases:
+      - availability_trend
+      - uptime_over_time
+    expected_type: float
+    typical_source_systems: [datadog, new_relic, cloudwatch]
+    persona_relevance:
+      cto: 1.0
+      coo: 0.5
+    recognition_basis: "Time-series aggregation of monitoring data, one value per period bucket."
+    timing_semantics: "Period-keyed. Each period (typically quarterly) has one trend point."
+    scope_boundaries: "Aggregated across monitored services unless scoped to one service."
+    calculation_methodology: "For each period: sum(up_seconds) / sum(observed_seconds)."
+    comparability_rules: "Trend is comparable as long as monitoring scope is unchanged across periods."
+
+  # ─── CCO/FinOps dashboard metric roots (WP11b) ─────────────────────
+  - id: cloud_spend_monthly_total
+    concept_id: CSP-101
+    name: Total Monthly Cloud Spend
+    description: "Period total of cloud infrastructure spend, dollar-denominated."
+    domain: cloud_spend
+    cluster: FinOps Aggregate
+    example_fields:
+      - cost_usd
+      - period_label
+      - account_id
+      - service_code
+    aliases:
+      - monthly_cloud_spend
+      - total_monthly_cloud_spend
+      - total_cloud_spend
+    expected_type: float
+    typical_source_systems: [aws_cost_explorer, synthetic_warehouse, cloudhealth, finops_platform]
+    persona_relevance:
+      cto: 1.0
+      cfo: 0.9
+    recognition_basis: "Sum of cloud_spend_period.cost_usd over the period."
+    timing_semantics: "Period-based aggregate. Reported monthly, rolled up to quarter/year."
+    scope_boundaries: "Total of all in-scope cloud accounts. Excludes non-cloud SaaS spend."
+    calculation_methodology: "sum(cost_usd) grouped by period."
+    comparability_rules: "Comparable across periods when account scope is constant."
+
+  - id: cloud_spend_by_service
+    concept_id: CSP-102
+    name: Cloud Spend by Service
+    description: "Cloud spend broken down by AWS/GCP/Azure service code."
+    domain: cloud_spend
+    cluster: FinOps Aggregate
+    example_fields:
+      - service_code
+      - service_name
+      - cost_usd
+    aliases:
+      - spend_by_service
+      - top_services_by_spend
+    expected_type: float
+    typical_source_systems: [aws_cost_explorer, synthetic_warehouse, cloudhealth]
+    persona_relevance:
+      cto: 1.0
+      cfo: 0.6
+    recognition_basis: "Aggregation of cloud_spend_period rows by service_code."
+    timing_semantics: "Period-based. Reported per service per period."
+    scope_boundaries: "Limited to services that incurred cost in the period."
+    calculation_methodology: "sum(cost_usd) grouped by service_code."
+    comparability_rules: "Comparable across periods when service catalog is constant."
+
+  - id: cloud_spend_by_team
+    concept_id: CSP-103
+    name: Cloud Spend by Team
+    description: "Cloud spend attributed to engineering teams via owner tags."
+    domain: cloud_spend
+    cluster: FinOps Aggregate
+    example_fields:
+      - team
+      - cost_center
+      - owner_email
+      - cost_usd
+    aliases:
+      - spend_by_team
+      - team_cost_attribution
+    expected_type: float
+    typical_source_systems: [aws_cost_explorer, finops_platform, synthetic_warehouse]
+    persona_relevance:
+      cto: 1.0
+      cfo: 0.7
+    recognition_basis: "Aggregation of cloud_spend_period rows by cloud_owner.team."
+    timing_semantics: "Period-based per team."
+    scope_boundaries: "Excludes untagged spend (rolled up to an 'untagged' synthetic team)."
+    calculation_methodology: "sum(cost_usd) grouped by cloud_owner.team."
+    comparability_rules: "Comparable across periods when team taxonomy is stable."
+
+  - id: cloud_savings_opportunities_amount
+    concept_id: CSP-104
+    name: Identified Cloud Savings Amount
+    description: "Estimated dollar savings from identified optimization opportunities."
+    domain: cloud_spend
+    cluster: FinOps Aggregate
+    example_fields:
+      - opportunity_id
+      - type
+      - estimated_savings_usd
+    aliases:
+      - identified_savings
+      - potential_savings
+      - savings_amount
+    expected_type: float
+    typical_source_systems: [aws_compute_optimizer, finops_platform, synthetic_warehouse]
+    persona_relevance:
+      cto: 1.0
+      cfo: 0.8
+    recognition_basis: "Sum of estimated_savings_usd across all opportunities for the period."
+    timing_semantics: "Period-based."
+    scope_boundaries: "Opportunities with confidence above the platform threshold."
+    calculation_methodology: "sum(estimated_savings_usd)."
+    comparability_rules: "Confidence threshold must match across periods for comparability."

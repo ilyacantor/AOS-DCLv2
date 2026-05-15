@@ -44,8 +44,9 @@ client = TestClient(app, raise_server_exceptions=False)
 
 TEST_TENANT_ID = str(uuid.uuid5(uuid.NAMESPACE_DNS, "cloud-spend-ontology-test"))
 
-# The 7 concepts declared in the cloud_spend domain. Updated whenever the
-# YAML's cloud_spend block changes.
+# The 11 concepts declared in the cloud_spend domain. Updated whenever the
+# YAML's cloud_spend block changes. WP11b added 4 dashboard metric roots
+# (CSP-101..104) for the Cloud Cost Optimization dashboard.
 EXPECTED_CLOUD_SPEND_CONCEPT_IDS = {
     "cloud_spend",          # CSP-001 — umbrella root for cloud_spend.* concepts
     "cloud_resource",       # CSP-002
@@ -54,6 +55,10 @@ EXPECTED_CLOUD_SPEND_CONCEPT_IDS = {
     "cloud_spend_period",   # CSP-005
     "cloud_utilization",    # CSP-006
     "cloud_owner",          # CSP-007
+    "cloud_spend_monthly_total",          # CSP-101 — WP11b dashboard KPI root
+    "cloud_spend_by_service",             # CSP-102 — WP11b dashboard breakdown root
+    "cloud_spend_by_team",                # CSP-103 — WP11b dashboard breakdown root
+    "cloud_savings_opportunities_amount", # CSP-104 — WP11b dashboard KPI root
 }
 
 
