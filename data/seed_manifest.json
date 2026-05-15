@@ -1,12 +1,8 @@
 {
-  "seed_date": "2026-05-14",
-  "dcl_ingest_id": "fb33d637-9c1f-4cc9-ba0b-0dc73c97b506",
-  "farm_run_id": "snapshot_push_f511edfc-079_873be688",
+  "seed_date": "2026-05-15",
+  "dcl_ingest_id": "2286f724-ec6b-4285-aafa-377fc1317d9e",
   "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
   "total_triples": 1228,
-  "entities": [
-    "VeloWorks-GQFR"
-  ],
   "concept_summary": {
     "arr": 156,
     "asset": 105,
@@ -36,5 +32,8 @@
     "support": 48,
     "workforce": 253
   },
-  "identity_checks": {}
+  "entities": [
+    "HelixCorp-C2K4"
+  ],
+  "farm_run_id": "snapshot_push_e62e6cfc-fc1_6c165fc5"
 }
