@@ -43,6 +43,8 @@ def _make_triple(**overrides):
         "source_system": "test_sys",
         "source_table": "invoices",
         "source_field": "amount",
+        "pipe_id": "00000000-0000-0000-0000-000000000099",
+        "fabric_plane": "test",
         "confidence_score": 0.4,
         "confidence_tier": "low",
     }

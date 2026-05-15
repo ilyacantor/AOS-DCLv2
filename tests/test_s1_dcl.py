@@ -50,7 +50,11 @@ def make_test_triple(
     period="2025-Q1",
     **overrides,
 ) -> dict:
-    """Factory for test triples."""
+    """Factory for test triples. Includes the full provenance contract by
+    default (source_system, source_field, pipe_id, fabric_plane,
+    confidence_score) so any test that doesn't care about provenance still
+    passes ingest validation. Override per-field to test contract violations.
+    """
     base = {
         "entity_id": entity_id,
         "concept": concept,
@@ -60,6 +64,9 @@ def make_test_triple(
         "currency": "USD",
         "unit": "dollars",
         "source_system": "test",
+        "source_field": "amount",
+        "pipe_id": "00000000-0000-0000-0000-000000000099",
+        "fabric_plane": "test",
         "confidence_score": 0.95,
         "confidence_tier": "high",
     }

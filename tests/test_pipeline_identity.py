@@ -31,6 +31,9 @@ TEST_TENANT_ID = str(uuid.uuid5(uuid.NAMESPACE_DNS, "pipeline-identity-test"))
 
 
 def _make_triple(**overrides):
+    """Default triple satisfies the full provenance contract
+    (source_system, source_field, pipe_id, fabric_plane, confidence_score).
+    """
     base = {
         "entity_id": "test_entity",
         "concept": "revenue.total",
@@ -39,6 +42,9 @@ def _make_triple(**overrides):
         "period": "2025-Q1",
         "currency": "USD",
         "source_system": "test",
+        "source_field": "amount",
+        "pipe_id": "00000000-0000-0000-0000-000000000099",
+        "fabric_plane": "test",
         "confidence_score": 0.9,
         "confidence_tier": "high",
     }

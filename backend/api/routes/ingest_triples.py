@@ -191,10 +191,65 @@ def _validate_triple(t: TriplePayload, index: int) -> None:
 
     if not t.source_system or not t.source_system.strip():
         raise HTTPException(
-            status_code=400,
+            status_code=422,
             detail={
-                "error": "VALIDATION_FAILED",
-                "message": f"Triple #{index}: source_system is required and must be non-empty.",
+                "error": "PROVENANCE_INCOMPLETE",
+                "message": (
+                    f"Triple #{index} (entity_id={t.entity_id!r} concept={t.concept!r}): "
+                    f"source_system is required and must be non-empty. "
+                    f"Provenance contract: every triple carries source_system, source_field, "
+                    f"pipe_id, fabric_plane, confidence_score."
+                ),
+                "field": "source_system",
+                "triple_index": index,
+            },
+        )
+
+    if not t.source_field or not t.source_field.strip():
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "PROVENANCE_INCOMPLETE",
+                "message": (
+                    f"Triple #{index} (entity_id={t.entity_id!r} concept={t.concept!r}): "
+                    f"source_field is required and must be non-empty. "
+                    f"Provenance contract: every triple carries source_system, source_field, "
+                    f"pipe_id, fabric_plane, confidence_score."
+                ),
+                "field": "source_field",
+                "triple_index": index,
+            },
+        )
+
+    if not t.pipe_id or not str(t.pipe_id).strip():
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "PROVENANCE_INCOMPLETE",
+                "message": (
+                    f"Triple #{index} (entity_id={t.entity_id!r} concept={t.concept!r}): "
+                    f"pipe_id is required and must be non-empty. "
+                    f"Provenance contract: every triple carries source_system, source_field, "
+                    f"pipe_id, fabric_plane, confidence_score."
+                ),
+                "field": "pipe_id",
+                "triple_index": index,
+            },
+        )
+
+    if not t.fabric_plane or not t.fabric_plane.strip():
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "PROVENANCE_INCOMPLETE",
+                "message": (
+                    f"Triple #{index} (entity_id={t.entity_id!r} concept={t.concept!r}): "
+                    f"fabric_plane is required and must be non-empty. "
+                    f"Provenance contract: every triple carries source_system, source_field, "
+                    f"pipe_id, fabric_plane, confidence_score."
+                ),
+                "field": "fabric_plane",
+                "triple_index": index,
             },
         )
 

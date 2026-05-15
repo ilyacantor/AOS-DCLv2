@@ -103,6 +103,8 @@ def _make_cloud_spend_triple(concept: str, value, **overrides) -> dict:
         "source_system": "aws_cur",
         "source_table": "billing_export",
         "source_field": concept.split(".")[-1],
+        "pipe_id": "00000000-0000-0000-0000-000000000099",
+        "fabric_plane": "warehouse",
         "confidence_score": 0.95,
         "confidence_tier": "high",
     }
