@@ -12,11 +12,7 @@ CREATE TABLE IF NOT EXISTS tenant_registry (
 CREATE INDEX IF NOT EXISTS idx_tenant_registry_tenant_id
     ON tenant_registry (tenant_id);
 
--- Seed Meridian and Cascadia under the shared demo tenant UUID.
--- entity_name values are deterministic: seeded RNG from uuid5(tenant_id, entity_id).
-INSERT INTO tenant_registry (entity_id, tenant_id, entity_name) VALUES
-    ('meridian', '69688df3-fc8e-51f8-a77c-9c13f9b3a784', 'AeroWave-PD8Q'),
-    ('cascadia', '69688df3-fc8e-51f8-a77c-9c13f9b3a784', 'InfoWorks-C5AZ')
-ON CONFLICT (entity_id) DO UPDATE
-    SET tenant_id = EXCLUDED.tenant_id,
-        entity_name = EXCLUDED.entity_name;
+-- Tenant rows are populated by the live pipeline (Farm → DCL ingest),
+-- not by migration seeds. Hardcoded entity tags previously seeded here
+-- were removed per convergence_transition_master WP2 (fixture-era entity
+-- tags eradicated). See ws-1 b5 cleanup.
