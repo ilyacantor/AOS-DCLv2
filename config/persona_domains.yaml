@@ -23,6 +23,7 @@ personas:
       - arr
       - coa
       - gl
+      - gl_account
       - sales
       - vendor
       - accounts_payable
