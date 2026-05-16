@@ -539,6 +539,7 @@ def triples_browse(
     entity_id: Optional[str] = None,
     period: Optional[str] = None,
     property: Optional[str] = Query(None, alias="property"),
+    run_id: Optional[str] = Query(None, description="Scope to a single ingest batch (dcl_ingest_id / aam_inference_id)"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
@@ -560,6 +561,15 @@ def triples_browse(
     if property:
         clauses.append("property = %s")
         params.append(property)
+    if run_id:
+        # run_id is a UUID column; reject malformed input cleanly instead of letting psycopg raise.
+        import uuid as _uuid
+        try:
+            _uuid.UUID(run_id)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=400, detail=f"run_id must be a UUID; got {run_id!r}")
+        clauses.append("run_id = %s")
+        params.append(run_id)
 
     where = " AND ".join(clauses)
 
@@ -603,6 +613,8 @@ def triples_browse(
         filters_applied["period"] = period
     if property:
         filters_applied["property"] = property
+    if run_id:
+        filters_applied["run_id"] = run_id
 
     return {
         "triples": triples,
