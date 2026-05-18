@@ -543,8 +543,21 @@ def triples_browse(
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
-    """Browse raw triples with filtering and pagination."""
-    clauses = ["is_active = true"]
+    """Browse raw triples with filtering and pagination.
+
+    When `run_id` is explicitly provided, is_active filter is dropped:
+    the caller wants THIS batch's data regardless of whether tenant_runs
+    has marked a later run as current. Required for AAM Fabrics drill
+    view of a recent push that's been superseded by a subsequent push
+    in the same trigger (5-sync trigger batches flip earlier ones
+    inactive within seconds of each other). Without this, drilling into
+    any but the absolute-latest run returns 0 triples even though the
+    rows are present. See aam_deferred_work.md#20 for the cross-source
+    aggregation case that needs the same opt-out.
+    """
+    clauses: list[str] = []
+    if not run_id:
+        clauses.append("is_active = true")
     params: list = []
 
     if domain:
@@ -571,7 +584,7 @@ def triples_browse(
         clauses.append("run_id = %s")
         params.append(run_id)
 
-    where = " AND ".join(clauses)
+    where = " AND ".join(clauses) if clauses else "TRUE"
 
     # Deduplicate triples that differ only by run_id or source_run_tag
     # (multiple pipeline runs produce duplicates). Keep the most recent
