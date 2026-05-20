@@ -15,6 +15,8 @@ interface OverviewData {
 
 interface RunData {
   run_id: string;
+  tenant_id?: string;
+  tenant_label?: string;
   timestamp: string;
   triple_count: number;
   is_active: boolean;
@@ -71,6 +73,9 @@ export function TriplesPanel() {
   // Triple browser state
   const [browseData, setBrowseData] = useState<BrowseData | null>(null);
   const [browseLoading, setBrowseLoading] = useState(false);
+  // R3: triples/browse is tenant-scoped — browseTenant carries the required
+  // tenant_id. Defaulted from the runs list once it loads.
+  const [browseTenant, setBrowseTenant] = useState('');
   const [browseDomain, setBrowseDomain] = useState('');
   const [browseEntity, setBrowseEntity] = useState('');
   const [browsePeriod, setBrowsePeriod] = useState('');
@@ -106,9 +111,14 @@ export function TriplesPanel() {
   };
 
   const fetchBrowse = useCallback(async (offset = 0) => {
+    // R3: /api/dcl/triples/browse requires tenant_id and 422s without it.
+    // browseTenant is empty until the runs list resolves a default — skip
+    // the call until then rather than fire a guaranteed 422.
+    if (!browseTenant) return;
     setBrowseLoading(true);
     try {
       const params = new URLSearchParams();
+      params.set('tenant_id', browseTenant);
       if (browseDomain) params.set('domain', browseDomain);
       if (browseEntity) params.set('entity_id', browseEntity);
       if (browsePeriod) params.set('period', browsePeriod);
@@ -124,7 +134,7 @@ export function TriplesPanel() {
     } finally {
       setBrowseLoading(false);
     }
-  }, [browseDomain, browseEntity, browsePeriod, browseProperty]);
+  }, [browseTenant, browseDomain, browseEntity, browsePeriod, browseProperty]);
 
   const fetchAll = useCallback(() => {
     fetchOverview();
@@ -140,6 +150,16 @@ export function TriplesPanel() {
     const interval = setInterval(fetchAll, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [autoRefresh, fetchAll]);
+
+  // R3: once runs load, default the browse tenant to the active run's
+  // tenant (else the first run carrying one). browse stays idle until set.
+  useEffect(() => {
+    if (browseTenant || runs.length === 0) return;
+    const tid =
+      runs.find((r) => r.is_active && r.tenant_id)?.tenant_id ??
+      runs.find((r) => r.tenant_id)?.tenant_id;
+    if (tid) setBrowseTenant(tid);
+  }, [runs, browseTenant]);
 
   // Auto-load browse when filters change
   useEffect(() => {
@@ -197,6 +217,16 @@ export function TriplesPanel() {
     }
     return JSON.stringify(val);
   };
+
+  // Distinct (tenant_id, label) pairs from the runs list — the tenant
+  // selector options. browse must always carry one of these (R3).
+  const tenantOptions: [string, string][] = Array.from(
+    new Map(
+      runs
+        .filter((r) => r.tenant_id)
+        .map((r) => [r.tenant_id as string, r.tenant_label || (r.tenant_id as string)]),
+    ).entries(),
+  );
 
   // --- Render ---
 
@@ -445,6 +475,19 @@ export function TriplesPanel() {
 
           {/* Filters */}
           <div className="flex items-center gap-3 px-4 py-2 border-b border-border/30 flex-wrap">
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">Tenant:</span>
+              <select
+                value={browseTenant}
+                onChange={(e) => { setBrowseTenant(e.target.value); setBrowseOffset(0); }}
+                className="px-2 py-1 text-xs rounded border border-border bg-background"
+              >
+                {tenantOptions.length === 0 && <option value="">(no runs)</option>}
+                {tenantOptions.map(([tid, label]) => (
+                  <option key={tid} value={tid}>{label}</option>
+                ))}
+              </select>
+            </div>
             <div className="flex items-center gap-1">
               <span className="text-xs text-muted-foreground">Domain:</span>
               <select
