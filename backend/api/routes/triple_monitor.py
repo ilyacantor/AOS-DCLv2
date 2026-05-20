@@ -535,6 +535,7 @@ def triples_identity_checks():
 
 @router.get("/api/dcl/triples/browse")
 def triples_browse(
+    tenant_id: str = Query(..., description="Tenant UUID — REQUIRED. Every browse is tenant-scoped."),
     domain: Optional[str] = None,
     entity_id: Optional[str] = None,
     period: Optional[str] = None,
@@ -544,6 +545,14 @@ def triples_browse(
     offset: int = Query(0, ge=0),
 ):
     """Browse raw triples with filtering and pagination.
+
+    tenant_id is REQUIRED — the query always filters `WHERE tenant_id =`,
+    so the endpoint can never return another tenant's triples or, with
+    no params, every tenant's data. A wholly-absent tenant_id yields a
+    422. NOTE: this is tenant *scoping*, not authentication — the
+    endpoint does not verify that the caller owns the tenant_id it
+    passes. Cryptographic auth (token-derived tenant, mirroring the MCP
+    path) is a deliberate follow-up; see the deferred-work log.
 
     When `run_id` is explicitly provided, is_active filter is dropped:
     the caller wants THIS batch's data regardless of whether tenant_runs
@@ -555,10 +564,11 @@ def triples_browse(
     rows are present. See aam_deferred_work.md#20 for the cross-source
     aggregation case that needs the same opt-out.
     """
-    clauses: list[str] = []
+    # tenant_id filter is unconditional and first — every browse is scoped.
+    clauses: list[str] = ["tenant_id = %s"]
+    params: list = [tenant_id]
     if not run_id:
         clauses.append("is_active = true")
-    params: list = []
 
     if domain:
         # Use prefix LIKE instead of split_part for index-friendly filtering.
@@ -643,6 +653,7 @@ def triples_browse(
 class BrowseBatchRequest(BaseModel):
     """Request body for batch browse — fetches triples across multiple domains
     in a single SQL query instead of N individual browse calls."""
+    tenant_id: str = Field(..., description="Tenant UUID — REQUIRED. Batch browse is tenant-scoped.")
     domains: List[str] = Field(..., min_length=1, description="List of concept domains to fetch")
     entity_ids: Optional[List[str]] = Field(None, description="Filter by entity IDs")
     period: Optional[str] = Field(None, description="Filter by period")
@@ -654,9 +665,13 @@ def triples_browse_batch(req: BrowseBatchRequest):
 
     Returns triples grouped by domain. Replaces N individual browse calls with
     one SQL query, eliminating HTTP round-trip overhead for reports.
+
+    tenant_id is REQUIRED — the query always filters `WHERE tenant_id =`.
+    Tenant scoping, not authentication (see triples_browse docstring).
     """
-    clauses = ["is_active = true"]
-    params: list = []
+    # tenant_id filter is unconditional — every batch browse is scoped.
+    clauses = ["is_active = true", "tenant_id = %s"]
+    params: list = [req.tenant_id]
 
     # Domain filter: concept LIKE 'domain1.%' OR concept LIKE 'domain2.%' ...
     domain_conditions = []
