@@ -75,6 +75,7 @@ from backend.api.routes.mai import router as mai_router
 from backend.api.routes.ingest_triples import router as ingest_triples_router
 from backend.api.routes.triple_monitor import router as triple_monitor_router
 from backend.api.routes.recon_checks import router as recon_checks_router
+from backend.api.routes.monitor import router as monitor_router
 
 logger = get_logger(__name__)
 
@@ -349,6 +350,8 @@ app.include_router(mai_router)
 app.include_router(ingest_triples_router)
 app.include_router(triple_monitor_router)
 app.include_router(recon_checks_router)
+# Demo pipeline monitor — read-only metrics endpoint. Additive and isolated.
+app.include_router(monitor_router)
 
 # Plan B WP5 — real wire-protocol MCP server (HTTP+SSE transport).
 # The stdio transport runs in a separate process: `python -m backend.api.mcp_stdio`.
