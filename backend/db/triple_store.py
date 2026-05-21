@@ -678,59 +678,47 @@ class TripleStore:
         Returns:
             dict keyed by persona, each with data_sources, domains, triple_count, domain_list.
         """
-        # Single query: get per-domain stats from current runs only
-        # Join with tenant_runs so we see only live data, not stale historical runs.
+        # One pass over the live triple set: per-domain triple_count plus the
+        # distinct set of source systems. Joining tenant_runs keeps it to
+        # current runs; is_active = true is the liveness invariant — it drives
+        # the query off idx_triples_active and excludes deactivated runs.
+        # Returning the per-domain source SET (not a count) lets per-persona
+        # data_sources be unioned in Python, so this stays one query no matter
+        # how many personas the config defines — previously it was one extra
+        # full COUNT(DISTINCT) scan per persona (the N+1 that made this ~19s
+        # on the prod-scale triple store).
         sql = (
             "SELECT split_part(st.concept, '.', 1) AS domain, "
-            "COUNT(DISTINCT st.source_system) AS source_count, "
+            "array_agg(DISTINCT st.source_system) "
+            "  FILTER (WHERE st.source_system IS NOT NULL) AS sources, "
             "COUNT(*) AS triple_count "
             "FROM semantic_triples st "
             "JOIN tenant_runs tr "
             "  ON tr.tenant_id = st.tenant_id AND tr.current_run_id = st.run_id "
+            "WHERE st.is_active = true "
             "GROUP BY domain"
         )
+        domain_stats: dict[str, dict] = {}
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(sql)
-                domain_stats: dict[str, dict] = {}
                 for row in cur.fetchall():
                     domain_stats[row[0]] = {
-                        "source_count": row[1],
+                        "sources": set(row[1] or []),
                         "triple_count": row[2],
                     }
 
         result = {}
         for persona, domains in persona_domains.items():
-            matched_domains = []
-            total_sources: set[str] = set()
+            matched_domains = [d for d in domains if d in domain_stats]
+            sources: set[str] = set()
             total_triples = 0
-
-            for d in domains:
-                if d in domain_stats:
-                    matched_domains.append(d)
-
-            # Need distinct source_system across all matched domains (current runs only)
-            if matched_domains:
-                placeholders = ", ".join(["%s"] * len(matched_domains))
-                src_sql = (
-                    f"SELECT COUNT(DISTINCT st.source_system) "
-                    f"FROM semantic_triples st "
-                    f"JOIN tenant_runs tr "
-                    f"  ON tr.tenant_id = st.tenant_id AND tr.current_run_id = st.run_id "
-                    f"WHERE split_part(st.concept, '.', 1) IN ({placeholders})"
-                )
-                with get_connection() as conn2:
-                    with conn2.cursor() as cur2:
-                        cur2.execute(src_sql, matched_domains)
-                        data_sources = cur2.fetchone()[0]
-            else:
-                data_sources = 0
-
             for d in matched_domains:
+                sources |= domain_stats[d]["sources"]
                 total_triples += domain_stats[d]["triple_count"]
 
             result[persona] = {
-                "data_sources": data_sources,
+                "data_sources": len(sources),
                 "domains": len(matched_domains),
                 "triple_count": total_triples,
                 "domain_list": matched_domains,
