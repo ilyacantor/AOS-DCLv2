@@ -561,3 +561,12 @@ If yes:
 If no items overlap, say so in one line ("Pre-session check: no open deferred items in scope") and proceed.
 
 Skipping the pre-session check is the same class of failure as chat-only parking — it lets the file drift from reality.
+
+## Test result reporting
+
+Before claiming a suite is green/passing/done:
+1. Quote the final pytest summary line verbatim ("X passed, Y failed in Zs")
+2. If that line is absent from tool output, state: "Suite did not complete. Partial signal: <what was actually observed>"
+3. Never map per-test or per-file pass counts to suite-level claims. "test_smoke 6/6" = "6 of 6 smoke tests passed; full suite status unknown" — never "green"
+4. No "honest deviation" / "spot-checked" / "looks good" framing as a substitute for the summary line
+5. Same rule for any long-running command: no completion claim without the final stdout/exit-code evidence in-context
