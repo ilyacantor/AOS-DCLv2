@@ -441,22 +441,27 @@ def health():
 
 
 @app.get("/api/dcl/snapshots")
-async def dcl_snapshots(tenant_id: Optional[str] = None):
+async def dcl_snapshots(
+    tenant_id: Optional[str] = None,
+    limit: int = 10,
+):
     """Available snapshots from tenant_runs, enriched with triple counts.
 
-    If tenant_id is omitted, returns snapshots across every tenant,
-    merged and sorted newest-first — the DCL monitoring UI's snapshot
-    selector is tenant-agnostic (same as GET /api/dcl/entities).
+    If tenant_id is omitted, returns the N most-recent snapshots per tenant
+    (clamped to [1, 50], default 10) — the DCL monitoring UI's snapshot
+    selector is tenant-agnostic. If tenant_id is supplied, returns up to
+    `limit` most-recent runs for that tenant.
     Returns {snapshots: [{dcl_ingest_id, snapshot_name, entity_id, run_timestamp, total_rows, is_current}], tenant_id}.
     """
     from backend.db.triple_store import TripleStore
 
     store = TripleStore()
+    n = max(1, min(int(limit), 50))
     try:
         if tenant_id:
-            snapshots = store.get_tenant_snapshots(tenant_id)
+            snapshots = store.get_tenant_snapshots(tenant_id)[:n]
         else:
-            snapshots = store.get_all_snapshots()
+            snapshots = store.get_all_snapshots(limit_per_tenant=n)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     return {"snapshots": snapshots, "tenant_id": tenant_id}

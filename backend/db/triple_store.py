@@ -486,26 +486,99 @@ class TripleStore:
 
         return snapshots
 
-    def get_all_snapshots(self) -> list[dict]:
-        """Get snapshots across every tenant, merged and sorted newest-first.
+    def get_all_snapshots(self, limit_per_tenant: int = 10) -> list[dict]:
+        """Get N most-recent snapshots per tenant, sorted newest-first.
 
-        Used by GET /api/dcl/snapshots when no tenant_id is supplied — the
-        DCL monitoring UI's snapshot selector is tenant-agnostic (same as
-        GET /api/dcl/entities). Returns the same row shape as
-        get_tenant_snapshots so the two paths are interchangeable.
+        Single pool borrow + one SQL pass. Replaces the prior O(T) per-tenant
+        loop that opened a fresh connection per tenant (see
+        dcl_deferred_work.md#35 + aam_deferred_work.md#37).
+
+        snapshot_name preserves the existing get_tenant_snapshots() per-tenant
+        resolution: an arbitrary tenant_runs row supplies the current/previous
+        names for the whole tenant, derive {entity_id}-{rid[:4]} otherwise.
+        Per-entity name correctness is a separate write-site concern tracked
+        in dcl_deferred_work.md#36/#39 — do not turn this into a JOIN.
+
+        Args:
+            limit_per_tenant: Top-N runs per tenant by created_at. Clamped [1, 50].
         """
-        sql = "SELECT DISTINCT tenant_id FROM tenant_runs"
+        n = max(1, min(int(limit_per_tenant), 50))
+        sql = """
+            WITH RECURSIVE all_runs AS (
+                (SELECT tenant_id, run_id, entity_id, created_at
+                 FROM semantic_triples
+                 ORDER BY tenant_id, run_id LIMIT 1)
+                UNION ALL
+                (SELECT s.tenant_id, s.run_id, s.entity_id, s.created_at
+                 FROM all_runs r, LATERAL (
+                     SELECT tenant_id, run_id, entity_id, created_at
+                     FROM semantic_triples
+                     WHERE (tenant_id, run_id) > (r.tenant_id, r.run_id)
+                     ORDER BY tenant_id, run_id LIMIT 1
+                 ) s)
+            ),
+            ranked AS (
+                SELECT tenant_id, run_id, entity_id, created_at,
+                       ROW_NUMBER() OVER (PARTITION BY tenant_id
+                                          ORDER BY created_at DESC) AS rn
+                FROM all_runs
+            ),
+            top_n AS (
+                SELECT tenant_id, run_id, entity_id, created_at
+                FROM ranked WHERE rn <= %s
+            ),
+            tenant_name_pick AS (
+                SELECT DISTINCT ON (tenant_id) tenant_id,
+                       current_run_id, previous_run_id,
+                       current_snapshot_name, previous_snapshot_name
+                FROM tenant_runs
+                ORDER BY tenant_id, entity_id
+            ),
+            run_counts AS (
+                SELECT run_id, COUNT(*) AS total_rows
+                FROM semantic_triples
+                WHERE run_id IN (SELECT run_id FROM top_n)
+                GROUP BY run_id
+            )
+            SELECT
+                t.run_id, t.entity_id, t.created_at,
+                tn.current_run_id, tn.previous_run_id,
+                tn.current_snapshot_name, tn.previous_snapshot_name,
+                COALESCE(c.total_rows, 0) AS total_rows
+            FROM top_n t
+            LEFT JOIN tenant_name_pick tn ON tn.tenant_id = t.tenant_id
+            LEFT JOIN run_counts c ON c.run_id = t.run_id
+            ORDER BY t.created_at DESC
+        """
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql)
-                tenant_ids = [str(r[0]) for r in cur.fetchall()]
+                cur.execute(sql, (n,))
+                rows = cur.fetchall()
 
-        merged: list[dict] = []
-        for tid in tenant_ids:
-            merged.extend(self.get_tenant_snapshots(tid))
-        # Newest-first by run_timestamp. ISO 8601 strings sort lexically.
-        merged.sort(key=lambda s: s["run_timestamp"] or "", reverse=True)
-        return merged
+        snapshots = []
+        for (run_id, entity_id, created_at,
+             current_run_id, previous_run_id,
+             cur_snap_name, prev_snap_name, total_rows) in rows:
+            rid = str(run_id)
+            current = str(current_run_id) if current_run_id else None
+            previous = str(previous_run_id) if previous_run_id else None
+
+            if rid == current and cur_snap_name:
+                snap_name = cur_snap_name
+            elif rid == previous and prev_snap_name:
+                snap_name = prev_snap_name
+            else:
+                snap_name = f"{entity_id}-{rid[:4]}" if entity_id else None
+
+            snapshots.append({
+                "dcl_ingest_id": rid,
+                "snapshot_name": snap_name,
+                "entity_id": entity_id,
+                "run_timestamp": created_at.isoformat() if created_at else None,
+                "total_rows": total_rows,
+                "is_current": rid == current,
+            })
+        return snapshots
 
     def purge_old_runs(self, tenant_id: str, keep_runs: int = 2) -> int:
         """Hard-delete triples from old runs, keeping the N most recent run_ids.
