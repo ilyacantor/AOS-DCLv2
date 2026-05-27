@@ -13,19 +13,11 @@
 --
 -- CONCURRENTLY: creation does not block reads/writes on semantic_triples. Must
 -- run outside a transaction block — the migration runner detects CONCURRENTLY
--- and switches to autocommit mode for this file.
+-- and switches to autocommit mode for this file, then runs a post-CONCURRENTLY
+-- check that REINDEXes any index left in indisvalid=false state. See
+-- run_migration.py:_remediate_invalid_indexes. No manual verification required.
 --
 -- IF NOT EXISTS: idempotent — safe to re-run.
---
--- POST-MIGRATION CHECK: CREATE INDEX CONCURRENTLY can leave the index in an
--- invalid state (indisvalid=false) if it hits conflicting writes during the
--- second pass. After running this migration, verify:
---   SELECT indisvalid FROM pg_index
---   WHERE indexrelid = 'idx_triples_active_run'::regclass;
--- If valid=false, remediate with:
---   REINDEX INDEX CONCURRENTLY idx_triples_active_run;
--- The planner ignores invalid indexes — applying this migration without
--- verifying validity leaves the deactivate UPDATE on the slow BitmapAnd plan.
 
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_triples_active_run
     ON semantic_triples (run_id) WHERE is_active = true;
