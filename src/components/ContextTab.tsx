@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { EntitySelector, EntityInfo } from './RunSelector';
+import { SnapshotSelector, SnapshotState } from './RunSelector';
 
 interface DomainInfo {
   domain: string;
@@ -40,14 +40,11 @@ interface ContextData {
 }
 
 interface ContextTabProps {
-  entities: EntityInfo[];
-  selectedEntityId: string;
-  onEntityChange: (id: string) => void;
-  entitiesLoading?: boolean;
-  entitiesError?: string | null;
+  snapshot: SnapshotState;
 }
 
-export function ContextTab({ entities, selectedEntityId, onEntityChange, entitiesLoading, entitiesError }: ContextTabProps) {
+export function ContextTab({ snapshot }: ContextTabProps) {
+  const { selectedEntityId } = snapshot;
   const [data, setData] = useState<ContextData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +103,7 @@ export function ContextTab({ entities, selectedEntityId, onEntityChange, entitie
     <div className="h-full flex flex-col p-4 gap-3 overflow-hidden">
       {/* Entity selector bar */}
       <div className="shrink-0 flex items-center gap-3">
-        <EntitySelector entities={entities} selectedEntityId={selectedEntityId} onEntityChange={onEntityChange} loading={entitiesLoading} error={entitiesError} />
+        <SnapshotSelector snapshot={snapshot} />
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={handlePurgeStale}

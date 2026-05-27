@@ -53,24 +53,50 @@ def page_setup(page: Page):
 
 
 def navigate_to_tab(page: Page, tab_name: str):
-    """Navigate to DCL frontend and click a tab."""
-    page.goto(DCL_URL, wait_until="networkidle")
+    """Navigate to DCL frontend and click a tab.
+
+    wait_until="load" (not "networkidle") — the snapshot selector polls
+    every ~12s so the page is never network-idle. Dynamic content is
+    awaited via expect(...) in each test.
+    """
+    page.goto(DCL_URL, wait_until="load")
     tab = page.locator("button, a").filter(has_text=tab_name)
     expect(tab.first).to_be_visible(timeout=15_000)
     tab.first.click()
     page.wait_for_timeout(3_000)
 
 
-def select_most_recent_entity(page: Page):
-    """Select the most recent entity from the entity dropdown."""
-    selects = page.locator("select")
-    if selects.count() > 0:
-        sel = selects.first
-        options = sel.locator("option").all()
-        # Skip "All Entities" (index 0), pick first real entity
-        if len(options) > 1:
-            sel.select_option(index=1)
-            page.wait_for_timeout(2_000)
+def select_active_snapshot(page: Page):
+    """Select the active-run snapshot with the broadest domain coverage.
+
+    These tests assert full pipeline output (>= 10 domains, all financial
+    domains present). The snapshot selector follows the latest snapshot by
+    default, but the latest snapshot's run may not be the active one, and
+    active-run-scoped views (Context domain coverage) return nothing for a
+    non-active run. There can also be multiple active runs (one per tenant)
+    of differing breadth. Pick the active snapshot whose entity has the most
+    populated domains so the quality assertions run against real data.
+    """
+    sel = page.locator("#snapshot-selector")
+    if sel.count() == 0:
+        return
+    snaps = httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=30.0).json()["snapshots"]
+    active = [s for s in snaps if s.get("is_current")]
+    assert active, "No is_current snapshot — run the ingest pipeline"
+
+    def domain_count(entity_id: str) -> int:
+        resp = httpx.get(
+            f"{DCL_BACKEND}/api/dcl/contextualization-summary",
+            params={"entity_id": entity_id},
+            timeout=30.0,
+        )
+        if resp.status_code != 200:
+            return 0
+        return resp.json().get("domain_coverage", {}).get("domains_populated", 0)
+
+    best = max(active, key=lambda s: domain_count(s["entity_id"]))
+    sel.select_option(best["dcl_ingest_id"])
+    page.wait_for_timeout(2_000)
 
 
 class TestDomainCoverage:
@@ -80,7 +106,7 @@ class TestDomainCoverage:
     def test_domain_count_at_least_10(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Context")
-        select_most_recent_entity(page)
+        select_active_snapshot(page)
 
         body = page.locator("body").text_content() or ""
 
@@ -101,7 +127,7 @@ class TestDomainCoverage:
     def test_required_domains_present(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Context")
-        select_most_recent_entity(page)
+        select_active_snapshot(page)
 
         body = (page.locator("body").text_content() or "").lower()
 
@@ -121,7 +147,7 @@ class TestConfidenceDistribution:
     def test_exact_confidence_greater_than_zero(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Context")
-        select_most_recent_entity(page)
+        select_active_snapshot(page)
 
         body = page.locator("body").text_content() or ""
 
@@ -141,7 +167,7 @@ class TestConfidenceDistribution:
     def test_at_least_two_confidence_tiers(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Context")
-        select_most_recent_entity(page)
+        select_active_snapshot(page)
 
         body = page.locator("body").text_content() or ""
 
@@ -165,7 +191,7 @@ class TestReconSourceRunTag:
     def test_farm_dcl_count_not_skip(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Recon")
-        select_most_recent_entity(page)
+        select_active_snapshot(page)
 
         # Click Run Recon
         run_btn = page.locator("button").filter(has_text="Run Recon")
@@ -208,7 +234,7 @@ class TestTripleCountGrowth:
     def test_total_triples_over_20000(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Ingest")
-        select_most_recent_entity(page)
+        select_active_snapshot(page)
 
         body = page.locator("body").text_content() or ""
 

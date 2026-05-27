@@ -60,11 +60,13 @@ test.describe.serial(
       await expect(ingestTab.first()).toBeVisible({ timeout: 15_000 });
       await ingestTab.first().click();
 
-      // Entity dropdown should load and contain expectedEntity
-      const dropdown = page.locator("select").first();
+      // Snapshot dropdown should load and contain a snapshot for expectedEntity.
+      // Snapshot option text is the snapshot_name (e.g. VeloCorp-KDDN-c712),
+      // which embeds the entity_id.
+      const dropdown = page.locator("#snapshot-selector");
       await expect(dropdown).toBeVisible({ timeout: 15_000 });
 
-      // Wait for options to populate
+      // Wait for options to populate (placeholder "No snapshots" is a single option).
       await expect(
         dropdown.locator("option")
       ).not.toHaveCount(1, { timeout: 15_000 });
@@ -75,7 +77,7 @@ test.describe.serial(
       );
       expect(
         hasEntity,
-        `Expected entity ${expectedEntity} in Ingest dropdown, found: ${options.join(", ")}`
+        `Expected a snapshot for entity ${expectedEntity} in Ingest dropdown, found: ${options.join(", ")}`
       ).toBe(true);
 
       await page.screenshot({ path: `${SCREENSHOTS}/02_dcl_ingest.png` });
@@ -92,21 +94,25 @@ test.describe.serial(
       await expect(graphTab.first()).toBeVisible({ timeout: 15_000 });
       await graphTab.first().click();
 
-      const dropdown = page.locator("select").first();
+      const dropdown = page.locator("#snapshot-selector");
       await expect(dropdown).toBeVisible({ timeout: 15_000 });
 
-      // Select expectedEntity from dropdown
+      // Find the snapshot option whose name embeds the entity prefix, then
+      // select it by its dcl_ingest_id value.
       const entityPrefix = expectedEntity.split("-").slice(0, 2).join("-");
       const allOptions = await dropdown.locator("option").all();
       let targetValue = "";
+      let targetText = "";
       for (const opt of allOptions) {
         const text = (await opt.textContent()) || "";
         if (text.includes(entityPrefix)) {
-          targetValue = await opt.getAttribute("value") || "";
+          targetValue = (await opt.getAttribute("value")) || "";
+          targetText = text;
           break;
         }
       }
-      expect(targetValue, `Entity ${entityPrefix} not found in Graph dropdown`).toContain(entityPrefix);
+      expect(targetText, `No snapshot for entity ${entityPrefix} in Graph dropdown`).toContain(entityPrefix);
+      expect(targetValue, "matched snapshot option must have a dcl_ingest_id value").toBeTruthy();
       await dropdown.selectOption(targetValue);
 
       // Provenance label must reference the entity
@@ -133,8 +139,8 @@ test.describe.serial(
       await expect(dashTab.first()).toBeVisible({ timeout: 15_000 });
       await dashTab.first().click();
 
-      // Select the entity if dropdown is present
-      const dropdown = page.locator("select").first();
+      // Select the snapshot for the entity via the snapshot dropdown.
+      const dropdown = page.locator("#snapshot-selector");
       if (await dropdown.isVisible()) {
         const entityPrefix = expectedEntity.split("-").slice(0, 2).join("-");
         const allOptions = await dropdown.locator("option").all();

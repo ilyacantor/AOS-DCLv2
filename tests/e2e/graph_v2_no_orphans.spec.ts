@@ -23,12 +23,18 @@ test.describe.serial("Graph v2 — L3 orphan gate", () => {
   test.setTimeout(120_000);
 
   test("no L3 orphans render for the live entity", async ({ page, request }) => {
-    // Resolve a live entity from the backend — no hardcoded names.
-    const entitiesResp = await request.get(`${BACKEND}/api/dcl/entities`);
-    expect(entitiesResp.ok()).toBeTruthy();
-    const { entities } = await entitiesResp.json();
-    expect(entities?.length, "DCL has zero entities — run a pipeline").toBeGreaterThan(0);
-    const entityId = entities[0].entity_id as string;
+    // The Graph tab is driven by the snapshot selector. Resolve the latest
+    // snapshot from the backend — its dcl_ingest_id is what the dropdown
+    // holds, its entity_id is what the graph renders.
+    const snapResp = await request.get(`${BACKEND}/api/dcl/snapshots`);
+    expect(snapResp.ok()).toBeTruthy();
+    const { snapshots } = await snapResp.json();
+    expect(snapshots?.length, "DCL has zero snapshots — run a pipeline").toBeGreaterThan(0);
+    const latest = snapshots.reduce((a: any, b: any) =>
+      (b.run_timestamp || "") > (a.run_timestamp || "") ? b : a,
+    );
+    const dclIngestId = latest.dcl_ingest_id as string;
+    const entityId = latest.entity_id as string;
 
     // Capture the payload the frontend actually receives.
     const runPayloads: any[] = [];
@@ -45,13 +51,14 @@ test.describe.serial("Graph v2 — L3 orphan gate", () => {
     await page.evaluate(() => localStorage.clear());
     await page.goto(FRONTEND, { waitUntil: "load" });
 
-    const graphV2Button = page.locator("button").filter({ hasText: "Graph v2" });
-    await expect(graphV2Button).toBeVisible({ timeout: 15_000 });
-    await graphV2Button.click();
+    const graphButton = page.locator("button").filter({ hasText: /^Graph$/ });
+    await expect(graphButton.first()).toBeVisible({ timeout: 15_000 });
+    await graphButton.first().click();
 
-    const entitySelect = page.locator("select");
-    await expect(entitySelect).toBeVisible({ timeout: 10_000 });
-    await entitySelect.selectOption(entityId);
+    const snapshotSelect = page.locator("#snapshot-selector");
+    await expect(snapshotSelect).toBeVisible({ timeout: 10_000 });
+    await expect(snapshotSelect.locator("option")).toHaveCount(snapshots.length, { timeout: 15_000 });
+    await snapshotSelect.selectOption(dclIngestId);
 
     const svg = page.locator('svg[role="img"][aria-label="Data-driven graph of DCL triple flow"]');
     await expect(svg).toBeVisible({ timeout: 30_000 });

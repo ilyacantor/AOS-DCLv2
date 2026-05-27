@@ -7,28 +7,21 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { GraphSnapshot, PersonaId } from '../types';
-import { EntitySelector, type EntityInfo } from './RunSelector';
+import { SnapshotSelector, type SnapshotState } from './RunSelector';
 import { DataDrivenSankey } from './graph-v2';
 
 interface GraphV2TabProps {
   graphData: GraphSnapshot | null;
-  entities: EntityInfo[];
-  selectedEntityId: string;
-  onEntityChange: (id: string) => void;
-  entitiesLoading: boolean;
-  entitiesError: string | null;
+  snapshot: SnapshotState;
   selectedPersonas: PersonaId[];
 }
 
 export function GraphV2Tab({
   graphData,
-  entities,
-  selectedEntityId,
-  onEntityChange,
-  entitiesLoading,
-  entitiesError,
+  snapshot,
   selectedPersonas,
 }: GraphV2TabProps) {
+  const { selectedEntityId } = snapshot;
   const [entityGraphData, setEntityGraphData] = useState<GraphSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -93,13 +86,7 @@ export function GraphV2Tab({
     <div className="h-full flex flex-col overflow-hidden">
       {/* Top bar — entity selector + snapshot provenance */}
       <div className="shrink-0 flex items-center gap-4 px-4 py-2 border-b border-border bg-card/30">
-        <EntitySelector
-          entities={entities}
-          selectedEntityId={selectedEntityId}
-          onEntityChange={onEntityChange}
-          loading={entitiesLoading}
-          error={entitiesError}
-        />
+        <SnapshotSelector snapshot={snapshot} />
         {displayData?.meta?.snapshotName && (
           <span className="text-xs text-muted-foreground font-mono">
             {displayData.meta.snapshotName}

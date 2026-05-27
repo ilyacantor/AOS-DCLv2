@@ -27,7 +27,9 @@ export default defineConfig({
         rewrite: (path: string) => path.replace(/^\/api\/platform/, '/api'),
       },
       '/api': {
-        target: 'http://localhost:8004',
+        // DCL UI shows the same DCL the pipeline ingests to (Farm push + NLQ
+        // read both target :8104). Override via VITE_DCL_API_URL.
+        target: process.env.VITE_DCL_API_URL || 'http://localhost:8104',
         changeOrigin: true,
       },
     },

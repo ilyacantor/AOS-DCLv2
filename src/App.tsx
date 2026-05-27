@@ -8,7 +8,7 @@ import { ContextTab } from './components/ContextTab';
 import { DashboardTab } from './components/DashboardTab';
 import { ReconTab } from './components/ReconTab';
 import { GraphV2Tab } from './components/GraphV2Tab';
-import { useEntities } from './components/RunSelector';
+import { useSnapshots } from './components/RunSelector';
 
 type MainView = 'graph' | 'dashboard' | 'context' | 'guide' | 'recon' | 'ingest';
 
@@ -53,8 +53,10 @@ function App() {
   const personaDropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Shared entity state — all 4 monitoring tabs use this
-  const { entities, selectedEntityId, setSelectedEntityId, loading: entitiesLoading, error: entitiesError } = useEntities();
+  // Shared snapshot state — all 5 monitoring tabs use this. The selected
+  // snapshot's entity_id drives the per-tab data fetches via selectedEntityId.
+  const snapshot = useSnapshots();
+  const { selectedEntityId, loading: entitiesLoading } = snapshot;
 
   useEffect(() => {
     if (!isRunning) return;
@@ -208,17 +210,9 @@ function App() {
       });
   }, [entitiesLoading, selectedEntityId]);
 
-  // Auto re-render when snapshot selection changes
-  const snapshotInitRef = useRef(true);
-  useEffect(() => {
-    if (snapshotInitRef.current) {
-      snapshotInitRef.current = false;
-      return;
-    }
-    if (selectedSnapshotName) {
-      handleRun();
-    }
-  }, [selectedSnapshotName]);
+  // Snapshot-change graph re-render is handled per-tab (each tab self-fetches
+  // entity-scoped data off snapshot.selectedEntityId — see GraphV2Tab). No
+  // app-level re-run needed; this avoids a redundant force_refresh /api/dcl/run.
 
   const handleRun = async () => {
     setIsRunning(true);
@@ -438,17 +432,17 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
         {mainView === 'context' ? (
-          <ContextTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
+          <ContextTab snapshot={snapshot} />
         ) : mainView === 'ingest' ? (
-          <IngestTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
+          <IngestTab snapshot={snapshot} />
         ) : mainView === 'recon' ? (
-          <ReconTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
+          <ReconTab snapshot={snapshot} />
         ) : mainView === 'guide' ? (
           <UserGuide />
         ) : mainView === 'dashboard' ? (
-          <DashboardTab entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} />
+          <DashboardTab snapshot={snapshot} />
         ) : (
-          <GraphV2Tab graphData={graphData} entities={entities} selectedEntityId={selectedEntityId} onEntityChange={setSelectedEntityId} entitiesLoading={entitiesLoading} entitiesError={entitiesError} selectedPersonas={selectedPersonas} />
+          <GraphV2Tab graphData={graphData} snapshot={snapshot} selectedPersonas={selectedPersonas} />
         )}
       </div>
       <Toaster />

@@ -478,12 +478,34 @@ class TripleStore:
             snapshots.append({
                 "dcl_ingest_id": rid,
                 "snapshot_name": snap_name,
+                "entity_id": entity_id,
                 "run_timestamp": created_at.isoformat() if created_at else None,
                 "total_rows": counts.get(rid, 0),
                 "is_current": rid == current_run_id,
             })
 
         return snapshots
+
+    def get_all_snapshots(self) -> list[dict]:
+        """Get snapshots across every tenant, merged and sorted newest-first.
+
+        Used by GET /api/dcl/snapshots when no tenant_id is supplied — the
+        DCL monitoring UI's snapshot selector is tenant-agnostic (same as
+        GET /api/dcl/entities). Returns the same row shape as
+        get_tenant_snapshots so the two paths are interchangeable.
+        """
+        sql = "SELECT DISTINCT tenant_id FROM tenant_runs"
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                tenant_ids = [str(r[0]) for r in cur.fetchall()]
+
+        merged: list[dict] = []
+        for tid in tenant_ids:
+            merged.extend(self.get_tenant_snapshots(tid))
+        # Newest-first by run_timestamp. ISO 8601 strings sort lexically.
+        merged.sort(key=lambda s: s["run_timestamp"] or "", reverse=True)
+        return merged
 
     def purge_old_runs(self, tenant_id: str, keep_runs: int = 2) -> int:
         """Hard-delete triples from old runs, keeping the N most recent run_ids.

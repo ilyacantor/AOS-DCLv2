@@ -7,12 +7,16 @@ import { test, expect } from "playwright/test";
 
 const CONSOLE = "http://localhost:3009";
 const DCL = "http://localhost:3004";
+const DCL_BACKEND = "http://localhost:8004";
 const NLQ = "http://localhost:3005";
 
 test.describe.serial(
   "SE pipeline → DCL → NLQ — entity provenance across all surfaces",
   () => {
+    // The DCL surface is snapshot-grained: the selector holds dcl_ingest_ids,
+    // and the latest snapshot's entity_id is the entity the pipeline produced.
     let entityId: string;
+    let dclIngestId: string;
 
     // ── Step 1 — Console SE Pipeline ──────────────────────────
 
@@ -52,13 +56,13 @@ test.describe.serial(
       await expect(runButton).not.toHaveText("Running...", {
         timeout: 60_000,
       });
-      const entitySelect = page.locator("select").first();
-      await expect(entitySelect).toBeVisible({ timeout: 15_000 });
+      const snapshotSelect = page.locator("#snapshot-selector");
+      await expect(snapshotSelect).toBeVisible({ timeout: 15_000 });
       await expect(async () => {
-        const optCount = await entitySelect.locator("option").count();
+        const optCount = await snapshotSelect.locator("option").count();
         expect(optCount).toBeGreaterThan(1);
       }).toPass({ timeout: 15_000 });
-      return entitySelect;
+      return snapshotSelect;
     }
 
     // ── Step 2 — DCL / Graph ──────────────────────────────────
@@ -70,21 +74,28 @@ test.describe.serial(
 
       const entitySelect = await waitForDclReady(page);
 
-      const options = entitySelect.locator("option");
-      const count = await options.count();
-      for (let i = 0; i < count; i++) {
-        const text = (await options.nth(i).textContent()) ?? "";
-        if (text.includes("*")) {
-          entityId = (await options.nth(i).getAttribute("value")) ?? "";
-          break;
-        }
-      }
-      expect(
-        entityId,
-        "Most-recent entity (marked *) must exist in dropdown",
-      ).toBeTruthy();
+      // Ground truth: the latest snapshot (max run_timestamp) is the one the
+      // selector marks `*` and follows by default. Resolve its entity_id and
+      // dcl_ingest_id from the backend snapshot list.
+      const snaps = (
+        await (await page.request.get(`${DCL_BACKEND}/api/dcl/snapshots`)).json()
+      ).snapshots as Array<{
+        dcl_ingest_id: string;
+        entity_id: string;
+        run_timestamp: string;
+      }>;
+      const latest = snaps.reduce((a, b) =>
+        (b.run_timestamp || "") > (a.run_timestamp || "") ? b : a,
+      );
+      entityId = latest.entity_id;
+      dclIngestId = latest.dcl_ingest_id;
+      expect(entityId, "Latest snapshot must have an entity_id").toBeTruthy();
 
-      await entitySelect.selectOption(entityId);
+      // The `*`-marked option must be the latest snapshot.
+      const starred = entitySelect.locator("option").filter({ hasText: "* " });
+      await expect(starred).toHaveValue(dclIngestId);
+
+      await entitySelect.selectOption(dclIngestId);
 
       await expect(
         page.locator('button[data-role="run-primary"]'),
@@ -114,7 +125,7 @@ test.describe.serial(
       test.setTimeout(90_000);
 
       const entitySelect = await waitForDclReady(page);
-      await entitySelect.selectOption(entityId);
+      await entitySelect.selectOption(dclIngestId);
 
       await page.locator("button").filter({ hasText: "Dashboard" }).click();
 
@@ -126,7 +137,7 @@ test.describe.serial(
       await expect(rows.first()).toBeVisible({ timeout: 15_000 });
 
       const selectedVal = await entitySelect.inputValue();
-      expect(selectedVal).toBe(entityId);
+      expect(selectedVal).toBe(dclIngestId);
 
       await page.screenshot({
         path: "tests/e2e/screenshots/step3_dcl_dashboard.png",
@@ -140,7 +151,7 @@ test.describe.serial(
       test.setTimeout(90_000);
 
       const entitySelect = await waitForDclReady(page);
-      await entitySelect.selectOption(entityId);
+      await entitySelect.selectOption(dclIngestId);
 
       await page.locator("button").filter({ hasText: "Context" }).click();
 
@@ -186,7 +197,7 @@ test.describe.serial(
       test.setTimeout(90_000);
 
       const entitySelect = await waitForDclReady(page);
-      await entitySelect.selectOption(entityId);
+      await entitySelect.selectOption(dclIngestId);
 
       await page.locator("button").filter({ hasText: "Ingest" }).click();
 

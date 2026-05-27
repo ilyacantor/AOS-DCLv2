@@ -70,11 +70,12 @@ def page_setup(page: Page):
 def navigate_to_tab(page: Page, tab_name: str):
     """Navigate to DCL frontend and click a tab.
 
-    Uses networkidle to ensure async API calls (runs, tab data) complete
-    before the test reads the DOM. The runs endpoint returns in ~850ms
-    with 95 runs; networkidle waits until no requests for 500ms.
+    Uses wait_until="load" — not "networkidle" — because the snapshot
+    selector polls /api/dcl/snapshots every ~12s, so the page never goes
+    network-idle for 500ms. Dynamic content is awaited explicitly via
+    expect(...) below and in each test.
     """
-    page.goto(DCL_URL, wait_until="networkidle")
+    page.goto(DCL_URL, wait_until="load")
     tab = page.locator("button, a").filter(has_text=tab_name)
     expect(tab.first).to_be_visible(timeout=15_000)
     tab.first.click()
@@ -93,7 +94,7 @@ class TestCrossTab:
         page.goto(DCL_URL, wait_until="load")
         page.wait_for_timeout(3_000)
 
-        for tab_name in ["Ingest", "Context", "Dashboard", "Recon", "Graph v2"]:
+        for tab_name in ["Ingest", "Context", "Dashboard", "Recon", "Graph"]:
             tab = page.locator("button, a").filter(has_text=tab_name)
             expect(tab.first).to_be_visible(timeout=10_000)
             tab.first.click()
@@ -113,8 +114,8 @@ class TestCrossTab:
                 f"Tab '{tab_name}' has too few DOM elements — likely crashed"
             )
 
-    def test_all_tabs_have_entity_selector(self, page_setup: Page):
-        """Every monitoring tab must display an entity selector dropdown."""
+    def test_all_tabs_have_snapshot_selector(self, page_setup: Page):
+        """Every monitoring tab must display the snapshot selector dropdown."""
         page = page_setup
         page.goto(DCL_URL, wait_until="load")
         page.wait_for_timeout(3_000)
@@ -127,40 +128,52 @@ class TestCrossTab:
 
             body_text = page.locator("body").text_content() or ""
 
-            # Entity selector dropdown must be present
-            assert "Entity:" in body_text, (
-                f"Tab '{tab_name}' missing entity selector (no 'Entity:' label)"
+            # Snapshot selector dropdown must be present
+            assert "Snapshot:" in body_text, (
+                f"Tab '{tab_name}' missing snapshot selector (no 'Snapshot:' label)"
+            )
+            assert page.locator("#snapshot-selector").count() == 1, (
+                f"Tab '{tab_name}' missing #snapshot-selector dropdown"
             )
 
-    def test_all_tabs_show_same_entity(self, page_setup: Page):
-        """After load, all 4 monitoring tabs must show the same selected entity."""
+    def test_all_tabs_show_same_snapshot(self, page_setup: Page):
+        """After load, all 4 monitoring tabs share one selected snapshot.
+
+        The snapshot selector is app-level shared state, so every tab's
+        #snapshot-selector must hold the same dcl_ingest_id — and it must
+        be the newest snapshot (max run_timestamp) since the default mode
+        is follow-latest.
+        """
         page = page_setup
-        page.goto(DCL_URL, wait_until="networkidle")
+
+        # Ground truth: newest snapshot by run_timestamp.
+        snaps = httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=30.0).json()["snapshots"]
+        newest_id = max(snaps, key=lambda s: s["run_timestamp"] or "")["dcl_ingest_id"]
+        snap_count = len(snaps)
+
+        page.goto(DCL_URL, wait_until="load")
         page.wait_for_timeout(3_000)
 
-        entities_seen = {}
+        snapshots_seen = {}
         for tab_name in ["Ingest", "Context", "Dashboard", "Recon"]:
             tab = page.locator("button, a").filter(has_text=tab_name)
             expect(tab.first).to_be_visible(timeout=10_000)
             tab.first.click()
             page.wait_for_timeout(2_000)
 
-            # Find the entity selector — it has "Entity:" label next to it
-            selects = page.locator("select")
-            for i in range(selects.count()):
-                sel = selects.nth(i)
-                val = sel.input_value()
-                # Entity IDs are readable names (not UUIDs)
-                if val and len(val) < 100 and not (len(val) > 30 and val.count("-") >= 4):
-                    entities_seen[tab_name] = val
-                    break
+            selector = page.locator("#snapshot-selector")
+            expect(selector).to_be_visible(timeout=10_000)
+            # Wait for the async snapshot fetch to populate the dropdown —
+            # it renders a "No snapshots" placeholder until then.
+            expect(selector.locator("option")).to_have_count(snap_count, timeout=15_000)
+            snapshots_seen[tab_name] = selector.input_value()
 
-        assert len(entities_seen) >= 3, (
-            f"Could not find entity selector in enough tabs: {entities_seen}"
+        assert len(snapshots_seen) == 4, (
+            f"Snapshot selector missing on some tab: {snapshots_seen}"
         )
-        unique_entities = set(entities_seen.values())
-        assert len(unique_entities) == 1, (
-            f"Tabs show different entities — provenance mismatch: {entities_seen}"
+        unique = set(snapshots_seen.values())
+        assert unique == {newest_id}, (
+            f"Tabs must all follow the newest snapshot {newest_id}; saw {snapshots_seen}"
         )
 
 
@@ -208,16 +221,18 @@ class TestIngestTab:
         body_text = page.locator("body").text_content() or ""
         assert "Last Ingest" in body_text or "Ingest Count" in body_text
 
-    def test_entity_selector(self, page_setup: Page):
+    def test_snapshot_selector(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Ingest")
 
         body_text = page.locator("body").text_content() or ""
-        assert "Entity:" in body_text, "Ingest tab missing entity selector"
+        assert "Snapshot:" in body_text, "Ingest tab missing snapshot selector"
 
-        # Entity selector dropdown should exist with at least one option
-        selects = page.locator("select")
-        assert selects.count() >= 1, "No select elements found on Ingest tab"
+        # Snapshot selector option count must match the backend snapshot list.
+        snap_count = len(httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=30.0).json()["snapshots"])
+        selector = page.locator("#snapshot-selector")
+        expect(selector).to_be_visible(timeout=10_000)
+        expect(selector.locator("option")).to_have_count(snap_count, timeout=10_000)
 
 
 # ---------------------------------------------------------------------------
@@ -264,13 +279,15 @@ class TestContextTab:
         conf_header = page.locator("text=Confidence Distribution").first
         expect(conf_header).to_be_visible(timeout=5_000)
 
-    def test_entity_selector(self, page_setup: Page):
+    def test_snapshot_selector(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Context")
 
-        # Entity dropdown should be present
-        entity_select = page.locator("select").filter(has_text="All Entities")
-        expect(entity_select.first).to_be_visible(timeout=5_000)
+        # Snapshot dropdown should be present and populated.
+        selector = page.locator("#snapshot-selector")
+        expect(selector).to_be_visible(timeout=5_000)
+        snap_count = len(httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=30.0).json()["snapshots"])
+        expect(selector.locator("option")).to_have_count(snap_count, timeout=10_000)
 
 
 # ---------------------------------------------------------------------------
@@ -340,18 +357,18 @@ class TestDashboardTab:
 # ---------------------------------------------------------------------------
 
 class TestReconTab:
-    def test_entity_selector(self, page_setup: Page):
+    def test_snapshot_selector(self, page_setup: Page):
         page = page_setup
         navigate_to_tab(page, "Recon")
 
         body_text = page.locator("body").text_content() or ""
-        assert "Entity:" in body_text, "Recon tab missing entity selector"
+        assert "Snapshot:" in body_text, "Recon tab missing snapshot selector"
 
-        # Entity selector dropdown should exist with at least one option
-        entity_select = page.locator("select")
-        expect(entity_select.first).to_be_visible(timeout=5_000)
-        options = entity_select.first.locator("option").all()
-        assert len(options) >= 1, "Entity selector has no options"
+        # Snapshot selector option count must match the backend snapshot list.
+        snap_count = len(httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=30.0).json()["snapshots"])
+        selector = page.locator("#snapshot-selector")
+        expect(selector).to_be_visible(timeout=5_000)
+        expect(selector.locator("option")).to_have_count(snap_count, timeout=10_000)
 
     def test_run_recon_button(self, page_setup: Page):
         page = page_setup
@@ -361,13 +378,27 @@ class TestReconTab:
         expect(btn.first).to_be_visible(timeout=5_000)
 
     def test_recon_executes_and_shows_correct_results(self, page_setup: Page):
-        """Run recon and verify all 5 checks render with correct data from the backend."""
+        """Run recon and verify all 5 checks render with correct data from the backend.
+
+        Recon scopes to the active-run triple set. Select the snapshot for
+        the active run (is_current) so recon has data to check — the
+        follow-latest default may point at a snapshot whose run is not the
+        active one, for which recon legitimately returns no checks.
+        """
         page = page_setup
         navigate_to_tab(page, "Recon")
 
-        # Get the selected entity from the dropdown
-        entity_select = page.locator("select").first
-        selected_entity = entity_select.input_value()
+        selector = page.locator("#snapshot-selector")
+        expect(selector).to_be_visible(timeout=10_000)
+
+        # Pick the snapshot whose run is active (is_current) — its entity is
+        # guaranteed to have active triples for recon to verify.
+        snaps = httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=30.0).json()["snapshots"]
+        active = next((s for s in snaps if s.get("is_current")), None)
+        assert active is not None, "No is_current snapshot — run the ingest pipeline"
+        selected_entity = active["entity_id"]
+        selector.select_option(active["dcl_ingest_id"])
+        page.wait_for_timeout(2_000)
 
         # Fetch backend ground truth for this entity
         recon_url = f"{DCL_BACKEND}/api/dcl/recon?entity_id={selected_entity}"
@@ -450,13 +481,24 @@ class TestReconTab:
             )
 
     def test_overall_status_matches_backend(self, page_setup: Page):
-        """Overall status badge must match the backend's overall verdict."""
+        """Overall status badge must match the backend's overall verdict.
+
+        Selects the active-run snapshot (is_current) so recon has triples to
+        verify — see test_recon_executes_and_shows_correct_results.
+        """
         page = page_setup
         navigate_to_tab(page, "Recon")
 
-        # Get the selected entity
-        entity_select = page.locator("select").first
-        selected_entity = entity_select.input_value()
+        selector = page.locator("#snapshot-selector")
+        expect(selector).to_be_visible(timeout=10_000)
+
+        # Pick the snapshot whose run is active (is_current).
+        snaps = httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=30.0).json()["snapshots"]
+        active = next((s for s in snaps if s.get("is_current")), None)
+        assert active is not None, "No is_current snapshot — run the ingest pipeline"
+        selected_entity = active["entity_id"]
+        selector.select_option(active["dcl_ingest_id"])
+        page.wait_for_timeout(2_000)
 
         # Fetch backend ground truth
         api_resp = httpx.get(
@@ -503,32 +545,35 @@ class TestGraphV2Tab:
     """E2E tests for the data-driven Graph v2 tab."""
 
     def test_tab_visible_and_navigable(self, page_setup: Page):
-        """Graph v2 tab appears in nav and renders without crash."""
+        """Graph tab appears in nav and renders without crash."""
         page = page_setup
-        page.goto(DCL_URL, wait_until="networkidle")
-        tab = page.locator("button, a").filter(has_text="Graph v2")
+        page.goto(DCL_URL, wait_until="load")
+        tab = page.locator("button, a").filter(has_text="Graph")
         expect(tab.first).to_be_visible(timeout=10_000)
         tab.first.click()
         page.wait_for_timeout(3_000)
         body_text = page.locator("body").text_content() or ""
         # Should render either graph content or empty state
         assert "pipeline data" in body_text.lower() or len(body_text) > 100, (
-            "Graph v2 tab appears blank"
+            "Graph tab appears blank"
         )
 
-    def test_entity_selector_present(self, page_setup: Page):
-        """Graph v2 tab shows entity selector."""
+    def test_snapshot_selector_present(self, page_setup: Page):
+        """Graph tab shows the snapshot selector."""
         page = page_setup
-        navigate_to_tab(page, "Graph v2")
+        navigate_to_tab(page, "Graph")
         body_text = page.locator("body").text_content() or ""
-        assert "Entity:" in body_text, (
-            "Graph v2 tab missing entity selector"
+        assert "Snapshot:" in body_text, (
+            "Graph tab missing snapshot selector"
         )
 
     def test_graph_renders_svg_with_nodes(self, page_setup: Page):
-        """Graph v2 renders SVG with at least one node when pipeline data exists."""
+        """Graph tab renders SVG with at least one node when pipeline data exists."""
         page = page_setup
-        navigate_to_tab(page, "Graph v2")
+        navigate_to_tab(page, "Graph")
+        # The Graph tab fetches POST /api/dcl/run for the selected snapshot —
+        # wait for the "Loading graph data..." state to clear before asserting.
+        expect(page.locator("text=Loading graph data")).to_have_count(0, timeout=90_000)
         svg = page.locator("svg")
         if svg.count() > 0:
             nodes = page.locator("[data-layer]")
@@ -543,7 +588,7 @@ class TestGraphV2Tab:
     def test_links_have_stroke_width(self, page_setup: Page):
         """At least one link has a non-zero strokeWidth when data exists."""
         page = page_setup
-        navigate_to_tab(page, "Graph v2")
+        navigate_to_tab(page, "Graph")
         paths = page.locator("svg path[stroke-width]")
         if paths.count() > 0:
             width = paths.first.get_attribute("stroke-width")
@@ -554,7 +599,10 @@ class TestGraphV2Tab:
     def test_empty_state_message(self, page_setup: Page):
         """When no data, shows 'No pipeline data' message."""
         page = page_setup
-        navigate_to_tab(page, "Graph v2")
+        navigate_to_tab(page, "Graph")
+        # Wait for the graph fetch to settle so a still-loading tab is not
+        # mistaken for an empty one.
+        expect(page.locator("text=Loading graph data")).to_have_count(0, timeout=90_000)
         # If there's no SVG with nodes, the empty state should show
         nodes = page.locator("[data-layer]")
         if nodes.count() == 0:
@@ -566,7 +614,7 @@ class TestGraphV2Tab:
     def test_stub_node_has_no_outgoing_mapping_links(self, page_setup: Page):
         """A stub source (registered but zero triples) has no outgoing domain links."""
         page = page_setup
-        navigate_to_tab(page, "Graph v2")
+        navigate_to_tab(page, "Graph")
         stubs = page.locator('[data-status="stub"]')
         if stubs.count() > 0:
             # Stub node exists — it should render but have no outgoing
@@ -578,7 +626,7 @@ class TestGraphV2Tab:
     def test_original_graph_tab_unchanged(self, page_setup: Page):
         """Tab 1 (Graph) still works — regression check."""
         page = page_setup
-        page.goto(DCL_URL, wait_until="networkidle")
+        page.goto(DCL_URL, wait_until="load")
         tab = page.locator("button, a").filter(has_text="Graph").first
         expect(tab).to_be_visible(timeout=10_000)
         tab.click()

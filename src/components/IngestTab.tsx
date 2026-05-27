@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { EntitySelector, EntityInfo } from './RunSelector';
+import { SnapshotSelector, SnapshotState } from './RunSelector';
 
 interface IngestLogEntry {
   id: string;
@@ -16,24 +16,23 @@ interface IngestLogEntry {
 }
 
 interface IngestTabProps {
-  entities: EntityInfo[];
-  selectedEntityId: string;
-  onEntityChange: (id: string) => void;
-  entitiesLoading?: boolean;
-  entitiesError?: string | null;
+  snapshot: SnapshotState;
 }
 
-export function IngestTab({ entities, selectedEntityId, onEntityChange, entitiesLoading, entitiesError }: IngestTabProps) {
+export function IngestTab({ snapshot }: IngestTabProps) {
+  const { selectedEntityId, snapshots } = snapshot;
   const [logs, setLogs] = useState<IngestLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
-  // "Total Triples" is always the system-wide count (label says "Active in store").
-  // Per-entity latest_ingest is scoped to the selection.
+  // "Total Triples" is the system-wide active count (label says "Active in
+  // store"). is_current marks the run tenant_runs.current_run_id points at —
+  // i.e. the active run for that entity — so summing total_rows over the
+  // current snapshots gives the live store size.
   const storeTotalTriples = useMemo(
-    () => entities.reduce((sum, e) => sum + e.triple_count, 0),
-    [entities],
+    () => snapshots.filter((s) => s.is_current).reduce((sum, s) => sum + s.total_rows, 0),
+    [snapshots],
   );
 
   const fetchData = async (entityId?: string) => {
@@ -80,7 +79,7 @@ export function IngestTab({ entities, selectedEntityId, onEntityChange, entities
     <div className="h-full flex flex-col p-4 gap-3 overflow-hidden">
       {/* Entity selector bar */}
       <div className="shrink-0 flex items-center gap-3">
-        <EntitySelector entities={entities} selectedEntityId={selectedEntityId} onEntityChange={onEntityChange} loading={entitiesLoading} error={entitiesError} />
+        <SnapshotSelector snapshot={snapshot} />
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => fetchData(selectedEntityId || undefined)}

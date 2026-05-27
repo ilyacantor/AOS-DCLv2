@@ -1,6 +1,6 @@
 {
-  "seed_date": "2026-05-15",
-  "dcl_ingest_id": "5cc3ee47-65aa-4214-abb3-7f7858151d1c",
+  "seed_date": "2026-05-27",
+  "dcl_ingest_id": "bdce4fb1-9837-41f4-89e9-85b158ce241c",
   "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
   "total_triples": 1838,
   "concept_summary": {
@@ -43,7 +43,7 @@
     "workforce": 253
   },
   "entities": [
-    "TechEdge-25KH"
+    "CyberCorp-J0PT"
   ],
-  "farm_run_id": "snapshot_push_370b61c0-d4c_e4d64636"
+  "farm_run_id": "snapshot_push_b4e1f9b3-4cd_2ca4c387"
 }

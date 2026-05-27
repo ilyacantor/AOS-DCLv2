@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { EntitySelector, EntityInfo } from './RunSelector';
+import { SnapshotSelector, SnapshotState } from './RunSelector';
 
 interface TripleRow {
   id: string;
@@ -44,14 +44,11 @@ interface Filters {
 const EMPTY_FILTERS: Filters = { domain: '', source_system: '', period: '' };
 
 interface DashboardTabProps {
-  entities: EntityInfo[];
-  selectedEntityId: string;
-  onEntityChange: (id: string) => void;
-  entitiesLoading?: boolean;
-  entitiesError?: string | null;
+  snapshot: SnapshotState;
 }
 
-export function DashboardTab({ entities, selectedEntityId, onEntityChange, entitiesLoading, entitiesError }: DashboardTabProps) {
+export function DashboardTab({ snapshot }: DashboardTabProps) {
+  const { selectedEntityId } = snapshot;
   const [data, setData] = useState<DashboardData | null>(null);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
@@ -111,7 +108,7 @@ export function DashboardTab({ entities, selectedEntityId, onEntityChange, entit
     <div className="h-full flex flex-col p-4 gap-3 overflow-hidden">
       {/* Entity selector bar */}
       <div className="shrink-0 flex items-center gap-3">
-        <EntitySelector entities={entities} selectedEntityId={selectedEntityId} onEntityChange={onEntityChange} loading={entitiesLoading} error={entitiesError} />
+        <SnapshotSelector snapshot={snapshot} />
       </div>
 
       {/* Filter bar */}

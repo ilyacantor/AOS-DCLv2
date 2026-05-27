@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { EntitySelector, EntityInfo } from './RunSelector';
+import { SnapshotSelector, SnapshotState } from './RunSelector';
 
 interface ReconCheck {
   check: string;
@@ -26,14 +26,11 @@ interface ReconResult {
 }
 
 interface ReconTabProps {
-  entities: EntityInfo[];
-  selectedEntityId: string;
-  onEntityChange: (id: string) => void;
-  entitiesLoading?: boolean;
-  entitiesError?: string | null;
+  snapshot: SnapshotState;
 }
 
-export function ReconTab({ entities, selectedEntityId, onEntityChange, entitiesLoading, entitiesError }: ReconTabProps) {
+export function ReconTab({ snapshot }: ReconTabProps) {
+  const { selectedEntityId } = snapshot;
   const [result, setResult] = useState<ReconResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +106,7 @@ export function ReconTab({ entities, selectedEntityId, onEntityChange, entitiesL
     <div className="h-full flex flex-col p-4 gap-4 overflow-hidden">
       {/* Top: Entity selector + Run Recon button */}
       <div className="shrink-0 flex items-center gap-3">
-        <EntitySelector entities={entities} selectedEntityId={selectedEntityId} onEntityChange={onEntityChange} loading={entitiesLoading} error={entitiesError} />
+        <SnapshotSelector snapshot={snapshot} />
         <button
           onClick={runRecon}
           disabled={loading || !selectedEntityId}

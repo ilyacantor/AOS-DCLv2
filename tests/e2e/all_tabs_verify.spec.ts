@@ -4,7 +4,7 @@
  * Verifies every DCL tab renders without errors after the tenant_runs
  * alignment fix. Captures console errors and screenshots.
  *
- * Tabs: Graph, Graph v2, Dashboard, Context, Recon, Ingest
+ * Tabs: Graph, Dashboard, Context, Recon, Ingest
  */
 
 import { test, expect } from "playwright/test";
@@ -83,7 +83,7 @@ test.describe.serial("DCL All Tabs — No Errors", () => {
     ).toHaveLength(0);
   });
 
-  test("3. Graph v2 tab — entity selection renders graph", async ({ page }) => {
+  test("3. Graph tab — snapshot selection renders graph", async ({ page }) => {
     const consoleErrors: string[] = [];
     setupConsoleCapture(page, consoleErrors);
 
@@ -94,30 +94,30 @@ test.describe.serial("DCL All Tabs — No Errors", () => {
     await expect(runButton).toBeVisible({ timeout: 15_000 });
     await expect(runButton).not.toHaveText("Running...", { timeout: 60_000 });
 
-    // Navigate to Graph v2
-    const graphV2Button = page.locator("button").filter({ hasText: "Graph v2" });
-    await graphV2Button.click();
+    // Navigate to the Graph tab
+    const graphButton = page.locator("button").filter({ hasText: /^Graph$/ });
+    await graphButton.first().click();
 
-    // Wait for entity selector to populate
-    const entitySelect = page.locator("select");
-    await expect(entitySelect).toBeVisible({ timeout: 10_000 });
+    // Wait for the snapshot selector to populate
+    const snapshotSelect = page.locator("#snapshot-selector");
+    await expect(snapshotSelect).toBeVisible({ timeout: 10_000 });
 
-    // Wait for entities to load (options > 1 means we have real entities beyond "All Entities")
+    // Wait for snapshots to load (placeholder "No snapshots" is a single option).
     await expect(async () => {
-      const optionCount = await entitySelect.locator("option").count();
+      const optionCount = await snapshotSelect.locator("option").count();
       expect(optionCount).toBeGreaterThan(1);
     }).toPass({ timeout: 15_000 });
 
-    const options = await entitySelect.locator("option").allTextContents();
-    console.log(`Graph v2 entity options: ${options.join(", ")}`);
+    const options = await snapshotSelect.locator("option").allTextContents();
+    console.log(`Graph snapshot options: ${options.slice(0, 5).join(", ")}`);
 
     // Verify no phantom entities
     const hasFluxEdge = options.some(o => o.includes("Fluxedge") || o.includes("FluxEdge"));
-    expect(hasFluxEdge, "FluxEdge should not be in entity dropdown").toBe(false);
+    expect(hasFluxEdge, "FluxEdge should not be in snapshot dropdown").toBe(false);
 
-    // Check auto-selected entity
-    const selectedValue = await entitySelect.inputValue();
-    console.log(`Auto-selected entity: ${selectedValue}`);
+    // The default (follow-latest) selection is the newest snapshot.
+    const selectedValue = await snapshotSelect.inputValue();
+    console.log(`Default snapshot: ${selectedValue}`);
 
     if (selectedValue) {
       // Wait for graph to render (POST /api/dcl/run with entity_id)
@@ -135,7 +135,7 @@ test.describe.serial("DCL All Tabs — No Errors", () => {
       const hasGraph = await svgGraph.first().isVisible().catch(() => false);
       const errorText = await errorState.first().textContent().catch(() => null);
 
-      console.log(`Graph v2 rendered: ${hasGraph}, error: ${errorText ?? "none"}`);
+      console.log(`Graph rendered: ${hasGraph}, error: ${errorText ?? "none"}`);
 
       // Must not have a tenant resolution error
       if (errorText) {
@@ -144,14 +144,21 @@ test.describe.serial("DCL All Tabs — No Errors", () => {
       }
     }
 
-    await page.screenshot({ path: "tests/e2e/artifacts/verify_graph_v2.png", fullPage: true });
+    // Viewport (not fullPage) screenshot: fullPage rasterization of the
+    // graph SVG crashes the renderer under WSL2 headless Chromium. The
+    // screenshot is a diagnostic artifact, not an assertion — capture it
+    // defensively with a short timeout so a wedged renderer cannot consume
+    // the test budget (the assertion below still runs).
+    await page
+      .screenshot({ path: "tests/e2e/artifacts/verify_graph_v2.png", fullPage: false, timeout: 8_000 })
+      .catch(() => { /* screenshot is diagnostic only */ });
 
     const appErrors = consoleErrors.filter(
       (e) => !e.includes("ERR_NAME_NOT_RESOLVED") && !e.includes("ERR_BLOCKED_BY_CLIENT")
     );
     expect(
       appErrors,
-      `Console errors on Graph v2: ${appErrors.join("; ")}`
+      `Console errors on Graph tab: ${appErrors.join("; ")}`
     ).toHaveLength(0);
   });
 
