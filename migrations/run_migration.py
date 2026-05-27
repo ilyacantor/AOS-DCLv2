@@ -37,15 +37,26 @@ def run_migrations():
     try:
         conn.autocommit = False
         cur = conn.cursor()
+        applied = 0
         for sql_file in sql_files:
             print(f"Running {sql_file.name} ...")
             sql = sql_file.read_text()
-            cur.execute(sql)
+            # CREATE INDEX CONCURRENTLY cannot run inside a transaction block.
+            # Detect and run that file standalone in autocommit mode.
+            if "CONCURRENTLY" in sql.upper():
+                conn.commit()  # flush any pending transactional migrations
+                conn.autocommit = True
+                cur.execute(sql)
+                conn.autocommit = False
+            else:
+                cur.execute(sql)
             print(f"  OK — {sql_file.name}")
+            applied += 1
         conn.commit()
-        print(f"\nAll {len(sql_files)} migration(s) applied successfully.")
+        print(f"\nAll {applied} migration(s) applied successfully.")
     except Exception as e:
-        conn.rollback()
+        if not conn.autocommit:
+            conn.rollback()
         print(f"\nMIGRATION FAILED: {e}")
         sys.exit(1)
     finally:

@@ -524,19 +524,9 @@ def ingest_triples(
         f"tenant_id={req.tenant_id}, concepts={concept_summary}, duration={duration_ms}ms"
     )
 
-    # Safety warning: flag if table is growing beyond expected bounds
-    if replace:
-        try:
-            total = _triple_store.count_total_rows()
-            if total > 200_000:
-                logger.warning(
-                    "[ingest-triples] semantic_triples has %s total rows "
-                    "(threshold: 200,000). Consider running POST /api/dcl/purge-old-runs "
-                    "for tenant_id=%s.",
-                    f"{total:,}", req.tenant_id,
-                )
-        except Exception:
-            logger.warning("[ingest-triples] Failed to check total row count", exc_info=True)
+    # Bloat-watch moved off the hot path. See GET /api/dcl/admin/triple-count
+    # (this file) — operator/cron polls it; ingest latency is no longer gated
+    # by a full-table COUNT(*).
 
     # Record to ingest_log — observability only, never fails the ingest
     _record_ingest_log(
@@ -759,6 +749,40 @@ def purge_old_runs(tenant_id: str, keep_runs: int = 2):
         f"kept_runs={keep_runs}"
     )
     return {"deleted": deleted, "tenant_id": tenant_id, "kept_runs": keep_runs}
+
+
+@router.get("/api/dcl/admin/triple-count")
+def admin_triple_count(threshold: int = 200_000):
+    """Bloat-watch metrics — total row count of semantic_triples + threshold flag.
+
+    Moved off the ingest hot path (previously inline in /api/dcl/ingest-triples
+    on every replace=true). Operator/cron polls this endpoint; the count runs
+    a full-table COUNT(*) which may take seconds on a large or bloated table,
+    so it is deliberately not gating ingest latency.
+
+    Returns:
+        total_rows: actual row count.
+        threshold: warning threshold (default 200,000).
+        above_threshold: bool — true if total_rows > threshold.
+        warning: operator-readable string when above_threshold, else None.
+    """
+    total = _triple_store.count_total_rows()
+    above = total > threshold
+    warning: Optional[str] = None
+    if above:
+        warning = (
+            f"semantic_triples has {total:,} total rows "
+            f"(threshold: {threshold:,}). Consider running "
+            f"POST /api/dcl/admin/purge-stale or "
+            f"POST /api/dcl/purge-old-runs?tenant_id=<tenant>."
+        )
+        logger.warning(f"[admin/triple-count] {warning}")
+    return {
+        "total_rows": total,
+        "threshold": threshold,
+        "above_threshold": above,
+        "warning": warning,
+    }
 
 
 @router.post("/api/dcl/admin/purge-stale")

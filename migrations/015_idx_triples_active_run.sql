@@ -1,0 +1,31 @@
+-- Migration 015: partial index on (run_id) WHERE is_active=true
+--
+-- Background: swap_and_deactivate's UPDATE
+--   UPDATE semantic_triples SET is_active=false
+--   WHERE run_id = %s AND is_active = true
+-- previously planned as a BitmapAnd of idx_triples_run + idx_triples_concept_domain
+-- (the latter is partial WHERE is_active=true but keyed on concept-domain/entity_id,
+-- so used as a poor proxy for "all active rows globally"). Planner scanned ~668k
+-- row-pointers on a 14M-row dev table to filter the run's ~24k active rows.
+--
+-- A direct partial index on (run_id) WHERE is_active=true collapses the plan to
+-- a single index scan returning only the rows that need the UPDATE.
+--
+-- CONCURRENTLY: creation does not block reads/writes on semantic_triples. Must
+-- run outside a transaction block — the migration runner detects CONCURRENTLY
+-- and switches to autocommit mode for this file.
+--
+-- IF NOT EXISTS: idempotent — safe to re-run.
+--
+-- POST-MIGRATION CHECK: CREATE INDEX CONCURRENTLY can leave the index in an
+-- invalid state (indisvalid=false) if it hits conflicting writes during the
+-- second pass. After running this migration, verify:
+--   SELECT indisvalid FROM pg_index
+--   WHERE indexrelid = 'idx_triples_active_run'::regclass;
+-- If valid=false, remediate with:
+--   REINDEX INDEX CONCURRENTLY idx_triples_active_run;
+-- The planner ignores invalid indexes — applying this migration without
+-- verifying validity leaves the deactivate UPDATE on the slow BitmapAnd plan.
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_triples_active_run
+    ON semantic_triples (run_id) WHERE is_active = true;
