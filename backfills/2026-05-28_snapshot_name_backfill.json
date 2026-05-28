@@ -1,0 +1,85 @@
+{
+  "audit_date": "2026-05-28T18:09:26.814184+00:00",
+  "schema": "shared_gdbmdr",
+  "phase": "apply",
+  "polluted_row_count": 7,
+  "rows": [
+    {
+      "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
+      "entity_id": "CloudFleet-IT-4a344d",
+      "current_run_id": "7fff5bf7-f5b6-4050-82ee-7f57da84517f",
+      "current_snapshot_name_old": "cloud-spend-CloudFleet-IT-4a344d",
+      "current_snapshot_name_new": "CloudFleet-IT-4a344d-7fff",
+      "previous_run_id": null,
+      "previous_snapshot_name_old": null,
+      "previous_snapshot_name_new": null,
+      "updated_at": "2026-05-23T00:40:38.084508+00:00"
+    },
+    {
+      "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
+      "entity_id": "CloudFleet-IT-929a77",
+      "current_run_id": "db84e04d-9b07-4106-858b-2b044f839681",
+      "current_snapshot_name_old": "cloud-spend-CloudFleet-IT-929a77",
+      "current_snapshot_name_new": "CloudFleet-IT-929a77-db84",
+      "previous_run_id": null,
+      "previous_snapshot_name_old": null,
+      "previous_snapshot_name_new": null,
+      "updated_at": "2026-05-23T00:47:13.728886+00:00"
+    },
+    {
+      "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
+      "entity_id": "CloudFleet-IT-92e3fb",
+      "current_run_id": "5722ee58-ec4a-4598-8f6a-843911ea8086",
+      "current_snapshot_name_old": "cloud-spend-CloudFleet-IT-92e3fb",
+      "current_snapshot_name_new": "CloudFleet-IT-92e3fb-5722",
+      "previous_run_id": null,
+      "previous_snapshot_name_old": null,
+      "previous_snapshot_name_new": null,
+      "updated_at": "2026-05-22T22:57:08.420414+00:00"
+    },
+    {
+      "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
+      "entity_id": "CloudFleet-IT-966cab",
+      "current_run_id": "b8b1c21d-2429-4b47-9b06-906ab9303547",
+      "current_snapshot_name_old": "cloud-spend-CloudFleet-IT-966cab",
+      "current_snapshot_name_new": "CloudFleet-IT-966cab-b8b1",
+      "previous_run_id": null,
+      "previous_snapshot_name_old": null,
+      "previous_snapshot_name_new": null,
+      "updated_at": "2026-05-23T00:30:37.510788+00:00"
+    },
+    {
+      "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
+      "entity_id": "CloudFleet-IT-bc4224",
+      "current_run_id": "24df1d2c-5a80-4999-8b7a-529be0b16502",
+      "current_snapshot_name_old": "cloud-spend-CloudFleet-IT-bc4224",
+      "current_snapshot_name_new": "CloudFleet-IT-bc4224-24df",
+      "previous_run_id": null,
+      "previous_snapshot_name_old": null,
+      "previous_snapshot_name_new": null,
+      "updated_at": "2026-05-23T00:59:55.594848+00:00"
+    },
+    {
+      "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
+      "entity_id": "CloudFleet-IT-d13902",
+      "current_run_id": "8e1093cd-4b0b-416c-bf89-a97f1236a20b",
+      "current_snapshot_name_old": "cloud-spend-CloudFleet-IT-d13902",
+      "current_snapshot_name_new": "CloudFleet-IT-d13902-8e10",
+      "previous_run_id": null,
+      "previous_snapshot_name_old": null,
+      "previous_snapshot_name_new": null,
+      "updated_at": "2026-05-23T00:53:37.602589+00:00"
+    },
+    {
+      "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
+      "entity_id": "test-debug-1",
+      "current_run_id": "03d735a0-f206-4f4d-9694-bb6263b88f72",
+      "current_snapshot_name_old": "cloud-spend-test-debug-1",
+      "current_snapshot_name_new": "test-debug-1-03d7",
+      "previous_run_id": null,
+      "previous_snapshot_name_old": null,
+      "previous_snapshot_name_new": null,
+      "updated_at": "2026-05-23T00:29:32.510914+00:00"
+    }
+  ]
+}

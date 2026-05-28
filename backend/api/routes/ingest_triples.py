@@ -500,6 +500,42 @@ def ingest_triples(
             },
         )
 
+    # Persistence-boundary enforcement (dcl_deferred_work.md#36).
+    # snapshot_name must be either None (AAM relay path — read-side derives,
+    # dcl#38 contract) or canonical I5 form `{entity_id}-{4hex}`. Non-None
+    # non-canonical names (raw UUIDs, "cloudedge-*", "cloud-spend-*",
+    # "cco_summary", etc.) are rejected — no writer can persist a
+    # non-canonical name regardless of which Farm path produced the call.
+    if req.snapshot_name is not None and req.snapshot_name != "":
+        import re as _re_check
+        _canon_pattern = _re_check.compile(
+            r"^" + _re_check.escape(resolved_entity_id) + r"-[0-9a-f]{4}$",
+            _re_check.IGNORECASE,
+        )
+        if not _canon_pattern.match(req.snapshot_name):
+            _canonical = (
+                f"{resolved_entity_id}-"
+                f"{str(req.dcl_ingest_id).replace('-', '')[:4]}"
+            )
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "NONCANONICAL_SNAPSHOT_NAME",
+                    "message": (
+                        f"snapshot_name {req.snapshot_name!r} rejected — "
+                        f"does not match I5 form '<entity_id>-<4hex>' "
+                        f"for entity_id={resolved_entity_id!r}. "
+                        f"Canonical would be {_canonical!r}. "
+                        f"Caller must normalize via farm.services.identity."
+                        f"normalize_run_name() before push, or omit "
+                        f"snapshot_name to let the read path derive."
+                    ),
+                    "supplied": req.snapshot_name,
+                    "expected_canonical": _canonical,
+                    "entity_id": resolved_entity_id,
+                },
+            )
+
     # Atomic pointer swap + deactivation — single transaction.
     # Entity-scoped: only deactivates the previous run for THIS entity.
     # Not set for append=true (multi-batch ingest of the same run_id keeps
