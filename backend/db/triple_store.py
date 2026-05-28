@@ -404,73 +404,96 @@ class TripleStore:
             )
         return str(row[0])
 
-    def get_tenant_snapshots(self, tenant_id: str) -> list[dict]:
-        """Get all available snapshots for a tenant from semantic_triples.
+    def get_tenant_snapshots(
+        self, tenant_id: str, limit: int = 10,
+    ) -> list[dict]:
+        """Get the N most-recent snapshots for a tenant, newest-first.
 
-        Uses a recursive CTE skip-scan on idx_triples_tenant_run to find
-        distinct run_ids in ~60ms, then batch-counts in ~600ms.  Replaces
-        the old tenant_runs-only approach that capped at 2 snapshots.
+        Single pool borrow + one SQL pass. Replaces the prior 3-query
+        sequence (tenant_runs SELECT + recursive CTE skip-scan + counts_sql
+        across ALL the tenant's runs) that exceeded the 15s statement
+        timeout once the tenant accumulated hundreds of inactive runs (see
+        dcl_deferred_work.md#27 BLOAT REGRESSION 2026-05-27).
 
-        snapshot_name uses the stored name from tenant_runs for current/
-        previous runs, and derives {entity_id}-{run_id_prefix} for older
-        runs (I5 convention).
+        Mirrors get_all_snapshots()'s pattern: recursive CTE skip-scan to
+        enumerate distinct run_ids for this tenant cheaply, ROW_NUMBER over
+        created_at DESC, filter rn <= limit so counts_sql touches only N
+        runs instead of all. Cost becomes O(N) at the read boundary
+        regardless of bloat.
+
+        snapshot_name preserves the existing per-tenant fetchone() behavior
+        intentionally (one arbitrary tenant_runs row supplies current/
+        previous names). Per-entity name correctness tracked in
+        dcl_deferred_work.md#36/#39.
+
+        Args:
+            limit: Top-N runs by created_at. Clamped [1, 50].
         """
-        tr_sql = """
-            SELECT current_run_id, previous_run_id,
-                   current_snapshot_name, previous_snapshot_name
-            FROM tenant_runs WHERE tenant_id = %s
-        """
-        # Recursive skip-scan: jumps between distinct run_ids via the
-        # (tenant_id, run_id) index — touches ~1 row per run, not 20k.
-        skip_scan_sql = """
-            WITH RECURSIVE runs AS (
+        n = max(1, min(int(limit), 50))
+        sql = """
+            WITH RECURSIVE all_runs AS (
                 (SELECT run_id, entity_id, created_at
                  FROM semantic_triples
                  WHERE tenant_id = %s
                  ORDER BY run_id LIMIT 1)
                 UNION ALL
                 (SELECT s.run_id, s.entity_id, s.created_at
-                 FROM runs r, LATERAL (
+                 FROM all_runs r, LATERAL (
                      SELECT run_id, entity_id, created_at
                      FROM semantic_triples
                      WHERE tenant_id = %s AND run_id > r.run_id
                      ORDER BY run_id LIMIT 1
                  ) s)
+            ),
+            ranked AS (
+                SELECT run_id, entity_id, created_at,
+                       ROW_NUMBER() OVER (ORDER BY created_at DESC) AS rn
+                FROM all_runs
+            ),
+            top_n AS (
+                SELECT run_id, entity_id, created_at
+                FROM ranked WHERE rn <= %s
+            ),
+            tenant_name_pick AS (
+                SELECT current_run_id, previous_run_id,
+                       current_snapshot_name, previous_snapshot_name
+                FROM tenant_runs
+                WHERE tenant_id = %s
+                ORDER BY entity_id
+                LIMIT 1
+            ),
+            run_counts AS (
+                SELECT run_id, COUNT(*) AS total_rows
+                FROM semantic_triples
+                WHERE run_id IN (SELECT run_id FROM top_n)
+                GROUP BY run_id
             )
-            SELECT run_id, entity_id, created_at
-            FROM runs ORDER BY created_at DESC
-        """
-        counts_sql = """
-            SELECT run_id, COUNT(*) FROM semantic_triples
-            WHERE run_id = ANY(%s::uuid[])
-            GROUP BY run_id
+            SELECT
+                t.run_id, t.entity_id, t.created_at,
+                tn.current_run_id, tn.previous_run_id,
+                tn.current_snapshot_name, tn.previous_snapshot_name,
+                COALESCE(c.total_rows, 0) AS total_rows
+            FROM top_n t
+            LEFT JOIN tenant_name_pick tn ON true
+            LEFT JOIN run_counts c ON c.run_id = t.run_id
+            ORDER BY t.created_at DESC
         """
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(tr_sql, (tenant_id,))
-                tr_row = cur.fetchone()
-
-                cur.execute(skip_scan_sql, (tenant_id, tenant_id))
-                run_rows = cur.fetchall()
-
-                if not run_rows:
-                    return []
-
-                run_ids = [r[0] for r in run_rows]
-                cur.execute(counts_sql, (run_ids,))
-                counts = {str(r[0]): r[1] for r in cur.fetchall()}
-
-        current_run_id = str(tr_row[0]) if tr_row and tr_row[0] else None
-        previous_run_id = str(tr_row[1]) if tr_row and tr_row[1] else None
-        cur_snap_name = tr_row[2] if tr_row else None
-        prev_snap_name = tr_row[3] if tr_row else None
+                cur.execute(sql, (tenant_id, tenant_id, n, tenant_id))
+                rows = cur.fetchall()
 
         snapshots = []
-        for run_id_val, entity_id, created_at in run_rows:
-            rid = str(run_id_val)
-            if rid == current_run_id and cur_snap_name:
+        for (run_id, entity_id, created_at,
+             current_run_id, previous_run_id,
+             cur_snap_name, prev_snap_name, total_rows) in rows:
+            rid = str(run_id)
+            current = str(current_run_id) if current_run_id else None
+            previous = str(previous_run_id) if previous_run_id else None
+
+            if rid == current and cur_snap_name:
                 snap_name = cur_snap_name
-            elif rid == previous_run_id and prev_snap_name:
+            elif rid == previous and prev_snap_name:
                 snap_name = prev_snap_name
             else:
                 snap_name = f"{entity_id}-{rid[:4]}" if entity_id else None
@@ -480,10 +503,9 @@ class TripleStore:
                 "snapshot_name": snap_name,
                 "entity_id": entity_id,
                 "run_timestamp": created_at.isoformat() if created_at else None,
-                "total_rows": counts.get(rid, 0),
-                "is_current": rid == current_run_id,
+                "total_rows": total_rows,
+                "is_current": rid == current,
             })
-
         return snapshots
 
     def get_all_snapshots(self, limit_per_tenant: int = 10) -> list[dict]:

@@ -459,7 +459,7 @@ async def dcl_snapshots(
     n = max(1, min(int(limit), 50))
     try:
         if tenant_id:
-            snapshots = store.get_tenant_snapshots(tenant_id)[:n]
+            snapshots = store.get_tenant_snapshots(tenant_id, limit=n)
         else:
             snapshots = store.get_all_snapshots(limit_per_tenant=n)
     except ValueError as e:
