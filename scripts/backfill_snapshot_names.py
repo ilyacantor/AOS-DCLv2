@@ -122,28 +122,34 @@ def main() -> int:
                 cur_old = row["current_snapshot_name"]
                 prev_old = row["previous_snapshot_name"]
                 entity_id_row = row["entity_id"]
-                # A row needs fixing if its name is non-NULL and non-canonical
-                # for its entity_id — covers UUID-shape, cloudedge-*,
-                # cloud-spend-*, "cco_summary", and any future non-I5 form.
+                cur_run = row["current_run_id"]
+                prev_run = row["previous_run_id"]
+                # Rule (post dcl#36 + #38 option X):
+                # - current_run_id ALWAYS exists → current_snapshot_name must
+                #   ALWAYS be canonical. NULL (AAM-relay legacy) or any
+                #   non-canonical shape (UUID, cloudedge-*, cloud-spend-*,
+                #   "cco_summary") needs fixing.
+                # - previous_snapshot_name must be canonical IFF previous_run_id
+                #   exists; a NULL name with NULL run_id is correct (no prior
+                #   run to name) and is left alone.
                 cur_needs_fix = (
-                    cur_old is not None
-                    and not is_canonical(entity_id_row, cur_old)
+                    cur_run is not None
+                    and (cur_old is None or not is_canonical(entity_id_row, cur_old))
                 )
                 prev_needs_fix = (
-                    prev_old is not None
-                    and not is_canonical(entity_id_row, prev_old)
+                    prev_run is not None
+                    and (prev_old is None or not is_canonical(entity_id_row, prev_old))
                 )
                 if not (cur_needs_fix or prev_needs_fix):
                     continue
                 entity_id = row["entity_id"]
                 cur_new = (
-                    derive_run_name(entity_id, str(row["current_run_id"]))
+                    derive_run_name(entity_id, str(cur_run))
                     if cur_needs_fix else None
                 )
                 prev_new = (
-                    derive_run_name(entity_id, str(row["previous_run_id"]))
-                    if prev_needs_fix and row["previous_run_id"] is not None
-                    else None
+                    derive_run_name(entity_id, str(prev_run))
+                    if prev_needs_fix else None
                 )
                 polluted_rows.append({
                     "tenant_id": str(row["tenant_id"]),
@@ -174,12 +180,14 @@ def main() -> int:
 
         with conn.cursor() as cur:
             for r in polluted_rows:
+                # Match the old value with IS NOT DISTINCT FROM so NULL rows
+                # (AAM-relay legacy) are matched too — `= NULL` never is.
                 if r["current_snapshot_name_new"] is not None:
                     cur.execute(
                         f"UPDATE {args.schema}.tenant_runs "
                         f"SET current_snapshot_name = %s "
                         f"WHERE tenant_id = %s AND entity_id = %s "
-                        f"AND current_snapshot_name = %s",
+                        f"AND current_snapshot_name IS NOT DISTINCT FROM %s",
                         (
                             r["current_snapshot_name_new"],
                             r["tenant_id"], r["entity_id"],
@@ -192,7 +200,7 @@ def main() -> int:
                         f"UPDATE {args.schema}.tenant_runs "
                         f"SET previous_snapshot_name = %s "
                         f"WHERE tenant_id = %s AND entity_id = %s "
-                        f"AND previous_snapshot_name = %s",
+                        f"AND previous_snapshot_name IS NOT DISTINCT FROM %s",
                         (
                             r["previous_snapshot_name_new"],
                             r["tenant_id"], r["entity_id"],
@@ -201,17 +209,24 @@ def main() -> int:
                     )
                     rows_updated += cur.rowcount
 
-            # Residual check: any non-canonical row left? Loop in Python
-            # because canonical depends on entity_id (per-row predicate).
+            # Residual check: any row that SHOULD be canonical but isn't?
+            # current_run_id present → current_snapshot_name must be canonical
+            # (NULL counts as residual post-X). previous canonical IFF
+            # previous_run_id present. Per-row predicate → loop in Python.
             cur.execute(
-                f"SELECT entity_id, current_snapshot_name, previous_snapshot_name "
+                f"SELECT entity_id, current_run_id, current_snapshot_name, "
+                f"previous_run_id, previous_snapshot_name "
                 f"FROM {args.schema}.tenant_runs"
             )
             residual = 0
-            for ent, cur_n, prev_n in cur.fetchall():
-                if cur_n is not None and not is_canonical(ent, cur_n):
+            for ent, cur_run, cur_n, prev_run, prev_n in cur.fetchall():
+                if cur_run is not None and (
+                    cur_n is None or not is_canonical(ent, cur_n)
+                ):
                     residual += 1
-                if prev_n is not None and not is_canonical(ent, prev_n):
+                if prev_run is not None and (
+                    prev_n is None or not is_canonical(ent, prev_n)
+                ):
                     residual += 1
 
         if residual > 0:
