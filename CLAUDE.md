@@ -1,6 +1,7 @@
 # AutonomOS (AOS) — Agent Constitution
-> Version: 7.0 | Updated: March 2026 | Owner: Ilya (CEO)
+> Version: 7.1 | Updated: May 2026 | Owner: Ilya (CEO)
 > Replaces: CLAUDE.md v6.0 + HARNESS_RULES_v2.md (now one document)
+> v7.1: architecture (pipeline topology, RACI table, ports, module wiring) moved to the canonical governing docs; this file holds durable behavioral rules and guardrails only.
 > Deploy to `tests/CLAUDE.md` in every AOS repo.
 
 ---
@@ -44,20 +45,19 @@ Ilya is the CEO and de facto CTO. He is NOT a developer. He reasons architectura
 ---
 
 ## PLATFORM IN ONE PARAGRAPH
-AutonomOS is an AI-native enterprise platform that delivers unified context for the enterprise. It discovers what exists (AOD), understands how to connect (AAM), generates synthetic financial models (Farm), maps everything to business meaning via a semantic triple store (DCL — AOS only), runs multi-entity workflows for M&A and integration intelligence (Convergence), lets humans and AI query in plain English (NLQ), and surfaces the operator experience through Console. Platform hosts the Mai concierge agent and the supervised execution classification engine. Mai is the concierge — she reads broadly, writes to admin surfaces only, and does not execute operational workflows. Convergence owns operational workflow execution (COFA merge, combining, entity resolution, QofE) via code-driven control flow with bounded LLM reasoning steps.
+Platform overview and module roles are architecture — see `aos_production_architecture_blueprint_v1.1.md` and the RACI (`AOS_MASTER_RACI_v8.6.csv`).
 
 ---
 
 ## DATA ARCHITECTURE
-**AOS pipeline:** AOD → AAM → Farm → triple conversion → PG direct. Six orchestrated steps. Only Farm Financials writes triples to DCL via orchestrator. Existing direct-PG write code in AOD/AAM is labeled tech debt — must not be extended. Old DCL pipe ingest path (Structure/Dispatch/Content) is deprecated — do not fix or extend.
+Pipeline topology, stage order, and triple write paths are architecture — see `se_triples_conversion_build_plan_v2.2.md` and `pipeline_identity_architecture_v1` (AOS), `convergence_blueprint_master` (Convergence), `AAM_Blueprint_v3` (AAM connectivity).
 
-**Convergence pipeline:** Farm (per entity) → Convergence (per entity) → COFA merge → Verify. All Convergence engines live in the Convergence repo. Farm Convergence push routes to Convergence backend (port 8010), not DCL. Convergence triples write to convergence_triples. DCL is never in the Convergence write path.
-
-**AOS and Convergence are strict separation of concerns with no shared plumbing.** Unit of work is the stage, not the pipeline. No shared code paths between AOS and Convergence pipelines.
-
-- **Entities:** Transitional fixture configs (Meridian, Cascadia) are superseded by convergence_transition_master WP2. Entity is a tag — no split brain.
-- **Farm configs:** Current fixture configs will be eradicated per convergence_transition_master. Any numbers at $35M or $124M scale are broken.
-- **No demo mode.** fact_base.json is removed. If data is missing, fail loudly.
+Durable guardrails:
+- Existing direct-PG write code in AOD/AAM is tech debt — must not be extended.
+- The old DCL pipe ingest path (Structure/Dispatch/Content) is deprecated — do not fix or extend.
+- AOS and Convergence are strict separation of concerns — no shared code paths between the two pipelines. Unit of work is the stage, not the pipeline.
+- Entity is a tag — no split brain. No hardcoded entity names; fixture configs are transitional and being eradicated (convergence_transition_master). Any numbers at $35M or $124M scale are broken.
+- No demo mode. fact_base.json is removed. If data is missing, fail loudly.
 
 ### Terminology
 - AOS = single-entity product (codebase: SE)
@@ -129,48 +129,37 @@ Hook scope (scripts/precommit.sh, sourced from `.playwright-banned-patterns`): i
 ## MODULE RACI — SUMMARY
 **Authoritative source: `AOS_MASTER_RACI_v8.6.csv`**
 
-| Module | Owns | Does NOT own |
-|--------|------|-------------|
-| **AOD** | Discovery, classification, SOR detection, ConnectionCandidate generation | Pipe blueprints, data extraction, semantic mapping |
-| **AAM** | Pipe blueprints, work orders, drift detection, self-healing, adapters | Data movement, semantic mapping |
-| **DCL** (SE only) | Semantic triple store, ontology, graph engine, SE query resolution, reconciliation, triple monitoring. Owns all write-side invariants (ingest, is_active, tenant_runs). | ME engines (moved to Convergence), engagement lifecycle, discovery, NLQ formatting |
-| **Convergence** (M&A product) | All Convergence v2 engines (combining, bridge, QoE, overlap, cross-sell, entity resolution, COFA, what-if), engagement lifecycle, resolution workspaces, entity policies, model_client (Anthropic SDK direct), workflow execution. Reads DCL tables (SELECT only). Writes to convergence_triples (own table). | Triple store schema, AOS query resolution, discovery, NLQ formatting, Mai concierge |
-| **NLQ** | Intent resolution, persona filtering, query dispatch, report portal, rendering | Semantic mapping, data storage |
-| **Farm** | Synthetic data, financial models, test oracle, triple conversion, entity_id generation | Production data, live connections |
-| **Platform** | Mai concierge runtime, constitution, classification engine, supervised execution, admin tool registry, guided tour | Operational workflow execution (owned by Convergence), production operator UI (owned by Console) |
-| **Console** | Production UI, pipeline orchestration, operator feed, task queue, upload, e2e demo, Mai chat | Module internals — calls module APIs |
+Module ownership (Owns / Does NOT own per module, 8 active services + Console) is architecture — read the CSV. The table previously inlined here was abbreviated and drifts.
 
 **RACI VIOLATION = STOP AND FLAG.** Exception (A12/C6): RACI is for design decisions. Fix bugs wherever they live.
 
 ---
 
 ## CONVERGENCE GUARDRAIL
-Convergence = base AOS + a bridge where Target pipes join Acquirer pipes into one unified context via Convergence's convergence_triples. Entity is a tag. Same engine, ontology, resolution, query routing. **Convergence is a separate repo and service (port 8010/3010). DCL is AOS-only.** Reject any proposal that creates separate engines, adds Convergence-specific columns to DCL, introduces split brain, or diverges from base AOS for multi-entity.
+Convergence topology, ports, and cross-service wiring are architecture — see `convergence_blueprint_master`. Convergence is a separate repo and service; DCL is AOS-only.
 
-**Cross-service contracts:**
-- Convergence reads DCL-owned tables directly (SELECT only) — report-time queries need sub-ms latency.
-- Convergence writes to its own convergence_triples table. Convergence never writes to DCL-owned tables.
-- DCL never reads or writes Convergence-owned tables. DCL calls GET /api/convergence/engagement/active for engagement context.
+Durable guardrails:
+- Reject any proposal that creates separate engines, adds Convergence-specific columns to DCL, introduces split brain, or diverges from base AOS for multi-entity. Entity is a tag — same engine, ontology, resolution, query routing.
+- Convergence reads DCL-owned tables SELECT-only and writes to its own table — it never writes to DCL-owned tables.
+- DCL never reads or writes Convergence-owned tables.
 - Schema changes to semantic_triples require Convergence coordination (SCHEMA_CONTRACT.md in DCL).
 
 **Workflow vs Agent category rule:**
 - **Agent** (Mai): LLM decides control flow. Concierge scope only. Read-broad, write-admin-only.
-- **Workflow** (Convergence): code decides control flow. LLM is a bounded reasoning step inside one node. Convergence calls Anthropic SDK directly via model_client — no dependency on Platform Mai for LLM access.
-- Operational tasks (COFA merge, combining, entity resolution, QofE review) route through Convergence workflow endpoints (POST /api/convergence/workflow/*/run), not through Mai's chat endpoint.
+- **Workflow** (Convergence): code decides control flow. LLM is a bounded reasoning step inside one node. Convergence calls the Anthropic SDK directly — no dependency on Platform Mai for LLM access.
+- Operational tasks (COFA merge, combining, entity resolution, QofE review) route through Convergence workflow endpoints, not through Mai's chat endpoint.
 - Operational tools (write_cofa_mapping, write_combining_output, write_resolution_decision) are NOT registered in Mai's tool registry. They exist inside Convergence workflow handlers.
 - Do not ship operational execution through Mai. Do not register operational tools in Mai's catalog. This is a permanent exclusion.
 
 ---
 
 ## MAI
-Concierge agent. Reads broadly, writes narrowly to admin surfaces only. Does NOT execute operational workflows. Constitution lives in Platform (`~/code/platform/app/mai/constitution/`). Full spec: mai_blueprint_master.
+Mai's runtime, scope, constitution layers, supervised-execution mechanics, and observability surfaces are architecture — see `mai_blueprint_master`. Constitution lives in Platform.
 
-- **Scope:** Onboarding guidance, admin (tenant/user/engagement metadata), tech support, navigation, explanation of platform state, observability queries over workflow runs.
-- **Constitution:** Layer 0 (Identity, voice, generalization charter), Layer 1 (Scenario Variant), Layer 2 (Observability grammar, escalation criteria), Layer 3 (Quality gates). Accounting axioms and entity policies are NOT in Mai's constitution — they live in Convergence workflow prompts.
-- **Supervised Execution:** Four-tier model governs Convergence workflow invocations (not Mai concierge actions). Classification engine in Platform. Console operator feed (card-based, tier badges, 30-second polling).
-- **Entity policies:** Manually authored Markdown, hosted in `convergence/backend/policies/`. Read by Convergence workflow pre-flight. Not part of Mai's constitution.
-- **Does NOT:** Execute operational workflows. Route COFA merge, combining, entity resolution, or QofE through her chat endpoint. Register operational tools in her tool catalog. Recommend accounting resolutions.
-- **Observability:** Mai reads workflow run summaries via GET /api/convergence/runs. She explains results by reading structured data, not by re-reasoning over accounting rules.
+Durable guardrails — Mai is the concierge: reads broadly, writes narrowly to admin surfaces only. She does NOT:
+- Execute operational workflows, or route COFA merge / combining / entity resolution / QofE through her chat endpoint.
+- Register operational tools in her tool catalog.
+- Recommend accounting resolutions — she explains results by reading structured data, not by re-reasoning over accounting rules.
 
 ---
 
@@ -205,17 +194,7 @@ The most dangerous failure mode. They make broken features look working.
 ---
 
 ## TECH STACK
-
-| Module | Backend | Frontend | DB | Port (BE/FE) |
-|--------|---------|----------|----|---------------|
-| AOD | FastAPI/Python | React 18 + Vite | Supabase PG | 8001 / 3001 |
-| AAM | FastAPI/Python | Server-rendered HTML | SQLite | 8002 / 8002 |
-| Farm | FastAPI/Python | Jinja2/Tailwind | Supabase PG | 8003 / 8003 |
-| DCL | FastAPI/Python | React 18 + Vite | Supabase PG + Pinecone | 8004 / 3004 |
-| NLQ | FastAPI/Python | React 18 + Vite | Supabase PG | 8005 / 3005 |
-| Platform | FastAPI/Python | React 18 + Vite | Supabase PG | 8006 / 3006 |
-| Console | FastAPI + asyncpg | React 18 + TS + Vite + Tailwind | Supabase PG | 8009 / 3009 |
-| Convergence | FastAPI/Python | React 18 + Vite | Supabase PG (shared) | 8010 / 3010 |
+Per-module backend/frontend/DB/ports are architecture — see `aos_production_architecture_blueprint_v1.1.md`; each repo's own ports live in its repo-specific guardrails.
 
 Separate repos per module. All repos branch from `dev`. No feature branches unless explicitly requested.
 
