@@ -1008,7 +1008,8 @@ class TripleStore:
         where = " AND ".join(clauses)
         sql = (
             "SELECT id, tenant_id, entity_id, concept, property, value, period, "
-            "       currency, unit, source_system, source_field, pipe_id, "
+            "       currency, unit, source_system, source_field, "
+            "       fabric_plane, fabric_product, pipe_id, "
             "       run_id, confidence_score, confidence_tier, is_active, "
             "       created_at "
             f"FROM semantic_triples WHERE {where} "
