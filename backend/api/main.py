@@ -73,6 +73,7 @@ from backend.dcl.routes import router as dcl_router
 from backend.api.routes.graph_traversal import router as graph_traversal_router
 from backend.api.routes.mai import router as mai_router
 from backend.api.routes.ingest_triples import router as ingest_triples_router
+from backend.api.routes.ingest_records import router as ingest_records_router
 from backend.api.routes.triple_monitor import router as triple_monitor_router
 from backend.api.routes.recon_checks import router as recon_checks_router
 from backend.api.routes.monitor import router as monitor_router
@@ -348,6 +349,7 @@ app.include_router(dcl_router)
 app.include_router(graph_traversal_router)
 app.include_router(mai_router)
 app.include_router(ingest_triples_router)
+app.include_router(ingest_records_router)
 app.include_router(triple_monitor_router)
 app.include_router(recon_checks_router)
 # Demo pipeline monitor — read-only metrics endpoint. Additive and isolated.

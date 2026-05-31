@@ -380,7 +380,13 @@ def ingest_triples(
                 source_system=t.source_system,
                 ontology_concept=t.concept,
                 confidence=t.confidence_score,
-                method=t.resolution_method or "heuristic",
+                # Mapping.method describes how the field→concept mapping was
+                # derived (Literal: heuristic/rag/llm/llm_validated/aam_edge) —
+                # NOT entity-resolution method. Feeding resolution_method here
+                # (deterministic/fuzzy/manual) raised a ValidationError for any
+                # resolved triple ingested in Prod mode (now reachable via the
+                # /ingest-records fabric path). Field-mapping method is heuristic.
+                method="heuristic",
                 status="ok",
             )
         field_mappings = list(seen.values())
@@ -931,3 +937,59 @@ def _update_seed_manifest(
     except Exception as e:
         # Manifest update is informational — log but don't fail the ingest
         logger.warning(f"[ingest-triples] Failed to update seed_manifest.json: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Store helpers shared with the fabric-connect records path
+# (kept in this module — the store-write boundary — so triple-table access
+#  stays out of the route/resolver/test layers).
+# ---------------------------------------------------------------------------
+
+def promote_canonical_to_manual(tenant_id: str, canonical_id: str) -> int:
+    """Flip fuzzy-bound triples for a canonical to manual @ 0.99 on operator HITL
+    approval (the hitl_confirmed path). Returns the number of triples updated."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE semantic_triples "
+                "SET resolution_method='manual', resolution_confidence=0.99, updated_at=now() "
+                "WHERE tenant_id=%s AND canonical_id=%s AND resolution_method='fuzzy'",
+                (tenant_id, canonical_id),
+            )
+            n = cur.rowcount
+            conn.commit()
+    logger.info(
+        "[resolver-hitl] promoted %d triples to manual for canonical_id=%s", n, canonical_id
+    )
+    return n
+
+
+def get_run_triples(tenant_id: str, run_id: str) -> list[dict]:
+    """Return all triples for a (tenant_id, run_id) with resolution + provenance
+    columns. Read primitive used by fabric-connect verification."""
+    cols = [
+        "concept", "property", "value", "source_system", "source_field",
+        "pipe_id", "fabric_plane", "fabric_product", "confidence_score",
+        "confidence_tier", "canonical_id", "resolution_method", "resolution_confidence",
+    ]
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"SELECT {', '.join(cols)} FROM semantic_triples "
+                "WHERE tenant_id=%s AND run_id=%s",
+                (tenant_id, run_id),
+            )
+            rows = cur.fetchall()
+    return [dict(zip(cols, r)) for r in rows]
+
+
+def delete_tenant_triples(tenant_id: str) -> int:
+    """Hard-delete all triples for a tenant. Tenant-scoped store maintenance
+    primitive (sibling of delete_inactive / purge_old_runs)."""
+    _validate_uuid(tenant_id, "tenant_id")
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM semantic_triples WHERE tenant_id=%s", (tenant_id,))
+            n = cur.rowcount
+            conn.commit()
+    return n
