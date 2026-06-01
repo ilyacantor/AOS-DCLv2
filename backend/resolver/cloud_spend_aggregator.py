@@ -115,4 +115,18 @@ def aggregate_cloud_spend(
                   unit="count"))
     out.append(_t(f"{_CONCEPT_ROOT}.savings", "potential_amount",
                   round(potential_savings, 2), unit="usd", currency="USD"))
+    # NLQ "top"/summary metrics on their own DCL-registered concept roots
+    # (cloud_spend_by_service / cloud_spend_by_team / cloud_savings_opportunities_amount
+    # are registered in ontology_concepts.yaml + persona_domains.yaml under CTO),
+    # property "amount" per nlq metric_concept_map.
+    if by_service:
+        _, top_svc_amt = max(by_service.items(), key=lambda kv: kv[1])
+        out.append(_t("cloud_spend_by_service.top_service", "amount",
+                      round(top_svc_amt, 2), unit="usd", currency="USD"))
+    if by_team:
+        _, top_team_amt = max(by_team.items(), key=lambda kv: kv[1])
+        out.append(_t("cloud_spend_by_team.top_team", "amount",
+                      round(top_team_amt, 2), unit="usd", currency="USD"))
+    out.append(_t("cloud_savings_opportunities_amount.summary", "amount",
+                  round(potential_savings, 2), unit="usd", currency="USD"))
     return out
