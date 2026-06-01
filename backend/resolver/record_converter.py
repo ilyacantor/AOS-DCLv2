@@ -172,6 +172,17 @@ class RecordConverter:
         fabric_plane = pipe.get("fabric_plane")
         fabric_product = pipe.get("fabric_product")
         domain = (pipe.get("domain") or "").strip() or None
+        # Cloud-spend pipes carry a metric fleet, not party records. NLQ's
+        # cloud-spend metrics are direct lookups of pre-aggregated concepts
+        # (cloud_spend.summary.total_cost, cloud_spend.by_service.<svc>, ...)
+        # that per-field mapping cannot produce. Compute the fleet aggregates
+        # instead — cloud-spend aggregation lives in DCL ingest.
+        if domain == "cloud_spend":
+            from backend.resolver.cloud_spend_aggregator import aggregate_cloud_spend
+            result.payloads.extend(aggregate_cloud_spend(
+                entity_id=entity_id, pipe=pipe, records=pipe.get("records") or [],
+            ))
+            return
         identity_key = (pipe.get("identity_key") or "").strip() or None
         record_key_field = pipe.get("record_key_field") or "id"
         records = pipe.get("records") or []
