@@ -50,7 +50,7 @@ Platform overview and module roles are architecture — see `aos_production_arch
 ---
 
 ## DATA ARCHITECTURE
-Pipeline topology, stage order, and triple write paths are architecture — see `se_triples_conversion_build_plan_v2.2.md` and `pipeline_identity_architecture_v1` (AOS), `convergence_blueprint_master` (Convergence), `AAM_Blueprint_v3` (AAM connectivity).
+Pipeline topology, stage order, and triple write paths are architecture — see `se_triples_conversion_build_plan_v2.2.md` and `pipeline_identity_architecture_v1` (AOS), `convergence_blueprint_master` (Convergence), `AAM_Blueprint_v4` (AAM connectivity).
 
 Durable guardrails:
 - Existing direct-PG write code in AOD/AAM is tech debt — must not be extended.
