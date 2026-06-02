@@ -13,13 +13,17 @@ Prerequisites:
   - Run: python -m pytest tests/e2e/test_pipeline_quality.py -v
 """
 
+import os
 import re
 import pytest
 import httpx
 from playwright.sync_api import Page, expect
 
-DCL_URL = "http://localhost:3004"
-DCL_BACKEND = "http://localhost:8004"
+# pytest targets the dev stack (DEV_ENV_NOTES: pytest → dcl-dev :8104). The
+# dcl-frontend on :3004 proxies /api → :8104, so backend reads must hit :8104 to
+# stay coherent with what the UI renders. Override for a prod-consistent run.
+DCL_URL = os.environ.get("DCL_FRONTEND_URL", "http://localhost:3004")
+DCL_BACKEND = os.environ.get("DCL_BACKEND_URL", "http://localhost:8104")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -246,18 +250,23 @@ class TestTripleCountGrowth:
         )
         ui_total = int(match.group(1).replace(",", ""))
 
-        # Ground truth from API at runtime (B10) — not a hardcoded threshold
-        resp = httpx.get(f"{DCL_BACKEND}/api/dcl/entities", timeout=10.0)
-        assert resp.status_code == 200, f"Entities API returned {resp.status_code}"
-        api_entities = resp.json()["entities"]
-        expected_total = sum(e["triple_count"] for e in api_entities)
+        # Ground truth from API at runtime (B10). The Ingest tab's "Total Triples"
+        # is the system-wide ACTIVE count — IngestTab sums total_rows over the
+        # is_current snapshots (one active run per entity). Compare against exactly
+        # that, not the all-entities sum (which also counts superseded runs on the
+        # multi-entity AOS tenant and would never match the UI).
+        resp = httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=15.0)
+        assert resp.status_code == 200, f"Snapshots API returned {resp.status_code}"
+        snaps = resp.json()["snapshots"]
+        expected_total = sum(s["total_rows"] for s in snaps if s.get("is_current"))
 
         assert ui_total == expected_total, (
-            f"Total Triples in UI ({ui_total:,}) does not match API "
-            f"ground truth ({expected_total:,}). UI-API mismatch."
+            f"Total Triples in UI ({ui_total:,}) does not match the is_current "
+            f"snapshot total from the API ({expected_total:,}). UI-API mismatch."
         )
-        # Minimum floor: any valid pipeline run produces at least 10K triples
+        # Minimum floor: the active snapshot set should hold a full SE pipeline
+        # run's worth of triples (>= 10K).
         assert ui_total >= 10_000, (
-            f"Total Triples is {ui_total:,}. Even a single-entity SE run "
-            f"should produce at least 10,000 triples."
+            f"Total Triples is {ui_total:,}. The active snapshot set should hold "
+            f"at least 10,000 triples (a full SE pipeline run)."
         )

@@ -11,13 +11,17 @@ Install (once):
   playwright install chromium
 """
 
+import os
 import json
 import pytest
 import httpx
 from playwright.sync_api import Page, expect
 
-DCL_URL = "http://localhost:3004"
-DCL_BACKEND = "http://localhost:8004"
+# pytest targets the dev stack (DEV_ENV_NOTES: pytest → dcl-dev :8104). The
+# dcl-frontend on :3004 proxies /api → :8104, so backend reads must hit :8104 to
+# stay coherent with what the UI renders. Override for a prod-consistent run.
+DCL_URL = os.environ.get("DCL_FRONTEND_URL", "http://localhost:3004")
+DCL_BACKEND = os.environ.get("DCL_BACKEND_URL", "http://localhost:8104")
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -574,16 +578,18 @@ class TestGraphV2Tab:
         # The Graph tab fetches POST /api/dcl/run for the selected snapshot —
         # wait for the "Loading graph data..." state to clear before asserting.
         expect(page.locator("text=Loading graph data")).to_have_count(0, timeout=90_000)
-        svg = page.locator("svg")
-        if svg.count() > 0:
-            nodes = page.locator("[data-layer]")
-            if nodes.count() > 0:
-                # At least one node has a layer attribute
-                assert nodes.count() > 0
-            else:
-                # Empty state is also acceptable
-                body_text = page.locator("body").text_content() or ""
-                assert "no pipeline data" in body_text.lower()
+        # The Sankey draws its nodes asynchronously AFTER the fetch resolves; for a
+        # large snapshot the draw lags the "Loading" clear. Wait for the graph to
+        # settle — nodes drawn OR the empty-state message — so a graph still
+        # drawing is not misread as empty (race fix, B14).
+        nodes = page.locator("[data-layer]")
+        empty = page.get_by_text("No pipeline data", exact=False)
+        expect(nodes.first.or_(empty.first)).to_be_visible(timeout=30_000)
+        if nodes.count() > 0:
+            assert nodes.count() > 0
+        else:
+            body_text = page.locator("body").text_content() or ""
+            assert "no pipeline data" in body_text.lower()
 
     def test_links_have_stroke_width(self, page_setup: Page):
         """At least one link has a non-zero strokeWidth when data exists."""
@@ -603,8 +609,13 @@ class TestGraphV2Tab:
         # Wait for the graph fetch to settle so a still-loading tab is not
         # mistaken for an empty one.
         expect(page.locator("text=Loading graph data")).to_have_count(0, timeout=90_000)
-        # If there's no SVG with nodes, the empty state should show
+        # Wait for the graph to settle — nodes drawn OR the empty-state message —
+        # so a graph still drawing after "Loading" clears is not misread as empty
+        # (race fix, B14).
         nodes = page.locator("[data-layer]")
+        empty = page.get_by_text("No pipeline data", exact=False)
+        expect(nodes.first.or_(empty.first)).to_be_visible(timeout=30_000)
+        # If there's no SVG with nodes, the empty state should show
         if nodes.count() == 0:
             body_text = page.locator("body").text_content() or ""
             assert "no pipeline data" in body_text.lower(), (

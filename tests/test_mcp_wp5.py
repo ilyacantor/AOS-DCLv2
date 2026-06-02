@@ -116,6 +116,43 @@ def _last_audit(tenant_id: str) -> dict:
 pytestmark = pytest.mark.anyio
 
 
+@pytest.fixture(autouse=True)
+def _isolate_anyio_from_playwright():
+    """Isolate each async test from pytest-playwright's leftover event loop.
+
+    pytest-playwright (the sync plugin the e2e tests use) drives its own driver
+    loop and, when its tests run earlier in the same `pytest tests/` session,
+    leaves two pieces of process-global asyncio state poisoned: (1) its loop is
+    still registered as the thread's *running* loop, so anyio can't start/close
+    its own ("Cannot run the event loop while another loop is running"); and
+    (2) anyio's cached _current_runner references a closed asyncio.Runner
+    ("Runner is closed"). Reset both before every async test here so they run
+    clean regardless of collection order.
+    """
+    import asyncio
+    import anyio.pytest_plugin as _ap
+
+    saved_loop = None
+    try:
+        saved_loop = asyncio.events._get_running_loop()
+        asyncio.events._set_running_loop(None)
+    except Exception:
+        pass
+    _ap._runner_leases = 0
+    _ap._runner_stack = None
+    _ap._current_runner = None
+    try:
+        yield
+    finally:
+        # Restore pytest-playwright's running loop so its session-scoped browser
+        # fixture can still tear down ("Browser.close: no running event loop").
+        if saved_loop is not None:
+            try:
+                asyncio.events._set_running_loop(saved_loop)
+            except Exception:
+                pass
+
+
 @pytest.fixture
 def anyio_backend():
     return "asyncio"
