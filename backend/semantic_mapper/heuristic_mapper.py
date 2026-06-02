@@ -142,40 +142,90 @@ class HeuristicMapper:
             for table in source.tables:
                 table_context = self._get_table_context(table.name)
 
+                # --- Pass 1: per-field candidates (Tier 0 AAM edge wins outright) ---
+                edge_by_field: Dict[str, Mapping] = {}
+                ranked_by_field: Dict[str, List[Tuple[Dict[str, Any], float]]] = {}
                 for field in table.fields:
-                    # --- Tier 0: AAM edge lookup ---
-                    edge_mapping = self._try_aam_edge(
-                        source.id, table.name, field.name
-                    )
+                    edge_mapping = self._try_aam_edge(source.id, table.name, field.name)
                     if edge_mapping:
                         self.aam_edge_hits += 1
-                        mappings.append(edge_mapping)
+                        edge_by_field[field.name] = edge_mapping
                         continue
                     self.aam_edge_misses += 1
-
-                    # --- Tier 1: Heuristic classification ---
-                    matched_concept, confidence = self._match_field_to_concept(
-                        field.name,
-                        field.semantic_hint or "",
-                        field.type,
-                        table.name,
-                        table_context
+                    ranked_by_field[field.name] = self._rank_field_candidates(
+                        field.name, field.semantic_hint or "", field.type,
+                        table.name, table_context,
                     )
 
-                    if matched_concept:
-                        mapping = Mapping(
-                            id=f"{source.id}_{table.name}_{field.name}_{matched_concept['id']}",
-                            source_field=field.name,
-                            source_table=table.name,
-                            source_system=source.id,
-                            ontology_concept=matched_concept['id'],
-                            confidence=confidence,
-                            method="heuristic",
-                            status="ok"
-                        )
-                        mappings.append(mapping)
+                # --- Pipe co-occurrence: a domain is "native" to this pipe when a
+                # field maps unambiguously into it (all that field's candidates
+                # share one ontology domain). Anchors like customer_name->customer
+                # (sales) and currency->currency (finance) establish the pipe's
+                # context. Ambiguous fields are then routed by that context, not by
+                # the raw name score — so amount_usd in an orders pipe binds to
+                # revenue (finance, native here), not cloud_spend (foreign here). ---
+                native_domains = self._native_domains(ranked_by_field)
+
+                # --- Pass 2: emit, disambiguating each field against the context ---
+                for field in table.fields:
+                    if field.name in edge_by_field:
+                        mappings.append(edge_by_field[field.name])
+                        continue
+                    ranked = ranked_by_field.get(field.name) or []
+                    if not ranked:
+                        continue
+                    concept, confidence = self._resolve_by_context(ranked, native_domains)
+                    mappings.append(Mapping(
+                        id=f"{source.id}_{table.name}_{field.name}_{concept['id']}",
+                        source_field=field.name,
+                        source_table=table.name,
+                        source_system=source.id,
+                        ontology_concept=concept['id'],
+                        confidence=confidence,
+                        method="heuristic",
+                        status="ok",
+                    ))
 
         return mappings
+
+    @staticmethod
+    def _native_domains(
+        ranked_by_field: Dict[str, List[Tuple[Dict[str, Any], float]]]
+    ) -> set:
+        """Ontology domains this pipe unambiguously contains.
+
+        A field anchors a domain when every one of its candidates resolves to
+        that single domain (no cross-domain contest). Those anchors are the
+        pipe's context; ambiguous fields are read against them.
+        """
+        native = set()
+        for ranked in ranked_by_field.values():
+            domains = {(c.get('domain') or '') for c, _ in ranked}
+            domains.discard('')
+            if len(domains) == 1:
+                native |= domains
+        return native
+
+    @staticmethod
+    def _resolve_by_context(
+        ranked: List[Tuple[Dict[str, Any], float]],
+        native_domains: set,
+    ) -> Tuple[Dict[str, Any], float]:
+        """Pick a field's concept, letting pipe context override the name score.
+
+        Default to the top name-scored candidate. But if that candidate's domain
+        is foreign to the pipe (not among native_domains) while a lower-scored
+        candidate sits in a native domain, the native candidate wins — the field
+        belongs to the pipe's context, not to whatever its name matches globally.
+        With no native context (empty set) the name score stands unchanged.
+        """
+        top_concept, top_conf = ranked[0]
+        top_domain = top_concept.get('domain') or ''
+        if top_domain and native_domains and top_domain not in native_domains:
+            for concept, conf in ranked:
+                if (concept.get('domain') or '') in native_domains:
+                    return concept, conf
+        return top_concept, top_conf
 
     def _try_aam_edge(
         self, system_id: str, table_name: str, field_name: str
@@ -287,26 +337,52 @@ class HeuristicMapper:
         table_name: str,
         table_context: str
     ) -> Tuple[Optional[Dict[str, Any]], float]:
+        """Best single concept for a field by name/alias/pattern scoring.
+
+        Thin wrapper over _rank_field_candidates returning its top candidate.
+        Cross-field context disambiguation is applied by create_mappings, which
+        consumes the full ranked candidate list directly.
+        """
+        ranked = self._rank_field_candidates(
+            field_name, semantic_hint, field_type, table_name, table_context
+        )
+        return ranked[0] if ranked else (None, 0.0)
+
+    def _rank_field_candidates(
+        self,
+        field_name: str,
+        semantic_hint: str,
+        field_type: str,
+        table_name: str,
+        table_context: str
+    ) -> List[Tuple[Dict[str, Any], float]]:
+        """All viable concept candidates for a field, highest confidence first.
+
+        Pure name/alias/pattern scoring — it deliberately keeps EVERY positive
+        candidate (not just the argmax) so create_mappings can break cross-domain
+        ties with pipe co-occurrence. A field whose top name-match is contextually
+        foreign (amount_usd -> cloud_spend in an orders pipe) still carries its
+        in-context runner-up (revenue) here for context to choose.
+        """
         field_lower = field_name.lower()
-        
+
+        # Positive patterns are authoritative — a single deterministic concept.
         positive_match = self._check_positive_patterns(field_name)
         if positive_match and positive_match in self._concept_by_id:
-            return self._concept_by_id[positive_match], CONFIDENCE_POSITIVE_PATTERN
-        
-        best_match = None
-        best_confidence = 0.0
-        
+            return [(self._concept_by_id[positive_match], CONFIDENCE_POSITIVE_PATTERN)]
+
+        scored: List[Tuple[Dict[str, Any], float]] = []
         for concept in self.concepts:
             concept_id = concept['id']
-            
+
             if self._is_blocked_by_negative_pattern(field_name, concept_id):
                 continue
-            
+
             example_fields = concept.get('example_fields', [])
             synonyms = concept.get('aliases', [])
-            
+
             match_confidence = 0.0
-            
+
             for example in example_fields:
                 example_lower = example.lower()
                 if example_lower == field_lower:
@@ -337,21 +413,22 @@ class HeuristicMapper:
             if match_confidence > 0 and table_context == "monitoring":
                 if concept_id in ['incident', 'health', 'aws_resource']:
                     match_confidence = min(match_confidence + CONFIDENCE_CONTEXT_BOOST, CONFIDENCE_CONTEXT_CAP)
-            
-            if match_confidence > best_confidence:
-                best_confidence = match_confidence
-                best_match = concept
-        
-        if best_match is None and semantic_hint:
-            if semantic_hint == "amount":
-                if table_context == "financial":
-                    for c in ['revenue', 'cost']:
-                        if c in self._concept_by_id:
-                            return self._concept_by_id[c], CONFIDENCE_SEMANTIC_AMOUNT
 
-            if semantic_hint == "id":
-                if "account" in field_lower and not self._is_blocked_by_negative_pattern(field_name, "account"):
-                    if "account" in self._concept_by_id:
-                        return self._concept_by_id["account"], CONFIDENCE_SEMANTIC_ID
-        
-        return best_match, best_confidence
+            if match_confidence > 0:
+                scored.append((concept, match_confidence))
+
+        if scored:
+            scored.sort(key=lambda pair: pair[1], reverse=True)
+            return scored
+
+        # Semantic-hint fallback — only when nothing name-matched.
+        if semantic_hint == "amount" and table_context == "financial":
+            for c in ['revenue', 'cost']:
+                if c in self._concept_by_id:
+                    return [(self._concept_by_id[c], CONFIDENCE_SEMANTIC_AMOUNT)]
+        if semantic_hint == "id":
+            if "account" in field_lower and not self._is_blocked_by_negative_pattern(field_name, "account"):
+                if "account" in self._concept_by_id:
+                    return [(self._concept_by_id["account"], CONFIDENCE_SEMANTIC_ID)]
+
+        return []

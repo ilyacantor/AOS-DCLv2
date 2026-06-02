@@ -92,10 +92,6 @@ concepts:
     cluster: Finance
     example_fields:
       - amount
-      - amount_usd
-      - order_total
-      - gross_amount
-      - sale_amount
       - revenue
       - total
       - value
@@ -4005,11 +4001,6 @@ concepts:
       - backlog_count
       - escalation_rate
       - reopen_rate
-      # per-ticket attributes (gateway support feed, #49 Phase 5)
-      - priority
-      - category
-      - assignee_team
-      - ticket_status
     aliases:
       - support_metrics
       - helpdesk
@@ -4272,16 +4263,14 @@ concepts:
     domain: cloud_spend
     cluster: FinOps
     example_fields:
-      # NOTE: cloud-spend is ingested via the cloud_spend_aggregator (domain=
-      # cloud_spend short-circuits per-field mapping). These example_fields are
-      # therefore only consulted when a NON-cloud-spend source has a matching
-      # field — so generic money/period names (cost_usd, amount_usd, period)
-      # were removed: they stole order/revenue amounts into cloud_spend (#49).
       - cloud_spend
       - finops_spend
       - cloud_bill
+      - cost_usd
+      - amount_usd
+      - period
       - account_id
-      - service_code
+      - service
       - resource_id
     aliases:
       - finops

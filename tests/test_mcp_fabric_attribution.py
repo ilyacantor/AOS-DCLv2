@@ -23,21 +23,39 @@ import pytest
 from backend.core.db import get_connection
 from backend.engine.mcp_tools import tool_query_triples
 
+# query_triples is paginated. The ground-truth triple must live in a
+# (tenant, concept) group small enough to be returned in full within this
+# limit — otherwise a truncated page can legitimately omit it (the dev DB
+# holds >5k active rows for some demo concepts, e.g. gl.2200). Coupling the
+# two keeps this acceptance about fabric attribution, not pagination luck.
+QUERY_LIMIT = 1000
+
 
 def _ground_truth_fabric_triple() -> dict | None:
     """One active triple that carries real fabric attribution, straight from
-    the store. Returns None only if no fabric-attributed data exists."""
+    the store. Restricted to a (tenant, concept) group that fits within
+    QUERY_LIMIT so the verifying query returns the whole group, and ordered so
+    the same triple is picked every run (deterministic, truncation-proof).
+    Returns None only if no fabric-attributed data exists."""
     sql = (
-        "SELECT tenant_id, entity_id, concept, id, fabric_plane, fabric_product "
-        "FROM semantic_triples "
-        "WHERE is_active = true "
-        "  AND fabric_plane IS NOT NULL AND fabric_plane NOT IN ('none', '') "
+        "WITH grp AS ("
+        "  SELECT tenant_id, concept FROM semantic_triples "
+        "  WHERE is_active = true "
+        "    AND fabric_plane IS NOT NULL AND fabric_plane NOT IN ('none', '') "
+        "  GROUP BY tenant_id, concept HAVING count(*) <= %s"
+        ") "
+        "SELECT t.tenant_id, t.entity_id, t.concept, t.id, t.fabric_plane, t.fabric_product "
+        "FROM semantic_triples t "
+        "JOIN grp ON grp.tenant_id = t.tenant_id AND grp.concept = t.concept "
+        "WHERE t.is_active = true "
+        "  AND t.fabric_plane IS NOT NULL AND t.fabric_plane NOT IN ('none', '') "
+        "ORDER BY t.tenant_id, t.concept, t.id "
         "LIMIT 1"
     )
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("SET statement_timeout = 15000")
-            cur.execute(sql)
+            cur.execute(sql, (QUERY_LIMIT,))
             row = cur.fetchone()
             if row is None:
                 return None
@@ -57,7 +75,7 @@ def test_query_triples_carries_fabric_attribution():
     )
 
     rows = tool_query_triples(
-        gt["tenant_id"], concept=gt["concept"], limit=1000, active_only=True
+        gt["tenant_id"], concept=gt["concept"], limit=QUERY_LIMIT, active_only=True
     )
     assert rows, (
         f"query_triples(tenant={gt['tenant_id']}, concept={gt['concept']}) "
