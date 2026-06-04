@@ -148,6 +148,16 @@ the Convergence repo SELECTs requires coordination per the top of this file.
 Status: **LOCKED** = conformed + verified; **PENDING** = canonical decided, conform queued;
 **NO-PRODUCER** = not name drift — nothing emits it (see register below).
 
+**Progress (2026-06-04):** `cloud_spend` LOCKED (SE conform + re-ingest proof). The 14 SE-only
+name-drifts LOCKED — NLQ re-pointed to the canonical (`churn_rate_pct`→`customer.gross_churn_rate`,
+`logo_churn_pct`→`customer.logo_churn_rate`, `csat`→`support.csat`, `resolution_hours`/`first_response_hours`
+→`support.*`, `tech_debt_pct`/`features_shipped`→`engineering.*`, `ltv_cac`→`customer.ltv_cac_ratio`,
+`avg_deal_size`/`quota_attainment_pct`→`sales.*`, `new_logos`→`customer.count.new`,
+`selling_expenses`/`g_and_a_expenses`→`opex.sales_marketing`/`opex.general_admin`,
+`change_in_deferred_rev`→`…change_in_deferred_rev`) and VERIFIED resolving against SE entity
+BlueFlow-I5BQ (ds=dcl_v2). PENDING: `customer_count`+`support_tickets` (coordinated fabric
+conform — they have a fabric producer); then the NO-PRODUCER emitters (emit all 14).
+
 ### cloud_spend / FinOps  (canonical root `cloud_spend.*` — ontology CSP-001)
 | NLQ metric | Canonical `concept` / `property` | Producers | Status |
 |---|---|---|---|
@@ -168,7 +178,7 @@ fabric writes atemporal (period=NULL). NLQ's period fallback resolves both.
 ### support  (canonical root `support.*` — ontology CS-012; resolves the `service.*` collision)
 | NLQ metric | Canonical `concept` / `property` | Producers | Status |
 |---|---|---|---|
-| support_tickets | `support.tickets` / `total` | SE (operational_kpis) + fabric (records_summary_aggregator: conform `service.support_tickets`→`support.tickets`) | PENDING |
+| support_tickets | `support.tickets.total` / `count` | SE (operational_kpis) + fabric (records_summary_aggregator: conform `service.support_tickets`→`support.tickets.total`) | PENDING |
 | resolution_hours | `support.resolution_time` / `hours` | SE | PENDING (NLQ re-point off `service.*`) |
 | first_response_hours | `support.first_response_time` / `hours` | SE | PENDING (NLQ re-point) |
 
