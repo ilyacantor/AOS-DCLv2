@@ -217,6 +217,13 @@ Reconciling names cannot make these populate. The value exists in Farm's ground-
 the second group has no data anywhere. Options per metric: **(A) add an SE emitter** (canonical
 root in brackets) or **(B) drop from `PERSONA_METRICS`** (nlq `visualization_intent.py`).
 
+**DECISION (Ilya, 2026-06-04): EMIT ALL 14 (option A for every row).** The oracle-backed metrics
+get an SE emitter that writes the existing ground-truth value as a triple; the four dataless
+metrics (cac_payback, implementation_days, burn_multiple, + its `cash_flow.net_burn` and
+`revenue.recurring` components) get a Farm financial-model field + emitter so every persona tile
+resolves. None are dropped from `PERSONA_METRICS`; the 4 off-map names are added to NLQ's map at
+the canonical concept below.
+
 | Metric (persona) | Oracle data? | Canonical if emitted | Decision |
 |---|---|---|---|
 | security_vulns (CTO) | yes (`ground_truth.py`) | `engineering.security_vulns` / count | A or B |
