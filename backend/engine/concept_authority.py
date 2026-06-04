@@ -28,8 +28,9 @@ _CONCEPT_AUTHORITY: Dict[str, List[str]] = {
     "infrastructure.uptime": ["datadog"],
     "infrastructure.downtime": ["datadog"],
 
-    # Cloud spend — AWS Cost Explorer is the system of record
-    "infrastructure.cloud_spend": ["aws_cost_explorer"],
+    # Cloud spend — AWS Cost Explorer is the system of record (canonical root
+    # cloud_spend per dcl/SCHEMA_CONTRACT.md; was infrastructure.cloud_spend)
+    "cloud_spend": ["aws_cost_explorer"],
 }
 
 
@@ -39,8 +40,8 @@ def get_authority_rank(concept: str, source_system: str) -> int:
     Lower rank = higher authority. Returns 0 for the top authority,
     1 for second, etc. Returns 999 for unranked sources (default/ERP).
 
-    Uses longest-prefix matching: "infrastructure.cloud_spend.total"
-    matches "infrastructure.cloud_spend" before "infrastructure".
+    Uses longest-prefix matching: "infrastructure.incidents.p1"
+    matches "infrastructure.incidents" before "infrastructure".
     """
     best_match_len = 0
     best_rank = 999
