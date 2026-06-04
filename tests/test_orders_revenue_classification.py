@@ -82,8 +82,10 @@ def test_orders_amount_usd_classifies_to_revenue_not_cloud_spend():
     try:
         run_id, resp = _ingest(tenant, "OrdersRevenueProof", pipe)
         summary = resp["concept_summary"]
-        # Positive: both orders' amount_usd became revenue.
-        assert summary.get("revenue") == 2, f"expected revenue=2, got concept_summary={summary}"
+        # Positive: both orders' amount_usd became revenue (2 per-record rows), plus the
+        # #52 revenue.total summary aggregate the event-bus plane now emits = 3 revenue-root
+        # triples. (The per-record amount_usd->revenue binding is asserted precisely below.)
+        assert summary.get("revenue") == 3, f"expected revenue=3 (2 orders + revenue.total summary), got concept_summary={summary}"
         # Paired negative: the bug cannot return — nothing classified as cloud_spend.
         assert "cloud_spend" not in summary, f"amount mis-bound to cloud_spend: {summary}"
         # Persisted + user-visible: the amount_usd row carries concept=revenue.

@@ -279,6 +279,18 @@ class RecordConverter:
                 )
                 result.payloads.append(payload)
 
+        # --- Plane summary aggregates (NLQ-resolvable metrics) ---
+        # The per-record triples above feed the agent (DCL-MCP per-record reads);
+        # NLQ answers from PRE-AGGREGATED concepts, so emit each plane's summary
+        # metric too (revenue.total / customer.total / service.support_tickets).
+        # Scoped to this pipe's fabric_plane so the order-event plane's incidental
+        # customer_name fields don't inflate the customer count (four-fabric
+        # context). Additive — the per-record triples remain for the agent.
+        from backend.resolver.records_summary_aggregator import aggregate_records_summary
+        result.payloads.extend(aggregate_records_summary(
+            entity_id=entity_id, pipe=pipe, records=records,
+        ))
+
 
 # Process-lifetime singleton — keeps the registry snapshot cache warm across
 # requests (per-request instances would defeat tier-4 block-key prefiltering).

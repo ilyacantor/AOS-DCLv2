@@ -310,8 +310,11 @@ def test_hitl_pending_approve_promotes_triples_to_manual():
     assert listed["count"] == 1, listed
     hitl_id = listed["items"][0]["hitl_queue_id"]
 
-    # Pre-approval: the probe's triples are fuzzy-bound.
-    probe_triples = [t for t in _triples_for_run(run_id) if str(t["pipe_id"]) == SAGE_PIPE]
+    # Pre-approval: the probe's per-record triples are fuzzy-bound. (The records-path
+    # also emits a non-resolution customer.total summary aggregate per pipe; scope to
+    # the per-record party concept so the resolution assertion checks what it means to.)
+    probe_triples = [t for t in _triples_for_run(run_id)
+                     if str(t["pipe_id"]) == SAGE_PIPE and t["concept"] == "customer"]
     assert probe_triples and all(t["resolution_method"] == "fuzzy" for t in probe_triples)
 
     dec = client.post(f"/api/dcl/resolver/hitl/{hitl_id}/decide",
@@ -319,8 +322,11 @@ def test_hitl_pending_approve_promotes_triples_to_manual():
     assert dec.status_code == 200, dec.text
     assert dec.json()["triples_promoted"] >= 1, dec.json()
 
-    # Post-approval: the same triples are now manual @ 0.99 (hitl_confirmed).
-    after = [t for t in _triples_for_run(run_id) if str(t["pipe_id"]) == SAGE_PIPE]
+    # Post-approval: the same per-record triples are now manual @ 0.99 (hitl_confirmed).
+    # (Scope to the per-record party concept — the customer.total summary aggregate is not
+    # resolution-bound and carries no resolution_method/confidence.)
+    after = [t for t in _triples_for_run(run_id)
+             if str(t["pipe_id"]) == SAGE_PIPE and t["concept"] == "customer"]
     assert all(t["resolution_method"] == "manual" for t in after), after
     assert all(float(t["resolution_confidence"]) == 0.99 for t in after), after
 
