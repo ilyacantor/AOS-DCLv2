@@ -258,3 +258,55 @@ and the fabric planes, every LOCKED metric in this registry resolves to a value 
 and that no producer emits a listed metric under a non-canonical name. Until that test lands,
 this file is the manual gate: any new emitter or NLQ map entry for a listed metric must use the
 canonical name here.
+
+---
+
+# SE-path cutover readiness
+
+Rich SE data currently reaches DCL the OLD way: Farm's snapshot_triple_builder →
+`POST /api/dcl/ingest-triples` (Farm classifies, DCL stores). The target is to converge on
+the records-path the fabric planes already use: source → AAM transport (raw records +
+provenance, no mapping in AAM) → `POST /api/dcl/ingest-records` (DCL maps/resolves/classifies).
+**Do NOT flip rich SE data from `ingest-triples` to `ingest-records` until ALL readiness gates
+below are met.** Re-tenanting the shared SE entities is part of this readiness, not a separate fix.
+
+Identity rule for ContextOS (single-entity): **entity↔tenant is 1:1.** One-to-many (one
+tenant, many entities) is Convergence (M&A) only — never the single-entity demo. No
+shared-tenant lumping.
+
+## Readiness gates (all required before the flip)
+1. **1:1 tenants.** Each SE entity has its own tenant. Today entity→tenant is already 1:1 (no
+   entity sits on >1 tenant; the BlueFlow-I5BQ duplicate was removed 2026-06-04), but the
+   *reverse* still violates 1:1: ~60 SE demo entities are lumped on the shared tenant
+   `69688df3`. Re-tenant them onto dedicated tenants. (FabricDemo `fab1c0de` and the already-
+   dedicated SE tenants comply.)
+2. **Records-path covers the rich domains.** DCL's record_converter + aggregators must classify
+   every SE concept domain (finance/P&L/BS/CF, workforce, customer/sales, support, engineering,
+   cloud_spend, …) under the canonical names in the registry above — not just the four fabric
+   planes. Measured by gate 4.
+3. **is_current scoping.** The multi-entity is_current resolution (dcl #36/#39/#42) is landed so
+   a fresh records-path run is naturally the current snapshot for its entity.
+4. **SE-parity gate (frozen baseline — not eyeballed).** On the richest SE entity
+   (FluxEdge-TMZ8), the records-path (source → transport → DCL-classify) must REPRODUCE the
+   current SE dataset at parity: every concept present, under its CANONICAL name, values matching.
+   - Baseline captured 2026-06-04: `cutover/se_parity_baseline__FluxEdge-TMZ8.jsonl` (24,165
+     active triples, 259 concepts, 31 roots) + `.summary.json`, dumped from the LIVE SE store by
+     `cutover/capture_se_parity_baseline.py` (kept local, NOT committed — it reads the pre-mig
+     store; see the STORE NOTE below). It DELIBERATELY includes concepts that are dark in NLQ
+     today ONLY from name drift (e.g. `infrastructure.cloud_spend.*` 336 triples,
+     `customer.count.total`, `support.tickets.total`, `customer.gross_churn_rate`,
+     `opex.sales_marketing`) — real data the records-path must emit, mapped to the canonical
+     names the registry pins (`cloud_spend.summary.*`, `customer.count.total`,
+     `support.tickets.total`, …).
+   - The flip is BLOCKED until a records-path run for FluxEdge-TMZ8 diffs clean against this
+     baseline (drifted→canonical per the registry): zero missing concepts, values matching.
+
+## STORE NOTE — dev schema is pre-rebuild (a related cutover dependency)
+A DCL store-rebuild (mig014/015/016) made `current_triples` the canonical read and dropped the
+legacy active-flag column. But the dev store this baseline was captured from (`shared_gdbmdr`) is
+still the PRE-rebuild model — the legacy base triples table + active flag, no `current_triples`.
+The baseline is correct — it's exactly what the live dev DCL serves today — but two consequences
+for the cutover: (a) new DCL/parity tooling must read the canonical store (`current_triples`),
+which is why the capture script is kept local/uncommitted; (b) rebuilding the dev `shared_gdbmdr`
+schema to the post-mig016 model is a dependency of the records-path cutover landing on the
+canonical store.

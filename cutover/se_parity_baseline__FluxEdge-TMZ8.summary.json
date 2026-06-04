@@ -1,0 +1,1692 @@
+{
+  "by_root": {
+    "accounts_payable": {
+      "concepts": 1,
+      "triples": 296
+    },
+    "accounts_receivable": {
+      "concepts": 1,
+      "triples": 824
+    },
+    "arr": {
+      "concepts": 13,
+      "triples": 156
+    },
+    "asset": {
+      "concepts": 9,
+      "triples": 105
+    },
+    "aws_cost": {
+      "concepts": 1,
+      "triples": 1
+    },
+    "cash_flow": {
+      "concepts": 15,
+      "triples": 169
+    },
+    "coa": {
+      "concepts": 33,
+      "triples": 249
+    },
+    "cogs": {
+      "concepts": 2,
+      "triples": 21
+    },
+    "customer": {
+      "concepts": 25,
+      "triples": 315
+    },
+    "datadog": {
+      "concepts": 1,
+      "triples": 1
+    },
+    "ebitda_adjustment": {
+      "concepts": 8,
+      "triples": 80
+    },
+    "efficiency": {
+      "concepts": 5,
+      "triples": 60
+    },
+    "engineering": {
+      "concepts": 4,
+      "triples": 96
+    },
+    "equity": {
+      "concepts": 4,
+      "triples": 40
+    },
+    "event": {
+      "concepts": 1,
+      "triples": 1
+    },
+    "event_stream": {
+      "concepts": 5,
+      "triples": 60
+    },
+    "gl": {
+      "concepts": 33,
+      "triples": 3451
+    },
+    "infrastructure": {
+      "concepts": 14,
+      "triples": 336
+    },
+    "invoice": {
+      "concepts": 1,
+      "triples": 6072
+    },
+    "jira": {
+      "concepts": 1,
+      "triples": 1
+    },
+    "journal_entry": {
+      "concepts": 1,
+      "triples": 9822
+    },
+    "liability": {
+      "concepts": 5,
+      "triples": 65
+    },
+    "operations": {
+      "concepts": 2,
+      "triples": 24
+    },
+    "opex": {
+      "concepts": 5,
+      "triples": 73
+    },
+    "pipeline": {
+      "concepts": 1,
+      "triples": 2
+    },
+    "pnl": {
+      "concepts": 6,
+      "triples": 77
+    },
+    "revenue": {
+      "concepts": 16,
+      "triples": 1328
+    },
+    "sales": {
+      "concepts": 9,
+      "triples": 108
+    },
+    "service": {
+      "concepts": 11,
+      "triples": 31
+    },
+    "support": {
+      "concepts": 4,
+      "triples": 48
+    },
+    "workforce": {
+      "concepts": 22,
+      "triples": 253
+    }
+  },
+  "captured_utc": "2026-06-04T15:34:46.244751+00:00",
+  "concept_inventory": {
+    "accounts_payable.vendor": {
+      "distinct_periods": 0,
+      "distinct_properties": 1,
+      "root": "accounts_payable",
+      "triples": 296
+    },
+    "accounts_receivable.aging": {
+      "distinct_periods": 0,
+      "distinct_properties": 2,
+      "root": "accounts_receivable",
+      "triples": 824
+    },
+    "arr.beginning": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "arr",
+      "triples": 12
+    },
+    "arr.by_region.amer": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "arr",
+      "triples": 12
+    },
+    "arr.by_region.apac": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "arr",
+      "triples": 12
+    },
+    "arr.by_region.emea": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "arr",
+      "triples": 12
+    },
+    "arr.by_segment.enterprise": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "arr",
+      "triples": 12
+    },
+    "arr.by_segment.mid_market": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "arr",
+      "triples": 12
+    },
+    "arr.by_segment.smb": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "arr",
+      "triples": 12
+    },
+    "arr.churned": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "arr",
+      "triples": 12
+    },
+    "arr.ending": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "arr",
+      "triples": 12
+    },
+    "arr.expansion": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "arr",
+      "triples": 12
+    },
+    "arr.mrr": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "arr",
+      "triples": 12
+    },
+    "arr.new": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "arr",
+      "triples": 12
+    },
+    "arr.new_logo": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "arr",
+      "triples": 12
+    },
+    "asset._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "asset",
+      "triples": 1
+    },
+    "asset.current.accounts_receivable": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "asset",
+      "triples": 13
+    },
+    "asset.current.cash": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "asset",
+      "triples": 13
+    },
+    "asset.current.prepaid": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "asset",
+      "triples": 13
+    },
+    "asset.current.unbilled_revenue": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "asset",
+      "triples": 13
+    },
+    "asset.noncurrent.goodwill": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "asset",
+      "triples": 13
+    },
+    "asset.noncurrent.intangibles": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "asset",
+      "triples": 13
+    },
+    "asset.noncurrent.property_plant_equipment": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "asset",
+      "triples": 13
+    },
+    "asset.total": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "asset",
+      "triples": 13
+    },
+    "aws_cost._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "aws_cost",
+      "triples": 1
+    },
+    "cash_flow._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 1
+    },
+    "cash_flow.financing.debt_proceeds": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 12
+    },
+    "cash_flow.financing.debt_repayment": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 12
+    },
+    "cash_flow.financing.dividends": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 12
+    },
+    "cash_flow.financing.total": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 12
+    },
+    "cash_flow.investing.capex": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 12
+    },
+    "cash_flow.investing.total": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 12
+    },
+    "cash_flow.net_change": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 12
+    },
+    "cash_flow.operating.change_in_ap": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 12
+    },
+    "cash_flow.operating.change_in_ar": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 12
+    },
+    "cash_flow.operating.change_in_deferred_rev": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 12
+    },
+    "cash_flow.operating.depreciation_add_back": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 12
+    },
+    "cash_flow.operating.net_income": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 12
+    },
+    "cash_flow.operating.total": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 12
+    },
+    "cash_flow.operating.working_capital_changes": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cash_flow",
+      "triples": 12
+    },
+    "coa.1100": {
+      "distinct_periods": 0,
+      "distinct_properties": 7,
+      "root": "coa",
+      "triples": 7
+    },
+    "coa.1200": {
+      "distinct_periods": 0,
+      "distinct_properties": 7,
+      "root": "coa",
+      "triples": 7
+    },
+    "coa.1300": {
+      "distinct_periods": 0,
+      "distinct_properties": 7,
+      "root": "coa",
+      "triples": 7
+    },
+    "coa.1400": {
+      "distinct_periods": 0,
+      "distinct_properties": 7,
+      "root": "coa",
+      "triples": 7
+    },
+    "coa.1500": {
+      "distinct_periods": 0,
+      "distinct_properties": 7,
+      "root": "coa",
+      "triples": 7
+    },
+    "coa.1600": {
+      "distinct_periods": 0,
+      "distinct_properties": 7,
+      "root": "coa",
+      "triples": 7
+    },
+    "coa.2100": {
+      "distinct_periods": 0,
+      "distinct_properties": 7,
+      "root": "coa",
+      "triples": 7
+    },
+    "coa.2200": {
+      "distinct_periods": 0,
+      "distinct_properties": 7,
+      "root": "coa",
+      "triples": 7
+    },
+    "coa.2300": {
+      "distinct_periods": 0,
+      "distinct_properties": 7,
+      "root": "coa",
+      "triples": 7
+    },
+    "coa.2400": {
+      "distinct_periods": 0,
+      "distinct_properties": 7,
+      "root": "coa",
+      "triples": 7
+    },
+    "coa.3100": {
+      "distinct_periods": 0,
+      "distinct_properties": 7,
+      "root": "coa",
+      "triples": 7
+    },
+    "coa.3200": {
+      "distinct_periods": 0,
+      "distinct_properties": 7,
+      "root": "coa",
+      "triples": 7
+    },
+    "coa.3300": {
+      "distinct_periods": 0,
+      "distinct_properties": 7,
+      "root": "coa",
+      "triples": 7
+    },
+    "coa.4100": {
+      "distinct_periods": 0,
+      "distinct_properties": 9,
+      "root": "coa",
+      "triples": 9
+    },
+    "coa.4200": {
+      "distinct_periods": 0,
+      "distinct_properties": 9,
+      "root": "coa",
+      "triples": 9
+    },
+    "coa.4300": {
+      "distinct_periods": 0,
+      "distinct_properties": 8,
+      "root": "coa",
+      "triples": 8
+    },
+    "coa.4400": {
+      "distinct_periods": 0,
+      "distinct_properties": 8,
+      "root": "coa",
+      "triples": 8
+    },
+    "coa.5100": {
+      "distinct_periods": 0,
+      "distinct_properties": 9,
+      "root": "coa",
+      "triples": 9
+    },
+    "coa.5200": {
+      "distinct_periods": 0,
+      "distinct_properties": 8,
+      "root": "coa",
+      "triples": 8
+    },
+    "coa.5300": {
+      "distinct_periods": 0,
+      "distinct_properties": 8,
+      "root": "coa",
+      "triples": 8
+    },
+    "coa.5400": {
+      "distinct_periods": 0,
+      "distinct_properties": 8,
+      "root": "coa",
+      "triples": 8
+    },
+    "coa.6100": {
+      "distinct_periods": 0,
+      "distinct_properties": 8,
+      "root": "coa",
+      "triples": 8
+    },
+    "coa.6200": {
+      "distinct_periods": 0,
+      "distinct_properties": 9,
+      "root": "coa",
+      "triples": 9
+    },
+    "coa.6300": {
+      "distinct_periods": 0,
+      "distinct_properties": 8,
+      "root": "coa",
+      "triples": 8
+    },
+    "coa.6310": {
+      "distinct_periods": 0,
+      "distinct_properties": 8,
+      "root": "coa",
+      "triples": 8
+    },
+    "coa.6320": {
+      "distinct_periods": 0,
+      "distinct_properties": 8,
+      "root": "coa",
+      "triples": 8
+    },
+    "coa.7100": {
+      "distinct_periods": 0,
+      "distinct_properties": 8,
+      "root": "coa",
+      "triples": 8
+    },
+    "coa.7200": {
+      "distinct_periods": 0,
+      "distinct_properties": 8,
+      "root": "coa",
+      "triples": 8
+    },
+    "coa.7300": {
+      "distinct_periods": 0,
+      "distinct_properties": 8,
+      "root": "coa",
+      "triples": 8
+    },
+    "coa.8100": {
+      "distinct_periods": 0,
+      "distinct_properties": 9,
+      "root": "coa",
+      "triples": 9
+    },
+    "coa.8200": {
+      "distinct_periods": 0,
+      "distinct_properties": 8,
+      "root": "coa",
+      "triples": 8
+    },
+    "coa.9100": {
+      "distinct_periods": 0,
+      "distinct_properties": 8,
+      "root": "coa",
+      "triples": 8
+    },
+    "coa._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "coa",
+      "triples": 1
+    },
+    "cogs._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "cogs",
+      "triples": 1
+    },
+    "cogs.total": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "cogs",
+      "triples": 20
+    },
+    "customer.acv": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.bookings.by_segment.enterprise": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.bookings.by_segment.mid_market": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.bookings.by_segment.smb": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.cac": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.churn.by_segment.enterprise": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.churn.by_segment.mid_market": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.churn.by_segment.smb": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.count.by_segment.enterprise": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.count.by_segment.mid_market": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.count.by_segment.smb": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.count.churned": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.count.new": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.count.total": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.gross_churn_rate": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.logo_churn_rate": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.ltv": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.ltv_cac_ratio": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.nps": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.nrr": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 12
+    },
+    "customer.pipeline.closed_won": {
+      "distinct_periods": 15,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 15
+    },
+    "customer.pipeline.lead": {
+      "distinct_periods": 15,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 15
+    },
+    "customer.pipeline.negotiation": {
+      "distinct_periods": 15,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 15
+    },
+    "customer.pipeline.proposal": {
+      "distinct_periods": 15,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 15
+    },
+    "customer.pipeline.qualified": {
+      "distinct_periods": 15,
+      "distinct_properties": 1,
+      "root": "customer",
+      "triples": 15
+    },
+    "datadog._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "datadog",
+      "triples": 1
+    },
+    "ebitda_adjustment.facility_consolidation.initial_diligence": {
+      "distinct_periods": 1,
+      "distinct_properties": 10,
+      "root": "ebitda_adjustment",
+      "triples": 10
+    },
+    "ebitda_adjustment.headcount_synergies.initial_diligence": {
+      "distinct_periods": 1,
+      "distinct_properties": 10,
+      "root": "ebitda_adjustment",
+      "triples": 10
+    },
+    "ebitda_adjustment.non_recurring_legal.initial_diligence": {
+      "distinct_periods": 1,
+      "distinct_properties": 10,
+      "root": "ebitda_adjustment",
+      "triples": 10
+    },
+    "ebitda_adjustment.non_recurring_professional_fees.initial_diligence": {
+      "distinct_periods": 1,
+      "distinct_properties": 10,
+      "root": "ebitda_adjustment",
+      "triples": 10
+    },
+    "ebitda_adjustment.owner_compensation.initial_diligence": {
+      "distinct_periods": 1,
+      "distinct_properties": 10,
+      "root": "ebitda_adjustment",
+      "triples": 10
+    },
+    "ebitda_adjustment.related_party_transactions.initial_diligence": {
+      "distinct_periods": 1,
+      "distinct_properties": 10,
+      "root": "ebitda_adjustment",
+      "triples": 10
+    },
+    "ebitda_adjustment.run_rate_cost_savings.initial_diligence": {
+      "distinct_periods": 1,
+      "distinct_properties": 10,
+      "root": "ebitda_adjustment",
+      "triples": 10
+    },
+    "ebitda_adjustment.technology_consolidation.initial_diligence": {
+      "distinct_periods": 1,
+      "distinct_properties": 10,
+      "root": "ebitda_adjustment",
+      "triples": 10
+    },
+    "efficiency.arr_per_employee": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "efficiency",
+      "triples": 12
+    },
+    "efficiency.burn_multiple": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "efficiency",
+      "triples": 12
+    },
+    "efficiency.magic_number": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "efficiency",
+      "triples": 12
+    },
+    "efficiency.revenue_per_employee": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "efficiency",
+      "triples": 12
+    },
+    "efficiency.rule_of_40": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "efficiency",
+      "triples": 12
+    },
+    "engineering.features_shipped": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "engineering",
+      "triples": 24
+    },
+    "engineering.sprint_velocity": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "engineering",
+      "triples": 24
+    },
+    "engineering.story_points": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "engineering",
+      "triples": 24
+    },
+    "engineering.tech_debt_rate": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "engineering",
+      "triples": 24
+    },
+    "equity._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "equity",
+      "triples": 1
+    },
+    "equity.common_stock": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "equity",
+      "triples": 13
+    },
+    "equity.retained_earnings": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "equity",
+      "triples": 13
+    },
+    "equity.total": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "equity",
+      "triples": 13
+    },
+    "event._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "event",
+      "triples": 1
+    },
+    "event_stream.consumer_lag": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "event_stream",
+      "triples": 12
+    },
+    "event_stream.event_volume": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "event_stream",
+      "triples": 12
+    },
+    "event_stream.message_throughput": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "event_stream",
+      "triples": 12
+    },
+    "event_stream.partition_count": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "event_stream",
+      "triples": 12
+    },
+    "event_stream.topic_count": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "event_stream",
+      "triples": 12
+    },
+    "gl.1100": {
+      "distinct_periods": 25,
+      "distinct_properties": 4,
+      "root": "gl",
+      "triples": 99
+    },
+    "gl.1200": {
+      "distinct_periods": 25,
+      "distinct_properties": 4,
+      "root": "gl",
+      "triples": 99
+    },
+    "gl.1300": {
+      "distinct_periods": 25,
+      "distinct_properties": 4,
+      "root": "gl",
+      "triples": 99
+    },
+    "gl.1400": {
+      "distinct_periods": 25,
+      "distinct_properties": 4,
+      "root": "gl",
+      "triples": 99
+    },
+    "gl.1500": {
+      "distinct_periods": 25,
+      "distinct_properties": 4,
+      "root": "gl",
+      "triples": 78
+    },
+    "gl.1600": {
+      "distinct_periods": 25,
+      "distinct_properties": 4,
+      "root": "gl",
+      "triples": 99
+    },
+    "gl.2100": {
+      "distinct_periods": 25,
+      "distinct_properties": 4,
+      "root": "gl",
+      "triples": 99
+    },
+    "gl.2200": {
+      "distinct_periods": 25,
+      "distinct_properties": 4,
+      "root": "gl",
+      "triples": 99
+    },
+    "gl.2300": {
+      "distinct_periods": 25,
+      "distinct_properties": 4,
+      "root": "gl",
+      "triples": 99
+    },
+    "gl.2400": {
+      "distinct_periods": 25,
+      "distinct_properties": 3,
+      "root": "gl",
+      "triples": 75
+    },
+    "gl.3100": {
+      "distinct_periods": 25,
+      "distinct_properties": 3,
+      "root": "gl",
+      "triples": 75
+    },
+    "gl.3200": {
+      "distinct_periods": 25,
+      "distinct_properties": 3,
+      "root": "gl",
+      "triples": 75
+    },
+    "gl.3300": {
+      "distinct_periods": 25,
+      "distinct_properties": 3,
+      "root": "gl",
+      "triples": 75
+    },
+    "gl.4100": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.4200": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.4300": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.4400": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.5100": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.5200": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.5300": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.5400": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.6100": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.6200": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.6300": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.6310": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.6320": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.7100": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.7200": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.7300": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.8100": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.8200": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl.9100": {
+      "distinct_periods": 24,
+      "distinct_properties": 5,
+      "root": "gl",
+      "triples": 120
+    },
+    "gl._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "gl",
+      "triples": 1
+    },
+    "infrastructure.cloud_spend.by_resource.compute": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "infrastructure",
+      "triples": 24
+    },
+    "infrastructure.cloud_spend.by_resource.database": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "infrastructure",
+      "triples": 24
+    },
+    "infrastructure.cloud_spend.by_resource.ml_ai": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "infrastructure",
+      "triples": 24
+    },
+    "infrastructure.cloud_spend.by_resource.network": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "infrastructure",
+      "triples": 24
+    },
+    "infrastructure.cloud_spend.by_resource.other": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "infrastructure",
+      "triples": 24
+    },
+    "infrastructure.cloud_spend.by_resource.storage": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "infrastructure",
+      "triples": 24
+    },
+    "infrastructure.cloud_spend.pct_revenue": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "infrastructure",
+      "triples": 24
+    },
+    "infrastructure.cloud_spend.total": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "infrastructure",
+      "triples": 24
+    },
+    "infrastructure.downtime": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "infrastructure",
+      "triples": 24
+    },
+    "infrastructure.incidents.p1": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "infrastructure",
+      "triples": 24
+    },
+    "infrastructure.incidents.p2": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "infrastructure",
+      "triples": 24
+    },
+    "infrastructure.mttr.p1": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "infrastructure",
+      "triples": 24
+    },
+    "infrastructure.mttr.p2": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "infrastructure",
+      "triples": 24
+    },
+    "infrastructure.uptime": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "infrastructure",
+      "triples": 24
+    },
+    "invoice.billing": {
+      "distinct_periods": 12,
+      "distinct_properties": 2,
+      "root": "invoice",
+      "triples": 6072
+    },
+    "jira._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "jira",
+      "triples": 1
+    },
+    "journal_entry.general": {
+      "distinct_periods": 12,
+      "distinct_properties": 2,
+      "root": "journal_entry",
+      "triples": 9822
+    },
+    "liability.current.accounts_payable": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "liability",
+      "triples": 13
+    },
+    "liability.current.accrued_expenses": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "liability",
+      "triples": 13
+    },
+    "liability.current.deferred_revenue": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "liability",
+      "triples": 13
+    },
+    "liability.noncurrent.long_term_debt": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "liability",
+      "triples": 13
+    },
+    "liability.total": {
+      "distinct_periods": 13,
+      "distinct_properties": 1,
+      "root": "liability",
+      "triples": 13
+    },
+    "operations.automation_rate": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "operations",
+      "triples": 12
+    },
+    "operations.sla_attainment": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "operations",
+      "triples": 12
+    },
+    "opex._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "opex",
+      "triples": 1
+    },
+    "opex.general_admin": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "opex",
+      "triples": 20
+    },
+    "opex.research_development": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "opex",
+      "triples": 20
+    },
+    "opex.sales_marketing": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "opex",
+      "triples": 20
+    },
+    "opex.total": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "opex",
+      "triples": 12
+    },
+    "pipeline._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "pipeline",
+      "triples": 2
+    },
+    "pnl._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "pnl",
+      "triples": 1
+    },
+    "pnl.depreciation_amortization": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "pnl",
+      "triples": 20
+    },
+    "pnl.ebitda": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "pnl",
+      "triples": 12
+    },
+    "pnl.net_income": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "pnl",
+      "triples": 12
+    },
+    "pnl.operating_profit": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "pnl",
+      "triples": 12
+    },
+    "pnl.tax": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "pnl",
+      "triples": 20
+    },
+    "revenue._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 1
+    },
+    "revenue.by_customer": {
+      "distinct_periods": 12,
+      "distinct_properties": 20,
+      "root": "revenue",
+      "triples": 240
+    },
+    "revenue.by_region.amer": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 12
+    },
+    "revenue.by_region.apac": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 12
+    },
+    "revenue.by_region.emea": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 12
+    },
+    "revenue.by_segment.enterprise": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 12
+    },
+    "revenue.by_segment.mid_market": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 12
+    },
+    "revenue.by_segment.smb": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 12
+    },
+    "revenue.expansion": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 12
+    },
+    "revenue.new_logo": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 12
+    },
+    "revenue.new_logo.by_region.amer": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 12
+    },
+    "revenue.new_logo.by_region.apac": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 12
+    },
+    "revenue.new_logo.by_region.emea": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 12
+    },
+    "revenue.recognized": {
+      "distinct_periods": 0,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 923
+    },
+    "revenue.renewal": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 12
+    },
+    "revenue.total": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "revenue",
+      "triples": 20
+    },
+    "sales.avg_deal_size": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "sales",
+      "triples": 12
+    },
+    "sales.bookings.total": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "sales",
+      "triples": 12
+    },
+    "sales.cycle_days": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "sales",
+      "triples": 12
+    },
+    "sales.pipeline.by_region.amer": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "sales",
+      "triples": 12
+    },
+    "sales.pipeline.by_region.apac": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "sales",
+      "triples": 12
+    },
+    "sales.pipeline.by_region.emea": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "sales",
+      "triples": 12
+    },
+    "sales.pipeline.total": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "sales",
+      "triples": 12
+    },
+    "sales.quota_attainment": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "sales",
+      "triples": 12
+    },
+    "sales.win_rate": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "sales",
+      "triples": 12
+    },
+    "service._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "service",
+      "triples": 1
+    },
+    "service.commercial": {
+      "distinct_periods": 0,
+      "distinct_properties": 3,
+      "root": "service",
+      "triples": 3
+    },
+    "service.customer_operations": {
+      "distinct_periods": 0,
+      "distinct_properties": 3,
+      "root": "service",
+      "triples": 3
+    },
+    "service.digital_ai": {
+      "distinct_periods": 0,
+      "distinct_properties": 3,
+      "root": "service",
+      "triples": 3
+    },
+    "service.finance_accounting": {
+      "distinct_periods": 0,
+      "distinct_properties": 3,
+      "root": "service",
+      "triples": 3
+    },
+    "service.hr_operations": {
+      "distinct_periods": 0,
+      "distinct_properties": 3,
+      "root": "service",
+      "triples": 3
+    },
+    "service.operations": {
+      "distinct_periods": 0,
+      "distinct_properties": 3,
+      "root": "service",
+      "triples": 3
+    },
+    "service.risk": {
+      "distinct_periods": 0,
+      "distinct_properties": 3,
+      "root": "service",
+      "triples": 3
+    },
+    "service.strategy": {
+      "distinct_periods": 0,
+      "distinct_properties": 3,
+      "root": "service",
+      "triples": 3
+    },
+    "service.supply_chain": {
+      "distinct_periods": 0,
+      "distinct_properties": 3,
+      "root": "service",
+      "triples": 3
+    },
+    "service.technology": {
+      "distinct_periods": 0,
+      "distinct_properties": 3,
+      "root": "service",
+      "triples": 3
+    },
+    "support.csat": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "support",
+      "triples": 12
+    },
+    "support.first_response_time": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "support",
+      "triples": 12
+    },
+    "support.resolution_time": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "support",
+      "triples": 12
+    },
+    "support.tickets.total": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "support",
+      "triples": 12
+    },
+    "workforce._meta": {
+      "distinct_periods": 1,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 1
+    },
+    "workforce.attrition_rate": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.bench": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.bench_delivery": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.by_department.customer_success": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.by_department.engineering": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.by_department.g&a": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.by_department.marketing": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.by_department.product": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.by_department.sales": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.consulting": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.corporate": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.delivery": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.engineering": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.nearshore": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.offshore": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.onshore": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.sales": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.headcount.total": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.hires": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.terminations": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    },
+    "workforce.utilization_rate": {
+      "distinct_periods": 12,
+      "distinct_properties": 1,
+      "root": "workforce",
+      "triples": 12
+    }
+  },
+  "distinct_concept_roots": 31,
+  "distinct_concepts": 259,
+  "entity_id": "FluxEdge-TMZ8",
+  "schema": "shared_gdbmdr",
+  "source": "live SE output (Farm -> /api/dcl/ingest-triples)",
+  "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
+  "total_active_triples": 24165
+}
