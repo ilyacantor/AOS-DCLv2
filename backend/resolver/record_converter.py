@@ -183,6 +183,17 @@ class RecordConverter:
                 entity_id=entity_id, pipe=pipe, records=pipe.get("records") or [],
             ))
             return
+        # Financial-statement pipe: period-keyed P&L/BS/CF bundles. DCL owns the
+        # account->canonical-concept map (the SE financial cutover — concept formation
+        # moves Farm->DCL via ingest-records). Like cloud_spend, this REPLACES the
+        # per-record path: the records are metric bundles, not party records.
+        if domain == "financials":
+            from backend.resolver.financial_records_aggregator import aggregate_financial_records
+            result.payloads.extend(aggregate_financial_records(
+                entity_id=entity_id, pipe=pipe, records=pipe.get("records") or [],
+                warnings=result.warnings,
+            ))
+            return
         identity_key = (pipe.get("identity_key") or "").strip() or None
         record_key_field = pipe.get("record_key_field") or "id"
         records = pipe.get("records") or []
