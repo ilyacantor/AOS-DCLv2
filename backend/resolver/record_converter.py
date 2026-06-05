@@ -194,6 +194,16 @@ class RecordConverter:
                 warnings=result.warnings,
             ))
             return
+        # Operational-metrics pipe: period-keyed sales/workforce/eng/uptime/support KPIs.
+        # DCL owns the metric catalog (operational counterpart to the CoA map). Like
+        # financials, REPLACES per-record — these are metric bundles, not party records.
+        if domain == "operations":
+            from backend.resolver.operational_records_aggregator import aggregate_operational_records
+            result.payloads.extend(aggregate_operational_records(
+                entity_id=entity_id, pipe=pipe, records=pipe.get("records") or [],
+                warnings=result.warnings,
+            ))
+            return
         identity_key = (pipe.get("identity_key") or "").strip() or None
         record_key_field = pipe.get("record_key_field") or "id"
         records = pipe.get("records") or []
