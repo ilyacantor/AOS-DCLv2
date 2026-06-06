@@ -43,6 +43,8 @@ OPERATIONAL_FIELD_CONCEPTS: dict[str, tuple[str, str, str]] = {
     "new_logo_revenue": ("revenue.new_logo", "amount", "usd"),
     "expansion_revenue": ("revenue.expansion", "amount", "usd"),
     "renewal_revenue": ("revenue.renewal", "amount", "usd"),
+    "arr_ending": ("arr.ending", "amount", "usd"),
+    "arr_beginning": ("arr.beginning", "amount", "usd"),
     # ── Customer retention / CS (CRO/CCO) ────────────────────────────
     "new_customers": ("customer.count.new", "count", "count"),
     "nrr": ("customer.nrr", "rate", "pct"),
