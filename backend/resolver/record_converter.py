@@ -204,6 +204,17 @@ class RecordConverter:
                 warnings=result.warnings,
             ))
             return
+        # Raw-ledger pipe: per-record detail (gl/coa/journal_entry/invoice/AP/AR/ebitda_adjustment
+        # + observability/ops). DCL composes concept = root.key from the record's structural fields
+        # (no fixed catalog — thousands of distinct ledger keys). Like financials/operations, this
+        # REPLACES per-record + bypasses the persona guard (full-depth detail, not a persona tile).
+        if domain == "ledger":
+            from backend.resolver.ledger_records_aggregator import aggregate_ledger_records
+            result.payloads.extend(aggregate_ledger_records(
+                entity_id=entity_id, pipe=pipe, records=pipe.get("records") or [],
+                warnings=result.warnings,
+            ))
+            return
         identity_key = (pipe.get("identity_key") or "").strip() or None
         record_key_field = pipe.get("record_key_field") or "id"
         records = pipe.get("records") or []
