@@ -51,6 +51,7 @@ personas:
     display_name: Chief Operating Officer
     domains:
       - workforce
+      - headcount
       - efficiency
       - support
       - operations
@@ -83,4 +84,5 @@ personas:
     display_name: Chief Human Resources Officer
     domains:
       - workforce
+      - headcount
       - employee

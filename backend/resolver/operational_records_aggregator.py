@@ -79,6 +79,17 @@ OPERATIONAL_FIELD_CONCEPTS: dict[str, tuple[str, str, str]] = {
     "uptime_auth_api": ("uptime_by_service.auth-api", "rate", "pct"),
 }
 
+# Dimensional breakdowns: nested {member: value} fields -> concept "<metric>.by_<dimension>" with
+# property=member (the shape NLQ's dashboard_data_resolver._resolve_triple_breakdown looks for, so
+# the map/bar/donut tiles populate instead of "No <dim> breakdown data for '<metric>'").
+_NESTED_BREAKDOWNS = {
+    "revenue_by_region": ("revenue.by_region", "usd"),
+    "arr_by_region": ("arr.by_region", "usd"),
+    "arr_by_customer": ("arr.by_customer", "usd"),
+    "headcount_by_department": ("headcount.by_department", "count"),
+    "uptime_pct_by_service": ("uptime_pct.by_service", "pct"),
+}
+
 _PERIOD_KEY = "period"
 _STRUCTURAL_KEYS = frozenset({_PERIOD_KEY, "id"})
 
@@ -106,6 +117,28 @@ def aggregate_operational_records(
 
         for fname, raw_value in record.items():
             if fname in _STRUCTURAL_KEYS:
+                continue
+            if fname in _NESTED_BREAKDOWNS:
+                base, unit = _NESTED_BREAKDOWNS[fname]
+                # The MAP resolver wants concept="<metric>.by_region.<region>" (region in the
+                # concept); the bar/donut resolver wants concept="<metric>.by_<dim>" with
+                # property=member. Region breakdowns take the former, all others the latter.
+                region_in_concept = base.endswith(".by_region")
+                if isinstance(raw_value, dict):
+                    for member, mval in raw_value.items():
+                        v = _num(mval)
+                        if v is None:
+                            continue
+                        concept = f"{base}.{member}" if region_in_concept else base
+                        prop = "amount" if region_in_concept else str(member)
+                        payloads.append(TriplePayload(
+                            entity_id=entity_id, concept=concept, property=prop, value=v,
+                            period=period, currency="USD" if unit == "usd" else None, unit=unit,
+                            source_system=source_system, source_table=f"fabric_via:{raw_source}",
+                            source_field=f"{fname}.{member}", pipe_id=pipe_id,
+                            confidence_score=_CONF, confidence_tier=_TIER,
+                            fabric_plane=fabric_plane, fabric_product=fabric_product,
+                        ))
                 continue
             mapping = OPERATIONAL_FIELD_CONCEPTS.get(fname)
             if mapping is None:
