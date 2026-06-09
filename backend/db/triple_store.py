@@ -1032,21 +1032,62 @@ class TripleStore:
                     rows.append(d)
         return rows
 
-    def mcp_list_domains(self, tenant_id: str) -> list[dict]:
-        """Distinct concept-root domains visible to the tenant, with counts."""
+    def mcp_list_domains(
+        self, tenant_id: str, entity_id: str | None = None
+    ) -> list[dict]:
+        """Distinct concept-root domains visible to the tenant, with counts.
+
+        entity_id scopes the inventory to a single run's entity — the Fabric Lab
+        passes the selected run's entity so the domain inventory reflects ONE run,
+        the way NLQ scopes to the selected snapshot. Omitted = the whole tenant.
+        """
+        clauses = ["tenant_id = %s", "is_active = true"]
+        params: list = [tenant_id]
+        if entity_id is not None:
+            clauses.append("entity_id = %s")
+            params.append(entity_id)
         sql = (
             "SELECT split_part(concept, '.', 1) AS domain, COUNT(*) AS cnt "
             "FROM semantic_triples "
-            "WHERE tenant_id = %s AND is_active = true "
+            f"WHERE {' AND '.join(clauses)} "
             "GROUP BY domain ORDER BY cnt DESC"
         )
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, (tenant_id,))
+                cur.execute(sql, tuple(params))
                 return [
                     {"domain": row[0], "triple_count": int(row[1])}
                     for row in cur.fetchall()
                 ]
+
+    def mcp_list_runs(self, tenant_id: str) -> list[dict]:
+        """List the current runs (snapshots) for a tenant — one row per (entity,
+        active run), newest first. The NLQ-snapshot equivalent for MCP consumers:
+        a consumer builds a follow-latest run selector from this. Each row carries
+        the run id (renamed run_id → dcl_ingest_id at the tool boundary, I1),
+        entity_id, triple_count, and the latest created_at.
+        """
+        sql = (
+            "SELECT entity_id, run_id, COUNT(*) AS cnt, MAX(created_at) AS latest "
+            "FROM semantic_triples "
+            "WHERE tenant_id = %s AND is_active = true "
+            "GROUP BY entity_id, run_id "
+            "ORDER BY MAX(created_at) DESC"
+        )
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (tenant_id,))
+                out: list[dict] = []
+                for row in cur.fetchall():
+                    latest = row[3]
+                    out.append({
+                        "entity_id": row[0],
+                        "run_id": str(row[1]) if row[1] is not None else None,
+                        "triple_count": int(row[2]),
+                        "created_at": latest.isoformat()
+                        if hasattr(latest, "isoformat") else str(latest),
+                    })
+                return out
 
     def mcp_provenance_lookup(
         self,

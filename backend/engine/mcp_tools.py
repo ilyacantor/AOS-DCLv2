@@ -91,14 +91,34 @@ def tool_query_triples(
 # =============================================================================
 
 
-def tool_list_domains(tenant_id: str) -> list[dict]:
-    """Return distinct concept-root domains with triple counts for tenant."""
+def tool_list_domains(tenant_id: str, entity_id: str | None = None) -> list[dict]:
+    """Return distinct concept-root domains with triple counts for tenant,
+    optionally scoped to one entity (the selected run)."""
     if not tenant_id:
         raise MCPToolError(
             "list_domains requires tenant_id — caller's token did not "
             "carry one (I2 violation)."
         )
-    return _store.mcp_list_domains(tenant_id)
+    return _store.mcp_list_domains(tenant_id, entity_id)
+
+
+def tool_list_runs(tenant_id: str) -> list[dict]:
+    """Return the current runs (snapshots) for the tenant — one per (entity,
+    active run), newest first. The NLQ-snapshot equivalent for MCP consumers:
+    dcl_ingest_id, entity_id, triple_count, created_at. The bare run_id is
+    renamed to the namespaced dcl_ingest_id before exposure (I1)."""
+    if not tenant_id:
+        raise MCPToolError(
+            "list_runs requires tenant_id — caller's token did not "
+            "carry one (I2 violation)."
+        )
+    out: list[dict] = []
+    for row in _store.mcp_list_runs(tenant_id):
+        d = dict(row)
+        if "run_id" in d:
+            d["dcl_ingest_id"] = d.pop("run_id")
+        out.append(d)
+    return out
 
 
 # =============================================================================
@@ -226,7 +246,26 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "list_domains": {
         "description": (
             "List distinct concept-root domains visible to the caller's "
-            "tenant with triple counts."
+            "tenant with triple counts. Optionally scope to one entity_id "
+            "(the selected run's entity) to mirror a snapshot-scoped view."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "entity_id": {
+                    "type": "string",
+                    "description": "Scope the domain inventory to one run's entity",
+                },
+            },
+        },
+    },
+    "list_runs": {
+        "description": (
+            "List the current runs (snapshots) for the caller's tenant — one "
+            "per (entity, active run), newest first: dcl_ingest_id, entity_id, "
+            "triple_count, created_at. The NLQ-snapshot equivalent — build a "
+            "follow-latest run selector from this and scope reads to the "
+            "picked run's entity_id."
         ),
         "inputSchema": {"type": "object", "properties": {}},
     },
@@ -284,7 +323,9 @@ def dispatch(tenant_id: str, tool_name: str, arguments: dict[str, Any]) -> Any:
     if tool_name == "query_triples":
         return tool_query_triples(tenant_id, **args)
     if tool_name == "list_domains":
-        return tool_list_domains(tenant_id)
+        return tool_list_domains(tenant_id, args.get("entity_id"))
+    if tool_name == "list_runs":
+        return tool_list_runs(tenant_id)
     if tool_name == "concept_lookup":
         return tool_concept_lookup(
             tenant_id, args.get("query") or args.get("concept", "")

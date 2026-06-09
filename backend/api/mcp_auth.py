@@ -41,6 +41,7 @@ _DEFAULT_TTL_SECONDS = 24 * 60 * 60  # 24h
 _DEFAULT_SCOPE = (
     "query_triples",
     "list_domains",
+    "list_runs",
     "concept_lookup",
     "semantic_export",
     "provenance",
