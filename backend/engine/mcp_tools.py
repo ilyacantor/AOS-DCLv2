@@ -76,12 +76,17 @@ def tool_query_triples(
         limit=limit,
         active_only=active_only,
     )
-    # Rename bare run_id → dcl_ingest_id per I1 before exposing.
+    # Rename bare run_id → dcl_ingest_id per I1 before exposing, and expose
+    # the row id under the provenance tool's vocabulary (triple_id) so a
+    # consumer can drill THIS exact triple — composite (concept, entity,
+    # period) lookups are ambiguous across properties (I3).
     out: list[dict] = []
     for row in raw:
         d = dict(row)
         if "run_id" in d:
             d["dcl_ingest_id"] = d.pop("run_id")
+        if "id" in d:
+            d["triple_id"] = d["id"]
         out.append(d)
     return out
 
@@ -185,6 +190,7 @@ def tool_provenance(
     *,
     triple_id: str | None = None,
     concept: str | None = None,
+    property: str | None = None,
     entity_id: str | None = None,
     period: str | None = None,
 ) -> dict[str, Any]:
@@ -207,6 +213,7 @@ def tool_provenance(
         tenant_id,
         triple_id=triple_id,
         concept=concept,
+        property=property,
         entity_id=entity_id,
         period=period,
     )
@@ -301,6 +308,7 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
             "properties": {
                 "triple_id": {"type": "string"},
                 "concept": {"type": "string"},
+                "property": {"type": "string"},
                 "entity_id": {"type": "string"},
                 "period": {"type": "string"},
             },

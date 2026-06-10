@@ -1013,7 +1013,10 @@ class TripleStore:
             "       run_id, confidence_score, confidence_tier, is_active, "
             "       created_at "
             f"FROM semantic_triples WHERE {where} "
-            f"ORDER BY created_at DESC LIMIT {safe_limit}"
+            # id tiebreaker: batch inserts share created_at, and ties broke
+            # arbitrarily per call — two identical queries could return
+            # different row orders (consumers compare reads; B14).
+            f"ORDER BY created_at DESC, id DESC LIMIT {safe_limit}"
         )
         rows: list[dict] = []
         with get_connection() as conn:
@@ -1095,11 +1098,14 @@ class TripleStore:
         *,
         triple_id: str | None = None,
         concept: str | None = None,
+        property: str | None = None,
         entity_id: str | None = None,
         period: str | None = None,
     ) -> dict | None:
         """Return one triple's provenance fields. Tenant-scoped lookup
-        either by triple_id or by (concept, entity_id, period)."""
+        either by triple_id (exact) or by coordinates. Triple identity is
+        (entity, concept, property, period) — property narrows the composite
+        path so 'status' can't return 'amount''s provenance."""
         clauses = ["tenant_id = %s"]
         params: list = [tenant_id]
         if triple_id is not None:
@@ -1108,6 +1114,9 @@ class TripleStore:
         else:
             clauses.append("concept = %s")
             params.append(concept)
+            if property is not None:
+                clauses.append("property = %s")
+                params.append(property)
             if entity_id is not None:
                 clauses.append("entity_id = %s")
                 params.append(entity_id)
@@ -1122,7 +1131,8 @@ class TripleStore:
             "       source_system, source_field, source_table, "
             "       pipe_id, run_id, confidence_score, confidence_tier "
             f"FROM semantic_triples WHERE {where} "
-            "ORDER BY created_at DESC LIMIT 1"
+            # id tiebreaker: batch rows share created_at (B14 determinism).
+            "ORDER BY created_at DESC, id DESC LIMIT 1"
         )
         with get_connection() as conn:
             with conn.cursor() as cur:
