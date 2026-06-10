@@ -41,12 +41,19 @@ personas:
     domains:
       - revenue
       - customer
+      # account.* = CRM account/customer records (Farm salesforce generator).
+      # Was unmapped → 422 UNMAPPED_DOMAIN at ingest (farm_deferred_work.md#11).
+      - account
       - service
       - arr
       - sales
       - customer_service
       - pipeline
       - event
+      # CRM-path manifest concepts (Farm salesforce/billing generators) —
+      # unmapped → 422 UNMAPPED_DOMAIN at ingest (farm_deferred_work.md#11).
+      - opportunity
+      - subscription
   COO:
     display_name: Chief Operating Officer
     domains:
@@ -57,6 +64,10 @@ personas:
       - operations
       - vendor
       - customer_service
+      # CRM-path manifest concepts (farm_deferred_work.md#11).
+      - compensation
+      - position
+      - ticket
   CTO:
     display_name: Chief Technology Officer
     domains:
@@ -65,6 +76,10 @@ personas:
       - event_stream
       - aws_cost
       - pipeline
+      # CRM-path manifest concepts (farm_deferred_work.md#11).
+      - health
+      - engineering_work
+      - aws_resource
       - jira
       - datadog
       - event
