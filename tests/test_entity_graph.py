@@ -186,8 +186,31 @@ class TestConstraintViolations:
         assert concept == "edge.BELONGS_TO"
         assert prop == "department:sales->org_unit:OtherOrg-9999"
         assert status == "open"
-        assert claims["edge"]["src_key"] == "sales"
-        assert claims["conflicting_with"]["dst_key"] == ENTITY
+        # ONE register with Gate 1A: claims is the ARRAY-of-claims contract —
+        # each claim carries source_system (the drill UI maps claims; the
+        # disposition route reads c["source_system"]).
+        assert isinstance(claims, list) and len(claims) == 2
+        rejected, live_claim = claims
+        assert rejected["source_system"] == SRC_SYS
+        assert rejected["standing"] == "rejected"
+        assert rejected["asserted_edge"]["src_key"] == "sales"
+        assert rejected["asserted_edge"]["dst_key"] == "OtherOrg-9999"
+        assert live_claim["standing"] == "live"
+        assert live_claim["source_system"] == SRC_SYS
+        assert live_claim["asserted_edge"]["dst_key"] == ENTITY
+        assert live_claim["edge_id"]            # drillable to the live edge row
+        # and the row serves through Gate 1A's OWN register API (one register)
+        r = client.get("/api/dcl/conflicts", params={
+            "tenant_id": tenant_id, "entity_id": ENTITY, "conflict_type": "structural",
+        })
+        assert r.status_code == 200, r.text
+        listed = r.json()
+        mine = [c for c in listed["conflicts"]
+                if c["concept"] == "edge.BELONGS_TO"
+                and c["property"] == "department:sales->org_unit:OtherOrg-9999"]
+        assert len(mine) == 1, listed
+        assert mine[0]["conflict_class"] == "edge_cardinality"
+        assert [c["source_system"] for c in mine[0]["claims"]] == [SRC_SYS, SRC_SYS]
         # and the graph holds ONLY the admissible edge
         live = store.get_neighbors(tenant_id, ENTITY, "department", "sales")
         assert len(live) == 1

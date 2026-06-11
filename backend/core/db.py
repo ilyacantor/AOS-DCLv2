@@ -39,9 +39,11 @@ from backend.utils.log_utils import get_logger
 
 try:
     import psycopg2
+    from psycopg2 import extensions as _pg_extensions
     from psycopg2.pool import ThreadedConnectionPool
 except ImportError:
     psycopg2 = None  # type: ignore[assignment]
+    _pg_extensions = None  # type: ignore[assignment]
     ThreadedConnectionPool = None  # type: ignore[assignment]
 
 logger = get_logger(__name__)
@@ -49,6 +51,77 @@ logger = get_logger(__name__)
 
 class PoolExhausted(Exception):
     """Raised when all connections are checked out and getconn() times out."""
+
+
+# ---------------------------------------------------------------------------
+# Read statement_timeout binding (dcl ledger #62)
+#
+# The Supabase pooler ignores connection-string startup options on BOTH ports,
+# so the pool-init `-c statement_timeout` never reaches dev connections — the
+# 15s read ceiling was silently absent (role default 2min applied). The
+# txn-safe mechanism is SET LOCAL, but a dedicated per-borrow execute costs a
+# full pooler round trip (~76ms p50 from this bench — a B18 violation on read
+# endpoints). Instead, cursors prefix the SET LOCAL onto the FIRST statement
+# of each transaction: psycopg2 sends multi-statement simple-query strings in
+# ONE round trip, so the ceiling binds at zero marginal cost.
+#
+#  - The prefix fires only when the connection's transaction status is IDLE
+#    (a fresh transaction); statements after the first ride the same txn.
+#  - Write paths that need a bigger budget keep working unchanged: their own
+#    `SET LOCAL statement_timeout` becomes "SET LOCAL 15s; SET LOCAL <theirs>"
+#    — the later SET LOCAL wins for the rest of the transaction.
+#  - copy_expert() bypasses execute(); every COPY path in this repo issues an
+#    explicit SET LOCAL execute first, which the prefix combines with.
+#  - Parameter mogrification applies to the combined string; the prefix
+#    carries no placeholders, so client-side interpolation is unaffected.
+#  - Works for any requested cursor class (incl. RealDictCursor): the factory
+#    wraps whatever class the caller asked for, cached per base class.
+# ---------------------------------------------------------------------------
+
+_bound_factory_cache: dict = {}
+
+
+def _bound_cursor_factory(base):
+    """Return (cached) subclass of `base` that binds the read ceiling on the
+    first statement of every transaction."""
+    cached = _bound_factory_cache.get(base)
+    if cached is not None:
+        return cached
+
+    prefix = f"SET LOCAL statement_timeout = {int(QUERY_STATEMENT_TIMEOUT_MS)}; "
+
+    class _TimeoutBoundCursor(base):  # type: ignore[misc,valid-type]
+        def execute(self, query, vars=None):
+            try:
+                fresh_txn = (
+                    self.connection.info.transaction_status
+                    == _pg_extensions.TRANSACTION_STATUS_IDLE
+                )
+            except Exception:
+                fresh_txn = False
+            if fresh_txn and isinstance(query, str):
+                query = prefix + query
+            return super().execute(query, vars)
+
+    _TimeoutBoundCursor.__name__ = f"TimeoutBound{getattr(base, '__name__', 'Cursor')}"
+    _bound_factory_cache[base] = _TimeoutBoundCursor
+    return _TimeoutBoundCursor
+
+
+def _timeout_bound_connection_class():
+    """Connection class whose cursor() wraps WHATEVER cursor class the caller
+    requests — an explicit cursor_factory argument (e.g. canonical_registry's
+    RealDictCursor) would bypass a connection-level cursor_factory attribute,
+    so the wrap must happen inside cursor() itself."""
+    class _TimeoutBoundConnection(_pg_extensions.connection):
+        def cursor(self, *args, **kwargs):
+            base = (kwargs.pop("cursor_factory", None)
+                    or self.cursor_factory
+                    or _pg_extensions.cursor)
+            kwargs["cursor_factory"] = _bound_cursor_factory(base)
+            return super().cursor(*args, **kwargs)
+
+    return _TimeoutBoundConnection
 
 
 # Module-level singleton state
@@ -91,11 +164,19 @@ def _ensure_pool() -> Optional[ThreadedConnectionPool]:
             minconn=POOL_MIN_CONN,
             maxconn=POOL_MAX_CONN,
             dsn=database_url,
+            # Binds the read statement_timeout on the first statement of every
+            # transaction at zero marginal round trips (ledger #62) — see
+            # _bound_cursor_factory above.
+            connection_factory=_timeout_bound_connection_class(),
             connect_timeout=DB_CONNECT_TIMEOUT,
             keepalives=1,
             keepalives_idle=30,
             keepalives_interval=10,
             keepalives_count=5,
+            # Honored on prod's direct db.<ref> host; the Supabase pooler
+            # IGNORES startup options on both ports (dcl ledger #62, verified
+            # 2026-06-11) — in dev the binding mechanism is the SET LOCAL
+            # issued per borrow in get_connection() below.
             options=f"-c statement_timeout={QUERY_STATEMENT_TIMEOUT_MS}",
         )
 
@@ -221,6 +302,8 @@ def get_connection():
                     conn = _getconn_with_timeout(pg_pool, POOL_GETCONN_TIMEOUT)
             except Exception as exc:
                 logger.warning("Stale connection detection failed: %s", exc)
+        # Read statement_timeout binding happens inside the connection class
+        # (connection_factory at pool init) — nothing to do per borrow.
         yield conn
     except PoolExhausted:
         raise  # Let callers handle pool exhaustion explicitly

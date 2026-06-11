@@ -209,15 +209,19 @@ class EdgeStore:
                     )
                     superseded = cur.rowcount
 
-                # Live state AFTER supersession — the baseline constraints check against.
+                # Live state AFTER supersession — the baseline constraints check
+                # against. source_system + id ride along so a violation's register
+                # claim can name the conflicting live edge's source and drill to it.
                 cur.execute(
-                    "SELECT src_type, src_key, edge_type, dst_type, dst_key FROM entity_edges "
+                    "SELECT src_type, src_key, edge_type, dst_type, dst_key, "
+                    "       source_system, id FROM entity_edges "
                     "WHERE tenant_id = %s AND entity_id = %s AND is_active = true",
                     [str(tenant_id), entity_id],
                 )
                 live = [
                     {"src_type": r[0], "src_key": r[1], "edge_type": r[2],
-                     "dst_type": r[3], "dst_key": r[4]}
+                     "dst_type": r[3], "dst_key": r[4],
+                     "source_system": r[5], "edge_id": str(r[6])}
                     for r in cur.fetchall()
                 ]
 
@@ -240,7 +244,10 @@ class EdgeStore:
                         continue
                     accepted.append(
                         {k: e[k] for k in ("src_type", "src_key", "edge_type", "dst_type", "dst_key")}
-                        | {"_full": e}
+                        # source_system/edge_id make an in-batch winner claimable
+                        # in the register exactly like a DB-live one; edge_id is
+                        # filled from RETURNING at insert below.
+                        | {"source_system": e["source_system"], "edge_id": None, "_full": e}
                     )
 
                 # Supersede the live predecessors of accepted re-asserted coordinates.
@@ -275,32 +282,56 @@ class EdgeStore:
                         vals.pop()
                     cur.execute(
                         f"INSERT INTO entity_edges ({', '.join(cols)}) VALUES "
-                        f"({', '.join(['%s'] * len(cols))})",
+                        f"({', '.join(['%s'] * len(cols))}) RETURNING id",
                         vals,
                     )
+                    e["edge_id"] = str(cur.fetchone()[0])
 
-                # Register violations — structural class, same transaction (018 contract).
+                # Register violations — structural class, same transaction as the
+                # graph write (commit or roll back together; a violation can never
+                # be silently lost). ONE register with Gate 1A: rows live in
+                # conflict_register under 1A's contract — claims is an ARRAY of
+                # per-source claim dicts each carrying source_system (the conflict
+                # drill UI maps claims; the disposition route reads
+                # c["source_system"] and tolerates absent triple_id). The inline
+                # INSERT mirrors ConflictStore.upsert_conflicts' coords/ON CONFLICT
+                # semantics; it stays inline (not the store call) so the register
+                # row and the edge writes share this transaction.
                 for v in violations:
                     e = edges[v["edge_index"]]
+                    claims: list[dict] = [{
+                        "source_system": e["source_system"],
+                        "pipe_id": str(e["pipe_id"]) if e.get("pipe_id") else None,
+                        "derivation": e["derivation"],
+                        "asserted_edge": {k: e.get(k) for k in (
+                            "src_type", "src_key", "edge_type", "dst_type", "dst_key",
+                            "properties")},
+                        "rule": v["rule"],
+                        "detail": v["detail"],
+                        "standing": "rejected",
+                    }]
+                    cw = v.get("conflicting_with")
+                    if cw:
+                        claims.append({
+                            "source_system": cw["source_system"],
+                            "edge_id": cw["edge_id"],
+                            "asserted_edge": {k: cw[k] for k in (
+                                "src_type", "src_key", "edge_type", "dst_type", "dst_key")},
+                            "standing": "live",
+                        })
                     cur.execute(
                         "INSERT INTO conflict_register "
                         "(tenant_id, entity_id, conflict_type, conflict_class, concept, property, "
                         " period, dcl_ingest_id, status, claims) "
                         "VALUES (%s, %s, 'structural', %s, %s, %s, NULL, %s, 'open', %s) "
                         "ON CONFLICT (tenant_id, entity_id, concept, property, COALESCE(period, ''), dcl_ingest_id) "
-                        "DO UPDATE SET claims = EXCLUDED.claims, updated_at = now()",
+                        "DO UPDATE SET claims = EXCLUDED.claims, "
+                        "conflict_type = EXCLUDED.conflict_type, "
+                        "conflict_class = EXCLUDED.conflict_class, updated_at = now()",
                         [str(tenant_id), entity_id, v["conflict_class"],
                          f"edge.{e['edge_type']}",
                          f"{e['src_type']}:{e['src_key']}->{e['dst_type']}:{e['dst_key']}",
-                         run_id,
-                         json.dumps({
-                             "rule": v["rule"],
-                             "detail": v["detail"],
-                             "edge": {k: e.get(k) for k in (
-                                 "src_type", "src_key", "edge_type", "dst_type", "dst_key",
-                                 "properties", "source_system", "pipe_id", "derivation")},
-                             "conflicting_with": v.get("conflicting_with"),
-                         })],
+                         run_id, json.dumps(claims)],
                     )
 
                 conn.commit()
