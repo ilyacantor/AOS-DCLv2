@@ -1,0 +1,5 @@
+# Stamped sequence captures are run artifacts — only the latest verified
+# capture is committed (the wrapper and the e2e acceptance render it).
+*
+!.gitignore
+!latest.json

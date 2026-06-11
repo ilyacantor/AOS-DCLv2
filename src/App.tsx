@@ -8,9 +8,17 @@ import { ContextTab } from './components/ContextTab';
 import { DashboardTab } from './components/DashboardTab';
 import { ReconTab } from './components/ReconTab';
 import { GraphV2Tab } from './components/GraphV2Tab';
+import GroundedDemoTab from './components/demo/GroundedDemoTab';
 import { useSnapshots } from './components/RunSelector';
 
-type MainView = 'graph' | 'dashboard' | 'context' | 'guide' | 'recon' | 'ingest';
+type MainView = 'graph' | 'dashboard' | 'context' | 'guide' | 'recon' | 'ingest' | 'demo';
+
+// Deep-link support so Console can launch a surface directly
+// (?view=demo&entity_id=…). Read once at module init; tab clicks still rule.
+const initialParams = new URLSearchParams(window.location.search);
+const initialView: MainView =
+  initialParams.get('view') === 'demo' ? 'demo' : 'graph';
+const requestedEntityId = initialParams.get('entity_id');
 
 const ALL_PERSONAS: PersonaId[] = ['CFO', 'CRO', 'COO', 'CTO', 'CHRO'];
 
@@ -44,7 +52,7 @@ function App() {
   const [_runId, setRunId] = useState<string | undefined>(cached.current?.runId);
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [mainView, setMainView] = useState<MainView>('graph');
+  const [mainView, setMainView] = useState<MainView>(initialView);
   const [_loadError, setLoadError] = useState<string | null>(null);
   const [isCachedView, setIsCachedView] = useState(cached.current !== null);
 
@@ -290,6 +298,7 @@ function App() {
     { id: 'context', label: 'Context' },
     { id: 'recon', label: 'Recon' },
     { id: 'ingest', label: 'Ingest' },
+    { id: 'demo', label: 'Demo' },
   ];
 
   return (
@@ -441,6 +450,8 @@ function App() {
           <UserGuide />
         ) : mainView === 'dashboard' ? (
           <DashboardTab snapshot={snapshot} />
+        ) : mainView === 'demo' ? (
+          <GroundedDemoTab requestedEntityId={requestedEntityId} />
         ) : (
           <GraphV2Tab graphData={graphData} snapshot={snapshot} selectedPersonas={selectedPersonas} />
         )}

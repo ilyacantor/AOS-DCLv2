@@ -1,0 +1,1680 @@
+{
+  "meta": {
+    "stamp": "20260611T175715Z",
+    "entity_id": "CedarGrid-1823",
+    "tenant_id": "51aee6ec-15c3-4fb0-833a-a19bb4511296",
+    "model": "claude-opus-4-8",
+    "dcl_url": "http://localhost:8014",
+    "farm_url": "http://localhost:8003",
+    "dcl_ingest_id": "27a52b2a-5559-4cd9-a0bc-b658071e48a3",
+    "snapshot_name": "CedarGrid-1823-27a5",
+    "register": {
+      "available": true,
+      "open_conflicts": 2
+    }
+  },
+  "beats": {
+    "preflight": {
+      "dcl": {
+        "url": "http://localhost:8014/health",
+        "status": 200
+      },
+      "farm": {
+        "url": "http://localhost:8003/api/health",
+        "status": 200
+      },
+      "entity_snapshot": {
+        "dcl_ingest_id": "27a52b2a-5559-4cd9-a0bc-b658071e48a3",
+        "snapshot_name": "CedarGrid-1823-27a5",
+        "entity_id": "CedarGrid-1823",
+        "run_timestamp": "2026-06-11T17:25:06.850939+00:00",
+        "total_rows": 6678,
+        "is_current": true
+      }
+    },
+    "register_probe": {
+      "available": true,
+      "open_conflicts": 2
+    },
+    "ingest_reject": {
+      "request": {
+        "tenant_id": "51aee6ec-15c3-4fb0-833a-a19bb4511296",
+        "dcl_ingest_id": "73f8c8b9-5669-4ce8-8b13-fee755d89f9f",
+        "entity_id": "CedarGrid-1823",
+        "snapshot_name": "CedarGrid-1823-demo",
+        "pipes": []
+      },
+      "status_code": 400,
+      "response_excerpt": "{\"detail\":{\"error\":\"VALIDATION_FAILED\",\"message\":\"pipes list must not be empty.\"}}",
+      "passed": true
+    },
+    "audit_proof": {
+      "per_token": [
+        {
+          "question_id": "q_revenue",
+          "caller_token_id": "62585540d39db123",
+          "tool_calls_made": 5,
+          "audit_rows": 5,
+          "tools_audited": [
+            "conflict_query",
+            "list_runs",
+            "query_triples"
+          ],
+          "transport": [
+            "http+sse"
+          ],
+          "passed": true
+        },
+        {
+          "question_id": "q_net_income",
+          "caller_token_id": "d227d5118330b7ac",
+          "tool_calls_made": 2,
+          "audit_rows": 2,
+          "tools_audited": [
+            "conflict_query",
+            "query_triples"
+          ],
+          "transport": [
+            "http+sse"
+          ],
+          "passed": true
+        },
+        {
+          "question_id": "q_cash",
+          "caller_token_id": "d1a7f592521856f0",
+          "tool_calls_made": 6,
+          "audit_rows": 6,
+          "tools_audited": [
+            "concept_lookup",
+            "conflict_query",
+            "list_domains",
+            "list_runs",
+            "query_triples"
+          ],
+          "transport": [
+            "http+sse"
+          ],
+          "passed": true
+        },
+        {
+          "question_id": "q_headcount",
+          "caller_token_id": "9e2abc0ae228633e",
+          "tool_calls_made": 5,
+          "audit_rows": 5,
+          "tools_audited": [
+            "concept_lookup",
+            "conflict_query",
+            "list_runs",
+            "query_triples"
+          ],
+          "transport": [
+            "http+sse"
+          ],
+          "passed": true
+        },
+        {
+          "question_id": "q_arr",
+          "caller_token_id": "1b6313db4d3830f5",
+          "tool_calls_made": 6,
+          "audit_rows": 6,
+          "tools_audited": [
+            "concept_lookup",
+            "conflict_query",
+            "list_runs",
+            "query_triples"
+          ],
+          "transport": [
+            "http+sse"
+          ],
+          "passed": true
+        },
+        {
+          "question_id": "q_attrition_live",
+          "caller_token_id": "dd78289a1c04c338",
+          "tool_calls_made": 7,
+          "audit_rows": 7,
+          "tools_audited": [
+            "concept_lookup",
+            "conflict_query",
+            "list_domains",
+            "list_runs",
+            "query_triples"
+          ],
+          "transport": [
+            "http+sse"
+          ],
+          "passed": true
+        },
+        {
+          "question_id": "q_enps_no_data",
+          "caller_token_id": "e454fe4bf68dab15",
+          "tool_calls_made": 5,
+          "audit_rows": 5,
+          "tools_audited": [
+            "concept_lookup",
+            "conflict_query",
+            "list_domains",
+            "list_runs",
+            "query_triples"
+          ],
+          "transport": [
+            "http+sse"
+          ],
+          "passed": true
+        },
+        {
+          "question_id": "q_conflict_live",
+          "caller_token_id": "6c6d30a6c2335068",
+          "tool_calls_made": 2,
+          "audit_rows": 2,
+          "tools_audited": [
+            "conflict_query",
+            "list_domains"
+          ],
+          "transport": [
+            "http+sse"
+          ],
+          "passed": true
+        }
+      ],
+      "passed": true
+    }
+  },
+  "slots": [
+    {
+      "id": "q1_attrition_headline",
+      "question": "Where is attrition highest and what's driving it?",
+      "status": "pending",
+      "kind": "conflict",
+      "pending_reason": "\u00a713 Q1 (headline) \u2014 multi-hop drill (departures \u2192 exit themes \u2192 comp policy \u2192 market comp) and the HR-vs-finance headcount denominator conflict (22% vs 19%) require the Gate 1A Farm scenario months (conflicting HR + finance feeds). Until those datasets exist this slot is pending; it is never simulated."
+    },
+    {
+      "id": "q2_cloud_conflict",
+      "question": "What was March compute spend for the entity \u2014 billing or GL?",
+      "status": "pending",
+      "kind": "conflict",
+      "pending_reason": "\u00a713 Q2 \u2014 billing ($412K-class) vs GL ($387K-class) disagreement with credit/untagged/unexplained decomposition requires the Gate 1A dual-source cloud-spend scenario feeds. Single billing source today; pending, never simulated."
+    },
+    {
+      "id": "q_revenue",
+      "question": "What was total revenue in the most recent quarter?",
+      "status": "live",
+      "kind": "numeric",
+      "ground_truth_resolved": {
+        "feed": "financial",
+        "field": "revenue",
+        "period": "latest",
+        "scales": [
+          1,
+          1000
+        ],
+        "value": 361.06
+      },
+      "panel_a": {
+        "answer_text": "Total revenue in the most recent quarter (**2026-Q4**) was **$361.06 million**.",
+        "tool_calls": [
+          {
+            "name": "list_feeds",
+            "arguments": {},
+            "result_excerpt": "{\"financial\": {\"record_count\": 13, \"fields\": [\"accounts_payable\", \"accounts_receivable\", \"accrued_expenses\", \"asset_total\", \"capex\", \"cash\", \"cf_net_change\", \"cfo\", \"change_in_ap\", \"change_in_ar\", \"change_in_deferred_rev\", \"cogs\", \"common_stock\", \"current_liabilities\", \"deferred_revenue\", \"depreciation_add_back\", \"depreciation_amortization\", \"ebitda\", \"equity_total\", \"financing_debt_repayment\", \"financing_dividends\", \"financing_total\", \"goodwill\", \"intangibles\", \"investing_total\", \"liability_total\", \"long_term_debt\", \"net_income\", \"operating_profit\", \"opex_general_admin\", \"opex_research_development\", \"opex_sales_marketing\", \"opex_total\", \"period\", \"prepaid\", \"property_plant_equipment\", \"retained_earnings\", \"revenue\", \"revenue_by_customer\", \"tax_expense\", \"unbilled_revenue\"], \"period_range\": [\"2023-Q4\", \"2026-Q4\"]}, \"operational\": {\"record_count\": 15, \"fields\": [\"arr_beginning\", \"arr_by_customer\", \"arr_by_region\", \"arr_ending\", \"attrition_rate\", \"avg_deal_size\", \"bookings_total\", \"csat\", \"deploy_frequency\", \"downtime_hours\", \"expansion_revenue\", \"features_shipped\", \"first_response_hours\", \"gross_churn_rate\", \"headcount_by_department\", \"headcount_customer_success\", \"headcount_engineering\", \"headcount_g_and_a\", \"headcount_marketing\", \"headcount_product\", \"headcount_sales\", \"headcount_total\", \"hires\", \"logo_churn_rate\", \"ltv_cac_ratio\", \"mttr_p1_hours\", \"new_customers\", \"new_logo_revenue\", \"nps\", \"nrr\", \"p1_incidents\", \"period\", \"pipeline_closed_won\", \"pipeline_lead\", \"pipeline_negotiation\", \"pipeline_proposal\", \"pipeline_qualified\", \"quota_attainment\", \"renewal_revenue\", \"resolution_hours\", \"revenue_by_region\", \"sales_cycle_days\", \"sales_pipeline_total\", \"sprint_velocity\", \"tech_debt_rate\", \"terminations\", \"uptime_auth_api\", \"uptime_overall\", \"uptime_pct_by_service\", \"uptime_trend\", \"win_rate\"], \"period_range\": [\"2024\", \"2026-Q4\"]}, \"ledger\": {\"record_count\": 917, \"fields\": [\"account_name\", \"account_number\", \"account_type\", \"adjustment_category\", \"adjustment_name\", \"ag\n\u2026[truncated 1136 chars]",
+            "is_error": false,
+            "latency_ms": 308
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "financial",
+              "period": "2026-Q4",
+              "fields": [
+                "revenue"
+              ]
+            },
+            "result_excerpt": "{\"feed\": \"financial\", \"returned\": 1, \"records\": [{\"period\": \"2026-Q4\", \"revenue\": 361.06}]}",
+            "is_error": false,
+            "latency_ms": 0
+          }
+        ],
+        "usage": {
+          "input_tokens": 5358,
+          "output_tokens": 215
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 5.91,
+        "panel": "a",
+        "access": "raw-feeds-direct",
+        "entity_id": "CedarGrid-1823"
+      },
+      "panel_b": {
+        "answer_text": "**Total revenue for the most recent quarter (2026-Q4): $361.06M**\n\n- **Period:** 2026-Q4 \u2014 the most recent quarter present in the store for CedarGrid-1823 (data runs 2024-Q1 through 2026-Q4).\n- **Concept:** `revenue.total`\n- **Source system:** NetSuite (ERP), source field `revenue`\n- **Confidence:** 0.95 (exact tier)\n- **Triple id:** `8cbc04fa-9d4d-4bd9-866a-da390c91cfdb`\n- **Ingest run:** `27a52b2a-5559-4cd9-a0bc-b658071e48a3` (current/active snapshot)\n\n**Conflicts:** None \u2014 the Conflict Register returned zero open or dispositioned conflicts for `revenue.total` (and revenue broadly) on this entity.\n\nNote: the store also carries revenue breakdowns (by region, by customer, and by type \u2014 renewal/expansion/new_logo) for the same period if you'd like a decomposition of that total.",
+        "tool_calls": [
+          {
+            "name": "list_runs",
+            "arguments": {},
+            "result_excerpt": "[{\"entity_id\": \"CedarGrid-1823\", \"triple_count\": 6678, \"created_at\": \"2026-06-11T17:25:17.234181+00:00\", \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\"}]",
+            "is_error": false,
+            "latency_ms": 485
+          },
+          {
+            "name": "query_triples",
+            "arguments": {
+              "concept": "revenue",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "[{\"id\": \"fe4d318a-c5d4-4ed6-9147-60fba64926b2\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"revenue.expansion\", \"property\": \"amount\", \"value\": 7.2, \"period\": \"2025-Q3\", \"currency\": \"USD\", \"unit\": \"usd\", \"source_system\": \"snowflake\", \"source_field\": \"expansion_revenue\", \"fabric_plane\": \"bi\", \"fabric_product\": \"snowflake\", \"pipe_id\": \"1dbc97af-0b1c-5343-9f7c-9d45f2fc43db\", \"confidence_score\": 0.95, \"confidence_tier\": \"exact\", \"is_active\": true, \"created_at\": \"2026-06-11T17:25:11.554912+00:00\", \"ingested_at\": \"2026-06-11T17:25:11.554912+00:00\", \"superseded_at\": null, \"valid_from\": \"2026-06-11T17:25:11.554912+00:00\", \"valid_to\": null, \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"triple_id\": \"fe4d318a-c5d4-4ed6-9147-60fba64926b2\"}, {\"id\": \"fd1e8703-a13f-4365-9745-3a9af87ceaac\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"revenue.renewal\", \"property\": \"amount\", \"value\": 256.26, \"period\": \"2025-Q2\", \"currency\": \"USD\", \"unit\": \"usd\", \"source_system\": \"snowflake\", \"source_field\": \"renewal_revenue\", \"fabric_plane\": \"bi\", \"fabric_product\": \"snowflake\", \"pipe_id\": \"1dbc97af-0b1c-5343-9f7c-9d45f2fc43db\", \"confidence_score\": 0.95, \"confidence_tier\": \"exact\", \"is_active\": true, \"created_at\": \"2026-06-11T17:25:11.554912+00:00\", \"ingested_at\": \"2026-06-11T17:25:11.554912+00:00\", \"superseded_at\": null, \"valid_from\": \"2026-06-11T17:25:11.554912+00:00\", \"valid_to\": null, \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"triple_id\": \"fd1e8703-a13f-4365-9745-3a9af87ceaac\"}, {\"id\": \"f944c708-274c-426d-ad7b-419cee8399e8\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"revenue.by_region.EMEA\", \"property\": \"amount\", \"value\": 83.75, \"period\": \"2025-Q4\", \"currency\": \"USD\", \"unit\": \"usd\", \"source_system\": \"snowflake\", \"source_field\": \"revenue_by_region.EMEA\", \"fabric_plane\": \"bi\", \"fabric_product\": \"snowflake\", \"pipe_id\": \"\n\u2026[truncated 79101 chars]",
+            "is_error": false,
+            "latency_ms": 639
+          },
+          {
+            "name": "conflict_query",
+            "arguments": {
+              "concept": "revenue",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "{\"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"conflicts\": [], \"total_count\": 0}",
+            "is_error": false,
+            "latency_ms": 525
+          },
+          {
+            "name": "query_triples",
+            "arguments": {
+              "concept": "revenue.total",
+              "entity_id": "CedarGrid-1823",
+              "period": "2026-Q4"
+            },
+            "result_excerpt": "[{\"id\": \"8cbc04fa-9d4d-4bd9-866a-da390c91cfdb\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"revenue.total\", \"property\": \"amount\", \"value\": 361.06, \"period\": \"2026-Q4\", \"currency\": \"USD\", \"unit\": \"dollars\", \"source_system\": \"netsuite\", \"source_field\": \"revenue\", \"fabric_plane\": \"erp\", \"fabric_product\": \"netsuite\", \"pipe_id\": \"7519a0d4-1e06-5027-8a45-ad63632cd1f5\", \"confidence_score\": 0.95, \"confidence_tier\": \"exact\", \"is_active\": true, \"created_at\": \"2026-06-11T17:25:09.103054+00:00\", \"ingested_at\": \"2026-06-11T17:25:09.103054+00:00\", \"superseded_at\": null, \"valid_from\": \"2026-06-11T17:25:09.103054+00:00\", \"valid_to\": null, \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"triple_id\": \"8cbc04fa-9d4d-4bd9-866a-da390c91cfdb\"}]",
+            "is_error": false,
+            "latency_ms": 494
+          },
+          {
+            "name": "conflict_query",
+            "arguments": {
+              "concept": "revenue.total",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "{\"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"conflicts\": [], \"total_count\": 0}",
+            "is_error": false,
+            "latency_ms": 568
+          }
+        ],
+        "usage": {
+          "input_tokens": 95301,
+          "output_tokens": 959
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 16.56,
+        "panel": "b",
+        "access": "dcl-mcp-http-sse",
+        "entity_id": "CedarGrid-1823",
+        "mcp": {
+          "sse_url": "http://localhost:8014/api/mcp/sse",
+          "caller_token_id": "62585540d39db123",
+          "scope": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ],
+          "tools_listed": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ]
+        },
+        "question_id": "q_revenue"
+      },
+      "scores": {
+        "a": {
+          "correctness": {
+            "passed": true,
+            "matched_value": 361.06,
+            "scale": 1
+          },
+          "provenance": {
+            "present": false,
+            "cited_triple_or_ingest_ids": [],
+            "cited_source_systems": [],
+            "confidence_cited": false
+          }
+        },
+        "b": {
+          "correctness": {
+            "passed": true,
+            "matched_value": 361.06,
+            "scale": 1
+          },
+          "provenance": {
+            "present": true,
+            "cited_triple_or_ingest_ids": [
+              "27a52b2a-5559-4cd9-a0bc-b658071e48a3",
+              "8cbc04fa-9d4d-4bd9-866a-da390c91cfdb"
+            ],
+            "cited_source_systems": [
+              "netsuite"
+            ],
+            "confidence_cited": true
+          }
+        }
+      },
+      "passed": true
+    },
+    {
+      "id": "q_net_income",
+      "question": "What was net income in the most recent quarter?",
+      "status": "live",
+      "kind": "numeric",
+      "ground_truth_resolved": {
+        "feed": "financial",
+        "field": "net_income",
+        "period": "latest",
+        "scales": [
+          1,
+          1000
+        ],
+        "value": 99.99
+      },
+      "panel_a": {
+        "answer_text": "Net income in the most recent quarter (2026-Q4) was **$99.99 million**.\n\nFor context that quarter: revenue was $361.06M and operating profit was $133.32M.",
+        "tool_calls": [
+          {
+            "name": "list_feeds",
+            "arguments": {},
+            "result_excerpt": "{\"financial\": {\"record_count\": 13, \"fields\": [\"accounts_payable\", \"accounts_receivable\", \"accrued_expenses\", \"asset_total\", \"capex\", \"cash\", \"cf_net_change\", \"cfo\", \"change_in_ap\", \"change_in_ar\", \"change_in_deferred_rev\", \"cogs\", \"common_stock\", \"current_liabilities\", \"deferred_revenue\", \"depreciation_add_back\", \"depreciation_amortization\", \"ebitda\", \"equity_total\", \"financing_debt_repayment\", \"financing_dividends\", \"financing_total\", \"goodwill\", \"intangibles\", \"investing_total\", \"liability_total\", \"long_term_debt\", \"net_income\", \"operating_profit\", \"opex_general_admin\", \"opex_research_development\", \"opex_sales_marketing\", \"opex_total\", \"period\", \"prepaid\", \"property_plant_equipment\", \"retained_earnings\", \"revenue\", \"revenue_by_customer\", \"tax_expense\", \"unbilled_revenue\"], \"period_range\": [\"2023-Q4\", \"2026-Q4\"]}, \"operational\": {\"record_count\": 15, \"fields\": [\"arr_beginning\", \"arr_by_customer\", \"arr_by_region\", \"arr_ending\", \"attrition_rate\", \"avg_deal_size\", \"bookings_total\", \"csat\", \"deploy_frequency\", \"downtime_hours\", \"expansion_revenue\", \"features_shipped\", \"first_response_hours\", \"gross_churn_rate\", \"headcount_by_department\", \"headcount_customer_success\", \"headcount_engineering\", \"headcount_g_and_a\", \"headcount_marketing\", \"headcount_product\", \"headcount_sales\", \"headcount_total\", \"hires\", \"logo_churn_rate\", \"ltv_cac_ratio\", \"mttr_p1_hours\", \"new_customers\", \"new_logo_revenue\", \"nps\", \"nrr\", \"p1_incidents\", \"period\", \"pipeline_closed_won\", \"pipeline_lead\", \"pipeline_negotiation\", \"pipeline_proposal\", \"pipeline_qualified\", \"quota_attainment\", \"renewal_revenue\", \"resolution_hours\", \"revenue_by_region\", \"sales_cycle_days\", \"sales_pipeline_total\", \"sprint_velocity\", \"tech_debt_rate\", \"terminations\", \"uptime_auth_api\", \"uptime_overall\", \"uptime_pct_by_service\", \"uptime_trend\", \"win_rate\"], \"period_range\": [\"2024\", \"2026-Q4\"]}, \"ledger\": {\"record_count\": 917, \"fields\": [\"account_name\", \"account_number\", \"account_type\", \"adjustment_category\", \"adjustment_name\", \"ag\n\u2026[truncated 1136 chars]",
+            "is_error": false,
+            "latency_ms": 623
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "financial",
+              "period": "2026-Q4",
+              "fields": [
+                "net_income",
+                "revenue",
+                "operating_profit"
+              ]
+            },
+            "result_excerpt": "{\"feed\": \"financial\", \"returned\": 1, \"records\": [{\"period\": \"2026-Q4\", \"revenue\": 361.06, \"operating_profit\": 133.32, \"net_income\": 99.99}]}",
+            "is_error": false,
+            "latency_ms": 0
+          }
+        ],
+        "usage": {
+          "input_tokens": 5393,
+          "output_tokens": 256
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 9.16,
+        "panel": "a",
+        "access": "raw-feeds-direct",
+        "entity_id": "CedarGrid-1823"
+      },
+      "panel_b": {
+        "answer_text": "The most recent quarter with net income data is **2026-Q4**:\n\n**Net income (2026-Q4): $99.99M**\n\n- **Period:** 2026-Q4 (latest available; the series runs from 2023-Q4 through 2026-Q4)\n- **Source system:** NetSuite (ERP), source field `net_income`\n- **Confidence:** 0.95 (tier: exact)\n- **Triple id:** `3ff1f180-282a-4a77-b21a-445bd9133b0f`\n- **Ingest id:** `27a52b2a-5559-4cd9-a0bc-b658071e48a3`\n- **Conflicts:** None detected in the Conflict Register for net_income on this entity.\n\nFor context, the prior quarter (2026-Q3) was $95.09M (triple `064cf9a8-b41c-4cda-a00e-2b9fa4f1e856`, same source/confidence).",
+        "tool_calls": [
+          {
+            "name": "query_triples",
+            "arguments": {
+              "concept": "net_income",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "[{\"id\": \"fcdda5a3-0115-4bc0-b570-beedf1419465\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"pnl.net_income\", \"property\": \"amount\", \"value\": 71.69, \"period\": \"2025-Q2\", \"currency\": \"USD\", \"unit\": \"dollars\", \"source_system\": \"netsuite\", \"source_field\": \"net_income\", \"fabric_plane\": \"erp\", \"fabric_product\": \"netsuite\", \"pipe_id\": \"7519a0d4-1e06-5027-8a45-ad63632cd1f5\", \"confidence_score\": 0.95, \"confidence_tier\": \"exact\", \"is_active\": true, \"created_at\": \"2026-06-11T17:25:09.103054+00:00\", \"ingested_at\": \"2026-06-11T17:25:09.103054+00:00\", \"superseded_at\": null, \"valid_from\": \"2026-06-11T17:25:09.103054+00:00\", \"valid_to\": null, \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"triple_id\": \"fcdda5a3-0115-4bc0-b570-beedf1419465\"}, {\"id\": \"ef92708c-6612-4ded-a4d5-af127c674e93\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"pnl.net_income\", \"property\": \"amount\", \"value\": 58.38, \"period\": \"2024-Q3\", \"currency\": \"USD\", \"unit\": \"dollars\", \"source_system\": \"netsuite\", \"source_field\": \"net_income\", \"fabric_plane\": \"erp\", \"fabric_product\": \"netsuite\", \"pipe_id\": \"7519a0d4-1e06-5027-8a45-ad63632cd1f5\", \"confidence_score\": 0.95, \"confidence_tier\": \"exact\", \"is_active\": true, \"created_at\": \"2026-06-11T17:25:09.103054+00:00\", \"ingested_at\": \"2026-06-11T17:25:09.103054+00:00\", \"superseded_at\": null, \"valid_from\": \"2026-06-11T17:25:09.103054+00:00\", \"valid_to\": null, \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"triple_id\": \"ef92708c-6612-4ded-a4d5-af127c674e93\"}, {\"id\": \"cc8945c5-9aa2-459d-9bff-ce8539a7ef99\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"pnl.net_income\", \"property\": \"amount\", \"value\": 81.26, \"period\": \"2025-Q4\", \"currency\": \"USD\", \"unit\": \"dollars\", \"source_system\": \"netsuite\", \"source_field\": \"net_income\", \"fabric_plane\": \"erp\", \"fabric_product\": \"netsuite\", \"pipe_id\": \"7519a0d4-1e06-5027-8a45-ad\n\u2026[truncated 8344 chars]",
+            "is_error": false,
+            "latency_ms": 499
+          },
+          {
+            "name": "conflict_query",
+            "arguments": {
+              "concept": "net_income",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "{\"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"conflicts\": [], \"total_count\": 0}",
+            "is_error": false,
+            "latency_ms": 580
+          }
+        ],
+        "usage": {
+          "input_tokens": 9834,
+          "output_tokens": 497
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 8.62,
+        "panel": "b",
+        "access": "dcl-mcp-http-sse",
+        "entity_id": "CedarGrid-1823",
+        "mcp": {
+          "sse_url": "http://localhost:8014/api/mcp/sse",
+          "caller_token_id": "d227d5118330b7ac",
+          "scope": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ],
+          "tools_listed": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ]
+        },
+        "question_id": "q_net_income"
+      },
+      "scores": {
+        "a": {
+          "correctness": {
+            "passed": true,
+            "matched_value": 99.99,
+            "scale": 1
+          },
+          "provenance": {
+            "present": false,
+            "cited_triple_or_ingest_ids": [],
+            "cited_source_systems": [],
+            "confidence_cited": false
+          }
+        },
+        "b": {
+          "correctness": {
+            "passed": true,
+            "matched_value": 99.99,
+            "scale": 1
+          },
+          "provenance": {
+            "present": true,
+            "cited_triple_or_ingest_ids": [
+              "27a52b2a-5559-4cd9-a0bc-b658071e48a3"
+            ],
+            "cited_source_systems": [
+              "netsuite"
+            ],
+            "confidence_cited": true
+          }
+        }
+      },
+      "passed": true
+    },
+    {
+      "id": "q_cash",
+      "question": "What was the cash position at the end of the most recent quarter?",
+      "status": "live",
+      "kind": "numeric",
+      "ground_truth_resolved": {
+        "feed": "financial",
+        "field": "cash",
+        "period": "latest",
+        "scales": [
+          1,
+          1000
+        ],
+        "value": 1819.68
+      },
+      "panel_a": {
+        "answer_text": "The cash position at the end of the most recent quarter (**2026-Q4**) was **$1,819.68 million** (\u2248$1.82 billion). The net change in cash during that quarter was +$126.7 million.",
+        "tool_calls": [
+          {
+            "name": "list_feeds",
+            "arguments": {},
+            "result_excerpt": "{\"financial\": {\"record_count\": 13, \"fields\": [\"accounts_payable\", \"accounts_receivable\", \"accrued_expenses\", \"asset_total\", \"capex\", \"cash\", \"cf_net_change\", \"cfo\", \"change_in_ap\", \"change_in_ar\", \"change_in_deferred_rev\", \"cogs\", \"common_stock\", \"current_liabilities\", \"deferred_revenue\", \"depreciation_add_back\", \"depreciation_amortization\", \"ebitda\", \"equity_total\", \"financing_debt_repayment\", \"financing_dividends\", \"financing_total\", \"goodwill\", \"intangibles\", \"investing_total\", \"liability_total\", \"long_term_debt\", \"net_income\", \"operating_profit\", \"opex_general_admin\", \"opex_research_development\", \"opex_sales_marketing\", \"opex_total\", \"period\", \"prepaid\", \"property_plant_equipment\", \"retained_earnings\", \"revenue\", \"revenue_by_customer\", \"tax_expense\", \"unbilled_revenue\"], \"period_range\": [\"2023-Q4\", \"2026-Q4\"]}, \"operational\": {\"record_count\": 15, \"fields\": [\"arr_beginning\", \"arr_by_customer\", \"arr_by_region\", \"arr_ending\", \"attrition_rate\", \"avg_deal_size\", \"bookings_total\", \"csat\", \"deploy_frequency\", \"downtime_hours\", \"expansion_revenue\", \"features_shipped\", \"first_response_hours\", \"gross_churn_rate\", \"headcount_by_department\", \"headcount_customer_success\", \"headcount_engineering\", \"headcount_g_and_a\", \"headcount_marketing\", \"headcount_product\", \"headcount_sales\", \"headcount_total\", \"hires\", \"logo_churn_rate\", \"ltv_cac_ratio\", \"mttr_p1_hours\", \"new_customers\", \"new_logo_revenue\", \"nps\", \"nrr\", \"p1_incidents\", \"period\", \"pipeline_closed_won\", \"pipeline_lead\", \"pipeline_negotiation\", \"pipeline_proposal\", \"pipeline_qualified\", \"quota_attainment\", \"renewal_revenue\", \"resolution_hours\", \"revenue_by_region\", \"sales_cycle_days\", \"sales_pipeline_total\", \"sprint_velocity\", \"tech_debt_rate\", \"terminations\", \"uptime_auth_api\", \"uptime_overall\", \"uptime_pct_by_service\", \"uptime_trend\", \"win_rate\"], \"period_range\": [\"2024\", \"2026-Q4\"]}, \"ledger\": {\"record_count\": 917, \"fields\": [\"account_name\", \"account_number\", \"account_type\", \"adjustment_category\", \"adjustment_name\", \"ag\n\u2026[truncated 1136 chars]",
+            "is_error": false,
+            "latency_ms": 230
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "financial",
+              "period": "2026-Q4",
+              "fields": [
+                "cash",
+                "cf_net_change"
+              ]
+            },
+            "result_excerpt": "{\"feed\": \"financial\", \"returned\": 1, \"records\": [{\"period\": \"2026-Q4\", \"cash\": 1819.68, \"cf_net_change\": 126.7}]}",
+            "is_error": false,
+            "latency_ms": 0
+          }
+        ],
+        "usage": {
+          "input_tokens": 5395,
+          "output_tokens": 259
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 9.38,
+        "panel": "a",
+        "access": "raw-feeds-direct",
+        "entity_id": "CedarGrid-1823"
+      },
+      "panel_b": {
+        "answer_text": "**Cash position at end of most recent quarter (2026-Q4): $1,819.68M**\n\nThe most recent quarter in the store for CedarGrid-1823 is **2026-Q4**. Cash & Equivalents (concept `asset.current.cash`) stood at **$1,819.68 million** (USD).\n\n**Provenance:**\n- Source system: NetSuite (ERP), source field `cash`\n- Confidence: 0.95 (tier: exact)\n- Triple id: `aead0162-b3ce-4c4d-b593-9322672955fb`\n- Ingest run: `27a52b2a-5559-4cd9-a0bc-b658071e48a3`\n\n**Conflicts:** None \u2014 the Conflict Register returned no open or dispositioned conflicts for this concept/entity.\n\nFor context, the prior quarter (2026-Q3) was $1,692.98M (triple `fd13fec3-\u2026`), so cash rose ~$126.7M quarter-over-quarter.",
+        "tool_calls": [
+          {
+            "name": "concept_lookup",
+            "arguments": {
+              "query": "cash position"
+            },
+            "result_excerpt": "TOOL ERROR (MCP): No concept found for 'cash position'.",
+            "is_error": false,
+            "latency_ms": 255
+          },
+          {
+            "name": "list_runs",
+            "arguments": {},
+            "result_excerpt": "[{\"entity_id\": \"CedarGrid-1823\", \"triple_count\": 6678, \"created_at\": \"2026-06-11T17:25:17.234181+00:00\", \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\"}]",
+            "is_error": false,
+            "latency_ms": 477
+          },
+          {
+            "name": "concept_lookup",
+            "arguments": {
+              "query": "cash"
+            },
+            "result_excerpt": "{\"type\": \"metric\", \"id\": \"cash\", \"name\": \"Cash & Equivalents\", \"definition\": \"Cash and cash equivalents on the balance sheet\", \"aliases\": [\"cash balance\", \"cash on hand\", \"liquidity\"], \"pack\": \"cfo\", \"allowed_dims\": [\"region\"], \"allowed_grains\": [\"month\", \"quarter\"]}",
+            "is_error": false,
+            "latency_ms": 244
+          },
+          {
+            "name": "list_domains",
+            "arguments": {
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "[{\"domain\": \"gl\", \"triple_count\": 3451}, {\"domain\": \"support\", \"triple_count\": 468}, {\"domain\": \"revenue\", \"triple_count\": 398}, {\"domain\": \"arr\", \"triple_count\": 312}, {\"domain\": \"coa\", \"triple_count\": 249}, {\"domain\": \"customer\", \"triple_count\": 214}, {\"domain\": \"cash_flow\", \"triple_count\": 138}, {\"domain\": \"workforce\", \"triple_count\": 120}, {\"domain\": \"accounts_payable\", \"triple_count\": 109}, {\"domain\": \"accounts_receivable\", \"triple_count\": 109}, {\"domain\": \"asset\", \"triple_count\": 104}, {\"domain\": \"journal_entry\", \"triple_count\": 85}, {\"domain\": \"uptime_pct\", \"triple_count\": 84}, {\"domain\": \"ebitda_adjustment\", \"triple_count\": 80}, {\"domain\": \"liability\", \"triple_count\": 78}, {\"domain\": \"invoice\", \"triple_count\": 73}, {\"domain\": \"headcount\", \"triple_count\": 72}, {\"domain\": \"sales\", \"triple_count\": 72}, {\"domain\": \"pnl\", \"triple_count\": 65}, {\"domain\": \"efficiency\", \"triple_count\": 60}, {\"domain\": \"event_stream\", \"triple_count\": 60}, {\"domain\": \"opex\", \"triple_count\": 52}, {\"domain\": \"equity\", \"triple_count\": 39}, {\"domain\": \"infrastructure\", \"triple_count\": 24}, {\"domain\": \"engineering\", \"triple_count\": 24}, {\"domain\": \"operations\", \"triple_count\": 24}, {\"domain\": \"cloud_spend\", \"triple_count\": 19}, {\"domain\": \"cogs\", \"triple_count\": 13}, {\"domain\": \"uptime_trend\", \"triple_count\": 12}, {\"domain\": \"sprint_velocity\", \"triple_count\": 12}, {\"domain\": \"incident_count\", \"triple_count\": 12}, {\"domain\": \"deploy_frequency\", \"triple_count\": 12}, {\"domain\": \"uptime_by_service\", \"triple_count\": 12}, {\"domain\": \"account\", \"triple_count\": 12}, {\"domain\": \"pipeline\", \"triple_count\": 2}, {\"domain\": \"cloud_savings_opportunities_amount\", \"triple_count\": 1}, {\"domain\": \"cloud_spend_by_service\", \"triple_count\": 1}, {\"domain\": \"event\", \"triple_count\": 1}, {\"domain\": \"jira\", \"triple_count\": 1}, {\"domain\": \"aws_cost\", \"triple_count\": 1}, {\"domain\": \"cloud_spend_by_team\", \"triple_count\": 1}, {\"domain\": \"datadog\", \"triple_count\": 1}, {\"domain\": \"service\", \"triple_count\": 1}]",
+            "is_error": false,
+            "latency_ms": 478
+          },
+          {
+            "name": "query_triples",
+            "arguments": {
+              "concept": "cash",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "[{\"id\": \"fd13fec3-275a-4e8d-a1c8-53b56aa712d4\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"asset.current.cash\", \"property\": \"amount\", \"value\": 1692.98, \"period\": \"2026-Q3\", \"currency\": \"USD\", \"unit\": \"dollars\", \"source_system\": \"netsuite\", \"source_field\": \"cash\", \"fabric_plane\": \"erp\", \"fabric_product\": \"netsuite\", \"pipe_id\": \"7519a0d4-1e06-5027-8a45-ad63632cd1f5\", \"confidence_score\": 0.95, \"confidence_tier\": \"exact\", \"is_active\": true, \"created_at\": \"2026-06-11T17:25:09.103054+00:00\", \"ingested_at\": \"2026-06-11T17:25:09.103054+00:00\", \"superseded_at\": null, \"valid_from\": \"2026-06-11T17:25:09.103054+00:00\", \"valid_to\": null, \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"triple_id\": \"fd13fec3-275a-4e8d-a1c8-53b56aa712d4\"}, {\"id\": \"ee83f0c9-185b-4f16-a13d-82832e2c83d0\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"asset.current.cash\", \"property\": \"amount\", \"value\": 952.82, \"period\": \"2024-Q4\", \"currency\": \"USD\", \"unit\": \"dollars\", \"source_system\": \"netsuite\", \"source_field\": \"cash\", \"fabric_plane\": \"erp\", \"fabric_product\": \"netsuite\", \"pipe_id\": \"7519a0d4-1e06-5027-8a45-ad63632cd1f5\", \"confidence_score\": 0.95, \"confidence_tier\": \"exact\", \"is_active\": true, \"created_at\": \"2026-06-11T17:25:09.103054+00:00\", \"ingested_at\": \"2026-06-11T17:25:09.103054+00:00\", \"superseded_at\": null, \"valid_from\": \"2026-06-11T17:25:09.103054+00:00\", \"valid_to\": null, \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"triple_id\": \"ee83f0c9-185b-4f16-a13d-82832e2c83d0\"}, {\"id\": \"e96e1eb5-9bbb-499c-a1c6-258f087eac29\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"asset.current.cash\", \"property\": \"amount\", \"value\": 1042.55, \"period\": \"2025-Q1\", \"currency\": \"USD\", \"unit\": \"dollars\", \"source_system\": \"netsuite\", \"source_field\": \"cash\", \"fabric_plane\": \"erp\", \"fabric_product\": \"netsuite\", \"pipe_id\": \"7519a0d4-1e06-5027-8a45-ad6\n\u2026[truncated 8341 chars]",
+            "is_error": false,
+            "latency_ms": 474
+          },
+          {
+            "name": "conflict_query",
+            "arguments": {
+              "concept": "cash",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "{\"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"conflicts\": [], \"total_count\": 0}",
+            "is_error": false,
+            "latency_ms": 2282
+          }
+        ],
+        "usage": {
+          "input_tokens": 17257,
+          "output_tokens": 914
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 18.96,
+        "panel": "b",
+        "access": "dcl-mcp-http-sse",
+        "entity_id": "CedarGrid-1823",
+        "mcp": {
+          "sse_url": "http://localhost:8014/api/mcp/sse",
+          "caller_token_id": "d1a7f592521856f0",
+          "scope": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ],
+          "tools_listed": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ]
+        },
+        "question_id": "q_cash"
+      },
+      "scores": {
+        "a": {
+          "correctness": {
+            "passed": true,
+            "matched_value": 1819.68,
+            "scale": 1
+          },
+          "provenance": {
+            "present": false,
+            "cited_triple_or_ingest_ids": [],
+            "cited_source_systems": [],
+            "confidence_cited": false
+          }
+        },
+        "b": {
+          "correctness": {
+            "passed": true,
+            "matched_value": 1819.68,
+            "scale": 1
+          },
+          "provenance": {
+            "present": true,
+            "cited_triple_or_ingest_ids": [
+              "27a52b2a-5559-4cd9-a0bc-b658071e48a3"
+            ],
+            "cited_source_systems": [
+              "netsuite"
+            ],
+            "confidence_cited": true
+          }
+        }
+      },
+      "passed": true
+    },
+    {
+      "id": "q_headcount",
+      "question": "What is total headcount in the most recent quarter?",
+      "status": "live",
+      "kind": "numeric",
+      "ground_truth_resolved": {
+        "feed": "operational",
+        "field": "headcount_total",
+        "period": "latest",
+        "scales": [
+          1
+        ],
+        "value": 367.0
+      },
+      "panel_a": {
+        "answer_text": "Total headcount in the most recent quarter (**2026-Q4**) is **367 employees**.\n\nBreakdown by department:\n- Engineering: 117\n- G&A: 70\n- Sales: 66\n- Customer Success: 50\n- Marketing: 36\n- Product: 28\n\nThese sum exactly to 367, confirming the total.",
+        "tool_calls": [
+          {
+            "name": "list_feeds",
+            "arguments": {},
+            "result_excerpt": "{\"financial\": {\"record_count\": 13, \"fields\": [\"accounts_payable\", \"accounts_receivable\", \"accrued_expenses\", \"asset_total\", \"capex\", \"cash\", \"cf_net_change\", \"cfo\", \"change_in_ap\", \"change_in_ar\", \"change_in_deferred_rev\", \"cogs\", \"common_stock\", \"current_liabilities\", \"deferred_revenue\", \"depreciation_add_back\", \"depreciation_amortization\", \"ebitda\", \"equity_total\", \"financing_debt_repayment\", \"financing_dividends\", \"financing_total\", \"goodwill\", \"intangibles\", \"investing_total\", \"liability_total\", \"long_term_debt\", \"net_income\", \"operating_profit\", \"opex_general_admin\", \"opex_research_development\", \"opex_sales_marketing\", \"opex_total\", \"period\", \"prepaid\", \"property_plant_equipment\", \"retained_earnings\", \"revenue\", \"revenue_by_customer\", \"tax_expense\", \"unbilled_revenue\"], \"period_range\": [\"2023-Q4\", \"2026-Q4\"]}, \"operational\": {\"record_count\": 15, \"fields\": [\"arr_beginning\", \"arr_by_customer\", \"arr_by_region\", \"arr_ending\", \"attrition_rate\", \"avg_deal_size\", \"bookings_total\", \"csat\", \"deploy_frequency\", \"downtime_hours\", \"expansion_revenue\", \"features_shipped\", \"first_response_hours\", \"gross_churn_rate\", \"headcount_by_department\", \"headcount_customer_success\", \"headcount_engineering\", \"headcount_g_and_a\", \"headcount_marketing\", \"headcount_product\", \"headcount_sales\", \"headcount_total\", \"hires\", \"logo_churn_rate\", \"ltv_cac_ratio\", \"mttr_p1_hours\", \"new_customers\", \"new_logo_revenue\", \"nps\", \"nrr\", \"p1_incidents\", \"period\", \"pipeline_closed_won\", \"pipeline_lead\", \"pipeline_negotiation\", \"pipeline_proposal\", \"pipeline_qualified\", \"quota_attainment\", \"renewal_revenue\", \"resolution_hours\", \"revenue_by_region\", \"sales_cycle_days\", \"sales_pipeline_total\", \"sprint_velocity\", \"tech_debt_rate\", \"terminations\", \"uptime_auth_api\", \"uptime_overall\", \"uptime_pct_by_service\", \"uptime_trend\", \"win_rate\"], \"period_range\": [\"2024\", \"2026-Q4\"]}, \"ledger\": {\"record_count\": 917, \"fields\": [\"account_name\", \"account_number\", \"account_type\", \"adjustment_category\", \"adjustment_name\", \"ag\n\u2026[truncated 1136 chars]",
+            "is_error": false,
+            "latency_ms": 249
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "operational",
+              "period": "2026-Q4",
+              "fields": [
+                "headcount_total",
+                "headcount_by_department",
+                "headcount_engineering",
+                "headcount_sales",
+                "headcount_marketing",
+                "headcount_customer_success",
+                "headcount_product",
+                "headcount_g_and_a"
+              ]
+            },
+            "result_excerpt": "{\"feed\": \"operational\", \"returned\": 1, \"records\": [{\"period\": \"2026-Q4\", \"headcount_total\": 367.0, \"headcount_engineering\": 117.0, \"headcount_sales\": 66.0, \"headcount_product\": 28.0, \"headcount_marketing\": 36.0, \"headcount_customer_success\": 50.0, \"headcount_g_and_a\": 70.0, \"headcount_by_department\": {\"engineering\": 117.0, \"product\": 28.0, \"sales\": 66.0, \"marketing\": 36.0, \"customer_success\": 50.0, \"g&a\": 70.0}}]}",
+            "is_error": false,
+            "latency_ms": 0
+          }
+        ],
+        "usage": {
+          "input_tokens": 5598,
+          "output_tokens": 368
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 7.23,
+        "panel": "a",
+        "access": "raw-feeds-direct",
+        "entity_id": "CedarGrid-1823"
+      },
+      "panel_b": {
+        "answer_text": "## Total headcount \u2014 2026-Q4 (most recent quarter)\n\nThe store has no single \"total headcount\" triple; it carries headcount broken out by department (`headcount.by_department`). Summing the six departments for the latest quarter:\n\n| Department | Headcount | Triple ID |\n|---|---|---|\n| Engineering | 117 | 295e645d-73fe-4030-9299-ffdf22284f27 |\n| G&A | 70 | 39093387-7754-485f-915c-dbb45272f33f |\n| Sales | 66 | b41f8cab-9349-43e9-baa2-d59459ba2eb7 |\n| Customer Success | 50 | 879fa555-1619-4bfd-ba45-01dd00fe925f |\n| Marketing | 36 | 54fb1f62-1102-4547-93ac-2dc6eca48820 |\n| Product | 28 | 05457a3e-908f-415c-8c96-eb0677a77c2e |\n| **Total** | **367** | |\n\n**Total headcount in 2026-Q4 = 367 employees** (sum of departmental figures).\n\n**Provenance:** All six triples are sourced from **Snowflake** (source field `headcount_by_department.*`), confidence **0.95** (tier: exact), ingest run `27a52b2a-5559-4cd9-a0bc-b658071e48a3`.\n\n**Conflicts:** None \u2014 the conflict register returned 0 conflicts for the headcount concept on this entity.\n\nNote: This total is a sum I computed from the per-department triples; the store does not contain a pre-aggregated company-wide headcount value. The data is keyed by department dimension only (no separate location/level/team breakdown for this period).",
+        "tool_calls": [
+          {
+            "name": "list_runs",
+            "arguments": {},
+            "result_excerpt": "[{\"entity_id\": \"CedarGrid-1823\", \"triple_count\": 6678, \"created_at\": \"2026-06-11T17:25:17.234181+00:00\", \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\"}]",
+            "is_error": false,
+            "latency_ms": 487
+          },
+          {
+            "name": "concept_lookup",
+            "arguments": {
+              "query": "total headcount"
+            },
+            "result_excerpt": "TOOL ERROR (MCP): No concept found for 'total headcount'.",
+            "is_error": false,
+            "latency_ms": 246
+          },
+          {
+            "name": "concept_lookup",
+            "arguments": {
+              "query": "headcount"
+            },
+            "result_excerpt": "{\"type\": \"metric\", \"id\": \"headcount\", \"name\": \"Headcount\", \"definition\": \"Total employee count\", \"aliases\": [\"employees\", \"employee count\", \"HC\", \"FTE\"], \"pack\": \"chro\", \"allowed_dims\": [\"department\", \"team\", \"location\", \"level\"], \"allowed_grains\": [\"month\", \"quarter\", \"year\"]}",
+            "is_error": false,
+            "latency_ms": 266
+          },
+          {
+            "name": "query_triples",
+            "arguments": {
+              "concept": "headcount",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "[{\"id\": \"fdfb992d-e505-488e-8679-0907ed579102\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"headcount.by_department\", \"property\": \"customer_success\", \"value\": 35.0, \"period\": \"2024-Q3\", \"currency\": null, \"unit\": \"count\", \"source_system\": \"snowflake\", \"source_field\": \"headcount_by_department.customer_success\", \"fabric_plane\": \"bi\", \"fabric_product\": \"snowflake\", \"pipe_id\": \"1dbc97af-0b1c-5343-9f7c-9d45f2fc43db\", \"confidence_score\": 0.95, \"confidence_tier\": \"exact\", \"is_active\": true, \"created_at\": \"2026-06-11T17:25:11.554912+00:00\", \"ingested_at\": \"2026-06-11T17:25:11.554912+00:00\", \"superseded_at\": null, \"valid_from\": \"2026-06-11T17:25:11.554912+00:00\", \"valid_to\": null, \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"triple_id\": \"fdfb992d-e505-488e-8679-0907ed579102\"}, {\"id\": \"f541a1f8-3be0-4e85-9343-a98b7a3cb838\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"headcount.by_department\", \"property\": \"product\", \"value\": 23.0, \"period\": \"2025-Q2\", \"currency\": null, \"unit\": \"count\", \"source_system\": \"snowflake\", \"source_field\": \"headcount_by_department.product\", \"fabric_plane\": \"bi\", \"fabric_product\": \"snowflake\", \"pipe_id\": \"1dbc97af-0b1c-5343-9f7c-9d45f2fc43db\", \"confidence_score\": 0.95, \"confidence_tier\": \"exact\", \"is_active\": true, \"created_at\": \"2026-06-11T17:25:11.554912+00:00\", \"ingested_at\": \"2026-06-11T17:25:11.554912+00:00\", \"superseded_at\": null, \"valid_from\": \"2026-06-11T17:25:11.554912+00:00\", \"valid_to\": null, \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"triple_id\": \"f541a1f8-3be0-4e85-9343-a98b7a3cb838\"}, {\"id\": \"f3526cb9-6b79-484c-9c8f-edf5d36e60dc\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"headcount.by_department\", \"property\": \"product\", \"value\": 19.0, \"period\": \"2024-Q2\", \"currency\": null, \"unit\": \"count\", \"source_system\": \"snowflake\", \"source_field\": \"headcount_by_department\n\u2026[truncated 57549 chars]",
+            "is_error": false,
+            "latency_ms": 586
+          },
+          {
+            "name": "conflict_query",
+            "arguments": {
+              "concept": "headcount",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "{\"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"conflicts\": [], \"total_count\": 0}",
+            "is_error": false,
+            "latency_ms": 552
+          }
+        ],
+        "usage": {
+          "input_tokens": 74598,
+          "output_tokens": 1259
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 23.91,
+        "panel": "b",
+        "access": "dcl-mcp-http-sse",
+        "entity_id": "CedarGrid-1823",
+        "mcp": {
+          "sse_url": "http://localhost:8014/api/mcp/sse",
+          "caller_token_id": "9e2abc0ae228633e",
+          "scope": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ],
+          "tools_listed": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ]
+        },
+        "question_id": "q_headcount"
+      },
+      "scores": {
+        "a": {
+          "correctness": {
+            "passed": true,
+            "matched_value": 367.0,
+            "scale": 1
+          },
+          "provenance": {
+            "present": false,
+            "cited_triple_or_ingest_ids": [],
+            "cited_source_systems": [],
+            "confidence_cited": false
+          }
+        },
+        "b": {
+          "correctness": {
+            "passed": true,
+            "matched_value": 367.0,
+            "scale": 1
+          },
+          "provenance": {
+            "present": true,
+            "cited_triple_or_ingest_ids": [
+              "27a52b2a-5559-4cd9-a0bc-b658071e48a3"
+            ],
+            "cited_source_systems": [
+              "snowflake"
+            ],
+            "confidence_cited": true
+          }
+        }
+      },
+      "passed": true
+    },
+    {
+      "id": "q_arr",
+      "question": "What is ending ARR for the most recent quarter?",
+      "status": "live",
+      "kind": "numeric",
+      "ground_truth_resolved": {
+        "feed": "operational",
+        "field": "arr_ending",
+        "period": "latest",
+        "scales": [
+          1,
+          1000
+        ],
+        "value": 1477.13
+      },
+      "panel_a": {
+        "answer_text": "**Ending ARR for 2026-Q4 (most recent quarter): $1,477.13 million** (~$1.48 billion).\n\nFor context, it grew from a beginning ARR of $1,411.31M that quarter \u2014 a net add of ~$65.82M (+4.7%).",
+        "tool_calls": [
+          {
+            "name": "list_feeds",
+            "arguments": {},
+            "result_excerpt": "{\"financial\": {\"record_count\": 13, \"fields\": [\"accounts_payable\", \"accounts_receivable\", \"accrued_expenses\", \"asset_total\", \"capex\", \"cash\", \"cf_net_change\", \"cfo\", \"change_in_ap\", \"change_in_ar\", \"change_in_deferred_rev\", \"cogs\", \"common_stock\", \"current_liabilities\", \"deferred_revenue\", \"depreciation_add_back\", \"depreciation_amortization\", \"ebitda\", \"equity_total\", \"financing_debt_repayment\", \"financing_dividends\", \"financing_total\", \"goodwill\", \"intangibles\", \"investing_total\", \"liability_total\", \"long_term_debt\", \"net_income\", \"operating_profit\", \"opex_general_admin\", \"opex_research_development\", \"opex_sales_marketing\", \"opex_total\", \"period\", \"prepaid\", \"property_plant_equipment\", \"retained_earnings\", \"revenue\", \"revenue_by_customer\", \"tax_expense\", \"unbilled_revenue\"], \"period_range\": [\"2023-Q4\", \"2026-Q4\"]}, \"operational\": {\"record_count\": 15, \"fields\": [\"arr_beginning\", \"arr_by_customer\", \"arr_by_region\", \"arr_ending\", \"attrition_rate\", \"avg_deal_size\", \"bookings_total\", \"csat\", \"deploy_frequency\", \"downtime_hours\", \"expansion_revenue\", \"features_shipped\", \"first_response_hours\", \"gross_churn_rate\", \"headcount_by_department\", \"headcount_customer_success\", \"headcount_engineering\", \"headcount_g_and_a\", \"headcount_marketing\", \"headcount_product\", \"headcount_sales\", \"headcount_total\", \"hires\", \"logo_churn_rate\", \"ltv_cac_ratio\", \"mttr_p1_hours\", \"new_customers\", \"new_logo_revenue\", \"nps\", \"nrr\", \"p1_incidents\", \"period\", \"pipeline_closed_won\", \"pipeline_lead\", \"pipeline_negotiation\", \"pipeline_proposal\", \"pipeline_qualified\", \"quota_attainment\", \"renewal_revenue\", \"resolution_hours\", \"revenue_by_region\", \"sales_cycle_days\", \"sales_pipeline_total\", \"sprint_velocity\", \"tech_debt_rate\", \"terminations\", \"uptime_auth_api\", \"uptime_overall\", \"uptime_pct_by_service\", \"uptime_trend\", \"win_rate\"], \"period_range\": [\"2024\", \"2026-Q4\"]}, \"ledger\": {\"record_count\": 917, \"fields\": [\"account_name\", \"account_number\", \"account_type\", \"adjustment_category\", \"adjustment_name\", \"ag\n\u2026[truncated 1136 chars]",
+            "is_error": false,
+            "latency_ms": 295
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "operational",
+              "period": "2026-Q4",
+              "fields": [
+                "arr_ending",
+                "arr_beginning"
+              ]
+            },
+            "result_excerpt": "{\"feed\": \"operational\", \"returned\": 1, \"records\": [{\"period\": \"2026-Q4\", \"arr_ending\": 1477.13, \"arr_beginning\": 1411.31}]}",
+            "is_error": false,
+            "latency_ms": 0
+          }
+        ],
+        "usage": {
+          "input_tokens": 5395,
+          "output_tokens": 285
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 6.26,
+        "panel": "a",
+        "access": "raw-feeds-direct",
+        "entity_id": "CedarGrid-1823"
+      },
+      "panel_b": {
+        "answer_text": "**Ending ARR \u2014 2026-Q4 (most recent quarter): $1,477.13M**\n\nThe most recent quarter with data is **2026-Q4**.\n\n| Field | Value |\n|---|---|\n| Concept | `arr.ending` (amount) |\n| Period | 2026-Q4 |\n| Value | $1,477.13M USD |\n| Source system | snowflake (field `arr_ending`) |\n| Confidence | 0.95 (exact tier) |\n| Triple id | 281a4eb3-66ce-46b1-8a8f-e454272d664a |\n| Ingest run | 27a52b2a-5559-4cd9-a0bc-b658071e48a3 |\n\n**Conflicts:** None \u2014 the Conflict Register returned 0 open or dispositioned conflicts for `arr.ending` on this entity.\n\nFor context, this followed the latest current run/snapshot for CedarGrid-1823 (created 2026-06-11). Prior-quarter ending ARR was $1,411.31M (2026-Q3), so 2026-Q4 grew ~$65.8M QoQ \u2014 same source and confidence.",
+        "tool_calls": [
+          {
+            "name": "concept_lookup",
+            "arguments": {
+              "query": "ending ARR"
+            },
+            "result_excerpt": "TOOL ERROR (MCP): No concept found for 'ending ARR'.",
+            "is_error": false,
+            "latency_ms": 250
+          },
+          {
+            "name": "list_runs",
+            "arguments": {},
+            "result_excerpt": "[{\"entity_id\": \"CedarGrid-1823\", \"triple_count\": 6678, \"created_at\": \"2026-06-11T17:25:17.234181+00:00\", \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\"}]",
+            "is_error": false,
+            "latency_ms": 460
+          },
+          {
+            "name": "concept_lookup",
+            "arguments": {
+              "query": "ARR"
+            },
+            "result_excerpt": "{\"type\": \"metric\", \"id\": \"arr\", \"name\": \"Annual Recurring Revenue\", \"definition\": \"Total annual value of recurring subscription revenue\", \"aliases\": [\"ARR\", \"annual recurring revenue\", \"recurring revenue\", \"annual revenue\"], \"pack\": \"cfo\", \"allowed_dims\": [\"customer\", \"service_line\", \"region\", \"segment\"], \"allowed_grains\": [\"month\", \"quarter\", \"year\"]}",
+            "is_error": false,
+            "latency_ms": 244
+          },
+          {
+            "name": "query_triples",
+            "arguments": {
+              "concept": "arr",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "[{\"id\": \"ff6c8fff-84e5-495e-91dd-ddac2d8c50c6\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"arr.beginning\", \"property\": \"amount\", \"value\": 1096.6, \"period\": \"2025-Q3\", \"currency\": \"USD\", \"unit\": \"usd\", \"source_system\": \"snowflake\", \"source_field\": \"arr_beginning\", \"fabric_plane\": \"bi\", \"fabric_product\": \"snowflake\", \"pipe_id\": \"1dbc97af-0b1c-5343-9f7c-9d45f2fc43db\", \"confidence_score\": 0.95, \"confidence_tier\": \"exact\", \"is_active\": true, \"created_at\": \"2026-06-11T17:25:11.554912+00:00\", \"ingested_at\": \"2026-06-11T17:25:11.554912+00:00\", \"superseded_at\": null, \"valid_from\": \"2026-06-11T17:25:11.554912+00:00\", \"valid_to\": null, \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"triple_id\": \"ff6c8fff-84e5-495e-91dd-ddac2d8c50c6\"}, {\"id\": \"feb428eb-6dd0-4ce3-b622-70e594b57ff8\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"arr.by_customer\", \"property\": \"Deloitte\", \"value\": 2.6, \"period\": \"2026-Q2\", \"currency\": \"USD\", \"unit\": \"usd\", \"source_system\": \"snowflake\", \"source_field\": \"arr_by_customer.Deloitte\", \"fabric_plane\": \"bi\", \"fabric_product\": \"snowflake\", \"pipe_id\": \"1dbc97af-0b1c-5343-9f7c-9d45f2fc43db\", \"confidence_score\": 0.95, \"confidence_tier\": \"exact\", \"is_active\": true, \"created_at\": \"2026-06-11T17:25:11.554912+00:00\", \"ingested_at\": \"2026-06-11T17:25:11.554912+00:00\", \"superseded_at\": null, \"valid_from\": \"2026-06-11T17:25:11.554912+00:00\", \"valid_to\": null, \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"triple_id\": \"feb428eb-6dd0-4ce3-b622-70e594b57ff8\"}, {\"id\": \"fdfa870c-1f1f-420e-83c1-2998607febc2\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"arr.by_customer\", \"property\": \"AT&T\", \"value\": 86.67, \"period\": \"2025-Q2\", \"currency\": \"USD\", \"unit\": \"usd\", \"source_system\": \"snowflake\", \"source_field\": \"arr_by_customer.AT&T\", \"fabric_plane\": \"bi\", \"fabric_product\": \"snowflake\", \"pipe_id\": \"1dbc97af\n\u2026[truncated 79114 chars]",
+            "is_error": false,
+            "latency_ms": 653
+          },
+          {
+            "name": "query_triples",
+            "arguments": {
+              "concept": "arr.ending",
+              "entity_id": "CedarGrid-1823",
+              "period": "2026-Q4"
+            },
+            "result_excerpt": "[{\"id\": \"281a4eb3-66ce-46b1-8a8f-e454272d664a\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"arr.ending\", \"property\": \"amount\", \"value\": 1477.13, \"period\": \"2026-Q4\", \"currency\": \"USD\", \"unit\": \"usd\", \"source_system\": \"snowflake\", \"source_field\": \"arr_ending\", \"fabric_plane\": \"bi\", \"fabric_product\": \"snowflake\", \"pipe_id\": \"1dbc97af-0b1c-5343-9f7c-9d45f2fc43db\", \"confidence_score\": 0.95, \"confidence_tier\": \"exact\", \"is_active\": true, \"created_at\": \"2026-06-11T17:25:11.554912+00:00\", \"ingested_at\": \"2026-06-11T17:25:11.554912+00:00\", \"superseded_at\": null, \"valid_from\": \"2026-06-11T17:25:11.554912+00:00\", \"valid_to\": null, \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"triple_id\": \"281a4eb3-66ce-46b1-8a8f-e454272d664a\"}]",
+            "is_error": false,
+            "latency_ms": 485
+          },
+          {
+            "name": "conflict_query",
+            "arguments": {
+              "concept": "arr.ending",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "{\"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"conflicts\": [], \"total_count\": 0}",
+            "is_error": false,
+            "latency_ms": 575
+          }
+        ],
+        "usage": {
+          "input_tokens": 101170,
+          "output_tokens": 1007
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 18.29,
+        "panel": "b",
+        "access": "dcl-mcp-http-sse",
+        "entity_id": "CedarGrid-1823",
+        "mcp": {
+          "sse_url": "http://localhost:8014/api/mcp/sse",
+          "caller_token_id": "1b6313db4d3830f5",
+          "scope": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ],
+          "tools_listed": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ]
+        },
+        "question_id": "q_arr"
+      },
+      "scores": {
+        "a": {
+          "correctness": {
+            "passed": true,
+            "matched_value": 1477.13,
+            "scale": 1
+          },
+          "provenance": {
+            "present": false,
+            "cited_triple_or_ingest_ids": [],
+            "cited_source_systems": [],
+            "confidence_cited": false
+          }
+        },
+        "b": {
+          "correctness": {
+            "passed": true,
+            "matched_value": 1477.13,
+            "scale": 1
+          },
+          "provenance": {
+            "present": true,
+            "cited_triple_or_ingest_ids": [
+              "27a52b2a-5559-4cd9-a0bc-b658071e48a3",
+              "281a4eb3-66ce-46b1-8a8f-e454272d664a"
+            ],
+            "cited_source_systems": [
+              "snowflake"
+            ],
+            "confidence_cited": true
+          }
+        }
+      },
+      "passed": true
+    },
+    {
+      "id": "q_attrition_live",
+      "question": "What is the attrition rate in the most recent quarter, and how has it moved over the prior year?",
+      "status": "live",
+      "kind": "numeric",
+      "ground_truth_resolved": {
+        "feed": "operational",
+        "field": "attrition_rate",
+        "period": "latest",
+        "scales": [
+          1,
+          0.01,
+          100
+        ],
+        "value": 0.11
+      },
+      "panel_a": {
+        "answer_text": "## Attrition Rate \u2014 2026-Q4 (most recent quarter)\n\n**Employee attrition is 11.0%** in 2026-Q4 (annualized rate; 10 terminations against a headcount of 367).\n\n### Movement over the prior year\n\n| Period | Attrition rate |\n|--------|---------------|\n| 2025-Q4 | 11.5% |\n| 2026-Q1 | 11.0% |\n| 2026-Q2 | 11.0% |\n| 2026-Q3 | 11.0% |\n| **2026-Q4** | **11.0%** |\n\n**Net move: down 0.5 percentage points year-over-year** (11.5% \u2192 11.0%, a ~4% relative improvement). The rate stepped down from 11.5% to 11.0% at the start of 2026-Q1 and has held flat at 11.0% for all four quarters since.\n\nFor broader context, attrition has been on a steady downward trend: 12.0% throughout 2024 \u2192 11.5% throughout 2025 \u2192 11.0% in 2026.\n\nNote: this is *workforce* attrition. If you meant customer/revenue churn instead, the operational feed also carries `gross_churn_rate` and `logo_churn_rate` \u2014 let me know and I'll pull those.",
+        "tool_calls": [
+          {
+            "name": "list_feeds",
+            "arguments": {},
+            "result_excerpt": "{\"financial\": {\"record_count\": 13, \"fields\": [\"accounts_payable\", \"accounts_receivable\", \"accrued_expenses\", \"asset_total\", \"capex\", \"cash\", \"cf_net_change\", \"cfo\", \"change_in_ap\", \"change_in_ar\", \"change_in_deferred_rev\", \"cogs\", \"common_stock\", \"current_liabilities\", \"deferred_revenue\", \"depreciation_add_back\", \"depreciation_amortization\", \"ebitda\", \"equity_total\", \"financing_debt_repayment\", \"financing_dividends\", \"financing_total\", \"goodwill\", \"intangibles\", \"investing_total\", \"liability_total\", \"long_term_debt\", \"net_income\", \"operating_profit\", \"opex_general_admin\", \"opex_research_development\", \"opex_sales_marketing\", \"opex_total\", \"period\", \"prepaid\", \"property_plant_equipment\", \"retained_earnings\", \"revenue\", \"revenue_by_customer\", \"tax_expense\", \"unbilled_revenue\"], \"period_range\": [\"2023-Q4\", \"2026-Q4\"]}, \"operational\": {\"record_count\": 15, \"fields\": [\"arr_beginning\", \"arr_by_customer\", \"arr_by_region\", \"arr_ending\", \"attrition_rate\", \"avg_deal_size\", \"bookings_total\", \"csat\", \"deploy_frequency\", \"downtime_hours\", \"expansion_revenue\", \"features_shipped\", \"first_response_hours\", \"gross_churn_rate\", \"headcount_by_department\", \"headcount_customer_success\", \"headcount_engineering\", \"headcount_g_and_a\", \"headcount_marketing\", \"headcount_product\", \"headcount_sales\", \"headcount_total\", \"hires\", \"logo_churn_rate\", \"ltv_cac_ratio\", \"mttr_p1_hours\", \"new_customers\", \"new_logo_revenue\", \"nps\", \"nrr\", \"p1_incidents\", \"period\", \"pipeline_closed_won\", \"pipeline_lead\", \"pipeline_negotiation\", \"pipeline_proposal\", \"pipeline_qualified\", \"quota_attainment\", \"renewal_revenue\", \"resolution_hours\", \"revenue_by_region\", \"sales_cycle_days\", \"sales_pipeline_total\", \"sprint_velocity\", \"tech_debt_rate\", \"terminations\", \"uptime_auth_api\", \"uptime_overall\", \"uptime_pct_by_service\", \"uptime_trend\", \"win_rate\"], \"period_range\": [\"2024\", \"2026-Q4\"]}, \"ledger\": {\"record_count\": 917, \"fields\": [\"account_name\", \"account_number\", \"account_type\", \"adjustment_category\", \"adjustment_name\", \"ag\n\u2026[truncated 1136 chars]",
+            "is_error": false,
+            "latency_ms": 213
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "operational",
+              "fields": [
+                "attrition_rate",
+                "terminations",
+                "headcount_total",
+                "hires"
+              ]
+            },
+            "result_excerpt": "{\"feed\": \"operational\", \"returned\": 15, \"records\": [{\"period\": \"2024\"}, {\"period\": \"2024-Q1\", \"headcount_total\": 235.0, \"hires\": 7.0, \"terminations\": 7.0, \"attrition_rate\": 0.12}, {\"period\": \"2024-Q2\", \"headcount_total\": 247.0, \"hires\": 19.0, \"terminations\": 7.0, \"attrition_rate\": 0.12}, {\"period\": \"2024-Q3\", \"headcount_total\": 259.0, \"hires\": 19.0, \"terminations\": 7.0, \"attrition_rate\": 0.12}, {\"period\": \"2024-Q4\", \"headcount_total\": 272.0, \"hires\": 21.0, \"terminations\": 8.0, \"attrition_rate\": 0.12}, {\"period\": \"2025\"}, {\"period\": \"2025-Q1\", \"headcount_total\": 284.0, \"hires\": 20.0, \"terminations\": 8.0, \"attrition_rate\": 0.115}, {\"period\": \"2025-Q2\", \"headcount_total\": 296.0, \"hires\": 20.0, \"terminations\": 8.0, \"attrition_rate\": 0.115}, {\"period\": \"2025-Q3\", \"headcount_total\": 308.0, \"hires\": 21.0, \"terminations\": 9.0, \"attrition_rate\": 0.115}, {\"period\": \"2025-Q4\", \"headcount_total\": 321.0, \"hires\": 22.0, \"terminations\": 9.0, \"attrition_rate\": 0.115}, {\"period\": \"2026\"}, {\"period\": \"2026-Q1\", \"headcount_total\": 333.0, \"hires\": 21.0, \"terminations\": 9.0, \"attrition_rate\": 0.11}, {\"period\": \"2026-Q2\", \"headcount_total\": 344.0, \"hires\": 20.0, \"terminations\": 9.0, \"attrition_rate\": 0.11}, {\"period\": \"2026-Q3\", \"headcount_total\": 355.0, \"hires\": 20.0, \"terminations\": 9.0, \"attrition_rate\": 0.11}, {\"period\": \"2026-Q4\", \"headcount_total\": 367.0, \"hires\": 22.0, \"terminations\": 10.0, \"attrition_rate\": 0.11}]}",
+            "is_error": false,
+            "latency_ms": 0
+          }
+        ],
+        "usage": {
+          "input_tokens": 6140,
+          "output_tokens": 647
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 12.24,
+        "panel": "a",
+        "access": "raw-feeds-direct",
+        "entity_id": "CedarGrid-1823"
+      },
+      "panel_b": {
+        "answer_text": "## Attrition Rate \u2014 CedarGrid-1823\n\n**Most recent quarter (2026-Q4): 11.0%** (value 0.11)\n\nThis is the latest period in the store. The metric is carried as `workforce.attrition_rate`, sourced from **Snowflake**, confidence **0.95 (exact tier)**, ingest run `27a52b2a-5559-4cd9-a0bc-b658071e48a3`.\n\n### Movement over the prior year\n\n| Period | Attrition rate | Triple id |\n|--------|---------------|-----------|\n| 2025-Q4 | 11.5% | ec76d417-0323-436c-9fa3-2353295d58f9 |\n| 2026-Q1 | 11.0% | e1af9861-bc47-49c8-9031-007aa264a260 |\n| 2026-Q2 | 11.0% | 47a961c1-6524-498a-a828-be5342eff6a1 |\n| 2026-Q3 | 11.0% | 05e891d9-f967-4aab-9119-ff263efae483 |\n| 2026-Q4 | 11.0% | b84fea1d-ac1e-40a9-b4b3-ebfef3a6ad78 |\n\n**Year-over-year:** Attrition has eased **0.5 percentage points**, from 11.5% in 2025-Q4 to 11.0% in 2026-Q4. The rate stepped down from 11.5% to 11.0% at the start of 2026 (2026-Q1) and has held flat at 11.0% through all four quarters of 2026.\n\nFor broader context, the metric has trended steadily downward: 12.0% across all of 2024 \u2192 11.5% across all of 2025 \u2192 11.0% across 2026.\n\n### Provenance & data quality\n- **Source:** Snowflake (field `attrition_rate`), pipe `1dbc97af-0b1c-5343-9f7c-9d45f2fc43db`, all at confidence 0.95 (exact).\n- **Ingest run:** `27a52b2a-5559-4cd9-a0bc-b658071e48a3` (the only active run for this entity).\n- **Conflicts:** None \u2014 the Conflict Register returned no open or dispositioned conflicts for this concept/entity.\n\nOne note on grounding: the requested catalog metric `attrition_rate_pct` returned no triples; the data is stored under the domain-qualified concept `workforce.attrition_rate` (unit: pct), which I used here.",
+        "tool_calls": [
+          {
+            "name": "concept_lookup",
+            "arguments": {
+              "query": "attrition rate"
+            },
+            "result_excerpt": "{\"type\": \"metric\", \"id\": \"attrition_rate_pct\", \"name\": \"Attrition Rate\", \"definition\": \"Percentage of employees leaving\", \"aliases\": [\"attrition\", \"turnover\", \"turnover rate\", \"attrition rate\"], \"pack\": \"chro\", \"allowed_dims\": [\"department\", \"team\", \"tenure_band\", \"location\"], \"allowed_grains\": [\"month\", \"quarter\", \"year\"]}",
+            "is_error": false,
+            "latency_ms": 313
+          },
+          {
+            "name": "list_runs",
+            "arguments": {},
+            "result_excerpt": "[{\"entity_id\": \"CedarGrid-1823\", \"triple_count\": 6678, \"created_at\": \"2026-06-11T17:25:17.234181+00:00\", \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\"}]",
+            "is_error": false,
+            "latency_ms": 509
+          },
+          {
+            "name": "query_triples",
+            "arguments": {
+              "concept": "attrition_rate_pct",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "[]",
+            "is_error": false,
+            "latency_ms": 522
+          },
+          {
+            "name": "conflict_query",
+            "arguments": {
+              "concept": "attrition_rate_pct",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "{\"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"conflicts\": [], \"total_count\": 0}",
+            "is_error": false,
+            "latency_ms": 550
+          },
+          {
+            "name": "list_domains",
+            "arguments": {
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "[{\"domain\": \"gl\", \"triple_count\": 3451}, {\"domain\": \"support\", \"triple_count\": 468}, {\"domain\": \"revenue\", \"triple_count\": 398}, {\"domain\": \"arr\", \"triple_count\": 312}, {\"domain\": \"coa\", \"triple_count\": 249}, {\"domain\": \"customer\", \"triple_count\": 214}, {\"domain\": \"cash_flow\", \"triple_count\": 138}, {\"domain\": \"workforce\", \"triple_count\": 120}, {\"domain\": \"accounts_payable\", \"triple_count\": 109}, {\"domain\": \"accounts_receivable\", \"triple_count\": 109}, {\"domain\": \"asset\", \"triple_count\": 104}, {\"domain\": \"journal_entry\", \"triple_count\": 85}, {\"domain\": \"uptime_pct\", \"triple_count\": 84}, {\"domain\": \"ebitda_adjustment\", \"triple_count\": 80}, {\"domain\": \"liability\", \"triple_count\": 78}, {\"domain\": \"invoice\", \"triple_count\": 73}, {\"domain\": \"headcount\", \"triple_count\": 72}, {\"domain\": \"sales\", \"triple_count\": 72}, {\"domain\": \"pnl\", \"triple_count\": 65}, {\"domain\": \"efficiency\", \"triple_count\": 60}, {\"domain\": \"event_stream\", \"triple_count\": 60}, {\"domain\": \"opex\", \"triple_count\": 52}, {\"domain\": \"equity\", \"triple_count\": 39}, {\"domain\": \"infrastructure\", \"triple_count\": 24}, {\"domain\": \"engineering\", \"triple_count\": 24}, {\"domain\": \"operations\", \"triple_count\": 24}, {\"domain\": \"cloud_spend\", \"triple_count\": 19}, {\"domain\": \"cogs\", \"triple_count\": 13}, {\"domain\": \"uptime_trend\", \"triple_count\": 12}, {\"domain\": \"sprint_velocity\", \"triple_count\": 12}, {\"domain\": \"incident_count\", \"triple_count\": 12}, {\"domain\": \"deploy_frequency\", \"triple_count\": 12}, {\"domain\": \"uptime_by_service\", \"triple_count\": 12}, {\"domain\": \"account\", \"triple_count\": 12}, {\"domain\": \"pipeline\", \"triple_count\": 2}, {\"domain\": \"cloud_savings_opportunities_amount\", \"triple_count\": 1}, {\"domain\": \"cloud_spend_by_service\", \"triple_count\": 1}, {\"domain\": \"event\", \"triple_count\": 1}, {\"domain\": \"jira\", \"triple_count\": 1}, {\"domain\": \"aws_cost\", \"triple_count\": 1}, {\"domain\": \"cloud_spend_by_team\", \"triple_count\": 1}, {\"domain\": \"datadog\", \"triple_count\": 1}, {\"domain\": \"service\", \"triple_count\": 1}]",
+            "is_error": false,
+            "latency_ms": 504
+          },
+          {
+            "name": "query_triples",
+            "arguments": {
+              "concept": "attrition",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "[]",
+            "is_error": false,
+            "latency_ms": 490
+          },
+          {
+            "name": "query_triples",
+            "arguments": {
+              "domain": "workforce",
+              "entity_id": "CedarGrid-1823",
+              "limit": 200
+            },
+            "result_excerpt": "[{\"id\": \"ff4bb91f-633e-4803-8c17-0ca9abb8bca2\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"workforce.headcount.by_department.product\", \"property\": \"count\", \"value\": 19.0, \"period\": \"2024-Q2\", \"currency\": null, \"unit\": \"count\", \"source_system\": \"snowflake\", \"source_field\": \"headcount_product\", \"fabric_plane\": \"bi\", \"fabric_product\": \"snowflake\", \"pipe_id\": \"1dbc97af-0b1c-5343-9f7c-9d45f2fc43db\", \"confidence_score\": 0.95, \"confidence_tier\": \"exact\", \"is_active\": true, \"created_at\": \"2026-06-11T17:25:11.554912+00:00\", \"ingested_at\": \"2026-06-11T17:25:11.554912+00:00\", \"superseded_at\": null, \"valid_from\": \"2026-06-11T17:25:11.554912+00:00\", \"valid_to\": null, \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"triple_id\": \"ff4bb91f-633e-4803-8c17-0ca9abb8bca2\"}, {\"id\": \"fbe4a863-2254-48a7-99e5-1650aaa04a1b\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"workforce.hires\", \"property\": \"count\", \"value\": 20.0, \"period\": \"2025-Q2\", \"currency\": null, \"unit\": \"count\", \"source_system\": \"snowflake\", \"source_field\": \"hires\", \"fabric_plane\": \"bi\", \"fabric_product\": \"snowflake\", \"pipe_id\": \"1dbc97af-0b1c-5343-9f7c-9d45f2fc43db\", \"confidence_score\": 0.95, \"confidence_tier\": \"exact\", \"is_active\": true, \"created_at\": \"2026-06-11T17:25:11.554912+00:00\", \"ingested_at\": \"2026-06-11T17:25:11.554912+00:00\", \"superseded_at\": null, \"valid_from\": \"2026-06-11T17:25:11.554912+00:00\", \"valid_to\": null, \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"triple_id\": \"fbe4a863-2254-48a7-99e5-1650aaa04a1b\"}, {\"id\": \"f2046191-1533-44f2-977d-cc54fe34a76c\", \"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"concept\": \"workforce.headcount.by_department.marketing\", \"property\": \"count\", \"value\": 27.0, \"period\": \"2024-Q4\", \"currency\": null, \"unit\": \"count\", \"source_system\": \"snowflake\", \"source_field\": \"headcount_marketing\", \"fabric_plane\": \"bi\", \"fabric_produ\n\u2026[truncated 95821 chars]",
+            "is_error": false,
+            "latency_ms": 724
+          }
+        ],
+        "usage": {
+          "input_tokens": 66836,
+          "output_tokens": 1779
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 28.46,
+        "panel": "b",
+        "access": "dcl-mcp-http-sse",
+        "entity_id": "CedarGrid-1823",
+        "mcp": {
+          "sse_url": "http://localhost:8014/api/mcp/sse",
+          "caller_token_id": "dd78289a1c04c338",
+          "scope": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ],
+          "tools_listed": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ]
+        },
+        "question_id": "q_attrition_live"
+      },
+      "scores": {
+        "a": {
+          "correctness": {
+            "passed": true,
+            "matched_value": 11.0,
+            "scale": 0.01
+          },
+          "provenance": {
+            "present": false,
+            "cited_triple_or_ingest_ids": [],
+            "cited_source_systems": [],
+            "confidence_cited": false
+          }
+        },
+        "b": {
+          "correctness": {
+            "passed": true,
+            "matched_value": 11.0,
+            "scale": 0.01
+          },
+          "provenance": {
+            "present": true,
+            "cited_triple_or_ingest_ids": [
+              "1dbc97af-0b1c-5343-9f7c-9d45f2fc43db",
+              "27a52b2a-5559-4cd9-a0bc-b658071e48a3"
+            ],
+            "cited_source_systems": [
+              "snowflake"
+            ],
+            "confidence_cited": true
+          }
+        }
+      },
+      "passed": true
+    },
+    {
+      "id": "q_enps_no_data",
+      "question": "What is the employee NPS (eNPS) for the most recent quarter?",
+      "status": "live",
+      "kind": "no_data",
+      "panel_a": {
+        "answer_text": "I checked the data, and I need to flag an important distinction.\n\n**There is no employee NPS (eNPS) metric in this entity's data.**\n\nThe only NPS figure available is in the operational feed for **2026-Q4**: `nps = 51`. However, this is the **customer Net Promoter Score**, not eNPS \u2014 it sits alongside customer-experience KPIs (CSAT of 4.26, churn, NRR, etc.), and there is no employee-survey/sentiment field in any of the three feeds.\n\nThe closest **employee**-related metrics available for 2026-Q4 are:\n- **Attrition rate:** 11%\n- **Headcount (total):** 367\n\nIf you'd like, I can pull additional employee/workforce indicators (hires, terminations, attrition by department, ARR/revenue per employee), but a true eNPS is not captured in CedarGrid-1823's warehouse exports.",
+        "tool_calls": [
+          {
+            "name": "list_feeds",
+            "arguments": {},
+            "result_excerpt": "{\"financial\": {\"record_count\": 13, \"fields\": [\"accounts_payable\", \"accounts_receivable\", \"accrued_expenses\", \"asset_total\", \"capex\", \"cash\", \"cf_net_change\", \"cfo\", \"change_in_ap\", \"change_in_ar\", \"change_in_deferred_rev\", \"cogs\", \"common_stock\", \"current_liabilities\", \"deferred_revenue\", \"depreciation_add_back\", \"depreciation_amortization\", \"ebitda\", \"equity_total\", \"financing_debt_repayment\", \"financing_dividends\", \"financing_total\", \"goodwill\", \"intangibles\", \"investing_total\", \"liability_total\", \"long_term_debt\", \"net_income\", \"operating_profit\", \"opex_general_admin\", \"opex_research_development\", \"opex_sales_marketing\", \"opex_total\", \"period\", \"prepaid\", \"property_plant_equipment\", \"retained_earnings\", \"revenue\", \"revenue_by_customer\", \"tax_expense\", \"unbilled_revenue\"], \"period_range\": [\"2023-Q4\", \"2026-Q4\"]}, \"operational\": {\"record_count\": 15, \"fields\": [\"arr_beginning\", \"arr_by_customer\", \"arr_by_region\", \"arr_ending\", \"attrition_rate\", \"avg_deal_size\", \"bookings_total\", \"csat\", \"deploy_frequency\", \"downtime_hours\", \"expansion_revenue\", \"features_shipped\", \"first_response_hours\", \"gross_churn_rate\", \"headcount_by_department\", \"headcount_customer_success\", \"headcount_engineering\", \"headcount_g_and_a\", \"headcount_marketing\", \"headcount_product\", \"headcount_sales\", \"headcount_total\", \"hires\", \"logo_churn_rate\", \"ltv_cac_ratio\", \"mttr_p1_hours\", \"new_customers\", \"new_logo_revenue\", \"nps\", \"nrr\", \"p1_incidents\", \"period\", \"pipeline_closed_won\", \"pipeline_lead\", \"pipeline_negotiation\", \"pipeline_proposal\", \"pipeline_qualified\", \"quota_attainment\", \"renewal_revenue\", \"resolution_hours\", \"revenue_by_region\", \"sales_cycle_days\", \"sales_pipeline_total\", \"sprint_velocity\", \"tech_debt_rate\", \"terminations\", \"uptime_auth_api\", \"uptime_overall\", \"uptime_pct_by_service\", \"uptime_trend\", \"win_rate\"], \"period_range\": [\"2024\", \"2026-Q4\"]}, \"ledger\": {\"record_count\": 917, \"fields\": [\"account_name\", \"account_number\", \"account_type\", \"adjustment_category\", \"adjustment_name\", \"ag\n\u2026[truncated 1136 chars]",
+            "is_error": false,
+            "latency_ms": 228
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "operational",
+              "period": "2026-Q4",
+              "fields": [
+                "nps",
+                "csat",
+                "attrition_rate",
+                "headcount_total"
+              ]
+            },
+            "result_excerpt": "{\"feed\": \"operational\", \"returned\": 1, \"records\": [{\"period\": \"2026-Q4\", \"nps\": 51.0, \"csat\": 4.26, \"headcount_total\": 367.0, \"attrition_rate\": 0.11}]}",
+            "is_error": false,
+            "latency_ms": 0
+          }
+        ],
+        "usage": {
+          "input_tokens": 5646,
+          "output_tokens": 994
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 15.09,
+        "panel": "a",
+        "access": "raw-feeds-direct",
+        "entity_id": "CedarGrid-1823"
+      },
+      "panel_b": {
+        "answer_text": "I checked the store for Employee Net Promoter Score (concept id `enps`, aliases include \"eNPS\"/\"employee NPS\") scoped to the current run for entity **CedarGrid-1823** (`dcl_ingest_id: 27a52b2a-5559-4cd9-a0bc-b658071e48a3`).\n\n**There is no eNPS data in the store for this entity** \u2014 the query for the `enps` concept (which matches both the catalog id and any domain-qualified `*.enps` instances) returned zero triples, for any period. So I can't report an eNPS value for the most recent quarter, and I won't estimate one.\n\nFor context, the entity does have a `workforce` domain (120 triples) and a `headcount` domain (72 triples), but neither surfaces an Employee Net Promoter Score metric. If the eNPS figure you're after lives under a different concept name, let me know and I can look it up.\n\n(No conflicts were registered for `enps`, since there's no underlying data.)",
+        "tool_calls": [
+          {
+            "name": "concept_lookup",
+            "arguments": {
+              "query": "eNPS"
+            },
+            "result_excerpt": "{\"type\": \"metric\", \"id\": \"enps\", \"name\": \"Employee Net Promoter Score\", \"definition\": \"Employee willingness to recommend the company as a workplace\", \"aliases\": [\"eNPS\", \"employee NPS\", \"employee net promoter\", \"workplace recommendation score\"], \"pack\": \"chro\", \"allowed_dims\": [\"department\", \"team\", \"tenure_band\", \"location\"], \"allowed_grains\": [\"month\", \"quarter\", \"year\"]}",
+            "is_error": false,
+            "latency_ms": 250
+          },
+          {
+            "name": "list_runs",
+            "arguments": {},
+            "result_excerpt": "[{\"entity_id\": \"CedarGrid-1823\", \"triple_count\": 6678, \"created_at\": \"2026-06-11T17:25:17.234181+00:00\", \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\"}]",
+            "is_error": false,
+            "latency_ms": 524
+          },
+          {
+            "name": "query_triples",
+            "arguments": {
+              "concept": "enps",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "[]",
+            "is_error": false,
+            "latency_ms": 472
+          },
+          {
+            "name": "conflict_query",
+            "arguments": {
+              "concept": "enps",
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "{\"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"conflicts\": [], \"total_count\": 0}",
+            "is_error": false,
+            "latency_ms": 544
+          },
+          {
+            "name": "list_domains",
+            "arguments": {
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "[{\"domain\": \"gl\", \"triple_count\": 3451}, {\"domain\": \"support\", \"triple_count\": 468}, {\"domain\": \"revenue\", \"triple_count\": 398}, {\"domain\": \"arr\", \"triple_count\": 312}, {\"domain\": \"coa\", \"triple_count\": 249}, {\"domain\": \"customer\", \"triple_count\": 214}, {\"domain\": \"cash_flow\", \"triple_count\": 138}, {\"domain\": \"workforce\", \"triple_count\": 120}, {\"domain\": \"accounts_payable\", \"triple_count\": 109}, {\"domain\": \"accounts_receivable\", \"triple_count\": 109}, {\"domain\": \"asset\", \"triple_count\": 104}, {\"domain\": \"journal_entry\", \"triple_count\": 85}, {\"domain\": \"uptime_pct\", \"triple_count\": 84}, {\"domain\": \"ebitda_adjustment\", \"triple_count\": 80}, {\"domain\": \"liability\", \"triple_count\": 78}, {\"domain\": \"invoice\", \"triple_count\": 73}, {\"domain\": \"headcount\", \"triple_count\": 72}, {\"domain\": \"sales\", \"triple_count\": 72}, {\"domain\": \"pnl\", \"triple_count\": 65}, {\"domain\": \"efficiency\", \"triple_count\": 60}, {\"domain\": \"event_stream\", \"triple_count\": 60}, {\"domain\": \"opex\", \"triple_count\": 52}, {\"domain\": \"equity\", \"triple_count\": 39}, {\"domain\": \"infrastructure\", \"triple_count\": 24}, {\"domain\": \"engineering\", \"triple_count\": 24}, {\"domain\": \"operations\", \"triple_count\": 24}, {\"domain\": \"cloud_spend\", \"triple_count\": 19}, {\"domain\": \"cogs\", \"triple_count\": 13}, {\"domain\": \"uptime_trend\", \"triple_count\": 12}, {\"domain\": \"sprint_velocity\", \"triple_count\": 12}, {\"domain\": \"incident_count\", \"triple_count\": 12}, {\"domain\": \"deploy_frequency\", \"triple_count\": 12}, {\"domain\": \"uptime_by_service\", \"triple_count\": 12}, {\"domain\": \"account\", \"triple_count\": 12}, {\"domain\": \"pipeline\", \"triple_count\": 2}, {\"domain\": \"cloud_savings_opportunities_amount\", \"triple_count\": 1}, {\"domain\": \"cloud_spend_by_service\", \"triple_count\": 1}, {\"domain\": \"event\", \"triple_count\": 1}, {\"domain\": \"jira\", \"triple_count\": 1}, {\"domain\": \"aws_cost\", \"triple_count\": 1}, {\"domain\": \"cloud_spend_by_team\", \"triple_count\": 1}, {\"domain\": \"datadog\", \"triple_count\": 1}, {\"domain\": \"service\", \"triple_count\": 1}]",
+            "is_error": false,
+            "latency_ms": 496
+          }
+        ],
+        "usage": {
+          "input_tokens": 10821,
+          "output_tokens": 834
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 17.33,
+        "panel": "b",
+        "access": "dcl-mcp-http-sse",
+        "entity_id": "CedarGrid-1823",
+        "mcp": {
+          "sse_url": "http://localhost:8014/api/mcp/sse",
+          "caller_token_id": "e454fe4bf68dab15",
+          "scope": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ],
+          "tools_listed": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ]
+        },
+        "question_id": "q_enps_no_data"
+      },
+      "scores": {
+        "a": {
+          "no_data_honesty": {
+            "passed": true,
+            "fabricated_number": false
+          },
+          "provenance": {
+            "present": false,
+            "cited_triple_or_ingest_ids": [],
+            "cited_source_systems": [],
+            "confidence_cited": false
+          }
+        },
+        "b": {
+          "no_data_honesty": {
+            "passed": true,
+            "fabricated_number": false
+          },
+          "provenance": {
+            "present": true,
+            "cited_triple_or_ingest_ids": [
+              "27a52b2a-5559-4cd9-a0bc-b658071e48a3"
+            ],
+            "cited_source_systems": [],
+            "confidence_cited": false
+          }
+        }
+      },
+      "passed": true
+    },
+    {
+      "id": "q_conflict_live",
+      "question": "Do your source systems disagree about any customer records for this entity?",
+      "status": "live",
+      "kind": "conflict",
+      "panel_a": {
+        "answer_text": "Yes \u2014 the source systems materially disagree about customers. I checked the customer dimension across all three feeds for 2026\u2011Q4 (with 2024\u2011Q4 as a corroborating period). Here's what reconciles and what doesn't.\n\n## What agrees\nThe **named-account dimension is consistent** between the financial and operational feeds. Both `revenue_by_customer` (financial) and `arr_by_customer` (operational) list the **identical 20 enterprise accounts in the same rank order** (JPMorgan Chase \u2192 Amazon \u2192 UnitedHealth \u2192 \u2026 \u2192 IBM), and the ARR-to-quarterly-revenue ratio is a steady ~10.2\u00d7 across every account. So the two systems agree on *who* the top customers are.\n\n## What disagrees\n\n**1. The two \"by-customer\" breakdowns disagree on completeness.**\n- Operational `arr_by_customer` sums to **1,477.13**, which ties out *exactly* to `arr_ending` (100% of ARR allocated).\n- Financial `revenue_by_customer` sums to only **$144.18M**, but reported total `revenue` is **$361.06M** \u2014 so **~60% ($216.9M) of revenue is attributed to no customer at all.** Same defect in 2024\u2011Q4: customer detail sums to $92.04M against $236.04M revenue (~39%). The financial customer ledger does not tie to its own top line.\n\n**2. The systems disagree wildly on how many customers exist.**\n- AR subledger (`ar_aging`): **71 distinct customers** with open invoices in 2026\u2011Q4 (98 in 2024\u2011Q4 \u2014 *declining* over time).\n- Revenue/ARR breakdowns: only **20 named customers**.\n- Operational `new_customers`: **268 net\u2011new in 2026\u2011Q4 alone** (and 234\u2013501 every prior quarter \u2014 ~1,800 in 2024). You cannot add hundreds of customers per quarter while the AR subledger's distinct-customer count *shrinks* from 98 to 71. These figures are mutually impossible.\n\n**3. Even within the ledger, the AR views disagree.** `invoice_summary` for 2026\u2011Q4 shows **1 invoice, 1 counterparty, $361.06M** (mislabeled `distinct_vendors`), while `ar_aging` for the same quarter shows **71 distinct customers across 124 open invoices totaling $46.69M**.\n\n## Bottom line\nFor 2026\u2011Q4: the financial and operational feeds **agree on the top-20 customer names** but **disagree on coverage** (ARR fully allocated vs. only 40% of revenue attributed), and the operational customer *counts* (268 new/qtr) are irreconcilable with the AR subledger (71 distinct customers, and falling). I would not trust any cross-system customer-level total without first resolving the ~$217M of unattributed revenue and the new-customer vs. AR customer-count conflict.",
+        "tool_calls": [
+          {
+            "name": "list_feeds",
+            "arguments": {},
+            "result_excerpt": "{\"financial\": {\"record_count\": 13, \"fields\": [\"accounts_payable\", \"accounts_receivable\", \"accrued_expenses\", \"asset_total\", \"capex\", \"cash\", \"cf_net_change\", \"cfo\", \"change_in_ap\", \"change_in_ar\", \"change_in_deferred_rev\", \"cogs\", \"common_stock\", \"current_liabilities\", \"deferred_revenue\", \"depreciation_add_back\", \"depreciation_amortization\", \"ebitda\", \"equity_total\", \"financing_debt_repayment\", \"financing_dividends\", \"financing_total\", \"goodwill\", \"intangibles\", \"investing_total\", \"liability_total\", \"long_term_debt\", \"net_income\", \"operating_profit\", \"opex_general_admin\", \"opex_research_development\", \"opex_sales_marketing\", \"opex_total\", \"period\", \"prepaid\", \"property_plant_equipment\", \"retained_earnings\", \"revenue\", \"revenue_by_customer\", \"tax_expense\", \"unbilled_revenue\"], \"period_range\": [\"2023-Q4\", \"2026-Q4\"]}, \"operational\": {\"record_count\": 15, \"fields\": [\"arr_beginning\", \"arr_by_customer\", \"arr_by_region\", \"arr_ending\", \"attrition_rate\", \"avg_deal_size\", \"bookings_total\", \"csat\", \"deploy_frequency\", \"downtime_hours\", \"expansion_revenue\", \"features_shipped\", \"first_response_hours\", \"gross_churn_rate\", \"headcount_by_department\", \"headcount_customer_success\", \"headcount_engineering\", \"headcount_g_and_a\", \"headcount_marketing\", \"headcount_product\", \"headcount_sales\", \"headcount_total\", \"hires\", \"logo_churn_rate\", \"ltv_cac_ratio\", \"mttr_p1_hours\", \"new_customers\", \"new_logo_revenue\", \"nps\", \"nrr\", \"p1_incidents\", \"period\", \"pipeline_closed_won\", \"pipeline_lead\", \"pipeline_negotiation\", \"pipeline_proposal\", \"pipeline_qualified\", \"quota_attainment\", \"renewal_revenue\", \"resolution_hours\", \"revenue_by_region\", \"sales_cycle_days\", \"sales_pipeline_total\", \"sprint_velocity\", \"tech_debt_rate\", \"terminations\", \"uptime_auth_api\", \"uptime_overall\", \"uptime_pct_by_service\", \"uptime_trend\", \"win_rate\"], \"period_range\": [\"2024\", \"2026-Q4\"]}, \"ledger\": {\"record_count\": 917, \"fields\": [\"account_name\", \"account_number\", \"account_type\", \"adjustment_category\", \"adjustment_name\", \"ag\n\u2026[truncated 1136 chars]",
+            "is_error": false,
+            "latency_ms": 213
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "financial",
+              "period": "2026-Q4",
+              "fields": [
+                "revenue_by_customer",
+                "revenue",
+                "accounts_receivable"
+              ]
+            },
+            "result_excerpt": "{\"feed\": \"financial\", \"returned\": 1, \"records\": [{\"period\": \"2026-Q4\", \"revenue\": 361.06, \"accounts_receivable\": 169.5, \"revenue_by_customer\": {\"JPMorgan Chase\": 34.03, \"Amazon\": 26.52, \"UnitedHealth Group\": 21.68, \"Bank of America\": 16.38, \"AT&T\": 11.93, \"Pfizer\": 8.58, \"Walmart\": 6.71, \"Citigroup\": 4.47, \"Johnson & Johnson\": 3.46, \"Verizon\": 2.54, \"General Motors\": 2.01, \"Procter & Gamble\": 1.61, \"Goldman Sachs\": 1.18, \"Honeywell\": 0.93, \"Intel\": 0.69, \"Microsoft\": 0.47, \"Oracle\": 0.37, \"Deloitte\": 0.27, \"Accenture\": 0.2, \"IBM\": 0.15}}]}",
+            "is_error": false,
+            "latency_ms": 0
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "operational",
+              "period": "2026-Q4",
+              "fields": [
+                "arr_by_customer",
+                "arr_ending",
+                "new_customers"
+              ]
+            },
+            "result_excerpt": "{\"feed\": \"operational\", \"returned\": 1, \"records\": [{\"period\": \"2026-Q4\", \"arr_ending\": 1477.13, \"new_customers\": 268.0, \"arr_by_customer\": {\"JPMorgan Chase\": 348.64, \"Amazon\": 271.7, \"UnitedHealth Group\": 222.11, \"Bank of America\": 167.81, \"AT&T\": 122.22, \"Pfizer\": 87.9, \"Walmart\": 68.74, \"Citigroup\": 45.8, \"Johnson & Johnson\": 35.45, \"Verizon\": 26.02, \"General Motors\": 20.59, \"Procter & Gamble\": 16.49, \"Goldman Sachs\": 12.09, \"Honeywell\": 9.53, \"Intel\": 7.07, \"Microsoft\": 4.82, \"Oracle\": 3.79, \"Deloitte\": 2.77, \"Accenture\": 2.05, \"IBM\": 1.54}}]}",
+            "is_error": false,
+            "latency_ms": 0
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "ledger",
+              "period": "2026-Q4",
+              "fields": [
+                "record_type",
+                "distinct_customers",
+                "open_invoice_count",
+                "total_amount_due",
+                "description",
+                "namespace"
+              ]
+            },
+            "result_excerpt": "{\"feed\": \"ledger\", \"returned\": 7, \"records\": [{\"record_type\": \"journal_entry_summary\", \"period\": \"2026-Q4\"}, {\"record_type\": \"invoice_summary\", \"period\": \"2026-Q4\"}, {\"record_type\": \"ap_aging\", \"period\": \"2026-Q4\", \"total_amount_due\": 24.41, \"open_invoice_count\": 158}, {\"record_type\": \"ar_aging\", \"period\": \"2026-Q4\", \"total_amount_due\": 46.69, \"open_invoice_count\": 124, \"distinct_customers\": 71}, {\"record_type\": \"efficiency_metrics\", \"period\": \"2026-Q4\"}, {\"record_type\": \"ops_sla_metrics\", \"period\": \"2026-Q4\"}, {\"record_type\": \"event_stream_metrics\", \"period\": \"2026-Q4\"}]}",
+            "is_error": false,
+            "latency_ms": 0
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "ledger",
+              "period": "2026-Q4"
+            },
+            "result_excerpt": "{\"feed\": \"ledger\", \"returned\": 7, \"records\": [{\"record_type\": \"journal_entry_summary\", \"period\": \"2026-Q4\", \"entry_count\": 237, \"total_debit_amount\": 415.22, \"total_credit_amount\": 415.22, \"avg_amount\": 1.75, \"distinct_debit_accounts\": 84, \"distinct_credit_accounts\": 84, \"days_to_post_avg\": 3.5}, {\"record_type\": \"invoice_summary\", \"period\": \"2026-Q4\", \"invoice_count\": 1, \"total_amount\": 361.06, \"avg_amount\": 361.06, \"line_items_avg\": 2.51, \"due_days_avg\": 35.6, \"distinct_vendors\": 1}, {\"record_type\": \"ap_aging\", \"period\": \"2026-Q4\", \"total_amount_due\": 24.41, \"open_invoice_count\": 158, \"distinct_vendors\": 66, \"days_outstanding_avg\": 38.6, \"aging_current\": 13.43, \"aging_1_30\": 5.37, \"aging_31_60\": 2.69, \"aging_61_90\": 1.71, \"aging_90_plus\": 1.22}, {\"record_type\": \"ar_aging\", \"period\": \"2026-Q4\", \"total_amount_due\": 46.69, \"open_invoice_count\": 124, \"distinct_customers\": 71, \"days_sales_outstanding\": 46.5, \"aging_current\": 28.01, \"aging_1_30\": 9.34, \"aging_31_60\": 4.67, \"aging_61_90\": 2.8, \"aging_90_plus\": 1.87}, {\"record_type\": \"efficiency_metrics\", \"period\": \"2026-Q4\", \"magic_number\": 1.66, \"burn_multiple\": -1.92, \"rule_of_40\": 55.1, \"revenue_per_employee\": 0.98, \"arr_per_employee\": 4.02}, {\"record_type\": \"ops_sla_metrics\", \"period\": \"2026-Q4\", \"automation_rate\": 0.0, \"sla_attainment\": 0.0}, {\"record_type\": \"event_stream_metrics\", \"period\": \"2026-Q4\", \"topic_count\": 45, \"partition_count\": 270, \"message_throughput_msgs_sec\": 2256.0, \"consumer_lag_sec\": 1.15, \"event_volume_millions\": 17542.7}]}",
+            "is_error": false,
+            "latency_ms": 0
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "operational",
+              "fields": [
+                "new_customers",
+                "arr_ending"
+              ]
+            },
+            "result_excerpt": "{\"feed\": \"operational\", \"returned\": 15, \"records\": [{\"period\": \"2024\"}, {\"period\": \"2024-Q1\", \"arr_ending\": 793.29, \"new_customers\": 407.0}, {\"period\": \"2024-Q2\", \"arr_ending\": 850.31, \"new_customers\": 436.0}, {\"period\": \"2024-Q3\", \"arr_ending\": 911.42, \"new_customers\": 467.0}, {\"period\": \"2024-Q4\", \"arr_ending\": 976.93, \"new_customers\": 501.0}, {\"period\": \"2025\"}, {\"period\": \"2025-Q1\", \"arr_ending\": 1035.04, \"new_customers\": 364.0}, {\"period\": \"2025-Q2\", \"arr_ending\": 1096.6, \"new_customers\": 386.0}, {\"period\": \"2025-Q3\", \"arr_ending\": 1161.83, \"new_customers\": 409.0}, {\"period\": \"2025-Q4\", \"arr_ending\": 1230.94, \"new_customers\": 433.0}, {\"period\": \"2026\"}, {\"period\": \"2026-Q1\", \"arr_ending\": 1288.35, \"new_customers\": 234.0}, {\"period\": \"2026-Q2\", \"arr_ending\": 1348.43, \"new_customers\": 245.0}, {\"period\": \"2026-Q3\", \"arr_ending\": 1411.31, \"new_customers\": 256.0}, {\"period\": \"2026-Q4\", \"arr_ending\": 1477.13, \"new_customers\": 268.0}]}",
+            "is_error": false,
+            "latency_ms": 0
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "ledger",
+              "fields": [
+                "record_type",
+                "distinct_customers",
+                "distinct_vendors",
+                "open_invoice_count"
+              ]
+            },
+            "result_excerpt": "{\"feed\": \"ledger\", \"returned\": 917, \"records\": [{\"record_type\": \"gl_balance\", \"period\": \"2023-12\"}, {\"record_type\": \"gl_balance\", \"period\": \"2023-12\"}, {\"record_type\": \"gl_balance\", \"period\": \"2023-12\"}, {\"record_type\": \"gl_balance\", \"period\": \"2023-12\"}, {\"record_type\": \"gl_balance\", \"period\": \"2023-12\"}, {\"record_type\": \"gl_balance\", \"period\": \"2023-12\"}, {\"record_type\": \"gl_balance\", \"period\": \"2023-12\"}, {\"record_type\": \"gl_balance\", \"period\": \"2023-12\"}, {\"record_type\": \"gl_balance\", \"period\": \"2023-12\"}, {\"record_type\": \"gl_balance\", \"period\": \"2023-12\"}, {\"record_type\": \"gl_balance\", \"period\": \"2023-12\"}, {\"record_type\": \"gl_balance\", \"period\": \"2023-12\"}, {\"record_type\": \"gl_balance\", \"period\": \"2023-12\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\", \"period\": \"2024-01\"}, {\"record_type\": \"gl_balance\"\n\u2026[truncated 26049 chars]",
+            "is_error": false,
+            "latency_ms": 3
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "ledger",
+              "period": "2024-Q4",
+              "fields": [
+                "record_type",
+                "distinct_customers",
+                "open_invoice_count",
+                "total_amount_due"
+              ]
+            },
+            "result_excerpt": "{\"feed\": \"ledger\", \"returned\": 7, \"records\": [{\"record_type\": \"journal_entry_summary\", \"period\": \"2024-Q4\"}, {\"record_type\": \"invoice_summary\", \"period\": \"2024-Q4\"}, {\"record_type\": \"ap_aging\", \"period\": \"2024-Q4\", \"total_amount_due\": 14.57, \"open_invoice_count\": 151}, {\"record_type\": \"ar_aging\", \"period\": \"2024-Q4\", \"total_amount_due\": 39.02, \"open_invoice_count\": 170, \"distinct_customers\": 98}, {\"record_type\": \"efficiency_metrics\", \"period\": \"2024-Q4\"}, {\"record_type\": \"ops_sla_metrics\", \"period\": \"2024-Q4\"}, {\"record_type\": \"event_stream_metrics\", \"period\": \"2024-Q4\"}]}",
+            "is_error": false,
+            "latency_ms": 0
+          },
+          {
+            "name": "read_feed",
+            "arguments": {
+              "feed": "financial",
+              "period": "2024-Q4",
+              "fields": [
+                "revenue",
+                "revenue_by_customer"
+              ]
+            },
+            "result_excerpt": "{\"feed\": \"financial\", \"returned\": 1, \"records\": [{\"period\": \"2024-Q4\", \"revenue\": 236.04, \"revenue_by_customer\": {\"JPMorgan Chase\": 22.26, \"Amazon\": 17.32, \"UnitedHealth Group\": 12.6, \"Bank of America\": 10.08, \"AT&T\": 7.97, \"Pfizer\": 5.19, \"Walmart\": 4.42, \"Citigroup\": 3.01, \"Johnson & Johnson\": 2.41, \"Verizon\": 1.7, \"General Motors\": 1.28, \"Procter & Gamble\": 0.95, \"Goldman Sachs\": 0.8, \"Honeywell\": 0.59, \"Intel\": 0.44, \"Microsoft\": 0.33, \"Oracle\": 0.26, \"Deloitte\": 0.18, \"Accenture\": 0.14, \"IBM\": 0.11}}]}",
+            "is_error": false,
+            "latency_ms": 0
+          }
+        ],
+        "usage": {
+          "input_tokens": 56466,
+          "output_tokens": 6954
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 91.23,
+        "panel": "a",
+        "access": "raw-feeds-direct",
+        "entity_id": "CedarGrid-1823"
+      },
+      "panel_b": {
+        "answer_text": "Yes. Your source systems disagree about customer records for CedarGrid-1823. Here's the plain picture:\n\n## Customer-record conflict \u2014 confluent vs. workato\n\nThe Conflict Register shows **2 open structural conflicts** on the `customer` concept (property `customer_name`), both for period **2026-Q2**:\n\n| Conflict | confluent | workato | Status | Recommended action |\n|---|---|---|---|---|\n| `f1a5f4a6\u2026` | 60 records | 6 records | **open** | escalate |\n| `6b252475\u2026` | 60 records | 6 records | **open** | escalate |\n\n- **Conflict type:** structural (the sources disagree on the *set* of customer records / coverage, not on a single numeric value).\n- **Disagreement:** **confluent** asserts **60** customer rows; **workato** asserts **6**. The two systems are not reconciled on which customer records exist.\n- **Materiality:** flagged **not material** on a per-record basis (rel threshold 0.005), but the recommended disposition is still **escalate** \u2014 there is no automatic winner source, so a human must disposition this via the HITL surface.\n- **Root cause (per concept metadata):** the `customer` concept is a point-in-time entity created when a prospect converts to a paying customer / a record is established in CRM/ERP, with event-driven status changes. The two pipelines appear to apply different scope boundaries (e.g., what counts as a converted, non-internal commercial relationship), producing the 60-vs-6 gap.\n\n## Provenance\n- Source: Conflict Register, tenant-scoped, entity `CedarGrid-1823`.\n- Conflict IDs: `f1a5f4a6-4a6b-44ac-b005-e697db2919ef` (ingest `27a52b2a-5559-4cd9-a0bc-b658071e48a3`, detected 2026-06-11) and `6b252475-fb90-414f-ab9b-8c3d64def99b` (ingest `a1aa4477-63de-4bef-b5e9-8fb362b13fd5`, detected 2026-06-11).\n- Sample triples \u2014 confluent: `00017c54-6db9-482b-a5a7-a64fdf4b79dc`; workato: `270f1081-9f49-4f3b-86fc-50d4fe721cf5`.\n- Both conflicts have `recommended.winner_source = null` \u2192 no source is authoritative; resolution requires escalation.\n\n**Bottom line:** Yes \u2014 confluent and workato disagree on this entity's customer records (60 vs. 6) for 2026-Q2. Both conflicts are still open and flagged for escalation; no automated winner has been assigned. Want me to pull the reconciliation recommendation / precedent chain for this conflict class to see how similar cases were dispositioned?",
+        "tool_calls": [
+          {
+            "name": "conflict_query",
+            "arguments": {
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "{\"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"conflicts\": [{\"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"conflict_type\": \"structural\", \"conflict_class\": \"company|customer|customer_name|confluent+workato\", \"concept\": \"customer\", \"property\": \"customer_name\", \"period\": \"2026-Q2\", \"dcl_ingest_id\": \"27a52b2a-5559-4cd9-a0bc-b658071e48a3\", \"status\": \"open\", \"claims\": [{\"row_count\": 60, \"source_system\": \"confluent\", \"sample_triple_id\": \"00017c54-6db9-482b-a5a7-a64fdf4b79dc\"}, {\"row_count\": 6, \"source_system\": \"workato\", \"sample_triple_id\": \"270f1081-9f49-4f3b-86fc-50d4fe721cf5\"}], \"materiality\": {\"basis\": \"per_record\", \"material\": false, \"abs_delta\": null, \"rel_delta\": null, \"abs_threshold\": null, \"rel_threshold\": 0.005}, \"recommended\": {\"basis\": \"none\", \"action\": \"escalate\", \"winner_source\": null}, \"root_cause_explanation\": \"Concept 'customer' \\u2014 sources disagree (confluent=None, workato=None). Likely cause per concept metadata \\u2014 recognition basis: Created when a prospect converts to a paying customer or when a customer record is established in the CRM/ERP.; timing semantics: Point-in-time entity. Customer status (active, churned, prospect) changes are event-driven.; scope boundaries: Includes all entities with a commercial relationship. Excludes prospects that have not converted and internal entities.\", \"root_cause_source\": \"concept_metadata\", \"detected_at\": \"2026-06-11T17:25:06.071139+00:00\", \"updated_at\": \"2026-06-11T17:25:06.071139+00:00\", \"conflict_id\": \"f1a5f4a6-4a6b-44ac-b005-e697db2919ef\"}, {\"tenant_id\": \"51aee6ec-15c3-4fb0-833a-a19bb4511296\", \"entity_id\": \"CedarGrid-1823\", \"conflict_type\": \"structural\", \"conflict_class\": \"company|customer|customer_name|confluent+workato\", \"concept\": \"customer\", \"property\": \"customer_name\", \"period\": \"2026-Q2\", \"dcl_ingest_id\": \"a1aa4477-63de-4bef-b5e9-8fb362b13fd5\", \"status\": \"open\", \"claims\": [{\"row_count\": 60, \"source_system\": \"confluent\", \"sample_triple_id\": \"00a479da-c6\n\u2026[truncated 1100 chars]",
+            "is_error": false,
+            "latency_ms": 538
+          },
+          {
+            "name": "list_domains",
+            "arguments": {
+              "entity_id": "CedarGrid-1823"
+            },
+            "result_excerpt": "[{\"domain\": \"gl\", \"triple_count\": 3451}, {\"domain\": \"support\", \"triple_count\": 468}, {\"domain\": \"revenue\", \"triple_count\": 398}, {\"domain\": \"arr\", \"triple_count\": 312}, {\"domain\": \"coa\", \"triple_count\": 249}, {\"domain\": \"customer\", \"triple_count\": 214}, {\"domain\": \"cash_flow\", \"triple_count\": 138}, {\"domain\": \"workforce\", \"triple_count\": 120}, {\"domain\": \"accounts_payable\", \"triple_count\": 109}, {\"domain\": \"accounts_receivable\", \"triple_count\": 109}, {\"domain\": \"asset\", \"triple_count\": 104}, {\"domain\": \"journal_entry\", \"triple_count\": 85}, {\"domain\": \"uptime_pct\", \"triple_count\": 84}, {\"domain\": \"ebitda_adjustment\", \"triple_count\": 80}, {\"domain\": \"liability\", \"triple_count\": 78}, {\"domain\": \"invoice\", \"triple_count\": 73}, {\"domain\": \"headcount\", \"triple_count\": 72}, {\"domain\": \"sales\", \"triple_count\": 72}, {\"domain\": \"pnl\", \"triple_count\": 65}, {\"domain\": \"efficiency\", \"triple_count\": 60}, {\"domain\": \"event_stream\", \"triple_count\": 60}, {\"domain\": \"opex\", \"triple_count\": 52}, {\"domain\": \"equity\", \"triple_count\": 39}, {\"domain\": \"infrastructure\", \"triple_count\": 24}, {\"domain\": \"engineering\", \"triple_count\": 24}, {\"domain\": \"operations\", \"triple_count\": 24}, {\"domain\": \"cloud_spend\", \"triple_count\": 19}, {\"domain\": \"cogs\", \"triple_count\": 13}, {\"domain\": \"uptime_trend\", \"triple_count\": 12}, {\"domain\": \"sprint_velocity\", \"triple_count\": 12}, {\"domain\": \"incident_count\", \"triple_count\": 12}, {\"domain\": \"deploy_frequency\", \"triple_count\": 12}, {\"domain\": \"uptime_by_service\", \"triple_count\": 12}, {\"domain\": \"account\", \"triple_count\": 12}, {\"domain\": \"pipeline\", \"triple_count\": 2}, {\"domain\": \"cloud_savings_opportunities_amount\", \"triple_count\": 1}, {\"domain\": \"cloud_spend_by_service\", \"triple_count\": 1}, {\"domain\": \"event\", \"triple_count\": 1}, {\"domain\": \"jira\", \"triple_count\": 1}, {\"domain\": \"aws_cost\", \"triple_count\": 1}, {\"domain\": \"cloud_spend_by_team\", \"triple_count\": 1}, {\"domain\": \"datadog\", \"triple_count\": 1}, {\"domain\": \"service\", \"triple_count\": 1}]",
+            "is_error": false,
+            "latency_ms": 470
+          }
+        ],
+        "usage": {
+          "input_tokens": 6480,
+          "output_tokens": 1153
+        },
+        "model": "claude-opus-4-8",
+        "stop_reason": "end_turn",
+        "elapsed_s": 20.94,
+        "panel": "b",
+        "access": "dcl-mcp-http-sse",
+        "entity_id": "CedarGrid-1823",
+        "mcp": {
+          "sse_url": "http://localhost:8014/api/mcp/sse",
+          "caller_token_id": "6c6d30a6c2335068",
+          "scope": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ],
+          "tools_listed": [
+            "query_triples",
+            "list_domains",
+            "list_runs",
+            "concept_lookup",
+            "semantic_export",
+            "provenance",
+            "conflict_query",
+            "reconciliation_recommend"
+          ]
+        },
+        "question_id": "q_conflict_live"
+      },
+      "scores": {
+        "a": {
+          "conflict": {
+            "passed": false,
+            "expected_conflicts": 2,
+            "disclosed": false,
+            "register_sources": [
+              "confluent",
+              "workato"
+            ],
+            "sources_named_in_answer": [],
+            "called_conflict_query": false
+          },
+          "provenance": {
+            "present": false,
+            "cited_triple_or_ingest_ids": [],
+            "cited_source_systems": [],
+            "confidence_cited": false
+          }
+        },
+        "b": {
+          "conflict": {
+            "passed": true,
+            "expected_conflicts": 2,
+            "disclosed": true,
+            "register_sources": [
+              "confluent",
+              "workato"
+            ],
+            "sources_named_in_answer": [
+              "confluent",
+              "workato"
+            ],
+            "called_conflict_query": true
+          },
+          "provenance": {
+            "present": true,
+            "cited_triple_or_ingest_ids": [
+              "00017c54-6db9-482b-a5a7-a64fdf4b79dc",
+              "270f1081-9f49-4f3b-86fc-50d4fe721cf5",
+              "27a52b2a-5559-4cd9-a0bc-b658071e48a3",
+              "a1aa4477-63de-4bef-b5e9-8fb362b13fd5",
+              "f1a5f4a6-4a6b-44ac-b005-e697db2919ef"
+            ],
+            "cited_source_systems": [
+              "confluent",
+              "workato"
+            ],
+            "confidence_cited": false
+          }
+        }
+      },
+      "passed": true
+    }
+  ],
+  "summary": {
+    "live_slots": 8,
+    "pending_slots": 2,
+    "panel_a": {
+      "numeric_correct": 6,
+      "numeric_total": 6,
+      "provenance_present": 0
+    },
+    "panel_b": {
+      "numeric_correct": 6,
+      "numeric_total": 6,
+      "provenance_present": 8,
+      "no_data_honest": 1,
+      "no_data_total": 1,
+      "conflict_disclosed": 1,
+      "conflict_total": 1
+    }
+  },
+  "sequence_passed": true
+}

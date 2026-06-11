@@ -1,0 +1,102 @@
+# Eval question slots for the grounded-agent before/after demo (§13).
+#
+# This file is DATA — the sequence layer reads it; nothing here executes.
+# Slot statuses:
+#   live    — runs now against the live dev entity; scored.
+#   pending — the §13 beat whose scenario data arrives with Gate 1A demo
+#             datasets (Farm conflict-class months). The slot is presented
+#             honestly as pending; output is NEVER faked.
+#
+# Ground truth is resolved at RUN TIME from the raw source feeds
+# (demo/feeds.py — B10). No expected values are hardcoded here.
+# scales: accepted unit multipliers when matching a number extracted from
+# an answer (feeds are $M-scale; an agent may verbalize $1.48B for 1477.13;
+# rates may be verbalized as 0.058 or 5.8%).
+
+meta:
+  entity_default: CedarGrid-1823
+  model_default: claude-opus-4-8
+  seed_derivation: "uuid5(NAMESPACE_URL, 'fin-seed:{entity_id}') % 2**31"
+  rel_tolerance: 0.02
+
+slots:
+  - id: q1_attrition_headline
+    status: pending
+    kind: conflict
+    question: "Where is attrition highest and what's driving it?"
+    pending_reason: >-
+      §13 Q1 (headline) — multi-hop drill (departures → exit themes → comp
+      policy → market comp) and the HR-vs-finance headcount denominator
+      conflict (22% vs 19%) require the Gate 1A Farm scenario months
+      (conflicting HR + finance feeds). Until those datasets exist this slot
+      is pending; it is never simulated.
+
+  - id: q2_cloud_conflict
+    status: pending
+    kind: conflict
+    question: "What was March compute spend for the entity — billing or GL?"
+    pending_reason: >-
+      §13 Q2 — billing ($412K-class) vs GL ($387K-class) disagreement with
+      credit/untagged/unexplained decomposition requires the Gate 1A
+      dual-source cloud-spend scenario feeds. Single billing source today;
+      pending, never simulated.
+
+  - id: q_revenue
+    status: live
+    kind: numeric
+    question: "What was total revenue in the most recent quarter?"
+    ground_truth: {feed: financial, field: revenue, period: latest, scales: [1, 1000]}
+
+  - id: q_net_income
+    status: live
+    kind: numeric
+    question: "What was net income in the most recent quarter?"
+    ground_truth: {feed: financial, field: net_income, period: latest, scales: [1, 1000]}
+
+  - id: q_cash
+    status: live
+    kind: numeric
+    question: "What was the cash position at the end of the most recent quarter?"
+    ground_truth: {feed: financial, field: cash, period: latest, scales: [1, 1000]}
+
+  - id: q_headcount
+    status: live
+    kind: numeric
+    question: "What is total headcount in the most recent quarter?"
+    ground_truth: {feed: operational, field: headcount_total, period: latest, scales: [1]}
+
+  - id: q_arr
+    status: live
+    kind: numeric
+    question: "What is ending ARR for the most recent quarter?"
+    ground_truth: {feed: operational, field: arr_ending, period: latest, scales: [1, 1000]}
+
+  - id: q_attrition_live
+    status: live
+    kind: numeric
+    question: "What is the attrition rate in the most recent quarter, and how has it moved over the prior year?"
+    ground_truth: {feed: operational, field: attrition_rate, period: latest, scales: [1, 0.01, 100]}
+
+  - id: q_enps_no_data
+    status: live
+    kind: no_data
+    question: "What is the employee NPS (eNPS) for the most recent quarter?"
+    notes: >-
+      No source produces employee-NPS for any records-path entity (customer
+      'nps' exists; employee NPS does not). The honest answer is that the
+      data is absent — the no-data tile renders that honestly. A fabricated
+      number here is a scoring failure.
+
+  - id: q_conflict_live
+    status: live
+    kind: conflict
+    question: "Do your source systems disagree about any customer records for this entity?"
+    notes: >-
+      Scored against the live Conflict Register (Gate 1A) at run time: the
+      expected disclosure set is GET /api/dcl/conflicts for the entity at
+      sequence start. Panel B carries conflict_query in its token scope.
+      Panel A's raw surface is the pull-accessible feeds (financial /
+      operational / ledger); the fabric planes (e.g. confluent vs workato
+      customer rows) are push-class with no pull endpoint — raw access has
+      no cross-source register, which is precisely the before-condition.
+      This asymmetry is stated here and in the capture, not hidden.
