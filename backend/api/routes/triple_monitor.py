@@ -541,6 +541,7 @@ def triples_browse(
     period: Optional[str] = None,
     property: Optional[str] = Query(None, alias="property"),
     run_id: Optional[str] = Query(None, description="Scope to a single ingest batch (dcl_ingest_id / aam_inference_id)"),
+    as_of: Optional[str] = Query(None, description="ISO timestamp — knowledge-time travel: rows live at that instant (ingested on or before, not yet superseded)"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
@@ -567,7 +568,27 @@ def triples_browse(
     # tenant_id filter is unconditional and first — every browse is scoped.
     clauses: list[str] = ["tenant_id = %s"]
     params: list = [tenant_id]
-    if not run_id:
+    if as_of and run_id:
+        raise HTTPException(
+            status_code=400,
+            detail="as_of and run_id are mutually exclusive — a run scope "
+                   "already pins the read to one ingest batch; as_of travels "
+                   "the knowledge timeline across batches.",
+        )
+    if as_of:
+        from datetime import datetime as _dt
+        try:
+            _dt.fromisoformat(as_of.replace("Z", "+00:00"))
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"as_of must be an ISO-8601 timestamp; got {as_of!r}",
+            )
+        clauses.append(
+            "ingested_at <= %s AND (superseded_at IS NULL OR superseded_at > %s)"
+        )
+        params.extend([as_of, as_of])
+    elif not run_id:
         clauses.append("is_active = true")
 
     if domain:
@@ -900,10 +921,82 @@ def triples_persona_stats():
 
 @router.post("/api/dcl/triples/deactivate-run")
 def deactivate_run(run_id: str = Query(...)):
-    """Deactivate all triples for a specific run."""
+    """Supersede all live triples for a specific run (bi-temporal: closes
+    their knowledge window; rows stay queryable via as-of reads)."""
     count = _triple_store.deactivate_run(run_id)
-    logger.info(f"[triple-monitor] Deactivated {count} triples for run_id={run_id}")
+    logger.info(f"[triple-monitor] Superseded {count} triples for run_id={run_id}")
     return {"dcl_ingest_id": run_id, "deactivated_count": count}
+
+
+# ---------------------------------------------------------------------------
+# GET /api/dcl/triples/runs/diff
+# ---------------------------------------------------------------------------
+
+@router.get("/api/dcl/triples/runs/diff")
+def runs_diff(
+    tenant_id: str = Query(..., description="Tenant UUID — required, every diff is tenant-scoped"),
+    entity_id: str = Query(..., description="Entity business key"),
+    dcl_ingest_id_base: Optional[str] = Query(None, description="Older run; defaults to tenant_runs.previous_run_id for the entity"),
+    dcl_ingest_id_compare: Optional[str] = Query(None, description="Newer run; defaults to tenant_runs.current_run_id for the entity"),
+    limit: int = Query(200, ge=1, le=1000, description="Per-category sample cap; counts are always exact"),
+):
+    """Run-over-run diff for one entity: added / removed / changed assertion
+    groups between two ingest runs. With no explicit run pair, diffs the
+    entity's current run against its previous run (the tenant_runs pointer
+    pair, exposed here for the first time). Single bounded SQL."""
+    import uuid as _uuid
+    for name, val in (("tenant_id", tenant_id),
+                      ("dcl_ingest_id_base", dcl_ingest_id_base),
+                      ("dcl_ingest_id_compare", dcl_ingest_id_compare)):
+        if val is not None:
+            try:
+                _uuid.UUID(val)
+            except (ValueError, AttributeError):
+                raise HTTPException(status_code=400, detail=f"{name} must be a UUID; got {val!r}")
+
+    base, compare = dcl_ingest_id_base, dcl_ingest_id_compare
+    if base is None or compare is None:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT current_run_id, previous_run_id FROM tenant_runs "
+                    "WHERE tenant_id = %s AND entity_id = %s",
+                    (tenant_id, entity_id),
+                )
+                row = cur.fetchone()
+        if row is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No tenant_runs pointer for tenant_id={tenant_id} "
+                       f"entity_id={entity_id!r} — the entity has no ingest history here.",
+            )
+        current_run = str(row[0]) if row[0] else None
+        previous_run = str(row[1]) if row[1] else None
+        compare = compare or current_run
+        base = base or previous_run
+        if base is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Entity {entity_id!r} has no previous run to diff against "
+                       f"(previous_run_id is empty — single ingest so far). "
+                       f"Pass dcl_ingest_id_base explicitly to diff arbitrary runs.",
+            )
+
+    result = _triple_store.diff_runs(tenant_id, entity_id, base, compare, limit=limit)
+    if (result["counts"]["unchanged"] == 0
+            and not any(result["counts"][c] for c in ("added", "removed", "changed"))):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Neither run {base} nor {compare} has triples for "
+                   f"entity_id={entity_id!r} under tenant_id={tenant_id} — nothing to diff.",
+        )
+    return {
+        "tenant_id": tenant_id,
+        "entity_id": entity_id,
+        "dcl_ingest_id_base": base,
+        "dcl_ingest_id_compare": compare,
+        **result,
+    }
 
 
 # ---------------------------------------------------------------------------

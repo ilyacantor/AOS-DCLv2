@@ -81,6 +81,13 @@ FINANCIAL_FIELD_CONCEPTS: dict[str, str] = {
     "change_in_ar": "cash_flow.operating.change_in_ar",
     "change_in_ap": "cash_flow.operating.change_in_ap",
     "change_in_deferred_rev": "cash_flow.operating.change_in_deferred_rev",
+    # CF statement totals (#54 gate-4: records-path full cash-flow statement —
+    # investing/financing/net_change so CF identity + cash continuity hold)
+    "investing_total": "cash_flow.investing.total",
+    "financing_total": "cash_flow.financing.total",
+    "financing_debt_repayment": "cash_flow.financing.debt_repayment",
+    "financing_dividends": "cash_flow.financing.dividends",
+    "cf_net_change": "cash_flow.net_change",
     # ── ARR ──────────────────────────────────────────────────────────
     "arr_beginning": "arr.beginning",
     "arr_ending": "arr.ending",

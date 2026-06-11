@@ -2,6 +2,15 @@
 TripleStore — data access for the semantic_triples table.
 
 Sync psycopg2, parameterized queries, no business logic.
+
+Bi-temporal store (Gate 0, ContextOS_Blueprint_v1 §6/§15): every fact carries
+valid_from/valid_to (world time) and ingested_at/superseded_at (knowledge
+time). Lifecycle writes CLOSE a fact's knowledge window (SET superseded_at)
+— they never delete. is_active is a STORED generated column defined as
+(superseded_at IS NULL); any code that still writes is_active fails loudly
+at the database. Hard DELETEs survive only in the explicit retention tools
+(delete_inactive / purge_old_runs / delete_by_run — B19 operator scope) and
+in the same-run redelivery scrub inside replace_tenant_triples.
 """
 
 import io
@@ -68,17 +77,32 @@ class TripleStore:
                 return len(triples)
 
     def replace_tenant_triples(self, tenant_id: str, triples: list[dict]) -> int:
-        """Atomically DELETE old triples, then COPY-insert new batch.
+        """Atomically supersede prior live triples, then COPY-insert new batch.
 
-        Scopes the DELETE to entity_ids present in the incoming triples so
-        that replacing one entity's data does not nuke another entity's
-        triples within the same tenant.  Both operations share one
-        transaction — if COPY fails the DELETE rolls back.
+        Bi-temporal semantics: prior runs' live rows get superseded_at=now()
+        — history is preserved, nothing from earlier runs is deleted. The one
+        DELETE that remains is the same-run redelivery scrub: rows already
+        carrying THIS batch's run_id are the same ingest event re-delivered
+        (?replace=true idempotent replay) and re-inserting without scrubbing
+        would duplicate the event's own history.
+
+        Scopes to entity_ids present in the incoming triples so replacing one
+        entity's data does not supersede another entity's triples within the
+        same tenant. All statements share one transaction — if COPY fails the
+        scrub and supersession roll back.
         """
         if not tenant_id:
             raise ValueError("replace_tenant_triples requires tenant_id")
         if not triples:
             return 0
+
+        run_ids = {str(t["run_id"]) for t in triples if t.get("run_id")}
+        if len(run_ids) != 1:
+            raise ValueError(
+                f"replace_tenant_triples requires exactly one run_id across "
+                f"the batch; got {sorted(run_ids) or '(none)'}"
+            )
+        run_id = run_ids.pop()
 
         entity_ids = sorted({t["entity_id"] for t in triples if t.get("entity_id")})
 
@@ -96,28 +120,36 @@ class TripleStore:
             buf.write("\n")
         buf.seek(0)
 
+        ent_clause = ""
+        ent_params: list = []
+        if entity_ids:
+            placeholders = ", ".join(["%s"] * len(entity_ids))
+            ent_clause = f" AND entity_id IN ({placeholders})"
+            ent_params = entity_ids
+
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     f"SET LOCAL statement_timeout = {int(INGEST_STATEMENT_TIMEOUT_MS)}"
                 )
-                if entity_ids:
-                    placeholders = ", ".join(["%s"] * len(entity_ids))
-                    cur.execute(
-                        f"DELETE FROM semantic_triples "
-                        f"WHERE tenant_id = %s AND entity_id IN ({placeholders})",
-                        [tenant_id] + entity_ids,
-                    )
-                else:
-                    cur.execute(
-                        "DELETE FROM semantic_triples WHERE tenant_id = %s",
-                        (tenant_id,),
-                    )
-                deleted = cur.rowcount
+                cur.execute(
+                    f"DELETE FROM semantic_triples "
+                    f"WHERE tenant_id = %s AND run_id = %s{ent_clause}",
+                    [tenant_id, run_id] + ent_params,
+                )
+                scrubbed = cur.rowcount
+                cur.execute(
+                    f"UPDATE semantic_triples "
+                    f"SET superseded_at = now(), updated_at = now() "
+                    f"WHERE tenant_id = %s AND is_active = true{ent_clause}",
+                    [tenant_id] + ent_params,
+                )
+                superseded = cur.rowcount
                 logger.info(
-                    "[replace_tenant_triples] Deleted %d old triples for "
+                    "[replace_tenant_triples] Superseded %d live triples "
+                    "(+%d same-run redelivery rows scrubbed) for "
                     "tenant_id=%s, entity_ids=%s",
-                    deleted, tenant_id, entity_ids or "(all)",
+                    superseded, scrubbed, tenant_id, entity_ids or "(all)",
                 )
                 cur.copy_expert(self._COPY_SQL, buf)
                 conn.commit()
@@ -195,7 +227,7 @@ class TripleStore:
             )
         placeholders = ", ".join(["%s"] * len(entity_ids))
         sql = (
-            "UPDATE semantic_triples SET is_active = false, updated_at = now() "
+            "UPDATE semantic_triples SET superseded_at = now(), updated_at = now() "
             f"WHERE is_active = true AND tenant_id = %s AND entity_id IN ({placeholders})"
         )
         params = [tenant_id] + entity_ids
@@ -215,7 +247,7 @@ class TripleStore:
         if not tenant_id:
             raise ValueError("deactivate_tenant_triples requires tenant_id.")
         sql = (
-            "UPDATE semantic_triples SET is_active = false, updated_at = now() "
+            "UPDATE semantic_triples SET superseded_at = now(), updated_at = now() "
             "WHERE is_active = true AND tenant_id = %s"
         )
         with get_connection() as conn:
@@ -226,9 +258,12 @@ class TripleStore:
                 return cur.rowcount
 
     def delete_inactive(self) -> int:
-        """Hard-delete all inactive triples across all tenants.
+        """Hard-delete all superseded triples across all tenants.
 
-        Maintenance operation to purge deactivated runs and reclaim space.
+        RETENTION tool (B19 operator scope) — this is the one sanctioned way
+        history leaves the store. Default lifecycle never deletes; an
+        operator runs this deliberately to reclaim space, destroying as-of
+        history older than the live set.
         """
         sql = "DELETE FROM semantic_triples WHERE is_active = false"
         with get_connection() as conn:
@@ -238,9 +273,10 @@ class TripleStore:
                 return cur.rowcount
 
     def deactivate_run(self, run_id: str) -> int:
-        """Set is_active=false for all triples in a run. Returns count affected."""
+        """Supersede all live triples in a run (closes their knowledge window).
+        Returns count affected. Rows remain queryable via as-of reads."""
         sql = (
-            "UPDATE semantic_triples SET is_active = false, updated_at = now() "
+            "UPDATE semantic_triples SET superseded_at = now(), updated_at = now() "
             "WHERE run_id = %s AND is_active = true"
         )
         with get_connection() as conn:
@@ -265,11 +301,19 @@ class TripleStore:
                                      current_snapshot_name, previous_snapshot_name, updated_at)
             VALUES (%s, %s, %s, NULL, %s, NULL, now())
             ON CONFLICT (tenant_id, entity_id) DO UPDATE
-              SET previous_run_id          = tenant_runs.current_run_id,
-                  current_run_id           = EXCLUDED.current_run_id,
-                  previous_snapshot_name   = tenant_runs.current_snapshot_name,
-                  current_snapshot_name    = EXCLUDED.current_snapshot_name,
-                  updated_at              = now()
+              SET previous_run_id = CASE
+                      WHEN tenant_runs.current_run_id IS DISTINCT FROM EXCLUDED.current_run_id
+                      THEN tenant_runs.current_run_id
+                      ELSE tenant_runs.previous_run_id
+                  END,
+                  previous_snapshot_name = CASE
+                      WHEN tenant_runs.current_run_id IS DISTINCT FROM EXCLUDED.current_run_id
+                      THEN tenant_runs.current_snapshot_name
+                      ELSE tenant_runs.previous_snapshot_name
+                  END,
+                  current_run_id        = EXCLUDED.current_run_id,
+                  current_snapshot_name = EXCLUDED.current_snapshot_name,
+                  updated_at            = now()
             RETURNING previous_run_id
         """
         with get_connection() as conn:
@@ -297,15 +341,23 @@ class TripleStore:
                                      current_snapshot_name, previous_snapshot_name, updated_at)
             VALUES (%s, %s, %s, NULL, %s, NULL, now())
             ON CONFLICT (tenant_id, entity_id) DO UPDATE
-              SET previous_run_id          = tenant_runs.current_run_id,
-                  current_run_id           = EXCLUDED.current_run_id,
-                  previous_snapshot_name   = tenant_runs.current_snapshot_name,
-                  current_snapshot_name    = EXCLUDED.current_snapshot_name,
-                  updated_at              = now()
+              SET previous_run_id = CASE
+                      WHEN tenant_runs.current_run_id IS DISTINCT FROM EXCLUDED.current_run_id
+                      THEN tenant_runs.current_run_id
+                      ELSE tenant_runs.previous_run_id
+                  END,
+                  previous_snapshot_name = CASE
+                      WHEN tenant_runs.current_run_id IS DISTINCT FROM EXCLUDED.current_run_id
+                      THEN tenant_runs.current_snapshot_name
+                      ELSE tenant_runs.previous_snapshot_name
+                  END,
+                  current_run_id        = EXCLUDED.current_run_id,
+                  current_snapshot_name = EXCLUDED.current_snapshot_name,
+                  updated_at            = now()
             RETURNING previous_run_id
         """
         deactivate_sql = (
-            "UPDATE semantic_triples SET is_active = false, updated_at = now() "
+            "UPDATE semantic_triples SET superseded_at = now(), updated_at = now() "
             "WHERE run_id = %s AND is_active = true"
         )
         with get_connection() as conn:
@@ -958,8 +1010,128 @@ class TripleStore:
                     if row[0] and row[1]
                 )
 
+    def diff_runs(
+        self,
+        tenant_id: str,
+        entity_id: str,
+        base_run_id: str,
+        compare_run_id: str,
+        limit: int = 200,
+    ) -> dict:
+        """Run-over-run diff for one entity between two ingest runs.
+
+        Unit of comparison is the assertion group (concept, property, period,
+        source_system) — coordinates are NOT row-unique inside a run (multi-
+        source collisions; per-record ledger rows), so each side aggregates to
+        row count + an order-independent digest of the value multiset, and the
+        join can never fan out. Categories: added / removed / changed
+        (count or value-set differs). Single bounded SQL — both runs reach
+        their rows via idx_triples_run; per-category samples capped at
+        `limit`, totals always exact (dcl_deferred_work.md#56 discipline).
+
+        Returns {counts: {added, removed, changed, unchanged}, samples:
+        {added: [...], removed: [...], changed: [...]}, truncated: {...}}.
+        """
+        safe_limit = max(1, min(int(limit), 1000))
+        sql = """
+            WITH base AS (
+                SELECT concept, property, COALESCE(period, '') AS period,
+                       source_system,
+                       COUNT(*) AS cnt,
+                       md5(string_agg(value::text, '|' ORDER BY value::text)) AS digest,
+                       MIN(value::text) AS single_value
+                FROM semantic_triples
+                WHERE tenant_id = %s AND entity_id = %s AND run_id = %s
+                GROUP BY concept, property, COALESCE(period, ''), source_system
+            ),
+            cmp AS (
+                SELECT concept, property, COALESCE(period, '') AS period,
+                       source_system,
+                       COUNT(*) AS cnt,
+                       md5(string_agg(value::text, '|' ORDER BY value::text)) AS digest,
+                       MIN(value::text) AS single_value
+                FROM semantic_triples
+                WHERE tenant_id = %s AND entity_id = %s AND run_id = %s
+                GROUP BY concept, property, COALESCE(period, ''), source_system
+            ),
+            joined AS (
+                SELECT
+                    COALESCE(b.concept, c.concept)             AS concept,
+                    COALESCE(b.property, c.property)           AS property,
+                    COALESCE(b.period, c.period)               AS period,
+                    COALESCE(b.source_system, c.source_system) AS source_system,
+                    b.cnt AS base_count, c.cnt AS compare_count,
+                    b.single_value AS base_value, c.single_value AS compare_value,
+                    CASE
+                        WHEN b.concept IS NULL THEN 'added'
+                        WHEN c.concept IS NULL THEN 'removed'
+                        WHEN b.cnt != c.cnt OR b.digest != c.digest THEN 'changed'
+                        ELSE 'unchanged'
+                    END AS category
+                FROM base b
+                FULL OUTER JOIN cmp c
+                  USING (concept, property, period, source_system)
+            ),
+            ranked AS (
+                SELECT *,
+                       ROW_NUMBER() OVER (PARTITION BY category
+                                          ORDER BY concept, property, period,
+                                                   source_system) AS rn,
+                       COUNT(*) OVER (PARTITION BY category) AS total
+                FROM joined
+            )
+            SELECT category, total, concept, property,
+                   NULLIF(period, '') AS period, source_system,
+                   base_count, compare_count, base_value, compare_value
+            FROM ranked
+            WHERE (category != 'unchanged' AND rn <= %s)
+               OR (category = 'unchanged' AND rn = 1)
+            ORDER BY category, rn
+        """
+        params = [tenant_id, entity_id, base_run_id,
+                  tenant_id, entity_id, compare_run_id, safe_limit]
+        counts = {"added": 0, "removed": 0, "changed": 0, "unchanged": 0}
+        samples: dict[str, list[dict]] = {"added": [], "removed": [], "changed": []}
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                for (category, total, concept, prop, period, source_system,
+                     base_count, compare_count, base_value, compare_value) in cur.fetchall():
+                    counts[category] = total
+                    if category == "unchanged":
+                        continue
+                    entry = {
+                        "concept": concept,
+                        "property": prop,
+                        "period": period,
+                        "source_system": source_system,
+                    }
+                    if category == "changed":
+                        entry["base_count"] = base_count
+                        entry["compare_count"] = compare_count
+                        # Scalar values shown only when unambiguous (one row
+                        # per side); multi-row groups differ by digest/count.
+                        if base_count == 1 and compare_count == 1:
+                            entry["base_value"] = base_value
+                            entry["compare_value"] = compare_value
+                    elif category == "added":
+                        entry["count"] = compare_count
+                        if compare_count == 1:
+                            entry["value"] = compare_value
+                    else:
+                        entry["count"] = base_count
+                        if base_count == 1:
+                            entry["value"] = base_value
+                    samples[category].append(entry)
+        truncated = {
+            cat: counts[cat] > len(samples[cat]) for cat in samples
+        }
+        return {"counts": counts, "samples": samples, "truncated": truncated,
+                "sample_limit": safe_limit}
+
     def delete_by_run(self, run_id: str) -> int:
-        """Hard-delete all triples for a run (test cleanup only)."""
+        """Hard-delete all triples for a run (retention/test cleanup only —
+        B19 scope; default lifecycle supersedes, never deletes)."""
         sql = "DELETE FROM semantic_triples WHERE run_id = %s"
         with get_connection() as conn:
             with conn.cursor() as cur:
@@ -981,11 +1153,17 @@ class TripleStore:
         period: str | None = None,
         limit: int = 100,
         active_only: bool = True,
+        as_of: str | None = None,
     ) -> list[dict]:
         """Query triples for a tenant. Used by the external MCP server.
 
         Returns dicts with JSON-safe values (UUIDs as strings, datetimes
         as ISO strings). Filters by domain (concept root) or full concept.
+
+        as_of (ISO timestamp): knowledge-time travel — returns the rows that
+        were live at that instant (ingested on or before, not yet superseded).
+        Overrides active_only; the as-of predicate IS the liveness filter at
+        time T.
         """
         clauses = ["tenant_id = %s"]
         params: list = [tenant_id]
@@ -1001,7 +1179,12 @@ class TripleStore:
         if period is not None:
             clauses.append("period = %s")
             params.append(period)
-        if active_only:
+        if as_of is not None:
+            clauses.append(
+                "ingested_at <= %s AND (superseded_at IS NULL OR superseded_at > %s)"
+            )
+            params.extend([as_of, as_of])
+        elif active_only:
             clauses.append("is_active = true")
 
         safe_limit = max(1, min(int(limit), 1000))
@@ -1011,7 +1194,7 @@ class TripleStore:
             "       currency, unit, source_system, source_field, "
             "       fabric_plane, fabric_product, pipe_id, "
             "       run_id, confidence_score, confidence_tier, is_active, "
-            "       created_at "
+            "       created_at, ingested_at, superseded_at, valid_from, valid_to "
             f"FROM semantic_triples WHERE {where} "
             # id tiebreaker: batch inserts share created_at, and ties broke
             # arbitrarily per call — two identical queries could return
@@ -1028,8 +1211,10 @@ class TripleStore:
                     for k in ("id", "tenant_id", "pipe_id", "run_id"):
                         if d.get(k) is not None:
                             d[k] = str(d[k])
-                    if d.get("created_at") is not None:
-                        d["created_at"] = d["created_at"].isoformat()
+                    for k in ("created_at", "ingested_at", "superseded_at",
+                              "valid_from", "valid_to"):
+                        if d.get(k) is not None:
+                            d[k] = d[k].isoformat()
                     if d.get("confidence_score") is not None:
                         d["confidence_score"] = float(d["confidence_score"])
                     rows.append(d)
