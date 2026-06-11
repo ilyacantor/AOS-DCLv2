@@ -301,12 +301,38 @@ shared-tenant lumping.
    - The flip is BLOCKED until a records-path run for FluxEdge-TMZ8 diffs clean against this
      baseline (drifted→canonical per the registry): zero missing concepts, values matching.
 
-## STORE NOTE — dev schema is pre-rebuild (a related cutover dependency)
-A DCL store-rebuild (mig014/015/016) made `current_triples` the canonical read and dropped the
-legacy active-flag column. But the dev store this baseline was captured from (`shared_gdbmdr`) is
-still the PRE-rebuild model — the legacy base triples table + active flag, no `current_triples`.
-The baseline is correct — it's exactly what the live dev DCL serves today — but two consequences
-for the cutover: (a) new DCL/parity tooling must read the canonical store (`current_triples`),
-which is why the capture script is kept local/uncommitted; (b) rebuilding the dev `shared_gdbmdr`
-schema to the post-mig016 model is a dependency of the records-path cutover landing on the
-canonical store.
+## STORE LINEAGE — the April 2026 current_triples rebuild (historical), and what is canonical now
+Corrected 2026-06-11 after a primary-evidence diagnostic. The `current_triples` store rebuild
+(that line's migrations 014/015/016/017: flat live mirror + partitioned archive +
+`swap_and_delete`, `is_active` dropped) was REAL production code Apr 13–19 2026 — deployed to
+prod via Render, applied to the then-prod store — and was backed out on Apr 19 via a full prod
+store reset (every prod table's earliest row is 2026-04-19 21:41Z). The code line survives only
+on branch `rollback-backup-apr19`; no environment carries its DDL. The prior wording of this
+section ("made current_triples the canonical read") described that deployed-then-reverted era as
+if it were current — it is not, and `current_triples` must not be treated as a target.
+
+**Canonical store (Gate 0, ContextOS_Blueprint_v1 §6/§15): `semantic_triples`, bi-temporal.**
+Migration `017_bitemporal_store.sql` (applied to aos-dev `shared_gdbmdr` 2026-06-11; prod
+application is its own B19-gated gate). Every fact carries two timelines; supersession closes
+windows; nothing is deleted on the lifecycle path; hard DELETEs are operator retention tools.
+
+### Temporal Columns v1 (reusable convention — any future fact-bearing table, incl. Gate 1B edges)
+| column | type | meaning |
+|---|---|---|
+| `valid_from` / `valid_to` | timestamptz, NOT NULL/NULL | when the assertion is true in the world (valid_to NULL = still true) |
+| `ingested_at` / `superseded_at` | timestamptz, NOT NULL/NULL | when DCL learned it / stopped believing it (superseded_at NULL = live) |
+| `is_active` | boolean GENERATED ALWAYS AS (`superseded_at IS NULL`) STORED | compatibility liveness flag — readable everywhere, unwritable by construction |
+
+Rules: lifecycle writes SET `superseded_at = now()` (predicate `is_active = true` for partial-index
+match); corrections = new row, same coordinates, same `valid_from`, old row superseded; late-arriving
+= new row with past `valid_from`, predecessor gets `valid_to` + `superseded_at`; as-of read =
+`ingested_at <= T AND (superseded_at IS NULL OR superseded_at > T)`. The mechanism is key-agnostic —
+an edges table carries the same four columns + generated flag unchanged.
+
+### Convergence coordination note (additive schema change, 2026-06-11)
+`semantic_triples` gained the four temporal columns; `is_active` was dropped and re-added as the
+STORED GENERATED column above — same name, same values, same partial-index predicates. Convergence's
+SELECT-only reads (`WHERE is_active = true`) are unaffected. Stability guarantee, grounded in the
+Apr 19 history: removing `is_active` was field-tested once and backed out at the cost of a full prod
+store reset — under the bi-temporal model the column is definitional (`superseded_at IS NULL`) and
+is guaranteed to remain readable; any future change to it requires Convergence coordination here.

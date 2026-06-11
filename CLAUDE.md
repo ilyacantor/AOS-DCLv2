@@ -474,10 +474,16 @@ Destructive actions touch state the user or another tenant cannot get back
 without recovery effort. In DCL that list is narrow but high-cost:
 
 - `TRUNCATE` / `DROP TABLE` / `DROP COLUMN` against any live table.
-- `DELETE FROM semantic_triples | current_triples | tenant_runs | semantic_triples_archive`
-  outside the `swap_and_delete` path.
-- Running a migration that rewrites or rebuilds the store (014/015/016, or any
-  successor).
+- `DELETE FROM semantic_triples | tenant_runs` outside the sanctioned retention
+  tools (`purge-inactive`, `purge-old-runs`, `delete_by_run`, test-tenant
+  cleanup). The bi-temporal lifecycle (mig017) supersedes rows — it never
+  deletes; a hand-written DELETE against history is destruction, not lifecycle.
+  (`current_triples` / `semantic_triples_archive` / `swap_and_delete` belonged
+  to the April 2026 store rebuild — deployed Apr 13–19, backed out via full
+  prod store reset; see SCHEMA_CONTRACT.md "Store lineage". They exist in no
+  environment.)
+- Running a migration that rewrites or rebuilds the store (any successor of
+  mig017).
 - Killing or restarting dcl-backend while an in-flight ingest or migration
   holds an open transaction.
 - `git reset --hard`, `git push --force`, branch deletion on unmerged work.
@@ -486,9 +492,12 @@ Before any destructive action:
 
 1. State the blast radius in one sentence — which table, how many rows, which
    tenants, and whether the change is reversible.
-2. Check for in-flight transactions. `apply_mig015` survived a compaction once
-   because its txn was still open; killing dcl-backend would have rolled back
-   hours of scan work. If you cannot prove the write path is idle, wait.
+2. Check for in-flight transactions. `apply_mig015` (April 2026 store rebuild,
+   since backed out) once held an hours-open backfill txn through a compaction;
+   killing dcl-backend would have rolled back hours of scan work. The lesson
+   stands for every successor: prove the write path is idle first, and any
+   prod-store migration must be batched and lock-budgeted explicitly against
+   that incident.
 3. Confirm with the user before executing. One-time approval stands for the
    scope stated in that approval, nothing more. "Apply mig016" does not
    authorize "also drop ingest_log."
