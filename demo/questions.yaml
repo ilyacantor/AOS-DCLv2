@@ -21,25 +21,38 @@ meta:
 
 slots:
   - id: q1_attrition_headline
-    status: pending
+    status: live
     kind: conflict
     question: "Where is attrition highest and what's driving it?"
-    pending_reason: >-
-      §13 Q1 (headline) — multi-hop drill (departures → exit themes → comp
-      policy → market comp) and the HR-vs-finance headcount denominator
-      conflict (22% vs 19%) require the Gate 1A Farm scenario months
-      (conflicting HR + finance feeds). Until those datasets exist this slot
-      is pending; it is never simulated.
+    notes: >-
+      §13 Q1 (headline). The Farm conflict-scenario months are live: an
+      HR-system feed (workday_hr) and a finance cost-center rollup
+      (netsuite_finance_rollup) legitimately disagree on headcount —
+      contractor classification, terminations not yet cleared from payroll,
+      org-unit mapping — so derived attrition differs (~22% vs ~19% in the
+      headline month). Both raw files are in Panel A's feed set
+      (hr_headcount / finance_headcount); the Register carries the
+      workforce.* conflicts DCL's engine detected from the ingested feeds.
+      Scored against the live Register: disclosure must name the disagreeing
+      sources. Ground truth for the underlying values resolves from the
+      feeds at run time (B10); per-month detail (incl. the conflict-free
+      month) lives in GET /api/farm/scenario/ground-truth.
 
   - id: q2_cloud_conflict
-    status: pending
+    status: live
     kind: conflict
     question: "What was March compute spend for the entity — billing or GL?"
-    pending_reason: >-
-      §13 Q2 — billing ($412K-class) vs GL ($387K-class) disagreement with
-      credit/untagged/unexplained decomposition requires the Gate 1A
-      dual-source cloud-spend scenario feeds. Single billing source today;
-      pending, never simulated.
+    notes: >-
+      §13 Q2. Dual cloud-spend scenario feeds are live: provider billing
+      (aws_billing) vs GL allocation (netsuite_gl_allocation) disagree on
+      monthly compute spend ($412K-class vs $387K-class in 2026-03),
+      decomposable into untagged resources + credit posting lag + a small
+      honest unexplained remainder (decomposition in
+      GET /api/farm/scenario/ground-truth). Both raw files are in Panel A's
+      feed set (billing_cloud / gl_cloud); the Register carries the
+      cloud_spend.* per-month conflicts DCL's engine detected. Scored
+      against the live Register: disclosure must name the disagreeing
+      sources.
 
   - id: q_revenue
     status: live

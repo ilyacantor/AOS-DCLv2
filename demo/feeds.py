@@ -33,6 +33,14 @@ FEED_PATHS = {
     "financial": "/api/farm/financial-records",
     "operational": "/api/farm/operational-records",
     "ledger": "/api/farm/ledger-records",
+    # §13 conflict-scenario dual feeds (Gate 1A demo datasets): two systems'
+    # views of the same facts. Panel A's raw access for the conflict beats =
+    # BOTH files of a pair; eval ground truth for the disagreement values
+    # resolves from these at run time (B10), exactly like the others.
+    "hr_headcount": "/api/farm/scenario/hr-headcount-records",
+    "finance_headcount": "/api/farm/scenario/finance-headcount-records",
+    "billing_cloud": "/api/farm/scenario/billing-cloud-records",
+    "gl_cloud": "/api/farm/scenario/gl-cloud-records",
 }
 
 

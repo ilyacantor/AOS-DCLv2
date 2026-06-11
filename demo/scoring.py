@@ -118,7 +118,25 @@ def score_conflict(answer: str, register_conflicts: list[dict], tool_calls: list
                 src = (claim.get("source_system") or "").lower()
                 if src:
                     register_sources.add(src)
-        mentioned_sources = sorted(s for s in register_sources if s in low)
+        # A source is "named" when the answer contains its literal id, OR all
+        # of its alpha tokens at word boundaries, OR its HEAD token (the
+        # vendor/system name — how a person says it: "Workday vs NetSuite
+        # disagree" discloses workday_hr vs netsuite_finance_rollup).
+        # Requiring the snake_case literal scored exemplary disclosures as
+        # silence; an answer naming no systems still fails.
+        import re as _re
+
+        def _named(src: str) -> bool:
+            if src in low:
+                return True
+            tokens = [t for t in _re.split(r"[^a-z0-9]+", src) if t]
+            if not tokens:
+                return False
+            if all(_re.search(rf"\b{_re.escape(t)}", low) for t in tokens):
+                return True
+            return bool(_re.search(rf"\b{_re.escape(tokens[0])}\b", low))
+
+        mentioned_sources = sorted(s for s in register_sources if _named(s))
         worded = any(w in low for w in CONFLICT_WORDS)
         disclosed = worded and bool(mentioned_sources)
         return {
