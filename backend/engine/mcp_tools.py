@@ -52,7 +52,11 @@ def tool_query_triples(
     The tenant_id filter is non-overridable. The 'domain' filter matches
     the root segment of concept names (e.g. domain='cloud_spend' matches
     'cloud_spend.amount_billed', 'cloud_spend.aws_total'). 'concept' is
-    the full concept name when the caller knows it exactly.
+    either a full dotted path (exact match) or an unqualified catalog id
+    (what concept_lookup returns), which matches the exact id, its
+    namespace (id.*, e.g. 'revenue' -> 'revenue.total'), and every
+    domain-qualified instance (*.id, e.g. 'net_income' ->
+    'pnl.net_income') so the two tools compose.
 
     include_descendants (Gate 1B): expand 'concept' through the concept
     hierarchy — a domain expands to every root beneath it, a root or dotted
@@ -397,15 +401,19 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "query_triples": {
         "description": (
             "Query semantic triples for the caller's tenant. Filters by "
-            "domain (concept root) or full concept; optionally by entity_id "
-            "and period. tenant_id is derived from the caller's token and "
-            "cannot be overridden."
+            "domain (concept root) or concept; optionally by entity_id "
+            "and period. Stored concepts are domain-qualified dotted paths "
+            "(e.g. 'pnl.net_income'); an unqualified concept (a catalog id "
+            "from concept_lookup, e.g. 'net_income' or 'revenue') matches "
+            "the exact id, its namespace (id.*), and every domain-qualified "
+            "instance (*.id). tenant_id is derived from the "
+            "caller's token and cannot be overridden."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "domain": {"type": "string", "description": "Concept root (e.g. 'cloud_spend')"},
-                "concept": {"type": "string", "description": "Full concept name"},
+                "concept": {"type": "string", "description": "Dotted concept path (e.g. 'pnl.net_income') or unqualified catalog id (matches all domain-qualified instances)"},
                 "entity_id": {"type": "string"},
                 "period": {"type": "string", "description": "Period code (e.g. 'Q3-2026')"},
                 "limit": {"type": "integer", "default": 100, "maximum": 1000},

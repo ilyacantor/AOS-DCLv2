@@ -79,6 +79,7 @@ from backend.api.routes.triple_monitor import router as triple_monitor_router
 from backend.api.routes.recon_checks import router as recon_checks_router
 from backend.api.routes.monitor import router as monitor_router
 from backend.api.routes.conflicts import router as conflicts_router
+from backend.api.routes.mcp_audit_read import router as mcp_audit_read_router
 
 logger = get_logger(__name__)
 
@@ -356,6 +357,8 @@ app.include_router(entity_graph_router)
 app.include_router(triple_monitor_router)
 app.include_router(recon_checks_router)
 app.include_router(conflicts_router)
+# MCP audit ledger read surface — decision-trace seed (§9). Read-only, tenant-scoped.
+app.include_router(mcp_audit_read_router)
 # Demo pipeline monitor — read-only metrics endpoint. Additive and isolated.
 app.include_router(monitor_router)
 

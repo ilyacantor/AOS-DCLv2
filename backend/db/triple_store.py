@@ -1168,8 +1168,21 @@ class TripleStore:
         clauses = ["tenant_id = %s"]
         params: list = [tenant_id]
         if concept is not None:
-            clauses.append("concept = %s")
-            params.append(concept)
+            if "." in concept:
+                clauses.append("concept = %s")
+                params.append(concept)
+            else:
+                # Unqualified catalog ids (what concept_lookup returns) must
+                # compose with query_triples. Stored concepts are dotted
+                # paths and a catalog id appears in two shapes:
+                #   leaf under a domain  — 'net_income' -> 'pnl.net_income'
+                #   root with submetrics — 'revenue'    -> 'revenue.total'
+                # So an unqualified id matches the exact id, its namespace
+                # (id.*, same semantics as the domain filter), and any
+                # domain-qualified instance (*.id). Additive — more rows,
+                # never fewer; dotted paths keep exact-match semantics.
+                clauses.append("(concept = %s OR concept LIKE %s OR concept LIKE %s)")
+                params.extend([concept, f"{concept}.%", f"%.{concept}"])
         if domain is not None:
             clauses.append("(concept = %s OR concept LIKE %s)")
             params.extend([domain, f"{domain}.%"])
