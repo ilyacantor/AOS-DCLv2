@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SnapshotSelector, SnapshotState } from './RunSelector';
 
 interface DomainInfo {
@@ -39,6 +39,35 @@ interface ContextData {
   source_system_breakdown: SourceInfo[];
 }
 
+interface ConflictClaim {
+  source_system: string;
+  value?: unknown;
+  triple_id?: string;
+  confidence_score?: number;
+  confidence_tier?: string;
+  ingested_at?: string;
+  source_table?: string;
+  source_field?: string;
+  pipe_id?: string;
+  row_count?: number;
+}
+
+interface ConflictEntry {
+  conflict_id: string;
+  conflict_type: 'value' | 'structural';
+  conflict_class: string;
+  concept: string;
+  property: string;
+  period: string | null;
+  status: 'open' | 'dispositioned' | 'escalated';
+  claims: ConflictClaim[];
+  materiality?: { abs_delta?: number | null; rel_delta?: number | null; material?: boolean };
+  recommended?: { action?: string; basis?: string; winner_source?: string | null;
+                  precedent?: { decided_by?: string; rationale?: string; winner_source?: string } };
+  root_cause_explanation?: string;
+  detected_at: string;
+}
+
 interface ContextTabProps {
   snapshot: SnapshotState;
 }
@@ -48,8 +77,14 @@ export function ContextTab({ snapshot }: ContextTabProps) {
   const [data, setData] = useState<ContextData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Stale-response guard: the unscoped mount fetch can resolve AFTER a
+  // scoped post-selection fetch and overwrite it (entity badge then shows
+  // store-wide numbers against a selected entity). Only the latest request
+  // may set state.
+  const fetchSeq = useRef(0);
 
   const fetchData = async (entityId?: string) => {
+    const seq = ++fetchSeq.current;
     setLoading(true);
     setError(null);
     try {
@@ -59,11 +94,12 @@ export function ContextTab({ snapshot }: ContextTabProps) {
 
       const ctxRes = await fetch(`/api/dcl/contextualization-summary${qs}`);
       if (!ctxRes.ok) throw new Error(`Context summary: HTTP ${ctxRes.status}`);
-      setData(await ctxRes.json());
+      const body = await ctxRes.json();
+      if (seq === fetchSeq.current) setData(body);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to fetch context data');
+      if (seq === fetchSeq.current) setError(e instanceof Error ? e.message : 'Failed to fetch context data');
     } finally {
-      setLoading(false);
+      if (seq === fetchSeq.current) setLoading(false);
     }
   };
 
@@ -147,6 +183,15 @@ export function ContextTab({ snapshot }: ContextTabProps) {
           detail="Distinct systems"
         />
       </div>
+
+      {/* Conflict Register drill (Gate 1A) — entity-scoped operator surface */}
+      {selectedEntityId && (
+        <ConflictsPanel
+          entityId={selectedEntityId}
+          openCount={resolution.conflicts_detected}
+          onDispositioned={() => fetchData(selectedEntityId || undefined)}
+        />
+      )}
 
       {/* Two side-by-side panels */}
       <div className="flex-1 min-h-0 flex gap-3">
@@ -239,6 +284,223 @@ export function ContextTab({ snapshot }: ContextTabProps) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ConflictsPanel({ entityId, openCount, onDispositioned }:
+  { entityId: string; openCount: number; onDispositioned: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [entries, setEntries] = useState<ConflictEntry[]>([]);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [rationale, setRationale] = useState('');
+  const [decidedBy, setDecidedBy] = useState('operator');
+  const [manualWinner, setManualWinner] = useState('');
+
+  const fetchRegister = async (all: boolean) => {
+    setErr(null);
+    try {
+      const params = new URLSearchParams({ entity_id: entityId, limit: '100' });
+      if (!all) params.set('status', 'open');
+      const res = await fetch(`/api/dcl/conflicts?${params}`);
+      if (!res.ok) throw new Error(`Conflict register: HTTP ${res.status} — ${(await res.json()).detail ?? ''}`);
+      const body = await res.json();
+      setEntries(body.conflicts);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to load conflict register');
+    }
+  };
+
+  useEffect(() => {
+    if (open) fetchRegister(showAll);
+    setExpanded(null);
+  }, [open, showAll, entityId]);
+
+  const disposition = async (entry: ConflictEntry, action: string, winner?: string) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/dcl/conflicts/${entry.conflict_id}/disposition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action, decided_by: decidedBy.trim(), rationale: rationale.trim(),
+          winner_source: winner ?? null, entity_id: entityId,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(`Disposition failed: HTTP ${res.status} — ${body.detail ?? ''}`);
+      setRationale('');
+      setManualWinner('');
+      await fetchRegister(showAll);
+      onDispositioned();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Disposition failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const fmtVal = (v: unknown) => (typeof v === 'number' ? v.toLocaleString() : String(v ?? '—'));
+
+  return (
+    <div className="shrink-0 border rounded overflow-hidden" data-testid="conflicts-panel">
+      <button
+        onClick={() => setOpen(!open)}
+        data-testid="conflicts-toggle"
+        className="w-full flex items-center justify-between px-3 py-2 bg-muted/50 hover:bg-accent text-xs font-medium"
+      >
+        <span>
+          Conflict Register
+          <span className={`ml-2 px-1.5 py-0.5 rounded ${openCount > 0 ? 'bg-amber-500/20 text-amber-500' : 'bg-muted text-muted-foreground'}`}>
+            {openCount} open
+          </span>
+        </span>
+        <span className="text-muted-foreground">{open ? 'Hide' : 'Drill'}</span>
+      </button>
+
+      {open && (
+        <div className="max-h-80 overflow-y-auto border-t">
+          <div className="flex items-center gap-3 px-3 py-1.5 border-b bg-card/50 text-xs">
+            <label className="flex items-center gap-1.5">
+              <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
+              Include dispositioned
+            </label>
+            <span className="ml-auto text-muted-foreground">{entries.length} shown</span>
+          </div>
+          {err && <div className="px-3 py-2 text-xs text-destructive" data-testid="conflicts-error">{err}</div>}
+          {entries.length === 0 && !err && (
+            <div className="px-3 py-4 text-xs text-center text-muted-foreground">No conflicts on the register for this entity.</div>
+          )}
+          {entries.map((c) => (
+            <div key={c.conflict_id} className="border-b" data-testid={`conflict-row-${c.concept}-${c.period ?? ''}`}>
+              <button
+                onClick={() => setExpanded(expanded === c.conflict_id ? null : c.conflict_id)}
+                className="w-full grid grid-cols-[70px_1fr_auto_auto] items-center gap-2 px-3 py-1.5 text-xs hover:bg-accent/50 text-left"
+              >
+                <span className={`px-1.5 py-0.5 rounded text-center ${c.conflict_type === 'value' ? 'bg-red-500/15 text-red-400' : 'bg-blue-500/15 text-blue-400'}`}>
+                  {c.conflict_type}
+                </span>
+                <span className="font-medium truncate">
+                  {c.concept}.{c.property}{c.period ? ` · ${c.period}` : ''}
+                  <span className="ml-2 text-muted-foreground font-normal">
+                    {c.claims.map((cl) => `${cl.source_system}${cl.value !== undefined ? `=${fmtVal(cl.value)}` : ''}`).join(' vs ')}
+                  </span>
+                </span>
+                {c.materiality?.rel_delta != null && (
+                  <span className="text-muted-foreground">Δ {(c.materiality.rel_delta * 100).toFixed(1)}%</span>
+                )}
+                <span className={`px-1.5 py-0.5 rounded ${c.status === 'open' ? 'bg-amber-500/15 text-amber-500' : c.status === 'escalated' ? 'bg-purple-500/15 text-purple-400' : 'bg-green-500/15 text-green-500'}`}>
+                  {c.status}
+                </span>
+              </button>
+
+              {expanded === c.conflict_id && (
+                <div className="px-3 py-2 bg-card/30 border-t text-xs space-y-2" data-testid="conflict-detail">
+                  {c.recommended?.basis === 'precedent' && c.recommended.precedent && (
+                    <div className="px-2 py-1.5 rounded bg-blue-500/10 border border-blue-500/30" data-testid="precedent-banner">
+                      Precedent: <b>{c.recommended.precedent.winner_source}</b> accepted by {c.recommended.precedent.decided_by} — “{c.recommended.precedent.rationale}”.
+                      Proposed: <b>{c.recommended.action}</b> (HITL decides).
+                    </div>
+                  )}
+                  {c.recommended?.basis === 'authority' && (
+                    <div className="px-2 py-1.5 rounded bg-muted/40">
+                      Authority map proposes <b>{c.recommended.winner_source}</b> ({c.recommended.action}).
+                    </div>
+                  )}
+                  <table className="w-full">
+                    <thead><tr className="text-muted-foreground border-b">
+                      <th className="text-left py-1">Source</th><th className="text-left">Value</th>
+                      <th className="text-left">Conf</th><th className="text-left">Ingested</th>
+                      <th className="text-left">Field</th><th className="text-left">Triple</th>
+                    </tr></thead>
+                    <tbody>
+                      {c.claims.map((cl) => (
+                        <tr key={cl.source_system} className="border-b border-border/40">
+                          <td className="py-1 font-medium">{cl.source_system}</td>
+                          <td>{cl.row_count != null ? `${cl.row_count} rows` : fmtVal(cl.value)}</td>
+                          <td>{cl.confidence_score != null ? `${cl.confidence_score} (${cl.confidence_tier})` : '—'}</td>
+                          <td>{cl.ingested_at ? new Date(cl.ingested_at).toLocaleString() : '—'}</td>
+                          <td>{cl.source_table ?? '—'}.{cl.source_field ?? '—'}</td>
+                          <td className="font-mono">{cl.triple_id ? cl.triple_id.slice(0, 8) : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {c.root_cause_explanation && (
+                    <div className="text-muted-foreground">{c.root_cause_explanation}</div>
+                  )}
+                  {c.status === 'open' || c.status === 'escalated' ? (
+                    <div className="space-y-1.5 pt-1 border-t border-border/40">
+                      <div className="flex gap-2">
+                        <input
+                          value={decidedBy} onChange={(e) => setDecidedBy(e.target.value)}
+                          placeholder="Decided by" data-testid="decided-by"
+                          className="w-32 px-2 py-1 rounded border bg-background"
+                        />
+                        <input
+                          value={rationale} onChange={(e) => setRationale(e.target.value)}
+                          placeholder="Rationale (required — this is the decision trace)"
+                          data-testid="rationale"
+                          className="flex-1 px-2 py-1 rounded border bg-background"
+                        />
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        {c.claims.slice(0, 2).map((cl, i) => (
+                          <button
+                            key={cl.source_system}
+                            disabled={busy || !rationale.trim() || !decidedBy.trim()}
+                            onClick={() => disposition(c, i === 0 ? 'accept_a' : 'accept_b')}
+                            data-testid={`accept-${cl.source_system}`}
+                            className="px-2 py-1 rounded bg-green-600/20 text-green-400 border border-green-600/40 hover:bg-green-600/30 disabled:opacity-40"
+                          >
+                            Accept {cl.source_system}
+                          </button>
+                        ))}
+                        <button
+                          disabled={busy || !rationale.trim() || !decidedBy.trim()}
+                          onClick={() => disposition(c, 'escalate')}
+                          data-testid="escalate"
+                          className="px-2 py-1 rounded bg-purple-600/20 text-purple-400 border border-purple-600/40 hover:bg-purple-600/30 disabled:opacity-40"
+                        >
+                          Escalate
+                        </button>
+                        {c.claims.length > 2 && (
+                          <>
+                            <select
+                              value={manualWinner} onChange={(e) => setManualWinner(e.target.value)}
+                              className="px-2 py-1 rounded border bg-background"
+                            >
+                              <option value="">Manual winner…</option>
+                              {c.claims.map((cl) => (
+                                <option key={cl.source_system} value={cl.source_system}>{cl.source_system}</option>
+                              ))}
+                            </select>
+                            <button
+                              disabled={busy || !rationale.trim() || !decidedBy.trim() || !manualWinner}
+                              onClick={() => disposition(c, 'manual', manualWinner)}
+                              className="px-2 py-1 rounded bg-muted border hover:bg-accent disabled:opacity-40"
+                            >
+                              Accept manual
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-green-500" data-testid="dispositioned-note">
+                      Dispositioned — losing claims superseded (still visible via as-of reads).
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

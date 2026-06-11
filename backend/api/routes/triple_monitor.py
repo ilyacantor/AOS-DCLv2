@@ -1117,7 +1117,6 @@ def contextualization_summary(
                     resolution["workspaces_resolved"] = (
                         by_status.get("resolved", 0) + by_status.get("confirmed", 0)
                     )
-                    resolution["conflicts_detected"] = by_status.get("conflict", 0) + by_status.get("escalated", 0)
                     break
         except PoolExhausted as e:
             raise HTTPException(
@@ -1129,6 +1128,12 @@ def contextualization_summary(
         except Exception as e:
             logger.warning(f"[persona-view] Failed to query resolution table {table_name}: {e}")
             continue
+
+    # conflicts_detected is REAL as of Gate 1A: open + escalated rows in the
+    # Conflict Register (entity-scoped when an entity is selected). The old
+    # source (dormant resolution_workspaces statuses) always read 0.
+    from backend.db.conflict_store import ConflictStore
+    resolution["conflicts_detected"] = ConflictStore().count_open(entity_id=entity_id)
 
     source_data = []
     for row in source_rows:

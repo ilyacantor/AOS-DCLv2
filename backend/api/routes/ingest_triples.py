@@ -98,6 +98,7 @@ class IngestResponse(BaseModel):
     source_rows: int
     triples_written: int
     expansion_factor: float
+    conflicts_detected: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -561,9 +562,27 @@ def ingest_triples(
 
     concept_summary = _triple_store.count_by_domain(req.tenant_id, run_id=req.dcl_ingest_id)
 
+    # Conflict detection (Gate 1A): every batch re-detects this run's rows AT
+    # THIS BATCH'S COORDINATES and upserts the Conflict Register — idempotent
+    # per (coords, run); per-batch cost scales with the batch, not the
+    # accumulated run (B18). Detection failures propagate: it runs on data
+    # this request just wrote, so an error here is an error in the ingest
+    # contract, not a background nicety (A1).
+    from backend.engine.conflict_detection import detect_and_register
+    batch_coords = sorted({
+        (r["concept"], r["property"], r["period"] or "") for r in rows
+    })
+    conflict_result = detect_and_register(
+        str(req.tenant_id), resolved_entity_id, str(req.dcl_ingest_id),
+        coords=batch_coords,
+    )
+    conflicts_touched = len(conflict_result["conflicts"])
+
     logger.info(
         f"[ingest-triples] Ingested {count} triples for dcl_ingest_id={req.dcl_ingest_id}, "
-        f"tenant_id={req.tenant_id}, concepts={concept_summary}, duration={duration_ms}ms"
+        f"tenant_id={req.tenant_id}, concepts={concept_summary}, "
+        f"conflicts={conflicts_touched} ({conflict_result['detected_new']} new), "
+        f"duration={duration_ms}ms"
     )
 
     # Bloat-watch moved off the hot path. See GET /api/dcl/admin/triple-count
@@ -613,6 +632,7 @@ def ingest_triples(
         source_rows=source_rows_val,
         triples_written=count,
         expansion_factor=expansion,
+        conflicts_detected=conflicts_touched,
     )
 
 

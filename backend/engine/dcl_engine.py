@@ -512,13 +512,16 @@ class DCLEngine:
         domains = sorted({r["domain"] for r in sankey_rows})
         entities = sorted({r["entity_id"] for r in sankey_rows if r.get("entity_id")})
 
-        # Detect concept-level collisions (multiple sources for same concept)
+        # Detect concept-level collisions (multiple sources for same concept).
+        # Authority is per-tenant data (Gate 1A): load the effective map once.
         from backend.engine.concept_authority import pick_primary
+        from backend.db.conflict_store import ConflictStore
+        authority_map = ConflictStore().load_authority_map(tenant_id)
         collision_rows = triple_store.get_concept_collisions(tenant_id, entity_id)
         collisions = []
         for row in collision_rows:
             sources_list = row["sources"].split(",")
-            primary, alternatives = pick_primary(row["concept"], sources_list)
+            primary, alternatives = pick_primary(row["concept"], sources_list, authority_map)
             collisions.append({
                 "entity_id": row["entity_id"],
                 "concept": row["concept"],

@@ -77,6 +77,7 @@ from backend.api.routes.ingest_records import router as ingest_records_router
 from backend.api.routes.triple_monitor import router as triple_monitor_router
 from backend.api.routes.recon_checks import router as recon_checks_router
 from backend.api.routes.monitor import router as monitor_router
+from backend.api.routes.conflicts import router as conflicts_router
 
 logger = get_logger(__name__)
 
@@ -352,6 +353,7 @@ app.include_router(ingest_triples_router)
 app.include_router(ingest_records_router)
 app.include_router(triple_monitor_router)
 app.include_router(recon_checks_router)
+app.include_router(conflicts_router)
 # Demo pipeline monitor — read-only metrics endpoint. Additive and isolated.
 app.include_router(monitor_router)
 

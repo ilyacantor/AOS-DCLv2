@@ -226,7 +226,83 @@ def tool_provenance(
 
 
 # =============================================================================
-# Tool registry — the public 5
+# conflict_query — Conflict Register reads (Gate 1A)
+# =============================================================================
+
+
+def tool_conflict_query(
+    tenant_id: str,
+    *,
+    entity_id: str | None = None,
+    status: str | None = None,
+    conflict_type: str | None = None,
+    concept: str | None = None,
+    conflict_class: str | None = None,
+    limit: int = 100,
+) -> dict[str, Any]:
+    """Query the Conflict Register for the caller's tenant. Read-only."""
+    if not tenant_id:
+        raise MCPToolError(
+            "conflict_query requires tenant_id — caller's token did not "
+            "carry one (I2 violation)."
+        )
+    from backend.db.conflict_store import ConflictStore
+    rows, total = ConflictStore().list_conflicts(
+        tenant_id, entity_id=entity_id, status=status,
+        conflict_type=conflict_type, concept=concept,
+        conflict_class=conflict_class, limit=limit,
+    )
+    return {"tenant_id": str(tenant_id), "conflicts": rows, "total_count": total}
+
+
+# =============================================================================
+# reconciliation_recommend — recommendation + precedent for a conflict (Gate 1A)
+# =============================================================================
+
+
+def tool_reconciliation_recommend(
+    tenant_id: str,
+    *,
+    conflict_id: str | None = None,
+    conflict_class: str | None = None,
+) -> dict[str, Any]:
+    """Return the recommended disposition and precedent chain for a conflict
+    (by conflict_id) or a conflict class. Proposal only — HITL decides."""
+    if not tenant_id:
+        raise MCPToolError(
+            "reconciliation_recommend requires tenant_id — caller's token "
+            "did not carry one (I2 violation)."
+        )
+    if conflict_id is None and conflict_class is None:
+        raise MCPToolError(
+            "reconciliation_recommend requires 'conflict_id' or 'conflict_class'."
+        )
+    from backend.db.conflict_store import ConflictStore
+    store = ConflictStore()
+    out: dict[str, Any] = {"tenant_id": str(tenant_id)}
+    if conflict_id is not None:
+        row = store.get_conflict(tenant_id, conflict_id)
+        if row is None:
+            raise MCPToolError(
+                f"reconciliation_recommend: conflict {conflict_id!r} not found "
+                f"within the calling tenant."
+            )
+        out.update({
+            "conflict_id": row["conflict_id"],
+            "conflict_class": row["conflict_class"],
+            "status": row["status"],
+            "recommended": row.get("recommended"),
+            "root_cause_explanation": row.get("root_cause_explanation"),
+            "dispositions": store.list_dispositions(tenant_id, conflict_id),
+        })
+        conflict_class = row["conflict_class"]
+    out["precedent"] = store.latest_precedent(tenant_id, conflict_class)
+    out.setdefault("conflict_class", conflict_class)
+    return out
+
+
+# =============================================================================
+# Tool registry — the public 8
 # =============================================================================
 
 
@@ -314,6 +390,38 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
             },
         },
     },
+    "conflict_query": {
+        "description": (
+            "Query the Conflict Register for the caller's tenant: value-level "
+            "and structural conflicts with claims (full provenance drill), "
+            "materiality, status, and the recommended disposition. Read-only."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "entity_id": {"type": "string"},
+                "status": {"type": "string", "enum": ["open", "dispositioned", "escalated"]},
+                "conflict_type": {"type": "string", "enum": ["value", "structural"]},
+                "concept": {"type": "string"},
+                "conflict_class": {"type": "string"},
+                "limit": {"type": "integer", "default": 100, "maximum": 500},
+            },
+        },
+    },
+    "reconciliation_recommend": {
+        "description": (
+            "Recommended disposition + precedent chain for one conflict "
+            "(conflict_id) or a conflict class. Precedent beats authority; "
+            "proposal only — a human dispositions via the HITL surface."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "conflict_id": {"type": "string"},
+                "conflict_class": {"type": "string"},
+            },
+        },
+    },
 }
 
 
@@ -342,4 +450,8 @@ def dispatch(tenant_id: str, tool_name: str, arguments: dict[str, Any]) -> Any:
         return tool_semantic_export(tenant_id)
     if tool_name == "provenance":
         return tool_provenance(tenant_id, **args)
+    if tool_name == "conflict_query":
+        return tool_conflict_query(tenant_id, **args)
+    if tool_name == "reconciliation_recommend":
+        return tool_reconciliation_recommend(tenant_id, **args)
     raise MCPToolError(f"No dispatch handler for {tool_name!r}")
