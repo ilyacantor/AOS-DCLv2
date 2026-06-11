@@ -13,6 +13,7 @@ Install (once):
 
 import os
 import json
+import re
 import pytest
 import httpx
 from playwright.sync_api import Page, expect
@@ -416,8 +417,13 @@ class TestReconTab:
         expect(btn.first).to_be_visible(timeout=5_000)
         btn.first.click()
 
-        # Wait for results
-        page.wait_for_timeout(10_000)
+        # Wait for results deterministically — the completion artifact is the
+        # rendered check set; under page-load convoy the recon round trips can
+        # exceed any fixed sleep (the old 10s wait scraped a partial DOM).
+        expect(page.locator("body")).to_contain_text("Domain Completeness", timeout=60_000)
+        expect(
+            page.locator("button").filter(has_text=re.compile(r"Running"))
+        ).to_have_count(0, timeout=60_000)
 
         body_text = page.locator("body").text_content() or ""
 
@@ -512,10 +518,14 @@ class TestReconTab:
         assert api_resp.status_code == 200
         expected_overall = api_resp.json()["overall"].upper()  # "PASS", "WARN", or "FAIL"
 
-        # Run recon in UI
+        # Run recon in UI — wait for the rendered check set, not a fixed sleep
+        # (same convoy-margin fix as test_recon_executes_and_shows_correct_results).
         btn = page.locator("button").filter(has_text="Run Recon")
         btn.first.click()
-        page.wait_for_timeout(10_000)
+        expect(page.locator("body")).to_contain_text("Domain Completeness", timeout=60_000)
+        expect(
+            page.locator("button").filter(has_text=re.compile(r"Running"))
+        ).to_have_count(0, timeout=60_000)
 
         body_text = page.locator("body").text_content() or ""
 

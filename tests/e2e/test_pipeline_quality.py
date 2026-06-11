@@ -88,19 +88,33 @@ def select_active_snapshot(page: Page):
     active = [s for s in snaps if s.get("is_current")]
     assert active, "No is_current snapshot — run the ingest pipeline"
 
-    def domain_count(entity_id: str) -> int:
-        resp = httpx.get(
-            f"{DCL_BACKEND}/api/dcl/contextualization-summary",
-            params={"entity_id": entity_id},
-            timeout=30.0,
-        )
-        if resp.status_code != 200:
-            return 0
-        return resp.json().get("domain_coverage", {}).get("domains_populated", 0)
+    # Deterministic pick from the snapshots payload itself: highest
+    # total_rows (the richest run), dcl_ingest_id as the tiebreak. The
+    # previous per-candidate domain probes (one contextualization-summary
+    # call per active snapshot) silently scored any non-200 as 0 — under
+    # load one failed probe let a near-empty entity win selection, which
+    # rotated these quality assertions red (the B14 harness-bug class).
+    # No probe storm, no silent fallback, same winner every run.
+    best = max(active, key=lambda s: (s.get("total_rows") or 0, s["dcl_ingest_id"]))
 
-    best = max(active, key=lambda s: domain_count(s["entity_id"]))
-    sel.select_option(best["dcl_ingest_id"])
-    page.wait_for_timeout(2_000)
+    # Deterministic sync, tab-aware: only the Context tab fetches the scoped
+    # contextualization summary — wait for THIS entity's response there (the
+    # page-load convoy can push it past any fixed sleep; the measured landing
+    # was ~6s where the old wait_for_timeout(2_000) then scraped a null
+    # render as 0 / 0). Other tabs fetch their own endpoints and their tests
+    # wait on their own rendered content.
+    on_context_tab = page.locator("text=Domain Coverage").count() > 0
+    if on_context_tab:
+        with page.expect_response(
+            lambda r: "contextualization-summary" in r.url
+            and f"entity_id={best['entity_id']}" in r.url
+            and r.status == 200,
+            timeout=45_000,
+        ):
+            sel.select_option(best["dcl_ingest_id"])
+    else:
+        sel.select_option(best["dcl_ingest_id"])
+    page.wait_for_timeout(500)  # paint settle
 
 
 class TestDomainCoverage:
@@ -202,8 +216,14 @@ class TestReconSourceRunTag:
         expect(run_btn.first).to_be_visible(timeout=5_000)
         run_btn.first.click()
 
-        # Wait for results — "Running..." disappears
-        page.wait_for_timeout(8_000)
+        # Wait for results deterministically: the completion artifact is the
+        # rendered check row itself. Under page-load convoy the recon round
+        # trips can exceed any fixed sleep (the old 8s wait scraped a
+        # still-Running DOM).
+        expect(page.locator("body")).to_contain_text("DCL Count", timeout=60_000)
+        expect(
+            page.locator("button").filter(has_text=re.compile(r"Running"))
+        ).to_have_count(0, timeout=60_000)
 
         body = page.locator("body").text_content() or ""
 
@@ -240,6 +260,12 @@ class TestTripleCountGrowth:
         navigate_to_tab(page, "Ingest")
         select_active_snapshot(page)
 
+        # Wait for the stat to actually render before scraping — the Ingest
+        # tab's own fetch can land after any fixed sleep under the page-load
+        # convoy; a premature scrape reads a stale or absent number.
+        expect(page.locator("body")).to_contain_text(
+            re.compile(r"Total Triples\s*[\d,]{2,}"), timeout=30_000
+        )
         body = page.locator("body").text_content() or ""
 
         # Extract the number after "Total Triples"
