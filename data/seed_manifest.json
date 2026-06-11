@@ -1,8 +1,8 @@
 {
   "seed_date": "2026-06-11",
-  "dcl_ingest_id": "c59353ee-862e-4bfe-8aed-873d168c1586",
-  "tenant_id": "9e2d190a-0bda-47ee-86d3-d431ef084eb7",
-  "total_triples": 306,
+  "dcl_ingest_id": "5e2d9d0c-be3f-471d-87f5-991ad995e296",
+  "tenant_id": "7fba612e-6042-4de3-97d7-86030454483c",
+  "total_triples": 2099,
   "concept_summary": {
     "account": 12,
     "accounts_payable": 109,
@@ -49,7 +49,7 @@
     "workforce": 120
   },
   "entities": [
-    "EmberForge-3540"
+    "LumenForge-7cb1"
   ],
   "farm_run_id": "snapshot_push_5652c2f4-efa_f8f75ced"
 }

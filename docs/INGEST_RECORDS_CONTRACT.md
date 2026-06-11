@@ -45,9 +45,21 @@ already exists.
   stamps `canonical_id` / `resolution_method` / `resolution_confidence` on every
   triple built from the record. `concept` = `domain`; `property` = source field
   name. Use this for SE business records (customer / vendor / invoice / …).
+- **Fixed catalog domains** (`financials` | `operations` | `cloud_spend` |
+  `ledger`) → no resolution; a DCL-owned field catalog classifies each source
+  column to its canonical (concept, property). Unknown columns warn loud.
+  - `financials` / `operations`: period-keyed statement / KPI records (one per
+    period); flat source columns (`revenue`, `headcount_total`, …).
+  - `ledger`: source rows tagged with their source table via `record_type`
+    (`gl_balance` | `coa_account` | `journal_entry_summary` | `invoice_summary`
+    | `ap_aging` | `ar_aging` | `qoe_adjustment` | `efficiency_metrics` |
+    `ops_sla_metrics` | `event_stream_metrics` | `namespace_declaration`),
+    carrying genuine export columns (`account_number`, `aging_1_30`, …) — never
+    pre-formed concept fragments. Per-key families compose the concept from
+    source identifiers (`gl.{account_number}`, `coa.{account_number}`,
+    `ebitda_adjustment.{adjustment_category}.{lifecycle_stage}`).
 - **No `domain`** → no resolution; DCL's Live Semantic Mapper classifies each
-  field to a concept. Use this for metric pipes (e.g. cloud-spend). `identity_key`
-  without `domain` is a 422.
+  field to a concept. `identity_key` without `domain` is a 422.
 - One `entity_id` per call; all pipes inherit it.
 
 ## Resolution → persistence vocabulary
