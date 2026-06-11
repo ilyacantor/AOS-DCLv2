@@ -336,3 +336,62 @@ SELECT-only reads (`WHERE is_active = true`) are unaffected. Stability guarantee
 Apr 19 history: removing `is_active` was field-tested once and backed out at the cost of a full prod
 store reset — under the bi-temporal model the column is definitional (`superseded_at IS NULL`) and
 is guaranteed to remain readable; any future change to it requires Convergence coordination here.
+
+---
+
+## `entity_edges` (Gate 1B, migration 019)
+
+Owner: DCL. Typed, bi-temporal entity↔entity edges inside one enterprise scope
+(`tenant_id` + `entity_id`, the I2 pair). Nodes are `(node_type, node_key)` pairs —
+department, service, customer, org_unit, person, … — not separate tables; node values
+join from `semantic_triples` at read time. Named `entity_edges` deliberately — AOD owns
+a `semantic_edges` table in the aos-dev `dev` schema (dcl_deferred_work.md #57) and a
+distinct name keeps cross-schema greps unambiguous. Additive — no existing-table
+changes; Convergence is unaffected.
+
+| Column | Type | Nullable | Default | Constraint |
+|--------|------|----------|---------|------------|
+| `id` | UUID | NOT NULL | `gen_random_uuid()` | PRIMARY KEY |
+| `tenant_id` | UUID | NOT NULL | — | — |
+| `entity_id` | TEXT | NOT NULL | — | — |
+| `src_type` / `src_key` | TEXT | NOT NULL | — | source node |
+| `edge_type` | TEXT | NOT NULL | — | registered in `edge_types` |
+| `dst_type` / `dst_key` | TEXT | NOT NULL | — | target node |
+| `properties` | JSONB | NULL | — | — |
+| `source_system` | TEXT | NOT NULL | — | provenance contract, as facts |
+| `source_table` / `source_field` | TEXT | NULL | — | — |
+| `pipe_id` | UUID | NULL | — | — |
+| `run_id` | UUID | NOT NULL | — | exposed as `dcl_ingest_id` (I1) |
+| `source_run_tag` | TEXT | NULL | — | — |
+| `confidence_score` | NUMERIC(3,2) | NOT NULL | — | `>= 0 AND <= 1` |
+| `confidence_tier` | TEXT | NOT NULL | — | `IN ('exact','high','medium','low')` |
+| `fabric_plane` / `fabric_product` | TEXT | NULL | — | — |
+| `derivation` | TEXT | NOT NULL | — | `IN ('derived','declared')` |
+| Temporal Columns v1 | — | — | — | exactly the convention above |
+| `created_at` / `updated_at` | TIMESTAMPTZ | NULL | `now()` | — |
+
+Live-edge identity = `(tenant_id, entity_id, src_type, src_key, edge_type, dst_type,
+dst_key)`; re-asserting the coordinates supersedes the prior row (corrections, same as
+facts). Constraint rules (cardinality + allowed node-type pairs, from `edge_types`) are
+enforced in `backend/db/edge_store.py` at the persistence boundary; violating edges are
+EXCLUDED from the graph and flagged into `conflict_register`
+(`conflict_type='structural'`, classes `edge_cardinality` / `edge_pair_disallowed` /
+`edge_type_unregistered`) in the same transaction — register write and graph write
+commit or roll back together.
+
+## `edge_types` (Gate 1B, migration 019)
+
+Owner: DCL. `tenant_id '*'` = built-ins (HAS one_to_many, GENERATES many_to_many,
+BELONGS_TO many_to_one, REPORTS_TO many_to_one); tenant rows overlay. Cardinality
+semantics: `many_to_one` — a src holds ≤1 live edge of the type; `one_to_many` — a dst
+is pointed at by ≤1; `one_to_one` — both; `many_to_many` — neither. `allowed_pairs`
+JSONB `[[src_type, dst_type], …]`, NULL = unrestricted.
+
+## `concept_hierarchy` (Gate 1B, migration 019)
+
+Owner: DCL. TENANT-DEFINED parent links only — the ontology YAML remains the single
+source of the default tree (domain → root, derived at read time in
+`backend/registry/concept_hierarchy.py`; dotted children implied by name). PK
+`(tenant_id, concept)` — single parent, a tree; cycles rejected at write. Reads
+participate via `expand_for_read` (exact concepts + dotted prefixes) used by
+`query_triples(include_descendants=true)` and `GET /api/dcl/concepts/hierarchy`.

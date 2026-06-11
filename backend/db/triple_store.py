@@ -1220,6 +1220,79 @@ class TripleStore:
                     rows.append(d)
         return rows
 
+    def mcp_query_triples_expanded(
+        self,
+        tenant_id: str,
+        *,
+        exacts: list[str],
+        prefixes: list[str],
+        entity_id: str | None = None,
+        period: str | None = None,
+        limit: int = 100,
+        active_only: bool = True,
+        as_of: str | None = None,
+    ) -> list[dict]:
+        """Query triples whose concept matches a hierarchy expansion — exact
+        names OR dotted subtrees (concept LIKE '<prefix>.%'). One SQL pass, so
+        a parent-with-descendants read (Gate 1B concept hierarchy) stays a
+        single deterministic query. Same row shape, ordering, and temporal
+        semantics as mcp_query_triples.
+        """
+        if not exacts and not prefixes:
+            return []
+        clauses = ["tenant_id = %s"]
+        params: list = [tenant_id]
+        concept_terms: list[str] = []
+        if exacts:
+            concept_terms.append("concept = ANY(%s)")
+            params.append(list(exacts))
+        if prefixes:
+            concept_terms.append("concept LIKE ANY(%s)")
+            params.append([f"{p}.%" for p in prefixes])
+        clauses.append("(" + " OR ".join(concept_terms) + ")")
+        if entity_id is not None:
+            clauses.append("entity_id = %s")
+            params.append(entity_id)
+        if period is not None:
+            clauses.append("period = %s")
+            params.append(period)
+        if as_of is not None:
+            clauses.append(
+                "ingested_at <= %s AND (superseded_at IS NULL OR superseded_at > %s)"
+            )
+            params.extend([as_of, as_of])
+        elif active_only:
+            clauses.append("is_active = true")
+
+        safe_limit = max(1, min(int(limit), 1000))
+        sql = (
+            "SELECT id, tenant_id, entity_id, concept, property, value, period, "
+            "       currency, unit, source_system, source_field, "
+            "       fabric_plane, fabric_product, pipe_id, "
+            "       run_id, confidence_score, confidence_tier, is_active, "
+            "       created_at, ingested_at, superseded_at, valid_from, valid_to "
+            f"FROM semantic_triples WHERE {' AND '.join(clauses)} "
+            f"ORDER BY created_at DESC, id DESC LIMIT {safe_limit}"
+        )
+        rows: list[dict] = []
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                cols = [d[0] for d in cur.description]
+                for r in cur.fetchall():
+                    d = dict(zip(cols, r))
+                    for k in ("id", "tenant_id", "pipe_id", "run_id"):
+                        if d.get(k) is not None:
+                            d[k] = str(d[k])
+                    for k in ("created_at", "ingested_at", "superseded_at",
+                              "valid_from", "valid_to"):
+                        if d.get(k) is not None:
+                            d[k] = d[k].isoformat()
+                    if d.get("confidence_score") is not None:
+                        d["confidence_score"] = float(d["confidence_score"])
+                    rows.append(d)
+        return rows
+
     def mcp_list_domains(
         self, tenant_id: str, entity_id: str | None = None
     ) -> list[dict]:

@@ -45,6 +45,7 @@ def tool_query_triples(
     period: str | None = None,
     limit: int = 100,
     active_only: bool = True,
+    include_descendants: bool = False,
 ) -> list[dict]:
     """Return triples filtered by the calling tenant.
 
@@ -52,6 +53,10 @@ def tool_query_triples(
     the root segment of concept names (e.g. domain='cloud_spend' matches
     'cloud_spend.amount_billed', 'cloud_spend.aws_total'). 'concept' is
     the full concept name when the caller knows it exactly.
+
+    include_descendants (Gate 1B): expand 'concept' through the concept
+    hierarchy — a domain expands to every root beneath it, a root or dotted
+    concept to itself plus its subtree (one SQL pass, deterministic order).
 
     The response contains a per-triple namespaced ingest identifier
     (dcl_ingest_id) — never a bare run_id, per I1.
@@ -67,15 +72,29 @@ def tool_query_triples(
             "— refusing to dump a full tenant table."
         )
 
-    raw = _store.mcp_query_triples(
-        tenant_id,
-        domain=domain,
-        concept=concept,
-        entity_id=entity_id,
-        period=period,
-        limit=limit,
-        active_only=active_only,
-    )
+    if include_descendants:
+        from backend.registry.concept_hierarchy import expand_for_read
+        parent = concept or domain
+        expansion = expand_for_read(tenant_id, parent)
+        raw = _store.mcp_query_triples_expanded(
+            tenant_id,
+            exacts=expansion["exact"],
+            prefixes=expansion["prefixes"],
+            entity_id=entity_id,
+            period=period,
+            limit=limit,
+            active_only=active_only,
+        )
+    else:
+        raw = _store.mcp_query_triples(
+            tenant_id,
+            domain=domain,
+            concept=concept,
+            entity_id=entity_id,
+            period=period,
+            limit=limit,
+            active_only=active_only,
+        )
     # Rename bare run_id → dcl_ingest_id per I1 before exposing, and expose
     # the row id under the provenance tool's vocabulary (triple_id) so a
     # consumer can drill THIS exact triple — composite (concept, entity,
@@ -302,7 +321,75 @@ def tool_reconciliation_recommend(
 
 
 # =============================================================================
-# Tool registry — the public 8
+# traverse_graph — entity-graph traversal (Gate 1B, §7)
+# =============================================================================
+
+
+def tool_traverse_graph(
+    tenant_id: str,
+    *,
+    entity_id: str,
+    node_type: str | None = None,
+    node_key: str | None = None,
+    edge_type: str | None = None,
+    direction: str = "both",
+    as_of: str | None = None,
+    limit: int = 500,
+) -> dict:
+    """Traverse the persisted entity↔entity graph.
+
+    With (node_type, node_key): that node's typed edges + neighbor list.
+    Without: the entity's whole subgraph (nodes + typed edges). as_of is the
+    bi-temporal knowledge-time read — the topology as it was believed at T.
+
+    A NEW tool rather than a query_triples overload: traversal returns
+    nodes+edges, a different shape from fact rows — overloading would muddy
+    both contracts.
+    """
+    if not tenant_id:
+        raise MCPToolError(
+            "traverse_graph requires tenant_id — caller's token did not "
+            "carry one (I2 violation)."
+        )
+    if not entity_id or not str(entity_id).strip():
+        raise MCPToolError("traverse_graph requires entity_id (I2).")
+    if (node_type is None) != (node_key is None):
+        raise MCPToolError(
+            "traverse_graph: node_type and node_key must be provided together."
+        )
+
+    from backend.db.edge_store import EdgeContractError, EdgeIdentityError, get_edge_store
+    store = get_edge_store()
+    try:
+        if node_type is not None:
+            edges = store.get_neighbors(
+                tenant_id, entity_id, node_type, node_key,
+                edge_type=edge_type, direction=direction, as_of=as_of, limit=limit,
+            )
+            neighbors: dict[tuple, dict] = {}
+            for e in edges:
+                for t, k in ((e["src_type"], e["src_key"]), (e["dst_type"], e["dst_key"])):
+                    if (t, k) != (node_type, node_key):
+                        neighbors.setdefault((t, k), {"node_type": t, "node_key": k})
+            return {
+                "entity_id": entity_id,
+                "node": {"node_type": node_type, "node_key": node_key},
+                "as_of": as_of,
+                "edges": edges,
+                "neighbors": list(neighbors.values()),
+            }
+        sub = store.get_subgraph(
+            tenant_id, entity_id,
+            edge_types=[edge_type] if edge_type else None, as_of=as_of, limit=limit,
+        )
+        return {"entity_id": entity_id, "as_of": as_of,
+                "nodes": sub["nodes"], "edges": sub["edges"]}
+    except (EdgeIdentityError, EdgeContractError) as e:
+        raise MCPToolError(f"traverse_graph: {e}")
+
+
+# =============================================================================
+# Tool registry — the public tools (Gate 1A conflict pair + Gate 1B traversal)
 # =============================================================================
 
 
@@ -323,6 +410,36 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
                 "period": {"type": "string", "description": "Period code (e.g. 'Q3-2026')"},
                 "limit": {"type": "integer", "default": 100, "maximum": 1000},
                 "active_only": {"type": "boolean", "default": True},
+                "include_descendants": {
+                    "type": "boolean", "default": False,
+                    "description": (
+                        "Expand the concept through the concept hierarchy — a "
+                        "domain expands to every root beneath it, a root/dotted "
+                        "concept to itself plus its subtree."
+                    ),
+                },
+            },
+        },
+    },
+    "traverse_graph": {
+        "description": (
+            "Traverse the persisted entity graph (typed entity-to-entity "
+            "edges, bi-temporal). With node_type+node_key: that node's edges "
+            "and neighbors; without: the entity's whole subgraph. as_of (ISO "
+            "timestamp) reads the topology as it was believed at that time. "
+            "tenant_id is derived from the caller's token."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "required": ["entity_id"],
+            "properties": {
+                "entity_id": {"type": "string"},
+                "node_type": {"type": "string", "description": "e.g. department | service | org_unit"},
+                "node_key": {"type": "string"},
+                "edge_type": {"type": "string", "description": "HAS | GENERATES | BELONGS_TO | REPORTS_TO | tenant-defined"},
+                "direction": {"type": "string", "enum": ["out", "in", "both"], "default": "both"},
+                "as_of": {"type": "string", "description": "ISO timestamp — knowledge-time as-of"},
+                "limit": {"type": "integer", "default": 500, "maximum": 5000},
             },
         },
     },
@@ -438,6 +555,8 @@ def dispatch(tenant_id: str, tool_name: str, arguments: dict[str, Any]) -> Any:
     args.pop("tenant_id", None)
     if tool_name == "query_triples":
         return tool_query_triples(tenant_id, **args)
+    if tool_name == "traverse_graph":
+        return tool_traverse_graph(tenant_id, **args)
     if tool_name == "list_domains":
         return tool_list_domains(tenant_id, args.get("entity_id"))
     if tool_name == "list_runs":

@@ -288,9 +288,15 @@ def test_every_triple_carries_full_provenance():
 # ---------------------------------------------------------------------------
 
 def test_hitl_pending_approve_promotes_triples_to_manual():
-    # Find a value pair that lands in the pending band [0.65, 0.90).
-    seed_val = "Northwind Traders"
-    probe_val = "Northwind Trading Co"
+    # Per-run unique pair, similarity preserved (same infix on both sides):
+    # the tenant id is fixed (uuid5) and the store is bi-temporal/durable, so
+    # a FIXED pair poisons re-runs — a prior run's decided row makes the
+    # resolver auto-apply (or dedup) instead of queueing pending, and the
+    # suite stops being twice-runnable (B14). The band assert below remains
+    # the guard that the generated pair still lands in pending.
+    tag = uuid.uuid4().hex[:6]
+    seed_val = f"Northwind{tag} Traders"
+    probe_val = f"Northwind{tag} Trading Co"
     score = similarity_score(probe_val, seed_val)
     assert 0.65 <= score < 0.90, f"probe pair not in pending band: {score}"
 
@@ -302,13 +308,18 @@ def test_hitl_pending_approve_promotes_triples_to_manual():
     assert resp.status_code == 201, resp.text
     assert resp.json()["resolution_summary"].get("hitl_pending") == 1, resp.json()
 
-    pending = _hitl_rows(status="pending")
+    # Scope to THIS run's pair — exactly one pending row for it, regardless of
+    # what older runs left in the fixed tenant's durable history.
+    pending = [r for r in _hitl_rows(status="pending")
+               if tag in (r.get("left_value") or "") or tag in (r.get("right_value") or "")]
     assert len(pending) == 1, pending
     hitl_id = None
     # fetch the id via the operator list endpoint (the surface AAM's UI uses)
     listed = client.get(f"/api/dcl/resolver/hitl?tenant_id={TEST_TENANT_ID}&status=pending").json()
-    assert listed["count"] == 1, listed
-    hitl_id = listed["items"][0]["hitl_queue_id"]
+    mine = [it for it in listed["items"]
+            if tag in (it.get("left_value") or "") or tag in (it.get("right_value") or "")]
+    assert len(mine) == 1, listed
+    hitl_id = mine[0]["hitl_queue_id"]
 
     # Pre-approval: the probe's per-record triples are fuzzy-bound. (The records-path
     # also emits a non-resolution customer.total summary aggregate per pipe; scope to

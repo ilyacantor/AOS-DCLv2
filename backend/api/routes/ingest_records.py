@@ -86,6 +86,12 @@ class IngestRecordsResponse(BaseModel):
     # Loud, non-silent record of every field DCL could not place (unmapped by the
     # Live Mapper, or mapped to a non-persona concept) and every rejected identity.
     warnings: list[dict]
+    # Gate 1B (§7): relationships DCL derived from record structure on this
+    # ingest (e.g. org-unit membership from workforce records) + any constraint
+    # violations — flagged into the conflict register, never silently dropped.
+    edges_derived: int = 0
+    edges_written: int = 0
+    edge_violations: list[dict] = []
 
 
 # ---------------------------------------------------------------------------
@@ -179,11 +185,32 @@ def ingest_records(
     )
     ingest_resp: IngestResponse = ingest_triples(envelope, replace=replace, append=append)
 
+    # --- Gate 1B (§7): derive entity↔entity edges from record structure ---
+    # DCL classifies relationships exactly where it classifies values; AAM
+    # stays transport-only. Derived edges ride the SAME ingest identity
+    # (dcl_ingest_id) and replace semantics as the facts they came from.
+    from backend.db.edge_store import get_edge_store
+    from backend.resolver.edge_deriver import derive_edges_from_pipes
+
+    derived = derive_edges_from_pipes(req.entity_id, pipes_as_dicts)
+    edges_written = 0
+    edge_violations: list[dict] = []
+    if derived:
+        for e in derived:
+            e["dcl_ingest_id"] = req.dcl_ingest_id
+            e["source_run_tag"] = req.source_run_tag
+        edge_result = get_edge_store().assert_edges(
+            req.tenant_id, req.entity_id, derived, replace=replace,
+        )
+        edges_written = edge_result.written
+        edge_violations = edge_result.violations
+
     logger.info(
         "[ingest-records] tenant_id=%s entity_id=%s pipes=%d records=%d -> %d triples; "
-        "resolution=%s warnings=%d",
+        "edges derived=%d written=%d violations=%d; resolution=%s warnings=%d",
         req.tenant_id, req.entity_id, len(req.pipes), records_seen,
-        ingest_resp.triples_written, conv.resolution_summary, len(conv.warnings),
+        ingest_resp.triples_written, len(derived), edges_written,
+        len(edge_violations), conv.resolution_summary, len(conv.warnings),
     )
 
     return IngestRecordsResponse(
@@ -198,6 +225,9 @@ def ingest_records(
         resolution_summary=conv.resolution_summary,
         hitl_queue_ids=conv.hitl_queue_ids,
         warnings=conv.warnings,
+        edges_derived=len(derived),
+        edges_written=edges_written,
+        edge_violations=edge_violations,
     )
 
 
