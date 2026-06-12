@@ -93,7 +93,7 @@ function StatusChip({ status }: { status: string }) {
 
 // ── main panel ───────────────────────────────────────────────────────────────
 
-export function AlignProposalsPanel({ entityId }: { entityId: string }) {
+export function ProposalsPanel({ entityId }: { entityId: string }) {
   const [open, setOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -124,10 +124,10 @@ export function AlignProposalsPanel({ entityId }: { entityId: string }) {
     setErr(null);
     try {
       const params = new URLSearchParams({ entity_id: entityId, status, limit: '100' });
-      const res = await fetch(`/api/dcl/align/proposals?${params}`);
+      const res = await fetch(`/api/dcl/proposals?${params}`);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(`Align proposals: HTTP ${res.status} — ${(body as { detail?: string }).detail ?? ''}`);
+        throw new Error(`Change proposals: HTTP ${res.status} — ${(body as { detail?: string }).detail ?? ''}`);
       }
       const body = await res.json();
       if (seq !== fetchSeq.current) return;
@@ -145,7 +145,7 @@ export function AlignProposalsPanel({ entityId }: { entityId: string }) {
   const fetchPendingCount = async () => {
     try {
       const params = new URLSearchParams({ entity_id: entityId, status: 'pending', limit: '1' });
-      const res = await fetch(`/api/dcl/align/proposals?${params}`);
+      const res = await fetch(`/api/dcl/proposals?${params}`);
       if (!res.ok) return;
       const body = await res.json();
       setPendingCount(body.total_count ?? 0);
@@ -212,7 +212,7 @@ export function AlignProposalsPanel({ entityId }: { entityId: string }) {
     setBusy(true);
     setDecideError(null);
     try {
-      const res = await fetch(`/api/dcl/align/proposals/${proposal.proposal_id}/decide`, {
+      const res = await fetch(`/api/dcl/proposals/${proposal.proposal_id}/decide`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -243,16 +243,16 @@ export function AlignProposalsPanel({ entityId }: { entityId: string }) {
     : 'bg-muted text-muted-foreground';
 
   return (
-    <div className="shrink-0 border rounded overflow-hidden" data-testid="align-proposals-panel">
+    <div className="shrink-0 border rounded overflow-hidden" data-testid="proposals-panel">
       {/* Toggle header */}
       <button
         onClick={() => setOpen(!open)}
-        data-testid="align-proposals-toggle"
+        data-testid="proposals-toggle"
         className="w-full flex items-center justify-between px-3 py-2 bg-muted/50 hover:bg-accent text-xs font-medium"
       >
         <span>
-          Align Proposals
-          <span className={`ml-2 px-1.5 py-0.5 rounded ${badgeCls}`} data-testid="align-pending-count">
+          Change Proposals
+          <span className={`ml-2 px-1.5 py-0.5 rounded ${badgeCls}`} data-testid="proposals-pending-count">
             {pendingCount === null ? '…' : `${pendingCount} pending`}
           </span>
         </span>
@@ -266,7 +266,7 @@ export function AlignProposalsPanel({ entityId }: { entityId: string }) {
             {(['pending', 'approved', 'rejected'] as const).map((s) => (
               <button
                 key={s}
-                data-testid={`align-status-filter-${s}`}
+                data-testid={`proposals-status-filter-${s}`}
                 onClick={() => setStatusFilter(s)}
                 className={`px-2 py-0.5 rounded border text-xs transition-colors ${
                   statusFilter === s
@@ -284,12 +284,12 @@ export function AlignProposalsPanel({ entityId }: { entityId: string }) {
 
           {/* Error displays */}
           {err && (
-            <div className="px-3 py-2 text-xs text-destructive border-b" data-testid="align-list-error">
+            <div className="px-3 py-2 text-xs text-destructive border-b" data-testid="proposals-list-error">
               {err}
             </div>
           )}
           {decideError && (
-            <div className="px-3 py-2 text-xs text-destructive border-b" data-testid="align-decide-error">
+            <div className="px-3 py-2 text-xs text-destructive border-b" data-testid="proposals-decide-error">
               {decideError}
             </div>
           )}
@@ -305,7 +305,7 @@ export function AlignProposalsPanel({ entityId }: { entityId: string }) {
               <div
                 key={p.proposal_id}
                 className="border-b"
-                data-testid={`align-proposal-row-${p.proposal_type}-${p.natural_key}`}
+                data-testid={`proposals-proposal-row-${p.proposal_type}-${p.natural_key}`}
               >
                 {/* Row summary */}
                 <button
@@ -315,10 +315,10 @@ export function AlignProposalsPanel({ entityId }: { entityId: string }) {
                   <span className={`px-1.5 py-0.5 rounded text-center truncate ${typeBadgeCls(p.proposal_type)}`}>
                     {p.proposal_type.replace(/_/g, '·')}
                   </span>
-                  <span className="font-medium truncate" data-testid={`align-payload-summary-${p.natural_key}`}>
+                  <span className="font-medium truncate" data-testid={`proposals-payload-summary-${p.natural_key}`}>
                     {payloadSummary(p.proposal_type, p.payload)}
                   </span>
-                  <span className="text-right text-muted-foreground" data-testid={`align-confidence-${p.natural_key}`}>
+                  <span className="text-right text-muted-foreground" data-testid={`proposals-confidence-${p.natural_key}`}>
                     {(p.confidence * 100).toFixed(0)}%
                   </span>
                   <ProvenanceBadge prov={p.provenance} />
@@ -329,7 +329,7 @@ export function AlignProposalsPanel({ entityId }: { entityId: string }) {
                 {expanded === p.proposal_id && (
                   <div
                     className="px-3 py-2 bg-card/30 border-t text-xs space-y-2"
-                    data-testid="align-proposal-detail"
+                    data-testid="proposals-proposal-detail"
                   >
                     {/* Payload */}
                     <pre className="font-mono bg-muted/30 rounded p-2 text-xs overflow-x-auto whitespace-pre-wrap">
@@ -341,10 +341,10 @@ export function AlignProposalsPanel({ entityId }: { entityId: string }) {
                       <div>Basis: <b>{String(p.provenance.basis ?? '—')}</b>
                         {p.provenance.confirmed_by && <> · confirmed by <b>{String(p.provenance.confirmed_by)}</b></>}
                       </div>
-                      {p.provenance.align_session_id && (
+                      {p.provenance.onboarding_session_id && (
                         <div>
-                          Session: <span className="font-mono" data-testid="align-session-id">
-                            {String(p.provenance.align_session_id)}
+                          Session: <span className="font-mono" data-testid="proposals-session-id">
+                            {String(p.provenance.onboarding_session_id)}
                           </span>
                         </div>
                       )}
@@ -354,7 +354,7 @@ export function AlignProposalsPanel({ entityId }: { entityId: string }) {
                     {p.status !== 'pending' && (
                       <div className="space-y-0.5">
                         {p.canonical_artifact_id && (
-                          <div className="text-green-500" data-testid="align-canonical-id">
+                          <div className="text-green-500" data-testid="proposals-canonical-id">
                             Canonical: <span className="font-mono">{p.canonical_artifact_id}</span>
                           </div>
                         )}
@@ -376,14 +376,14 @@ export function AlignProposalsPanel({ entityId }: { entityId: string }) {
                             value={decidedBy}
                             onChange={(e) => setDecidedBy(e.target.value)}
                             placeholder="Decided by"
-                            data-testid="align-decided-by"
+                            data-testid="proposals-decided-by"
                             className="w-32 px-2 py-1 rounded border bg-background"
                           />
                           <input
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
                             placeholder="Note (optional)"
-                            data-testid="align-note"
+                            data-testid="proposals-note"
                             className="flex-1 px-2 py-1 rounded border bg-background"
                           />
                         </div>
@@ -391,7 +391,7 @@ export function AlignProposalsPanel({ entityId }: { entityId: string }) {
                           <button
                             disabled={busy || !decidedBy.trim()}
                             onClick={() => decide(p, 'approve')}
-                            data-testid={`align-approve-btn-${p.natural_key}`}
+                            data-testid={`proposals-approve-btn-${p.natural_key}`}
                             className="px-3 py-1 rounded bg-green-600/20 text-green-400 border border-green-600/40 hover:bg-green-600/30 disabled:opacity-40"
                           >
                             Approve
@@ -399,7 +399,7 @@ export function AlignProposalsPanel({ entityId }: { entityId: string }) {
                           <button
                             disabled={busy || !decidedBy.trim()}
                             onClick={() => decide(p, 'reject')}
-                            data-testid={`align-reject-btn-${p.natural_key}`}
+                            data-testid={`proposals-reject-btn-${p.natural_key}`}
                             className="px-3 py-1 rounded bg-red-600/20 text-red-400 border border-red-600/40 hover:bg-red-600/30 disabled:opacity-40"
                           >
                             Reject

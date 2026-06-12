@@ -1,13 +1,13 @@
-"""Gate 3A acceptance: Align proposal queue + canonical apply-on-approve
+"""Gate 3A acceptance: Change proposal queue + canonical apply-on-approve
 (ContextOS_Blueprint_v1 §4, migration 023).
 
-Operator-visible outcome: an operator can POST a batch of Align-sourced proposals
-and see them in GET /api/dcl/align/proposals each carrying confidence + provenance;
-approve an authority_map proposal and immediately see the canonical row in
-GET /api/dcl/conflicts/authority-map carrying align provenance; reject another
-proposal and find zero canonical residue in every canonical store; duplicate proposals
-are reported explicitly with 'duplicate_of: <proposal_id>' (never silently dropped);
-a decision trace appears in GET /api/dcl/traces as trace_type='align_decision'.
+Operator-visible outcome: an operator can POST a batch of proposals and see them
+in GET /api/dcl/proposals each carrying confidence + provenance; approve an
+authority_map proposal and immediately see the canonical row in
+GET /api/dcl/conflicts/authority-map; reject another proposal and find zero canonical
+residue in every canonical store; duplicate proposals are reported explicitly with
+'duplicate_of: <proposal_id>' (never silently dropped); a decision trace appears in
+GET /api/dcl/traces as trace_type='proposal_decision'.
 
 Live-service integration tests: TestClient drives the real FastAPI app against the
 aos-dev database (migration 023 applied there). All tenant IDs are per-run-unique
@@ -34,7 +34,7 @@ client = TestClient(app, raise_server_exceptions=False)
 
 TENANT = str(uuid.uuid4())
 TAG = uuid.uuid4().hex[:6]
-ENTITY = f"AlignGate3A-{TAG}"
+ENTITY = f"ChangeProposals3A-{TAG}"
 TENANT_B = str(uuid.uuid4())  # isolation probe — never receives data
 
 
@@ -42,10 +42,10 @@ def _cleanup():
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "DELETE FROM alignment_decisions WHERE tenant_id = %s::uuid", (TENANT,)
+                "DELETE FROM change_proposal_decisions WHERE tenant_id = %s::uuid", (TENANT,)
             )
             cur.execute(
-                "DELETE FROM alignment_proposals WHERE tenant_id = %s::uuid", (TENANT,)
+                "DELETE FROM change_proposals WHERE tenant_id = %s::uuid", (TENANT,)
             )
             cur.execute(
                 "DELETE FROM tenant_concept_aliases WHERE tenant_id = %s::uuid", (TENANT,)
@@ -87,7 +87,7 @@ def _authority_map_proposal(concept_prefix="cloud_spend", sources=None):
         "provenance": {
             "basis": "confirmed",
             "confirmed_by": "CFO",
-            "align_session_id": f"sess-{TAG}",
+            "onboarding_session_id": f"sess-{TAG}",
         },
         "entity_id": ENTITY,
     }
@@ -113,7 +113,7 @@ def _conflict_candidate_proposal():
         "provenance": {
             "basis": "confirmed",
             "confirmed_by": "CFO",
-            "align_session_id": f"sess-{TAG}",
+            "onboarding_session_id": f"sess-{TAG}",
         },
         "entity_id": ENTITY,
     }
@@ -127,7 +127,7 @@ def _vocabulary_alias_proposal(alias="rev", concept_id="revenue"):
         "provenance": {
             "basis": "inferred",
             "confirmed_by": None,
-            "align_session_id": f"sess-{TAG}",
+            "onboarding_session_id": f"sess-{TAG}",
         },
     }
 
@@ -146,21 +146,21 @@ def _org_hierarchy_proposal():
         "provenance": {
             "basis": "confirmed",
             "confirmed_by": "COO",
-            "align_session_id": f"sess-{TAG}",
+            "onboarding_session_id": f"sess-{TAG}",
         },
     }
 
 
 def _intake(proposals):
     return client.post(
-        "/api/dcl/align/proposals",
+        "/api/dcl/proposals",
         json={"tenant_id": TENANT, "proposals": proposals},
     )
 
 
 def _decide(proposal_id, decision, decided_by="operator-1"):
     return client.post(
-        f"/api/dcl/align/proposals/{proposal_id}/decide",
+        f"/api/dcl/proposals/{proposal_id}/decide",
         json={"tenant_id": TENANT, "decision": decision,
               "decided_by": decided_by, "note": f"{decision}-test-{TAG}"},
     )
@@ -174,7 +174,7 @@ class TestNegative:
 
     def test_missing_tenant_id(self):
         r = client.post(
-            "/api/dcl/align/proposals",
+            "/api/dcl/proposals",
             json={"proposals": [_authority_map_proposal()]},
         )
         assert r.status_code == 422, r.text
@@ -182,7 +182,7 @@ class TestNegative:
 
     def test_empty_batch(self):
         r = client.post(
-            "/api/dcl/align/proposals",
+            "/api/dcl/proposals",
             json={"tenant_id": TENANT, "proposals": []},
         )
         assert r.status_code == 422, r.text
@@ -222,7 +222,7 @@ class TestNegative:
     def test_decide_missing_tenant(self):
         dummy_id = str(uuid.uuid4())
         r = client.post(
-            f"/api/dcl/align/proposals/{dummy_id}/decide",
+            f"/api/dcl/proposals/{dummy_id}/decide",
             json={"decision": "approve", "decided_by": "x"},
         )
         assert r.status_code == 422, r.text
@@ -240,22 +240,22 @@ class TestNegative:
         assert r.status_code == 201
         pid = r.json()["proposals"][0]["proposal_id"]
         r2 = client.post(
-            f"/api/dcl/align/proposals/{pid}/decide",
+            f"/api/dcl/proposals/{pid}/decide",
             json={"tenant_id": TENANT, "decision": "approve", "decided_by": ""},
         )
         assert r2.status_code == 422, r2.text
 
     def test_concept_lookup_missing_tenant(self):
-        r = client.get("/api/dcl/align/concept-lookup?alias=rev")
+        r = client.get("/api/dcl/concept-lookup?alias=rev")
         assert r.status_code == 422, r.text
 
     def test_concept_lookup_missing_alias(self):
-        r = client.get(f"/api/dcl/align/concept-lookup?tenant_id={TENANT}")
+        r = client.get(f"/api/dcl/concept-lookup?tenant_id={TENANT}")
         assert r.status_code == 422, r.text
 
     def test_tenant_isolation_list(self):
         _intake([_authority_map_proposal()])
-        r = client.get(f"/api/dcl/align/proposals?tenant_id={TENANT_B}")
+        r = client.get(f"/api/dcl/proposals?tenant_id={TENANT_B}")
         assert r.status_code == 200, r.text
         assert r.json()["total_count"] == 0, "TENANT_B must see no proposals from TENANT"
 
@@ -289,7 +289,7 @@ class TestIntake:
 
     def test_proposals_visible_in_list(self):
         _intake([_authority_map_proposal("cloud_spend")])
-        r = client.get(f"/api/dcl/align/proposals?tenant_id={TENANT}&status=pending")
+        r = client.get(f"/api/dcl/proposals?tenant_id={TENANT}&status=pending")
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["total_count"] >= 1
@@ -298,7 +298,7 @@ class TestIntake:
 
     def test_proposal_carries_confidence_and_provenance(self):
         _intake([_authority_map_proposal()])
-        r = client.get(f"/api/dcl/align/proposals?tenant_id={TENANT}&proposal_type=authority_map")
+        r = client.get(f"/api/dcl/proposals?tenant_id={TENANT}&proposal_type=authority_map")
         assert r.status_code == 200, r.text
         p = r.json()["proposals"][0]
         assert float(p["confidence"]) == pytest.approx(0.92)
@@ -311,7 +311,7 @@ class TestIntake:
         assert r.status_code == 201, r.text
         assert r.json()["accepted_count"] == 1
         r2 = client.get(
-            f"/api/dcl/align/proposals?tenant_id={TENANT}&proposal_type=vocabulary_alias"
+            f"/api/dcl/proposals?tenant_id={TENANT}&proposal_type=vocabulary_alias"
         )
         p = r2.json()["proposals"][0]
         assert p["provenance"]["basis"] == "inferred"
@@ -399,7 +399,7 @@ class TestApproveAuthority:
         r = _intake([_authority_map_proposal("engineering")])
         pid = r.json()["proposals"][0]["proposal_id"]
         _decide(pid, "approve")
-        r2 = client.get(f"/api/dcl/align/proposals?tenant_id={TENANT}&status=approved")
+        r2 = client.get(f"/api/dcl/proposals?tenant_id={TENANT}&status=approved")
         proposals = r2.json()["proposals"]
         pids = [p["proposal_id"] for p in proposals]
         assert pid in pids
@@ -438,7 +438,7 @@ class TestApproveVocabularyAlias:
         pid = r.json()["proposals"][0]["proposal_id"]
 
         r_before = client.get(
-            f"/api/dcl/align/concept-lookup?tenant_id={TENANT}&alias=rev_alias_test"
+            f"/api/dcl/concept-lookup?tenant_id={TENANT}&alias=rev_alias_test"
         )
         assert r_before.status_code == 200, r_before.text
         assert r_before.json()["resolved"] is False, (
@@ -448,7 +448,7 @@ class TestApproveVocabularyAlias:
         _decide(pid, "approve")
 
         r_after = client.get(
-            f"/api/dcl/align/concept-lookup?tenant_id={TENANT}&alias=rev_alias_test"
+            f"/api/dcl/concept-lookup?tenant_id={TENANT}&alias=rev_alias_test"
         )
         assert r_after.status_code == 200, r_after.text
         body = r_after.json()
@@ -464,7 +464,7 @@ class TestApproveVocabularyAlias:
         _decide(pid, "approve")
 
         r2 = client.get(
-            f"/api/dcl/align/concept-lookup?tenant_id={TENANT}&alias=rev_alias_case"
+            f"/api/dcl/concept-lookup?tenant_id={TENANT}&alias=rev_alias_case"
         )
         assert r2.json()["resolved"] is True
         assert r2.json()["concept_id"] == "revenue"
@@ -476,13 +476,13 @@ class TestApproveOrgHierarchy:
         r = _intake([_org_hierarchy_proposal()])
         pid = r.json()["proposals"][0]["proposal_id"]
 
-        r_contour_before = client.get(f"/api/dcl/align/contour?tenant_id={TENANT}")
+        r_contour_before = client.get(f"/api/dcl/contour?tenant_id={TENANT}")
         assert r_contour_before.status_code == 200
         assert r_contour_before.json()["contour_source"] == "none"
 
         _decide(pid, "approve")
 
-        r_contour = client.get(f"/api/dcl/align/contour?tenant_id={TENANT}")
+        r_contour = client.get(f"/api/dcl/contour?tenant_id={TENANT}")
         assert r_contour.status_code == 200, r_contour.text
         body = r_contour.json()
         assert body["contour_source"] == "approved"
@@ -499,7 +499,7 @@ class TestApproveOrgHierarchy:
         r_hier = _intake([_org_hierarchy_proposal()])
         _decide(r_hier.json()["proposals"][0]["proposal_id"], "approve")
 
-        r_contour = client.get(f"/api/dcl/align/contour?tenant_id={TENANT}")
+        r_contour = client.get(f"/api/dcl/contour?tenant_id={TENANT}")
         body = r_contour.json()
         sor = body.get("sor_authority", {})
         assert "cloud_spend" in sor, (
@@ -539,7 +539,7 @@ class TestReject:
         _decide(pid, "reject")
 
         r2 = client.get(
-            f"/api/dcl/align/concept-lookup?tenant_id={TENANT}&alias=reject_alias_test"
+            f"/api/dcl/concept-lookup?tenant_id={TENANT}&alias=reject_alias_test"
         )
         assert r2.json()["resolved"] is False, (
             "Rejected vocabulary_alias proposal must leave zero residue in "
@@ -582,15 +582,15 @@ class TestDecisionTrace:
         pid = r.json()["proposals"][0]["proposal_id"]
         _decide(pid, "approve", "trace-operator")
 
-        r2 = client.get(f"/api/dcl/traces?tenant_id={TENANT}&trace_type=align_decision")
+        r2 = client.get(f"/api/dcl/traces?tenant_id={TENANT}&trace_type=proposal_decision")
         assert r2.status_code == 200, r2.text
         traces = r2.json()["traces"]
-        align_traces = [t for t in traces if t["trace_type"] == "align_decision"]
-        assert len(align_traces) >= 1, (
-            f"Approved align proposal must produce an align_decision trace visible via "
+        proposal_traces = [t for t in traces if t["trace_type"] == "proposal_decision"]
+        assert len(proposal_traces) >= 1, (
+            f"Approved change proposal must produce a proposal_decision trace visible via "
             f"GET /api/dcl/traces. Got trace_types: {[t['trace_type'] for t in traces]}"
         )
-        trace = align_traces[0]
+        trace = proposal_traces[0]
         assert trace["agent"] == "trace-operator"
         assert trace["decision_type"] == "approve"
         refs = trace.get("refs", {})
@@ -601,12 +601,12 @@ class TestDecisionTrace:
         pid = r.json()["proposals"][0]["proposal_id"]
         _decide(pid, "reject", "reject-operator")
 
-        r2 = client.get(f"/api/dcl/traces?tenant_id={TENANT}&trace_type=align_decision")
+        r2 = client.get(f"/api/dcl/traces?tenant_id={TENANT}&trace_type=proposal_decision")
         assert r2.status_code == 200, r2.text
         traces = r2.json()["traces"]
         reject_traces = [
             t for t in traces
-            if t["trace_type"] == "align_decision" and t["decision_type"] == "reject"
+            if t["trace_type"] == "proposal_decision" and t["decision_type"] == "reject"
         ]
         assert len(reject_traces) >= 1
 
@@ -615,7 +615,7 @@ class TestDecisionTrace:
         pid = r.json()["proposals"][0]["proposal_id"]
         _decide(pid, "approve")
 
-        r2 = client.get(f"/api/dcl/traces?tenant_id={TENANT_B}&trace_type=align_decision")
+        r2 = client.get(f"/api/dcl/traces?tenant_id={TENANT_B}&trace_type=proposal_decision")
         assert r2.status_code == 200
         assert r2.json()["total_count"] == 0, (
             "TENANT_B must see no decision traces from TENANT — trace reads are tenant-scoped."
@@ -631,14 +631,14 @@ class TestRebuildFailsLoudOnStoreError:
     on a pre-mig023 store proves zero approved contours exist (ledger #70)."""
 
     def test_store_failure_aborts_rebuild(self, monkeypatch):
-        from backend.db.align_store import AlignStore
+        from backend.db.proposal_store import ProposalStore
         from backend.engine import graph_store
 
         def _boom(self):
             raise RuntimeError("simulated contour-store failure (connection lost)")
 
         monkeypatch.setattr(
-            AlignStore, "load_approved_contour_for_rebuild", _boom
+            ProposalStore, "load_approved_contour_for_rebuild", _boom
         )
         with pytest.raises(RuntimeError, match="simulated contour-store failure"):
             graph_store.rebuild_graph()
@@ -646,7 +646,7 @@ class TestRebuildFailsLoudOnStoreError:
     def test_pre_mig023_store_is_absence_not_failure(self, monkeypatch):
         from psycopg2 import errors as psycopg2_errors
 
-        from backend.db.align_store import AlignStore
+        from backend.db.proposal_store import ProposalStore
         from backend.engine import graph_store
 
         def _undefined(self):
@@ -655,7 +655,7 @@ class TestRebuildFailsLoudOnStoreError:
             )
 
         monkeypatch.setattr(
-            AlignStore, "load_approved_contour_for_rebuild", _undefined
+            ProposalStore, "load_approved_contour_for_rebuild", _undefined
         )
         # Must complete (sample-YAML absence path), not raise — prod :8004
         # startup survives until the #70 prod migration gate applies mig023.

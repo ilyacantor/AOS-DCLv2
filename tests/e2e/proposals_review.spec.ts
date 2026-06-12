@@ -1,19 +1,19 @@
-// Operator-visible outcome: with AlignTest entity selected in the Context tab, the Align Proposals panel shows 14 pending proposals; the authority_map/cost_center row shows confidence 95% and badge "confirmed by CFO"; clicking Approve writes cost_center → [netsuite, workday] to the authority map view; clicking Reject on vocabulary_alias/headcount removes it from pending and it appears under rejected filter; two pages load the same pending arr vocabulary proposal, page A approves it successfully, and page B's stale Approve click renders DCL's "can be decided only once" detail text on screen.
+// Operator-visible outcome: with ProposalsTest entity selected in the Context tab, the Change Proposals panel shows 14 pending proposals; the authority_map/cost_center row shows confidence 95% and badge "confirmed by CFO"; clicking Approve writes cost_center → [netsuite, workday] to the authority map view; clicking Reject on vocabulary_alias/headcount removes it from pending and it appears under rejected filter; two pages load the same pending arr vocabulary proposal, page A approves it successfully, and page B's stale Approve click renders DCL's "can be decided only once" detail text on screen.
 
 /**
- * Gate 3A D4 — Align review surface live acceptance (B17).
+ * Gate 3A D4 — Change Proposals review surface live acceptance (B17).
  *
  * Setup: beforeAll seeds a fresh DCL ingest snapshot (creates entity in selector)
- * then runs the align scripted CFO session for the same tenant. Both are real
+ * then runs the onboarding scripted CFO session for the same tenant. Both are real
  * pipeline calls (B5/B15). The operator path is 100% UI clicks and fills.
  *
- * Ground truth: fetched at runtime from GET /api/dcl/align/proposals (read-only).
+ * Ground truth: fetched at runtime from GET /api/dcl/proposals (read-only).
  * Expected values are never hardcoded; they flow from the real pipeline output.
  *
  * Constitution compliance:
  *   - Approve/Reject triggered by locator.click() — never page.request.post()
  *   - page.request.get() used for ground truth only (allowed exception)
- *   - execSync for align script subprocess (B15 — real pipeline)
+ *   - execSync for onboarding script subprocess (B15 — real pipeline)
  *   - Screenshots after every test (reporting rule 4)
  *   - before/after state capture on Approve (acceptance rule 2)
  *   - Assertions tied to ground truth, never hardcoded (acceptance rule 1)
@@ -28,7 +28,7 @@ const DCL_BACKEND  = process.env.DCL_BACKEND_URL  ?? "http://localhost:8104";
 
 // Per-run-unique tenant so reruns don't collide on the durable dev store (Gate 1B lesson).
 const TENANT_ID = randomUUID();
-const ENTITY_ID = `AlignTest-${TENANT_ID.slice(0, 8)}`;
+const ENTITY_ID = `ProposalsTest-${TENANT_ID.slice(0, 8)}`;
 const INGEST_ID = randomUUID();
 
 // Shared ground truth fetched in beforeAll.
@@ -39,7 +39,7 @@ let headcountProposal: Record<string, unknown>;
 
 const SCREENSHOTS = "tests/e2e/screenshots";
 
-test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
+test.describe.serial("Change Proposals review — live acceptance (Gate 3A D4)", () => {
   test.setTimeout(180_000);
 
   // ── SETUP ─────────────────────────────────────────────────────────────────
@@ -63,8 +63,8 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
             property: "amount",
             value: 1000000,
             period: "2026-Q1",
-            source_system: "align_test",
-            source_table: "align_test_seed",
+            source_system: "proposals_test",
+            source_table: "proposals_test_seed",
             source_field: "amount",
             pipe_id: "00000000-0000-4000-8000-000000000001",
             confidence_score: 0.8,
@@ -79,10 +79,10 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
       `DCL ingest seed failed: ${await seedResp.text()}`,
     ).toBe(201);
 
-    // 3. Run the Align scripted CFO session (real pipeline — B15).
+    // 3. Run the onboarding scripted CFO session (real pipeline — B15).
     //    This submits ~14 proposals to DCL for TENANT_ID.
     execSync(
-      `cd /home/ilyac/code/align && .venv/bin/python scripts/run_scripted_session.py` +
+      `cd /home/ilyac/code/dcl-onboarding-agent && .venv/bin/python scripts/run_scripted_session.py` +
       ` --tenant-id ${TENANT_ID}` +
       ` --script tests/fixtures/scripted_cfo_session.yaml`,
       { timeout: 120_000, stdio: "pipe" },
@@ -90,7 +90,7 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
 
     // 4. Fetch ground truth proposals (read-only GET — allowed).
     const gtResp = await request.get(
-      `${DCL_BACKEND}/api/dcl/align/proposals?entity_id=${encodeURIComponent(ENTITY_ID)}&limit=100`,
+      `${DCL_BACKEND}/api/dcl/proposals?entity_id=${encodeURIComponent(ENTITY_ID)}&limit=100`,
     );
     expect(gtResp.status(), "Ground truth proposals fetch failed").toBe(200);
     const gtBody = await gtResp.json();
@@ -120,7 +120,7 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
     await page.locator("button", { hasText: "Context" }).click();
     await page.waitForLoadState("networkidle");
 
-    // Select the AlignTest entity in the snapshot selector.
+    // Select the ProposalsTest entity in the snapshot selector.
     const selector = page.locator("#snapshot-selector");
     await selector.waitFor({ state: "visible", timeout: 20_000 });
     // Wait for the option to appear (snapshot polling may need a moment).
@@ -129,18 +129,18 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
     ).toBeAttached({ timeout: 20_000 });
     await selector.selectOption(INGEST_ID);
 
-    // Wait for Align Proposals panel header to appear.
-    const alignPanel = page.locator('[data-testid="align-proposals-panel"]');
-    await alignPanel.waitFor({ state: "visible", timeout: 15_000 });
+    // Wait for Change Proposals panel header to appear.
+    const proposalsPanel = page.locator('[data-testid="proposals-panel"]');
+    await proposalsPanel.waitFor({ state: "visible", timeout: 15_000 });
 
     // Open the panel.
-    await alignPanel.locator('[data-testid="align-proposals-toggle"]').click();
+    await proposalsPanel.locator('[data-testid="proposals-toggle"]').click();
 
     // Wait for list to load — status filter 'pending' is default.
     await page.waitForLoadState("networkidle");
 
     // Assert rendered pending count badge matches API count.
-    const pendingBadge = alignPanel.locator('[data-testid="align-pending-count"]');
+    const pendingBadge = proposalsPanel.locator('[data-testid="proposals-pending-count"]');
     await expect(pendingBadge).not.toHaveText("…", { timeout: 10_000 });
     const badgeText = await pendingBadge.textContent();
     const renderedPending = parseInt(badgeText?.match(/(\d+)/)?.[1] ?? "0", 10);
@@ -148,7 +148,7 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
       pendingProposals.length,
     );
 
-    await page.screenshot({ path: `${SCREENSHOTS}/align_01_pending_count.png` });
+    await page.screenshot({ path: `${SCREENSHOTS}/proposals_01_pending_count.png` });
   });
 
   // ── TEST 2: cost_center proposal confidence + provenance badge ─────────────
@@ -162,18 +162,18 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
     await expect(selector.locator(`option[value="${INGEST_ID}"]`)).toBeAttached({ timeout: 15_000 });
     await selector.selectOption(INGEST_ID);
 
-    const alignPanel = page.locator('[data-testid="align-proposals-panel"]');
-    await alignPanel.locator('[data-testid="align-proposals-toggle"]').click();
+    const proposalsPanel = page.locator('[data-testid="proposals-panel"]');
+    await proposalsPanel.locator('[data-testid="proposals-toggle"]').click();
     await page.waitForLoadState("networkidle");
 
     // The cost_center authority_map row.
-    const rowTestId = `align-proposal-row-authority_map-cost_center`;
-    const ccRow = alignPanel.locator(`[data-testid="${rowTestId}"]`);
+    const rowTestId = `proposals-proposal-row-authority_map-cost_center`;
+    const ccRow = proposalsPanel.locator(`[data-testid="${rowTestId}"]`);
     await ccRow.waitFor({ state: "visible", timeout: 15_000 });
 
     // Confidence: ground truth says 0.95 → "95%".
     const expectedConf = `${Math.round((costCenterProposal.confidence as number) * 100)}%`;
-    const confCell = ccRow.locator(`[data-testid="align-confidence-cost_center"]`);
+    const confCell = ccRow.locator(`[data-testid="proposals-confidence-cost_center"]`);
     await expect(confCell).toHaveText(expectedConf);
 
     // Provenance badge: basis=confirmed, confirmed_by=CFO.
@@ -188,7 +188,7 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
       await expect(provBadge).toContainText("inferred");
     }
 
-    await page.screenshot({ path: `${SCREENSHOTS}/align_02_cost_center_proposal.png` });
+    await page.screenshot({ path: `${SCREENSHOTS}/proposals_02_cost_center_proposal.png` });
   });
 
   // ── TEST 3: Approve cost_center — authority map updates ───────────────────
@@ -202,8 +202,8 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
     await expect(selector.locator(`option[value="${INGEST_ID}"]`)).toBeAttached({ timeout: 15_000 });
     await selector.selectOption(INGEST_ID);
 
-    const alignPanel = page.locator('[data-testid="align-proposals-panel"]');
-    await alignPanel.locator('[data-testid="align-proposals-toggle"]').click();
+    const proposalsPanel = page.locator('[data-testid="proposals-panel"]');
+    await proposalsPanel.locator('[data-testid="proposals-toggle"]').click();
     await page.waitForLoadState("networkidle");
 
     // Fetch ground-truth authority map BEFORE approve (read-only GET).
@@ -216,16 +216,16 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
     expect(hasCCBefore, "cost_center should NOT be in authority map before approve").toBe(false);
 
     // Expand the cost_center proposal row.
-    const ccRow = alignPanel.locator('[data-testid="align-proposal-row-authority_map-cost_center"]');
+    const ccRow = proposalsPanel.locator('[data-testid="proposals-proposal-row-authority_map-cost_center"]');
     await ccRow.waitFor({ state: "visible", timeout: 15_000 });
     await ccRow.locator("button").first().click();
 
     // Fill decided_by (it defaults to 'operator' but we fill explicitly).
-    const decidedByInput = ccRow.locator('[data-testid="align-decided-by"]');
+    const decidedByInput = ccRow.locator('[data-testid="proposals-decided-by"]');
     await decidedByInput.fill("operator");
 
     // Click Approve.
-    const approveBtn = ccRow.locator('[data-testid="align-approve-btn-cost_center"]');
+    const approveBtn = ccRow.locator('[data-testid="proposals-approve-btn-cost_center"]');
     await approveBtn.click();
 
     // Wait for decision to process and authority map to refresh.
@@ -235,7 +235,7 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
     const ccPayload = costCenterProposal.payload as Record<string, unknown>;
     const expectedSources = (ccPayload.ranked_sources as string[]) ?? [];
 
-    const authSection = alignPanel.locator('[data-testid="authority-map-section"]');
+    const authSection = proposalsPanel.locator('[data-testid="authority-map-section"]');
     const ccEntry = authSection.locator('[data-testid="authority-entry-cost_center"]');
     await ccEntry.waitFor({ state: "visible", timeout: 15_000 });
 
@@ -254,7 +254,7 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
     expect(ccAfter, "cost_center must appear in authority map after approve").toBeTruthy();
     expect(ccAfter!.ranked_sources, "ranked_sources must match payload").toEqual(expectedSources);
 
-    await page.screenshot({ path: `${SCREENSHOTS}/align_03_approve_cost_center.png` });
+    await page.screenshot({ path: `${SCREENSHOTS}/proposals_03_approve_cost_center.png` });
   });
 
   // ── TEST 4: Reject headcount vocabulary proposal ───────────────────────────
@@ -268,31 +268,31 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
     await expect(selector.locator(`option[value="${INGEST_ID}"]`)).toBeAttached({ timeout: 15_000 });
     await selector.selectOption(INGEST_ID);
 
-    const alignPanel = page.locator('[data-testid="align-proposals-panel"]');
-    await alignPanel.locator('[data-testid="align-proposals-toggle"]').click();
+    const proposalsPanel = page.locator('[data-testid="proposals-panel"]');
+    await proposalsPanel.locator('[data-testid="proposals-toggle"]').click();
     await page.waitForLoadState("networkidle");
 
     // Assert headcount row IS in pending before reject.
-    const headcountRow = alignPanel.locator(
-      '[data-testid="align-proposal-row-vocabulary_alias-headcount"]',
+    const headcountRow = proposalsPanel.locator(
+      '[data-testid="proposals-proposal-row-vocabulary_alias-headcount"]',
     );
     await headcountRow.waitFor({ state: "visible", timeout: 15_000 });
 
     // Expand + fill decided_by + click Reject.
     await headcountRow.locator("button").first().click();
-    await headcountRow.locator('[data-testid="align-decided-by"]').fill("operator");
-    await headcountRow.locator('[data-testid="align-reject-btn-headcount"]').click();
+    await headcountRow.locator('[data-testid="proposals-decided-by"]').fill("operator");
+    await headcountRow.locator('[data-testid="proposals-reject-btn-headcount"]').click();
     await page.waitForLoadState("networkidle");
 
     // headcount row must no longer appear in the pending list.
     await expect(headcountRow).not.toBeVisible({ timeout: 10_000 });
 
     // Switch to rejected filter — headcount must appear there.
-    await alignPanel.locator('[data-testid="align-status-filter-rejected"]').click();
+    await proposalsPanel.locator('[data-testid="proposals-status-filter-rejected"]').click();
     await page.waitForLoadState("networkidle");
 
-    const headcountRejectedRow = alignPanel.locator(
-      '[data-testid="align-proposal-row-vocabulary_alias-headcount"]',
+    const headcountRejectedRow = proposalsPanel.locator(
+      '[data-testid="proposals-proposal-row-vocabulary_alias-headcount"]',
     );
     await headcountRejectedRow.waitFor({ state: "visible", timeout: 15_000 });
 
@@ -306,12 +306,12 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
 
     // Concept lookup must return resolved=false (alias not applied after rejection).
     const lookupResp = await page.request.get(
-      `${DCL_BACKEND}/api/dcl/align/concept-lookup?tenant_id=${TENANT_ID}&alias=headcount`,
+      `${DCL_BACKEND}/api/dcl/concept-lookup?tenant_id=${TENANT_ID}&alias=headcount`,
     );
     const lookup = await lookupResp.json();
     expect(lookup.resolved, "Rejected alias must not be resolvable").toBe(false);
 
-    await page.screenshot({ path: `${SCREENSHOTS}/align_04_reject_headcount.png` });
+    await page.screenshot({ path: `${SCREENSHOTS}/proposals_04_reject_headcount.png` });
   });
 
   // ── TEST 5: Negative — stale-Approve race renders 409 detail text ───────────
@@ -334,10 +334,10 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
     await selectorA.waitFor({ state: "visible", timeout: 20_000 });
     await expect(selectorA.locator(`option[value="${INGEST_ID}"]`)).toBeAttached({ timeout: 15_000 });
     await selectorA.selectOption(INGEST_ID);
-    const alignPanelA = page.locator('[data-testid="align-proposals-panel"]');
-    await alignPanelA.locator('[data-testid="align-proposals-toggle"]').click();
+    const proposalsPanelA = page.locator('[data-testid="proposals-panel"]');
+    await proposalsPanelA.locator('[data-testid="proposals-toggle"]').click();
     await page.waitForLoadState("networkidle");
-    const arrRowA = alignPanelA.locator('[data-testid="align-proposal-row-vocabulary_alias-arr"]');
+    const arrRowA = proposalsPanelA.locator('[data-testid="proposals-proposal-row-vocabulary_alias-arr"]');
     await arrRowA.waitFor({ state: "visible", timeout: 15_000 });
 
     // ── Page B (operator 2) — loaded BEFORE page A approves ──────────────────
@@ -348,29 +348,29 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
     await selectorB.waitFor({ state: "visible", timeout: 20_000 });
     await expect(selectorB.locator(`option[value="${INGEST_ID}"]`)).toBeAttached({ timeout: 15_000 });
     await selectorB.selectOption(INGEST_ID);
-    const alignPanelB = pageB.locator('[data-testid="align-proposals-panel"]');
-    await alignPanelB.locator('[data-testid="align-proposals-toggle"]').click();
+    const proposalsPanelB = pageB.locator('[data-testid="proposals-panel"]');
+    await proposalsPanelB.locator('[data-testid="proposals-toggle"]').click();
     await pageB.waitForLoadState("networkidle");
     // arr is pending in page B's stale view.
-    const arrRowB = alignPanelB.locator('[data-testid="align-proposal-row-vocabulary_alias-arr"]');
+    const arrRowB = proposalsPanelB.locator('[data-testid="proposals-proposal-row-vocabulary_alias-arr"]');
     await arrRowB.waitFor({ state: "visible", timeout: 15_000 });
 
     // ── Page A: Approve arr (succeeds — arr leaves pending) ──────────────────
     await arrRowA.locator("button").first().click();
-    await arrRowA.locator('[data-testid="align-decided-by"]').fill("operator-page-a");
-    await arrRowA.locator('[data-testid="align-approve-btn-arr"]').click();
+    await arrRowA.locator('[data-testid="proposals-decided-by"]').fill("operator-page-a");
+    await arrRowA.locator('[data-testid="proposals-approve-btn-arr"]').click();
     await page.waitForLoadState("networkidle");
     await expect(arrRowA).not.toBeVisible({ timeout: 10_000 });
 
     // ── Page B: stale Approve click — backend returns 409 ────────────────────
     // page B has NOT reloaded; its DOM still shows arr as pending with Approve button.
     await arrRowB.locator("button").first().click();
-    await arrRowB.locator('[data-testid="align-decided-by"]').fill("operator-page-b");
-    await arrRowB.locator('[data-testid="align-approve-btn-arr"]').click();
+    await arrRowB.locator('[data-testid="proposals-decided-by"]').fill("operator-page-b");
+    await arrRowB.locator('[data-testid="proposals-approve-btn-arr"]').click();
     await pageB.waitForLoadState("networkidle");
 
     // DCL returns 409; the panel must render the already-decided detail text.
-    const errorDiv = alignPanelB.locator('[data-testid="align-decide-error"]');
+    const errorDiv = proposalsPanelB.locator('[data-testid="proposals-decide-error"]');
     await errorDiv.waitFor({ state: "visible", timeout: 10_000 });
     const errorText = await errorDiv.textContent();
     // DCL 409 detail: "Proposal <id> is already 'approved' — a proposal can be decided only once."
@@ -380,7 +380,7 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
     ).toMatch(/already\s+(approved|rejected)|can be decided only once/i);
     expect(errorText, "Error must not be a bare status code").not.toMatch(/^409$/);
 
-    await page.screenshot({ path: `${SCREENSHOTS}/align_05_negative_409_page_a.png` });
-    await pageB.screenshot({ path: `${SCREENSHOTS}/align_05_negative_409_page_b.png` });
+    await page.screenshot({ path: `${SCREENSHOTS}/proposals_05_negative_409_page_a.png` });
+    await pageB.screenshot({ path: `${SCREENSHOTS}/proposals_05_negative_409_page_b.png` });
   });
 });

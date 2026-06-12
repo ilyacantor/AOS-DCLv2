@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { SnapshotSelector, SnapshotState } from './RunSelector';
-import { AlignProposalsPanel } from './AlignProposalsPanel';
+import { ProposalsPanel } from './ProposalsPanel';
 
 interface DomainInfo {
   domain: string;
@@ -197,9 +197,9 @@ export function ContextTab({ snapshot }: ContextTabProps) {
         />
       )}
 
-      {/* Align Proposals review (Gate 3A) — entity-scoped HITL queue */}
+      {/* Change Proposals review (Gate 3A) — entity-scoped HITL queue */}
       {selectedEntityId && (
-        <AlignProposalsPanel entityId={selectedEntityId} />
+        <ProposalsPanel entityId={selectedEntityId} />
       )}
 
       {/* Two side-by-side panels */}

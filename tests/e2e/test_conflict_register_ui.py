@@ -107,12 +107,12 @@ def test_conflict_register_drill_and_disposition(page: Page, seeded_conflict):
     panel = page.get_by_test_id("conflicts-panel")
     expect(panel).to_contain_text("1 open", timeout=15000)
 
-    # Settle gate: the Align panel (Gate 3A) mounts beside the register and
+    # Settle gate: the Change Proposals panel (Gate 3A) mounts beside the register and
     # re-renders the tab as its fetches land; interact only once it has
     # loaded ("N pending", never '…') so the toggle click cannot be lost to
     # a mid-load re-render — the operator clicks a settled page (the #60
     # condition-wait discipline, not a fixed sleep).
-    expect(page.get_by_test_id("align-pending-count")).to_contain_text(
+    expect(page.get_by_test_id("proposals-pending-count")).to_contain_text(
         "pending", timeout=15000
     )
 

@@ -78,10 +78,10 @@ def rebuild_graph() -> None:
     #    thing. Sole carve-out: UndefinedTable on a pre-mig023 store (prod,
     #    until the #70 migration gate runs) proves zero approved contours
     #    exist, which IS absence — logged explicitly, never generalized.
-    from backend.db.align_store import AlignStore
+    from backend.db.proposal_store import ProposalStore
     from psycopg2 import errors as psycopg2_errors
     try:
-        contour_data = AlignStore().load_approved_contour_for_rebuild()
+        contour_data = ProposalStore().load_approved_contour_for_rebuild()
     except psycopg2_errors.UndefinedTable:
         logger.warning(
             "[GraphStore] tenant_contour does not exist on this store — "

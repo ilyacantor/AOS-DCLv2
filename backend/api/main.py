@@ -82,7 +82,7 @@ from backend.api.routes.conflicts import router as conflicts_router
 from backend.api.routes.mcp_audit_read import router as mcp_audit_read_router
 from backend.api.routes.traces import router as traces_router
 from backend.api.routes.exports import router as exports_router
-from backend.api.routes.align import router as align_router
+from backend.api.routes.proposals import router as proposals_router
 
 logger = get_logger(__name__)
 
@@ -116,7 +116,7 @@ def _store_migration_posture() -> str:
     'fresh'    — no semantic_triples table: a brand-new store; the pass
                  provisions it (initial bootstrap is the one ambient apply).
     'migrated' — semantic_triples AND the newest gated object
-                 (alignment_proposals, mig023) both exist: the pass re-applies
+                 (change_proposals, mig023) both exist: the pass re-applies
                  idempotently and any failure is real breakage.
     'pre_gate' — semantic_triples exists but the mig023 sentinel does not:
                  a store the operator has NOT taken through the prod
@@ -134,7 +134,7 @@ def _store_migration_posture() -> str:
             cur.execute(
                 "SELECT "
                 "  to_regclass('semantic_triples') IS NOT NULL, "
-                "  to_regclass('alignment_proposals') IS NOT NULL"
+                "  to_regclass('change_proposals') IS NOT NULL"
             )
             has_store, has_sentinel = cur.fetchone()
     if not has_store:
@@ -429,8 +429,8 @@ app.include_router(traces_router)
 app.include_router(exports_router)
 # Demo pipeline monitor — read-only metrics endpoint. Additive and isolated.
 app.include_router(monitor_router)
-# Gate 3A: Align proposal HITL queue + canonical apply-on-approve.
-app.include_router(align_router)
+# Gate 3A: Change proposal HITL queue + canonical apply-on-approve.
+app.include_router(proposals_router)
 
 # Plan B WP5 — real wire-protocol MCP server (HTTP+SSE transport).
 # The stdio transport runs in a separate process: `python -m backend.api.mcp_stdio`.

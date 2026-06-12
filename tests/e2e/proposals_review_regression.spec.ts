@@ -1,14 +1,14 @@
-// Operator-visible outcome: with route-stubbed proposals API returning a mock authority_map and vocabulary_alias proposal, the Align Proposals panel renders both rows with correct type badges, confidence percentages, provenance badges, payload summaries, and the authority map section shows the stubbed entry.
+// Operator-visible outcome: with route-stubbed proposals API returning a mock authority_map and vocabulary_alias proposal, the Change Proposals panel renders both rows with correct type badges, confidence percentages, provenance badges, payload summaries, and the authority map section shows the stubbed entry.
 /**
- * Gate 3A D4 — Align review mocked regression (taxonomy rule 6).
+ * Gate 3A D4 — Change Proposals review mocked regression (taxonomy rule 6).
  *
  * Regression only — route-stubbed (not live-services). Labeled per taxonomy rule 6:
  * live acceptance + mocked regression, both required. This file covers rendering
- * correctness against a fixed stub; the live acceptance is in align_review.spec.ts.
+ * correctness against a fixed stub; the live acceptance is in proposals_review.spec.ts.
  *
- * Uses page.route() to intercept /api/dcl/align/proposals* and
+ * Uses page.route() to intercept /api/dcl/proposals* and
  * /api/dcl/conflicts/authority-map* with deterministic mock responses.
- * No backend calls. No alignment_decisions writes. Read-only route interception.
+ * No backend calls. No change_proposal_decisions writes. Read-only route interception.
  */
 
 import { test, expect } from "playwright/test";
@@ -18,7 +18,7 @@ const DCL_FRONTEND = process.env.DCL_FRONTEND_URL ?? "http://localhost:3004";
 // Deterministic fake IDs (no randomness — regression must be stable across runs).
 const MOCK_TENANT = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
 const MOCK_INGEST = "11111111-2222-4333-8444-555555555555";
-const MOCK_ENTITY = "MockAlignEntity";
+const MOCK_ENTITY = "MockProposalsEntity";
 const MOCK_PROPOSAL_AUTHORITY = "cccccccc-dddd-4eee-8fff-000000000001";
 const MOCK_PROPOSAL_VOCAB    = "cccccccc-dddd-4eee-8fff-000000000002";
 
@@ -61,7 +61,7 @@ const MOCK_AUTHORITY_MAP = [
   { concept_prefix: "cost_center", ranked_sources: ["netsuite", "workday"] },
 ];
 
-test.describe("Align review — mocked regression (route-stubbed)", () => {
+test.describe("Change Proposals review — mocked regression (route-stubbed)", () => {
   test.setTimeout(60_000);
 
   test("renders stubbed proposals with correct badges, confidence, and authority map", async ({ page }) => {
@@ -105,8 +105,8 @@ test.describe("Align review — mocked regression (route-stubbed)", () => {
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ conflicts: [], total: 0 }) });
     });
 
-    // Stub align proposals — return mock list for both pending count fetch and full list.
-    await page.route("**/api/dcl/align/proposals**", (route) => {
+    // Stub change proposals — return mock list for both pending count fetch and full list.
+    await page.route("**/api/dcl/proposals**", (route) => {
       route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -146,29 +146,29 @@ test.describe("Align review — mocked regression (route-stubbed)", () => {
     await selector.selectOption(MOCK_INGEST);
     await page.waitForLoadState("networkidle");
 
-    // Align panel visible.
-    const alignPanel = page.locator('[data-testid="align-proposals-panel"]');
-    await alignPanel.waitFor({ state: "visible", timeout: 15_000 });
+    // Change Proposals panel visible.
+    const proposalsPanel = page.locator('[data-testid="proposals-panel"]');
+    await proposalsPanel.waitFor({ state: "visible", timeout: 15_000 });
 
     // Pending count badge shows 2 (the stub count).
-    const badge = alignPanel.locator('[data-testid="align-pending-count"]');
+    const badge = proposalsPanel.locator('[data-testid="proposals-pending-count"]');
     await expect(badge).not.toHaveText("…", { timeout: 10_000 });
     await expect(badge).toContainText("2");
 
     // Open the panel.
-    await alignPanel.locator('[data-testid="align-proposals-toggle"]').click();
+    await proposalsPanel.locator('[data-testid="proposals-toggle"]').click();
     await page.waitForLoadState("networkidle");
 
     // ── authority_map row ────────────────────────────────────────────────────
 
-    const authRow = alignPanel.locator('[data-testid="align-proposal-row-authority_map-cost_center"]');
+    const authRow = proposalsPanel.locator('[data-testid="proposals-proposal-row-authority_map-cost_center"]');
     await authRow.waitFor({ state: "visible", timeout: 10_000 });
 
     // Type badge visible (the CSS class carries the label).
     await expect(authRow).toBeVisible();
 
     // Confidence = 95%.
-    const authConf = authRow.locator('[data-testid="align-confidence-cost_center"]');
+    const authConf = authRow.locator('[data-testid="proposals-confidence-cost_center"]');
     await expect(authConf).toHaveText("95%");
 
     // Provenance badge: confirmed by CFO.
@@ -176,18 +176,18 @@ test.describe("Align review — mocked regression (route-stubbed)", () => {
     await expect(authProvBadge).toContainText("confirmed by CFO");
 
     // Payload summary: "cost_center: netsuite > workday".
-    const authSummary = authRow.locator('[data-testid="align-payload-summary-cost_center"]');
+    const authSummary = authRow.locator('[data-testid="proposals-payload-summary-cost_center"]');
     await expect(authSummary).toContainText("cost_center");
     await expect(authSummary).toContainText("netsuite");
     await expect(authSummary).toContainText("workday");
 
     // ── vocabulary_alias row ─────────────────────────────────────────────────
 
-    const vocabRow = alignPanel.locator('[data-testid="align-proposal-row-vocabulary_alias-headcount"]');
+    const vocabRow = proposalsPanel.locator('[data-testid="proposals-proposal-row-vocabulary_alias-headcount"]');
     await vocabRow.waitFor({ state: "visible", timeout: 10_000 });
 
     // Confidence = 95%.
-    const vocabConf = vocabRow.locator('[data-testid="align-confidence-headcount"]');
+    const vocabConf = vocabRow.locator('[data-testid="proposals-confidence-headcount"]');
     await expect(vocabConf).toHaveText("95%");
 
     // Provenance badge: inferred.
@@ -195,13 +195,13 @@ test.describe("Align review — mocked regression (route-stubbed)", () => {
     await expect(vocabProvBadge).toContainText("inferred");
 
     // Payload summary: "headcount → employee_count".
-    const vocabSummary = vocabRow.locator('[data-testid="align-payload-summary-headcount"]');
+    const vocabSummary = vocabRow.locator('[data-testid="proposals-payload-summary-headcount"]');
     await expect(vocabSummary).toContainText("headcount");
     await expect(vocabSummary).toContainText("employee_count");
 
     // ── authority map section ────────────────────────────────────────────────
 
-    const authSection = alignPanel.locator('[data-testid="authority-map-section"]');
+    const authSection = proposalsPanel.locator('[data-testid="authority-map-section"]');
     await expect(authSection).toBeVisible();
 
     // cost_center entry with netsuite > workday.
@@ -210,6 +210,6 @@ test.describe("Align review — mocked regression (route-stubbed)", () => {
     await expect(ccEntry).toContainText("netsuite");
     await expect(ccEntry).toContainText("workday");
 
-    await page.screenshot({ path: "tests/e2e/screenshots/align_regression_stubbed.png" });
+    await page.screenshot({ path: "tests/e2e/screenshots/proposals_regression_stubbed.png" });
   });
 });

@@ -1,10 +1,10 @@
-"""Align Proposal API (ContextOS Gate 3A §4).
+"""Change Proposal API (ContextOS Gate 3A §4).
 
-POST /api/dcl/align/proposals                     — batch intake from Align
-GET  /api/dcl/align/proposals                     — list (tenant-scoped, filtered)
-POST /api/dcl/align/proposals/{proposal_id}/decide — approve or reject
-GET  /api/dcl/align/contour                       — approved contour (composed)
-GET  /api/dcl/align/concept-lookup                — vocabulary alias lookup
+POST /api/dcl/proposals                     — batch intake from onboarding
+GET  /api/dcl/proposals                     — list (tenant-scoped, filtered)
+POST /api/dcl/proposals/{proposal_id}/decide — approve or reject
+GET  /api/dcl/contour                       — approved contour (composed)
+GET  /api/dcl/concept-lookup                — vocabulary alias lookup
 
 Identity: tenant_id is REQUIRED (or entity_id for operator surfaces, resolved
 server-side via tenant_runs, same pattern as conflicts.py). Missing → 422 loud (I2).
@@ -23,21 +23,21 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from backend.db.align_store import AlignStore, _VALID_PROPOSAL_TYPES, _natural_key
+from backend.db.proposal_store import ProposalStore, _VALID_PROPOSAL_TYPES, _natural_key
 from backend.db.conflict_store import ConflictStore
 from backend.db.triple_store import TripleStore
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
 
-router = APIRouter(tags=["Align Proposals"])
+router = APIRouter(tags=["Change Proposals"])
 
-_store = AlignStore()
+_store = ProposalStore()
 _conflicts = ConflictStore()
 _triples = TripleStore()
 
 
-def _resolve_align_tenant(
+def _resolve_proposal_tenant(
     tenant_id: Optional[str], entity_id: Optional[str], operation: str
 ) -> Optional[str]:
     """Resolve tenant from entity_id if tenant_id not given (operator surface pattern).
@@ -62,7 +62,7 @@ def _require_tenant(tenant_id: Optional[str], operation: str) -> str:
         raise HTTPException(
             status_code=422,
             detail=(
-                f"{operation} requires tenant_id — Align proposals are tenant-scoped (I2); "
+                f"{operation} requires tenant_id — change proposals are tenant-scoped (I2); "
                 f"no silent fallback."
             ),
         )
@@ -169,9 +169,9 @@ class IntakeRequest(BaseModel):
     proposals: list[dict]
 
 
-@router.post("/api/dcl/align/proposals", status_code=201)
+@router.post("/api/dcl/proposals", status_code=201)
 def proposals_intake(body: IntakeRequest):
-    """Batch intake from Align. 422 on: missing tenant_id, unknown proposal_type,
+    """Batch intake. 422 on: missing tenant_id, unknown proposal_type,
     element missing confidence or provenance.basis, empty batch.
 
     Duplicate detection is EXPLICIT: for each proposal, if a pending proposal
@@ -181,12 +181,12 @@ def proposals_intake(body: IntakeRequest):
 
     Response declares what was consumed (I3): per-element accepted/duplicate.
     """
-    tenant = _require_tenant(body.tenant_id, "POST /api/dcl/align/proposals")
+    tenant = _require_tenant(body.tenant_id, "POST /api/dcl/proposals")
     if not body.proposals:
         raise HTTPException(
             status_code=422,
-            detail="POST /api/dcl/align/proposals — proposals list is empty. "
-                   "Align must send at least one proposal per call.",
+            detail="POST /api/dcl/proposals — proposals list is empty. "
+                   "Send at least one proposal per call.",
         )
 
     # Validate every element first — fail fast on the first invalid one.
@@ -241,7 +241,7 @@ def proposals_intake(body: IntakeRequest):
     duplicate_count = sum(1 for r in final if r["status"] == "duplicate")
 
     logger.info(
-        "[align-intake] tenant=%s accepted=%d duplicates=%d",
+        "[proposals-intake] tenant=%s accepted=%d duplicates=%d",
         tenant, accepted_count, duplicate_count,
     )
     return {
@@ -256,7 +256,7 @@ def proposals_intake(body: IntakeRequest):
 # List
 # ---------------------------------------------------------------------------
 
-@router.get("/api/dcl/align/proposals")
+@router.get("/api/dcl/proposals")
 def proposals_list(
     tenant_id: Optional[str] = Query(None, description="Tenant UUID."),
     entity_id: Optional[str] = Query(None, description="Entity ID — resolves tenant server-side (operator surface)."),
@@ -265,8 +265,8 @@ def proposals_list(
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
-    resolved = _resolve_align_tenant(tenant_id, entity_id, "GET /api/dcl/align/proposals")
-    tenant = _require_tenant(resolved, "GET /api/dcl/align/proposals")
+    resolved = _resolve_proposal_tenant(tenant_id, entity_id, "GET /api/dcl/proposals")
+    tenant = _require_tenant(resolved, "GET /api/dcl/proposals")
     if status and status not in ("pending", "approved", "rejected"):
         raise HTTPException(
             status_code=422,
@@ -300,7 +300,7 @@ class DecideRequest(BaseModel):
     note: Optional[str] = None
 
 
-@router.post("/api/dcl/align/proposals/{proposal_id}/decide")
+@router.post("/api/dcl/proposals/{proposal_id}/decide")
 def proposals_decide(proposal_id: str, body: DecideRequest):
     """Approve or reject a pending proposal.
 
@@ -311,8 +311,8 @@ def proposals_decide(proposal_id: str, body: DecideRequest):
 
     On reject: the decision is recorded; zero canonical residue is written.
 
-    The decision is written to alignment_decisions, visible via GET /api/dcl/traces
-    as trace_type='align_decision'. decided_by is recorded; proposer≠approver
+    The decision is written to change_proposal_decisions, visible via GET /api/dcl/traces
+    as trace_type='proposal_decision'. decided_by is recorded; proposer≠approver
     enforcement is Gate 3C — not built here, not precluded.
     """
     try:
@@ -322,7 +322,7 @@ def proposals_decide(proposal_id: str, body: DecideRequest):
             status_code=400,
             detail=f"proposal_id must be a UUID; got {proposal_id!r}",
         )
-    tenant = _require_tenant(body.tenant_id, f"POST /api/dcl/align/proposals/{proposal_id}/decide")
+    tenant = _require_tenant(body.tenant_id, f"POST /api/dcl/proposals/{proposal_id}/decide")
     if body.decision not in _DECISIONS:
         raise HTTPException(
             status_code=422,
@@ -347,10 +347,10 @@ def proposals_decide(proposal_id: str, body: DecideRequest):
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
-        logger.error("[align-decide] ERROR proposal=%s: %s", proposal_id, e, exc_info=True)
+        logger.error("[proposals-decide] ERROR proposal=%s: %s", proposal_id, e, exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Align proposal decision failed — could not apply canonical artifact: {e}",
+            detail=f"Change proposal decision failed — could not apply canonical artifact: {e}",
         )
 
     proposal = _store.get_proposal(tenant, proposal_id)
@@ -365,7 +365,7 @@ def proposals_decide(proposal_id: str, body: DecideRequest):
 # Approved contour (composed: hierarchy + management_overlay + projected sor_authority)
 # ---------------------------------------------------------------------------
 
-@router.get("/api/dcl/align/contour")
+@router.get("/api/dcl/contour")
 def contour_get(
     tenant_id: Optional[str] = Query(None, description="Tenant UUID."),
     entity_id: Optional[str] = Query(None, description="Entity ID — resolves tenant server-side."),
@@ -379,8 +379,8 @@ def contour_get(
 
     If no approved contour exists for this tenant, returns {contour_source: 'none'}.
     """
-    resolved = _resolve_align_tenant(tenant_id, entity_id, "GET /api/dcl/align/contour")
-    tenant = _require_tenant(resolved, "GET /api/dcl/align/contour")
+    resolved = _resolve_proposal_tenant(tenant_id, entity_id, "GET /api/dcl/contour")
+    tenant = _require_tenant(resolved, "GET /api/dcl/contour")
     contour = _store.get_tenant_contour(tenant)
     if contour is None:
         return {
@@ -405,7 +405,7 @@ def contour_get(
         "management_overlay": contour["management_overlay"],
         "priority_queries": contour["priority_queries"],
         "sor_authority": sor_authority,
-        "align_proposal_ids": contour["align_proposal_ids"],
+        "proposal_ids": contour["proposal_ids"],
         "updated_at": contour["updated_at"],
     }
 
@@ -414,7 +414,7 @@ def contour_get(
 # Vocabulary alias lookup (the one real wired reader for tenant_concept_aliases)
 # ---------------------------------------------------------------------------
 
-@router.get("/api/dcl/align/concept-lookup")
+@router.get("/api/dcl/concept-lookup")
 def concept_lookup(
     tenant_id: Optional[str] = Query(None, description="Tenant UUID — REQUIRED."),
     alias: Optional[str] = Query(None, description="The alias to look up."),
@@ -427,11 +427,11 @@ def concept_lookup(
     This is the wired reader for tenant_concept_aliases populated by approved
     vocabulary_alias proposals. 422 loud on missing tenant_id or alias (I2).
     """
-    tenant = _require_tenant(tenant_id, "GET /api/dcl/align/concept-lookup")
+    tenant = _require_tenant(tenant_id, "GET /api/dcl/concept-lookup")
     if not alias or not alias.strip():
         raise HTTPException(
             status_code=422,
-            detail="GET /api/dcl/align/concept-lookup requires alias — "
+            detail="GET /api/dcl/concept-lookup requires alias — "
                    "it is the term to look up; an empty alias resolves nothing.",
         )
     result = _store.resolve_concept_alias(tenant, alias.strip())
@@ -445,7 +445,7 @@ def concept_lookup(
         "tenant_id": tenant,
         "alias": result["alias"],
         "concept_id": result["concept_id"],
-        "align_proposal_id": result["align_proposal_id"],
+        "proposal_id": result["proposal_id"],
         "resolved": True,
         "created_at": result["created_at"],
     }

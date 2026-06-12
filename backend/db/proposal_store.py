@@ -1,6 +1,6 @@
-"""AlignStore — data access for the Align proposal HITL queue (Gate 3A).
+"""ProposalStore — data access for the change proposal HITL queue (Gate 3A).
 
-Tables: alignment_proposals, alignment_decisions, tenant_contour, tenant_concept_aliases.
+Tables: change_proposals, change_proposal_decisions, tenant_contour, tenant_concept_aliases.
 Cross-table writes to: tenant_authority_map, conflict_register (apply-on-approve).
 
 Approval applies the canonical artifact in the SAME TRANSACTION as the status flip.
@@ -61,7 +61,7 @@ def _row_to_proposal(row: tuple, cols: list[str]) -> dict:
     return d
 
 
-class AlignStore:
+class ProposalStore:
 
     # ── proposal intake ──────────────────────────────────────────────────────
 
@@ -82,7 +82,7 @@ class AlignStore:
 
         sql = """
             SELECT proposal_type, natural_key, proposal_id
-            FROM alignment_proposals
+            FROM change_proposals
             WHERE tenant_id = %s
               AND status = 'pending'
               AND (proposal_type, natural_key) IN %s
@@ -108,7 +108,7 @@ class AlignStore:
                 for r in rows:
                     cur.execute(
                         """
-                        INSERT INTO alignment_proposals
+                        INSERT INTO change_proposals
                             (tenant_id, entity_id, proposal_type, natural_key,
                              payload, confidence, provenance, status)
                         VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s::jsonb, 'pending')
@@ -149,11 +149,11 @@ class AlignStore:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    f"SELECT COUNT(*) FROM alignment_proposals WHERE {where}", params
+                    f"SELECT COUNT(*) FROM change_proposals WHERE {where}", params
                 )
                 total = cur.fetchone()[0]
                 cur.execute(
-                    f"SELECT {_PROPOSAL_COLS} FROM alignment_proposals "
+                    f"SELECT {_PROPOSAL_COLS} FROM change_proposals "
                     f"WHERE {where} ORDER BY created_at DESC, proposal_id DESC "
                     f"LIMIT %s OFFSET %s",
                     params + [safe_limit, max(0, int(offset))],
@@ -166,7 +166,7 @@ class AlignStore:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    f"SELECT {_PROPOSAL_COLS} FROM alignment_proposals "
+                    f"SELECT {_PROPOSAL_COLS} FROM change_proposals "
                     f"WHERE tenant_id = %s AND proposal_id = %s",
                     (tenant_id, proposal_id),
                 )
@@ -197,7 +197,7 @@ class AlignStore:
                 # Lock the proposal row; verify it's pending.
                 cur.execute(
                     "SELECT status, proposal_type, payload, entity_id, confidence, provenance "
-                    "FROM alignment_proposals "
+                    "FROM change_proposals "
                     "WHERE proposal_id = %s AND tenant_id = %s FOR UPDATE",
                     (proposal_id, tenant_id),
                 )
@@ -205,7 +205,7 @@ class AlignStore:
                 if row is None:
                     raise LookupError(
                         f"Proposal {proposal_id} not found for tenant {tenant_id} — "
-                        f"check GET /api/dcl/align/proposals for this tenant."
+                        f"check GET /api/dcl/proposals for this tenant."
                     )
                 current_status, ptype, payload, entity_id, confidence, provenance = row
                 if current_status != "pending":
@@ -225,7 +225,7 @@ class AlignStore:
                 _STATUS = {"approve": "approved", "reject": "rejected"}
                 cur.execute(
                     """
-                    UPDATE alignment_proposals
+                    UPDATE change_proposals
                     SET status = %s, decided_at = now(), decided_by = %s,
                         decision_note = %s, canonical_artifact_id = %s
                     WHERE proposal_id = %s
@@ -236,7 +236,7 @@ class AlignStore:
 
                 cur.execute(
                     """
-                    INSERT INTO alignment_decisions
+                    INSERT INTO change_proposal_decisions
                         (tenant_id, entity_id, proposal_id, proposal_type,
                          decision, decided_by, decision_note, payload, canonical_artifact_id)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
@@ -252,7 +252,7 @@ class AlignStore:
             conn.commit()
 
         logger.info(
-            "[align-decide] proposal=%s type=%s decision=%s canonical=%s by=%s",
+            "[proposal-decide] proposal=%s type=%s decision=%s canonical=%s by=%s",
             proposal_id, ptype, decision, canonical_artifact_id, decided_by,
         )
         return {
@@ -274,7 +274,7 @@ class AlignStore:
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT hierarchy, management_overlay, priority_queries, "
-                    "align_proposal_ids, updated_at "
+                    "proposal_ids, updated_at "
                     "FROM tenant_contour WHERE tenant_id = %s",
                     (tenant_id,),
                 )
@@ -286,7 +286,7 @@ class AlignStore:
             "hierarchy": hierarchy or {},
             "management_overlay": management_overlay or [],
             "priority_queries": priority_queries or [],
-            "align_proposal_ids": list(pids or []),
+            "proposal_ids": list(pids or []),
             "updated_at": updated_at.isoformat(),
         }
 
@@ -338,7 +338,7 @@ class AlignStore:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT concept_id, alias, align_proposal_id, created_at "
+                    "SELECT concept_id, alias, proposal_id, created_at "
                     "FROM tenant_concept_aliases "
                     "WHERE tenant_id = %s AND lower(alias) = lower(%s)",
                     (tenant_id, alias),
@@ -350,7 +350,7 @@ class AlignStore:
         return {
             "concept_id": concept_id,
             "alias": matched_alias,
-            "align_proposal_id": str(proposal_id),
+            "proposal_id": str(proposal_id),
             "created_at": created_at.isoformat(),
         }
 
@@ -435,8 +435,8 @@ def _apply_conflict_candidate(
             proposal_id,
             json.dumps(payload.get("claims", [])),
             source_class,
-            "Stakeholder-identified conflict via Align",
-            "align",
+            "Stakeholder-identified conflict via proposals",
+            "onboarding",
         ),
     )
     row = cur.fetchone()
@@ -453,11 +453,11 @@ def _apply_vocabulary_alias(
     cur.execute(
         """
         INSERT INTO tenant_concept_aliases
-            (tenant_id, concept_id, alias, align_proposal_id)
+            (tenant_id, concept_id, alias, proposal_id)
         VALUES (%s, %s, %s, %s::uuid)
         ON CONFLICT (tenant_id, alias)
         DO UPDATE SET concept_id = EXCLUDED.concept_id,
-                      align_proposal_id = EXCLUDED.align_proposal_id
+                      proposal_id = EXCLUDED.proposal_id
         RETURNING id
         """,
         (str(tenant_id), concept_id, alias.lower(), proposal_id),
@@ -474,12 +474,12 @@ def _apply_org_hierarchy(
     roots = payload["roots"]
     cur.execute(
         """
-        INSERT INTO tenant_contour (tenant_id, hierarchy, align_proposal_ids)
+        INSERT INTO tenant_contour (tenant_id, hierarchy, proposal_ids)
         VALUES (%s, %s::jsonb, ARRAY[%s])
         ON CONFLICT (tenant_id) DO UPDATE SET
             hierarchy = tenant_contour.hierarchy || %s::jsonb,
-            align_proposal_ids = array_append(
-                array_remove(tenant_contour.align_proposal_ids, %s), %s
+            proposal_ids = array_append(
+                array_remove(tenant_contour.proposal_ids, %s), %s
             ),
             updated_at = now()
         """,
@@ -503,7 +503,7 @@ def _apply_management_overlay(
     new_entry = json.dumps({"board_segment": board_segment, "maps_to": maps_to})
     cur.execute(
         """
-        INSERT INTO tenant_contour (tenant_id, management_overlay, align_proposal_ids)
+        INSERT INTO tenant_contour (tenant_id, management_overlay, proposal_ids)
         VALUES (%s, %s::jsonb, ARRAY[%s])
         ON CONFLICT (tenant_id) DO UPDATE SET
             management_overlay = (
@@ -515,8 +515,8 @@ def _apply_management_overlay(
                     SELECT %s::jsonb
                 ) combined
             ),
-            align_proposal_ids = array_append(
-                array_remove(tenant_contour.align_proposal_ids, %s), %s
+            proposal_ids = array_append(
+                array_remove(tenant_contour.proposal_ids, %s), %s
             ),
             updated_at = now()
         """,
@@ -540,7 +540,7 @@ def _apply_priority_query(
     query_entry = json.dumps(payload)
     cur.execute(
         """
-        INSERT INTO tenant_contour (tenant_id, priority_queries, align_proposal_ids)
+        INSERT INTO tenant_contour (tenant_id, priority_queries, proposal_ids)
         VALUES (%s, %s::jsonb, ARRAY[%s])
         ON CONFLICT (tenant_id) DO UPDATE SET
             priority_queries = (
@@ -552,8 +552,8 @@ def _apply_priority_query(
                     SELECT %s::jsonb
                 ) combined
             ),
-            align_proposal_ids = array_append(
-                array_remove(tenant_contour.align_proposal_ids, %s), %s
+            proposal_ids = array_append(
+                array_remove(tenant_contour.proposal_ids, %s), %s
             ),
             updated_at = now()
         """,
