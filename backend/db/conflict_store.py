@@ -19,7 +19,7 @@ logger = get_logger(__name__)
 _REGISTER_COLS = (
     "id, tenant_id, entity_id, conflict_type, conflict_class, concept, property, "
     "period, dcl_ingest_id, status, claims, materiality, recommended, "
-    "root_cause_explanation, root_cause_source, detected_at, updated_at"
+    "root_cause_explanation, root_cause_source, detected_at, updated_at, source_class"
 )
 
 

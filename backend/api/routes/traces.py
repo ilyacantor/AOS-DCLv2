@@ -39,7 +39,7 @@ router = APIRouter(tags=["Decision Traces"])
 _traces = TraceStore()
 _rules = RuleStore()
 
-_TRACE_TYPES = ("mcp_call", "conflict_disposition", "er_confirmation")
+_TRACE_TYPES = ("mcp_call", "conflict_disposition", "er_confirmation", "align_decision")
 
 
 def _require_tenant(tenant_id: Optional[str], operation: str) -> str:

@@ -72,8 +72,24 @@ def rebuild_graph() -> None:
     # 1. Ontology pairings (always available)
     graph.load_from_ontology()
 
-    # 2. Contour map (sample in dev, approved map in prod)
-    graph.load_from_contour_map()
+    # 2. Contour map: approved tenant contour when one exists; None (absence)
+    #    falls through to the documented sample-YAML dev behavior. A store
+    #    FAILURE aborts the rebuild — absence and failure are not the same
+    #    thing. Sole carve-out: UndefinedTable on a pre-mig023 store (prod,
+    #    until the #70 migration gate runs) proves zero approved contours
+    #    exist, which IS absence — logged explicitly, never generalized.
+    from backend.db.align_store import AlignStore
+    from psycopg2 import errors as psycopg2_errors
+    try:
+        contour_data = AlignStore().load_approved_contour_for_rebuild()
+    except psycopg2_errors.UndefinedTable:
+        logger.warning(
+            "[GraphStore] tenant_contour does not exist on this store — "
+            "pre-mig023 environment (prod migration gate, ledger #70); "
+            "no approved contour can exist yet, using sample YAML"
+        )
+        contour_data = None
+    graph.load_from_contour_map(contour_data=contour_data)
 
     # 3. Normalizer mappings from DB
     from backend.semantic_mapper import SemanticMapper

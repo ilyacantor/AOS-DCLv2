@@ -24,7 +24,7 @@ _TRACE_COLS = (
     "result_summary, refs, occurred_at, ingested_at, superseded_at"
 )
 
-_TRACE_TYPES = ("mcp_call", "conflict_disposition", "er_confirmation")
+_TRACE_TYPES = ("mcp_call", "conflict_disposition", "er_confirmation", "align_decision")
 
 
 def _row_to_trace(row: tuple, cols: list[str]) -> dict:

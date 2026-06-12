@@ -89,8 +89,16 @@ def run_migrations():
             # CREATE INDEX CONCURRENTLY cannot run inside a transaction block.
             # Detect and run that file standalone in autocommit mode. After
             # the file applies, remediate any indisvalid=false indexes via
-            # REINDEX (also requires autocommit).
-            if "CONCURRENTLY" in sql.upper():
+            # REINDEX (also requires autocommit). Detection must ignore SQL
+            # comments: a file merely MENTIONING the word (mig022's header
+            # does) must not trigger the autocommit path — the mid-loop
+            # commit it forces makes a later failure non-atomic (it commits
+            # every prior file's re-apply, e.g. mig020's view without
+            # mig023's extension on top).
+            sql_no_comments = "\n".join(
+                line.split("--", 1)[0] for line in sql.splitlines()
+            )
+            if "CONCURRENTLY" in sql_no_comments.upper():
                 conn.commit()  # flush any pending transactional migrations
                 conn.autocommit = True
                 cur.execute(sql)

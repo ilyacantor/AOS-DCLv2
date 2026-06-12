@@ -22,9 +22,27 @@
 
 DO $$
 DECLARE
-    v_target regclass := 'field_concept_mappings'::regclass;
+    v_target regclass;
     v_kind   "char";
 BEGIN
+    -- Resolve via search_path first, then public explicitly. to_regclass()
+    -- returns NULL instead of raising, so a role that cannot see the
+    -- relation (aos-dev dev_user: the view lives in public, the base table
+    -- in shared_yuxrdo, neither on its runner search_path — the index there
+    -- was applied once via the privileged role, ledger #76) skips with a
+    -- NOTICE below instead of aborting every boot-time migration pass on
+    -- re-apply. Not-visible-on-re-apply is an environment fact, not a
+    -- failure; anywhere the relation IS visible, the index still applies.
+    v_target := COALESCE(
+        to_regclass('field_concept_mappings'),
+        to_regclass('public.field_concept_mappings')
+    );
+
+    IF v_target IS NULL THEN
+        RAISE NOTICE 'mig022: field_concept_mappings not visible from this role/search_path — natural-key index was applied via the privileged role (ledger #76); nothing to re-apply here.';
+        RETURN;
+    END IF;
+
     SELECT relkind INTO v_kind FROM pg_class WHERE oid = v_target;
 
     IF v_kind = 'v' THEN
@@ -34,12 +52,28 @@ BEGIN
           FROM pg_rewrite rw
           JOIN pg_depend  dep ON dep.objid = rw.oid AND dep.deptype = 'n'
           JOIN pg_class   bc  ON bc.oid = dep.refobjid AND bc.relkind = 'r'
-         WHERE rw.ev_class = 'field_concept_mappings'::regclass
+         WHERE rw.ev_class = v_target
          LIMIT 1;
     END IF;
 
+    -- Explicit catalog existence check rather than CREATE ... IF NOT EXISTS:
+    -- PG enforces table ownership BEFORE the IF NOT EXISTS short-circuit, so
+    -- a restricted role (dev_user) cannot even no-op the re-apply. The
+    -- catalog read is permission-free; a TRUE absence still attempts CREATE
+    -- and fails loudly when the role lacks rights — absence is never masked.
+    IF EXISTS (
+        SELECT 1
+          FROM pg_index i
+          JOIN pg_class ic ON ic.oid = i.indexrelid
+         WHERE i.indrelid = v_target
+           AND ic.relname = 'field_concept_mappings_natural_key_uq'
+    ) THEN
+        RAISE NOTICE 'mig022: natural-key index already present on % — nothing to re-apply.', v_target;
+        RETURN;
+    END IF;
+
     EXECUTE format(
-        'CREATE UNIQUE INDEX IF NOT EXISTS field_concept_mappings_natural_key_uq '
+        'CREATE UNIQUE INDEX field_concept_mappings_natural_key_uq '
         'ON %s (source_id, table_name, field_name, concept_id)',
         v_target
     );

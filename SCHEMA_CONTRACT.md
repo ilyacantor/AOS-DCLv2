@@ -395,3 +395,79 @@ source of the default tree (domain → root, derived at read time in
 `(tenant_id, concept)` — single parent, a tree; cycles rejected at write. Reads
 participate via `expand_for_read` (exact concepts + dotted prefixes) used by
 `query_triples(include_descendants=true)` and `GET /api/dcl/concepts/hierarchy`.
+
+---
+
+## Gate 3A Align tables (migration 023)
+
+All four tables below are DCL-owned. Convergence does NOT read them (they are Align-intake only; no `semantic_triples` writes here, so no Convergence coordination required). Additive — no existing table altered except `ALTER TABLE conflict_register ADD COLUMN source_class`.
+
+### `alignment_proposals`
+
+HITL queue for Align-sourced stakeholder elicitation proposals. The third HITL queue in DCL (resolver_hitl_queue is the first; resolution_workspaces is DEFINED-BUT-UNUSED; this is the canonical third). Resolved #45.
+
+| Column | Type | Nullable | Default | Constraint |
+|--------|------|----------|---------|------------|
+| `id` | UUID | NOT NULL | `gen_random_uuid()` | PRIMARY KEY |
+| `tenant_id` | UUID | NOT NULL | — | — |
+| `proposal_type` | TEXT | NOT NULL | — | `IN ('authority_map','conflict_candidate','vocabulary_alias','org_hierarchy','management_overlay','priority_query')` |
+| `natural_key` | TEXT | NOT NULL | — | — |
+| `confidence` | NUMERIC(3,2) | NOT NULL | — | `>= 0 AND <= 1` |
+| `provenance_basis` | TEXT | NOT NULL | — | — |
+| `provenance_source` | TEXT | NULL | — | — |
+| `payload` | JSONB | NOT NULL | — | — |
+| `status` | TEXT | NOT NULL | `'pending'` | `IN ('pending','approved','rejected')` |
+| `canonical_artifact_id` | UUID | NULL | — | — |
+| `created_at` | TIMESTAMPTZ | NOT NULL | `now()` | — |
+| `decided_at` | TIMESTAMPTZ | NULL | — | — |
+
+Unique index: `(tenant_id, proposal_type, natural_key) WHERE status = 'pending'` — allows re-proposal after rejection.
+
+### `alignment_decisions`
+
+Append-only trace for every approve/reject decision on alignment_proposals. The 4th branch of the `decision_traces` VIEW.
+
+| Column | Type | Nullable | Default | Constraint |
+|--------|------|----------|---------|------------|
+| `id` | UUID | NOT NULL | `gen_random_uuid()` | PRIMARY KEY |
+| `proposal_id` | UUID | NOT NULL | — | FK → `alignment_proposals(id)` |
+| `tenant_id` | UUID | NOT NULL | — | — |
+| `decision` | TEXT | NOT NULL | — | `IN ('approved','rejected')` |
+| `decided_by` | TEXT | NOT NULL | — | — |
+| `rationale` | TEXT | NULL | — | — |
+| `decided_at` | TIMESTAMPTZ | NOT NULL | `now()` | — |
+
+### `tenant_contour`
+
+Per-tenant org contour (hierarchy, management overlay, priority queries). Split-brain guard: `sor_authority` is NEVER stored here; it is always projected at read time from `tenant_authority_map`.
+
+| Column | Type | Nullable | Default | Constraint |
+|--------|------|----------|---------|------------|
+| `id` | UUID | NOT NULL | `gen_random_uuid()` | PRIMARY KEY |
+| `tenant_id` | UUID | NOT NULL | — | — |
+| `contour_type` | TEXT | NOT NULL | — | `IN ('org_hierarchy','management_overlay','priority_query')` |
+| `dimension` | TEXT | NOT NULL | — | — |
+| `data` | JSONB | NOT NULL | — | — |
+| `source_proposal_id` | UUID | NULL | — | — |
+| `updated_at` | TIMESTAMPTZ | NOT NULL | `now()` | — |
+
+Unique: `(tenant_id, contour_type, dimension)`.
+
+### `tenant_concept_aliases`
+
+Per-tenant vocabulary aliases (stakeholder shorthand → canonical concept). Wired reader: `GET /api/dcl/align/concept-lookup`.
+
+| Column | Type | Nullable | Default | Constraint |
+|--------|------|----------|---------|------------|
+| `id` | UUID | NOT NULL | `gen_random_uuid()` | PRIMARY KEY |
+| `tenant_id` | UUID | NOT NULL | — | — |
+| `alias` | TEXT | NOT NULL | — | — |
+| `canonical_concept` | TEXT | NOT NULL | — | — |
+| `source_proposal_id` | UUID | NULL | — | — |
+| `updated_at` | TIMESTAMPTZ | NOT NULL | `now()` | — |
+
+Unique: `(tenant_id, alias)`.
+
+### `conflict_register.source_class` (additive column, migration 023)
+
+Added: `source_class TEXT NOT NULL DEFAULT 'system_system' CHECK IN ('system_system','stakeholder_system','stakeholder_stakeholder')`. Discriminates conflict origin. Convergence reads `conflict_register` via SELECT — this is an additive column with a default, so it is non-breaking.

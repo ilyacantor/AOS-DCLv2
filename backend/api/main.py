@@ -82,6 +82,7 @@ from backend.api.routes.conflicts import router as conflicts_router
 from backend.api.routes.mcp_audit_read import router as mcp_audit_read_router
 from backend.api.routes.traces import router as traces_router
 from backend.api.routes.exports import router as exports_router
+from backend.api.routes.align import router as align_router
 
 logger = get_logger(__name__)
 
@@ -367,6 +368,8 @@ app.include_router(traces_router)
 app.include_router(exports_router)
 # Demo pipeline monitor — read-only metrics endpoint. Additive and isolated.
 app.include_router(monitor_router)
+# Gate 3A: Align proposal HITL queue + canonical apply-on-approve.
+app.include_router(align_router)
 
 # Plan B WP5 — real wire-protocol MCP server (HTTP+SSE transport).
 # The stdio transport runs in a separate process: `python -m backend.api.mcp_stdio`.
