@@ -6,8 +6,9 @@ POST /api/dcl/align/proposals/{proposal_id}/decide — approve or reject
 GET  /api/dcl/align/contour                       — approved contour (composed)
 GET  /api/dcl/align/concept-lookup                — vocabulary alias lookup
 
-Identity: tenant_id is a REQUIRED parameter on every endpoint.
-Missing tenant_id → 422 loud (I2). No run_id in any response (I1).
+Identity: tenant_id is REQUIRED (or entity_id for operator surfaces, resolved
+server-side via tenant_runs, same pattern as conflicts.py). Missing → 422 loud (I2).
+No run_id in any response (I1).
 
 Duplicate handling: explicit detection — never ON CONFLICT DO NOTHING.
 Each duplicate is reported as {'status': 'duplicate', 'duplicate_of': <proposal_id>}.
@@ -24,6 +25,7 @@ from pydantic import BaseModel
 
 from backend.db.align_store import AlignStore, _VALID_PROPOSAL_TYPES, _natural_key
 from backend.db.conflict_store import ConflictStore
+from backend.db.triple_store import TripleStore
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -32,6 +34,23 @@ router = APIRouter(tags=["Align Proposals"])
 
 _store = AlignStore()
 _conflicts = ConflictStore()
+_triples = TripleStore()
+
+
+def _resolve_align_tenant(
+    tenant_id: Optional[str], entity_id: Optional[str], operation: str
+) -> Optional[str]:
+    """Resolve tenant from entity_id if tenant_id not given (operator surface pattern).
+    Returns tenant_id string, or None if neither given (caller will 422 via _require_tenant).
+    Raises 404 if entity_id given but not found in tenant_runs."""
+    if tenant_id:
+        return tenant_id
+    if entity_id:
+        try:
+            return _triples.resolve_tenant_for_entity(entity_id)
+        except ValueError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+    return None
 
 _VALID_BASES = {"confirmed", "inferred"}
 _DECISIONS = {"approve", "reject"}
@@ -239,13 +258,15 @@ def proposals_intake(body: IntakeRequest):
 
 @router.get("/api/dcl/align/proposals")
 def proposals_list(
-    tenant_id: Optional[str] = Query(None, description="Tenant UUID — REQUIRED."),
+    tenant_id: Optional[str] = Query(None, description="Tenant UUID."),
+    entity_id: Optional[str] = Query(None, description="Entity ID — resolves tenant server-side (operator surface)."),
     status: Optional[str] = Query(None, description="pending | approved | rejected"),
     proposal_type: Optional[str] = Query(None),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
-    tenant = _require_tenant(tenant_id, "GET /api/dcl/align/proposals")
+    resolved = _resolve_align_tenant(tenant_id, entity_id, "GET /api/dcl/align/proposals")
+    tenant = _require_tenant(resolved, "GET /api/dcl/align/proposals")
     if status and status not in ("pending", "approved", "rejected"):
         raise HTTPException(
             status_code=422,
@@ -346,7 +367,8 @@ def proposals_decide(proposal_id: str, body: DecideRequest):
 
 @router.get("/api/dcl/align/contour")
 def contour_get(
-    tenant_id: Optional[str] = Query(None, description="Tenant UUID — REQUIRED."),
+    tenant_id: Optional[str] = Query(None, description="Tenant UUID."),
+    entity_id: Optional[str] = Query(None, description="Entity ID — resolves tenant server-side."),
 ):
     """Return the approved org contour for a tenant, composed as:
     - hierarchy: from tenant_contour (approved org_hierarchy proposals)
@@ -357,7 +379,8 @@ def contour_get(
 
     If no approved contour exists for this tenant, returns {contour_source: 'none'}.
     """
-    tenant = _require_tenant(tenant_id, "GET /api/dcl/align/contour")
+    resolved = _resolve_align_tenant(tenant_id, entity_id, "GET /api/dcl/align/contour")
+    tenant = _require_tenant(resolved, "GET /api/dcl/align/contour")
     contour = _store.get_tenant_contour(tenant)
     if contour is None:
         return {
