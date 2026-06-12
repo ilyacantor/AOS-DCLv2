@@ -110,6 +110,74 @@ def _is_graph_required_endpoint(path: str) -> bool:
     return any(path.startswith(p) for p in graph_required)
 
 
+def _store_migration_posture() -> str:
+    """Classify the connected store for the boot-time migration pass.
+
+    'fresh'    — no semantic_triples table: a brand-new store; the pass
+                 provisions it (initial bootstrap is the one ambient apply).
+    'migrated' — semantic_triples AND the newest gated object
+                 (alignment_proposals, mig023) both exist: the pass re-applies
+                 idempotently and any failure is real breakage.
+    'pre_gate' — semantic_triples exists but the mig023 sentinel does not:
+                 a store the operator has NOT taken through the prod
+                 migration gate (ledger #70). The pass must not touch it —
+                 gated migrations are a batched, B19-approved manual step,
+                 never an ambient boot side effect (016/017 reached prod
+                 exactly that way; ledger #85).
+
+    Raises on an unreachable/unreadable store — indeterminate is failure,
+    not absence (the proven-absence rule cuts both ways).
+    """
+    from backend.core.db import get_connection
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT "
+                "  to_regclass('semantic_triples') IS NOT NULL, "
+                "  to_regclass('alignment_proposals') IS NOT NULL"
+            )
+            has_store, has_sentinel = cur.fetchone()
+    if not has_store:
+        return "fresh"
+    return "migrated" if has_sentinel else "pre_gate"
+
+
+def _boot_migration_check() -> bool:
+    """Run (or deliberately skip) the boot-time migration pass.
+
+    Returns True when the pass ran green, False when it was skipped on a
+    pre-gate store. Raises on any failure — a failed pass aborts boot
+    (fail-loud ruling, ledger #82): a service down beats a service running
+    on the wrong schema.
+    """
+    import subprocess
+    import sys
+
+    posture = _store_migration_posture()
+    if posture == "pre_gate":
+        logger.error(
+            "[Migration] store is PRE-GATE (mig023 sentinel absent, data "
+            "present) — boot-time migration pass SKIPPED by design. The "
+            "remaining migrations are a batched, B19-gated manual step "
+            "(ledger #70/#85). Reads serve; gated-surface writers fail "
+            "loudly until the gate runs."
+        )
+        return False
+
+    result = subprocess.run(
+        [sys.executable, "migrations/run_migration.py"],
+        capture_output=True, text=True, timeout=30,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"[Migration] pass FAILED on a {posture} store — aborting boot "
+            f"(fail-loud ruling, ledger #82): "
+            f"{result.stderr.strip() or result.stdout.strip()}"
+        )
+    logger.info("[Migration] All migrations applied successfully (%s store)", posture)
+    return True
+
+
 # =============================================================================
 # App setup
 # =============================================================================
@@ -122,20 +190,13 @@ async def lifespan(app: FastAPI):
 
     # ---- Fast startup (sync, <100ms) ----
     logger.info("=== DCL Database Migration Check ===")
-    try:
-        import subprocess, sys
-        result = subprocess.run(
-            [sys.executable, "migrations/run_migration.py"],
-            capture_output=True, text=True, timeout=30,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(result.stderr.strip() or result.stdout.strip())
-        logger.info("[Migration] All migrations applied successfully")
-    except Exception as e:
-        if os.getenv("DCL_ENV", "dev").lower() == "production":
-            logger.error(f"[Migration] FAILED in production: {e}")
-            raise
-        logger.warning(f"[Migration] Failed (non-prod, continuing): {e}")
+    # Fail-loud (ledger #82 ruling): any failure here — posture probe,
+    # runner, timeout — propagates and aborts boot. No env-var branch; the
+    # store's PROVEN posture decides (DCL_ENV said 'development' on the
+    # prod-backed process, so it never gated anything real). The one
+    # non-fatal outcome is the deliberate pre-gate SKIP inside
+    # _boot_migration_check (proven-absence, not failure).
+    _boot_migration_check()
 
     logger.info("=== DCL Zero-Trust Security Check ===")
 
