@@ -14,6 +14,7 @@ tenant-scoped tokens (see backend/api/mcp_auth.py).
 """
 
 import os
+import time
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -160,7 +161,10 @@ def handle_tool_call(tool_call: MCPToolCall) -> MCPToolResult:
                 error=f"Unknown tool: {tool_call.tool}",
             )
         tenant_id = _legacy_tenant_id(tool_call.tool)
-        result = dispatch(tenant_id, tool_call.tool, tool_call.arguments)
+        if tool_call.arguments.get("persona"):
+            result = _dispatch_with_persona_audit(tenant_id, tool_call)
+        else:
+            result = dispatch(tenant_id, tool_call.tool, tool_call.arguments)
         return MCPToolResult(
             tool=tool_call.tool,
             success=True,
@@ -179,6 +183,61 @@ def handle_tool_call(tool_call: MCPToolCall) -> MCPToolResult:
             success=False,
             error=str(e),
         )
+
+
+def _dispatch_with_persona_audit(tenant_id: str, tool_call: MCPToolCall) -> Any:
+    """Gate 2B: a persona-scoped answer through the legacy HTTP shim leaves
+    the same decision trace as every other scoped surface — one mai_mcp_audit
+    append (transport='http') that the 2A decision_traces view projects as
+    trace_type='mcp_call' with decision_type = the dispatched tool and
+    payload carrying the persona. Outcome and latency are real; the compact
+    result_summary is recorded on success only (AuditRow contract). The
+    shim's shared-secret auth carries no verified per-caller token id, so
+    caller_token_id names the surface. Personaless shim calls never reach
+    this — zero new writes, byte-identical legacy behavior. Wholesale shim
+    auditing (ALL calls) stays open in dcl_deferred_work.md #75."""
+    from backend.api.mcp_audit import (
+        AuditRow,
+        hash_arguments,
+        summarize_result,
+        write_audit,
+    )
+
+    args = tool_call.arguments
+    raw_entity = args.get("entity_id")
+    entity_id = (
+        raw_entity.strip()
+        if isinstance(raw_entity, str) and raw_entity.strip()
+        else None
+    )
+
+    def _audit(**outcome_fields: Any) -> None:
+        write_audit(AuditRow(
+            tenant_id=tenant_id,
+            tool_name=tool_call.tool,
+            caller_token_id="http:legacy-tools-call",
+            arguments_hash=hash_arguments(args),
+            latency_ms=int((time.perf_counter() - started) * 1000),
+            transport="http",
+            entity_id=entity_id,
+            arguments=args,
+            **outcome_fields,
+        ))
+
+    started = time.perf_counter()
+    try:
+        result = dispatch(tenant_id, tool_call.tool, args)
+    except Exception as exc:
+        _audit(
+            outcome="error",
+            error_summary=(
+                str(exc) if isinstance(exc, MCPToolError)
+                else f"{type(exc).__name__}: {exc}"
+            ),
+        )
+        raise
+    _audit(outcome="success", result_summary=summarize_result(result))
+    return result
 
 
 def _handle_legacy_metric_provenance(tool_call: MCPToolCall) -> MCPToolResult:

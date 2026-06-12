@@ -1154,6 +1154,7 @@ class TripleStore:
         limit: int = 100,
         active_only: bool = True,
         as_of: str | None = None,
+        domains: list[str] | None = None,
     ) -> list[dict]:
         """Query triples for a tenant. Used by the external MCP server.
 
@@ -1164,9 +1165,24 @@ class TripleStore:
         were live at that instant (ingested on or before, not yet superseded).
         Overrides active_only; the as-of predicate IS the liveness filter at
         time T.
+
+        domains (Gate 2B persona scoping): restrict results to concepts whose
+        root is in this list — one OR-group of (concept = d OR concept LIKE
+        'd.%') per domain, ANDed with every other filter. Pushed into SQL so
+        scoping is never a Python post-filter.
         """
         clauses = ["tenant_id = %s"]
         params: list = [tenant_id]
+        if domains is not None:
+            if not domains:
+                raise ValueError(
+                    "mcp_query_triples: domains scoping list must be "
+                    "non-empty when provided — an empty scope is a "
+                    "caller bug, not an empty result."
+                )
+            clauses.append("(concept = ANY(%s) OR concept LIKE ANY(%s))")
+            params.append(list(domains))
+            params.append([f"{d}.%" for d in domains])
         if concept is not None:
             if "." in concept:
                 clauses.append("concept = %s")
@@ -1244,17 +1260,31 @@ class TripleStore:
         limit: int = 100,
         active_only: bool = True,
         as_of: str | None = None,
+        domains: list[str] | None = None,
     ) -> list[dict]:
         """Query triples whose concept matches a hierarchy expansion — exact
         names OR dotted subtrees (concept LIKE '<prefix>.%'). One SQL pass, so
         a parent-with-descendants read (Gate 1B concept hierarchy) stays a
         single deterministic query. Same row shape, ordering, and temporal
-        semantics as mcp_query_triples.
+        semantics as mcp_query_triples — including the Gate 2B persona
+        `domains` group, ANDed in SQL: hierarchy expansion can cross domain
+        roots (tenant-defined links), so the persona scope must bound the
+        expanded read too.
         """
         if not exacts and not prefixes:
             return []
         clauses = ["tenant_id = %s"]
         params: list = [tenant_id]
+        if domains is not None:
+            if not domains:
+                raise ValueError(
+                    "mcp_query_triples_expanded: domains scoping list must "
+                    "be non-empty when provided — an empty scope is a "
+                    "caller bug, not an empty result."
+                )
+            clauses.append("(concept = ANY(%s) OR concept LIKE ANY(%s))")
+            params.append(list(domains))
+            params.append([f"{d}.%" for d in domains])
         concept_terms: list[str] = []
         if exacts:
             concept_terms.append("concept = ANY(%s)")

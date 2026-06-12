@@ -7,7 +7,7 @@ Handles:
   GET  /api/dcl/graph/path             — debug: show join path between concept and dimension
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -34,6 +34,9 @@ class ResolveRequest(BaseModel):
     dimensions: List[str] = Field(default_factory=list)
     filters: List[FilterParam] = Field(default_factory=list)
     persona: Optional[str] = None
+    # Required when persona is set (Gate 2B): the persona-scoped decision
+    # trace must carry the tenant identity (I2). Unused otherwise.
+    tenant_id: Optional[str] = None
 
 
 class HopResponse(BaseModel):
@@ -93,6 +96,14 @@ class ResolveResponse(BaseModel):
     resolved_filters: List[ResolvedFilterResponse] = Field(default_factory=list)
 
 
+class PersonaResolveResponse(ResolveResponse):
+    """Persona-scoped resolve answer (Gate 2B). Carries the identity pair
+    context (I2) on top of the unchanged base shape; personaless responses
+    keep the exact base shape — no new keys."""
+    tenant_id: str
+    persona: str
+
+
 class GraphStatsResponse(BaseModel):
     concept_nodes: int
     dimension_nodes: int
@@ -125,10 +136,42 @@ def _get_graph_and_resolver():
 # POST /api/dcl/resolve
 # ---------------------------------------------------------------------------
 
-@router.post("/api/dcl/resolve", response_model=ResolveResponse)
+@router.post(
+    "/api/dcl/resolve",
+    response_model=Union[PersonaResolveResponse, ResolveResponse],
+)
 def resolve_query(request: ResolveRequest):
-    """Resolve a query against the semantic graph (8-step traversal)."""
+    """Resolve a query against the semantic graph (8-step traversal).
+
+    persona (Gate 2B): concept location is scoped to the persona's domain
+    list (config/persona_domains.yaml, exact key). Unknown persona → 422
+    naming the valid keys. persona requires tenant_id (the scoped answer's
+    decision trace carries the tenant, I2) → 422 when missing. Every
+    persona-scoped answer appends one mai_mcp_audit row (transport='http',
+    tool_name='resolve'); personaless calls write nothing and behave
+    exactly as before.
+    """
     from backend.engine.graph_types import QueryFilter, QueryIntent
+
+    if request.persona is not None:
+        from backend.engine.persona_view import (
+            UnknownPersonaError,
+            resolve_persona_domains,
+        )
+        try:
+            resolve_persona_domains(request.persona)
+        except UnknownPersonaError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        if not request.tenant_id or not request.tenant_id.strip():
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Persona-scoped resolve requires tenant_id — the "
+                    "scoped answer's decision trace must carry the tenant "
+                    "identity (I2). Pass tenant_id alongside persona "
+                    f"{request.persona!r}."
+                ),
+            )
 
     graph, resolver = _get_graph_and_resolver()
 
@@ -146,7 +189,12 @@ def resolve_query(request: ResolveRequest):
         persona=request.persona,
     )
 
-    result = resolver.resolve(intent)
+    if request.persona is not None:
+        from backend.api.mcp_audit import time_call
+        with time_call() as timing:
+            result = resolver.resolve(intent)
+    else:
+        result = resolver.resolve(intent)
 
     # Convert dataclass result to Pydantic response
     confidence_resp = None
@@ -170,7 +218,7 @@ def resolve_query(request: ResolveRequest):
             description=dq.description,
         )
 
-    return ResolveResponse(
+    base_fields = dict(
         can_answer=result.can_answer,
         confidence=confidence_resp,
         provenance=result.provenance,
@@ -207,6 +255,45 @@ def resolve_query(request: ResolveRequest):
             )
             for rf in result.resolved_filters
         ],
+    )
+
+    if request.persona is None:
+        return ResolveResponse(**base_fields)
+
+    # Persona-scoped answer: one decision-trace row (mai_mcp_audit →
+    # decision_traces view as trace_type='mcp_call', decision_type='resolve')
+    # carrying the persona in its payload. Personaless calls never reach
+    # this block.
+    from backend.api.mcp_audit import AuditRow, hash_arguments, write_audit
+    arguments: Dict[str, Any] = {
+        "concepts": request.concepts,
+        "persona": request.persona,
+        "tenant_id": request.tenant_id,
+    }
+    if request.dimensions:
+        arguments["dimensions"] = request.dimensions
+    if request.filters:
+        arguments["filters"] = [f.model_dump() for f in request.filters]
+    write_audit(AuditRow(
+        tenant_id=request.tenant_id,
+        tool_name="resolve",
+        caller_token_id="http:resolve",
+        arguments_hash=hash_arguments(arguments),
+        latency_ms=timing["latency_ms"],
+        outcome="success",
+        transport="http",
+        entity_id=None,
+        arguments=arguments,
+        result_summary={
+            "can_answer": result.can_answer,
+            "concept_sources": len(result.concept_sources),
+            "warnings": len(result.warnings),
+        },
+    ))
+    return PersonaResolveResponse(
+        tenant_id=request.tenant_id,
+        persona=request.persona,
+        **base_fields,
     )
 
 

@@ -48,6 +48,7 @@ def tool_query_triples(
     limit: int = 100,
     active_only: bool = True,
     include_descendants: bool = False,
+    persona: str | None = None,
 ) -> list[dict]:
     """Return triples filtered by the calling tenant.
 
@@ -64,6 +65,16 @@ def tool_query_triples(
     hierarchy — a domain expands to every root beneath it, a root or dotted
     concept to itself plus its subtree (one SQL pass, deterministic order).
 
+    persona (Gate 2B): restrict results to the persona's domain list from
+    config/persona_domains.yaml (exact key — unknown persona is a loud
+    error naming the valid keys). persona alone is a sufficient scope (no
+    domain/concept needed). An explicit 'domain', or a domain-QUALIFIED
+    'concept' (dotted path), whose root is outside the persona's list is a
+    CONFLICT and raises — never silently narrowed or unioned. An
+    unqualified concept is not a conflict: its cross-domain matches (*.id)
+    are bounded to the persona's domains by the SQL scope group.
+    persona=None leaves behavior exactly as before.
+
     The response contains a per-triple namespaced ingest identifier
     (dcl_ingest_id) — never a bare run_id, per I1.
     """
@@ -72,15 +83,49 @@ def tool_query_triples(
             "query_triples requires tenant_id — caller's token did not "
             "carry one (I2 violation)."
         )
-    if domain is None and concept is None:
+    persona_domains: list[str] | None = None
+    if persona is not None:
+        from backend.engine.persona_view import (
+            UnknownPersonaError,
+            resolve_persona_domains,
+        )
+        try:
+            persona_domains = resolve_persona_domains(persona)
+        except UnknownPersonaError as e:
+            raise MCPToolError(f"query_triples: {e}")
+        if domain is not None and domain not in persona_domains:
+            raise MCPToolError(
+                f"query_triples: domain {domain!r} conflicts with persona "
+                f"{persona!r} — it is not in the persona's domain list "
+                f"[{', '.join(persona_domains)}]. Refusing to silently "
+                f"narrow or union: drop the persona or use an in-scope "
+                f"domain."
+            )
+        if concept is not None and "." in concept:
+            concept_root = concept.split(".", 1)[0]
+            if concept_root not in persona_domains:
+                raise MCPToolError(
+                    f"query_triples: concept {concept!r} (domain "
+                    f"{concept_root!r}) conflicts with persona {persona!r} "
+                    f"— its domain is not in the persona's domain list "
+                    f"[{', '.join(persona_domains)}]. Refusing to silently "
+                    f"narrow or union: drop the persona or query an "
+                    f"in-scope concept."
+                )
+    if domain is None and concept is None and persona is None:
         raise MCPToolError(
-            "query_triples requires at least one of 'domain' or 'concept' "
-            "— refusing to dump a full tenant table."
+            "query_triples requires at least one of 'domain', 'concept', "
+            "or 'persona' — refusing to dump a full tenant table."
         )
 
     if include_descendants:
         from backend.registry.concept_hierarchy import expand_for_read
         parent = concept or domain
+        if parent is None:
+            raise MCPToolError(
+                "query_triples: include_descendants requires 'concept' or "
+                "'domain' — persona alone names no hierarchy node to expand."
+            )
         expansion = expand_for_read(tenant_id, parent)
         raw = _store.mcp_query_triples_expanded(
             tenant_id,
@@ -90,6 +135,7 @@ def tool_query_triples(
             period=period,
             limit=limit,
             active_only=active_only,
+            domains=persona_domains,
         )
     else:
         raw = _store.mcp_query_triples(
@@ -100,6 +146,7 @@ def tool_query_triples(
             period=period,
             limit=limit,
             active_only=active_only,
+            domains=persona_domains,
         )
     # Rename bare run_id → dcl_ingest_id per I1 before exposing, and expose
     # the row id under the provenance tool's vocabulary (triple_id) so a
@@ -467,6 +514,17 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
                         "Expand the concept through the concept hierarchy — a "
                         "domain expands to every root beneath it, a root/dotted "
                         "concept to itself plus its subtree."
+                    ),
+                },
+                "persona": {
+                    "type": "string",
+                    "description": (
+                        "Executive persona key (exact, case-sensitive — e.g. "
+                        "'CFO', 'CRO') from persona_domains.yaml. Restricts "
+                        "results to the persona's domain list. An explicit "
+                        "domain or dotted concept outside that list is a loud "
+                        "conflict error, never a silent narrowing. Omit for "
+                        "unscoped behavior."
                     ),
                 },
             },

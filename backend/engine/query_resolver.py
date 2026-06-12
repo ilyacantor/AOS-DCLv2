@@ -127,32 +127,65 @@ class QueryResolver:
             persona=intent.persona,
         )
 
-        # Step 2: Concept location
-        sources = self._locate_concepts(intent.concepts)
+        # Step 2: Concept location (persona-scoped when intent.persona is set)
+        sources, persona_excluded = self._locate_concepts(
+            intent.concepts, intent.persona,
+        )
+        persona_warnings: list[str] = []
+        if persona_excluded:
+            excluded_desc = ", ".join(
+                f"'{c}' (domain '{c.split('.', 1)[0]}')" for c in persona_excluded
+            )
+            from backend.engine.persona_view import resolve_persona_domains
+            allowed = resolve_persona_domains(intent.persona)
+            persona_warnings.append(
+                f"Persona '{intent.persona}' scoping excluded concepts "
+                f"outside its domains: {excluded_desc}. Allowed domains: "
+                f"[{', '.join(allowed)}]."
+            )
         if not sources:
+            if persona_excluded and len(persona_excluded) == len(intent.concepts):
+                # ALL requested concepts fall outside the persona's domains —
+                # existing not-found shape, reason names the scoping in detail.
+                return QueryResolution(
+                    can_answer=False,
+                    reason=(
+                        f"Persona scoping excluded all requested concepts: "
+                        f"{persona_warnings[0]} Nothing remains to resolve "
+                        f"for persona '{intent.persona}'."
+                    ),
+                )
+            in_scope = [c for c in intent.concepts if c not in persona_excluded]
             # Distinguish unknown concepts from unmapped ones
             unknown = [
-                c for c in intent.concepts
+                c for c in in_scope
                 if f"concept:{c}" not in self.graph.nodes
             ]
             if unknown:
                 return QueryResolution(
                     can_answer=False,
                     reason=f"Concept not recognized: {', '.join(unknown)}",
+                    warnings=persona_warnings,
                 )
             return QueryResolution(
                 can_answer=False,
-                reason=f"No sources found for concepts: {intent.concepts}",
+                reason=f"No sources found for concepts: {in_scope}",
+                warnings=persona_warnings,
             )
 
-        # Step 3: Dimension validity
-        invalid = self._check_dimensions(intent.concepts, intent.dimensions)
+        # Step 3: Dimension validity (over in-scope concepts only — persona
+        # exclusions are disclosed in warnings, not re-judged here)
+        located_concepts = [
+            c for c in intent.concepts if c not in persona_excluded
+        ]
+        invalid = self._check_dimensions(located_concepts, intent.dimensions)
         if invalid:
             pairs_str = ", ".join(f"{c}×{d}" for c, d in invalid)
             return QueryResolution(
                 can_answer=False,
                 reason=f"Invalid concept-dimension pairings: {pairs_str}",
                 concept_sources=sources,
+                warnings=persona_warnings,
             )
 
         # Step 4: Dimension source resolution
@@ -167,18 +200,42 @@ class QueryResolver:
         # Step 7: Confidence scoring
         confidence = self._score_path(sources, dim_authorities, join_paths)
 
-        # Step 8: Response assembly
+        # Step 8: Response assembly (persona exclusions disclosed in warnings)
         return self._assemble_response(
             sources, dim_authorities, join_paths,
-            resolved_filters, confidence, join_warnings,
+            resolved_filters, confidence, persona_warnings + join_warnings,
         )
 
     # ------------------------------------------------------------------
     # Step 2: Concept location (with alias fallback)
     # ------------------------------------------------------------------
 
-    def _locate_concepts(self, concepts: list[str]) -> list[FieldLocation]:
-        """Find the best source for each concept, with alias fallback."""
+    def _locate_concepts(
+        self, concepts: list[str], persona: str | None = None,
+    ) -> tuple[list[FieldLocation], list[str]]:
+        """Find the best source for each concept, with alias fallback.
+
+        persona (Gate 2B): concepts whose domain (first dotted segment)
+        is outside the persona's domain list are EXCLUDED from location —
+        returned in the second tuple element so the caller can disclose
+        them (warnings on partial exclusion, detailed not-found reason
+        when everything is excluded). Unknown persona raises
+        UnknownPersonaError (the route 422s before reaching here; direct
+        callers fail loudly). persona=None excludes nothing.
+        """
+        persona_excluded: list[str] = []
+        if persona is not None:
+            from backend.engine.persona_view import resolve_persona_domains
+            allowed = set(resolve_persona_domains(persona))
+            persona_excluded = [
+                c for c in concepts if c.split(".", 1)[0] not in allowed
+            ]
+            if persona_excluded:
+                logger.info(
+                    f"[Resolver] Persona '{persona}' excluded concepts "
+                    f"outside its domains: {persona_excluded}"
+                )
+                concepts = [c for c in concepts if c not in persona_excluded]
         all_sources: list[FieldLocation] = []
         for concept in concepts:
             sources = self.graph.find_concept_sources(concept)
@@ -200,7 +257,7 @@ class QueryResolver:
                 all_sources.extend(sources)
             else:
                 logger.warning(f"[Resolver] No sources for concept: {concept}")
-        return all_sources
+        return all_sources, persona_excluded
 
     def _resolve_concept_alias(self, concept_name: str) -> str | None:
         """Check ontology for a concept that lists this name as an alias."""

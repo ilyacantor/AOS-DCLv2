@@ -55,6 +55,42 @@ def get_persona_domain_mapping() -> Dict[str, List[str]]:
     return _load_persona_domains()
 
 
+class UnknownPersonaError(ValueError):
+    """Raised when a persona key has no entry in persona_domains.yaml.
+
+    Exact-key lookup only — no case normalization, no fuzzy matching,
+    no default. Callers map this to HTTP 422 / MCPToolError."""
+
+
+# Module-level cache for the query-scoping path (Gate 2B). Loaded once per
+# process — persona-scoped queries must not re-read YAML per request (B18).
+# get_persona_domain_mapping() above intentionally keeps its reload-per-call
+# semantics for the persona-stats surface; this cache is for the hot path.
+_PERSONA_DOMAINS_CACHE: Optional[Dict[str, List[str]]] = None
+
+
+def resolve_persona_domains(persona: str) -> List[str]:
+    """Return the domain list for an EXACT persona key from
+    config/persona_domains.yaml.
+
+    Unknown persona raises UnknownPersonaError naming the persona and the
+    valid keys. No case normalization, no fuzzy matching, no default —
+    'cfo' is not 'CFO'; loud failure is the contract (Gate 2B)."""
+    global _PERSONA_DOMAINS_CACHE
+    if _PERSONA_DOMAINS_CACHE is None:
+        _PERSONA_DOMAINS_CACHE = _load_persona_domains()
+    domains = _PERSONA_DOMAINS_CACHE.get(persona)
+    if domains is None:
+        valid = ", ".join(sorted(_PERSONA_DOMAINS_CACHE.keys()))
+        raise UnknownPersonaError(
+            f"Unknown persona {persona!r} — no entry in "
+            f"config/persona_domains.yaml. Valid personas (exact keys): "
+            f"{valid}. Persona keys are case-sensitive and are never "
+            f"normalized or fuzzy-matched."
+        )
+    return list(domains)
+
+
 class PersonaView:
     """Read-only view of persona → triple-domain mapping.
 

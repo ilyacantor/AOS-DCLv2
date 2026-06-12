@@ -14,6 +14,7 @@ POST /api/dcl/triples/deactivate-run  — deactivate a run
 
 import json
 import os
+import time
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -62,6 +63,70 @@ def _serialize_value(val):
 def _serialize_row(row: dict) -> dict:
     """Serialize all values in a row dict for JSON response."""
     return {k: _serialize_value(v) for k, v in row.items()}
+
+
+def _persona_scope_or_422(persona: str, explicit_domains: list[str]) -> list[str]:
+    """Resolve a persona's domain list for the browse surfaces (Gate 2B).
+
+    Unknown persona → 422 naming the valid keys. Any explicitly requested
+    domain outside the persona's list → 422 naming both sides (loud
+    conflict — never silently narrowed or unioned). Returns the persona's
+    domain list."""
+    from backend.engine.persona_view import (
+        UnknownPersonaError,
+        resolve_persona_domains,
+    )
+    try:
+        persona_domains = resolve_persona_domains(persona)
+    except UnknownPersonaError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    out_of_scope = [d for d in explicit_domains if d not in persona_domains]
+    if out_of_scope:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Domain filter {out_of_scope!r} conflicts with persona "
+                f"{persona!r} — not in the persona's domain list "
+                f"[{', '.join(persona_domains)}]. Refusing to silently "
+                f"narrow or union: drop the persona or request in-scope "
+                f"domains."
+            ),
+        )
+    return persona_domains
+
+
+def _i1_clean_row(row: dict) -> dict:
+    """Rename the bare run_id column to the namespaced dcl_ingest_id (I1)
+    for persona-scoped responses — a NEW response shape, so it carries no
+    run_id-named key. Personaless responses keep their pre-existing shape
+    byte-identically (NLQ consumes it)."""
+    d = dict(row)
+    if "run_id" in d:
+        d["dcl_ingest_id"] = d.pop("run_id")
+    return d
+
+
+def _write_browse_trace(*, tool_name: str, tenant_id: str, entity_id,
+                        arguments: dict, result_summary: dict,
+                        latency_ms: int) -> None:
+    """One decision-trace row per persona-scoped browse answer (Gate 2B):
+    a mai_mcp_audit append (transport='http') that the 2A decision_traces
+    view projects as trace_type='mcp_call' with decision_type naming the
+    surface and payload carrying the persona. Personaless calls never
+    reach this."""
+    from backend.api.mcp_audit import AuditRow, hash_arguments, write_audit
+    write_audit(AuditRow(
+        tenant_id=tenant_id,
+        tool_name=tool_name,
+        caller_token_id=f"http:{tool_name}",
+        arguments_hash=hash_arguments(arguments),
+        latency_ms=latency_ms,
+        outcome="success",
+        transport="http",
+        entity_id=entity_id,
+        arguments=arguments,
+        result_summary=result_summary,
+    ))
 
 
 # ---------------------------------------------------------------------------
@@ -544,6 +609,13 @@ def triples_browse(
     as_of: Optional[str] = Query(None, description="ISO timestamp — knowledge-time travel: rows live at that instant (ingested on or before, not yet superseded)"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
+    persona: Optional[str] = Query(None, description=(
+        "Executive persona key (exact, case-sensitive — e.g. 'CFO') from "
+        "persona_domains.yaml. Restricts results to the persona's domain "
+        "list; an explicit domain outside that list is a 422 conflict. "
+        "Persona-scoped answers append a decision trace; omit for the "
+        "unchanged unscoped behavior."
+    )),
 ):
     """Browse raw triples with filtering and pagination.
 
@@ -568,6 +640,15 @@ def triples_browse(
     # tenant_id filter is unconditional and first — every browse is scoped.
     clauses: list[str] = ["tenant_id = %s"]
     params: list = [tenant_id]
+    persona_domains: Optional[list] = None
+    if persona:
+        # Unknown persona / explicit out-of-scope domain → 422 (loud).
+        persona_domains = _persona_scope_or_422(
+            persona, [domain] if domain else [],
+        )
+        clauses.append("(concept = ANY(%s) OR concept LIKE ANY(%s))")
+        params.append(list(persona_domains))
+        params.append([f"{d}.%" for d in persona_domains])
     if as_of and run_id:
         raise HTTPException(
             status_code=400,
@@ -631,6 +712,7 @@ def triples_browse(
         f"LIMIT %s OFFSET %s"
     )
 
+    query_started = time.perf_counter() if persona else None
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
@@ -657,11 +739,43 @@ def triples_browse(
         filters_applied["period"] = period
     if property:
         filters_applied["property"] = property
-    if run_id:
-        filters_applied["run_id"] = run_id
 
+    if not persona:
+        # Unscoped: pre-existing response shape, byte-identical (NLQ
+        # consumes it). No trace write.
+        if run_id:
+            filters_applied["run_id"] = run_id
+        return {
+            "triples": triples,
+            "total_count": total_count,
+            "filters_applied": filters_applied,
+        }
+
+    # Persona-scoped answer (Gate 2B): NEW response shape — I1-clean rows
+    # (dcl_ingest_id, never run_id), identity context (I2), persona named
+    # in filters_applied, one decision-trace row appended.
+    if run_id:
+        filters_applied["dcl_ingest_id"] = run_id
+    filters_applied["persona"] = persona
+    arguments = {"tenant_id": tenant_id, "persona": persona,
+                 "limit": limit, "offset": offset}
+    for key, val in (("domain", domain), ("entity_id", entity_id),
+                     ("period", period), ("property", property),
+                     ("dcl_ingest_id", run_id), ("as_of", as_of)):
+        if val:
+            arguments[key] = val
+    _write_browse_trace(
+        tool_name="triples_browse",
+        tenant_id=tenant_id,
+        entity_id=entity_id,
+        arguments=arguments,
+        result_summary={"rows": len(triples), "total_count": total_count},
+        latency_ms=int((time.perf_counter() - query_started) * 1000),
+    )
     return {
-        "triples": triples,
+        "tenant_id": tenant_id,
+        "persona": persona,
+        "triples": [_i1_clean_row(t) for t in triples],
         "total_count": total_count,
         "filters_applied": filters_applied,
     }
@@ -678,6 +792,13 @@ class BrowseBatchRequest(BaseModel):
     domains: List[str] = Field(..., min_length=1, description="List of concept domains to fetch")
     entity_ids: Optional[List[str]] = Field(None, description="Filter by entity IDs")
     period: Optional[str] = Field(None, description="Filter by period")
+    persona: Optional[str] = Field(None, description=(
+        "Executive persona key (exact, case-sensitive) from "
+        "persona_domains.yaml. Every requested domain must be inside the "
+        "persona's domain list — any outside is a 422 conflict, never a "
+        "silent narrowing. Persona-scoped answers append a decision trace; "
+        "omit for the unchanged unscoped behavior."
+    ))
 
 
 @router.post("/api/dcl/triples/browse-batch")
@@ -689,7 +810,20 @@ def triples_browse_batch(req: BrowseBatchRequest):
 
     tenant_id is REQUIRED — the query always filters `WHERE tenant_id =`.
     Tenant scoping, not authentication (see triples_browse docstring).
+
+    persona (Gate 2B): domains are explicit here (required field), so the
+    persona scope is enforced as subset validation — every requested domain
+    must be in the persona's list (422 conflict otherwise). Once validated,
+    the requested in-scope domains ARE the read — ANDing the persona group
+    into SQL would be a provable no-op (each `concept LIKE 'd.%'` term is
+    contained in the persona group's own `d` term), so it is omitted.
     """
+    if req.persona:
+        # Unknown persona / any out-of-scope requested domain → 422 (loud).
+        # Subset validation IS the scope here (see docstring) — the returned
+        # list is not needed for SQL.
+        _persona_scope_or_422(req.persona, req.domains)
+
     # tenant_id filter is unconditional — every batch browse is scoped.
     clauses = ["is_active = true", "tenant_id = %s"]
     params: list = [req.tenant_id]
@@ -718,6 +852,7 @@ def triples_browse_batch(req: BrowseBatchRequest):
         f"ORDER BY entity_id, concept, property, period, created_at DESC"
     )
 
+    query_started = time.perf_counter() if req.persona else None
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
@@ -739,8 +874,39 @@ def triples_browse_batch(req: BrowseBatchRequest):
         domain = concept.split(".")[0] if concept else ""
         by_domain.setdefault(domain, []).append(t)
 
+    if not req.persona:
+        # Unscoped: pre-existing response shape, byte-identical. No trace.
+        return {
+            "triples_by_domain": by_domain,
+            "total_count": len(all_triples),
+            "domains_requested": req.domains,
+            "domains_returned": list(by_domain.keys()),
+        }
+
+    # Persona-scoped answer (Gate 2B): NEW response shape — I1-clean rows,
+    # identity context (I2), one decision-trace row appended.
+    arguments = {"tenant_id": req.tenant_id, "persona": req.persona,
+                 "domains": req.domains}
+    if req.entity_ids:
+        arguments["entity_ids"] = req.entity_ids
+    if req.period:
+        arguments["period"] = req.period
+    _write_browse_trace(
+        tool_name="triples_browse_batch",
+        tenant_id=req.tenant_id,
+        entity_id=(req.entity_ids[0]
+                   if req.entity_ids and len(req.entity_ids) == 1 else None),
+        arguments=arguments,
+        result_summary={"rows": len(all_triples),
+                        "domains_returned": len(by_domain)},
+        latency_ms=int((time.perf_counter() - query_started) * 1000),
+    )
     return {
-        "triples_by_domain": by_domain,
+        "tenant_id": req.tenant_id,
+        "persona": req.persona,
+        "triples_by_domain": {
+            d: [_i1_clean_row(t) for t in rows] for d, rows in by_domain.items()
+        },
         "total_count": len(all_triples),
         "domains_requested": req.domains,
         "domains_returned": list(by_domain.keys()),
