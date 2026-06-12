@@ -398,13 +398,15 @@ participate via `expand_for_read` (exact concepts + dotted prefixes) used by
 
 ---
 
-## Gate 3A Align tables (migration 023)
+## Gate 3A Change Proposal tables (migration 023)
 
-All four tables below are DCL-owned. Convergence does NOT read them (they are Align-intake only; no `semantic_triples` writes here, so no Convergence coordination required). Additive — no existing table altered except `ALTER TABLE conflict_register ADD COLUMN source_class`.
+> **Renamed 2026-06-12 (Dispatch R2):** `alignment_proposals` → `change_proposals`, `alignment_decisions` → `change_proposal_decisions`. The proposal queue is interviewer-agnostic infrastructure (also serves Gate 3B drift findings); the Align service identity was retired into Mai's onboarding scope. Live table names in the DB are the new names; idempotent DDL guards in 023_change_proposals.sql preserve the rename history.
 
-### `alignment_proposals`
+All four tables below are DCL-owned. Convergence does NOT read them (they are proposal-intake only; no `semantic_triples` writes here, so no Convergence coordination required). Additive — no existing table altered except `ALTER TABLE conflict_register ADD COLUMN source_class`.
 
-HITL queue for Align-sourced stakeholder elicitation proposals. The third HITL queue in DCL (resolver_hitl_queue is the first; resolution_workspaces is DEFINED-BUT-UNUSED; this is the canonical third). Resolved #45.
+### `change_proposals`
+
+HITL queue for onboarding-sourced stakeholder elicitation proposals. The third HITL queue in DCL (resolver_hitl_queue is the first; resolution_workspaces is DEFINED-BUT-UNUSED; this is the canonical third). Resolved #45.
 
 | Column | Type | Nullable | Default | Constraint |
 |--------|------|----------|---------|------------|
@@ -423,14 +425,14 @@ HITL queue for Align-sourced stakeholder elicitation proposals. The third HITL q
 
 Unique index: `(tenant_id, proposal_type, natural_key) WHERE status = 'pending'` — allows re-proposal after rejection.
 
-### `alignment_decisions`
+### `change_proposal_decisions`
 
-Append-only trace for every approve/reject decision on alignment_proposals. The 4th branch of the `decision_traces` VIEW.
+Append-only trace for every approve/reject decision on change_proposals. The 4th branch of the `decision_traces` VIEW (trace_type = `'proposal_decision'`).
 
 | Column | Type | Nullable | Default | Constraint |
 |--------|------|----------|---------|------------|
 | `id` | UUID | NOT NULL | `gen_random_uuid()` | PRIMARY KEY |
-| `proposal_id` | UUID | NOT NULL | — | FK → `alignment_proposals(id)` |
+| `proposal_id` | UUID | NOT NULL | — | FK → `change_proposals(id)` |
 | `tenant_id` | UUID | NOT NULL | — | — |
 | `decision` | TEXT | NOT NULL | — | `IN ('approved','rejected')` |
 | `decided_by` | TEXT | NOT NULL | — | — |
