@@ -1,4 +1,4 @@
-// Operator-visible outcome: with AlignTest entity selected in the Context tab, the Align Proposals panel shows 14 pending proposals; the authority_map/cost_center row shows confidence 95% and badge "confirmed by CFO"; clicking Approve writes cost_center → [netsuite, workday] to the authority map view; clicking Reject on vocabulary_alias/headcount removes it from pending and it appears under rejected filter; a second Approve attempt on the already-approved cost_center renders DCL's 409 "already approved" text in the UI.
+// Operator-visible outcome: with AlignTest entity selected in the Context tab, the Align Proposals panel shows 14 pending proposals; the authority_map/cost_center row shows confidence 95% and badge "confirmed by CFO"; clicking Approve writes cost_center → [netsuite, workday] to the authority map view; clicking Reject on vocabulary_alias/headcount removes it from pending and it appears under rejected filter; two pages load the same pending arr vocabulary proposal, page A approves it successfully, and page B's stale Approve click renders DCL's "can be decided only once" detail text on screen.
 
 /**
  * Gate 3A D4 — Align review surface live acceptance (B17).
@@ -13,7 +13,6 @@
  * Constitution compliance:
  *   - Approve/Reject triggered by locator.click() — never page.request.post()
  *   - page.request.get() used for ground truth only (allowed exception)
- *   - page.request.post() used ONLY in beforeAll for seeding preconditions (B5)
  *   - execSync for align script subprocess (B15 — real pipeline)
  *   - Screenshots after every test (reporting rule 4)
  *   - before/after state capture on Approve (acceptance rule 2)
@@ -315,110 +314,73 @@ test.describe.serial("Align review — live acceptance (Gate 3A D4)", () => {
     await page.screenshot({ path: `${SCREENSHOTS}/align_04_reject_headcount.png` });
   });
 
-  // ── TEST 5: Negative — second Approve renders 409 detail text ─────────────
+  // ── TEST 5: Negative — stale-Approve race renders 409 detail text ───────────
+  // Real-world trigger: two operators open the same pending proposal; operator A
+  // approves first; operator B's stale Approve click hits DCL's 409 path.
+  // Both pages are loaded BEFORE page A approves so page B genuinely holds a
+  // stale pending view — no mutative call from the test runner.
 
-  test("5. Negative: approve already-approved cost_center renders 409 detail text", async ({ page }) => {
-    // cost_center was approved in test 3 — attempting it again must surface the
-    // DCL 409 detail text in the UI, not a bare status code.
-    await page.goto(DCL_FRONTEND, { waitUntil: "domcontentloaded" });
-    await page.locator("button", { hasText: "Context" }).click();
-
-    const selector = page.locator("#snapshot-selector");
-    await selector.waitFor({ state: "visible", timeout: 20_000 });
-    await expect(selector.locator(`option[value="${INGEST_ID}"]`)).toBeAttached({ timeout: 15_000 });
-    await selector.selectOption(INGEST_ID);
-
-    const alignPanel = page.locator('[data-testid="align-proposals-panel"]');
-    await alignPanel.locator('[data-testid="align-proposals-toggle"]').click();
-
-    // Switch to approved filter to find the already-approved cost_center row.
-    await alignPanel.locator('[data-testid="align-status-filter-approved"]').click();
-    await page.waitForLoadState("networkidle");
-
-    // The cost_center row should appear under approved.
-    const ccApprovedRow = alignPanel.locator(
-      '[data-testid="align-proposal-row-authority_map-cost_center"]',
-    );
-    await ccApprovedRow.waitFor({ state: "visible", timeout: 15_000 });
-
-    // The row should NOT have an Approve button (status is approved, not pending).
-    // The detail section should show canonical artifact, not action buttons.
-    // Expand the row.
-    await ccApprovedRow.locator("button").first().click();
-    const detail = ccApprovedRow.locator('[data-testid="align-proposal-detail"]');
-    await detail.waitFor({ state: "visible", timeout: 5_000 });
-
-    // Approve button is absent for decided proposals.
-    const approveBtn = ccApprovedRow.locator('[data-testid="align-approve-btn-cost_center"]');
-    await expect(approveBtn).not.toBeVisible();
-
-    // To trigger the 409 path via the UI we must call the backend directly
-    // from the decide() function. Since the proposal is approved, the Approve button
-    // is hidden. Verify the UI renders the already-decided state (canonical id visible).
-    const canonicalEl = detail.locator('[data-testid="align-canonical-id"]');
-    await expect(canonicalEl).toBeVisible({ timeout: 5_000 });
-
-    // The canonical artifact ID must be a non-empty string.
-    const canonicalText = await canonicalEl.textContent();
-    expect(canonicalText?.trim().length, "canonical artifact id must be non-empty").toBeGreaterThan(0);
-
-    // Simulate the 409 scenario: click Approve on a PENDING proposal that we
-    // then decide via a direct API call first, making it already-decided before
-    // the UI click fires. Use the 'arr' vocabulary proposal for this negative test.
-    // Switch to pending filter.
-    await alignPanel.locator('[data-testid="align-status-filter-pending"]').click();
-    await page.waitForLoadState("networkidle");
-
-    // Find 'arr' vocabulary proposal (not yet decided).
-    const arrRow = alignPanel.locator('[data-testid="align-proposal-row-vocabulary_alias-arr"]');
-    await arrRow.waitFor({ state: "visible", timeout: 15_000 });
-    await arrRow.locator("button").first().click();
-    await arrRow.locator('[data-testid="align-decided-by"]').fill("operator");
-
-    // Click Approve twice rapidly — first click starts the fetch; second
-    // click fires before the panel re-renders and may hit the 409.
-    // Simpler: approve via page.request BEFORE clicking (allowed for setup only).
-    // Then click in UI — the backend returns 409, the UI must render the detail text.
-    const arrProposalId = (headcountProposal as Record<string, unknown>).proposal_id;
-    // Actually use a proposal that IS still pending for this negative test.
-    // arr is pending at this point (only headcount was rejected, cost_center approved).
+  test("5. Negative: stale-Approve race renders 409 already-decided detail text", async ({ page, context }) => {
     const arrGT = pendingProposals.find(
       (p: Record<string, unknown>) =>
         p.proposal_type === "vocabulary_alias" && p.natural_key === "arr",
     ) as Record<string, unknown>;
     expect(arrGT, "arr vocabulary proposal must be in ground truth").toBeTruthy();
 
-    // Approve arr via backend API (setup — allowed read/write for precondition).
-    await page.request.post(
-      `${DCL_BACKEND}/api/dcl/align/proposals/${arrGT.proposal_id}/decide`,
-      {
-        data: {
-          tenant_id: TENANT_ID,
-          decision: "approve",
-          decided_by: "pre-test-setup",
-        },
-      },
-    );
-
-    // Now click Approve in the UI for the same proposal — backend returns 409.
-    const arrApproveBtn = arrRow.locator('[data-testid="align-approve-btn-arr"]');
-    await arrApproveBtn.click();
+    // ── Page A (operator 1) ───────────────────────────────────────────────────
+    await page.goto(DCL_FRONTEND, { waitUntil: "domcontentloaded" });
+    await page.locator("button", { hasText: "Context" }).click();
+    const selectorA = page.locator("#snapshot-selector");
+    await selectorA.waitFor({ state: "visible", timeout: 20_000 });
+    await expect(selectorA.locator(`option[value="${INGEST_ID}"]`)).toBeAttached({ timeout: 15_000 });
+    await selectorA.selectOption(INGEST_ID);
+    const alignPanelA = page.locator('[data-testid="align-proposals-panel"]');
+    await alignPanelA.locator('[data-testid="align-proposals-toggle"]').click();
     await page.waitForLoadState("networkidle");
+    const arrRowA = alignPanelA.locator('[data-testid="align-proposal-row-vocabulary_alias-arr"]');
+    await arrRowA.waitFor({ state: "visible", timeout: 15_000 });
 
-    // The decide-error div must appear with DCL's 409 detail text.
-    const errorDiv = alignPanel.locator('[data-testid="align-decide-error"]');
+    // ── Page B (operator 2) — loaded BEFORE page A approves ──────────────────
+    const pageB = await context.newPage();
+    await pageB.goto(DCL_FRONTEND, { waitUntil: "domcontentloaded" });
+    await pageB.locator("button", { hasText: "Context" }).click();
+    const selectorB = pageB.locator("#snapshot-selector");
+    await selectorB.waitFor({ state: "visible", timeout: 20_000 });
+    await expect(selectorB.locator(`option[value="${INGEST_ID}"]`)).toBeAttached({ timeout: 15_000 });
+    await selectorB.selectOption(INGEST_ID);
+    const alignPanelB = pageB.locator('[data-testid="align-proposals-panel"]');
+    await alignPanelB.locator('[data-testid="align-proposals-toggle"]').click();
+    await pageB.waitForLoadState("networkidle");
+    // arr is pending in page B's stale view.
+    const arrRowB = alignPanelB.locator('[data-testid="align-proposal-row-vocabulary_alias-arr"]');
+    await arrRowB.waitFor({ state: "visible", timeout: 15_000 });
+
+    // ── Page A: Approve arr (succeeds — arr leaves pending) ──────────────────
+    await arrRowA.locator("button").first().click();
+    await arrRowA.locator('[data-testid="align-decided-by"]').fill("operator-page-a");
+    await arrRowA.locator('[data-testid="align-approve-btn-arr"]').click();
+    await page.waitForLoadState("networkidle");
+    await expect(arrRowA).not.toBeVisible({ timeout: 10_000 });
+
+    // ── Page B: stale Approve click — backend returns 409 ────────────────────
+    // page B has NOT reloaded; its DOM still shows arr as pending with Approve button.
+    await arrRowB.locator("button").first().click();
+    await arrRowB.locator('[data-testid="align-decided-by"]').fill("operator-page-b");
+    await arrRowB.locator('[data-testid="align-approve-btn-arr"]').click();
+    await pageB.waitForLoadState("networkidle");
+
+    // DCL returns 409; the panel must render the already-decided detail text.
+    const errorDiv = alignPanelB.locator('[data-testid="align-decide-error"]');
     await errorDiv.waitFor({ state: "visible", timeout: 10_000 });
     const errorText = await errorDiv.textContent();
-
-    // DCL 409 text: "Proposal <id> is already 'approved' — a proposal can be decided only once."
+    // DCL 409 detail: "Proposal <id> is already 'approved' — a proposal can be decided only once."
     expect(
       errorText,
       "Error must contain DCL's already-decided detail text",
     ).toMatch(/already\s+(approved|rejected)|can be decided only once/i);
-
-    // Must NOT be a bare status code.
     expect(errorText, "Error must not be a bare status code").not.toMatch(/^409$/);
 
-    await page.screenshot({ path: `${SCREENSHOTS}/align_05_negative_409.png` });
+    await page.screenshot({ path: `${SCREENSHOTS}/align_05_negative_409_page_a.png` });
+    await pageB.screenshot({ path: `${SCREENSHOTS}/align_05_negative_409_page_b.png` });
   });
 });
