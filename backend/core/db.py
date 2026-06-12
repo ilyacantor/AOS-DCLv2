@@ -33,6 +33,7 @@ from backend.core.constants import (
     DB_CONNECT_TIMEOUT,
     POOL_RETRY_COOLDOWN,
     POOL_GETCONN_TIMEOUT,
+    POOL_PREPING_IDLE_S,
     QUERY_STATEMENT_TIMEOUT_MS,
 )
 from backend.utils.log_utils import get_logger
@@ -128,6 +129,93 @@ def _timeout_bound_connection_class():
 _pool: Optional[ThreadedConnectionPool] = None
 _pool_initialized: bool = False
 _pool_last_attempt: float = 0
+
+# ---------------------------------------------------------------------------
+# Idle-age-gated pre-ping (ledger #67)
+#
+# The FIN-sniff in get_connection() is free but only sees drops whose FIN
+# already reached our socket buffer. Two observed #67 modes escape it: the
+# pooler's server-side leg dying (client TCP looks healthy; the next query
+# 500s with "SSL connection has been closed unexpectedly") and silent drops
+# (the next query hangs). Both strike connections that sat IDLE past the
+# pooler's reap horizon — so the validating SELECT 1 round trip is paid only
+# on borrows whose connection has been unused > POOL_PREPING_IDLE_S.
+# Connections cycling hot pay a dict lookup (no round trip): the #62 bench
+# put an unconditional per-borrow execute at ~76ms p50 — a B18 violation
+# this gate avoids. Unknown connections (fresh minconn stock, pool-created
+# replacements) have no recorded return time and are pinged — the safe
+# default. Ping failure → discard, reborrrow once, ping again; a second
+# failure raises loudly with both errors.
+#
+# The ping is sent as BYTES (b"SELECT 1"): the TimeoutBound cursor wrapper
+# prefixes SET LOCAL onto str queries only, and SET LOCAL outside a
+# transaction (the ping runs in autocommit to leave no open txn behind)
+# would emit a server warning on every validation.
+# ---------------------------------------------------------------------------
+
+_last_returned: dict = {}
+_last_returned_lock = threading.Lock()
+
+
+def _record_return(conn) -> None:
+    try:
+        with _last_returned_lock:
+            _last_returned[id(conn)] = time.monotonic()
+    except Exception:
+        pass
+
+
+def _ping(conn) -> None:
+    """One SELECT 1 round trip in autocommit (no txn left open, no SET LOCAL
+    prefix — bytes query bypasses the TimeoutBound str-only wrapper)."""
+    prior_autocommit = conn.autocommit
+    conn.autocommit = True
+    try:
+        with conn.cursor() as cur:
+            cur.execute(b"SELECT 1")
+            cur.fetchone()
+    finally:
+        conn.autocommit = prior_autocommit
+
+
+def _validate_if_idle(pg_pool, conn):
+    """Pre-ping connections idle past POOL_PREPING_IDLE_S; reconnect once on
+    failure. Returns a validated (or hot, assumed-good) connection. Raises
+    RuntimeError if a fresh connection fails the ping too."""
+    with _last_returned_lock:
+        returned_at = _last_returned.get(id(conn))
+    if returned_at is not None and (time.monotonic() - returned_at) <= POOL_PREPING_IDLE_S:
+        return conn  # hot path: no round trip
+
+    try:
+        _ping(conn)
+        return conn
+    except (psycopg2.OperationalError, psycopg2.InterfaceError) as first_err:
+        logger.warning(
+            "[db] Pre-ping failed on idle connection (%s) — discarding and "
+            "borrowing a fresh one (ledger #67 reconnect-once)", first_err
+        )
+        try:
+            pg_pool.putconn(conn, close=True)
+        except Exception:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        fresh = _getconn_with_timeout(pg_pool, POOL_GETCONN_TIMEOUT)
+        try:
+            _ping(fresh)
+            return fresh
+        except (psycopg2.OperationalError, psycopg2.InterfaceError) as second_err:
+            try:
+                pg_pool.putconn(fresh, close=True)
+            except Exception:
+                pass
+            raise RuntimeError(
+                f"[db] Pre-ping failed twice — database unreachable through the "
+                f"pool. First (stale connection): {first_err}. Second (fresh "
+                f"connection): {second_err}. Check Supabase pooler health."
+            ) from second_err
 
 
 def _ensure_pool() -> Optional[ThreadedConnectionPool]:
@@ -302,6 +390,10 @@ def get_connection():
                     conn = _getconn_with_timeout(pg_pool, POOL_GETCONN_TIMEOUT)
             except Exception as exc:
                 logger.warning("Stale connection detection failed: %s", exc)
+        # Idle-age-gated pre-ping (ledger #67): hot connections skip with a
+        # dict lookup; idle/unknown ones pay one validating round trip and
+        # reconnect-once on failure.
+        conn = _validate_if_idle(pg_pool, conn)
         # Read statement_timeout binding happens inside the connection class
         # (connection_factory at pool init) — nothing to do per borrow.
         yield conn
@@ -317,6 +409,7 @@ def get_connection():
         raise
     finally:
         if conn is not None and pg_pool is not None:
+            _record_return(conn)
             try:
                 pg_pool.putconn(conn)
             except Exception:

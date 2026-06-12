@@ -64,6 +64,12 @@ POOL_MIN_CONN = int(os.getenv("DCL_POOL_MIN_CONN", "2"))
 POOL_MAX_CONN = int(os.getenv("DCL_POOL_MAX_CONN", "20"))
 DB_CONNECT_TIMEOUT = int(os.getenv("DCL_DB_CONNECT_TIMEOUT", "10"))
 POOL_GETCONN_TIMEOUT = float(os.getenv("DCL_POOL_GETCONN_TIMEOUT", "5.0"))
+# Pre-ping idle threshold (ledger #67): a borrowed connection that has sat
+# unused longer than this is validated with one SELECT 1 round trip before
+# being handed out (reconnect-once on failure, loud error after that).
+# Connections cycling hot pay nothing — an unconditional per-borrow ping
+# would cost ~76ms p50 through the pooler (the #62 bench), a B18 violation.
+POOL_PREPING_IDLE_S = float(os.getenv("DCL_POOL_PREPING_IDLE_S", "60.0"))
 # Default statement timeout for read queries — prevents connections from being
 # held indefinitely when Supabase is slow. Set at the session level via connection
 # options so every pool connection inherits it. Ingest methods override with
