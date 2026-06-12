@@ -80,6 +80,7 @@ from backend.api.routes.recon_checks import router as recon_checks_router
 from backend.api.routes.monitor import router as monitor_router
 from backend.api.routes.conflicts import router as conflicts_router
 from backend.api.routes.mcp_audit_read import router as mcp_audit_read_router
+from backend.api.routes.traces import router as traces_router
 
 logger = get_logger(__name__)
 
@@ -359,6 +360,8 @@ app.include_router(recon_checks_router)
 app.include_router(conflicts_router)
 # MCP audit ledger read surface — decision-trace seed (§9). Read-only, tenant-scoped.
 app.include_router(mcp_audit_read_router)
+# Gate 2A (§9): unified decision-trace search + standing-rule registry.
+app.include_router(traces_router)
 # Demo pipeline monitor — read-only metrics endpoint. Additive and isolated.
 app.include_router(monitor_router)
 

@@ -1,7 +1,9 @@
 """
 Shared MCP tool implementations (Plan B WP5, §11.4).
 
-Single source of truth for the five external tools. Both the legacy HTTP
+Single source of truth for the external tool surface (TOOL_SCHEMAS /
+PUBLIC_TOOLS — the §11.4 base tools plus the Gate 1A conflict pair, the
+Gate 1B traversal, and the Gate 2A trace_query). Both the legacy HTTP
 path (backend/api/mcp_server.py) and the real wire-protocol MCP server
 (backend/api/mcp_server_real.py) call these functions.
 
@@ -325,6 +327,47 @@ def tool_reconciliation_recommend(
 
 
 # =============================================================================
+# trace_query — unified decision-trace reads (Gate 2A, §9)
+# =============================================================================
+
+
+def tool_trace_query(
+    tenant_id: str,
+    *,
+    entity_id: str | None = None,
+    concept: str | None = None,
+    agent: str | None = None,
+    decision_type: str | None = None,
+    trace_type: str | None = None,
+    conflict_class: str | None = None,
+    period: str | None = None,
+    since: str | None = None,
+    until: str | None = None,
+    as_of: str | None = None,
+    limit: int = 100,
+) -> dict[str, Any]:
+    """Query the unified decision-trace view (mcp_call + conflict_disposition
+    + er_confirmation) for the caller's tenant. Read-only. as_of is the
+    knowledge-time read (ingested_at <= as_of; traces are never superseded)."""
+    if not tenant_id:
+        raise MCPToolError(
+            "trace_query requires tenant_id — caller's token did not "
+            "carry one (I2 violation)."
+        )
+    from backend.db.trace_store import TraceStore
+    try:
+        rows, total = TraceStore().search_traces(
+            tenant_id, entity_id=entity_id, concept=concept, agent=agent,
+            decision_type=decision_type, trace_type=trace_type,
+            conflict_class=conflict_class, period=period,
+            since=since, until=until, as_of=as_of, limit=limit,
+        )
+    except ValueError as e:
+        raise MCPToolError(f"trace_query: {e}")
+    return {"tenant_id": str(tenant_id), "traces": rows, "total_count": total}
+
+
+# =============================================================================
 # traverse_graph — entity-graph traversal (Gate 1B, §7)
 # =============================================================================
 
@@ -547,6 +590,33 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
             },
         },
     },
+    "trace_query": {
+        "description": (
+            "Query the unified decision-trace view: MCP calls, conflict "
+            "dispositions, and entity-resolution confirmations as one list "
+            "of uniform trace records. Read-only, scoped to the caller's "
+            "tenant (tenant_id is derived from the caller's token and "
+            "cannot be overridden). as_of (ISO timestamp) is the "
+            "knowledge-time read — traces known at that instant; traces "
+            "are events and are never superseded."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "entity_id": {"type": "string"},
+                "concept": {"type": "string"},
+                "agent": {"type": "string", "description": "mcp_call: caller token id; conflict_disposition: decided_by; er_confirmation: actor"},
+                "decision_type": {"type": "string", "description": "mcp_call: tool name; conflict_disposition: action; er_confirmation: event"},
+                "trace_type": {"type": "string", "enum": ["mcp_call", "conflict_disposition", "er_confirmation"]},
+                "conflict_class": {"type": "string"},
+                "period": {"type": "string", "description": "Period code (e.g. '2025-Q1')"},
+                "since": {"type": "string", "description": "ISO timestamp — occurred at or after"},
+                "until": {"type": "string", "description": "ISO timestamp — occurred at or before"},
+                "as_of": {"type": "string", "description": "ISO timestamp — knowledge-time as-of"},
+                "limit": {"type": "integer", "default": 100, "maximum": 500},
+            },
+        },
+    },
 }
 
 
@@ -581,4 +651,6 @@ def dispatch(tenant_id: str, tool_name: str, arguments: dict[str, Any]) -> Any:
         return tool_conflict_query(tenant_id, **args)
     if tool_name == "reconciliation_recommend":
         return tool_reconciliation_recommend(tenant_id, **args)
+    if tool_name == "trace_query":
+        return tool_trace_query(tenant_id, **args)
     raise MCPToolError(f"No dispatch handler for {tool_name!r}")

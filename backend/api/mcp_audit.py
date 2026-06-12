@@ -29,6 +29,28 @@ def hash_arguments(arguments: dict[str, Any] | None) -> str:
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
+def summarize_result(result: Any) -> dict[str, Any]:
+    """Compact, structured summary of a tool result for the audit ledger
+    (migration 020 go-forward enrichment). NEVER the full payload:
+      list  -> {"rows": N}
+      dict  -> {"keys": [...top-level keys...]} plus "rows"/"total_count"
+               when the dict carries an obvious row list / count
+      other -> {"type": <python type name>}
+    """
+    if isinstance(result, list):
+        return {"rows": len(result)}
+    if isinstance(result, dict):
+        summary: dict[str, Any] = {"keys": sorted(str(k) for k in result.keys())}
+        if isinstance(result.get("total_count"), int):
+            summary["total_count"] = result["total_count"]
+        for list_key in ("traces", "conflicts", "edges", "nodes"):
+            if isinstance(result.get(list_key), list):
+                summary["rows"] = len(result[list_key])
+                break
+        return summary
+    return {"type": type(result).__name__}
+
+
 @dataclass
 class AuditRow:
     tenant_id: str
@@ -39,6 +61,10 @@ class AuditRow:
     outcome: str
     error_summary: str | None = None
     transport: str | None = None
+    # Migration 020 go-forward enrichment (nullable; historical rows stay NULL):
+    entity_id: str | None = None          # entity business key from tool args, when present
+    arguments: dict[str, Any] | None = None       # full tool-call arguments
+    result_summary: dict[str, Any] | None = None  # summarize_result() output, success only
 
 
 def write_audit(row: AuditRow) -> None:
@@ -46,8 +72,9 @@ def write_audit(row: AuditRow) -> None:
     sql = (
         "INSERT INTO mai_mcp_audit "
         "(tenant_id, tool_name, caller_token_id, arguments_hash, "
-        " latency_ms, outcome, error_summary, transport) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+        " latency_ms, outcome, error_summary, transport, "
+        " entity_id, arguments, result_summary) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb)"
     )
     try:
         with get_connection() as conn:
@@ -63,6 +90,9 @@ def write_audit(row: AuditRow) -> None:
                         row.outcome,
                         row.error_summary,
                         row.transport,
+                        row.entity_id,
+                        json.dumps(row.arguments, default=str) if row.arguments is not None else None,
+                        json.dumps(row.result_summary, default=str) if row.result_summary is not None else None,
                     ),
                 )
                 conn.commit()

@@ -1,8 +1,8 @@
 {
-  "seed_date": "2026-06-11",
-  "dcl_ingest_id": "a2062e15-ccec-4375-a26a-4f992134af36",
-  "tenant_id": "51aee6ec-15c3-4fb0-833a-a19bb4511296",
-  "total_triples": 36,
+  "seed_date": "2026-06-12",
+  "dcl_ingest_id": "e7a2ccea-2535-4f18-a904-e00068bc796a",
+  "tenant_id": "697e5edf-76b9-403e-aea0-6f66a4af1c50",
+  "total_triples": 2099,
   "concept_summary": {
     "account": 12,
     "accounts_payable": 109,
@@ -12,9 +12,9 @@
     "aws_cost": 1,
     "cash_flow": 138,
     "cloud_savings_opportunities_amount": 1,
-    "cloud_spend": 79,
-    "cloud_spend_by_service": 7,
-    "cloud_spend_by_team": 7,
+    "cloud_spend": 19,
+    "cloud_spend_by_service": 1,
+    "cloud_spend_by_team": 1,
     "coa": 249,
     "cogs": 13,
     "customer": 214,
@@ -27,7 +27,7 @@
     "event": 1,
     "event_stream": 60,
     "gl": 3451,
-    "headcount": 120,
+    "headcount": 72,
     "incident_count": 12,
     "infrastructure": 24,
     "invoice": 73,
@@ -46,10 +46,10 @@
     "uptime_by_service": 12,
     "uptime_pct": 84,
     "uptime_trend": 12,
-    "workforce": 168
+    "workforce": 120
   },
   "entities": [
-    "CedarGrid-1823"
+    "BeaconSync-a859"
   ],
   "farm_run_id": "snapshot_push_5652c2f4-efa_f8f75ced"
 }

@@ -5,9 +5,9 @@ Uses the Anthropic `mcp` SDK. Two transports:
   - stdio: launched via `python -m backend.api.mcp_stdio`
   - HTTP+SSE: mounted on FastAPI at /api/mcp/sse and /api/mcp/messages
 
-Tool surface: query_triples, list_domains, concept_lookup, semantic_export,
-provenance — read-only, tenant-scoped. The tool bodies live in
-`backend/engine/mcp_tools.py` and are shared with the legacy HTTP path.
+Tool surface: PUBLIC_TOOLS in `backend/engine/mcp_tools.py` (read-only,
+tenant-scoped). The tool bodies live there and are shared with the legacy
+HTTP path.
 
 Auth: each session is bound to a tenant_id derived from the caller's
 verified token. tenant_id is never an argument. Per-tenant rate limit
@@ -27,6 +27,7 @@ from mcp.server.models import InitializationOptions
 from backend.api.mcp_audit import (
     AuditRow,
     hash_arguments,
+    summarize_result,
     time_call,
     write_audit,
 )
@@ -56,8 +57,20 @@ SERVER_NAME = "dcl-mcp"
 SERVER_VERSION = "1.0.0"
 
 
+def _audit_enrichment(arguments: dict[str, Any] | None) -> dict[str, Any]:
+    """Migration 020 go-forward enrichment for every audit row: the full
+    tool-call arguments and the entity business key when the call names one."""
+    args = arguments if isinstance(arguments, dict) else None
+    entity_id = None
+    if args is not None:
+        raw = args.get("entity_id")
+        if isinstance(raw, str) and raw.strip():
+            entity_id = raw.strip()
+    return {"entity_id": entity_id, "arguments": args}
+
+
 def build_server() -> Server:
-    """Build a fresh MCP Server instance with the 5 tools wired."""
+    """Build a fresh MCP Server instance with the PUBLIC_TOOLS surface wired."""
     server = Server(SERVER_NAME)
 
     @server.list_tools()
@@ -87,6 +100,7 @@ def build_server() -> Server:
                 outcome="error",
                 error_summary=f"Unknown tool: {name}",
                 transport=transport,
+                **_audit_enrichment(arguments),
             )
             write_audit(audit)
             raise MCPToolError(f"Unknown tool: {name}")
@@ -102,6 +116,7 @@ def build_server() -> Server:
                 outcome="unauthorized",
                 error_summary="No MCP token bound to this session.",
                 transport=transport,
+                **_audit_enrichment(arguments),
             )
             write_audit(audit)
             raise MCPToolError(
@@ -119,6 +134,7 @@ def build_server() -> Server:
                 outcome="unauthorized",
                 error_summary=f"Token scope does not permit {name}.",
                 transport=transport,
+                **_audit_enrichment(arguments),
             )
             write_audit(audit)
             raise MCPToolError(
@@ -140,6 +156,7 @@ def build_server() -> Server:
                     f"{decision.retry_after_seconds:.1f}s."
                 ),
                 transport=transport,
+                **_audit_enrichment(arguments),
             )
             write_audit(audit)
             raise MCPToolError(
@@ -165,6 +182,7 @@ def build_server() -> Server:
                     outcome=outcome,
                     error_summary=error_summary,
                     transport=transport,
+                    **_audit_enrichment(arguments),
                 )
                 write_audit(audit)
                 raise
@@ -180,6 +198,7 @@ def build_server() -> Server:
                     outcome=outcome,
                     error_summary=error_summary,
                     transport=transport,
+                    **_audit_enrichment(arguments),
                 )
                 write_audit(audit)
                 raise MCPToolError(error_summary) from exc
@@ -194,6 +213,8 @@ def build_server() -> Server:
             outcome=outcome,
             error_summary=None,
             transport=transport,
+            result_summary=summarize_result(result),
+            **_audit_enrichment(arguments),
         )
         write_audit(audit)
 

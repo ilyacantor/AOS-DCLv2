@@ -78,7 +78,8 @@ def mcp_audit_read(
             total_count = cur.fetchone()[0]
             cur.execute(
                 "SELECT tool_name, caller_token_id, arguments_hash, latency_ms, "
-                "       outcome, error_summary, transport, created_at "
+                "       outcome, error_summary, transport, created_at, "
+                "       entity_id, arguments, result_summary "
                 f"FROM mai_mcp_audit WHERE {where} "
                 "ORDER BY created_at DESC LIMIT %s OFFSET %s",
                 params + [limit, offset],
@@ -95,6 +96,11 @@ def mcp_audit_read(
             "error_summary": r[5],
             "transport": r[6],
             "created_at": r[7].isoformat() if r[7] is not None else None,
+            # Migration 020 go-forward enrichment — additive fields; historical
+            # rows are NULL (knowledge honestly not captured at the time).
+            "entity_id": r[8],
+            "arguments": r[9],
+            "result_summary": r[10],
         }
         for r in rows
     ]

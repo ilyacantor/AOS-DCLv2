@@ -4,16 +4,19 @@ Plan B WP5 — real wire-protocol MCP server tests.
 Drives the DCL MCP server through the `mcp` SDK client (stdio + HTTP+SSE),
 not via curl against the legacy HTTP shim. Validates:
 
-  T1: list_tools returns the 5 §11.4 tools
+  T1: list_tools returns exactly the public tool surface (PUBLIC_TOOLS)
   T2: query_triples returns triples filtered to the calling tenant
   T3: token A cannot read token B's triples (tenant isolation)
-  T4: rate limit triggers at 61st call within 60s; audit row reflects it
+  T4: rate limit triggers above the per-tenant rpm; audit row reflects it
   T5: invalid/missing token rejected; audit row outcome='unauthorized'
   T6: stdio transport works end-to-end
-  T7: HTTP+SSE transport works end-to-end
+  T7: HTTP+SSE transport works end-to-end (live server at DCL_TEST_BASE_URL;
+      tokens are minted with the live server's shim secret — resolved below —
+      see dcl_deferred_work.md #63 for the docstring/body drift on this test)
   T8: legacy HTTP /api/mcp/tools/call still returns identical results after refactor
 
-The tests run against the live prod DB (per dcl_deferred_work.md #17).
+The tests run against the aos-dev database (.env.development — the dev/prod
+separation rule; mig 020's mai_mcp_audit enrichment columns exist only there).
 Audit rows are append-only and attributed to test tenants — safe to write.
 """
 
@@ -32,10 +35,19 @@ import pytest
 from dotenv import load_dotenv
 
 _repo = Path(__file__).resolve().parent.parent
-load_dotenv(_repo / ".env")
+load_dotenv(_repo / ".env.development")
 sys.path.insert(0, str(_repo))
 
 # Ensure DCL_MCP_TOKEN_SECRET is set so tokens can be minted/verified.
+# T7 talks to a LIVE server (DCL_TEST_BASE_URL), whose process env carries the
+# shim secret from `.env` (main.py's bare load_dotenv fills it; it is absent
+# from .env.development). Pull ONLY that var — never load `.env` wholesale into
+# the test env (its DATABASE_URL is prod; the stdio subprocess inherits env).
+if not os.environ.get("DCL_MCP_TOKEN_SECRET"):
+    from dotenv import dotenv_values
+    _live_secret = dotenv_values(_repo / ".env").get("DCL_MCP_TOKEN_SECRET")
+    if _live_secret:
+        os.environ["DCL_MCP_TOKEN_SECRET"] = _live_secret
 os.environ.setdefault("DCL_MCP_TOKEN_SECRET", "wp5-test-secret-do-not-use-in-prod")
 
 from mcp import ClientSession, StdioServerParameters  # noqa: E402
@@ -109,7 +121,9 @@ def _last_audit(tenant_id: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# T1: list_tools returns the 5 §11.4 tools
+# T1: list_tools returns exactly the public tool surface (PUBLIC_TOOLS —
+#     §11.4 base five + Gate 1A conflict pair + Gate 1B traverse_graph +
+#     Gate 2A trace_query + list_runs)
 # ---------------------------------------------------------------------------
 
 
@@ -159,7 +173,7 @@ def anyio_backend():
 
 
 @pytest.mark.anyio
-async def test_t1_list_tools_returns_five_public_tools():
+async def test_t1_list_tools_returns_public_tool_surface():
     token = mint_token(TENANT_A)["token"]
     async with await _stdio_session(token) as (read, write):
         async with ClientSession(read, write) as session:
@@ -167,8 +181,12 @@ async def test_t1_list_tools_returns_five_public_tools():
             result = await session.list_tools()
             names = sorted(t.name for t in result.tools)
             expected = sorted(PUBLIC_TOOLS)
+            assert "trace_query" in expected, (
+                "Gate 2A: trace_query must be part of the public tool surface"
+            )
             assert names == expected, (
-                f"Expected exactly the 5 public tools {expected}, got {names}"
+                f"Expected exactly the {len(expected)} public tools "
+                f"{expected}, got {names}"
             )
 
 
