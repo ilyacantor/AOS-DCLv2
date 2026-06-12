@@ -1,7 +1,7 @@
 {
   "seed_date": "2026-06-12",
-  "dcl_ingest_id": "e7a2ccea-2535-4f18-a904-e00068bc796a",
-  "tenant_id": "697e5edf-76b9-403e-aea0-6f66a4af1c50",
+  "dcl_ingest_id": "0b1731a4-9ab7-472d-9ec2-c15735d0bd61",
+  "tenant_id": "e84e1d4f-ef2f-4bd4-b705-4eae1446c561",
   "total_triples": 2099,
   "concept_summary": {
     "account": 12,
@@ -49,7 +49,7 @@
     "workforce": 120
   },
   "entities": [
-    "BeaconSync-a859"
+    "HarborFlow-d0ec"
   ],
   "farm_run_id": "snapshot_push_5652c2f4-efa_f8f75ced"
 }

@@ -60,13 +60,17 @@ class EdgeWriteResult:
     violations: list[dict] = field(default_factory=list)  # registered, excluded
 
 
-def _require_identity(tenant_id: str, entity_id: str) -> None:
+def _require_tenant(tenant_id: str) -> None:
     if not tenant_id or not str(tenant_id).strip():
         raise EdgeIdentityError("tenant_id is required at the edge persistence boundary (I2)")
     try:
         _uuid.UUID(str(tenant_id))
     except (ValueError, AttributeError, TypeError):
         raise EdgeIdentityError(f"tenant_id is not a valid UUID: {tenant_id!r}")
+
+
+def _require_identity(tenant_id: str, entity_id: str) -> None:
+    _require_tenant(tenant_id)
     if not entity_id or not str(entity_id).strip():
         raise EdgeIdentityError("entity_id is required at the edge persistence boundary (I2)")
 
@@ -501,6 +505,20 @@ class EdgeStore:
                     params,
                 )
                 return [self._row_to_edge(r) for r in cur.fetchall()]
+
+    def list_entities(self, tenant_id: str) -> list[str]:
+        """Distinct entity_ids holding at least one live edge for the tenant —
+        the tenant-wide enumeration the Gate 2C exports walk (and their
+        'does this tenant have a graph at all' existence predicate)."""
+        _require_tenant(tenant_id)
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT DISTINCT entity_id FROM entity_edges "
+                    "WHERE tenant_id = %s AND is_active = true ORDER BY entity_id",
+                    [str(tenant_id)],
+                )
+                return [r[0] for r in cur.fetchall()]
 
     def get_subgraph(
         self,

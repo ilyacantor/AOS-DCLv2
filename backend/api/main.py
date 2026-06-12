@@ -81,6 +81,7 @@ from backend.api.routes.monitor import router as monitor_router
 from backend.api.routes.conflicts import router as conflicts_router
 from backend.api.routes.mcp_audit_read import router as mcp_audit_read_router
 from backend.api.routes.traces import router as traces_router
+from backend.api.routes.exports import router as exports_router
 
 logger = get_logger(__name__)
 
@@ -362,6 +363,8 @@ app.include_router(conflicts_router)
 app.include_router(mcp_audit_read_router)
 # Gate 2A (§9): unified decision-trace search + standing-rule registry.
 app.include_router(traces_router)
+# Gate 2C: standards-track exports (Turtle / JSON-LD / MetricFlow YAML). Read-only.
+app.include_router(exports_router)
 # Demo pipeline monitor — read-only metrics endpoint. Additive and isolated.
 app.include_router(monitor_router)
 

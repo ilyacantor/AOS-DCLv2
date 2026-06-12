@@ -29,6 +29,12 @@ requests>=2.31.0
 mcp==0.9.1
 sse-starlette>=2.0,<4.0
 
+# Semantic exports (Gate 2C)
+rdflib==7.6.0                     # Turtle/JSON-LD graph serializer (runtime)
+pyld==3.0.0                       # Gate 2C export validators (test-time): JSON-LD expand/normalize
+pyoxigraph==0.5.8                 # Gate 2C export validators (test-time): independent triple store + SPARQL
+dbt-semantic-interfaces==0.10.5   # Gate 2C export validators (test-time): MetricFlow spec parser (pydantic<3 — no conflict with pydantic==2.9.2)
+
 # Utilities
 python-dotenv==1.0.1
 pyyaml>=6.0
