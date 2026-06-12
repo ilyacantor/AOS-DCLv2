@@ -158,28 +158,30 @@ export function ContextTab({ snapshot }: ContextTabProps) {
         </div>
       </div>
 
-      {/* Top metric row */}
+      {/* Top metric row. While a fetch is in flight the counts are UNKNOWN —
+          render '…', never a zero that is indistinguishable from a true zero
+          (the silent-fallback class: a loading gap must not look like data). */}
       <div className={`shrink-0 grid gap-3 ${showResolution ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <MetricCard
           label="Domain Coverage"
-          value={`${data?.domain_coverage.domains_populated ?? 0} / ${data?.domain_coverage.domains_total ?? 0}`}
+          value={loading ? '…' : `${data?.domain_coverage.domains_populated ?? 0} / ${data?.domain_coverage.domains_total ?? 0}`}
           detail="Ontology concepts with data"
         />
         <MetricCard
           label="Triples"
-          value={confTotal.toLocaleString()}
-          detail={`E:${conf.exact} H:${conf.high} M:${conf.medium} L:${conf.low}`}
+          value={loading ? '…' : confTotal.toLocaleString()}
+          detail={loading ? '…' : `E:${conf.exact} H:${conf.high} M:${conf.medium} L:${conf.low}`}
         />
         {showResolution && (
           <MetricCard
             label="Resolution"
-            value={`${resolution.workspaces_resolved} / ${resolution.workspaces_total}`}
-            detail={`${resolution.workspaces_pending} pending`}
+            value={loading ? '…' : `${resolution.workspaces_resolved} / ${resolution.workspaces_total}`}
+            detail={loading ? '…' : `${resolution.workspaces_pending} pending`}
           />
         )}
         <MetricCard
           label="Source Systems"
-          value={String(data?.source_system_breakdown.length ?? 0)}
+          value={loading ? '…' : String(data?.source_system_breakdown.length ?? 0)}
           detail="Distinct systems"
         />
       </div>
@@ -189,6 +191,7 @@ export function ContextTab({ snapshot }: ContextTabProps) {
         <ConflictsPanel
           entityId={selectedEntityId}
           openCount={resolution.conflicts_detected}
+          loading={loading}
           onDispositioned={() => fetchData(selectedEntityId || undefined)}
         />
       )}
@@ -288,8 +291,8 @@ export function ContextTab({ snapshot }: ContextTabProps) {
   );
 }
 
-function ConflictsPanel({ entityId, openCount, onDispositioned }:
-  { entityId: string; openCount: number; onDispositioned: () => void }) {
+function ConflictsPanel({ entityId, openCount, loading, onDispositioned }:
+  { entityId: string; openCount: number; loading: boolean; onDispositioned: () => void }) {
   const [open, setOpen] = useState(false);
   const [entries, setEntries] = useState<ConflictEntry[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -355,8 +358,8 @@ function ConflictsPanel({ entityId, openCount, onDispositioned }:
       >
         <span>
           Conflict Register
-          <span className={`ml-2 px-1.5 py-0.5 rounded ${openCount > 0 ? 'bg-amber-500/20 text-amber-500' : 'bg-muted text-muted-foreground'}`}>
-            {openCount} open
+          <span className={`ml-2 px-1.5 py-0.5 rounded ${!loading && openCount > 0 ? 'bg-amber-500/20 text-amber-500' : 'bg-muted text-muted-foreground'}`}>
+            {loading ? '…' : `${openCount} open`}
           </span>
         </span>
         <span className="text-muted-foreground">{open ? 'Hide' : 'Drill'}</span>
