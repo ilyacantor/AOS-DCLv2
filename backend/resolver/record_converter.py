@@ -37,7 +37,7 @@ from typing import Any, Optional
 from backend.api.routes.ingest_triples import TriplePayload
 from backend.aam.ingress import normalize_source_id
 from backend.db.canonical_registry import CanonicalRegistry
-from backend.domain.models import FieldSchema, SourceSystem, TableSchema
+from backend.domain.models import FieldSchema, Mapping, SourceSystem, TableSchema
 from backend.engine.ontology import get_ontology
 from backend.engine.persona_view import get_persona_domain_mapping
 from backend.resolver.record_resolver import RecordResolver
@@ -108,6 +108,55 @@ class ConversionResult:
     # method -> count, for the operator-visible response summary
     resolution_summary: dict = field(default_factory=dict)
     hitl_queue_ids: list[str] = field(default_factory=list)
+    # field->concept classifications learned this conversion, for the live graph
+    # (persisted to field_concept_mappings by the endpoint — see
+    # derive_field_mappings).
+    mappings: list[Mapping] = field(default_factory=list)
+
+
+def derive_field_mappings(payloads: list[TriplePayload]) -> list[Mapping]:
+    """Field->concept mappings the converted triples imply, for the semantic graph.
+
+    Every converted triple is evidence that a source field was classified as a
+    concept. rebuild_graph()/build_graph_snapshot() read field_concept_mappings to
+    build the CLASSIFIED_AS edges /resolve traverses; without this the records path
+    leaves the graph blind to its own ingest (the deprecated pipe path was the only
+    writer — deferred #76).
+
+    Derived from the PAYLOADS, not the raw HeuristicMapper output: domain-tagged
+    pipes force concept=domain (and the aggregators emit their own concepts), so the
+    mapping must carry exactly the concept the triple carries — otherwise the graph
+    would know a field under one concept while the facts live under another and
+    resolve would find a source with no data. Deduped to the highest confidence per
+    (source_system, source_table, source_field, concept); method is "heuristic"
+    (DCL's own rule-based classification — the records path builds no AAM edge index,
+    so never aam_edge, and is not rag/llm).
+    """
+    best: dict[tuple, float] = {}
+    skipped = 0
+    for p in payloads:
+        if not p.source_field or not p.source_table:
+            skipped += 1
+            continue
+        key = (p.source_system, p.source_table, p.source_field, p.concept)
+        conf = float(p.confidence_score)
+        if key not in best or conf > best[key]:
+            best[key] = conf
+    if skipped:
+        logger.warning(
+            "[records-mappings] %d payload(s) lacked source_field/source_table — "
+            "no field->concept mapping derived for them (triples still written)",
+            skipped,
+        )
+    return [
+        Mapping(
+            id=f"{ss}_{st}_{sf}_{concept}",
+            source_field=sf, source_table=st, source_system=ss,
+            ontology_concept=concept, confidence=conf,
+            method="heuristic", status="ok",
+        )
+        for (ss, st, sf, concept), conf in best.items()
+    ]
 
 
 class RecordConverter:
@@ -139,6 +188,9 @@ class RecordConverter:
         result = ConversionResult()
         for pipe in pipes:
             self._convert_one_pipe(tenant_id, entity_id, pipe, result)
+        # The field->concept classifications this batch implies — persisted by the
+        # endpoint so the graph can resolve them (deferred #76).
+        result.mappings = derive_field_mappings(result.payloads)
         return result
 
     def _classify_fields(self, *, source_id: str, pipe_id: str, table_name: str,

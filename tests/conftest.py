@@ -141,3 +141,74 @@ def seed_tenant_id() -> str:
 def seed_run_id() -> str:
     """Run ID from seed_manifest.json."""
     return RUN_ID
+
+
+@pytest.fixture(autouse=True)
+def _restore_field_concept_mappings():
+    """Isolate the GLOBAL field_concept_mappings table per test.
+
+    The records-path ingest writer (deferred #76) upserts field->concept rows on
+    every /api/dcl/ingest-records. That table is un-tenanted and is read by every
+    rebuild_graph(), so without isolation an ingest-records test leaks rows that
+    (a) flip a later suite's resolve asserts — the persona suite resolves a shared
+    concept expecting can_answer=False, which a stray 'revenue' field mapping
+    would turn True — and (b) make the suite non-deterministic across runs (B14).
+
+    Snapshot the PKs before the test; delete only the rows added during it,
+    leaving any pre-existing mappings untouched. Tests that touch no mappings pay
+    one cheap SELECT and a no-op. A DB/connection failure surfaces loudly (the
+    whole integration suite needs aos-dev) rather than being masked.
+    """
+    from backend.core.db import get_connection
+
+    sql = ("SELECT source_id, table_name, field_name, concept_id "
+           "FROM field_concept_mappings")
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            before = {tuple(r) for r in cur.fetchall()}
+    yield
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            added = {tuple(r) for r in cur.fetchall()} - before
+            if added:
+                cur.executemany(
+                    "DELETE FROM field_concept_mappings WHERE source_id=%s "
+                    "AND table_name=%s AND field_name=%s AND concept_id=%s",
+                    list(added),
+                )
+                conn.commit()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _sweep_field_concept_mappings_residue():
+    """Session-end backstop for the per-test isolation above.
+
+    A test that ingests records inside a MODULE- or SESSION-scoped fixture (e.g.
+    the live-backend e2e suites whose module fixture POSTs /api/dcl/ingest-records
+    once) writes field_concept_mappings rows that already exist before the first
+    per-test before-snapshot — so the function-scoped fixture never sees them as
+    "added" and never deletes them. Capture the true baseline at session start and
+    delete anything beyond it at session end, so the records-path writer leaves
+    ZERO residue in the global table across the run (B14)."""
+    from backend.core.db import get_connection
+
+    sql = ("SELECT source_id, table_name, field_name, concept_id "
+           "FROM field_concept_mappings")
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            baseline = {tuple(r) for r in cur.fetchall()}
+    yield
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            added = {tuple(r) for r in cur.fetchall()} - baseline
+            if added:
+                cur.executemany(
+                    "DELETE FROM field_concept_mappings WHERE source_id=%s "
+                    "AND table_name=%s AND field_name=%s AND concept_id=%s",
+                    list(added),
+                )
+                conn.commit()

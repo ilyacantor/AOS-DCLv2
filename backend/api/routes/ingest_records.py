@@ -78,6 +78,10 @@ class IngestRecordsResponse(BaseModel):
     pipes: int
     triple_count: int
     triples_written: int
+    # field->concept mappings learned + upserted to field_concept_mappings this
+    # ingest (deferred #76 — the records path now feeds the graph's CLASSIFIED_AS
+    # edges, the deprecated pipe path's old job).
+    mappings_written: int = 0
     concept_summary: dict
     # method -> count across all resolved records (exact/alias/pattern/fuzzy/
     # hitl_pending/discovery/rejected). Empty when no pipe declared an identity.
@@ -185,6 +189,17 @@ def ingest_records(
     )
     ingest_resp: IngestResponse = ingest_triples(envelope, replace=replace, append=append)
 
+    # --- Persist the field->concept classifications this ingest learned so the
+    # semantic graph (rebuilt at startup and by /api/dcl/run -> build_graph_snapshot)
+    # can resolve them. The records path is the live successor to the retired
+    # pipe-path mapping writer (deferred #76). The upsert is global and
+    # tenant-agnostic by design — field_concept_mappings is field->concept
+    # knowledge, not tenant data; ?replace= replaces THIS entity's triples, never
+    # the shared mapping set, so clear_existing stays False (clearing by source_id
+    # would wipe other tenants' fields on the same source). ---
+    from backend.semantic_mapper.persist_mappings import MappingPersistence
+    mappings_written = MappingPersistence().save_mappings(conv.mappings, clear_existing=False)
+
     # --- Gate 1B (§7): derive entity↔entity edges from record structure ---
     # DCL classifies relationships exactly where it classifies values; AAM
     # stays transport-only. Derived edges ride the SAME ingest identity
@@ -206,10 +221,10 @@ def ingest_records(
         edge_violations = edge_result.violations
 
     logger.info(
-        "[ingest-records] tenant_id=%s entity_id=%s pipes=%d records=%d -> %d triples; "
-        "edges derived=%d written=%d violations=%d; resolution=%s warnings=%d",
+        "[ingest-records] tenant_id=%s entity_id=%s pipes=%d records=%d -> %d triples, "
+        "%d field mappings; edges derived=%d written=%d violations=%d; resolution=%s warnings=%d",
         req.tenant_id, req.entity_id, len(req.pipes), records_seen,
-        ingest_resp.triples_written, len(derived), edges_written,
+        ingest_resp.triples_written, mappings_written, len(derived), edges_written,
         len(edge_violations), conv.resolution_summary, len(conv.warnings),
     )
 
@@ -221,6 +236,7 @@ def ingest_records(
         pipes=len(req.pipes),
         triple_count=ingest_resp.triple_count,
         triples_written=ingest_resp.triples_written,
+        mappings_written=mappings_written,
         concept_summary=ingest_resp.concept_summary,
         resolution_summary=conv.resolution_summary,
         hitl_queue_ids=conv.hitl_queue_ids,

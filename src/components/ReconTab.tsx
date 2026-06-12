@@ -92,7 +92,13 @@ export function ReconTab({ snapshot }: ReconTabProps) {
         return c.entities?.join(', ') || 'No entities';
       case 'source_coverage':
         if (c.missing && c.missing.length > 0) return `Missing: ${c.missing.join(', ')}`;
-        return `${(c.actual as string[])?.length ?? 0} sources present`;
+        // The recon endpoint always sends `actual` as the source-system list (a
+        // real 0 only when the run genuinely has none — a fail). Don't coerce a
+        // missing list to "0 sources present"; that would read absent data as a
+        // fact (deferred #77, never zero-default-as-fact).
+        return Array.isArray(c.actual)
+          ? `${c.actual.length} sources present`
+          : 'Source count unavailable';
       case 'validation_rejections':
         return c.rejected === 0 ? 'No rejections' : `${c.rejected} rejected`;
       case 'domain_completeness':

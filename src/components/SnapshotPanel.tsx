@@ -101,15 +101,25 @@ export function SnapshotPanel({ currentSnapshotName, runMetrics, aodRunId, onSna
     const vendor = colonIdx >= 0 ? fpv.substring(colonIdx + 1) : '';
     return { type: formatPlaneType(planeType), vendor: capitalize(vendor) };
   });
-  const fabricCount = fabricPlaneVendors.length || (profile?.aamMeta?.fabrics?.length ?? 0);
-
   // SOR vendor names (Salesforce, SAP, etc.)
   const sorVendors = profile?.aamMeta?.sor_vendors ?? [];
-  const sorCount = profile?.aamMeta?.sors ?? sorVendors.length;
-
   // Pipe source names (individual connection names)
   const pipeSourceNames = profile?.aamMeta?.source_names ?? [];
-  const pipeCount = profile?.aamMeta?.pipes ?? 0;
+
+  // Scale counts come ONLY from aamMeta, which is absent on snapshots ingested
+  // before the AAM-meta era. Absent metadata is UNKNOWN, not zero — render '—'
+  // so "no AAM metadata" never reads as the fact "0 fabrics / 0 pipes" (deferred
+  // #77, the banned render-unknown-as-benign-default class). A real 0 only shows
+  // when aamMeta is present and the count is genuinely zero.
+  const fabricCount: string | number = profile?.aamMeta
+    ? (fabricPlaneVendors.length || (profile.aamMeta.fabrics?.length ?? 0))
+    : '—';
+  const sorCount: string | number = profile?.aamMeta
+    ? (profile.aamMeta.sors ?? sorVendors.length)
+    : '—';
+  const pipeCount: string | number = profile?.aamMeta
+    ? (profile.aamMeta.pipes ?? 0)
+    : '—';
 
   return (
     <div className="h-full flex flex-col">

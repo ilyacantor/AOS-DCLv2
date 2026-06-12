@@ -81,7 +81,11 @@ promotes the bound triples to `manual` @ 0.99.
 {
   "dcl_ingest_id", "tenant_id", "entity_id",
   "records_seen", "pipes",
-  "triple_count", "triples_written", "concept_summary",
+  "triple_count", "triples_written",
+  "mappings_written",  // field->concept mappings learned this ingest + upserted to
+                       // field_concept_mappings, the graph's CLASSIFIED_AS source —
+                       // the records path is now the live mapping writer (deferred #76)
+  "concept_summary",
   "resolution_summary": { "discovery": 1, "fuzzy": 1, ... },  // by resolver method
   "hitl_queue_ids": ["..."],
   "warnings": [ { "type": "non_persona_concept|unmapped_field|identity_rejected",

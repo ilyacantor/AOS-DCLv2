@@ -369,3 +369,59 @@ def test_identity_key_without_domain_is_422():
     _, resp = _post_records([pipe])
     assert resp.status_code == 422, resp.text
     assert resp.json()["detail"]["error"] == "RESOLVER_CONTRACT"
+
+
+# ---------------------------------------------------------------------------
+# Deferred #76: the records path is the LIVE writer of field->concept mappings
+# ---------------------------------------------------------------------------
+
+def test_records_ingest_makes_concept_resolvable_with_provenance():
+    """A live records ingest makes its concepts answerable through /api/dcl/resolve
+    after the standard graph (re)build — the retired pipe path's old job, now done
+    on the canonical records path (deferred #76). Before this writer existed, dev
+    had zero field_concept_mappings and every resolve ended at "No sources found".
+
+    Operator-visible outcome: after AAM transports a customer pipe from a probe
+    source, asking the graph to resolve the `customer` concept answers
+    can_answer=true with a field-level source that points at THIS ingest's probe
+    fields. The before/after delta is keyed to a source no other test ingests, so
+    the proof is exactly what this ingest added — immune to customer mappings other
+    suites (e.g. the live-backend e2e fixtures) leave in the global table.
+    """
+    from backend.engine.graph_store import rebuild_graph
+    from backend.aam.ingress import normalize_source_id
+
+    PROBE_SRC = "Probe76Src"               # ingested by no other test
+    probe_sys = normalize_source_id(PROBE_SRC)
+    probe_pipe = _customer_pipe(str(uuid.uuid4()), PROBE_SRC, [
+        {"customer_id": "P76-1", "company_name": "Probe Robotics Inc."},
+    ])
+
+    def _customer_sources_from_probe():
+        # rebuild_graph() is the real startup/operator graph build — it reads
+        # field_concept_mappings to lay the CLASSIFIED_AS edges resolve traverses.
+        rebuild_graph()
+        r = client.post("/api/dcl/resolve", json={"concepts": ["customer"]})
+        assert r.status_code == 200, r.text
+        b = r.json()
+        return b, [s for s in b.get("concept_sources", [])
+                   if s["concept"] == "customer" and s["system"] == probe_sys]
+
+    # Negative (pre-ingest): the probe source is not yet a source for `customer`.
+    _before, before_src = _customer_sources_from_probe()
+    assert not before_src, f"{probe_sys} already a customer source before ingest: {before_src}"
+
+    # Live records ingest: writes the customer triples AND the field->concept
+    # mappings the converter learned (the new behavior under test).
+    _run_id, resp = _post_records([probe_pipe], entity_id="FabricResolveProof76")
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["mappings_written"] >= 1, f"records ingest wrote no field mappings: {resp.json()}"
+
+    # Positive (post-ingest + rebuild): `customer` is now resolvable, sourced from
+    # the probe system this ingest classified, with a provenance string.
+    after, after_src = _customer_sources_from_probe()
+    assert after["can_answer"] is True, (
+        f"customer not resolvable after records ingest + rebuild: reason={after.get('reason')!r}"
+    )
+    assert after_src, f"customer not sourced from {probe_sys} after ingest: {after.get('concept_sources')}"
+    assert after["provenance"], f"resolve returned can_answer with no provenance: {after}"
