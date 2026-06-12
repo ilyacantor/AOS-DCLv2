@@ -70,14 +70,22 @@ def test_questions_slots_well_formed():
             assert gt["scales"], s["id"]
 
 
-def test_gate1a_headline_slots_present_and_pending_honest():
-    """The two §13 headline beats exist verbatim as slots and are pending —
-    never wired to fake output."""
+def test_gate1a_headline_slots_present_and_live():
+    """The two §13 headline beats exist verbatim as slots and are LIVE
+    conflict slots — flipped pending→live when the Farm scenario months
+    landed (ledger #66 RESOLVED, commit b3387e5). The never-simulate rule
+    holds in its live form: conflict slots score against the entity's real
+    Register (see the capture's conflict scores), never canned output."""
     _, slots = _load_slots()
     by_id = {s["id"]: s for s in slots}
-    assert by_id["q1_attrition_headline"]["status"] == "pending"
-    assert "attrition" in by_id["q1_attrition_headline"]["question"].lower()
-    assert by_id["q2_cloud_conflict"]["status"] == "pending"
+    q1 = by_id["q1_attrition_headline"]
+    assert q1["status"] == "live"
+    assert q1["kind"] == "conflict"
+    assert "attrition" in q1["question"].lower()
+    q2 = by_id["q2_cloud_conflict"]
+    assert q2["status"] == "live"
+    assert q2["kind"] == "conflict"
+    assert "compute spend" in q2["question"].lower()
 
 
 # ---------------------------------------------------------------------------

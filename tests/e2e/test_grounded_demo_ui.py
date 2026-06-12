@@ -101,14 +101,29 @@ def test_no_data_slot_renders_honestly(page: Page, capture: dict):
     page.screenshot(path=os.path.join(SCREENSHOT_DIR, "grounded_demo_no_data.png"))
 
 
-def test_gate1a_slots_render_pending_never_simulated(page: Page, capture: dict):
+def test_gate1a_headline_slots_render_live_conflicts(page: Page, capture: dict):
+    """q1/q2 flipped pending→live (#66 RESOLVED, commit b3387e5): clicking
+    each renders the grounded After card disclosing the Register conflict and
+    naming the scenario-feed sources from the capture's own scores — and the
+    Gate 1A pending tile no longer renders for them (count 0 IS the spec:
+    a live slot has no pending state)."""
     _open_demo_tab(page)
     for slot_id in ("q1_attrition_headline", "q2_cloud_conflict"):
+        slot = next(s for s in capture["slots"] if s["id"] == slot_id)
+        conflict_score = slot["scores"]["b"]["conflict"]
+        if conflict_score["expected_conflicts"] == 0:
+            # Register empty at capture time — the honest expectation flips.
+            assert conflict_score["passed"], (
+                f"{slot_id}: B failed to state the no-conflict case"
+            )
+            continue
         page.get_by_test_id(f"demo-slot-{slot_id}").click()
-        tile = page.get_by_test_id("demo-pending-tile")
-        expect(tile).to_contain_text("Gate 1A")
-        expect(tile).to_contain_text("never simulated")
-    page.screenshot(path=os.path.join(SCREENSHOT_DIR, "grounded_demo_pending.png"))
+        expect(page.get_by_test_id("demo-pending-tile")).to_have_count(0)
+        after_card = page.get_by_text("After — grounded via DCL-MCP").locator("..").locator("..")
+        for src in conflict_score["sources_named_in_answer"]:
+            expect(after_card).to_contain_text(src)
+        expect(after_card).to_contain_text("conflict disclosed")
+    page.screenshot(path=os.path.join(SCREENSHOT_DIR, "grounded_demo_headline_live.png"))
 
 
 def test_conflict_slot_discloses_register_sources(page: Page, capture: dict):
