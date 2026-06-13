@@ -35,6 +35,9 @@ pyld==3.0.0                       # Gate 2C export validators (test-time): JSON-
 pyoxigraph==0.5.8                 # Gate 2C export validators (test-time): independent triple store + SPARQL
 dbt-semantic-interfaces==0.10.5   # Gate 2C export validators (test-time): MetricFlow spec parser (pydantic<3 — no conflict with pydantic==2.9.2)
 
+# Scheduler (Gate 3B D1 — APScheduler for structural-drift monitor)
+apscheduler>=3.10,<4.0
+
 # Utilities
 python-dotenv==1.0.1
 pyyaml>=6.0
