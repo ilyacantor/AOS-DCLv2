@@ -133,6 +133,11 @@ export function ProposalsPanel({ entityId }: { entityId: string }) {
   const [authLoading, setAuthLoading] = useState(false);
 
   const fetchSeq = useRef(0);
+  // Tracks the latest statusFilter for async callbacks (decide()) that outlive
+  // the render that created them — avoids the stale-closure race where the
+  // decide POST completes after the operator switches the filter.
+  const statusFilterRef = useRef<StatusFilter>('pending');
+  statusFilterRef.current = statusFilter;
 
   // ── data fetches ────────────────────────────────────────────────────────────
 
@@ -244,7 +249,7 @@ export function ProposalsPanel({ entityId }: { entityId: string }) {
       if (!res.ok) {
         throw new Error((body as { detail?: string }).detail ?? `HTTP ${res.status}`);
       }
-      await fetchProposals(statusFilter);
+      await fetchProposals(statusFilterRef.current);
       await fetchPendingCount();
       if (decision === 'approve') await fetchAuthorityMap();
     } catch (e) {
