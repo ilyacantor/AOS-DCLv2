@@ -22,6 +22,7 @@ logger = get_logger(__name__)
 _VALID_PROPOSAL_TYPES = frozenset({
     "authority_map", "conflict_candidate", "vocabulary_alias",
     "org_hierarchy", "management_overlay", "priority_query",
+    "structural_drift",   # Gate 3B D1 — scheduled drift detector
 })
 
 _PROPOSAL_COLS = (
@@ -48,6 +49,13 @@ def _natural_key(proposal_type: str, payload: dict) -> str:
         return str(payload.get("board_segment", "")).strip().lower()
     if proposal_type == "priority_query":
         return str(payload.get("query_label", "")).strip().lower()
+    if proposal_type == "structural_drift":
+        # Identifies the drift detection between a specific base→compare run pair
+        # for one entity. Same entity + same run pair = same pending drift = dedup.
+        entity = str(payload.get("entity_id", "")).strip().lower()
+        base = str(payload.get("dcl_ingest_id_base", "")).strip().lower()
+        compare = str(payload.get("dcl_ingest_id_compare", "")).strip().lower()
+        return f"{entity}|{base}|{compare}"
     raise ValueError(f"Unknown proposal_type for natural key: {proposal_type!r}")
 
 
