@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { GraphSnapshot, PersonaId, PersonaStats } from './types';
 import { Toaster } from './components/ui/toaster';
 import { useToast } from './hooks/use-toast';
-import { UserGuide } from './components/UserGuide';
+import { OperatorGuide } from './components/OperatorGuide';
 import { IngestTab } from './components/IngestTab';
 import { ContextTab } from './components/ContextTab';
 import { DashboardTab } from './components/DashboardTab';
@@ -341,7 +341,7 @@ function App() {
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground hover:bg-accent'
             }`}
-            title="Guide"
+            title="Operator Guide"
           >
             ?
           </button>
@@ -449,7 +449,7 @@ function App() {
         ) : mainView === 'recon' ? (
           <ReconTab snapshot={snapshot} />
         ) : mainView === 'guide' ? (
-          <UserGuide />
+          <OperatorGuide />
         ) : mainView === 'dashboard' ? (
           <DashboardTab snapshot={snapshot} />
         ) : mainView === 'monitor' ? (
