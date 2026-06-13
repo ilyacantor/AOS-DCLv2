@@ -9,7 +9,10 @@ Identity: schedule is global (not tenant-scoped) — no tenant_id on these route
 I1: no run_id in any response.
 """
 
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, field_validator
 
 from backend.db.monitor_store import MonitorStore
 from backend.api.scheduler import get_scheduler
@@ -36,6 +39,20 @@ _SWEEP_FUNCTIONS = {
     "structural_drift": run_structural_drift_sweep,
     "value_drift": run_value_drift_sweep,
 }
+
+
+class ResumeRequest(BaseModel):
+    interval_seconds: Optional[int] = None
+
+    @field_validator("interval_seconds")
+    @classmethod
+    def _interval_positive(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and v <= 0:
+            raise ValueError(
+                f"interval_seconds must be > 0; got {v}. "
+                "A zero or negative interval would spin the scheduler continuously."
+            )
+        return v
 
 
 def _get_job_or_404(job_name: str) -> dict:
@@ -79,9 +96,10 @@ def schedule_pause(job_name: str):
 
 
 @router.post("/api/dcl/monitor/schedule/{job_name}/resume")
-def schedule_resume(job_name: str):
+def schedule_resume(job_name: str, body: ResumeRequest = ResumeRequest()):
     """Resume a paused job: set enabled=true in monitor_schedule and add it back
-    to the APScheduler instance at its configured interval."""
+    to the APScheduler instance. If interval_seconds is given (>0), the interval
+    is updated in monitor_schedule before arming the scheduler."""
     job = _get_job_or_404(job_name)
     if job_name not in _JOB_FUNCTIONS:
         raise HTTPException(
@@ -89,12 +107,23 @@ def schedule_resume(job_name: str):
             detail=f"No sweep function registered for job '{job_name}'.",
         )
 
+    if body.interval_seconds is not None:
+        updated_interval = _store.set_interval(job_name, body.interval_seconds)
+        if updated_interval is None:
+            raise HTTPException(status_code=404, detail=f"Job '{job_name}' not found.")
+        effective_seconds = body.interval_seconds
+        logger.info(
+            "[monitor-schedule] interval updated for '%s': %ds → %ds",
+            job_name, job["interval_seconds"], effective_seconds,
+        )
+    else:
+        effective_seconds = job["interval_seconds"]
+
     updated = _store.set_enabled(job_name, True)
 
     sched = get_scheduler()
     if sched is not None:
         fn = _JOB_FUNCTIONS[job_name]
-        # Add the job if not already present; replace if it somehow exists.
         try:
             sched.remove_job(job_name)
         except Exception:
@@ -102,14 +131,14 @@ def schedule_resume(job_name: str):
         sched.add_job(
             fn,
             trigger="interval",
-            seconds=job["interval_seconds"],
+            seconds=effective_seconds,
             id=job_name,
             replace_existing=True,
             max_instances=1,
         )
         logger.info(
             "[monitor-schedule] resumed APScheduler job '%s' at %ds interval",
-            job_name, job["interval_seconds"],
+            job_name, effective_seconds,
         )
 
     return {"job_name": job_name, "action": "resumed", "job": updated}

@@ -326,3 +326,80 @@ def test_last_run_at_updated_after_run_now():
     job = next(j for j in sched["jobs"] if j["job_name"] == "structural_drift")
     assert job["last_run_at"] is not None, "last_run_at must be set after run-now"
     assert job["last_status"] == "ok", f"Expected last_status='ok'; got {job['last_status']}"
+
+
+# =============================================================================
+# Test: value_drift job in schedule list (D2 coverage)
+# =============================================================================
+
+def test_schedule_list_contains_value_drift():
+    """GET /api/dcl/monitor/schedule returns the value_drift job (added in D2)."""
+    resp = client.get("/api/dcl/monitor/schedule")
+    assert resp.status_code == 200, resp.text
+    jobs = {j["job_name"]: j for j in resp.json()["jobs"]}
+    assert "value_drift" in jobs, f"value_drift not in jobs: {list(jobs)}"
+    job = jobs["value_drift"]
+    assert isinstance(job["interval_seconds"], int) and job["interval_seconds"] > 0
+    assert isinstance(job["enabled"], bool)
+    assert "last_run_at" in job
+    assert "last_status" in job
+
+
+# =============================================================================
+# Test: resume with custom interval_seconds (D3)
+# =============================================================================
+
+def test_resume_with_custom_interval():
+    """Resume with interval_seconds=60 updates the DB; GET schedule reflects it.
+    Restores the original interval afterward."""
+    original = client.get("/api/dcl/monitor/schedule").json()
+    orig_interval = next(
+        j["interval_seconds"] for j in original["jobs"] if j["job_name"] == "structural_drift"
+    )
+
+    client.post("/api/dcl/monitor/schedule/structural_drift/pause")
+    resp = client.post(
+        "/api/dcl/monitor/schedule/structural_drift/resume",
+        json={"interval_seconds": 60},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["action"] == "resumed"
+    assert body["job"]["enabled"] is True
+
+    sched = client.get("/api/dcl/monitor/schedule").json()
+    job = next(j for j in sched["jobs"] if j["job_name"] == "structural_drift")
+    assert job["interval_seconds"] == 60, (
+        f"Expected interval_seconds=60 after resume with custom interval; got {job['interval_seconds']}"
+    )
+
+    # Restore original interval and pause.
+    client.post(
+        "/api/dcl/monitor/schedule/structural_drift/resume",
+        json={"interval_seconds": orig_interval},
+    )
+    client.post("/api/dcl/monitor/schedule/structural_drift/pause")
+
+
+def test_resume_invalid_interval_zero():
+    """interval_seconds=0 is rejected with 422."""
+    client.post("/api/dcl/monitor/schedule/structural_drift/pause")
+    resp = client.post(
+        "/api/dcl/monitor/schedule/structural_drift/resume",
+        json={"interval_seconds": 0},
+    )
+    assert resp.status_code == 422, (
+        f"Expected 422 for interval=0; got {resp.status_code}: {resp.text[:200]}"
+    )
+
+
+def test_resume_invalid_interval_negative():
+    """interval_seconds=-1 is rejected with 422."""
+    client.post("/api/dcl/monitor/schedule/structural_drift/pause")
+    resp = client.post(
+        "/api/dcl/monitor/schedule/structural_drift/resume",
+        json={"interval_seconds": -1},
+    )
+    assert resp.status_code == 422, (
+        f"Expected 422 for interval=-1; got {resp.status_code}: {resp.text[:200]}"
+    )

@@ -61,6 +61,19 @@ class MonitorStore:
             conn.commit()
         return _row_to_job(row) if row else None
 
+    def set_interval(self, job_name: str, interval_seconds: int) -> Optional[dict]:
+        """Update interval_seconds for a job. Returns updated row, or None if not found."""
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"UPDATE monitor_schedule SET interval_seconds = %s, updated_at = now() "
+                    f"WHERE job_name = %s RETURNING {_JOB_COLS}",
+                    (interval_seconds, job_name),
+                )
+                row = cur.fetchone()
+            conn.commit()
+        return _row_to_job(row) if row else None
+
     def record_run(self, job_name: str, status: str, detail: str) -> None:
         """Record the outcome of a sweep into last_run_at / last_status / last_detail."""
         with get_connection() as conn:
