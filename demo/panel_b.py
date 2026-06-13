@@ -59,7 +59,12 @@ def mint_demo_token(tenant_id: str) -> dict:
     the same operation as the operator mint flow."""
     from backend.api.mcp_auth import mint_token
 
-    return mint_token(tenant_id, ttl_seconds=3600, scope=TOKEN_SCOPE)
+    return mint_token(
+        tenant_id,
+        ttl_seconds=3600,
+        scope=TOKEN_SCOPE,
+        identity="demo-panel-b",
+    )
 
 
 def _bridge_tool_defs(mcp_tools) -> list[dict]:
