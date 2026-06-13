@@ -473,3 +473,25 @@ Unique: `(tenant_id, alias)`.
 ### `conflict_register.source_class` (additive column, migration 023)
 
 Added: `source_class TEXT NOT NULL DEFAULT 'system_system' CHECK IN ('system_system','stakeholder_system','stakeholder_stakeholder')`. Discriminates conflict origin. Convergence reads `conflict_register` via SELECT — this is an additive column with a default, so it is non-breaking.
+
+---
+
+## Gate 3C MCP agent-identity registry (migration 026)
+
+**DCL-owned. Convergence does NOT read this table.** No `semantic_triples` change — additive new table only. No Convergence coordination required.
+
+### `mcp_agent_identities`
+
+Per-tenant registry of declared agent identities with 3-axis scope. `identity_name` is a stable string key (e.g. `finops-readonly`). Empty arrays on any axis mean unrestricted on that axis — mirrors the token back-compat rule (empty scope = full access). Operators select an identity_name; `scripts/mcp_mint.py` resolves its scopes from this table and embeds them in the HMAC token. Enforcement is self-contained at the MCP boundary (no DB lookup at call time).
+
+| Column | Type | Nullable | Default | Constraint |
+|--------|------|----------|---------|------------|
+| `id` | UUID | NOT NULL | `gen_random_uuid()` | PRIMARY KEY |
+| `tenant_id` | UUID | NOT NULL | — | — |
+| `identity_name` | TEXT | NOT NULL | — | — |
+| `tool_scope` | TEXT[] | NOT NULL | `'{}'` | — |
+| `domain_scope` | TEXT[] | NOT NULL | `'{}'` | — |
+| `persona_scope` | TEXT[] | NOT NULL | `'{}'` | — |
+| `created_at` | TIMESTAMPTZ | NOT NULL | `now()` | — |
+
+Unique: `(tenant_id, identity_name)`. Index: `idx_mcp_agent_identities_tenant` on `(tenant_id)`.
