@@ -33,8 +33,11 @@ class TokenError(Exception):
 class VerifiedToken:
     tenant_id: str
     expires_at: int
-    scope: tuple[str, ...]
+    scope: tuple[str, ...]      # tool scope (backward-compat field name)
     token_id: str
+    identity: str | None = None             # declared agent-identity name (e.g. "finops-readonly")
+    domain_scope: tuple[str, ...] = ()      # allowed concept-root domains; empty = unrestricted
+    persona_scope: tuple[str, ...] = ()     # allowed persona keys; empty = unrestricted
 
 
 _DEFAULT_TTL_SECONDS = 24 * 60 * 60  # 24h
@@ -89,22 +92,41 @@ def mint_token(
     tenant_id: str,
     ttl_seconds: int = _DEFAULT_TTL_SECONDS,
     scope: tuple[str, ...] | list[str] | None = None,
+    *,
+    identity: str | None = None,
+    domain_scope: tuple[str, ...] | list[str] | None = None,
+    persona_scope: tuple[str, ...] | list[str] | None = None,
 ) -> dict:
     """Mint a new MCP token bound to tenant_id.
 
-    Returns {token, expires_at, token_id, tenant_id}.
+    Gate 3C D1: optional identity + 3-axis scope.
+    - scope: tool names allowed (empty = all tools, per existing semantics)
+    - domain_scope: concept-root domains allowed (empty = all domains)
+    - persona_scope: persona keys allowed (empty = all personas)
+    - identity: declared agent-identity name; resolved from mcp_agent_identities
+
+    Returns {token, expires_at, token_id, tenant_id, scope, identity,
+             domain_scope, persona_scope}.
     """
     if not tenant_id:
         raise TokenError("mint_token requires tenant_id (no anonymous tokens).")
     exp = int(time.time()) + int(ttl_seconds)
     scope_t = tuple(scope) if scope is not None else _DEFAULT_SCOPE
+    domain_scope_t = tuple(domain_scope) if domain_scope else ()
+    persona_scope_t = tuple(persona_scope) if persona_scope else ()
     nonce = secrets.token_hex(4)
-    payload = {
+    payload: dict = {
         "tenant_id": tenant_id,
         "exp": exp,
         "scope": list(scope_t),
         "nonce": nonce,
     }
+    if identity is not None:
+        payload["identity"] = identity
+    if domain_scope_t:
+        payload["domain_scope"] = list(domain_scope_t)
+    if persona_scope_t:
+        payload["persona_scope"] = list(persona_scope_t)
     payload_bytes = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
     sig = _sign(payload_bytes)
     token = f"{_b64url_encode(payload_bytes)}.{sig}"
@@ -114,6 +136,9 @@ def mint_token(
         "token_id": _compute_token_id(token),
         "tenant_id": tenant_id,
         "scope": list(scope_t),
+        "identity": identity,
+        "domain_scope": list(domain_scope_t),
+        "persona_scope": list(persona_scope_t),
     }
 
 
@@ -142,6 +167,9 @@ def verify_token(token: str) -> VerifiedToken:
     tenant_id = payload.get("tenant_id")
     exp = payload.get("exp")
     scope = payload.get("scope") or []
+    identity = payload.get("identity")                       # None for legacy tokens
+    domain_scope = tuple(payload.get("domain_scope") or []) # () for legacy = unrestricted
+    persona_scope = tuple(payload.get("persona_scope") or [])
     if not tenant_id:
         raise TokenError("MCP token payload missing tenant_id.")
     if not isinstance(exp, int):
@@ -153,4 +181,7 @@ def verify_token(token: str) -> VerifiedToken:
         expires_at=int(exp),
         scope=tuple(scope),
         token_id=_compute_token_id(token),
+        identity=identity,
+        domain_scope=domain_scope,
+        persona_scope=persona_scope,
     )

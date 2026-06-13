@@ -69,6 +69,28 @@ def _audit_enrichment(arguments: dict[str, Any] | None) -> dict[str, Any]:
     return {"entity_id": entity_id, "arguments": args}
 
 
+def _rbac_denial_enrichment(
+    arguments: dict[str, Any] | None,
+    identity_label: str,
+    axis: str,
+    denied_value: str,
+) -> dict[str, Any]:
+    """Gate 3C D1: enrich the audit arguments with RBAC denial context so the
+    identity and denied resource appear in the decision_traces VIEW payload.
+    The error_summary carries the human reason; payload carries the structured
+    context for machine queries on the trace axis."""
+    orig = dict(arguments or {})
+    entity_id = None
+    raw = orig.get("entity_id")
+    if isinstance(raw, str) and raw.strip():
+        entity_id = raw.strip()
+    enriched = {
+        **orig,
+        "_rbac_denied": {"identity": identity_label, "axis": axis, "denied": denied_value},
+    }
+    return {"entity_id": entity_id, "arguments": enriched}
+
+
 def build_server() -> Server:
     """Build a fresh MCP Server instance with the PUBLIC_TOOLS surface wired."""
     server = Server(SERVER_NAME)
@@ -123,8 +145,18 @@ def build_server() -> Server:
                 "MCP session is not authenticated — no tenant-scoped token."
             )
 
-        # Scope check.
+        # --- Scope checks (Gate 3C D1): tool, domain, persona axes. ---
+        # Back-compat: an empty scope axis means UNRESTRICTED on that axis.
+        # Only non-empty scope restricts access. Mirrors the existing tool check.
+
+        identity_label = token.identity or token.token_id
+
+        # Tool axis (pre-existing, extended with identity label in reason).
         if token.scope and name not in token.scope:
+            reason = (
+                f"identity {identity_label!r} is not scoped for tool {name!r} "
+                f"— denied (allowed tools: {list(token.scope)})"
+            )
             audit = AuditRow(
                 tenant_id=token.tenant_id,
                 tool_name=name,
@@ -132,14 +164,83 @@ def build_server() -> Server:
                 arguments_hash=hash_arguments(arguments),
                 latency_ms=0,
                 outcome="unauthorized",
-                error_summary=f"Token scope does not permit {name}.",
+                error_summary=reason,
                 transport=transport,
-                **_audit_enrichment(arguments),
+                **_rbac_denial_enrichment(arguments, identity_label, "tool", name),
             )
             write_audit(audit)
-            raise MCPToolError(
-                f"Token scope does not permit tool {name!r}."
-            )
+            raise MCPToolError(reason)
+
+        # Domain axis: if token has domain_scope, check explicit domain/concept args.
+        if token.domain_scope:
+            call_domain: str | None = (arguments or {}).get("domain")
+            if call_domain and call_domain not in token.domain_scope:
+                reason = (
+                    f"identity {identity_label!r} is not scoped for domain "
+                    f"{call_domain!r} — denied (allowed domains: {list(token.domain_scope)})"
+                )
+                audit = AuditRow(
+                    tenant_id=token.tenant_id,
+                    tool_name=name,
+                    caller_token_id=token.token_id,
+                    arguments_hash=hash_arguments(arguments),
+                    latency_ms=0,
+                    outcome="unauthorized",
+                    error_summary=reason,
+                    transport=transport,
+                    **_rbac_denial_enrichment(arguments, identity_label, "domain", call_domain),
+                )
+                write_audit(audit)
+                raise MCPToolError(reason)
+            # Also deny a domain-qualified concept whose root is out of scope.
+            call_concept: str | None = (arguments or {}).get("concept")
+            if call_concept and "." in call_concept:
+                concept_root = call_concept.split(".", 1)[0]
+                if concept_root not in token.domain_scope:
+                    reason = (
+                        f"identity {identity_label!r} is not scoped for domain "
+                        f"{concept_root!r} (from concept {call_concept!r}) "
+                        f"— denied (allowed domains: {list(token.domain_scope)})"
+                    )
+                    audit = AuditRow(
+                        tenant_id=token.tenant_id,
+                        tool_name=name,
+                        caller_token_id=token.token_id,
+                        arguments_hash=hash_arguments(arguments),
+                        latency_ms=0,
+                        outcome="unauthorized",
+                        error_summary=reason,
+                        transport=transport,
+                        **_rbac_denial_enrichment(
+                            arguments, identity_label, "domain", concept_root
+                        ),
+                    )
+                    write_audit(audit)
+                    raise MCPToolError(reason)
+
+        # Persona axis: if token has persona_scope, deny any out-of-scope persona arg.
+        if token.persona_scope:
+            call_persona: str | None = (arguments or {}).get("persona")
+            if call_persona and call_persona not in token.persona_scope:
+                reason = (
+                    f"identity {identity_label!r} is not scoped for persona "
+                    f"{call_persona!r} — denied (allowed personas: {list(token.persona_scope)})"
+                )
+                audit = AuditRow(
+                    tenant_id=token.tenant_id,
+                    tool_name=name,
+                    caller_token_id=token.token_id,
+                    arguments_hash=hash_arguments(arguments),
+                    latency_ms=0,
+                    outcome="unauthorized",
+                    error_summary=reason,
+                    transport=transport,
+                    **_rbac_denial_enrichment(
+                        arguments, identity_label, "persona", call_persona
+                    ),
+                )
+                write_audit(audit)
+                raise MCPToolError(reason)
 
         # Rate limit check.
         decision = global_limiter().check(token.tenant_id)
@@ -164,10 +265,13 @@ def build_server() -> Server:
                 f"{decision.retry_after_seconds:.1f}s."
             )
 
-        # Dispatch.
+        # Dispatch — pass domain_scope so broad reads filter to in-scope domains.
         with time_call() as t:
             try:
-                result = dispatch(token.tenant_id, name, arguments)
+                result = dispatch(
+                    token.tenant_id, name, arguments,
+                    effective_domain_scope=token.domain_scope,
+                )
                 outcome = "success"
                 error_summary: str | None = None
             except MCPToolError as exc:

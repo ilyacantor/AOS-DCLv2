@@ -49,6 +49,7 @@ def tool_query_triples(
     active_only: bool = True,
     include_descendants: bool = False,
     persona: str | None = None,
+    _effective_domain_scope: tuple[str, ...] = (),
 ) -> list[dict]:
     """Return triples filtered by the calling tenant.
 
@@ -112,11 +113,25 @@ def tool_query_triples(
                     f"narrow or union: drop the persona or query an "
                     f"in-scope concept."
                 )
-    if domain is None and concept is None and persona is None:
+    # Gate 3C D1: if the token carries a domain_scope, apply it to broad reads.
+    # Explicit out-of-scope domain/concept was already denied at the MCP boundary
+    # (mcp_server_real.py). Here we handle the broad-read case: no explicit domain
+    # means restrict to in-scope domains by narrowing persona_domains.
+    if _effective_domain_scope:
+        if persona_domains is not None:
+            # Intersect token domain_scope with persona's domain list.
+            persona_domains = [d for d in persona_domains if d in _effective_domain_scope]
+        elif domain is None:
+            # No persona filter and no explicit domain — restrict to token's domains.
+            persona_domains = list(_effective_domain_scope)
+
+    if domain is None and concept is None and persona is None and not _effective_domain_scope:
         raise MCPToolError(
             "query_triples requires at least one of 'domain', 'concept', "
             "or 'persona' — refusing to dump a full tenant table."
         )
+    # With an effective domain scope, a scopeless call returns triples for all in-scope
+    # domains (the domain_scope IS the filter — not a full dump).
 
     if include_descendants:
         from backend.registry.concept_hierarchy import expand_for_read
@@ -168,15 +183,25 @@ def tool_query_triples(
 # =============================================================================
 
 
-def tool_list_domains(tenant_id: str, entity_id: str | None = None) -> list[dict]:
+def tool_list_domains(
+    tenant_id: str,
+    entity_id: str | None = None,
+    *,
+    effective_domain_scope: tuple[str, ...] = (),
+) -> list[dict]:
     """Return distinct concept-root domains with triple counts for tenant,
-    optionally scoped to one entity (the selected run)."""
+    optionally scoped to one entity (the selected run).
+    Gate 3C D1: if effective_domain_scope is non-empty, restrict the result
+    to in-scope domains (broad-read filter)."""
     if not tenant_id:
         raise MCPToolError(
             "list_domains requires tenant_id — caller's token did not "
             "carry one (I2 violation)."
         )
-    return _store.mcp_list_domains(tenant_id, entity_id)
+    rows = _store.mcp_list_domains(tenant_id, entity_id)
+    if effective_domain_scope:
+        rows = [r for r in rows if r.get("domain") in effective_domain_scope]
+    return rows
 
 
 def tool_list_runs(tenant_id: str) -> list[dict]:
@@ -681,20 +706,32 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
 PUBLIC_TOOLS = tuple(TOOL_SCHEMAS.keys())
 
 
-def dispatch(tenant_id: str, tool_name: str, arguments: dict[str, Any]) -> Any:
+def dispatch(
+    tenant_id: str,
+    tool_name: str,
+    arguments: dict[str, Any],
+    *,
+    effective_domain_scope: tuple[str, ...] = (),
+) -> Any:
     """Invoke a tool by name. Tenant_id MUST come from the caller's
-    verified token, never from arguments. Returns the tool result."""
+    verified token, never from arguments. Returns the tool result.
+    Gate 3C D1: effective_domain_scope restricts broad reads to in-scope domains."""
     if tool_name not in TOOL_SCHEMAS:
         raise MCPToolError(f"Unknown tool: {tool_name!r}")
     args = dict(arguments or {})
     # Guard against accidental tenant overrides via arguments.
     args.pop("tenant_id", None)
     if tool_name == "query_triples":
-        return tool_query_triples(tenant_id, **args)
+        return tool_query_triples(
+            tenant_id, _effective_domain_scope=effective_domain_scope, **args
+        )
     if tool_name == "traverse_graph":
         return tool_traverse_graph(tenant_id, **args)
     if tool_name == "list_domains":
-        return tool_list_domains(tenant_id, args.get("entity_id"))
+        return tool_list_domains(
+            tenant_id, args.get("entity_id"),
+            effective_domain_scope=effective_domain_scope,
+        )
     if tool_name == "list_runs":
         return tool_list_runs(tenant_id)
     if tool_name == "concept_lookup":
