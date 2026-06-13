@@ -1,10 +1,12 @@
-"""Change Proposal API (ContextOS Gate 3A §4).
+"""Change Proposal API (ContextOS Gate 3A §4 + Gate 3C D2 approval chains).
 
-POST /api/dcl/proposals                     — batch intake from onboarding
-GET  /api/dcl/proposals                     — list (tenant-scoped, filtered)
-POST /api/dcl/proposals/{proposal_id}/decide — approve or reject
-GET  /api/dcl/contour                       — approved contour (composed)
-GET  /api/dcl/concept-lookup                — vocabulary alias lookup
+POST /api/dcl/proposals                       — batch intake from onboarding
+GET  /api/dcl/proposals                       — list (tenant-scoped, filtered)
+POST /api/dcl/proposals/{proposal_id}/decide  — approve or reject (chain-aware)
+GET  /api/dcl/contour                         — approved contour (composed)
+GET  /api/dcl/concept-lookup                  — vocabulary alias lookup
+GET  /api/dcl/approval-policy                 — tenant approval chain config (Gate 3C D2)
+PUT  /api/dcl/approval-policy                 — upsert tenant approval chain config
 
 Identity: tenant_id is REQUIRED (or entity_id for operator surfaces, resolved
 server-side via tenant_runs, same pattern as conflicts.py). Missing → 422 loud (I2).
@@ -15,6 +17,13 @@ Each duplicate is reported as {'status': 'duplicate', 'duplicate_of': <proposal_
 
 Canonical provenance: approval applies the canonical artifact in the same
 transaction as the status flip. Rejection leaves zero canonical residue.
+
+Gate 3C D2 — approval chains:
+  Each proposal may carry an optional 'proposer' identity set at intake.
+  Per-tenant policy (tenant_approval_policy) configures:
+    require_distinct_proposer_approver: decided_by must differ from proposer.
+    chain_steps: N distinct approvals required before canonical apply fires.
+  Denials write a trace (decision='denied') without changing proposal status.
 """
 
 import uuid as _uuid
@@ -150,6 +159,13 @@ def _validate_proposal_element(elem: dict, idx: int) -> tuple[str, str, dict]:
             ),
         )
 
+    proposer = elem.get("proposer")
+    if proposer is not None and not isinstance(proposer, str):
+        raise HTTPException(
+            status_code=422,
+            detail=f"proposals[{idx}] ({ptype}): proposer must be a string or null; got {type(proposer).__name__}",
+        )
+
     return ptype, nkey, {
         "proposal_type": ptype,
         "natural_key": nkey,
@@ -157,6 +173,7 @@ def _validate_proposal_element(elem: dict, idx: int) -> tuple[str, str, dict]:
         "confidence": confidence,
         "provenance": prov,
         "entity_id": elem.get("entity_id"),
+        "proposer": proposer or None,
     }
 
 
@@ -317,9 +334,12 @@ def proposals_decide(proposal_id: str, body: DecideRequest):
 
     On reject: the decision is recorded; zero canonical residue is written.
 
-    The decision is written to change_proposal_decisions, visible via GET /api/dcl/traces
-    as trace_type='proposal_decision'. decided_by is recorded; proposer≠approver
-    enforcement is Gate 3C — not built here, not precluded.
+    Gate 3C D2 chain enforcement:
+    - If tenant policy requires distinct proposer/approver and decided_by == proposer →
+      409 with readable reason; a denial trace is written but proposal stays pending.
+    - For chain_steps > 1: intermediate steps return is_final=false, no canonical_artifact_id;
+      the proposal stays pending for the next approver. Final step canonicalizes.
+    - If decided_by already approved a prior step → 409 denied (distinct required).
     """
     try:
         _uuid.UUID(proposal_id)
@@ -414,6 +434,52 @@ def contour_get(
         "proposal_ids": contour["proposal_ids"],
         "updated_at": contour["updated_at"],
     }
+
+
+# ---------------------------------------------------------------------------
+# Approval chain policy (Gate 3C D2) — per-tenant chain config
+# ---------------------------------------------------------------------------
+
+class ApprovalPolicyRequest(BaseModel):
+    tenant_id: str
+    require_distinct_proposer_approver: bool = False
+    chain_steps: int = 1
+
+
+@router.get("/api/dcl/approval-policy")
+def approval_policy_get(
+    tenant_id: Optional[str] = Query(None, description="Tenant UUID — REQUIRED."),
+):
+    """Return the approval policy for a tenant, or defaults if none configured.
+
+    Default (no policy row): chain_steps=1, require_distinct_proposer_approver=false.
+    Back-compat: this default produces Gate 3A single-approve behavior exactly.
+    """
+    tenant = _require_tenant(tenant_id, "GET /api/dcl/approval-policy")
+    return _store.get_approval_policy(tenant)
+
+
+@router.put("/api/dcl/approval-policy", status_code=200)
+def approval_policy_put(body: ApprovalPolicyRequest):
+    """Upsert the approval policy for a tenant.
+
+    chain_steps=1 + require_distinct=false reproduces Gate 3A behavior.
+    chain_steps=N>1 requires N distinct approvals before canonical apply.
+    require_distinct_proposer_approver=true: decided_by must differ from the
+    proposal's proposer identity (if proposer is null, check is skipped).
+    422 if chain_steps < 1.
+    """
+    tenant = _require_tenant(body.tenant_id, "PUT /api/dcl/approval-policy")
+    if body.chain_steps < 1:
+        raise HTTPException(
+            status_code=422,
+            detail=f"chain_steps must be >= 1; got {body.chain_steps}",
+        )
+    return _store.set_approval_policy(
+        tenant,
+        require_distinct_proposer_approver=body.require_distinct_proposer_approver,
+        chain_steps=body.chain_steps,
+    )
 
 
 # ---------------------------------------------------------------------------

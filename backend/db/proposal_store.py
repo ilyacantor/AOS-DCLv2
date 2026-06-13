@@ -126,7 +126,9 @@ class ProposalStore:
 
     def insert_proposals(self, rows: list[dict]) -> list[dict]:
         """Insert validated proposals. Returns inserted rows in order.
-        Caller has already done duplicate check; no ON CONFLICT here (per A1)."""
+        Caller has already done duplicate check; no ON CONFLICT here (per A1).
+        Each row may carry an optional 'proposer' field (Gate 3C D2) — the
+        identity that created the proposal. NULL for automated monitors."""
         if not rows:
             return []
         inserted = []
@@ -137,13 +139,14 @@ class ProposalStore:
                         """
                         INSERT INTO change_proposals
                             (tenant_id, entity_id, proposal_type, natural_key,
-                             payload, confidence, provenance, status)
-                        VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s::jsonb, 'pending')
+                             payload, confidence, provenance, status, proposer)
+                        VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s::jsonb, 'pending', %s)
                         RETURNING proposal_id, created_at
                         """,
                         (r["tenant_id"], r.get("entity_id"), r["proposal_type"],
                          r["natural_key"], json.dumps(r["payload"]),
-                         r["confidence"], json.dumps(r["provenance"])),
+                         r["confidence"], json.dumps(r["provenance"]),
+                         r.get("proposer")),
                     )
                     pid, created_at = cur.fetchone()
                     inserted.append({
@@ -223,6 +226,66 @@ class ProposalStore:
 
     # ── decide (approve / reject) ─────────────────────────────────────────────
 
+    def get_approval_policy(self, tenant_id: str) -> dict:
+        """Return the approval policy for a tenant, or defaults if none configured."""
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT require_distinct_proposer_approver, chain_steps "
+                    "FROM tenant_approval_policy WHERE tenant_id = %s::uuid",
+                    (tenant_id,),
+                )
+                row = cur.fetchone()
+        if row is None:
+            return {
+                "tenant_id": tenant_id,
+                "require_distinct_proposer_approver": False,
+                "chain_steps": 1,
+                "policy_source": "default",
+            }
+        require_distinct, chain_steps = row
+        return {
+            "tenant_id": tenant_id,
+            "require_distinct_proposer_approver": bool(require_distinct),
+            "chain_steps": chain_steps,
+            "policy_source": "configured",
+        }
+
+    def set_approval_policy(
+        self,
+        tenant_id: str,
+        require_distinct_proposer_approver: bool,
+        chain_steps: int,
+    ) -> dict:
+        """Upsert the approval policy for a tenant."""
+        if chain_steps < 1:
+            raise ValueError(
+                f"chain_steps must be >= 1; got {chain_steps}"
+            )
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO tenant_approval_policy
+                        (tenant_id, require_distinct_proposer_approver, chain_steps, updated_at)
+                    VALUES (%s::uuid, %s, %s, now())
+                    ON CONFLICT (tenant_id) DO UPDATE SET
+                        require_distinct_proposer_approver = EXCLUDED.require_distinct_proposer_approver,
+                        chain_steps = EXCLUDED.chain_steps,
+                        updated_at  = now()
+                    RETURNING updated_at
+                    """,
+                    (tenant_id, require_distinct_proposer_approver, chain_steps),
+                )
+                (updated_at,) = cur.fetchone()
+            conn.commit()
+        return {
+            "tenant_id": tenant_id,
+            "require_distinct_proposer_approver": require_distinct_proposer_approver,
+            "chain_steps": chain_steps,
+            "updated_at": updated_at.isoformat(),
+        }
+
     def decide_proposal(
         self, *,
         proposal_id: str,
@@ -234,14 +297,26 @@ class ProposalStore:
         """Flip status + apply canonical (if approve) + write decision trace.
         ALL in one transaction. Returns the decision record.
 
-        approval applies the canonical artifact; rejection writes zero canonical
-        residue — the only DB writes are the status flip and the decision trace row.
+        Gate 3C D2 — chain enforcement:
+        - Reads tenant_approval_policy for require_distinct_proposer_approver + chain_steps.
+        - If require_distinct and proposer is known and decided_by == proposer → denied.
+        - For chain_steps > 1: intermediate steps increment steps_approved, keep
+          status pending, write a trace with step_number; only the final step
+          canonicalizes. Distinct-approver check applies across ALL prior step approvers.
+        - Denial writes a trace (decision='denied') and commits before raising ValueError
+          so the denial is visible via GET /api/dcl/traces. Proposal stays pending.
+
+        Back-compat (no policy or defaults): behaves identically to Gate 3A.
         """
+        denial_error: Optional[str] = None
+        result: Optional[dict] = None
+
         with get_connection() as conn:
             with conn.cursor() as cur:
                 # Lock the proposal row; verify it's pending.
                 cur.execute(
-                    "SELECT status, proposal_type, payload, entity_id, confidence, provenance "
+                    "SELECT status, proposal_type, payload, entity_id, "
+                    "       confidence, provenance, proposer, steps_approved "
                     "FROM change_proposals "
                     "WHERE proposal_id = %s AND tenant_id = %s FOR UPDATE",
                     (proposal_id, tenant_id),
@@ -252,64 +327,162 @@ class ProposalStore:
                         f"Proposal {proposal_id} not found for tenant {tenant_id} — "
                         f"check GET /api/dcl/proposals for this tenant."
                     )
-                current_status, ptype, payload, entity_id, confidence, provenance = row
+                (current_status, ptype, payload, entity_id,
+                 confidence, provenance, proposer, steps_approved) = row
+
                 if current_status != "pending":
                     raise ValueError(
                         f"Proposal {proposal_id} is already {current_status!r} — "
                         f"a proposal can be decided only once."
                     )
 
-                canonical_artifact_id: Optional[str] = None
+                # Load approval policy (defaults if absent).
+                cur.execute(
+                    "SELECT require_distinct_proposer_approver, chain_steps "
+                    "FROM tenant_approval_policy WHERE tenant_id = %s::uuid",
+                    (tenant_id,),
+                )
+                policy_row = cur.fetchone()
+                require_distinct = bool(policy_row[0]) if policy_row else False
+                chain_steps = int(policy_row[1]) if policy_row else 1
 
-                if decision == "approve":
-                    canonical_artifact_id = _apply_canonical(
-                        cur, tenant_id=tenant_id, entity_id=entity_id,
-                        proposal_id=proposal_id, proposal_type=ptype, payload=payload,
+                step_number = steps_approved + 1  # the step being attempted
+
+                # ── Proposer≠approver check ───────────────────────────────────
+                if decision == "approve" and require_distinct and proposer:
+                    if decided_by == proposer:
+                        denial_reason = (
+                            f"Proposer {proposer!r} cannot approve their own proposal "
+                            f"(policy: require_distinct_proposer_approver=true) — "
+                            f"submit the decision under a distinct approver identity."
+                        )
+                        cur.execute(
+                            """
+                            INSERT INTO change_proposal_decisions
+                                (tenant_id, entity_id, proposal_id, proposal_type,
+                                 decision, decided_by, decision_note, payload,
+                                 canonical_artifact_id, step_number)
+                            VALUES (%s, %s, %s, %s, 'denied', %s, %s, %s::jsonb, NULL, %s)
+                            """,
+                            (tenant_id, entity_id, proposal_id, ptype,
+                             decided_by, denial_reason,
+                             json.dumps(payload) if payload else None,
+                             step_number),
+                        )
+                        conn.commit()
+                        denial_error = denial_reason
+                        # Fall through to raise after the with-block
+
+                # ── Distinct-approver across prior steps (multi-step chains) ──
+                if denial_error is None and decision == "approve" and chain_steps > 1:
+                    cur.execute(
+                        "SELECT decided_by FROM change_proposal_decisions "
+                        "WHERE proposal_id = %s AND decision = 'approve'",
+                        (proposal_id,),
                     )
+                    prior_approvers = {r[0] for r in cur.fetchall()}
+                    if decided_by in prior_approvers:
+                        denial_reason = (
+                            f"Approver {decided_by!r} has already approved a prior step "
+                            f"for proposal {proposal_id} — each chain step requires a "
+                            f"distinct approver identity."
+                        )
+                        cur.execute(
+                            """
+                            INSERT INTO change_proposal_decisions
+                                (tenant_id, entity_id, proposal_id, proposal_type,
+                                 decision, decided_by, decision_note, payload,
+                                 canonical_artifact_id, step_number)
+                            VALUES (%s, %s, %s, %s, 'denied', %s, %s, %s::jsonb, NULL, %s)
+                            """,
+                            (tenant_id, entity_id, proposal_id, ptype,
+                             decided_by, denial_reason,
+                             json.dumps(payload) if payload else None,
+                             step_number),
+                        )
+                        conn.commit()
+                        denial_error = denial_reason
 
-                _STATUS = {"approve": "approved", "reject": "rejected"}
-                cur.execute(
-                    """
-                    UPDATE change_proposals
-                    SET status = %s, decided_at = now(), decided_by = %s,
-                        decision_note = %s, canonical_artifact_id = %s
-                    WHERE proposal_id = %s
-                    """,
-                    (_STATUS[decision], decided_by, decision_note,
-                     canonical_artifact_id, proposal_id),
-                )
+                if denial_error is None:
+                    # ── Normal flow: approve (step or final) or reject ────────
+                    is_final_step = (decision == "reject") or (step_number >= chain_steps)
+                    canonical_artifact_id: Optional[str] = None
 
-                cur.execute(
-                    """
-                    INSERT INTO change_proposal_decisions
-                        (tenant_id, entity_id, proposal_id, proposal_type,
-                         decision, decided_by, decision_note, payload, canonical_artifact_id)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
-                    RETURNING id, decided_at
-                    """,
-                    (tenant_id, entity_id, proposal_id, ptype, decision,
-                     decided_by, decision_note,
-                     json.dumps(payload) if payload else None,
-                     canonical_artifact_id),
-                )
-                decision_id, decided_at = cur.fetchone()
+                    if decision == "approve" and is_final_step:
+                        canonical_artifact_id = _apply_canonical(
+                            cur, tenant_id=tenant_id, entity_id=entity_id,
+                            proposal_id=proposal_id, proposal_type=ptype, payload=payload,
+                        )
+                        cur.execute(
+                            """
+                            UPDATE change_proposals
+                            SET status = 'approved', decided_at = now(), decided_by = %s,
+                                decision_note = %s, canonical_artifact_id = %s,
+                                steps_approved = %s
+                            WHERE proposal_id = %s
+                            """,
+                            (decided_by, decision_note, canonical_artifact_id,
+                             step_number, proposal_id),
+                        )
+                    elif decision == "approve" and not is_final_step:
+                        # Intermediate step: advance counter, stay pending.
+                        cur.execute(
+                            "UPDATE change_proposals SET steps_approved = %s "
+                            "WHERE proposal_id = %s",
+                            (step_number, proposal_id),
+                        )
+                    else:
+                        # Reject at any step: flip to rejected, zero canonical residue.
+                        cur.execute(
+                            """
+                            UPDATE change_proposals
+                            SET status = 'rejected', decided_at = now(), decided_by = %s,
+                                decision_note = %s
+                            WHERE proposal_id = %s
+                            """,
+                            (decided_by, decision_note, proposal_id),
+                        )
 
-            conn.commit()
+                    cur.execute(
+                        """
+                        INSERT INTO change_proposal_decisions
+                            (tenant_id, entity_id, proposal_id, proposal_type,
+                             decision, decided_by, decision_note, payload,
+                             canonical_artifact_id, step_number)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s)
+                        RETURNING id, decided_at
+                        """,
+                        (tenant_id, entity_id, proposal_id, ptype, decision,
+                         decided_by, decision_note,
+                         json.dumps(payload) if payload else None,
+                         canonical_artifact_id, step_number),
+                    )
+                    decision_id, decided_at = cur.fetchone()
+                    conn.commit()
 
-        logger.info(
-            "[proposal-decide] proposal=%s type=%s decision=%s canonical=%s by=%s",
-            proposal_id, ptype, decision, canonical_artifact_id, decided_by,
-        )
-        return {
-            "decision_id": str(decision_id),
-            "proposal_id": proposal_id,
-            "proposal_type": ptype,
-            "decision": decision,
-            "decided_by": decided_by,
-            "decision_note": decision_note,
-            "decided_at": decided_at.isoformat(),
-            "canonical_artifact_id": canonical_artifact_id,
-        }
+                    logger.info(
+                        "[proposal-decide] proposal=%s type=%s decision=%s step=%d/%d "
+                        "canonical=%s by=%s",
+                        proposal_id, ptype, decision, step_number, chain_steps,
+                        canonical_artifact_id, decided_by,
+                    )
+                    result = {
+                        "decision_id": str(decision_id),
+                        "proposal_id": proposal_id,
+                        "proposal_type": ptype,
+                        "decision": decision,
+                        "step_number": step_number,
+                        "chain_steps": chain_steps,
+                        "decided_by": decided_by,
+                        "decision_note": decision_note,
+                        "decided_at": decided_at.isoformat(),
+                        "canonical_artifact_id": canonical_artifact_id,
+                        "is_final": is_final_step,
+                    }
+
+        if denial_error:
+            raise ValueError(denial_error)
+        return result  # type: ignore[return-value]
 
     # ── contour reads ─────────────────────────────────────────────────────────
 
