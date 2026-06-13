@@ -19,6 +19,8 @@ import pytest
 import httpx
 from playwright.sync_api import Page, expect
 
+from _dcl_ground_truth import get_snapshots  # sibling in tests/e2e (on sys.path)
+
 # pytest targets the dev stack (DEV_ENV_NOTES: pytest → dcl-dev :8104). The
 # dcl-frontend on :3004 proxies /api → :8104, so backend reads must hit :8104 to
 # stay coherent with what the UI renders. Override for a prod-consistent run.
@@ -84,7 +86,7 @@ def select_active_snapshot(page: Page):
     sel = page.locator("#snapshot-selector")
     if sel.count() == 0:
         return
-    snaps = httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=30.0).json()["snapshots"]
+    snaps = get_snapshots(DCL_BACKEND)
     active = [s for s in snaps if s.get("is_current")]
     assert active, "No is_current snapshot — run the ingest pipeline"
 

@@ -18,6 +18,8 @@ import pytest
 import httpx
 from playwright.sync_api import Page, expect
 
+from _dcl_ground_truth import get_snapshots  # sibling in tests/e2e (on sys.path)
+
 # pytest targets the dev stack (DEV_ENV_NOTES: pytest → dcl-dev :8104). The
 # dcl-frontend on :3004 proxies /api → :8104, so backend reads must hit :8104 to
 # stay coherent with what the UI renders. Override for a prod-consistent run.
@@ -152,7 +154,7 @@ class TestCrossTab:
         page = page_setup
 
         # Ground truth: newest snapshot by run_timestamp.
-        snaps = httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=30.0).json()["snapshots"]
+        snaps = get_snapshots(DCL_BACKEND)
         newest_id = max(snaps, key=lambda s: s["run_timestamp"] or "")["dcl_ingest_id"]
         snap_count = len(snaps)
 
@@ -234,7 +236,7 @@ class TestIngestTab:
         assert "Snapshot:" in body_text, "Ingest tab missing snapshot selector"
 
         # Snapshot selector option count must match the backend snapshot list.
-        snap_count = len(httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=30.0).json()["snapshots"])
+        snap_count = len(get_snapshots(DCL_BACKEND))
         selector = page.locator("#snapshot-selector")
         expect(selector).to_be_visible(timeout=10_000)
         expect(selector.locator("option")).to_have_count(snap_count, timeout=10_000)
@@ -291,7 +293,7 @@ class TestContextTab:
         # Snapshot dropdown should be present and populated.
         selector = page.locator("#snapshot-selector")
         expect(selector).to_be_visible(timeout=5_000)
-        snap_count = len(httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=30.0).json()["snapshots"])
+        snap_count = len(get_snapshots(DCL_BACKEND))
         expect(selector.locator("option")).to_have_count(snap_count, timeout=10_000)
 
 
@@ -370,7 +372,7 @@ class TestReconTab:
         assert "Snapshot:" in body_text, "Recon tab missing snapshot selector"
 
         # Snapshot selector option count must match the backend snapshot list.
-        snap_count = len(httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=30.0).json()["snapshots"])
+        snap_count = len(get_snapshots(DCL_BACKEND))
         selector = page.locator("#snapshot-selector")
         expect(selector).to_be_visible(timeout=5_000)
         expect(selector.locator("option")).to_have_count(snap_count, timeout=10_000)
@@ -398,7 +400,7 @@ class TestReconTab:
 
         # Pick the snapshot whose run is active (is_current) — its entity is
         # guaranteed to have active triples for recon to verify.
-        snaps = httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=30.0).json()["snapshots"]
+        snaps = get_snapshots(DCL_BACKEND)
         active = next((s for s in snaps if s.get("is_current")), None)
         assert active is not None, "No is_current snapshot — run the ingest pipeline"
         selected_entity = active["entity_id"]
@@ -503,7 +505,7 @@ class TestReconTab:
         expect(selector).to_be_visible(timeout=10_000)
 
         # Pick the snapshot whose run is active (is_current).
-        snaps = httpx.get(f"{DCL_BACKEND}/api/dcl/snapshots", timeout=30.0).json()["snapshots"]
+        snaps = get_snapshots(DCL_BACKEND)
         active = next((s for s in snaps if s.get("is_current")), None)
         assert active is not None, "No is_current snapshot — run the ingest pipeline"
         selected_entity = active["entity_id"]
