@@ -254,8 +254,18 @@ def run_value_drift_sweep() -> dict[str, Any]:
                 continue
 
             # Batch dedup: one query for all open conflicts of this entity.
+            # Treat PENDING *and APPROVED* as duplicates: once a conflict's
+            # natural_key was approved (dispositioned/canonicalized), the SAME
+            # key must not re-drift on a later sweep — detect_and_register can
+            # re-register a fresh open conflict_register row for the same values
+            # after the prior one was dispositioned, and a pending-only dedup
+            # would then re-file an endless stream of value_drift proposals for
+            # an already-resolved conflict (Gate 3B D3 e2e finding). A new
+            # period yields a new natural_key and still proposes.
             dedup_keys = [("value_drift", _vd_natural_key(entity_id, c)) for c in open_conflicts]
-            dup_map = proposal_store.check_duplicates(tenant_id, dedup_keys)
+            dup_map = proposal_store.check_duplicates(
+                tenant_id, dedup_keys, statuses=("pending", "approved"),
+            )
 
             # Intra-sweep dedup: the Gate 1A engine can register MORE THAN ONE
             # open conflict_register row that collapses to the SAME natural key

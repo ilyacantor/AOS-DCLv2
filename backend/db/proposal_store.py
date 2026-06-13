@@ -84,29 +84,39 @@ class ProposalStore:
 
     def check_duplicates(
         self, tenant_id: str, items: list[tuple[str, str]],
+        statuses: tuple[str, ...] = ("pending",),
     ) -> dict[tuple[str, str], Optional[str]]:
-        """For each (proposal_type, natural_key) pair return the pending proposal_id
-        if one already exists, else None. One query, no per-row round trips."""
+        """For each (proposal_type, natural_key) pair return an existing
+        proposal_id (in one of `statuses`), else None. One query, no per-row
+        round trips.
+
+        Default ('pending',) = "is this already queued". Callers that must not
+        re-raise a RESOLVED item pass ('pending','approved') — e.g. the
+        value_drift sweep: once a conflict's natural_key is approved
+        (dispositioned/canonicalized), the SAME key must not re-drift on the
+        next sweep (a resolved conflict re-proposing itself is noise; a new
+        period yields a new natural_key and still proposes). Rejected is
+        deliberately excluded — an operator decline does not bar re-detection."""
         if not items:
             return {}
-        values_clause = ",".join(
-            f"('{tenant_id}'::uuid, {i}, %s, %s)"
-            for i, _ in enumerate(items)
-        )
-        params: list[Any] = []
-        for ptype, nkey in items:
-            params.extend([ptype, nkey])
-
+        # Most-recent match wins per key (ORDER BY created_at) so an approved
+        # row is reported even if an older rejected one shares the key.
         sql = """
-            SELECT proposal_type, natural_key, proposal_id
+            SELECT DISTINCT ON (proposal_type, natural_key)
+                   proposal_type, natural_key, proposal_id
             FROM change_proposals
             WHERE tenant_id = %s
-              AND status = 'pending'
+              AND status = ANY(%s)
               AND (proposal_type, natural_key) IN %s
+            ORDER BY proposal_type, natural_key, created_at DESC
         """
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, (tenant_id, tuple((pt, nk) for pt, nk in items)))
+                cur.execute(
+                    sql,
+                    (tenant_id, list(statuses),
+                     tuple((pt, nk) for pt, nk in items)),
+                )
                 rows = cur.fetchall()
 
         result: dict[tuple[str, str], Optional[str]] = {k: None for k in items}
@@ -149,12 +159,24 @@ class ProposalStore:
 
     def list_proposals(
         self, tenant_id: str, *,
+        entity_id: Optional[str] = None,
         status: Optional[str] = None,
         proposal_type: Optional[str] = None,
         limit: int = 100, offset: int = 0,
     ) -> tuple[list[dict], int]:
         clauses = ["tenant_id = %s"]
         params: list[Any] = [tenant_id]
+        # entity_id is an OPTIONAL filter. The operator UI panel is
+        # entity-scoped (it passes the selected snapshot's entity_id), and
+        # multiple entities share one tenant — without this filter an
+        # "entity-scoped" panel shows the whole tenant's proposals
+        # (cross-entity contamination; caught by the Gate 3B D3 e2e where a
+        # value_drift entity's panel surfaced a sibling entity's
+        # structural_drift). When omitted, the call stays tenant-wide
+        # (back-compat for tenant-grain callers).
+        if entity_id:
+            clauses.append("entity_id = %s")
+            params.append(entity_id)
         if status:
             clauses.append("status = %s")
             params.append(status)

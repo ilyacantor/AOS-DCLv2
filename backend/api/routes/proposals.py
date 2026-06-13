@@ -277,11 +277,17 @@ def proposals_list(
             status_code=422,
             detail=f"proposal_type must be one of {sorted(_VALID_PROPOSAL_TYPES)}; got {proposal_type!r}",
         )
+    # Pass entity_id THROUGH as a filter (not just for tenant resolution) so an
+    # entity-scoped operator surface gets only that entity's proposals — entities
+    # share a tenant, so a tenant-wide list cross-contaminates the panel (Gate 3B
+    # D3 e2e finding). Omitted → tenant-wide (back-compat).
     rows, total = _store.list_proposals(
-        tenant, status=status, proposal_type=proposal_type, limit=limit, offset=offset,
+        tenant, entity_id=entity_id, status=status, proposal_type=proposal_type,
+        limit=limit, offset=offset,
     )
     return {
         "tenant_id": tenant,
+        "entity_id": entity_id,
         "proposals": rows,
         "total_count": total,
         "limit": limit,
