@@ -1,5 +1,6 @@
 // Operator Guide — the end-to-end DCL + Demo walkthrough, stage by stage.
-// Plain English, written for an operator. Replaces the deprecated UserGuide.
+// Plain English, written for an operator. Every claim here is checked against
+// what the tab actually does — no aspirational descriptions.
 
 export function OperatorGuide() {
   return (
@@ -9,7 +10,7 @@ export function OperatorGuide() {
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">DCL Operator Guide</h1>
           <p className="text-muted-foreground">
-            How your data moves through DCL, end to end — and how the Demo proves it.
+            What each tab actually does, in the order data moves through it — and how the Demo proves it.
           </p>
         </div>
 
@@ -19,64 +20,66 @@ export function OperatorGuide() {
             What DCL does, in one line
           </h2>
           <p className="text-foreground/90 leading-relaxed">
-            DCL takes raw data from many systems, works out <strong>what each value
-            actually means</strong> to the business, notices where systems
-            <strong> disagree</strong>, and keeps a living, governed picture of the
-            enterprise that an agent or a person can ask questions of — with every
-            answer carrying its source, its confidence, and its history.
+            DCL takes raw data from many systems and turns each value into a
+            <strong> business fact</strong> — a concept, a value, the source it came
+            from, and a confidence score. It keeps every fact's history, flags where
+            two systems <strong>disagree</strong>, and exposes the result for NLQ and
+            agents to query. The DCL tabs below are how you <em>inspect and govern</em>
+            what DCL knows; the actual question-answering happens downstream in NLQ and
+            the agents that read from DCL.
           </p>
           <p className="text-foreground/90 leading-relaxed">
-            The rest of this guide follows one batch of data through the six stages
-            below. Each stage maps to a tab along the top of the screen.
+            The tabs are listed below in the order data flows. Each section says what
+            the tab shows and what you can do there — nothing it doesn't.
           </p>
         </section>
 
         {/* ── The journey, stage by stage ─────────────────────────────── */}
         <section className="space-y-6">
           <h2 className="text-xl font-semibold text-foreground border-b border-border pb-2">
-            The journey of your data — six stages
+            The journey of your data, tab by tab
           </h2>
 
           <Stage
             n="1" name="Ingest" tab="Ingest tab"
-            what="Data arrives. Either an upstream system (Farm, or a real source through AAM) pushes it in, or records are loaded directly. Every batch is tagged with who it is about (the entity) and where it came from (the source system)."
-            see="The ingest log and the list of snapshots — each snapshot is one entity's data as of one run."
-            doNote="Nothing to do by hand on the happy path — ingest is automatic. If a batch is missing its entity or source tag, DCL rejects it loudly rather than guessing."
+            what="Data arrives. An upstream system pushes a batch in, tagged with which entity it is about and which source systems it came from. DCL classifies each incoming field/record into business concepts as it lands — that classification is what you browse in the next two tabs."
+            see="The ingest log: one row per batch — timestamp, entity, the sources in it, how many triples were received / written / rejected, the duration, and the run id."
+            doNote="Watch that batches are landing and that 'rejected' stays at zero. A non-zero reject count means rows failed validation (e.g. missing identity) — DCL rejects loudly rather than guessing."
           />
 
           <Stage
-            n="2" name="Normalize" tab="happens automatically"
-            what="DCL turns cryptic source fields into canonical business concepts. A column called KUNNR or cust_rev_ytd becomes Account or Revenue. Every value keeps a link back to the exact source field it came from, plus a confidence score for how sure DCL is."
-            see="The mappings and triples views — each row is one fact: an entity, a concept, a value, where it came from."
-            doNote="Review low-confidence mappings if a number looks wrong. The source link tells you exactly which field fed it."
+            n="2" name="The facts" tab="Dashboard tab"
+            what="The raw facts DCL produced, as a table you can filter. Each row is one triple: an entity, a business concept, a property, a value, the period, the source system, and a confidence score. This is the ground truth everything else is built from."
+            see="A filterable table — Concept, Property, Value, Period, Source, Confidence, Entity. (Note: this is a data browser, not a KPI dashboard — persona KPI dashboards live in NLQ, not here.)"
+            doNote="Filter to a concept, source, or entity to confirm a number and see exactly which source field produced it and how confident DCL is."
           />
 
           <Stage
-            n="3" name="Semantics" tab="Graph tab"
-            what="Concepts gain meaning and relationships — the knowledge graph. DCL knows Revenue rolls up to the CFO, which entities relate to which, and which systems are authoritative for which facts. This is the layer that lets a question get a grounded answer instead of a guess."
-            see="The graph: business concepts as nodes, relationships as links, with the source systems behind them."
-            doNote="Use it to trace how a concept connects — what feeds it, who owns it, what it relates to."
+            n="3" name="The shape" tab="Graph tab"
+            what="A flow diagram (a Sankey) of how one entity's data maps together: source systems on the left flow through their fields into business concepts, and on to the dimensions those concepts can be sliced by. It shows where each concept comes from — what feeds it — for the selected entity."
+            see="A left-to-right flow: sources → fields → concepts → dimensions. One entity at a time (pick it at the top). A persona filter (CFO/CRO/…) narrows the flow to the concepts that persona cares about."
+            doNote="Pick an entity, then trace a concept back to the source field(s) feeding it. Use the persona filter to focus on one role's concepts. (It does not show entity-to-entity relationships — that's a separate capability, not this tab.)"
           />
 
           <Stage
-            n="4" name="Context" tab="Context tab"
-            what="The full picture of one entity. Pick a snapshot and DCL shows how complete it is — how many business areas (domains) are populated, what is known and what is missing. Missing is information too: an empty area is shown honestly, not hidden."
-            see="Domain coverage (e.g. 'Domain Coverage 12 / 38'), the contextualization summary, and the entity's concepts."
-            doNote="Pick the snapshot you want to inspect from the selector at the top. Following 'latest' tracks the newest run; pin one to hold it."
+            n="4" name="Context & conflicts" tab="Context tab"
+            what="The picture of one entity, plus the place you resolve disagreements. Pick a snapshot and DCL shows how complete it is — which business areas (domains) are populated, with how many concepts, from how many sources, at what confidence. Below that is the Conflict Register: where two sources claim different values for the same entity, concept, and period."
+            see="A domain-coverage table (domain, concepts, sources, average confidence) and a confidence distribution; then the Conflict Register listing each open disagreement with its competing claims."
+            doNote="Drill a conflict row to see both claims with their sources, type a short reason, and Accept the authoritative source. The losing value is superseded (kept in history, not deleted) and the decision is recorded. This is where reconciliation actually happens."
           />
 
           <Stage
-            n="5" name="Reconcile" tab="Context / Recon tab"
-            what="Where two systems claim different values for the same fact — SAP says $100, Salesforce says $110 for the same revenue, same period — DCL flags a conflict. You drill in, see both claims side by side with their sources, and decide (the Conflict Register). The authority map says which system wins by default; a resolved conflict becomes precedent for next time."
-            see="The Conflict Register: each row is one disagreement, with the claims, the materiality, and a recommended resolution."
-            doNote="Type a short reason, then accept the authoritative source. The losing value is superseded (kept in history, not deleted), and the decision is recorded as a trace."
+            n="5" name="Monitoring" tab="Monitor tab"
+            what="DCL watches for change over time on a schedule. Structural drift = a field appears or disappears between an entity's runs. Value drift = sources that agreed start disagreeing. Each finding becomes a change proposal."
+            see="The two drift jobs (structural, value) with their on/off state, interval, and last-run time; and the drift findings in the Change Proposals list."
+            doNote="Approve a proposal to fold the change in (recorded with its source), or reject it. Pause or resume a job, or change its interval, right from this tab."
           />
 
           <Stage
-            n="6" name="Monitor" tab="Monitor tab"
-            what="DCL watches for change over time. Structural drift = a field appears or disappears between runs. Value drift = sources that used to agree start disagreeing. Each finding becomes a change proposal. The checks run on a schedule you can see and pause."
-            see="The two drift jobs with their last-run time and on/off state, and the drift findings in the Change Proposals list."
-            doNote="Approve a proposal to fold the change into the graph (with full provenance), or reject it. Pause a job from this tab whenever you want the checks to stop."
+            n="6" name="The Demo" tab="Demo tab"
+            what="The before/after that proves the point on the same question, same data, same model. It shows a captured run comparing an ungoverned agent against the same question answered through DCL."
+            see="Two panels. Panel A — a capable agent with raw access; it answers but can't show its work (it silently picks or blends sources). Panel B — the same question through DCL: it discloses the conflict, names the authoritative source, and carries a provenance badge. If no run has been captured, it says so."
+            doNote="Pick the entity; read the two panels side by side. A good run: both answer, and Panel B shows provenance on every answer and discloses each conflict."
           />
         </section>
 
@@ -86,59 +89,19 @@ export function OperatorGuide() {
             Two things that wrap the whole flow
           </h2>
           <p className="text-foreground/90 leading-relaxed">
-            <strong>Onboarding (Mai).</strong> Before data flows, Mai interviews
-            stakeholders in chat to learn the org structure, which system is the source
-            of truth for what, the local vocabulary, and known disagreements. What she
-            learns lands as proposals in the same queue you approve from — nothing she
-            captures becomes official until a person approves it.
+            <strong>Onboarding (Mai).</strong> Before data flows, you can interview
+            stakeholders through Mai in chat — org structure, which system is the source
+            of truth for what, local vocabulary, known disagreements. What Mai captures
+            lands as proposals in the same approval queue; nothing becomes official until
+            a person approves it.
           </p>
           <p className="text-foreground/90 leading-relaxed">
-            <strong>Governance.</strong> Agents and tools connect under a named
-            identity that is scoped to only the tools, business areas, and personas it
-            is allowed to touch — anything outside its scope is refused, loudly, and
-            recorded. Sensitive approvals can be configured to require two different
-            people (the proposer cannot approve their own change).
+            <strong>Governance.</strong> Agents and tools connect under a named identity
+            scoped to only the tools, business areas, and personas they are allowed to
+            touch — anything outside that scope is refused, loudly, and recorded.
+            Sensitive approvals can be configured so the person who proposes a change
+            cannot also approve it.
           </p>
-        </section>
-
-        {/* ── The Demo ────────────────────────────────────────────────── */}
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-foreground border-b border-border pb-2">
-            The Demo — proving it, before and after
-          </h2>
-          <p className="text-foreground/90 leading-relaxed">
-            The <strong>Demo tab</strong> runs a before/after on the same question, the
-            same data, and the same model. You pick the entity (and the month). Every
-            number is pulled live from DCL — nothing is staged.
-          </p>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-card border border-border rounded-lg p-4 space-y-2">
-              <h3 className="font-medium text-foreground">Panel A — raw agent</h3>
-              <p className="text-sm text-foreground/80 leading-relaxed">
-                A capable AI with full, direct access to both feeds. It answers — but it
-                cannot show its work. It quietly picks one source or blends them, and
-                cannot decompose the difference, name which system is authoritative,
-                cite precedent, or show an approval trail.
-              </p>
-            </div>
-            <div className="bg-card border border-border rounded-lg p-4 space-y-2">
-              <h3 className="font-medium text-foreground">Panel B — through DCL</h3>
-              <p className="text-sm text-foreground/80 leading-relaxed">
-                The same question, governed. It discloses the conflict, decomposes the
-                variance (credits, timing, untagged items — and an honest "unexplained"
-                where it cannot), names the authoritative system, cites precedent on
-                repeats, shows the approval trail, and drills to the source records.
-              </p>
-            </div>
-          </div>
-          <div className="bg-muted/30 border border-border rounded-lg p-4">
-            <h3 className="font-medium text-foreground mb-1">What a good run looks like</h3>
-            <p className="text-sm text-foreground/80 leading-relaxed">
-              Both panels answer. Panel B shows a provenance badge on every answer, its
-              numbers match the DCL ground truth, it discloses each conflict, and where
-              there is no data it says so plainly rather than inventing a figure.
-            </p>
-          </div>
         </section>
 
         {/* ── Quick reference ─────────────────────────────────────────── */}
@@ -147,19 +110,18 @@ export function OperatorGuide() {
             Quick reference — the tabs
           </h2>
           <div className="bg-card border border-border rounded-lg divide-y divide-border text-sm">
-            <Row tab="Ingest" use="Watch data arrive; see ingest log and snapshots." />
-            <Row tab="Graph" use="Explore the knowledge graph — concepts, relationships, sources." />
-            <Row tab="Context" use="Inspect one entity: domain coverage and what's known." />
-            <Row tab="Recon" use="Reconcile conflicts where sources disagree." />
-            <Row tab="Monitor" use="Drift detection over time; approve/reject change proposals; pause the schedule." />
-            <Row tab="Dashboard" use="Persona dashboards (CFO/CRO/COO/CTO) over the current data." />
-            <Row tab="Demo" use="Run the before/after grounded demo." />
+            <Row tab="Ingest" use="Watch data arrive — the ingest log (per-batch counts, sources, run id)." />
+            <Row tab="Dashboard" use="Browse the facts — a filterable table of triples (concept, value, source, confidence)." />
+            <Row tab="Graph" use="See the shape — a Sankey of sources → fields → concepts → dimensions, per entity, persona-filterable." />
+            <Row tab="Context" use="One entity's domain coverage + the Conflict Register (drill and resolve disagreements)." />
+            <Row tab="Monitor" use="Scheduled drift detection; approve/reject change proposals; pause the schedule." />
+            <Row tab="Demo" use="The before/after grounded demo (Panel A raw vs Panel B governed)." />
             <Row tab="?" use="This guide." />
           </div>
         </section>
 
         <p className="text-xs text-muted-foreground pt-4 border-t border-border">
-          DCL — the context layer of the AutonomOS platform. Every answer carries its
+          DCL — the context layer of the AutonomOS platform. Every fact carries its
           source, confidence, and history; nothing is deleted, only superseded.
         </p>
       </div>
