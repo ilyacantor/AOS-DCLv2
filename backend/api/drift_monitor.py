@@ -257,18 +257,29 @@ def run_value_drift_sweep() -> dict[str, Any]:
             dedup_keys = [("value_drift", _vd_natural_key(entity_id, c)) for c in open_conflicts]
             dup_map = proposal_store.check_duplicates(tenant_id, dedup_keys)
 
+            # Intra-sweep dedup: the Gate 1A engine can register MORE THAN ONE
+            # open conflict_register row that collapses to the SAME natural key
+            # (same entity·concept·property·period from different source-pairs /
+            # re-detections). dup_map is read once before any insert, so without
+            # tracking keys filed earlier in THIS loop the second occurrence
+            # would hit uq_change_proposal_pending and raise. Explicit dedup
+            # (the brief's requirement) covers both cross-sweep (dup_map) and
+            # within-sweep (seen) duplicates.
+            seen: set[str] = set()
             for c in open_conflicts:
                 nk = _vd_natural_key(entity_id, c)
                 existing_id = dup_map.get(("value_drift", nk))
-                if existing_id:
+                if existing_id or nk in seen:
                     proposals_deduped += 1
                     logger.info(
                         "[value_drift_monitor] entity=%s concept=%s.%s — "
                         "pending proposal already exists: %s (deduped)",
-                        entity_id, c["concept"], c.get("property"), existing_id,
+                        entity_id, c["concept"], c.get("property"),
+                        existing_id or "this-sweep",
                     )
                     continue
 
+                seen.add(nk)
                 proposal_store.insert_proposals([{
                     "tenant_id": tenant_id,
                     "entity_id": entity_id,
