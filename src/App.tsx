@@ -9,9 +9,10 @@ import { DashboardTab } from './components/DashboardTab';
 import { ReconTab } from './components/ReconTab';
 import { GraphV2Tab } from './components/GraphV2Tab';
 import GroundedDemoTab from './components/demo/GroundedDemoTab';
+import { MonitoringTab } from './components/MonitoringTab';
 import { useSnapshots } from './components/RunSelector';
 
-type MainView = 'graph' | 'dashboard' | 'context' | 'guide' | 'recon' | 'ingest' | 'demo';
+type MainView = 'graph' | 'dashboard' | 'context' | 'guide' | 'recon' | 'ingest' | 'demo' | 'monitor';
 
 // Deep-link support so Console can launch a surface directly
 // (?view=demo&entity_id=…). Read once at module init; tab clicks still rule.
@@ -298,6 +299,7 @@ function App() {
     { id: 'context', label: 'Context' },
     { id: 'recon', label: 'Recon' },
     { id: 'ingest', label: 'Ingest' },
+    { id: 'monitor', label: 'Monitor' },
     { id: 'demo', label: 'Demo' },
   ];
 
@@ -450,6 +452,8 @@ function App() {
           <UserGuide />
         ) : mainView === 'dashboard' ? (
           <DashboardTab snapshot={snapshot} />
+        ) : mainView === 'monitor' ? (
+          <MonitoringTab snapshot={snapshot} />
         ) : mainView === 'demo' ? (
           <GroundedDemoTab requestedEntityId={requestedEntityId} />
         ) : (

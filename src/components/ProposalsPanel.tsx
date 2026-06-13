@@ -43,6 +43,22 @@ function payloadSummary(ptype: string, payload: Record<string, unknown>): string
       return `${s(payload.board_segment)} → ${((payload.maps_to as string[]) ?? []).join(', ')}`;
     case 'priority_query':
       return `${s(payload.query_label)}`;
+    case 'structural_drift': {
+      const added = (payload.added as Array<{concept: string; property: string}>) ?? [];
+      const removed = (payload.removed as Array<{concept: string; property: string}>) ?? [];
+      const addParts = added.slice(0, 3).map(a => `+${a.concept}.${a.property}`);
+      const remParts = removed.slice(0, 3).map(r => `-${r.concept}.${r.property}`);
+      const more = (added.length + removed.length > 6) ? ' …' : '';
+      return [...addParts, ...remParts].join(', ') + more || 'no delta';
+    }
+    case 'value_drift': {
+      const claims = (payload.claims as Array<{source_system: string; value?: unknown}>) ?? [];
+      const trend = payload.trend as {prior_count: number; current_count: number} | undefined;
+      const key = `${s(payload.concept)}.${s(payload.property)}${payload.period ? ` (${s(payload.period)})` : ''}`;
+      const claimStr = claims.map(c => `${c.source_system}:${c.value}`).join(' vs ');
+      const trendStr = trend ? ` trend:${trend.prior_count}→${trend.current_count}` : '';
+      return `${key} — ${claimStr}${trendStr}`;
+    }
     default:
       return JSON.stringify(payload).slice(0, 80);
   }
@@ -56,6 +72,8 @@ function typeBadgeCls(ptype: string): string {
     case 'org_hierarchy':     return 'bg-green-500/15 text-green-400';
     case 'management_overlay':return 'bg-amber-500/15 text-amber-500';
     case 'priority_query':    return 'bg-cyan-500/15 text-cyan-400';
+    case 'structural_drift':  return 'bg-orange-500/15 text-orange-400';
+    case 'value_drift':       return 'bg-rose-500/15 text-rose-400';
     default:                  return 'bg-muted text-muted-foreground';
   }
 }
@@ -339,9 +357,9 @@ export function ProposalsPanel({ entityId }: { entityId: string }) {
                     {/* Provenance + session id */}
                     <div className="text-muted-foreground space-y-0.5">
                       <div>Basis: <b>{String(p.provenance.basis ?? '—')}</b>
-                        {p.provenance.confirmed_by && <> · confirmed by <b>{String(p.provenance.confirmed_by)}</b></>}
+                        {Boolean(p.provenance.confirmed_by) && <> · confirmed by <b>{String(p.provenance.confirmed_by)}</b></>}
                       </div>
-                      {p.provenance.onboarding_session_id && (
+                      {Boolean(p.provenance.onboarding_session_id) && (
                         <div>
                           Session: <span className="font-mono" data-testid="proposals-session-id">
                             {String(p.provenance.onboarding_session_id)}
