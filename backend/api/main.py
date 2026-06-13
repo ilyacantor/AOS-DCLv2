@@ -192,13 +192,28 @@ def _start_scheduler() -> None:
 
     APScheduler errors abort the scheduler setup but do NOT abort the rest of
     boot — a broken scheduler is degraded, not fatal (reads still serve).
+
+    #91 determinism guard: if DCL_SCHEDULER_ENABLED=false (or "0"), no jobs
+    are armed and no scheduler is started.  conftest.py sets this before any
+    test imports the app so the timer never fires during pytest.  The run-now
+    HTTP path is unaffected — it is synchronous, not timer-driven.
     """
+    if os.getenv("DCL_SCHEDULER_ENABLED", "true").lower() in ("false", "0"):
+        logger.info(
+            "[Scheduler] DCL_SCHEDULER_ENABLED=false — scheduler NOT started "
+            "(test guard or explicit disable, #91)"
+        )
+        return
+
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     from backend.api.scheduler import set_scheduler
-    from backend.api.drift_monitor import drift_job
+    from backend.api.drift_monitor import drift_job, value_drift_job
     from backend.db.monitor_store import MonitorStore
 
-    JOB_FUNCTIONS = {"structural_drift": drift_job}
+    JOB_FUNCTIONS = {
+        "structural_drift": drift_job,
+        "value_drift": value_drift_job,
+    }
 
     try:
         jobs = MonitorStore().list_jobs()

@@ -9,6 +9,15 @@ import json
 import os
 from pathlib import Path
 
+# #91 determinism guard — disarm the APScheduler BEFORE any test module
+# imports the FastAPI app.  The scheduler is a standing background writer to
+# change_proposals; if it fires during a pytest run it mutates store state
+# between pair-A and pair-B (B14 nondeterminism) and leaks proposals into
+# other tenants' data.  The run-now route stays fully functional — it is a
+# synchronous call, not a timer.  Tests and D3 drive detection through
+# run-now / explicit awaited fires, never the ambient timer.
+os.environ.setdefault("DCL_SCHEDULER_ENABLED", "false")
+
 import httpx
 import pytest
 

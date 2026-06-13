@@ -13,7 +13,10 @@ from fastapi import APIRouter, HTTPException
 
 from backend.db.monitor_store import MonitorStore
 from backend.api.scheduler import get_scheduler
-from backend.api.drift_monitor import run_structural_drift_sweep, drift_job
+from backend.api.drift_monitor import (
+    run_structural_drift_sweep, drift_job,
+    run_value_drift_sweep, value_drift_job,
+)
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -25,11 +28,13 @@ _store = MonitorStore()
 # Scheduler fires these wrappers (which call the sweep AND record outcomes).
 _JOB_FUNCTIONS = {
     "structural_drift": drift_job,
+    "value_drift": value_drift_job,
 }
 
 # Pure sweep functions — used by run-now to return a result dict.
 _SWEEP_FUNCTIONS = {
     "structural_drift": run_structural_drift_sweep,
+    "value_drift": run_value_drift_sweep,
 }
 
 

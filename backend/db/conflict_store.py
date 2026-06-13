@@ -156,6 +156,35 @@ class ConflictStore:
                 cols = [d[0] for d in cur.description]
                 return _row_to_register(row, cols)
 
+    def count_open_value(self, tenant_id: str, entity_id: str) -> int:
+        """Count open (non-dispositioned) VALUE conflicts for an entity.
+        Used by the value_drift sweep for trend tracking (prior vs current count)."""
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM conflict_register "
+                    "WHERE tenant_id = %s AND entity_id = %s "
+                    "AND status IN ('open', 'escalated') AND conflict_type = 'value'",
+                    (tenant_id, entity_id),
+                )
+                return cur.fetchone()[0]
+
+    def get_conflict_statuses(
+        self, tenant_id: str, conflict_ids: list[str],
+    ) -> dict[str, str]:
+        """Return {conflict_id: status} for the given IDs in one query.
+        Used by the value_drift sweep to skip already-dispositioned conflicts."""
+        if not conflict_ids:
+            return {}
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id::text, status FROM conflict_register "
+                    "WHERE tenant_id = %s AND id = ANY(%s::uuid[])",
+                    (tenant_id, conflict_ids),
+                )
+                return {str(row[0]): row[1] for row in cur.fetchall()}
+
     def count_open(self, tenant_id: str | None = None, entity_id: str | None = None) -> int:
         clauses = ["status IN ('open', 'escalated')"]
         params: list[Any] = []
@@ -175,61 +204,60 @@ class ConflictStore:
 
     # ── dispositions (append-only) ────────────────────────────────────────
 
-    def record_disposition(
-        self, *, conflict_id: str, tenant_id: str, entity_id: str,
+    def record_disposition_in_txn(
+        self, cur, *, conflict_id: str, tenant_id: str, entity_id: str,
         conflict_class: str, action: str, winner_source: str | None,
         loser_sources: list[str], superseded_triple_ids: list[str],
         decided_by: str, rationale: str, context: dict | None,
         new_status: str,
     ) -> dict:
-        """Append the disposition, flip register status, and supersede the losing
-        triples — one transaction. Returns the disposition record."""
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT status FROM conflict_register WHERE tenant_id = %s AND id = %s FOR UPDATE",
-                    (tenant_id, conflict_id),
-                )
-                row = cur.fetchone()
-                if row is None:
-                    raise LookupError(
-                        f"conflict {conflict_id} not found for tenant {tenant_id}"
-                    )
-                if row[0] == "dispositioned":
-                    raise ValueError(
-                        f"conflict {conflict_id} is already dispositioned — "
-                        f"dispositions are append-only decisions, not edits"
-                    )
-                cur.execute(
-                    """
-                    INSERT INTO conflict_dispositions
-                        (conflict_id, tenant_id, entity_id, conflict_class, action,
-                         winner_source, loser_sources, superseded_triple_ids,
-                         decided_by, rationale, context)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s::uuid[], %s, %s, %s::jsonb)
-                    RETURNING id, decided_at
-                    """,
-                    (conflict_id, tenant_id, entity_id, conflict_class, action,
-                     winner_source, loser_sources, superseded_triple_ids,
-                     decided_by, rationale,
-                     json.dumps(context) if context is not None else None),
-                )
-                disp_id, decided_at = cur.fetchone()
-                cur.execute(
-                    "UPDATE conflict_register SET status = %s, updated_at = now() "
-                    "WHERE id = %s",
-                    (new_status, conflict_id),
-                )
-                superseded = 0
-                if superseded_triple_ids:
-                    cur.execute(
-                        "UPDATE semantic_triples "
-                        "SET superseded_at = now(), updated_at = now() "
-                        "WHERE id = ANY(%s::uuid[]) AND tenant_id = %s AND is_active = true",
-                        (superseded_triple_ids, tenant_id),
-                    )
-                    superseded = cur.rowcount
-                conn.commit()
+        """Core disposition logic using an already-open cursor.
+
+        Caller owns the transaction and commit.  Used by _apply_value_drift
+        (apply-on-approve inside decide_proposal's transaction) so the
+        disposition, supersession, and proposal status flip happen atomically.
+        Same SQL as record_disposition — no duplication of supersession logic."""
+        cur.execute(
+            "SELECT status FROM conflict_register WHERE tenant_id = %s AND id = %s FOR UPDATE",
+            (tenant_id, conflict_id),
+        )
+        row = cur.fetchone()
+        if row is None:
+            raise LookupError(
+                f"conflict {conflict_id} not found for tenant {tenant_id}"
+            )
+        if row[0] == "dispositioned":
+            raise ValueError(
+                f"conflict {conflict_id} is already dispositioned — "
+                f"dispositions are append-only decisions, not edits"
+            )
+        cur.execute(
+            """
+            INSERT INTO conflict_dispositions
+                (conflict_id, tenant_id, entity_id, conflict_class, action,
+                 winner_source, loser_sources, superseded_triple_ids,
+                 decided_by, rationale, context)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s::uuid[], %s, %s, %s::jsonb)
+            RETURNING id, decided_at
+            """,
+            (conflict_id, tenant_id, entity_id, conflict_class, action,
+             winner_source, loser_sources, superseded_triple_ids,
+             decided_by, rationale,
+             json.dumps(context) if context is not None else None),
+        )
+        disp_id, decided_at = cur.fetchone()
+        cur.execute(
+            "UPDATE conflict_register SET status = %s, updated_at = now() WHERE id = %s",
+            (new_status, conflict_id),
+        )
+        superseded = 0
+        if superseded_triple_ids:
+            cur.execute(
+                "UPDATE semantic_triples SET superseded_at = now(), updated_at = now() "
+                "WHERE id = ANY(%s::uuid[]) AND tenant_id = %s AND is_active = true",
+                (superseded_triple_ids, tenant_id),
+            )
+            superseded = cur.rowcount
         logger.info(
             "[conflict-disposition] conflict=%s action=%s winner=%s superseded=%d by=%s",
             conflict_id, action, winner_source, superseded, decided_by,
@@ -244,6 +272,30 @@ class ConflictStore:
             "decided_by": decided_by,
             "decided_at": decided_at.isoformat(),
         }
+
+    def record_disposition(
+        self, *, conflict_id: str, tenant_id: str, entity_id: str,
+        conflict_class: str, action: str, winner_source: str | None,
+        loser_sources: list[str], superseded_triple_ids: list[str],
+        decided_by: str, rationale: str, context: dict | None,
+        new_status: str,
+    ) -> dict:
+        """Append the disposition, flip register status, and supersede the losing
+        triples — one transaction. Returns the disposition record."""
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                result = self.record_disposition_in_txn(
+                    cur,
+                    conflict_id=conflict_id, tenant_id=tenant_id,
+                    entity_id=entity_id, conflict_class=conflict_class,
+                    action=action, winner_source=winner_source,
+                    loser_sources=loser_sources,
+                    superseded_triple_ids=superseded_triple_ids,
+                    decided_by=decided_by, rationale=rationale,
+                    context=context, new_status=new_status,
+                )
+            conn.commit()
+        return result
 
     def latest_precedent(self, tenant_id: str, conflict_class: str) -> Optional[dict]:
         """Most recent non-escalate disposition for a conflict class (precedent

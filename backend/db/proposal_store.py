@@ -22,7 +22,8 @@ logger = get_logger(__name__)
 _VALID_PROPOSAL_TYPES = frozenset({
     "authority_map", "conflict_candidate", "vocabulary_alias",
     "org_hierarchy", "management_overlay", "priority_query",
-    "structural_drift",   # Gate 3B D1 — scheduled drift detector
+    "structural_drift",   # Gate 3B D1 — scheduled structural drift detector
+    "value_drift",        # Gate 3B D2 — scheduled value conflict sweep
 })
 
 _PROPOSAL_COLS = (
@@ -56,6 +57,14 @@ def _natural_key(proposal_type: str, payload: dict) -> str:
         base = str(payload.get("dcl_ingest_id_base", "")).strip().lower()
         compare = str(payload.get("dcl_ingest_id_compare", "")).strip().lower()
         return f"{entity}|{base}|{compare}"
+    if proposal_type == "value_drift":
+        # Identifies a specific value conflict by entity·concept·property·period.
+        # Stable across re-detections (same coord = same pending conflict = dedup).
+        entity = str(payload.get("entity_id", "")).strip().lower()
+        concept = str(payload.get("concept", "")).strip().lower()
+        prop = str(payload.get("property", "")).strip().lower()
+        period = str(payload.get("period") or "").strip().lower()
+        return f"{entity}|{concept}|{prop}|{period}"
     raise ValueError(f"Unknown proposal_type for natural key: {proposal_type!r}")
 
 
@@ -381,6 +390,8 @@ def _apply_canonical(
         "org_hierarchy":      _apply_org_hierarchy,
         "management_overlay": _apply_management_overlay,
         "priority_query":     _apply_priority_query,
+        "structural_drift":   _apply_structural_drift,   # Gate 3B D1: acknowledgment
+        "value_drift":        _apply_value_drift,        # Gate 3B D2: disposition via authority map
     }
     fn = dispatch.get(proposal_type)
     if fn is None:
@@ -575,3 +586,118 @@ def _apply_priority_query(
         ),
     )
     return f"contour:priority_query:{query_label}:{tenant_id}"
+
+
+def _apply_structural_drift(
+    cur, *, tenant_id: str, entity_id: Optional[str],
+    proposal_id: str, payload: dict,
+) -> str:
+    """Structural drift APPROVE = operator acknowledgment of schema evolution.
+
+    The graph already reflects reality — new/removed fields exist or not in
+    the current run's triples.  No store write is needed beyond what
+    decide_proposal already writes (status flip + decision trace).  The
+    canonical_artifact_id names the acknowledged delta so GET /api/dcl/traces
+    can surface the full loop.
+
+    A6/A2: no speculative structural-baseline table built here — if
+    acknowledgment needs durable state to prevent re-drift, that is a separate
+    design decision (surface to governor rather than build silently).
+    """
+    eid = entity_id or payload.get("entity_id", "unknown")
+    compare_run = payload.get("dcl_ingest_id_compare", "unknown")
+    return f"structural_drift:ack:{eid}:{compare_run}"
+
+
+def _apply_value_drift(
+    cur, *, tenant_id: str, entity_id: Optional[str],
+    proposal_id: str, payload: dict,
+) -> str:
+    """Value drift APPROVE = resolve the underlying conflict via the authority map.
+
+    Routes through ConflictStore.record_disposition_in_txn on the SHARED cursor
+    so the disposition, triple supersession, and proposal status flip are all
+    one atomic transaction.  Same supersession SQL as the HITL disposition route
+    (conflicts.py POST /{id}/disposition) — no duplication of that logic.
+
+    Authority-map winner determination: longest-prefix match on concept prefix,
+    first source in the ranked list that appears in the conflict's claims wins.
+    If no authority map entry covers the concept, the conflict is escalated
+    (operator review required) rather than silently ignoring the gap.
+    """
+    from backend.db.conflict_store import ConflictStore
+
+    conflict_id = payload.get("conflict_id")
+    if not conflict_id:
+        raise ValueError(
+            f"value_drift proposal {proposal_id} payload missing conflict_id — "
+            "cannot disposition the conflict without it."
+        )
+    eid = entity_id or payload.get("entity_id")
+    if not eid:
+        raise ValueError(
+            f"value_drift proposal {proposal_id} requires entity_id — "
+            "cannot write disposition without entity."
+        )
+
+    claims = payload.get("claims", [])
+    sources = [c["source_system"] for c in claims]
+    concept = payload.get("concept", "")
+    conflict_class = payload.get("conflict_class", "")
+
+    conflict_store = ConflictStore()
+    amap = conflict_store.load_authority_map(tenant_id)
+
+    best_prefix_len = -1
+    ranked: Optional[list] = None
+    for prefix, sources_ranked in amap.items():
+        if concept.startswith(prefix) and len(prefix) > best_prefix_len:
+            best_prefix_len = len(prefix)
+            ranked = sources_ranked
+
+    winner_source: Optional[str] = None
+    if ranked:
+        for src in ranked:
+            if src in sources:
+                winner_source = src
+                break
+
+    if winner_source:
+        action = "accept_a" if (sources and sources[0] == winner_source) else "accept_b"
+        loser_sources = [s for s in sources if s != winner_source]
+        superseded_triple_ids = [
+            c["triple_id"] for c in claims
+            if c["source_system"] != winner_source and c.get("triple_id")
+        ]
+        new_status = "dispositioned"
+        rationale = (
+            f"Value drift proposal approved — authority-map winner: {winner_source!r}. "
+            f"Sources in conflict: {sources}."
+        )
+    else:
+        action = "escalate"
+        loser_sources = []
+        superseded_triple_ids = []
+        new_status = "escalated"
+        rationale = (
+            f"Value drift proposal approved — no authority map entry for concept "
+            f"{concept!r}; escalated for operator review. Sources: {sources}."
+        )
+
+    disp = conflict_store.record_disposition_in_txn(
+        cur,
+        conflict_id=conflict_id,
+        tenant_id=tenant_id,
+        entity_id=eid,
+        conflict_class=conflict_class,
+        action=action,
+        winner_source=winner_source,
+        loser_sources=loser_sources,
+        superseded_triple_ids=superseded_triple_ids,
+        decided_by=f"value_drift_approve:proposal:{proposal_id}",
+        rationale=rationale,
+        context={"proposal_id": proposal_id, "claims": claims,
+                 "trend": payload.get("trend")},
+        new_status=new_status,
+    )
+    return f"conflict_disposition:{disp['disposition_id']}"
