@@ -596,7 +596,12 @@ class TestGraphV2Tab:
         # drawing is not misread as empty (race fix, B14).
         nodes = page.locator("[data-layer]")
         empty = page.get_by_text("No pipeline data", exact=False)
-        expect(nodes.first.or_(empty.first)).to_be_visible(timeout=30_000)
+        # Budget aligned with the Loading-clear wait above (90s): on a COLD graph
+        # build / under full-suite load on the bloated dev store (#27/#28), the
+        # nodes draw slow-but-correct — measured ~38s cold in isolation, which
+        # blew the old 30s wait and flapped this test in B14 run B (the render
+        # IS correct, just past 30s). Same condition-wait, wider budget.
+        expect(nodes.first.or_(empty.first)).to_be_visible(timeout=90_000)
         if nodes.count() > 0:
             assert nodes.count() > 0
         else:
@@ -626,7 +631,12 @@ class TestGraphV2Tab:
         # (race fix, B14).
         nodes = page.locator("[data-layer]")
         empty = page.get_by_text("No pipeline data", exact=False)
-        expect(nodes.first.or_(empty.first)).to_be_visible(timeout=30_000)
+        # Budget aligned with the Loading-clear wait above (90s): on a COLD graph
+        # build / under full-suite load on the bloated dev store (#27/#28), the
+        # nodes draw slow-but-correct — measured ~38s cold in isolation, which
+        # blew the old 30s wait and flapped this test in B14 run B (the render
+        # IS correct, just past 30s). Same condition-wait, wider budget.
+        expect(nodes.first.or_(empty.first)).to_be_visible(timeout=90_000)
         # If there's no SVG with nodes, the empty state should show
         if nodes.count() == 0:
             body_text = page.locator("body").text_content() or ""
