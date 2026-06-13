@@ -67,6 +67,24 @@ def _remediate_invalid_indexes(cur) -> None:
     print(f"  post-CONCURRENTLY check: {len(invalid)} index(es) now valid.")
 
 
+_LEDGER_DDL = """
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    filename   TEXT PRIMARY KEY,
+    checksum   TEXT NOT NULL,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+)
+"""
+
+
+def _checksum(sql: str) -> str:
+    """Content checksum of a migration file (whitespace-normalized so a
+    pure-comment/format touch doesn't force a re-run, but any SQL change
+    does)."""
+    import hashlib
+    normalized = "\n".join(line.rstrip() for line in sql.splitlines()).strip()
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
 def run_migrations():
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
@@ -82,19 +100,38 @@ def run_migrations():
     try:
         conn.autocommit = False
         cur = conn.cursor()
+
+        # Migration ledger: the runner applies each file ONCE and records it.
+        # Boot re-runs then skip already-applied files instead of re-applying
+        # all of them every time — re-applying the full set on every boot is
+        # what blew the 30s boot budget on the large dev store (it grew until
+        # the pass timed out, and #82 fail-loud correctly turned that timeout
+        # into an aborted boot). A genuinely NEW or CHANGED migration still
+        # runs and still fails loud on error.
+        cur.execute(_LEDGER_DDL)
+        conn.commit()
+        cur.execute("SELECT filename, checksum FROM schema_migrations")
+        ledger = dict(cur.fetchall())
+
         applied = 0
+        skipped = 0
         for sql_file in sql_files:
-            print(f"Running {sql_file.name} ...")
             sql = sql_file.read_text()
+            csum = _checksum(sql)
+            prior = ledger.get(sql_file.name)
+            if prior == csum:
+                skipped += 1
+                continue  # already applied, unchanged — skip (the fast path)
+
+            verb = "Running" if prior is None else "Re-running (changed)"
+            print(f"{verb} {sql_file.name} ...")
             # CREATE INDEX CONCURRENTLY cannot run inside a transaction block.
-            # Detect and run that file standalone in autocommit mode. After
-            # the file applies, remediate any indisvalid=false indexes via
-            # REINDEX (also requires autocommit). Detection must ignore SQL
-            # comments: a file merely MENTIONING the word (mig022's header
-            # does) must not trigger the autocommit path — the mid-loop
-            # commit it forces makes a later failure non-atomic (it commits
-            # every prior file's re-apply, e.g. mig020's view without
-            # mig023's extension on top).
+            # Detect and run that file standalone in autocommit mode, then
+            # remediate any indisvalid=false indexes via REINDEX (also
+            # autocommit). Detection ignores SQL comments: a file merely
+            # MENTIONING the word (mig022's header does) must not trip the
+            # autocommit path — the mid-loop commit it forces makes a later
+            # failure non-atomic.
             sql_no_comments = "\n".join(
                 line.split("--", 1)[0] for line in sql.splitlines()
             )
@@ -103,13 +140,30 @@ def run_migrations():
                 conn.autocommit = True
                 cur.execute(sql)
                 _remediate_invalid_indexes(cur)
+                # Record in its own autocommit statement (no open txn here).
+                cur.execute(
+                    "INSERT INTO schema_migrations (filename, checksum) "
+                    "VALUES (%s, %s) ON CONFLICT (filename) DO UPDATE SET "
+                    "checksum = EXCLUDED.checksum, applied_at = now()",
+                    (sql_file.name, csum),
+                )
                 conn.autocommit = False
             else:
                 cur.execute(sql)
+                cur.execute(
+                    "INSERT INTO schema_migrations (filename, checksum) "
+                    "VALUES (%s, %s) ON CONFLICT (filename) DO UPDATE SET "
+                    "checksum = EXCLUDED.checksum, applied_at = now()",
+                    (sql_file.name, csum),
+                )
             print(f"  OK — {sql_file.name}")
             applied += 1
+
         conn.commit()
-        print(f"\nAll {applied} migration(s) applied successfully.")
+        print(
+            f"\nMigrations up to date: {applied} applied, {skipped} already "
+            f"current ({len(sql_files)} total)."
+        )
     except Exception as e:
         if not conn.autocommit:
             conn.rollback()
