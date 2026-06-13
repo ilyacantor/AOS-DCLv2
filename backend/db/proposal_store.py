@@ -175,7 +175,13 @@ class ProposalStore:
         # structural_drift). When omitted, the call stays tenant-wide
         # (back-compat for tenant-grain callers).
         if entity_id:
-            clauses.append("entity_id = %s")
+            # Entity-scoped view = THIS entity's proposals PLUS tenant-grain
+            # proposals (entity_id IS NULL — authority_map / vocabulary_alias /
+            # org_hierarchy / management_overlay / priority_query apply to the
+            # whole tenant, not one entity, so they must show under any entity
+            # selection). Entity-specific proposals (drift, conflict candidates)
+            # of OTHER entities stay hidden — the contamination fix holds.
+            clauses.append("(entity_id = %s OR entity_id IS NULL)")
             params.append(entity_id)
         if status:
             clauses.append("status = %s")
