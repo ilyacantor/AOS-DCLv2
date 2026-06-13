@@ -88,7 +88,12 @@ export function MonitoringTab({ snapshot }: MonitoringTabProps) {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const detail = await res.json().then(j => j.detail ?? JSON.stringify(j)).catch(() => res.statusText);
+        const detail = await res.json().then(j => {
+          // FastAPI validation errors return detail as an array of {msg, loc} dicts.
+          if (typeof j.detail === 'string') return j.detail;
+          if (Array.isArray(j.detail)) return j.detail.map((e: Record<string, unknown>) => e.msg ?? JSON.stringify(e)).join('; ');
+          return JSON.stringify(j);
+        }).catch(() => res.statusText);
         setActionError(s => ({ ...s, [jobName]: String(detail) }));
       } else {
         await fetchJobs();
