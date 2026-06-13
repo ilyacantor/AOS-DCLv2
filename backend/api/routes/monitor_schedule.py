@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException
 
 from backend.db.monitor_store import MonitorStore
 from backend.api.scheduler import get_scheduler
-from backend.api.drift_monitor import run_structural_drift_sweep
+from backend.api.drift_monitor import run_structural_drift_sweep, drift_job
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -22,7 +22,13 @@ router = APIRouter(tags=["Monitor Schedule"])
 
 _store = MonitorStore()
 
+# Scheduler fires these wrappers (which call the sweep AND record outcomes).
 _JOB_FUNCTIONS = {
+    "structural_drift": drift_job,
+}
+
+# Pure sweep functions — used by run-now to return a result dict.
+_SWEEP_FUNCTIONS = {
     "structural_drift": run_structural_drift_sweep,
 }
 
@@ -106,27 +112,34 @@ def schedule_resume(job_name: str):
 
 @router.post("/api/dcl/monitor/schedule/{job_name}/run-now")
 def schedule_run_now(job_name: str):
-    """Trigger one sweep synchronously. This is the operator/test trigger for
-    an immediate run — NOT a test-only backdoor: it calls the exact same
-    function the scheduler fires (drift_job / run_structural_drift_sweep).
+    """Trigger one sweep synchronously. NOT a test-only backdoor: calls the
+    exact same sweep function the scheduler fires (run_structural_drift_sweep),
+    then records the outcome in monitor_schedule (same as drift_job does).
 
     Returns the sweep summary (entities_scanned, drift_findings,
     proposals_filed, proposals_deduped). On error: 500 with the informative
     message from the sweep (A1).
     """
     _get_job_or_404(job_name)
-    if job_name not in _JOB_FUNCTIONS:
+    sweep_fn = _SWEEP_FUNCTIONS.get(job_name)
+    if sweep_fn is None:
         raise HTTPException(
             status_code=422,
             detail=f"No sweep function registered for job '{job_name}'.",
         )
 
-    fn = _JOB_FUNCTIONS[job_name]
     try:
-        result = fn()
+        result = sweep_fn()
+        detail = (
+            f"scanned={result['entities_scanned']} "
+            f"findings={result['drift_findings']} "
+            f"filed={result['proposals_filed']} "
+            f"deduped={result['proposals_deduped']}"
+        )
+        _store.record_run(job_name, "ok", detail)
     except RuntimeError as exc:
-        # Partial sweep completed but some entity scans failed.
         logger.error("[monitor-schedule] run-now '%s' completed with errors: %s", job_name, exc)
+        _store.record_run(job_name, "error", str(exc)[:2000])
         raise HTTPException(
             status_code=500,
             detail=(
@@ -138,6 +151,7 @@ def schedule_run_now(job_name: str):
         logger.error(
             "[monitor-schedule] run-now '%s' unexpected error: %s", job_name, exc, exc_info=True
         )
+        _store.record_run(job_name, "error", f"{type(exc).__name__}: {exc}"[:2000])
         raise HTTPException(
             status_code=500,
             detail=f"Sweep '{job_name}' failed: {type(exc).__name__}: {exc}",
