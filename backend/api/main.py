@@ -179,6 +179,79 @@ def _boot_migration_check() -> bool:
 
 
 # =============================================================================
+# APScheduler helpers (Gate 3B D1)
+# =============================================================================
+
+
+def _start_scheduler() -> None:
+    """Start the APScheduler AsyncIOScheduler and arm enabled jobs from the DB.
+
+    Called during lifespan startup AFTER migrations so monitor_schedule exists.
+    Jobs with enabled=false (paused) are deliberately not added — pause survives
+    restart because the scheduler re-reads the DB at each boot.
+
+    APScheduler errors abort the scheduler setup but do NOT abort the rest of
+    boot — a broken scheduler is degraded, not fatal (reads still serve).
+    """
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from backend.api.scheduler import set_scheduler
+    from backend.api.drift_monitor import drift_job
+    from backend.db.monitor_store import MonitorStore
+
+    JOB_FUNCTIONS = {"structural_drift": drift_job}
+
+    try:
+        jobs = MonitorStore().list_jobs()
+    except Exception as exc:
+        logger.error(
+            "[Scheduler] Cannot read monitor_schedule — scheduler NOT started: %s", exc
+        )
+        return
+
+    sched = AsyncIOScheduler()
+    armed = 0
+    for job_row in jobs:
+        job_name = job_row["job_name"]
+        fn = JOB_FUNCTIONS.get(job_name)
+        if fn is None:
+            logger.warning(
+                "[Scheduler] No handler for job '%s' — skipping (add to JOB_FUNCTIONS)", job_name
+            )
+            continue
+        if not job_row["enabled"]:
+            logger.info("[Scheduler] Job '%s' is paused (enabled=false) — not armed", job_name)
+            continue
+        sched.add_job(
+            fn,
+            trigger="interval",
+            seconds=job_row["interval_seconds"],
+            id=job_name,
+            replace_existing=True,
+            max_instances=1,
+        )
+        armed += 1
+        logger.info(
+            "[Scheduler] Armed job '%s' at %ds interval", job_name, job_row["interval_seconds"]
+        )
+
+    sched.start()
+    set_scheduler(sched)
+    logger.info("[Scheduler] AsyncIOScheduler started (%d job(s) armed)", armed)
+
+
+def _stop_scheduler() -> None:
+    """Gracefully shut down the scheduler if it was started."""
+    from backend.api.scheduler import get_scheduler
+    sched = get_scheduler()
+    if sched is not None:
+        try:
+            sched.shutdown(wait=False)
+            logger.info("[Scheduler] AsyncIOScheduler stopped")
+        except Exception as exc:
+            logger.warning("[Scheduler] Stop error (non-fatal): %s", exc)
+
+
+# =============================================================================
 # App setup
 # =============================================================================
 
@@ -220,6 +293,10 @@ async def lifespan(app: FastAPI):
 
     logger.info("=== DCL Engine Starting (Metadata-Only Mode) ===")
 
+    # ---- APScheduler (Gate 3B D1): structural-drift monitor ----
+    logger.info("=== DCL Monitor Scheduler Starting ===")
+    _start_scheduler()
+
     # Set up readiness event and launch background warmup
     _startup_ready = asyncio.Event()
     _startup_phase = "warming"
@@ -236,6 +313,8 @@ async def lifespan(app: FastAPI):
             await warmup_task
         except asyncio.CancelledError:
             pass
+
+    _stop_scheduler()
 
     # Flush ALL pending debounced writes before closing pools.
     try:
@@ -431,6 +510,9 @@ app.include_router(exports_router)
 app.include_router(monitor_router)
 # Gate 3A: Change proposal HITL queue + canonical apply-on-approve.
 app.include_router(proposals_router)
+# Gate 3B D1: Structural drift monitor — schedule list + pause/resume/run-now.
+from backend.api.routes.monitor_schedule import router as monitor_schedule_router
+app.include_router(monitor_schedule_router)
 
 # Plan B WP5 — real wire-protocol MCP server (HTTP+SSE transport).
 # The stdio transport runs in a separate process: `python -m backend.api.mcp_stdio`.
