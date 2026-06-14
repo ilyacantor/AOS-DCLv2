@@ -65,7 +65,6 @@ from backend.core.redis_client import is_redis_available
 # Route modules (SE only)
 from backend.api.routes.ingest import router as ingest_router
 from backend.api.routes.export_pipes import router as export_pipes_router
-from backend.api.routes.reconciliation import router as reconciliation_router
 from backend.api.routes.temporal import router as temporal_router
 from backend.api.routes.deprecated import router as deprecated_router
 from backend.farm.routes import router as farm_router
@@ -502,7 +501,6 @@ async def startup_gate_middleware(request: Request, call_next):
 
 app.include_router(ingest_router)
 app.include_router(export_pipes_router)
-app.include_router(reconciliation_router)
 app.include_router(temporal_router)
 app.include_router(deprecated_router)
 app.include_router(farm_router)
@@ -818,29 +816,6 @@ async def seed_ingest(request: Request):
     store._save_to_disk()
     return {"status": "seeded", "activity_added": added_activity, "drops_added": added_drops}
 
-
-## /api/dcl/ingest/reset removed — use /api/dcl/ingest/flush (the router
-## endpoint) which calls store.reset() + pipe_store.reset() and returns
-## before/after counts.  reset() now clears memory + Redis + Postgres + disk.
-
-
-@app.get("/api/dcl/narration/{run_id}")
-def get_narration(run_id: str):
-    messages = engine.narration.get_messages(run_id)
-    return {"dcl_ingest_id": run_id, "messages": messages}
-
-
-@app.get("/api/dcl/monitor/{run_id}")
-def get_monitor(run_id: str):
-    return {
-        "dcl_ingest_id": run_id,
-        "monitor_data": {
-            "message": "Monitor data endpoint ready",
-            "sources": [],
-            "ontology": [],
-            "conflicts": [],
-        },
-    }
 
 
 # =============================================================================

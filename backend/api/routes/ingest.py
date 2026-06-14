@@ -836,75 +836,6 @@ def get_ingest_stats():
     return result
 
 
-@router.get("/activity")
-def list_activity(snapshot_name: Optional[str] = None):
-    """Return the 3-phase activity log — discrete events for Structure, Dispatch, Content.
-
-    Each entry represents one phase of the data flow:
-      - structure: AAM pushed pipe schemas via /export-pipes
-      - dispatch:  AAM/Farm manifest activated a dispatch
-      - content:   Farm pushed actual row data via /ingest
-
-    Optional ?snapshot_name= filter.
-    """
-    store = get_ingest_store()
-    entries = store.get_activity_log(snapshot_name=snapshot_name)
-
-    # Group by snapshot_name for easy frontend rendering
-    grouped: dict = {}
-    for e in entries:
-        snap = e["snapshot_name"]
-        grouped.setdefault(snap, []).append(e)
-
-    return {
-        "activity": entries,
-        "by_snapshot": grouped,
-        "total": len(entries),
-    }
-
-
-@router.get("/drops")
-def list_drops(snapshot_name: Optional[str] = None):
-    """Return the drop log — rejected ingestion attempts.
-
-    Optional ?snapshot_name= filter.
-    """
-    store = get_ingest_store()
-    entries = store.get_drop_log(snapshot_name=snapshot_name)
-
-    grouped: dict = {}
-    for e in entries:
-        snap = e["snapshot_name"] or "(no snapshot)"
-        grouped.setdefault(snap, []).append(e)
-
-    return {
-        "drops": entries,
-        "by_snapshot": grouped,
-        "total": len(entries),
-    }
-
-
-@router.get("/dispatches")
-def list_dispatches(snapshot_name: Optional[str] = None):
-    """List all Farm dispatches — each dispatch groups pipes from one manifest push.
-
-    Optional ?snapshot_name= filter to show only dispatches from a specific
-    Farm generation (e.g. 'cloudedge-a1b2').
-    """
-    store = get_ingest_store()
-    return {"dispatches": store.get_dispatches(snapshot_name=snapshot_name)}
-
-
-@router.get("/dispatches/{dispatch_id}")
-def get_dispatch_detail(dispatch_id: str):
-    """Get detailed breakdown for a single Farm dispatch."""
-    store = get_ingest_store()
-    summary = store.get_dispatch_summary(dispatch_id)
-    if not summary:
-        raise HTTPException(status_code=404, detail=f"Dispatch {dispatch_id} not found")
-    return summary
-
-
 # ---------------------------------------------------------------------------
 # Materialization endpoints
 # ---------------------------------------------------------------------------
@@ -1005,57 +936,6 @@ def sample_rows(pipe_id: Optional[str] = None, limit: int = 3):
 
 
 # ---------------------------------------------------------------------------
-# Flush ingest store (admin maintenance)
-# ---------------------------------------------------------------------------
-
-@router.post("/flush")
-async def flush_ingest_store():
-    """Flush all ingest data AND pipe definitions.
-
-    Clears: IngestStore (memory + Redis + disk) and PipeStore (memory +
-    Redis + Postgres + disk).  After flush the schema-on-write guard is
-    inactive (pipe count = 0), allowing the next Farm push through
-    without pre-registered AAM blueprints.
-
-    Both reset() methods now handle their own Redis/Postgres/disk cleanup
-    internally — no duplicate cleanup needed here.
-    """
-    store = get_ingest_store()
-    pipe_store = get_pipe_store()
-
-    # Snapshot before counts
-    stats_before = store.get_stats()
-    mat_before = store.get_materialized_stats()
-    pipes_before = pipe_store.count()
-
-    # reset() handles memory + Redis + disk for each store
-    store.reset()
-    pipe_store.reset()  # handles memory + Redis + Postgres + disk
-
-    # Reset mode to Empty — no data in memory
-    set_current_mode("Empty")
-
-    return {
-        "status": "flushed",
-        "mode": "Empty",
-        "message": "No data in memory. Run a new snapshot or initiate an enterprise scan.",
-        "before": {
-            "total_runs": stats_before.get("total_runs", 0),
-            "total_rows": stats_before.get("total_rows_buffered", 0),
-            "materialized_points": mat_before.get("total_points", 0),
-            "unique_sources": stats_before.get("unique_sources", 0),
-            "pipe_definitions": pipes_before,
-        },
-        "after": {
-            "total_runs": 0,
-            "total_rows": 0,
-            "materialized_points": 0,
-            "unique_sources": 0,
-            "pipe_definitions": 0,
-        },
-    }
-
-
 # ---------------------------------------------------------------------------
 # Seed endpoint — replay remote activity/drops into local store (dev only)
 # ---------------------------------------------------------------------------

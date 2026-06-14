@@ -60,40 +60,6 @@ def _timed_get(url: str) -> tuple[requests.Response, float]:
     return resp, elapsed_ms
 
 
-# ─── LAT_009: Recon cross-system warm latency ─────────────────────────
-
-
-def test_lat_009():
-    """Recon cross-system endpoint — warm latency (cached)."""
-    t = TestResult("LAT_009", "Recon cross-system warm latency")
-    results.append(t)
-
-    # Cold call to build cache
-    resp = requests.get(f"{BASE_URL}/api/dcl/reconciliation/cross-system", timeout=TIMEOUT)
-    if resp.status_code != 200:
-        t.fail("HTTP 200", f"HTTP {resp.status_code}: {resp.text[:200]}")
-        return
-
-    # Warm call
-    resp, elapsed = _timed_get(f"{BASE_URL}/api/dcl/reconciliation/cross-system")
-    t.latency_ms = elapsed
-
-    if resp.status_code != 200:
-        t.fail("HTTP 200", f"HTTP {resp.status_code}")
-        return
-
-    data = resp.json()
-    if "systems" not in data:
-        t.fail("response with 'systems' key", f"keys: {list(data.keys())}")
-        return
-
-    if elapsed > WARM_THRESHOLD_MS:
-        t.fail(f"<{WARM_THRESHOLD_MS}ms", f"{elapsed:.0f}ms")
-        return
-
-    t.pass_(f"{elapsed:.0f}ms")
-
-
 # ─── LAT_010: Ingest stats warm latency ──────────────────────────────
 
 
@@ -146,7 +112,6 @@ def main():
         sys.exit(1)
 
     tests = [
-        test_lat_009,
         test_lat_010,
     ]
 

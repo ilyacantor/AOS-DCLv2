@@ -205,54 +205,6 @@ class TestConfidenceDistribution:
         )
 
 
-class TestReconSourceRunTag:
-    """TEST 3: Recon Farm → DCL Count check must NOT be SKIP."""
-
-    def test_farm_dcl_count_not_skip(self, page_setup: Page):
-        page = page_setup
-        navigate_to_tab(page, "Recon")
-        select_active_snapshot(page)
-
-        # Click Run Recon
-        run_btn = page.locator("button").filter(has_text="Run Recon")
-        expect(run_btn.first).to_be_visible(timeout=5_000)
-        run_btn.first.click()
-
-        # Wait for results deterministically: the completion artifact is the
-        # rendered check row itself. Under page-load convoy the recon round
-        # trips can exceed any fixed sleep (the old 8s wait scraped a
-        # still-Running DOM).
-        expect(page.locator("body")).to_contain_text("DCL Count", timeout=60_000)
-        expect(
-            page.locator("button").filter(has_text=re.compile(r"Running"))
-        ).to_have_count(0, timeout=60_000)
-
-        body = page.locator("body").text_content() or ""
-
-        # Farm → DCL Count row must exist
-        assert "DCL Count" in body, (
-            f"Could not find 'Farm → DCL Count' check in Recon results. "
-            f"Body excerpt: {body[:500]}"
-        )
-
-        # Find the Farm → DCL Count section and check its status
-        # The check renders: status icon + check name + summary
-        # SKIP shows "No source_run_tag found" in the summary
-        farm_dcl_section = page.locator("div").filter(
-            has_text=re.compile(r"Farm.*DCL Count")
-        )
-        section_text = farm_dcl_section.last.text_content() or ""
-
-        assert "SKIP" not in section_text, (
-            f"Farm → DCL Count check is SKIP. "
-            f"source_run_tag is missing from the triple push. "
-            f"Section text: {section_text}"
-        )
-        assert "source_run_tag" not in section_text.lower(), (
-            f"Farm → DCL Count mentions missing source_run_tag: {section_text}"
-        )
-
-
 class TestTripleCountGrowth:
     """TEST 4: Total triple count on Ingest tab must match the API ground truth
     and exceed a minimum floor for a valid SE pipeline run (B10, B17)."""

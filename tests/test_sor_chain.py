@@ -262,27 +262,3 @@ def test_old_receipt_deserialization_without_sor_field():
     aod_sors = pipe_store.get_aod_systems_of_record()
     assert aod_sors == []
 
-
-# ---------------------------------------------------------------------------
-# Test 6: reconciliation shows AOD authority
-# ---------------------------------------------------------------------------
-
-def test_reconciliation_shows_aod_authority(client):
-    """After export-pipes → cross-system reconciliation returns aod_authority.sor_count=6.
-
-    POST /api/dcl/ingest is deprecated; reconciliation reads from PipeStore
-    (populated by export-pipes), not from ingest data.
-    """
-    # Structure phase with 6 SOR declarations
-    resp = client.post("/api/dcl/export-pipes", json=EXPORT_PAYLOAD_WITH_SOR)
-    assert resp.status_code == 200
-
-    # Cross-system reconciliation (reads from PipeStore, no AAM_URL needed)
-    resp = client.get("/api/dcl/reconciliation/cross-system")
-    assert resp.status_code == 200
-    recon = resp.json()
-
-    # aod_authority block must exist with correct SOR count
-    assert "aod_authority" in recon
-    assert recon["aod_authority"]["sor_count"] == 6
-    assert len(recon["aod_authority"]["systems_of_record"]) == 6
