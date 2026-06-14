@@ -336,11 +336,16 @@ class TestBrowseBatch:
 
 
 class TestResolve:
-    """Concept-location scoping. The dev graph carries ontology concepts but
-    no normalizer-mapped sources, so location legitimately ends at the
-    'No sources found' shape — the persona-material difference under test is
-    WHICH concepts are attempted vs excluded, and the detailed reason when
-    everything is out of scope."""
+    """Persona scoping on the /resolve surface. What this class uniquely
+    protects is the resolve response SHAPE and the persona EXCLUSION-DISCLOSURE
+    contract (which concepts a persona excludes, disclosed in warnings) — not
+    whether any concept currently resolves. (#76's records-path mapping writer
+    made /resolve able to return can_answer=True for mapped concepts, so the
+    old "no normalizer-mapped sources → always No-sources" premise is gone;
+    the affirmative can_answer=True path is covered deterministically by
+    test_fabric_connect_ingest::test_records_ingest_makes_concept_resolvable_with_provenance.
+    These tests therefore assert scoping + a data-independent can_answer/reason
+    invariant, never ambient dev-graph contents.)"""
 
     @staticmethod
     def _resolve_concepts():
@@ -371,9 +376,21 @@ class TestResolve:
             "join_paths", "provenance", "reason", "resolved_filters",
             "warnings",
         ], f"personaless resolve response shape changed: {sorted(body.keys())}"
-        assert body["can_answer"] is False
-        assert shared_c in body["reason"] and cfo_c in body["reason"]
-        assert body["warnings"] == []
+        # Personaless resolve excludes nothing — no persona-scoping warning,
+        # regardless of whether the concepts resolve. (The old can_answer=False
+        # assertion was the empty-graph premise #76 invalidated.)
+        assert not any("scoping excluded" in w for w in body["warnings"]), (
+            f"personaless resolve must not emit a persona-scoping warning: {body['warnings']}"
+        )
+        # Data-independent invariant on real resolve behavior: a resolvable
+        # answer carries located sources and no failure reason; an
+        # unanswerable one names its reason. This holds whatever the dev graph
+        # currently contains — it is not a tautology over ambient data.
+        if body["can_answer"]:
+            assert body["concept_sources"], "can_answer=True must carry concept_sources"
+            assert not body["reason"], f"can_answer=True must not carry a failure reason: {body['reason']}"
+        else:
+            assert body["reason"], "can_answer=False must carry a reason"
 
     def test_13_cfo_vs_cro_materially_different_scoping(self):
         shared_c, cfo_c = self._resolve_concepts()
@@ -383,24 +400,32 @@ class TestResolve:
         assert cfo.status_code == 200, cfo.text
         cfo_body = cfo.json()
         assert cfo_body["tenant_id"] == TENANT and cfo_body["persona"] == "CFO"
-        # Both concepts in CFO scope: both attempted, no exclusion warning.
-        assert shared_c in cfo_body["reason"] and cfo_c in cfo_body["reason"]
-        assert cfo_body["warnings"] == []
+        # Both concepts are in CFO scope → CFO excludes neither → no
+        # persona-scoping exclusion warning. (Asserted via the exclusion
+        # warning, not `reason`, which is None once a concept resolves.)
+        cfo_excl = [w for w in cfo_body["warnings"] if "scoping excluded" in w]
+        assert cfo_excl == [], f"CFO must not exclude in-scope concepts: {cfo_excl}"
 
         cro = client.post("/api/dcl/resolve", json={**ask, "persona": "CRO"})
         assert cro.status_code == 200, cro.text
         cro_body = cro.json()
         assert cro_body["persona"] == "CRO"
-        # CFO-only concept excluded: not attempted, disclosed in warnings.
-        assert cfo_c not in cro_body["reason"]
-        assert shared_c in cro_body["reason"]
-        assert len(cro_body["warnings"]) == 1
-        warn = cro_body["warnings"][0]
-        assert "CRO" in warn and cfo_c in warn
+        # The CFO-only concept is outside CRO scope → CRO excludes it and
+        # discloses exactly one persona-scoping exclusion naming CRO and it.
+        cro_excl = [w for w in cro_body["warnings"] if "scoping excluded" in w]
+        assert len(cro_excl) == 1, (
+            f"CRO must disclose exactly one persona exclusion: {cro_body['warnings']}"
+        )
+        assert "CRO" in cro_excl[0] and cfo_c in cro_excl[0], (
+            f"CRO exclusion warning must name CRO and {cfo_c}: {cro_excl[0]}"
+        )
 
-        assert (cfo_body["reason"], cfo_body["warnings"]) != (
-            cro_body["reason"], cro_body["warnings"]
-        ), "CFO and CRO must answer materially differently"
+        # Material difference on the SAME request: CRO discloses an exclusion
+        # CFO does not. (Deterministic from persona_domains.yaml — independent
+        # of whether the concepts have sources in the graph.)
+        assert cfo_excl != cro_excl, (
+            "CFO and CRO must scope the same request materially differently"
+        )
 
     def test_14_all_concepts_outside_persona_detailed_reason(self):
         _, cfo_c = self._resolve_concepts()
