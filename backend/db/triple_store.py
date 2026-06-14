@@ -32,7 +32,13 @@ class TripleStore:
         "confidence_score", "confidence_tier",
         "canonical_id", "resolution_method", "resolution_confidence",
         "fabric_plane", "fabric_product",
+        # JSONB — write-time normalization provenance (mig028). NULL when the
+        # value was already canonical (base unit, canonical currency, canonical
+        # period). Serialized as JSON for COPY exactly like `value`.
+        "normalization_metadata",
     ]
+    # JSONB columns: COPY needs their Python value json.dumps'd, not str()'d.
+    _JSON_COPY_COLS = frozenset({"value", "normalization_metadata"})
     _COPY_SQL = (
         f"COPY semantic_triples ({', '.join(_COPY_COLS)}) "
         f"FROM STDIN WITH (FORMAT text)"
@@ -57,12 +63,15 @@ class TripleStore:
 
         escape = self._copy_escape
         cols = self._COPY_COLS
+        json_cols = self._JSON_COPY_COLS
         buf = io.StringIO()
         for t in triples:
             row_vals = []
             for c in cols:
-                if c == "value":
-                    row_vals.append(escape(json.dumps(t["value"])))
+                if c in json_cols:
+                    v = t.get(c)
+                    # NULL stays NULL (\N); a present value is JSON-serialized.
+                    row_vals.append(escape(json.dumps(v) if v is not None else None))
                 else:
                     row_vals.append(escape(t.get(c)))
             buf.write("\t".join(row_vals))
@@ -108,12 +117,14 @@ class TripleStore:
 
         escape = self._copy_escape
         cols = self._COPY_COLS
+        json_cols = self._JSON_COPY_COLS
         buf = io.StringIO()
         for t in triples:
             row_vals = []
             for c in cols:
-                if c == "value":
-                    row_vals.append(escape(json.dumps(t["value"])))
+                if c in json_cols:
+                    v = t.get(c)
+                    row_vals.append(escape(json.dumps(v) if v is not None else None))
                 else:
                     row_vals.append(escape(t.get(c)))
             buf.write("\t".join(row_vals))

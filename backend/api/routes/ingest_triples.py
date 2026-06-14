@@ -18,10 +18,13 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Literal, Optional
 
+from backend.aam.ingress import normalize_source_id
 from backend.core.db import get_connection
+from backend.db.normalization_policy_store import NormalizationPolicyStore
 from backend.db.triple_store import TripleStore
 from backend.engine.persona_view import get_persona_domain_mapping
 from backend.registry.concept_registry import ConceptRegistry
+from backend.resolver import value_normalizer
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -30,6 +33,7 @@ router = APIRouter(tags=["Triple Ingest"])
 
 _triple_store = TripleStore()
 _concept_registry = ConceptRegistry()
+_normalization_policy_store = NormalizationPolicyStore()
 
 # Union of every domain prefix mapped to a persona, built at import time.
 # Farm-emitted triples whose concept prefix is absent from this set are
@@ -361,6 +365,51 @@ def ingest_triples(
             f"inserting new triples, pointer will be updated after insert"
         )
 
+    # --- Value normalization chokepoint (mig028) -------------------------
+    # ONE place: every triple is normalized to the tenant canonical (USD, base
+    # unit, one period representation) just before it is written, with the raw
+    # original preserved in normalization_metadata. This runs on the cross-
+    # source path BEFORE conflict detection so a cross-source gap is the REAL
+    # gap, never an artifact of unit/currency/format skew. Aggregators and
+    # converters are NOT edited for value logic — normalization is centralized
+    # here. Policy is loaded ONCE per ingest; per-triple work is O(1) and skips
+    # fast when nothing needs converting (metadata stays None).
+    #
+    # source_system is normalized through the canonical normalize_source_id
+    # (root-fixes dcl_deferred_work.md#80: aggregators stamp raw "NetSuite",
+    # the per-record path stamps "netsuite" — now uniformly canonical at the
+    # one write boundary, so both spellings collapse to one source).
+    norm_policy = _normalization_policy_store.load_policy(str(req.tenant_id))
+    normalization_metas: list[Optional[dict]] = [None] * len(req.triples)
+    for i, t in enumerate(req.triples):
+        t.source_system = normalize_source_id(t.source_system)
+        try:
+            result = value_normalizer.normalize(
+                value=t.value, unit=t.unit, currency=t.currency,
+                period=t.period, policy=norm_policy,
+            )
+        except ValueError as e:
+            # Fail loud (A1): an unknown unit-scale, an unparseable period, or
+            # a missing FX rate is a refusal to write a value we cannot place
+            # in the tenant canonical — surfaced as 422 with the readable
+            # message naming the offending unit/period/currency.
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "NORMALIZATION_FAILED",
+                    "message": (
+                        f"Triple #{i} (entity_id={t.entity_id!r} "
+                        f"concept={t.concept!r} property={t.property!r}): {e}"
+                    ),
+                    "triple_index": i,
+                },
+            )
+        t.value = result["value"]
+        t.unit = result["unit"]
+        t.currency = result["currency"]
+        t.period = result["period"]
+        normalization_metas[i] = result["metadata"]
+
     # Prod-mode AI: LLM concept validation + RAG lesson storage. Shared with
     # /api/dcl/run AAM-mode block via _apply_prod_mode_ai. Missing keys → 503.
     if req.run_mode == "Prod":
@@ -418,9 +467,11 @@ def ingest_triples(
             if new_concept and new_concept != t.concept:
                 t.concept = new_concept
 
-    # Build triple dicts for insertion
+    # Build triple dicts for insertion. value/unit/currency/period are already
+    # the tenant-canonical values from the normalization chokepoint above;
+    # normalization_metadata carries the raw original (or None for no-op rows).
     rows = []
-    for t in req.triples:
+    for i, t in enumerate(req.triples):
         rows.append({
             "tenant_id": req.tenant_id,
             "entity_id": t.entity_id,
@@ -443,6 +494,7 @@ def ingest_triples(
             "resolution_confidence": t.resolution_confidence,
             "fabric_plane": t.fabric_plane,
             "fabric_product": t.fabric_product,
+            "normalization_metadata": normalization_metas[i],
         })
 
     # --- Instrumentation: capture timing around the write ---
