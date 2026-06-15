@@ -100,6 +100,36 @@ _NESTED_BREAKDOWNS = {
     "exit_worklife_by_department": ("workforce.exit_theme.work_life.by_department", "count"),
     "comp_band_median_by_department": ("comp_band.median.by_department", "usd"),
     "market_median_by_job_family": ("market_benchmark.median.by_job_family", "usd"),
+    # ── Team/band structure + attrition (ContextOS #3) ────────────────────────
+    # GENERIC team cuts — the source column names carry no entity specifics.
+    # A workforce-departure feed cut by org team and by team+band (property=
+    # team / property="<team>:<band>"); band-level internal comp + market
+    # median (property="<dept>:<band>" / "<family>:<band>"). The team/band/dept
+    # KEYS are data (the entity's), never named in any derivation rule. These
+    # let the stitched graph walk org -> department -> team and let the
+    # synthesis rule tie a team's band-concentrated departures to a band driver.
+    "departures_by_team": ("workforce.departures.by_team", "count"),
+    "departures_by_team_band": ("workforce.departures.by_team_band", "count"),
+    "comp_band_median_by_department_band": ("comp_band.median.by_department_band", "usd"),
+    "market_median_by_job_family_band": ("market_benchmark.median.by_job_family_band", "usd"),
+}
+
+# String-valued breakdowns: nested {member: "<text>"} fields whose VALUE is a
+# business key / declared mapping, not a number. Same property=member shape as
+# _NESTED_BREAKDOWNS but the value is stored as text (jsonb string) — the _num
+# numeric path would drop these, so they get their own classifier branch. No
+# unit/currency (the value is a key, not a measure).
+#   workforce.team.member_of  — value "<parent_department>|<senior_roster>": a
+#       team's parent department (DATA the membership rule reads) + its senior
+#       bench size. The structural department->team hop derives from this.
+#   comp_band.resolution.department_to_job_family — value the external job family
+#       an internal department resolves to: the DECLARED mapping the gap rule
+#       reads so the internal->external comp pair is resolved from data, not a
+#       dict. Nested under the registered comp_band root (comp-domain metadata —
+#       no new ontology root, no Convergence-coordinated concept addition).
+_STRING_BREAKDOWNS: dict[str, str] = {
+    "team_membership": "workforce.team.member_of",
+    "comp_resolution_department_to_job_family": "comp_band.resolution.department_to_job_family",
 }
 
 _PERIOD_KEY = "period"
@@ -129,6 +159,32 @@ def aggregate_operational_records(
 
         for fname, raw_value in record.items():
             if fname in _STRUCTURAL_KEYS:
+                continue
+            if fname in _STRING_BREAKDOWNS:
+                base = _STRING_BREAKDOWNS[fname]
+                if isinstance(raw_value, dict):
+                    for member, mval in raw_value.items():
+                        # The value is a business key/declared mapping — keep it as
+                        # text. Empty/None is a data integrity gap, warn loud (A1):
+                        # a string breakdown with a blank value cannot carry a key.
+                        if mval is None or not str(mval).strip():
+                            warnings.append({
+                                "type": "empty_string_breakdown_value", "pipe_id": pipe_id,
+                                "field": fname, "member": str(member), "record_index": rec_idx,
+                                "detail": (
+                                    f"string-valued breakdown '{fname}' member '{member}' has "
+                                    f"an empty value; cannot form concept '{base}' — not converted"
+                                ),
+                            })
+                            continue
+                        payloads.append(TriplePayload(
+                            entity_id=entity_id, concept=base, property=str(member),
+                            value=str(mval), period=period, currency=None, unit=None,
+                            source_system=source_system, source_table=f"fabric_via:{raw_source}",
+                            source_field=f"{fname}.{member}", pipe_id=pipe_id,
+                            confidence_score=_CONF, confidence_tier=_TIER,
+                            fabric_plane=fabric_plane, fabric_product=fabric_product,
+                        ))
                 continue
             if fname in _NESTED_BREAKDOWNS:
                 base, unit = _NESTED_BREAKDOWNS[fname]
