@@ -64,7 +64,7 @@ function App() {
   // Shared snapshot state — all 5 monitoring tabs use this. The selected
   // snapshot's entity_id drives the per-tab data fetches via selectedEntityId.
   const snapshot = useSnapshots();
-  const { selectedEntityId, loading: entitiesLoading } = snapshot;
+  const { selectedEntityId, selectedTenantId, loading: entitiesLoading } = snapshot;
 
   useEffect(() => {
     if (!isRunning) return;
@@ -175,6 +175,12 @@ function App() {
     if (selectedEntityId) {
       runBody.entity_id = selectedEntityId;
     }
+    // Carry the identity pair (I2): pass the snapshot's tenant so an entity_id
+    // shared across two tenants resolves without a 422. null/single-tenant keeps
+    // the backend's resolve_single_tenant fallback.
+    if (selectedTenantId) {
+      runBody.tenant_id = selectedTenantId;
+    }
 
     const runPromise = fetch('/api/dcl/run', {
       method: 'POST',
@@ -216,7 +222,7 @@ function App() {
         }
         setIsRunning(false);
       });
-  }, [entitiesLoading, selectedEntityId]);
+  }, [entitiesLoading, selectedEntityId, selectedTenantId]);
 
   // Snapshot-change graph re-render is handled per-tab (each tab self-fetches
   // entity-scoped data off snapshot.selectedEntityId — see GraphV2Tab). No
@@ -239,6 +245,7 @@ function App() {
             force_refresh: true,
             snapshot_name: selectedSnapshotName,
             entity_id: selectedEntityId || undefined,
+            tenant_id: selectedTenantId || undefined,
           }),
         }),
         fetchPersonaStats(),

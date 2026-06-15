@@ -21,6 +21,9 @@ const POLL_INTERVAL_MS = 12_000;
 export interface Snapshot {
   dcl_ingest_id: string;
   snapshot_name: string | null;
+  /** Machine-only half of the identity pair (I2). Never displayed; passed back
+   *  to /api/dcl/run so a same-named entity under two tenants still resolves. */
+  tenant_id: string | null;
   entity_id: string | null;
   run_timestamp: string;
   total_rows: number;
@@ -36,6 +39,10 @@ export interface SnapshotState {
   selectedSnapshot: Snapshot | null;
   /** entity_id of the selected snapshot — this is what the 5 tabs consume. */
   selectedEntityId: string;
+  /** tenant_id of the selected snapshot — the machine-only identity half (I2),
+   *  passed to /api/dcl/run alongside entity_id so resolution is unambiguous
+   *  when the same entity_id exists under more than one tenant. */
+  selectedTenantId: string | null;
   /** True when following `*`; false when pinned to an explicit snapshot. */
   isFollowingLatest: boolean;
   /** Operator picked a snapshot from the dropdown. */
@@ -135,6 +142,7 @@ export function useSnapshots(): SnapshotState {
     latestId,
     selectedSnapshot,
     selectedEntityId: selectedSnapshot?.entity_id ?? '',
+    selectedTenantId: selectedSnapshot?.tenant_id ?? null,
     isFollowingLatest,
     onSelect,
     loading,

@@ -24,7 +24,7 @@ export function GraphV2Tab({
   snapshot,
   selectedPersonas,
 }: GraphV2TabProps) {
-  const { selectedEntityId } = snapshot;
+  const { selectedEntityId, selectedTenantId } = snapshot;
   const [mode, setMode] = useState<GraphMode>('fabric');
   const [entityGraphData, setEntityGraphData] = useState<GraphSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
@@ -55,6 +55,11 @@ export function GraphV2Tab({
         mode: 'Farm',
         run_mode: 'Dev',
         entity_id: selectedEntityId,
+        // Carry the identity pair (I2): the snapshot knows its tenant, so pass it
+        // rather than forcing the server to re-guess from entity_id alone — which
+        // 422s when the same entity_id exists under more than one tenant. null
+        // preserves the single-tenant auto-resolve path.
+        tenant_id: selectedTenantId,
       }),
       signal: controller.signal,
     })
@@ -80,7 +85,7 @@ export function GraphV2Tab({
       });
 
     return () => { controller.abort(); };
-  }, [selectedEntityId]);
+  }, [selectedEntityId, selectedTenantId]);
 
   // Use entity-scoped data when available, fall back to global graphData
   const displayData = entityGraphData ?? graphData;

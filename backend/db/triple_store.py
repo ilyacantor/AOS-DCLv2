@@ -570,6 +570,10 @@ class TripleStore:
             snapshots.append({
                 "dcl_ingest_id": rid,
                 "snapshot_name": snap_name,
+                # tenant_id is the machine-only half of the identity pair (I2):
+                # carried so the selecting surface can pass it back unambiguously
+                # (a same-named entity under two tenants must still resolve).
+                "tenant_id": str(tenant_id),
                 "entity_id": entity_id,
                 "run_timestamp": created_at.isoformat() if created_at else None,
                 "total_rows": total_rows,
@@ -632,7 +636,7 @@ class TripleStore:
                 GROUP BY run_id
             )
             SELECT
-                t.run_id, t.entity_id, t.created_at,
+                t.run_id, t.entity_id, t.created_at, t.tenant_id,
                 tn.current_run_id, tn.previous_run_id,
                 tn.current_snapshot_name, tn.previous_snapshot_name,
                 COALESCE(c.total_rows, 0) AS total_rows
@@ -647,7 +651,7 @@ class TripleStore:
                 rows = cur.fetchall()
 
         snapshots = []
-        for (run_id, entity_id, created_at,
+        for (run_id, entity_id, created_at, tenant_id,
              current_run_id, previous_run_id,
              cur_snap_name, prev_snap_name, total_rows) in rows:
             rid = str(run_id)
@@ -664,6 +668,11 @@ class TripleStore:
             snapshots.append({
                 "dcl_ingest_id": rid,
                 "snapshot_name": snap_name,
+                # tenant_id is the machine-only half of the identity pair (I2):
+                # this is the multi-tenant path, so each snapshot carries its own
+                # tenant so the selecting surface can pass it back unambiguously
+                # (a same-named entity under two tenants must still resolve).
+                "tenant_id": str(tenant_id) if tenant_id else None,
                 "entity_id": entity_id,
                 "run_timestamp": created_at.isoformat() if created_at else None,
                 "total_rows": total_rows,

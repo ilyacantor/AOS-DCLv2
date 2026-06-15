@@ -625,7 +625,10 @@ async def dcl_snapshots(
     (clamped to [1, 50], default 10) — the DCL monitoring UI's snapshot
     selector is tenant-agnostic. If tenant_id is supplied, returns up to
     `limit` most-recent runs for that tenant.
-    Returns {snapshots: [{dcl_ingest_id, snapshot_name, entity_id, run_timestamp, total_rows, is_current}], tenant_id}.
+    Returns {snapshots: [{dcl_ingest_id, snapshot_name, tenant_id, entity_id, run_timestamp, total_rows, is_current}], tenant_id}.
+    Each snapshot carries its own tenant_id (the machine-only half of the identity
+    pair, I2) so the selecting surface can pass it back to /api/dcl/run — a
+    same-named entity under two tenants must still resolve without guessing.
     """
     from backend.db.triple_store import TripleStore
 
