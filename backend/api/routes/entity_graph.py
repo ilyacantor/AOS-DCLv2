@@ -39,7 +39,12 @@ from backend.db.edge_store import (
     load_edge_types,
     put_edge_type,
 )
-from backend.engine.edge_derivation import EdgeDerivationError, derive_edges
+from backend.engine.edge_derivation import (
+    EdgeDerivationError,
+    _EXIT_CONCEPT_TMPL,
+    _HEADLINE_PERIOD,
+    derive_edges,
+)
 from backend.registry import concept_hierarchy
 from backend.utils.log_utils import get_logger
 
@@ -368,6 +373,250 @@ def graph_inspector(
         "values": values,
         "relationships": relationships,
         "relationship_count": len(relationships),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Edge provenance — drill from a synthesized edge to its source records
+# ---------------------------------------------------------------------------
+
+
+def _load_live_edge(
+    tenant_id: str, entity_id: str,
+    src_type: str, src_key: str, edge_type: str, dst_type: str, dst_key: str,
+) -> dict:
+    """The one live entity_edges row at this exact coordinate (its properties +
+    derivation + provenance). 404 — never an empty 200 — when the coordinate
+    names no live edge (A1: a non-existent edge is a provenance gap surfaced
+    loud, not a silent empty)."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT properties, derivation, source_system, confidence_tier, confidence_score "
+                "FROM entity_edges "
+                "WHERE tenant_id = %s AND entity_id = %s AND is_active = true "
+                "AND src_type = %s AND src_key = %s AND edge_type = %s "
+                "AND dst_type = %s AND dst_key = %s",
+                [tenant_id, entity_id, src_type, src_key, edge_type, dst_type, dst_key],
+            )
+            rows = cur.fetchall()
+    if not rows:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "EDGE_NOT_FOUND",
+                "message": (
+                    f"No live {edge_type} edge {src_type}:{src_key} -> {dst_type}:{dst_key} "
+                    f"for entity {entity_id!r} — cannot reveal source records for an edge that "
+                    f"does not exist. Check the edge coordinate against the rendered graph."
+                ),
+            },
+        )
+    if len(rows) > 1:
+        # Bi-temporal store: at most one row is_active per coordinate. >1 is a
+        # store-integrity break — surface it, do not pick one silently (A1).
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "EDGE_NOT_UNIQUE",
+                "message": (
+                    f"{len(rows)} live {edge_type} edges at {src_type}:{src_key} -> "
+                    f"{dst_type}:{dst_key} — the active set must be unique per coordinate; "
+                    f"refusing to synthesize provenance from an ambiguous edge."
+                ),
+            },
+        )
+    props, derivation, source_system, tier, score = rows[0]
+    return {
+        "properties": props or {},
+        "derivation": derivation,
+        "source_system": source_system,
+        "confidence_tier": tier,
+        "confidence_score": float(score) if score is not None else None,
+    }
+
+
+def _consumed_concepts(
+    edge_type: str, properties: dict, src_key: str, dst_key: str,
+) -> list[str]:
+    """The concepts an edge consumed, as the derivation recorded them.
+
+    BELOW_MARKET / RESOLVES_TO carry an explicit `consumed` list (the derivation
+    stamps it). DRIVEN_BY does not — its inputs are the four
+    workforce.exit_theme.<reason>.by_department counts whose ranking produced the
+    edge; reconstruct that list from the `breakdown` keys it stamped (those keys
+    ARE the reasons it ranked). An edge with neither is a provenance gap — raise
+    (A1), never return an empty list that would read as 'no sources'."""
+    consumed = properties.get("consumed")
+    if isinstance(consumed, list) and consumed:
+        return [str(c) for c in consumed]
+
+    if edge_type == "DRIVEN_BY":
+        breakdown = properties.get("breakdown")
+        if isinstance(breakdown, dict) and breakdown:
+            return [_EXIT_CONCEPT_TMPL.format(reason=r) for r in breakdown]
+
+    raise HTTPException(
+        status_code=422,
+        detail={
+            "error": "PROVENANCE_UNRESOLVABLE",
+            "message": (
+                f"{edge_type} edge {src_key} -> {dst_key} declares no `consumed` concepts "
+                f"(and no breakdown to reconstruct them from); its source records cannot be "
+                f"identified. The derivation must stamp what it consumed (I3) — fix the "
+                f"derivation, do not return an empty audit trail."
+            ),
+        },
+    )
+
+
+def _provenance_property_for(concept: str, src_type: str, src_key: str,
+                             dst_type: str, dst_key: str) -> str:
+    """Which property the consumed concept keys on for THIS edge. A `.by_<src_type>`
+    concept (e.g. comp_band.median.by_department on a department-sourced edge) keys
+    on src_key; a `.by_<dst_type>` concept (market_benchmark.median.by_job_family)
+    keys on dst_key. Neither ⇒ the concept does not key on either endpoint of this
+    edge — surface loud (A1), do not guess a property."""
+    if concept.endswith(f".by_{src_type}"):
+        return src_key
+    if concept.endswith(f".by_{dst_type}"):
+        return dst_key
+    raise HTTPException(
+        status_code=422,
+        detail={
+            "error": "PROVENANCE_KEY_UNRESOLVABLE",
+            "message": (
+                f"consumed concept {concept!r} does not end in '.by_{src_type}' or "
+                f"'.by_{dst_type}' — cannot determine which property keys the source record "
+                f"for edge {src_type}:{src_key} -> {dst_type}:{dst_key}. No guess is made."
+            ),
+        },
+    )
+
+
+def _source_record(tenant_id: str, entity_id: str, concept: str, property: str,
+                   period: str) -> Optional[dict]:
+    """The one active source triple for (concept, property) at the period the
+    derivation read, with full provenance. None when absent (the caller turns a
+    None into a loud provenance gap — A1). Latest-id tiebreak mirrors
+    mcp_provenance_lookup so a redelivered batch returns one deterministic row."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, concept, property, value, source_system, source_field, "
+                "       confidence_score, confidence_tier, ingested_at, normalization_metadata, period "
+                "FROM semantic_triples "
+                "WHERE tenant_id = %s AND entity_id = %s AND concept = %s AND property = %s "
+                "AND period = %s AND is_active = true "
+                "ORDER BY created_at DESC, id DESC LIMIT 1",
+                [tenant_id, entity_id, concept, property, period],
+            )
+            r = cur.fetchone()
+    if r is None:
+        return None
+    return {
+        "concept": r[1],
+        "property": r[2],
+        "value": r[3],
+        "source_system": r[4],
+        "source_field": r[5],
+        "confidence_score": float(r[6]) if r[6] is not None else None,
+        "confidence_tier": r[7],
+        "ingested_at": r[8].isoformat() if r[8] else None,
+        "triple_id": str(r[0]),
+        "normalization_metadata": r[9],
+        "period": r[10],
+    }
+
+
+# Edge properties that are the SYNTHESIZED output (the derived facts the sources
+# do NOT hold) vs the provenance/bookkeeping fields. The reveal returns the
+# synthesized block so the operator sees what the audit trail must account for.
+_PROVENANCE_BOOKKEEPING_KEYS = frozenset({"consumed", "source", "breakdown"})
+
+
+@router.get("/api/dcl/graph/edge-provenance")
+def graph_edge_provenance(
+    entity_id: str,
+    src_type: str,
+    src_key: str,
+    edge_type: str,
+    dst_type: str,
+    dst_key: str,
+    tenant_id: Optional[str] = Query(
+        None,
+        description="Tenant UUID — omit on operator surfaces; resolves from entity_id via tenant_runs (I4).",
+    ),
+):
+    """Drill from a SYNTHESIZED edge to the SOURCE RECORDS it was derived from —
+    the audit trail behind the derived fact (Blueprint §13). For the engineering
+    BELOW_MARKET edge this returns the two records the 13.16% gap was synthesized
+    from: comp_band engineering 165000 (workday_hr) and market_benchmark
+    software_engineering 190000 (radford_comp) — each with full provenance
+    (triple_id, source_field, confidence, ingested_at, normalization_metadata).
+
+    The edge's `consumed` concepts name the inputs; each is matched to its source
+    record by the property the concept keys on (a `.by_<src_type>` concept on
+    src_key, a `.by_<dst_type>` concept on dst_key), read at the period the
+    derivation consumed. A consumed concept that yields NO source record is a
+    provenance gap surfaced loud (422) — never silently dropped (A1). A
+    non-existent edge coordinate is a 404, never an empty 200.
+
+    tenant_id is optional on the operator surface (resolves from entity_id, I4)."""
+    tenant_id = _resolve_read_tenant(tenant_id, entity_id)
+
+    edge = _load_live_edge(
+        tenant_id, entity_id, src_type, src_key, edge_type, dst_type, dst_key,
+    )
+    properties = edge["properties"]
+    consumed = _consumed_concepts(edge_type, properties, src_key, dst_key)
+
+    sources: list[dict] = []
+    gaps: list[dict] = []
+    for concept in consumed:
+        prop = _provenance_property_for(concept, src_type, src_key, dst_type, dst_key)
+        rec = _source_record(tenant_id, entity_id, concept, prop, _HEADLINE_PERIOD)
+        if rec is None:
+            gaps.append({"concept": concept, "property": prop, "period": _HEADLINE_PERIOD})
+        else:
+            sources.append(rec)
+
+    if gaps:
+        # A consumed input has no surviving source record — the edge claims a
+        # provenance it cannot back. Surface it loud (A1); the synthesized fact
+        # is not honestly auditable without every input it consumed.
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "PROVENANCE_GAP",
+                "message": (
+                    f"{edge_type} edge {src_type}:{src_key} -> {dst_type}:{dst_key} consumed "
+                    f"{len(consumed)} concept(s) but {len(gaps)} have no active source record "
+                    f"at period {_HEADLINE_PERIOD}: {gaps}. The audit trail is incomplete — "
+                    f"refusing to present a partial provenance as complete."
+                ),
+            },
+        )
+
+    synthesized = {
+        k: v for k, v in properties.items() if k not in _PROVENANCE_BOOKKEEPING_KEYS
+    }
+
+    return {
+        "tenant_id": tenant_id,
+        "entity_id": entity_id,
+        "edge": {
+            "src": {"node_type": src_type, "node_key": src_key},
+            "edge_type": edge_type,
+            "dst": {"node_type": dst_type, "node_key": dst_key},
+            "derivation": edge["derivation"],
+            "source_system": edge["source_system"],
+            "confidence_tier": edge["confidence_tier"],
+            "confidence_score": edge["confidence_score"],
+        },
+        "consumed": consumed,
+        "sources": sources,
+        "synthesized": synthesized,
     }
 
 

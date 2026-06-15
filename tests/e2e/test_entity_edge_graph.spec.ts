@@ -110,6 +110,82 @@ test.describe.serial('Graph — Relationships (entity-edge hero)', () => {
     });
   });
 
+  test('Reveal source records drills the 13.16% gap to its two source records', async ({ page }) => {
+    // ── Ground truth: the two source records, from the read-only provenance
+    //    endpoint (Rule 1 — the allowed page.request.get exception). ──
+    const prov = (await (
+      await page.request.get(
+        `${BACKEND}/api/dcl/graph/edge-provenance?entity_id=${ENTITY}` +
+          `&src_type=department&src_key=engineering&edge_type=BELOW_MARKET` +
+          `&dst_type=job_family&dst_key=software_engineering`,
+      )
+    ).json()) as {
+      sources: { concept: string; value: number; source_system: string; triple_id: string }[];
+      synthesized: { gap_pct: number };
+    };
+    const internal = prov.sources.find((s) => s.source_system === 'workday_hr')!;
+    const market = prov.sources.find((s) => s.source_system === 'radford_comp')!;
+    expect(internal.value).toBe(165000);
+    expect(market.value).toBe(190000);
+    expect(internal.triple_id).not.toBe(market.triple_id); // two different real rows
+    expect(prov.synthesized.gap_pct).toBe(13.16);          // the fact they were synthesized into
+
+    // ── Operator path: Graph tab → ContextOSDemo → Relationships. ──
+    await page.goto(FRONTEND, { waitUntil: 'domcontentloaded' });
+    const graphButton = page.locator('button').filter({ hasText: /^Graph$/ });
+    await expect(graphButton.first()).toBeVisible({ timeout: 15_000 });
+    await graphButton.first().click();
+
+    const selector = page.locator('#snapshot-selector');
+    await expect(selector).toBeVisible({ timeout: 10_000 });
+    const ctxOption = selector.locator('option', { hasText: ENTITY }).first();
+    await expect(ctxOption).toHaveCount(1, { timeout: 15_000 });
+    const ctxValue = await ctxOption.getAttribute('value');
+    await selector.selectOption(ctxValue!);
+
+    await page.getByTestId('graph-mode-relationships').click();
+
+    const graph = page.getByTestId('entity-edge-graph');
+    await expect(graph).toHaveAttribute('data-entity-id', ENTITY, { timeout: 20_000 });
+
+    // Click the hero edge → inspector opens.
+    const heroEdge = page.locator(
+      '[data-testid="ee-edge"][data-edge-type="BELOW_MARKET"][data-src="engineering"]',
+    );
+    await expect(heroEdge).toHaveCount(1, { timeout: 15_000 });
+    await heroEdge.click();
+    await expect(page.getByTestId('ee-inspector')).toBeVisible({ timeout: 10_000 });
+
+    // ── The reveal: REAL click on "Reveal source records". ──
+    const reveal = page.getByTestId('ee-provenance-reveal');
+    await expect(reveal).toBeVisible({ timeout: 10_000 });
+    await reveal.click();
+
+    // The source-record table renders the two records behind the gap.
+    const provTable = page.getByTestId('ee-provenance');
+    await expect(provTable).toBeVisible({ timeout: 15_000 });
+
+    // Row 1: the internal comp_band — workday_hr / 165000.
+    const workdayRow = page.locator('[data-testid="ee-prov-row"][data-source="workday_hr"]');
+    await expect(workdayRow).toHaveCount(1, { timeout: 10_000 });
+    await expect(workdayRow.getByTestId('ee-prov-value')).toHaveText(String(internal.value)); // 165000
+    await expect(workdayRow.getByTestId('ee-prov-source')).toHaveText('workday_hr');
+
+    // Row 2: the market benchmark — radford_comp / 190000.
+    const radfordRow = page.locator('[data-testid="ee-prov-row"][data-source="radford_comp"]');
+    await expect(radfordRow).toHaveCount(1, { timeout: 10_000 });
+    await expect(radfordRow.getByTestId('ee-prov-value')).toHaveText(String(market.value)); // 190000
+    await expect(radfordRow.getByTestId('ee-prov-source')).toHaveText('radford_comp');
+
+    // Exactly the two source records the gap was synthesized from — no more.
+    await expect(page.getByTestId('ee-prov-row')).toHaveCount(prov.sources.length); // 2
+
+    await page.screenshot({
+      path: 'tests/e2e/screenshots/entity_edge_graph_provenance_reveal.png',
+      fullPage: true,
+    });
+  });
+
   test('a fetch failure surfaces the real error, never a silent empty graph', async ({ page }) => {
     // Negative (Rule 7): force the subgraph fetch to fail; the readable error
     // must render — not an empty canvas.

@@ -48,6 +48,36 @@ interface SubgraphResponse {
   edges: SubgraphEdge[];
 }
 
+/** One source record as returned by /api/dcl/graph/edge-provenance. */
+interface ProvenanceSource {
+  concept: string;
+  property: string;
+  value: unknown;
+  source_system: string | null;
+  source_field: string | null;
+  confidence_score: number | null;
+  confidence_tier: string | null;
+  ingested_at: string | null;
+  triple_id: string;
+  normalization_metadata: unknown;
+  period: string | null;
+}
+
+interface ProvenanceResponse {
+  tenant_id: string;
+  entity_id: string;
+  edge: {
+    src: { node_type: string; node_key: string };
+    edge_type: string;
+    dst: { node_type: string; node_key: string };
+    derivation: string | null;
+    source_system: string | null;
+  };
+  consumed: string[];
+  sources: ProvenanceSource[];
+  synthesized: Record<string, unknown>;
+}
+
 /** Node fill by node_type — distinct colors, no hardcoded entity names. */
 const NODE_COLOR: Record<string, string> = {
   department: '#1e3a8a',     // deep blue — the left layer
@@ -169,6 +199,13 @@ export function EntityEdgeGraph({ entityId }: { entityId: string }) {
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Provenance reveal: the source records the selected edge was synthesized from.
+  const [provenance, setProvenance] = useState<ProvenanceResponse | null>(null);
+  const [provLoading, setProvLoading] = useState(false);
+  const [provError, setProvError] = useState<string | null>(null);
+  const [provEdgeId, setProvEdgeId] = useState<string | null>(null);
+  const provAbortRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
     if (!entityId) {
       setData(null);
@@ -181,6 +218,9 @@ export function EntityEdgeGraph({ entityId }: { entityId: string }) {
     setLoading(true);
     setError(null);
     setSelectedEdgeId(null);
+    setProvenance(null);
+    setProvError(null);
+    setProvEdgeId(null);
 
     const url = `/api/dcl/graph/subgraph?entity_id=${encodeURIComponent(entityId)}`;
     fetch(url, { signal: controller.signal })
@@ -218,6 +258,58 @@ export function EntityEdgeGraph({ entityId }: { entityId: string }) {
     () => (laid && selectedEdgeId ? laid.edges.find((e) => e.id === selectedEdgeId) ?? null : null),
     [laid, selectedEdgeId],
   );
+
+  // Whether the revealed provenance still belongs to the selected edge. The
+  // reveal panel only shows when the operator's current selection matches what
+  // was fetched — selecting a different edge clears the stale table.
+  const provenanceForSelected =
+    provEdgeId !== null && provEdgeId === selectedEdgeId ? provenance : null;
+
+  // Fetch the source records the selected edge was synthesized from. Triggered
+  // ONLY by the operator's real click on the reveal control. Fail loud on any
+  // error (A1) — never a silent empty table.
+  function revealSources(edge: LaidEdge) {
+    if (provAbortRef.current) provAbortRef.current.abort();
+    const controller = new AbortController();
+    provAbortRef.current = controller;
+    setProvLoading(true);
+    setProvError(null);
+    setProvEdgeId(edge.id);
+    setProvenance(null);
+
+    const params = new URLSearchParams({
+      entity_id: entityId,
+      src_type: edge.src_type,
+      src_key: edge.src_key,
+      edge_type: edge.edge_type,
+      dst_type: edge.dst_type,
+      dst_key: edge.dst_key,
+    });
+    const url = `/api/dcl/graph/edge-provenance?${params.toString()}`;
+    fetch(url, { signal: controller.signal })
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          const detail =
+            (body && (body.detail?.message || body.detail)) || `HTTP ${res.status}`;
+          throw new Error(
+            `Source records could not load for ${edge.src_key} ${edge.edge_type} ` +
+              `${edge.dst_key} — ${detail} (GET ${url})`,
+          );
+        }
+        return res.json() as Promise<ProvenanceResponse>;
+      })
+      .then((body) => {
+        if (controller.signal.aborted) return;
+        setProvenance(body);
+        setProvLoading(false);
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        setProvError(err instanceof Error ? err.message : 'Failed to load source records');
+        setProvLoading(false);
+      });
+  }
 
   // Fail loud — show the real error, never a silent empty graph (A1).
   if (error) {
@@ -331,12 +423,15 @@ export function EntityEdgeGraph({ entityId }: { entityId: string }) {
         </svg>
       )}
 
-      {/* Inspector — the hovered/clicked edge's synthesized properties */}
+      {/* Inspector — the hovered/clicked edge's synthesized properties, plus the
+          drill-to-source reveal. pointer-events ON so the reveal control is
+          clickable (the SVG edges set selection on hover; the panel itself is
+          interactive). */}
       {selectedEdge && (
         <div
           data-testid="ee-inspector"
           data-edge-type={selectedEdge.edge_type}
-          className="absolute bottom-3 left-3 right-3 max-w-2xl rounded-lg border border-border bg-card/95 p-3 shadow-xl pointer-events-none"
+          className="absolute bottom-3 left-3 right-3 max-w-3xl rounded-lg border border-border bg-card/95 p-3 shadow-xl"
         >
           <div className="flex items-center gap-2">
             <span
@@ -356,6 +451,89 @@ export function EntityEdgeGraph({ entityId }: { entityId: string }) {
           <p className="text-xs text-foreground/90 mt-1.5" data-testid="ee-inspector-text">
             {edgeInspectorLine(selectedEdge)}
           </p>
+
+          {/* Reveal: the SOURCE RECORDS this synthesized edge was derived from —
+              the audit trail behind the derived fact. Real click triggers the
+              fetch (no hover, no auto-load). */}
+          <div className="mt-2.5 pt-2 border-t border-border/60">
+            <button
+              type="button"
+              data-testid="ee-provenance-reveal"
+              onClick={() => revealSources(selectedEdge)}
+              disabled={provLoading && provEdgeId === selectedEdge.id}
+              className="text-[11px] font-medium px-2 py-1 rounded border border-border bg-muted/40 text-foreground hover:bg-muted/70 transition-colors disabled:opacity-60"
+            >
+              {provLoading && provEdgeId === selectedEdge.id
+                ? 'Loading source records…'
+                : provenanceForSelected
+                  ? 'Source records (audit trail)'
+                  : 'Reveal source records'}
+            </button>
+
+            {/* Fail loud — the readable error, never a silent empty table (A1). */}
+            {provError && provEdgeId === selectedEdge.id && (
+              <p
+                className="text-[11px] text-destructive mt-2"
+                data-testid="ee-provenance-error"
+              >
+                {provError}
+              </p>
+            )}
+
+            {provenanceForSelected && (
+              <div className="mt-2" data-testid="ee-provenance">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                  {provenanceForSelected.sources.length} source record
+                  {provenanceForSelected.sources.length === 1 ? '' : 's'} consumed — the
+                  audit trail behind this derived edge
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[11px] border-collapse">
+                    <thead>
+                      <tr className="text-muted-foreground text-left">
+                        <th className="font-medium pr-3 pb-1">concept</th>
+                        <th className="font-medium pr-3 pb-1">value</th>
+                        <th className="font-medium pr-3 pb-1">source</th>
+                        <th className="font-medium pr-3 pb-1">confidence</th>
+                        <th className="font-medium pr-3 pb-1">ingested</th>
+                        <th className="font-medium pb-1">triple_id</th>
+                      </tr>
+                    </thead>
+                    <tbody className="font-mono text-foreground/90 align-top">
+                      {provenanceForSelected.sources.map((s) => (
+                        <tr
+                          key={s.triple_id}
+                          data-testid="ee-prov-row"
+                          data-source={s.source_system ?? ''}
+                          className="border-t border-border/40"
+                        >
+                          <td className="pr-3 py-1">{s.concept}</td>
+                          <td className="pr-3 py-1" data-testid="ee-prov-value">
+                            {String(s.value)}
+                          </td>
+                          <td className="pr-3 py-1" data-testid="ee-prov-source">
+                            {s.source_system ?? '—'}
+                          </td>
+                          <td className="pr-3 py-1">
+                            {s.confidence_score !== null ? s.confidence_score : '—'}
+                            {s.confidence_tier ? ` · ${s.confidence_tier}` : ''}
+                          </td>
+                          <td className="pr-3 py-1 whitespace-nowrap">
+                            {s.ingested_at
+                              ? new Date(s.ingested_at).toISOString().slice(0, 19).replace('T', ' ')
+                              : '—'}
+                          </td>
+                          <td className="py-1 text-muted-foreground" title={s.triple_id}>
+                            {s.triple_id.slice(0, 8)}…
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
