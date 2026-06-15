@@ -9,6 +9,9 @@ import { useEffect, useState, useRef } from 'react';
 import { GraphSnapshot, PersonaId } from '../types';
 import { SnapshotSelector, type SnapshotState } from './RunSelector';
 import { DataDrivenSankey } from './graph-v2';
+import { EntityEdgeGraph } from './graph-v2/EntityEdgeGraph';
+
+type GraphMode = 'fabric' | 'relationships';
 
 interface GraphV2TabProps {
   graphData: GraphSnapshot | null;
@@ -22,6 +25,7 @@ export function GraphV2Tab({
   selectedPersonas,
 }: GraphV2TabProps) {
   const { selectedEntityId } = snapshot;
+  const [mode, setMode] = useState<GraphMode>('fabric');
   const [entityGraphData, setEntityGraphData] = useState<GraphSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -84,15 +88,39 @@ export function GraphV2Tab({
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Top bar — entity selector + snapshot provenance */}
+      {/* Top bar — entity selector + mode toggle + snapshot provenance */}
       <div className="shrink-0 flex items-center gap-4 px-4 py-2 border-b border-border bg-card/30">
         <SnapshotSelector snapshot={snapshot} />
-        {displayData?.meta?.snapshotName && (
+        {/* Fabric | Relationships toggle */}
+        <div
+          role="tablist"
+          aria-label="Graph mode"
+          data-testid="graph-mode-toggle"
+          className="inline-flex rounded-md border border-border overflow-hidden"
+        >
+          {(['fabric', 'relationships'] as GraphMode[]).map((m) => (
+            <button
+              key={m}
+              role="tab"
+              aria-selected={mode === m}
+              data-testid={`graph-mode-${m}`}
+              onClick={() => setMode(m)}
+              className={`px-3 py-1 text-xs font-medium transition-colors ${
+                mode === m
+                  ? 'bg-primary/15 text-primary'
+                  : 'bg-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {m === 'fabric' ? 'Fabric' : 'Relationships'}
+            </button>
+          ))}
+        </div>
+        {mode === 'fabric' && displayData?.meta?.snapshotName && (
           <span className="text-xs text-muted-foreground font-mono">
             {displayData.meta.snapshotName}
           </span>
         )}
-        {loading && (
+        {mode === 'fabric' && loading && (
           <span className="text-xs text-muted-foreground">Loading graph...</span>
         )}
       </div>
@@ -100,7 +128,15 @@ export function GraphV2Tab({
       {/* Main content — graph or empty state */}
       <div className="flex-1 overflow-hidden p-4">
         <div className="h-full w-full rounded-xl border bg-card/30 overflow-hidden shadow-inner">
-          {fetchError ? (
+          {mode === 'relationships' ? (
+            selectedEntityId ? (
+              <EntityEdgeGraph entityId={selectedEntityId} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#080d18' }}>
+                <p className="text-sm text-slate-400">Select an entity to load relationships.</p>
+              </div>
+            )
+          ) : fetchError ? (
             <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#080d18' }}>
               <div className="text-center p-6 rounded-lg border border-destructive/30 bg-destructive/5 max-w-md">
                 <p className="text-sm text-destructive font-medium">{fetchError}</p>

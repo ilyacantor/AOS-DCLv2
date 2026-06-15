@@ -31,6 +31,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from backend.api.routes.ingest_triples import _validate_uuid
 from backend.core.db import get_connection
+from backend.db.triple_store import TripleStore
 from backend.db.edge_store import (
     EdgeContractError,
     EdgeIdentityError,
@@ -45,6 +46,30 @@ from backend.utils.log_utils import get_logger
 logger = get_logger(__name__)
 
 router = APIRouter(tags=["Entity Graph"])
+
+_triples = TripleStore()
+
+
+def _resolve_read_tenant(tenant_id: Optional[str], entity_id: str) -> str:
+    """Resolve the read tenant for an operator graph surface. Explicit tenant_id
+    wins (validated); else the entity's tenant via tenant_runs — the operator
+    surface pattern, same as conflicts.py / proposals.py (I2/I4: the operator
+    selects an entity, never types a tenant; tenant_id is machine-only and
+    never displayed). Loud 422/404 when neither resolves — no silent fallback
+    (A1)."""
+    if tenant_id:
+        _validate_uuid(tenant_id, "tenant_id")
+        return tenant_id
+    if not entity_id or not entity_id.strip():
+        raise HTTPException(
+            status_code=422,
+            detail="Provide entity_id (operator surface, tenant resolves from "
+                   "tenant_runs) or tenant_id explicitly — identity is required (I2).",
+        )
+    try:
+        return _triples.resolve_tenant_for_entity(entity_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 # ---------------------------------------------------------------------------
@@ -263,8 +288,8 @@ def graph_neighbors(
 
 @router.get("/api/dcl/graph/subgraph")
 def graph_subgraph(
-    tenant_id: str,
     entity_id: str,
+    tenant_id: Optional[str] = Query(None, description="Tenant UUID — omit on operator surfaces; resolves from entity_id via tenant_runs (I4)."),
     edge_types: Optional[str] = Query(None, description="Comma-separated edge-type filter"),
     as_of: Optional[str] = Query(None),
     include_values: bool = Query(True),
@@ -272,8 +297,10 @@ def graph_subgraph(
 ):
     """The enterprise's typed-edge subgraph — the platform-site hero read.
     nodes[] carry type/key/label (+ values when include_values), edges[] carry
-    type + properties + provenance + temporal columns."""
-    _validate_uuid(tenant_id, "tenant_id")
+    type + properties + provenance + temporal columns. tenant_id is optional on
+    the operator surface: when omitted it resolves from entity_id via tenant_runs
+    (I4 — the operator picks an entity, never types a tenant)."""
+    tenant_id = _resolve_read_tenant(tenant_id, entity_id)
     types = [t.strip() for t in edge_types.split(",") if t.strip()] if edge_types else None
     try:
         sub = get_edge_store().get_subgraph(

@@ -31,6 +31,7 @@ DCL_URL = os.environ.get("DEMO_DCL_URL", "http://localhost:8014")
 # mint scope — the demo token requests them explicitly).
 TOKEN_SCOPE = [
     "query_triples",
+    "traverse_graph",
     "list_domains",
     "list_runs",
     "concept_lookup",
