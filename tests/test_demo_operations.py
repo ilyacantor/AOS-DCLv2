@@ -249,7 +249,7 @@ def test_ingest_records_empty_pipes_rejected_loudly():
     assert "pipes" in detail["message"]
 
 
-def test_mcp_concept_filter_composes_with_concept_lookup(seed_tenant_id):
+def test_mcp_concept_filter_composes_with_concept_lookup():
     """Regression for the lookup->query composition gap found by the demo's
     grounded panel: concept_lookup returns unqualified catalog ids
     ('net_income') while the store keys domain-qualified dotted paths
@@ -258,13 +258,22 @@ def test_mcp_concept_filter_composes_with_concept_lookup(seed_tenant_id):
     false 'no data' for a populated metric."""
     import json as _json
 
+    # Read tenant AND entity from the SAME manifest snapshot. _update_seed_manifest
+    # rewrites this file on every ingest-triples, so mid-suite it churns; the
+    # import-frozen seed_tenant_id fixture (conftest TENANT_ID, read once at import)
+    # drifts from a fresh entities[0] read, leaving the entity on a DIFFERENT tenant
+    # than the fixture — that is the "composition gap is back" flap (the entity's
+    # net_income lives on its own tenant, not the stale fixture one). One read keeps
+    # (tenant, entity) a consistent pair, since _update_seed_manifest writes both
+    # atomically for the same run.
     manifest = _json.loads((REPO_ROOT / "data" / "seed_manifest.json").read_text())
     entity = manifest["entities"][0]
+    tenant = manifest["tenant_id"]
 
     from backend.engine.mcp_tools import tool_query_triples
 
     rows = tool_query_triples(
-        seed_tenant_id, concept="net_income", entity_id=entity, limit=50
+        tenant, concept="net_income", entity_id=entity, limit=50
     )
     assert len(rows) > 0, (
         f"unqualified catalog id 'net_income' returned no triples for "
@@ -279,7 +288,7 @@ def test_mcp_concept_filter_composes_with_concept_lookup(seed_tenant_id):
     assert dotted_concepts, "expected domain-qualified instances in the store"
     target = sorted(dotted_concepts)[0]
     exact = tool_query_triples(
-        seed_tenant_id, concept=target, entity_id=entity, limit=50
+        tenant, concept=target, entity_id=entity, limit=50
     )
     assert len(exact) > 0
     assert all(t["concept"] == target for t in exact)
@@ -287,7 +296,7 @@ def test_mcp_concept_filter_composes_with_concept_lookup(seed_tenant_id):
     # Root-shaped catalog ids ('revenue' -> 'revenue.total', the other
     # composition shape) must surface their namespace too.
     root_rows = tool_query_triples(
-        seed_tenant_id, concept="revenue", entity_id=entity, limit=200
+        tenant, concept="revenue", entity_id=entity, limit=200
     )
     namespaced = {t["concept"] for t in root_rows if t["concept"].startswith("revenue.")}
     assert "revenue.total" in namespaced, (
