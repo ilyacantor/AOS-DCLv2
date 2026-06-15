@@ -117,7 +117,7 @@ def test_conflict_register_drill_and_disposition(page: Page, seeded_conflict):
     )
 
     page.get_by_test_id("conflicts-toggle").click()
-    row = page.get_by_test_id("conflict-row-revenue.total-2025-Q1")
+    row = page.get_by_test_id("conflict-row-revenue.total-amount-2025-Q1")
     expect(row).to_contain_text("revenue.total.amount · 2025-Q1", timeout=15000)
     expect(row).to_contain_text(f"salesforce={claim_values['salesforce']:g}")
     expect(row).to_contain_text(f"sap={claim_values['sap']:g}")

@@ -22,6 +22,7 @@ from pydantic import BaseModel
 from backend.core.db import get_connection
 from backend.db.conflict_store import ConflictStore
 from backend.db.triple_store import TripleStore
+from backend.engine.authority_resolution import resolve_conflict
 from backend.engine.conflict_detection import detect_and_register
 from backend.utils.log_utils import get_logger
 
@@ -145,6 +146,11 @@ def conflicts_list(
         conflict_type=conflict_type, concept=concept,
         conflict_class=conflict_class, limit=limit, offset=offset,
     )
+    # Computed authority resolution (Stage 5, Gate 1): each value conflict
+    # carries its decisive value + disclosure, or status="escalated" with no
+    # silent pick. Additive — the existing register shape is untouched.
+    for r in rows:
+        r["resolved"] = resolve_conflict(r)
     return {"tenant_id": resolved_tenant, "entity_id": entity_id,
             "conflicts": rows, "total_count": total}
 

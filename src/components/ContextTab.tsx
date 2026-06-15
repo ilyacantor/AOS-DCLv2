@@ -65,6 +65,15 @@ interface ConflictEntry {
   materiality?: { abs_delta?: number | null; rel_delta?: number | null; material?: boolean };
   recommended?: { action?: string; basis?: string; winner_source?: string | null;
                   precedent?: { decided_by?: string; rationale?: string; winner_source?: string } };
+  resolved?: {
+    decisive_value: number | string | null;
+    decisive_source: string | null;
+    basis?: string | null;
+    root_cause?: string | null;
+    disclosed: { source_system: string; value: number | string | null }[];
+    gap_abs?: number | null;
+    status: 'resolved' | 'escalated';
+  };
   root_cause_explanation?: string;
   detected_at: string;
 }
@@ -200,6 +209,11 @@ export function ContextTab({ snapshot }: ContextTabProps) {
       {/* Change Proposals review (Gate 3A) — entity-scoped HITL queue */}
       {selectedEntityId && (
         <ProposalsPanel entityId={selectedEntityId} />
+      )}
+
+      {/* As-of time-travel + run-over-run diff (Stage 5, Gate 2) */}
+      {selectedEntityId && (
+        <AsOfPanel entityId={selectedEntityId} />
       )}
 
       {/* Two side-by-side panels */}
@@ -385,7 +399,7 @@ function ConflictsPanel({ entityId, openCount, loading, onDispositioned }:
             <div className="px-3 py-4 text-xs text-center text-muted-foreground">No conflicts on the register for this entity.</div>
           )}
           {entries.map((c) => (
-            <div key={c.conflict_id} className="border-b" data-testid={`conflict-row-${c.concept}-${c.period ?? ''}`}>
+            <div key={c.conflict_id} className="border-b" data-testid={`conflict-row-${c.concept}-${c.property}-${c.period ?? ''}`}>
               <button
                 onClick={() => setExpanded(expanded === c.conflict_id ? null : c.conflict_id)}
                 className="w-full grid grid-cols-[70px_1fr_auto_auto] items-center gap-2 px-3 py-1.5 text-xs hover:bg-accent/50 text-left"
@@ -409,6 +423,48 @@ function ConflictsPanel({ entityId, openCount, loading, onDispositioned }:
 
               {expanded === c.conflict_id && (
                 <div className="px-3 py-2 bg-card/30 border-t text-xs space-y-2" data-testid="conflict-detail">
+                  {/* Decisive value + disclosure (Stage 5, Gate 1). When the
+                      authority map (or precedent) names a winner, ONE decisive
+                      value leads, with the losing sources disclosed by how much
+                      they disagree. Escalated conflicts show no decisive value
+                      (A1 — no silent pick); the disclosure lists every claim. */}
+                  {c.resolved && c.resolved.status === 'resolved' && c.resolved.decisive_source && (
+                    <div
+                      className="px-2 py-1.5 rounded bg-green-600/15 border border-green-600/40 text-sm"
+                      data-testid="conflict-resolved"
+                      data-decisive-value={String(c.resolved.decisive_value ?? '')}
+                      data-decisive-source={c.resolved.decisive_source}
+                    >
+                      <span className="font-semibold text-green-400">
+                        Resolved: {fmtVal(c.resolved.decisive_value)}
+                      </span>{' '}
+                      — <b>{c.resolved.decisive_source}</b>{' '}
+                      <span className="text-muted-foreground">(authoritative)</span>
+                      {c.resolved.disclosed.length > 0 && (
+                        <span className="text-muted-foreground">
+                          {' · '}
+                          {c.resolved.disclosed
+                            .map((d) => `${d.source_system} disagrees at ${fmtVal(d.value)}`)
+                            .join(' · ')}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {c.resolved && c.resolved.status === 'escalated' && c.conflict_type === 'value' && (
+                    <div
+                      className="px-2 py-1.5 rounded bg-purple-600/10 border border-purple-600/30"
+                      data-testid="conflict-escalated"
+                    >
+                      <b className="text-purple-400">Escalated — no decisive value.</b>{' '}
+                      <span className="text-muted-foreground">
+                        No authority rule covers these sources; an operator must decide.
+                        Disclosed:{' '}
+                        {c.resolved.disclosed
+                          .map((d) => `${d.source_system}=${fmtVal(d.value)}`)
+                          .join(' · ')}
+                      </span>
+                    </div>
+                  )}
                   {c.recommended?.basis === 'precedent' && c.recommended.precedent && (
                     <div className="px-2 py-1.5 rounded bg-blue-500/10 border border-blue-500/30" data-testid="precedent-banner">
                       Precedent: <b>{c.recommended.precedent.winner_source}</b> accepted by {c.recommended.precedent.decided_by} — “{c.recommended.precedent.rationale}”.
@@ -508,6 +564,251 @@ function ConflictsPanel({ entityId, openCount, loading, onDispositioned }:
               )}
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface AsOfRow {
+  entity_id: string;
+  concept: string;
+  property: string;
+  value: unknown;
+  period: string | null;
+  source_system: string;
+  ingested_at?: string;
+}
+
+interface DiffGroup {
+  concept: string;
+  property: string;
+  period: string | null;
+}
+
+interface DiffChanged extends DiffGroup {
+  base_value?: unknown;
+  compare_value?: unknown;
+}
+
+// As-of time-travel + run-over-run diff (Stage 5, Gate 2). The reads already
+// exist (GET /triples/browse?as_of, GET /triples/runs/diff); this is the
+// operator surface. tenant_id is resolved from the entity via the conflicts
+// endpoint (the canonical entity→tenant resolver — it returns the pair even
+// with zero conflicts) because /triples/browse and /runs/diff both require an
+// explicit tenant UUID. A bad timestamp 400s server-side; we show the readable
+// error, never a silent empty grid (A1).
+function AsOfPanel({ entityId }: { entityId: string }) {
+  const [open, setOpen] = useState(false);
+  const [tenantId, setTenantId] = useState<string | null>(null);
+  const [asOf, setAsOf] = useState('');
+  const [rows, setRows] = useState<AsOfRow[] | null>(null);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [asOfErr, setAsOfErr] = useState<string | null>(null);
+  const [asOfBusy, setAsOfBusy] = useState(false);
+  const [diff, setDiff] = useState<
+    { counts: Record<string, number>; added: DiffGroup[]; removed: DiffGroup[]; changed: DiffChanged[] } | null
+  >(null);
+  const [diffErr, setDiffErr] = useState<string | null>(null);
+  const [diffBusy, setDiffBusy] = useState(false);
+
+  // Resolve tenant_id for this entity (canonical entity→tenant resolver).
+  useEffect(() => {
+    let live = true;
+    setTenantId(null);
+    setRows(null);
+    setDiff(null);
+    setAsOfErr(null);
+    setDiffErr(null);
+    (async () => {
+      try {
+        const res = await fetch(`/api/dcl/conflicts?entity_id=${encodeURIComponent(entityId)}&limit=1`);
+        const body = await res.json();
+        if (!res.ok) throw new Error(`Identity resolve: HTTP ${res.status} — ${body.detail ?? ''}`);
+        if (live) setTenantId(body.tenant_id);
+      } catch (e) {
+        if (live) setAsOfErr(e instanceof Error ? e.message : 'Could not resolve tenant for entity');
+      }
+    })();
+    return () => { live = false; };
+  }, [entityId]);
+
+  // The as-of read fires whenever the operator has entered an instant AND the
+  // tenant is resolved. Keying the fetch on [tenantId, asOf] (rather than
+  // running it inline in onChange) closes the race where a fill lands before
+  // the async tenant resolution completes — without that, an early change
+  // event would be silently dropped (a no-op the operator can't see). The
+  // operator's real change event still drives it: it sets asOf, the effect
+  // reacts. No test-only trigger.
+  useEffect(() => {
+    if (!asOf) { setRows(null); return; }
+    if (!tenantId) return;  // waits for tenant; re-runs when it resolves
+    let live = true;
+    setAsOfBusy(true);
+    setAsOfErr(null);
+    (async () => {
+      try {
+        const params = new URLSearchParams({
+          tenant_id: tenantId, entity_id: entityId, as_of: asOf, limit: '50',
+        });
+        const res = await fetch(`/api/dcl/triples/browse?${params}`);
+        const body = await res.json();
+        if (!res.ok) throw new Error(`As-of read: HTTP ${res.status} — ${body.detail ?? ''}`);
+        if (!live) return;
+        setRows(body.triples ?? []);
+        setTotalCount(body.total_count ?? (body.triples?.length ?? 0));
+      } catch (e) {
+        if (live) { setRows(null); setAsOfErr(e instanceof Error ? e.message : 'As-of read failed'); }
+      } finally {
+        if (live) setAsOfBusy(false);
+      }
+    })();
+    return () => { live = false; };
+  }, [tenantId, asOf, entityId]);
+
+  const runDiff = async () => {
+    if (!tenantId) return;
+    setDiffBusy(true);
+    setDiffErr(null);
+    try {
+      const params = new URLSearchParams({ tenant_id: tenantId, entity_id: entityId, limit: '50' });
+      const res = await fetch(`/api/dcl/triples/runs/diff?${params}`);
+      const body = await res.json();
+      if (!res.ok) throw new Error(`Run diff: HTTP ${res.status} — ${body.detail ?? ''}`);
+      // Per-category groups are nested under `samples` (counts are exact;
+      // samples are bounded by the limit). changed carries base/compare_value.
+      const s = body.samples ?? {};
+      setDiff({ counts: body.counts, added: s.added ?? [], removed: s.removed ?? [], changed: s.changed ?? [] });
+    } catch (e) {
+      setDiff(null);
+      setDiffErr(e instanceof Error ? e.message : 'Run diff failed');
+    } finally {
+      setDiffBusy(false);
+    }
+  };
+
+  const fmt = (v: unknown) => (typeof v === 'number' ? v.toLocaleString() : String(v ?? '—'));
+
+  return (
+    <div className="shrink-0 border rounded overflow-hidden" data-testid="as-of-panel">
+      <button
+        onClick={() => setOpen(!open)}
+        data-testid="as-of-toggle"
+        className="w-full flex items-center justify-between px-3 py-2 bg-muted/50 hover:bg-accent text-xs font-medium"
+      >
+        <span>As-of Time Travel &amp; Run Diff</span>
+        <span className="text-muted-foreground">{open ? 'Hide' : 'Open'}</span>
+      </button>
+
+      {open && (
+        <div className="border-t p-3 space-y-3 text-xs">
+          {/* As-of control */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className="text-muted-foreground">As-of:</label>
+            <input
+              type="datetime-local"
+              step="1"
+              value={asOf}
+              data-testid="as-of-control"
+              onChange={(e) => setAsOf(e.target.value)}
+              className="px-2 py-1 rounded border bg-background"
+            />
+            <span className="text-muted-foreground">
+              point-in-time knowledge: rows live at that instant
+            </span>
+          </div>
+
+          {asOfErr && (
+            <div className="px-2 py-1.5 rounded bg-destructive/10 border border-destructive/30 text-destructive" data-testid="as-of-error">
+              {asOfErr}
+            </div>
+          )}
+
+          {rows !== null && !asOfErr && (
+            <div className="border rounded overflow-hidden" data-testid="as-of-results">
+              <div className="bg-muted/50 px-2 py-1 border-b text-muted-foreground">
+                {asOfBusy ? 'Loading…' : `${totalCount ?? rows.length} rows live at ${asOf || 'now'}`}
+              </div>
+              <div className="max-h-48 overflow-y-auto">
+                <table className="w-full">
+                  <thead><tr className="text-muted-foreground border-b">
+                    <th className="text-left px-2 py-1">Concept</th>
+                    <th className="text-left">Value</th>
+                    <th className="text-left">Period</th>
+                    <th className="text-left">Source</th>
+                  </tr></thead>
+                  <tbody>
+                    {rows.map((r, i) => (
+                      <tr key={`${r.concept}.${r.property}.${r.period}.${r.source_system}.${i}`}
+                          className="border-b border-border/40"
+                          data-testid={`as-of-row-${r.concept}-${r.property}`}>
+                        <td className="px-2 py-1 font-medium">{r.concept}.{r.property}</td>
+                        <td data-testid={`as-of-value-${r.concept}-${r.property}`}>{fmt(r.value)}</td>
+                        <td>{r.period ?? '—'}</td>
+                        <td>{r.source_system}</td>
+                      </tr>
+                    ))}
+                    {rows.length === 0 && (
+                      <tr><td colSpan={4} className="px-2 py-3 text-center text-muted-foreground">
+                        No rows live at this instant (nothing ingested on or before it).
+                      </td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Run-over-run diff */}
+          <div className="pt-2 border-t border-border/40">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={runDiff}
+                disabled={diffBusy || !tenantId}
+                data-testid="run-diff-button"
+                className="px-2 py-1 rounded border hover:bg-accent disabled:opacity-40"
+              >
+                {diffBusy ? 'Diffing…' : 'Diff current vs previous run'}
+              </button>
+              {diff && (
+                <span className="text-muted-foreground" data-testid="run-diff-counts">
+                  +{diff.counts.added ?? 0} added · −{diff.counts.removed ?? 0} removed · ~{diff.counts.changed ?? 0} changed · {diff.counts.unchanged ?? 0} unchanged
+                </span>
+              )}
+            </div>
+            {diffErr && (
+              <div className="mt-2 px-2 py-1.5 rounded bg-destructive/10 border border-destructive/30 text-destructive" data-testid="run-diff-error">
+                {diffErr}
+              </div>
+            )}
+            {diff && (diff.changed.length > 0 || diff.added.length > 0 || diff.removed.length > 0) && (
+              <div className="mt-2 border rounded overflow-hidden max-h-48 overflow-y-auto" data-testid="run-diff-results">
+                <table className="w-full">
+                  <tbody>
+                    {diff.changed.map((c, i) => (
+                      <tr key={`chg-${i}`} className="border-b border-border/40">
+                        <td className="px-2 py-1 text-yellow-500">changed</td>
+                        <td className="font-medium">{c.concept}.{c.property}{c.period ? ` · ${c.period}` : ''}</td>
+                        <td>{fmt(c.base_value)} → {fmt(c.compare_value)}</td>
+                      </tr>
+                    ))}
+                    {diff.added.map((c, i) => (
+                      <tr key={`add-${i}`} className="border-b border-border/40">
+                        <td className="px-2 py-1 text-green-500">added</td>
+                        <td className="font-medium" colSpan={2}>{c.concept}.{c.property}{c.period ? ` · ${c.period}` : ''}</td>
+                      </tr>
+                    ))}
+                    {diff.removed.map((c, i) => (
+                      <tr key={`rem-${i}`} className="border-b border-border/40">
+                        <td className="px-2 py-1 text-red-400">removed</td>
+                        <td className="font-medium" colSpan={2}>{c.concept}.{c.property}{c.period ? ` · ${c.period}` : ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
