@@ -38,6 +38,7 @@ from backend.db.edge_store import (
     load_edge_types,
     put_edge_type,
 )
+from backend.engine.edge_derivation import EdgeDerivationError, derive_edges
 from backend.registry import concept_hierarchy
 from backend.utils.log_utils import get_logger
 
@@ -143,6 +144,44 @@ def ingest_edges(req: IngestEdgesRequest, replace: bool = Query(False)):
         edges_superseded=result.superseded,
         violations=result.violations,
     )
+
+
+# ---------------------------------------------------------------------------
+# Stage-3 edge derivation
+# ---------------------------------------------------------------------------
+
+class DeriveEdgesRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    tenant_id: str
+    entity_id: str
+    dcl_ingest_id: str = Field(..., alias="run_id")
+
+
+@router.post("/api/dcl/graph/derive", status_code=201)
+def derive_graph_edges(req: DeriveEdgesRequest):
+    """Stage-3 stitched graph: derive typed edges ACROSS resolved entities from
+    Stage-2 current-state triples and persist them in entity_edges. Derives the
+    cross-source comp-gap (BELOW_MARKET), the dominant exit driver (DRIVEN_BY),
+    and the declared department->job_family resolution (RESOLVES_TO). Identity
+    pair required (I2 — 422 on missing); one dcl_ingest_id stamps the batch (I1).
+    A department with a comp_band median but no resolvable market median fails
+    loud (A1 — 422 EDGE_DERIVATION), never a silent skip. Returns counts + edges.
+    (No UI — that is Stage 4.)"""
+    _validate_uuid(req.tenant_id, "tenant_id")
+    _validate_uuid(req.dcl_ingest_id, "dcl_ingest_id")
+    if not req.entity_id or not req.entity_id.strip():
+        raise HTTPException(
+            status_code=422,
+            detail={"error": "ENTITY_ID_REQUIRED",
+                    "message": "entity_id is required for edge derivation (I2)."},
+        )
+    try:
+        result = derive_edges(req.tenant_id, req.entity_id, req.dcl_ingest_id)
+    except EdgeDerivationError as e:
+        raise HTTPException(status_code=422, detail={"error": "EDGE_DERIVATION", "message": str(e)})
+    except (EdgeIdentityError, EdgeContractError) as e:
+        raise HTTPException(status_code=422, detail={"error": "EDGE_CONTRACT", "message": str(e)})
+    return result
 
 
 # ---------------------------------------------------------------------------
