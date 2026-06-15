@@ -190,8 +190,8 @@ def detect_and_register(
                    'source_field', source_field,
                    'pipe_id', pipe_id
                ) ORDER BY source_system, id) AS claims
-        FROM semantic_triples
-        WHERE tenant_id = %s AND entity_id = %s AND run_id = %s AND is_active = true
+        FROM semantic_triples_current
+        WHERE tenant_id = %s AND entity_id = %s AND run_id = %s
         {coord_clause}
         GROUP BY concept, property, period
         HAVING COUNT(DISTINCT source_system) > 1

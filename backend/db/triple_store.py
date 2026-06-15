@@ -186,7 +186,10 @@ class TripleStore:
             params.append(period)
         if active_only:
             if tenant_id is not None and entity_id is not None:
-                # Per-entity pointer — exact match
+                # Per-entity pointer — exact match. Reading through the
+                # current-state view (below) also applies is_active, so a
+                # current-run row that was superseded never surfaces even if
+                # the pointer is momentarily stale.
                 clauses.append(
                     "run_id = (SELECT current_run_id FROM tenant_runs "
                     "WHERE tenant_id = %s AND entity_id = %s)"
@@ -198,11 +201,14 @@ class TripleStore:
                     "run_id IN (SELECT current_run_id FROM tenant_runs WHERE tenant_id = %s)"
                 )
                 params.append(tenant_id)
-            else:
-                clauses.append("is_active = true")
+            # else: no extra predicate — the current-state view already filters
+            # is_active (Stage 2: semantic_triples_current).
 
+        # active_only surfaces the canonical current-state view; active_only=False
+        # reads the base table (includes superseded history for diff/as-of callers).
+        table = "semantic_triples_current" if active_only else "semantic_triples"
         where = " AND ".join(clauses)
-        sql = f"SELECT * FROM semantic_triples WHERE {where} ORDER BY created_at"
+        sql = f"SELECT * FROM {table} WHERE {where} ORDER BY created_at"
 
         with get_connection() as conn:
             with conn.cursor() as cur:
@@ -1356,14 +1362,14 @@ class TripleStore:
         passes the selected run's entity so the domain inventory reflects ONE run,
         the way NLQ scopes to the selected snapshot. Omitted = the whole tenant.
         """
-        clauses = ["tenant_id = %s", "is_active = true"]
+        clauses = ["tenant_id = %s"]
         params: list = [tenant_id]
         if entity_id is not None:
             clauses.append("entity_id = %s")
             params.append(entity_id)
         sql = (
             "SELECT split_part(concept, '.', 1) AS domain, COUNT(*) AS cnt "
-            "FROM semantic_triples "
+            "FROM semantic_triples_current "
             f"WHERE {' AND '.join(clauses)} "
             "GROUP BY domain ORDER BY cnt DESC"
         )
@@ -1384,8 +1390,8 @@ class TripleStore:
         """
         sql = (
             "SELECT entity_id, run_id, COUNT(*) AS cnt, MAX(created_at) AS latest "
-            "FROM semantic_triples "
-            "WHERE tenant_id = %s AND is_active = true "
+            "FROM semantic_triples_current "
+            "WHERE tenant_id = %s "
             "GROUP BY entity_id, run_id "
             "ORDER BY MAX(created_at) DESC"
         )

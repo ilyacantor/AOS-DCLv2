@@ -337,6 +337,22 @@ Apr 19 history: removing `is_active` was field-tested once and backed out at the
 store reset — under the bi-temporal model the column is definitional (`superseded_at IS NULL`) and
 is guaranteed to remain readable; any future change to it requires Convergence coordination here.
 
+### Stage-2 current-state surface: `semantic_triples_current` (VIEW, migration 029)
+ContextOS Stage 2 formalizes "current state" as a single LOGICAL view:
+`CREATE VIEW semantic_triples_current AS SELECT * FROM semantic_triples WHERE is_active = true`.
+Surfacing + conflict + normalization current-state reads route through it so "current state" has
+ONE definition; as-of reads bypass it (the parameterized bi-temporal predicate
+`ingested_at <= T AND (superseded_at IS NULL OR superseded_at > T)` against the base table, because
+point-in-time history lives below the liveness flag). It is read-only by construction — the base
+table remains the only write path (supersession via `SET superseded_at = now()`); a Stage-1
+normalized value lands in `semantic_triples` and therefore appears in the view automatically.
+**Explicitly distinct from the retired materialized `current_triples` table** (the Apr 2026 store
+rebuild above — flat live mirror + partitioned archive + `swap_and_delete`, exists in no
+environment): `semantic_triples_current` is a logical view over the one bi-temporal substrate, not a
+second materialized store, and does not reuse the `current_triples` name. Convergence's SELECT-only
+`WHERE is_active = true` reads are unaffected (the view is additive — it neither alters a column nor
+changes the predicate Convergence uses).
+
 ---
 
 ## `entity_edges` (Gate 1B, migration 019)
