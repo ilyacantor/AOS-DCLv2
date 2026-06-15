@@ -177,21 +177,25 @@ def test_comp_gap_carries_info_no_single_record_holds():
 
 
 def test_exit_driver_dominant_synthesized():
-    """DRIVEN_BY engineering->compensation with share 0.667, rank 1, count 8,
-    total 12 — and NO single triple asserts 'compensation is dominant' (each
-    exit_theme triple is just a count; the ranking is synthesized)."""
+    """DRIVEN_BY engineering->compensation with share 0.625, rank 1, count 5,
+    total 8 — and NO single triple asserts 'compensation is dominant' (each
+    exit_theme triple is just a count; the ranking is synthesized). The cohort
+    sums to 8 (comp 5, growth 2, mgmt 1, work_life 0) — ONE coherent engineering
+    departure number across the by-reason, by-department, and by-team/band lenses."""
     edge = _fetch_edge("department", "engineering", "DRIVEN_BY",
                        "exit_theme", "compensation")
     p = edge["properties"]
-    assert p["count"] == 8, f"count expected 8, got {p['count']}"
-    assert p["total"] == 12, f"total expected 12, got {p['total']}"
-    assert p["share"] == 0.667, f"share expected 0.667, got {p['share']}"
+    assert p["count"] == 5, f"count expected 5, got {p['count']}"
+    assert p["total"] == 8, f"total expected 8, got {p['total']}"
+    assert p["share"] == 0.625, f"share expected 0.625, got {p['share']}"
     assert p["rank"] == 1, f"rank expected 1, got {p['rank']}"
     assert edge["derivation"] == "derived", f"derivation expected 'derived', got {edge['derivation']}"
 
     # No single exit_theme triple asserts dominance — they are bare counts. The
-    # four counts (8/2/1/1) each live in their own triple; "compensation
-    # dominates" is the synthesized rank, present in no source record.
+    # four counts (5/2/1/0) each live in their own triple; "compensation
+    # dominates" is the synthesized rank, present in no source record. The cohort
+    # sums to 8 — the same engineering departure total the by-team/band and
+    # by-department lenses carry (one coherent number, no 12-vs-8).
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -203,9 +207,9 @@ def test_exit_driver_dominant_synthesized():
             )
             rows = cur.fetchall()
     counts = {c.split(".")[2]: float(v) for c, v in rows}
-    assert counts == {"compensation": 8.0, "growth": 2.0, "management": 1.0, "work_life": 1.0}, (
+    assert counts == {"compensation": 5.0, "growth": 2.0, "management": 1.0, "work_life": 0.0}, (
         f"the four engineering exit-theme counts (each a bare count, no dominance "
-        f"asserted) expected 8/2/1/1, got {counts}"
+        f"asserted) expected 5/2/1/0 (cohort sum 8), got {counts}"
     )
     # Each source triple is a single count; none carries 'rank' or 'share' or any
     # dominance claim. The ranking that names compensation the driver is

@@ -1,7 +1,7 @@
 """
 The SEQUENCE layer — orders real platform operations into the §13
-before/after run. Headless by design; the same artifact CI runs
-(headless run = regression run). The wrapper only renders what this
+Semantics-vs-contextOS tier run. Headless by design; the same artifact CI
+runs (headless run = regression run). The wrapper only renders what this
 writes.
 
 Every step here is a documented, manually-runnable platform operation
@@ -191,7 +191,7 @@ def run_sequence(entity_id: str, tenant_override: str | None, dcl_url: str,
 
         print(f"[RUN ] {slot['id']} — both panels…")
         try:
-            cap_a = asyncio.run(run_panel_a(entity_id, slot["question"], model))
+            cap_a = asyncio.run(run_panel_a(entity_id, tenant_id, slot["question"], model, dcl_url))
             cap_b = asyncio.run(run_panel_b(entity_id, tenant_id, slot["question"], model, dcl_url))
         except Exception as exc:
             record["error"] = f"{type(exc).__name__}: {exc}"
@@ -203,13 +203,16 @@ def run_sequence(entity_id: str, tenant_override: str | None, dcl_url: str,
 
         cap_b["question_id"] = slot["id"]
         panel_b_runs.append(cap_b)
-        record["panel_a"] = cap_a
-        record["panel_b"] = cap_b
+        # Capture keys: semantics (base tier, was panel_a) + contextos (premium,
+        # was panel_b). Both now read the same governed store over MCP; the
+        # difference is the capability scope, not the data.
+        record["semantics"] = cap_a
+        record["contextos"] = cap_b
         record["scores"] = scoring.score_slot(
-            slot, gt_value, {"a": cap_a, "b": cap_b}, register_conflicts, rel_tol
+            slot, gt_value, {"semantics": cap_a, "contextos": cap_b}, register_conflicts, rel_tol
         )
 
-        b = record["scores"]["b"]
+        b = record["scores"]["contextos"]
         b_ok = (
             b.get("correctness", {}).get("passed",
             b.get("no_data_honesty", {}).get("passed",
@@ -220,9 +223,9 @@ def run_sequence(entity_id: str, tenant_override: str | None, dcl_url: str,
             any_failed = True
         gt_str = f" gt={gt_value}" if gt_value is not None else ""
         print(f"[{'PASS' if b_ok else 'FAIL'}] {slot['id']}{gt_str} — "
-              f"A correct={record['scores']['a'].get('correctness', {}).get('passed', 'n/a')} "
-              f"B correct={b.get('correctness', {}).get('passed', 'n/a')} "
-              f"B prov={b['provenance']['present']}")
+              f"Semantics correct={record['scores']['semantics'].get('correctness', {}).get('passed', 'n/a')} "
+              f"contextOS correct={b.get('correctness', {}).get('passed', 'n/a')} "
+              f"contextOS prov={b['provenance']['present']}")
         slot_results.append(record)
 
     beats["audit_proof"] = audit_proof_beat(dcl_url, tenant_id, panel_b_runs)

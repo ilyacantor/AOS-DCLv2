@@ -65,7 +65,14 @@ def test_questions_slots_well_formed():
             )
         if s["status"] == "live" and s["kind"] == "numeric":
             gt = s["ground_truth"]
-            assert gt["feed"] in ("financial", "operational", "ledger"), s["id"]
+            # financial/operational/ledger are the standard records feeds; the
+            # scenario feeds (hr_headcount etc.) are the §13 workforce ground-truth
+            # source — the workforce domain is owned by the scenario, so the
+            # workforce-numeric slots resolve against it (demo/feeds.py FEED_PATHS).
+            assert gt["feed"] in (
+                "financial", "operational", "ledger",
+                "hr_headcount", "finance_headcount", "billing_cloud", "gl_cloud",
+            ), s["id"]
             assert gt["field"] and gt["period"], s["id"]
             assert gt["scales"], s["id"]
 

@@ -1,5 +1,11 @@
 """
-Panel B — the AFTER condition: the same model grounded through DCL-MCP.
+contextOS panel — the PREMIUM TIER condition: the same model, the same
+resolved data the Semantics (base-tier) panel has, plus the four
+capabilities the base tier lacks — relationship-graph traversal
+(traverse_graph), graph-grounded answers, conflict arbitration (the
+decisive reconciled value on a source disagreement, with disclosure),
+and as-of. The contrast is a TIER gap, not a data gap: both panels read
+the same governed store; this one can CONNECT the facts.
 
 A real agent client over the real wire-protocol HTTP MCP path: bearer
 token (HMAC shim, backend/api/mcp_auth.py), per-call audit rows in
@@ -46,18 +52,31 @@ SYSTEM = (
     "You are a data analyst agent for the company, connected to its "
     "governed context layer (DCL) over MCP for entity {entity_id}. Every "
     "number you state must be grounded in triples you actually queried. "
-    "Your job is to resolve, not just retrieve: when sources disagree, "
-    "check conflict_query for the concepts you rely on, state the conflict "
-    "plainly, name which source is authoritative and why, and give the "
-    "figure that follows from it. For ANY question about drivers, causes, "
-    "concentration, or how facts relate ACROSS departments/teams/sources "
-    "(e.g. what is driving attrition), you MUST call traverse_graph and "
-    "ground the answer in the derived edges it returns — the below-market "
-    "comp gap, the dominant exit reason, the org concentration. These are "
-    "synthesized edges no single triple asserts; do NOT reconstruct the "
-    "relationship by hand from separate query_triples results. "
-    "Dollar figures are in millions unless stated; "
-    "periods are quarters like 2026-Q4. The source behind a figure (system, "
+    "Your job is to resolve, not just retrieve. You have two capabilities the "
+    "base tier does not, and a complete answer uses BOTH when the question "
+    "calls for them:\n"
+    "(1) CONFLICT ARBITRATION. Whenever you report a metric, call conflict_query "
+    "for the concept(s) you rely on (workforce metrics like attrition_rate and "
+    "headcount are reported by more than one source — Workday HR vs the NetSuite "
+    "finance rollup — and disagree). If a conflict exists, state it plainly, NAME "
+    "the disagreeing source systems, say which is authoritative and why, and give "
+    "the decisive reconciled figure. Do this even when the question is mainly "
+    "about something else — surfacing the disagreement and the decisive value is "
+    "the point of the governed layer.\n"
+    "(2) GRAPH TRAVERSAL. For ANY question about drivers, causes, concentration, "
+    "or how facts relate ACROSS departments/teams/sources (e.g. what is driving "
+    "attrition), you MUST call traverse_graph and ground the answer in the derived "
+    "edges it returns — the below-market comp gap, the dominant exit reason, the "
+    "org concentration. These are synthesized edges no single triple asserts; do "
+    "NOT reconstruct the relationship by hand from separate query_triples results.\n"
+    "A question like 'where is attrition highest and what's driving it' needs both: "
+    "call conflict_query on the attrition/headcount concepts AND traverse_graph for "
+    "the driver, then give one answer that discloses the source conflict and names "
+    "the graph-grounded driver. When querying a concept by name, use its specific "
+    "id (e.g. 'attrition_rate', not the bare word 'attrition') or the 'workforce' "
+    "domain so you find the stored triples. "
+    "Dollar figures are in millions unless stated; periods are quarters like "
+    "2026-Q4 or months like 2026-03. The source behind a figure (system, "
     "confidence, triple id) is there to verify on request — cite it when it "
     "is load-bearing, but lead with the answer and the resolution, not the "
     "audit trail. If the store has no data for what was asked, say exactly "
@@ -137,7 +156,7 @@ async def run_panel_b(
                 execute_tool=execute_tool,
             )
 
-    result["panel"] = "b"
+    result["panel"] = "contextos"
     result["access"] = "dcl-mcp-http-sse"
     result["entity_id"] = entity_id
     result["mcp"] = {

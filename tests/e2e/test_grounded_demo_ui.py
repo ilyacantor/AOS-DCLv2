@@ -1,10 +1,10 @@
 # Operator-visible outcome: the DCL "Demo" tab renders the latest captured
-# before/after run for the capture's entity (e.g. CedarGrid-1823): the
-# net-income slot shows Panel B's answer containing the run-time ground-truth
-# value (e.g. 99.99) with a provenance chip naming a real source system
-# (e.g. netsuite); the eNPS slot shows the green "honest no-data" chip; the
-# two Gate 1A slots render sky-blue "Pending — arrives with Gate 1A scenario
-# data" tiles; the ingest-reject beat shows "HTTP 422"; the audit beat shows
+# Semantics-vs-contextOS tier run for the capture's entity (e.g. ContextOSDemo):
+# the net-income slot shows the contextOS panel's answer containing the run-time
+# ground-truth value (e.g. 119.05) with a provenance chip naming a real source
+# system (e.g. netsuite); the eNPS slot shows the green "honest no-data" chip;
+# the conflict slots disclose the Register conflict naming the disagreeing
+# sources; the ingest-reject beat shows "HTTP 400"; the audit beat shows
 # per-token rows == calls. All expected values come from the capture artifact
 # (itself ground-truthed against Farm feeds at sequence run time) fetched via
 # read-only GET — nothing is hardcoded here.
@@ -12,7 +12,9 @@
 B17 acceptance for the grounded-demo WRAPPER: the operator opens the DCL
 frontend, clicks the Demo tab, steps through slots by clicking them — real
 UI events only. Prerequisite (B15-style): a real headless sequence run has
-written public/demo-captures/latest.json (python -m demo.sequence).
+written public/demo-captures/latest.json (python -m demo.sequence). Panels:
+Semantics (base tier, capture key 'semantics') + contextOS (premium tier,
+capture key 'contextos').
 """
 
 import json
@@ -61,9 +63,9 @@ def test_demo_tab_renders_capture_meta_and_summary(page: Page, capture: dict):
     meta = page.get_by_test_id("demo-meta")
     expect(meta).to_contain_text(capture["meta"]["snapshot_name"])
     expect(meta).to_contain_text(capture["meta"]["dcl_ingest_id"])
-    s = capture["summary"]["panel_b"]
+    s = capture["summary"]["contextos"]
     expect(page.get_by_test_id("demo-summary")).to_contain_text(
-        f"grounded correct {s['numeric_correct']}/{s['numeric_total']}"
+        f"contextOS correct {s['numeric_correct']}/{s['numeric_total']}"
     )
     page.screenshot(path=os.path.join(SCREENSHOT_DIR, "grounded_demo_overview.png"))
 
@@ -71,14 +73,14 @@ def test_demo_tab_renders_capture_meta_and_summary(page: Page, capture: dict):
 def test_net_income_slot_shows_grounded_answer_and_provenance(page: Page, capture: dict):
     slot = next(s for s in capture["slots"] if s["id"] == "q_net_income")
     gt_value = slot["ground_truth_resolved"]["value"]
-    sources = slot["scores"]["b"]["provenance"]["cited_source_systems"]
+    sources = slot["scores"]["contextos"]["provenance"]["cited_source_systems"]
 
     _open_demo_tab(page)
     page.get_by_test_id("demo-slot-q_net_income").click()
     expect(page.get_by_test_id("demo-question-text")).to_contain_text(slot["question"])
 
-    # Panel B's rendered answer carries the run-time ground-truth number.
-    after_card = page.get_by_text("After — grounded via DCL-MCP").locator("..").locator("..")
+    # The contextOS panel's rendered answer carries the run-time ground-truth number.
+    after_card = page.get_by_text("contextOS — premium tier").locator("..").locator("..")
     expect(after_card).to_contain_text(str(gt_value))
     expect(after_card).to_contain_text("correct vs source ground truth")
     if sources:
@@ -91,12 +93,12 @@ def test_net_income_slot_shows_grounded_answer_and_provenance(page: Page, captur
 
 def test_no_data_slot_renders_honestly(page: Page, capture: dict):
     slot = next(s for s in capture["slots"] if s["id"] == "q_enps_no_data")
-    assert slot["scores"]["b"]["no_data_honesty"]["passed"], (
+    assert slot["scores"]["contextos"]["no_data_honesty"]["passed"], (
         "capture itself failed the no-data beat — fix the sequence, not the UI test"
     )
     _open_demo_tab(page)
     page.get_by_test_id("demo-slot-q_enps_no_data").click()
-    after_card = page.get_by_text("After — grounded via DCL-MCP").locator("..").locator("..")
+    after_card = page.get_by_text("contextOS — premium tier").locator("..").locator("..")
     expect(after_card).to_contain_text("honest no-data")
     page.screenshot(path=os.path.join(SCREENSHOT_DIR, "grounded_demo_no_data.png"))
 
@@ -110,7 +112,7 @@ def test_gate1a_headline_slots_render_live_conflicts(page: Page, capture: dict):
     _open_demo_tab(page)
     for slot_id in ("q1_attrition_headline", "q2_cloud_conflict"):
         slot = next(s for s in capture["slots"] if s["id"] == slot_id)
-        conflict_score = slot["scores"]["b"]["conflict"]
+        conflict_score = slot["scores"]["contextos"]["conflict"]
         if conflict_score["expected_conflicts"] == 0:
             # Register empty at capture time — the honest expectation flips.
             assert conflict_score["passed"], (
@@ -119,7 +121,7 @@ def test_gate1a_headline_slots_render_live_conflicts(page: Page, capture: dict):
             continue
         page.get_by_test_id(f"demo-slot-{slot_id}").click()
         expect(page.get_by_test_id("demo-pending-tile")).to_have_count(0)
-        after_card = page.get_by_text("After — grounded via DCL-MCP").locator("..").locator("..")
+        after_card = page.get_by_text("contextOS — premium tier").locator("..").locator("..")
         for src in conflict_score["sources_named_in_answer"]:
             expect(after_card).to_contain_text(src)
         expect(after_card).to_contain_text("conflict disclosed")
@@ -128,14 +130,14 @@ def test_gate1a_headline_slots_render_live_conflicts(page: Page, capture: dict):
 
 def test_conflict_slot_discloses_register_sources(page: Page, capture: dict):
     slot = next(s for s in capture["slots"] if s["id"] == "q_conflict_live")
-    conflict_score = slot["scores"]["b"]["conflict"]
+    conflict_score = slot["scores"]["contextos"]["conflict"]
     if conflict_score["expected_conflicts"] == 0:
         # Register empty at capture time — the honest expectation flips.
         assert conflict_score["passed"], "B failed to state the no-conflict case"
         return
     _open_demo_tab(page)
     page.get_by_test_id("demo-slot-q_conflict_live").click()
-    after_card = page.get_by_text("After — grounded via DCL-MCP").locator("..").locator("..")
+    after_card = page.get_by_text("contextOS — premium tier").locator("..").locator("..")
     for src in conflict_score["sources_named_in_answer"]:
         expect(after_card).to_contain_text(src)
     expect(after_card).to_contain_text("conflict disclosed")
@@ -149,7 +151,7 @@ def test_real_condition_beats_render(page: Page, capture: dict):
     expect(reject).to_contain_text("VALIDATION_FAILED")
     audit = page.get_by_test_id("beat-audit-proof")
     per_token = capture["beats"]["audit_proof"]["per_token"]
-    assert per_token, "capture has no audit-proof entries — sequence did not run Panel B"
+    assert per_token, "capture has no audit-proof entries — sequence did not run the contextOS panel"
     expect(audit).to_contain_text(f"{per_token[0]['audit_rows']}/{per_token[0]['tool_calls_made']}")
     expect(audit).to_contain_text(per_token[0]["caller_token_id"])
 

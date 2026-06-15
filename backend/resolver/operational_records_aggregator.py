@@ -98,6 +98,9 @@ _NESTED_BREAKDOWNS = {
     "exit_growth_by_department": ("workforce.exit_theme.growth.by_department", "count"),
     "exit_management_by_department": ("workforce.exit_theme.management.by_department", "count"),
     "exit_worklife_by_department": ("workforce.exit_theme.work_life.by_department", "count"),
+    # Per-department departure count (the cut a flat per-department attrition rate
+    # reads against headcount.by_department). property=member (department).
+    "departures_by_department": ("workforce.departures.by_department", "count"),
     "comp_band_median_by_department": ("comp_band.median.by_department", "usd"),
     "market_median_by_job_family": ("market_benchmark.median.by_job_family", "usd"),
     # ── Team/band structure + attrition (ContextOS #3) ────────────────────────

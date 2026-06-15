@@ -3,7 +3,7 @@ Deterministic eval scoring for the demo sequence (§13 eval harness).
 
 Scores each captured panel answer on:
   correctness          — numeric match against ground truth resolved at
-                         run time from the raw source feeds (B10),
+                         run time from the source feeds (B10),
   provenance presence  — the answer cites evidence that actually appeared
                          in the panel's tool results (source system name,
                          triple/ingest UUID, or confidence figure),
@@ -159,7 +159,7 @@ def score_conflict(answer: str, register_conflicts: list[dict], tool_calls: list
 
 def score_slot(slot: dict, gt_value: float | None, captures: dict[str, dict],
                register_conflicts: list[dict], rel_tol: float) -> dict:
-    """Score one live slot for both panels. captures: {'a': ..., 'b': ...}."""
+    """Score one live slot for both panels. captures: {'semantics': ..., 'contextos': ...}."""
     kind = slot["kind"]
     scores: dict[str, Any] = {}
     for panel, cap in captures.items():
@@ -179,32 +179,33 @@ def score_slot(slot: dict, gt_value: float | None, captures: dict[str, dict],
 
 
 def summarize(slot_results: list[dict]) -> dict:
-    """Aggregate the per-slot scores into the eval summary."""
+    """Aggregate the per-slot scores into the eval summary. Panels: 'semantics'
+    (base tier) and 'contextos' (premium tier)."""
     summary = {
         "live_slots": 0,
         "pending_slots": 0,
-        "panel_a": {"numeric_correct": 0, "numeric_total": 0, "provenance_present": 0},
-        "panel_b": {"numeric_correct": 0, "numeric_total": 0, "provenance_present": 0,
-                    "no_data_honest": 0, "no_data_total": 0,
-                    "conflict_disclosed": 0, "conflict_total": 0},
+        "semantics": {"numeric_correct": 0, "numeric_total": 0, "provenance_present": 0},
+        "contextos": {"numeric_correct": 0, "numeric_total": 0, "provenance_present": 0,
+                      "no_data_honest": 0, "no_data_total": 0,
+                      "conflict_disclosed": 0, "conflict_total": 0},
     }
     for s in slot_results:
         if s["status"] != "live":
             summary["pending_slots"] += 1
             continue
         summary["live_slots"] += 1
-        for panel in ("a", "b"):
+        for panel in ("semantics", "contextos"):
             sc = s.get("scores", {}).get(panel)
             if not sc:
                 continue
-            agg = summary[f"panel_{panel}"]
+            agg = summary[panel]
             if "correctness" in sc:
                 agg["numeric_total"] += 1
                 if sc["correctness"]["passed"]:
                     agg["numeric_correct"] += 1
             if sc["provenance"]["present"]:
                 agg["provenance_present"] += 1
-            if panel == "b":
+            if panel == "contextos":
                 if "no_data_honesty" in sc:
                     agg["no_data_total"] += 1
                     if sc["no_data_honesty"]["passed"]:

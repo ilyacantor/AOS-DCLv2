@@ -14,7 +14,7 @@
 # rates may be verbalized as 0.058 or 5.8%).
 
 meta:
-  entity_default: CedarGrid-1823
+  entity_default: ContextOSDemo
   model_default: claude-opus-4-8
   seed_derivation: "uuid5(NAMESPACE_URL, 'fin-seed:{entity_id}') % 2**31"
   rel_tolerance: 0.02
@@ -75,8 +75,11 @@ slots:
   - id: q_headcount
     status: live
     kind: numeric
-    question: "What is total headcount in the most recent quarter?"
-    ground_truth: {feed: operational, field: headcount_total, period: latest, scales: [1]}
+    question: "What is total company headcount in the latest month on record?"
+    # Workforce is owned by the §13 scenario (monthly roster). Ground truth is the
+    # HR lens at the conflict-free month (2026-06), where workday_hr and the finance
+    # rollup agree exactly (210) — an unambiguous single value for a clean retrieval.
+    ground_truth: {feed: hr_headcount, field: headcount_total, period: "2026-06", scales: [1]}
 
   - id: q_arr
     status: live
@@ -87,8 +90,11 @@ slots:
   - id: q_attrition_live
     status: live
     kind: numeric
-    question: "What is the attrition rate in the most recent quarter, and how has it moved over the prior year?"
-    ground_truth: {feed: operational, field: attrition_rate, period: latest, scales: [1, 0.01, 100]}
+    question: "What is the company-wide attrition rate in the latest month on record?"
+    # HR-lens attrition at the conflict-free month (2026-06): workday_hr and the
+    # finance rollup agree (11.43% annualized), so the value is unambiguous. The
+    # scenario owns the workforce domain; this is its clean monthly figure.
+    ground_truth: {feed: hr_headcount, field: attrition_rate, period: "2026-06", scales: [1, 0.01, 100]}
 
   - id: q_enps_no_data
     status: live

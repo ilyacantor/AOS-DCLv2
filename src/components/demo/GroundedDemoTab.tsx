@@ -1,5 +1,5 @@
 /**
- * Grounded-agent before/after demo — WRAPPER layer (§13).
+ * Semantics vs contextOS tier demo — WRAPPER layer (§13).
  *
  * Presentation only: renders the latest captured sequence run
  * (public/demo-captures/latest.json, written by `python -m demo.sequence`).
@@ -25,8 +25,8 @@ interface Slot {
   id: string; question: string; status: 'live' | 'pending'; kind: string;
   pending_reason?: string; error?: string; passed?: boolean;
   ground_truth_resolved?: { feed: string; field: string; period: string; value: number };
-  panel_a?: PanelCapture; panel_b?: PanelCapture;
-  scores?: { a: SlotScores; b: SlotScores };
+  semantics?: PanelCapture; contextos?: PanelCapture;
+  scores?: { semantics: SlotScores; contextos: SlotScores };
 }
 interface Capture {
   meta: { stamp: string; entity_id: string; model: string; dcl_ingest_id: string; snapshot_name?: string; register: { available: boolean; open_conflicts?: number } };
@@ -38,16 +38,16 @@ interface Capture {
   slots: Slot[];
   summary: {
     live_slots: number; pending_slots: number;
-    panel_a: { numeric_correct: number; numeric_total: number; provenance_present: number };
-    panel_b: { numeric_correct: number; numeric_total: number; provenance_present: number; no_data_honest: number; no_data_total: number; conflict_disclosed: number; conflict_total: number };
+    semantics: { numeric_correct: number; numeric_total: number; provenance_present: number };
+    contextos: { numeric_correct: number; numeric_total: number; provenance_present: number; no_data_honest: number; no_data_total: number; conflict_disclosed: number; conflict_total: number };
   };
   sequence_passed: boolean;
 }
 
 const NARRATION: Record<string, string> = {
-  numeric: 'Same model, same question. Panel A reads the raw warehouse exports directly. Panel B answers through the context layer — every figure resolved against the store, the authoritative source named where they disagree.',
-  no_data: 'A question the data cannot answer. The honest outcome IS the feature: the grounded panel states the absence plainly — no estimate, no filler.',
-  conflict: 'Where sources disagree, raw access has no register to consult. The grounded panel discloses the detected conflict from the Conflict Register — sources named, nothing arbitrated silently.',
+  numeric: 'Same model, same governed data. Semantics (base tier) reads the resolved store with the base tools. contextOS (premium tier) reads the same store and can connect the facts — every figure resolved, the authoritative source named where they disagree.',
+  no_data: 'A question the data cannot answer. The honest outcome IS the feature: both tiers state the absence plainly — no estimate, no filler.',
+  conflict: 'Where sources disagree, the base tier can surface both values but has no arbitration to resolve them. contextOS reads the Conflict Register, names the disagreeing sources, and gives the decisive value — nothing arbitrated silently.',
 };
 
 function Chip({ ok, label }: { ok: boolean | undefined; label: string }) {
@@ -78,8 +78,8 @@ function PanelCard({ title, subtitle, cap, scores, accent }: {
           </>
         ) : (
           <>
-            <span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-500/15 text-amber-400">silently picks one source · blends without disclosing · no conflict register</span>
-            <span className="text-xs text-muted-foreground">{cap.tool_calls.length} raw reads · {cap.elapsed_s}s</span>
+            <span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-500/15 text-amber-400">retrieval only · no graph traversal · no conflict arbitration · no as-of</span>
+            <span className="text-xs text-muted-foreground">{cap.tool_calls.length} base-tool calls · token {cap.mcp?.caller_token_id} · {cap.elapsed_s}s</span>
           </>
         )}
       </div>
@@ -140,17 +140,17 @@ export default function GroundedDemoTab({ requestedEntityId }: { requestedEntity
 
       <div className="flex flex-wrap items-center gap-3">
         <div>
-          <h1 className="text-xl font-bold">Grounded agent — before / after</h1>
+          <h1 className="text-xl font-bold">Semantics vs contextOS — base tier / premium tier</h1>
           <div className="text-xs text-muted-foreground" data-testid="demo-meta">
             {capture.meta.snapshot_name ?? capture.meta.entity_id} · model {capture.meta.model} · captured {capture.meta.stamp} · ingest {capture.meta.dcl_ingest_id}
           </div>
         </div>
         <div className="flex gap-2 ml-auto flex-wrap" data-testid="demo-summary">
           <Chip ok={capture.sequence_passed} label={capture.sequence_passed ? 'sequence PASS' : 'sequence FAIL'} />
-          <Chip ok={s.panel_b.numeric_correct === s.panel_b.numeric_total} label={`grounded correct ${s.panel_b.numeric_correct}/${s.panel_b.numeric_total}`} />
-          <Chip ok={undefined} label={`raw correct ${s.panel_a.numeric_correct}/${s.panel_a.numeric_total}`} />
-          {s.panel_b.conflict_total > 0 && <Chip ok={s.panel_b.conflict_disclosed === s.panel_b.conflict_total} label={`conflicts disclosed ${s.panel_b.conflict_disclosed}/${s.panel_b.conflict_total}`} />}
-          <Chip ok={s.panel_b.provenance_present === s.live_slots} label={`sourced ${s.panel_b.provenance_present}/${s.live_slots}`} />
+          <Chip ok={s.contextos.numeric_correct === s.contextos.numeric_total} label={`contextOS correct ${s.contextos.numeric_correct}/${s.contextos.numeric_total}`} />
+          <Chip ok={s.semantics.numeric_correct === s.semantics.numeric_total} label={`semantics correct ${s.semantics.numeric_correct}/${s.semantics.numeric_total}`} />
+          {s.contextos.conflict_total > 0 && <Chip ok={s.contextos.conflict_disclosed === s.contextos.conflict_total} label={`conflicts disclosed ${s.contextos.conflict_disclosed}/${s.contextos.conflict_total}`} />}
+          <Chip ok={s.contextos.provenance_present === s.live_slots} label={`sourced ${s.contextos.provenance_present}/${s.live_slots}`} />
           {s.pending_slots > 0 && <span className="px-2 py-0.5 rounded text-xs font-medium bg-sky-500/15 text-sky-400">{s.pending_slots} pending (Gate 1A)</span>}
         </div>
       </div>
@@ -223,14 +223,14 @@ export default function GroundedDemoTab({ requestedEntityId }: { requestedEntity
             </div>
           ) : (
             <div className="flex gap-3 flex-col lg:flex-row">
-              <PanelCard accent="a" title="Before — ungoverned" subtitle="same model · direct raw-feed access" cap={slot.panel_a} scores={slot.scores?.a} />
-              <PanelCard accent="b" title="After — grounded via DCL-MCP" subtitle="same model · bearer token · audited · rate-limited" cap={slot.panel_b} scores={slot.scores?.b} />
+              <PanelCard accent="a" title="Semantics — base tier" subtitle="same model · same governed store · base read tools only" cap={slot.semantics} scores={slot.scores?.semantics} />
+              <PanelCard accent="b" title="contextOS — premium tier" subtitle="same model · graph traversal · arbitration · as-of" cap={slot.contextos} scores={slot.scores?.contextos} />
             </div>
           )}
 
           {slot.status === 'live' && slot.ground_truth_resolved && (
             <div className="text-xs text-muted-foreground" data-testid="demo-ground-truth">
-              Ground truth (resolved at run time from the raw source feed, never hardcoded): {slot.ground_truth_resolved.field} @ {slot.ground_truth_resolved.period} = {slot.ground_truth_resolved.value}
+              Ground truth (resolved at run time from the source feed, never hardcoded): {slot.ground_truth_resolved.field} @ {slot.ground_truth_resolved.period} = {slot.ground_truth_resolved.value}
             </div>
           )}
         </div>

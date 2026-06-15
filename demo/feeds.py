@@ -1,8 +1,9 @@
 """
-Raw source-feed access for the demo — the "warehouse" side of the
-before/after contrast, and the runtime ground-truth source for eval
-scoring (B10: expected values come from the source system at run time,
-never hardcoded).
+Source-feed access for the demo — the runtime GROUND-TRUTH source for eval
+scoring (B10: expected values come from the source system at run time, never
+hardcoded). Both demo panels read the GOVERNED store over MCP; this module is
+not a panel data path — it only resolves the expected value a panel's answer is
+scored against, straight from the source records the platform ingested.
 
 The feeds are Farm's records-path export endpoints — the same endpoints
 AAM's transports pull from when the platform ingests an entity:
@@ -14,8 +15,8 @@ AAM's transports pull from when the platform ingests an entity:
 Seed contract: the operator records-path run derives the seed as
 uuid5(NAMESPACE_URL, "fin-seed:{entity_id}") % 2**31 (AAM
 app/routers/operator_fabric.py) so an entity's numbers are stable across
-re-runs. The same derivation is used here so a raw read returns exactly
-the records the platform ingested. Verified live: CedarGrid-1823
+re-runs. The same derivation is used here so a ground-truth read returns
+exactly the records the platform ingested. Verified live: CedarGrid-1823
 pnl.net_income 2026-Q4 == feed net_income 2026-Q4 == 99.99.
 """
 
@@ -34,9 +35,9 @@ FEED_PATHS = {
     "operational": "/api/farm/operational-records",
     "ledger": "/api/farm/ledger-records",
     # §13 conflict-scenario dual feeds (Gate 1A demo datasets): two systems'
-    # views of the same facts. Panel A's raw access for the conflict beats =
-    # BOTH files of a pair; eval ground truth for the disagreement values
-    # resolves from these at run time (B10), exactly like the others.
+    # views of the same facts. Ground truth for the disagreement values resolves
+    # from BOTH files of a pair at run time (B10), exactly like the others — the
+    # panels read the resolved store, this resolves what to score them against.
     "hr_headcount": "/api/farm/scenario/hr-headcount-records",
     "finance_headcount": "/api/farm/scenario/finance-headcount-records",
     "billing_cloud": "/api/farm/scenario/billing-cloud-records",
@@ -50,7 +51,7 @@ def derive_feed_seed(entity_id: str) -> int:
 
 
 def fetch_feed(feed: str, entity_id: str, timeout: float = 60.0) -> dict[str, Any]:
-    """Fetch one raw feed. Raises loudly on any failure (A1)."""
+    """Fetch one source feed (ground-truth resolution). Raises loudly on any failure (A1)."""
     if feed not in FEED_PATHS:
         raise ValueError(f"unknown feed {feed!r}; valid: {sorted(FEED_PATHS)}")
     url = f"{FARM_URL}{FEED_PATHS[feed]}"
