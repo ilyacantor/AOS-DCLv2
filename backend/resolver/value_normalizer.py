@@ -72,6 +72,27 @@ BASE_UNIT_SCALES: dict[Optional[str], Tuple[float, Optional[str]]] = {
     "percent": (1.0, "percent"),
     "pct": (1.0, "pct"),
     "ratio": (1.0, "ratio"),
+    # dimensional base measures — already the smallest meaningful unit, factor
+    # 1.0, base unit == the unit itself. These are MEASURES (a duration, a count
+    # of points, a score, a throughput), NOT magnitude SCALES — there is no
+    # 1000x/1e6 multiplier to guess, so passing them through is exact, not a
+    # silent fallback. The records path (operational_records_aggregator: days,
+    # hours, points, score) and the fabric/event-stream generators (seconds,
+    # messages_per_second) stamp these; the unit is preserved on the stored row
+    # so conflict detection compares same-unit values (each concept is
+    # single-unit, e.g. sales.cycle_days is always "days"). Currency-scale
+    # aliases ("dollars_millions"/"millions_usd") are deliberately NOT here:
+    # they occur only in stale shared-tenant fixture artifacts ($M-scale,
+    # flagged broken in the constitution) — a numeric in one of those fails
+    # loud, which is the correct A1 outcome, not a gap to paper over.
+    "days": (1.0, "days"),
+    "days_outstanding": (1.0, "days_outstanding"),
+    "hours": (1.0, "hours"),
+    "seconds": (1.0, "seconds"),
+    "score": (1.0, "score"),
+    "points": (1.0, "points"),
+    "story_points": (1.0, "story_points"),
+    "messages_per_second": (1.0, "messages_per_second"),
     None: (1.0, None),
     "": (1.0, ""),
     # currency-scoped scales -> base unit "usd"

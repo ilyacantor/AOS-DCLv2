@@ -383,6 +383,17 @@ def ingest_triples(
     normalization_metas: list[Optional[dict]] = [None] * len(req.triples)
     for i, t in enumerate(req.triples):
         t.source_system = normalize_source_id(t.source_system)
+        # Structural namespace markers ({ns}._meta / namespace_type, emitted by
+        # ledger_records_aggregator) are NOT time-series metrics: the value is a
+        # non-numeric catalog string and the period is the "_meta" SENTINEL by
+        # protocol, not a time period. There is nothing to scale or convert, and
+        # the sentinel must not be forced through the period parser (which fails
+        # loud on it — correctly, for real metrics). Pass markers through
+        # untouched so the sentinel/concept the domain queries key on is
+        # preserved; metadata stays None. Real metrics still get strict
+        # unit/currency/period normalization below.
+        if (t.concept or "").endswith("._meta"):
+            continue
         try:
             result = value_normalizer.normalize(
                 value=t.value, unit=t.unit, currency=t.currency,

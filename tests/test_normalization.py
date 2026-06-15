@@ -297,6 +297,108 @@ class TestNegatives:
 
 
 # ---------------------------------------------------------------------------
+# Dimensional base units (days/hours/score/points/seconds/...) — measures, not
+# magnitude scales: factor 1.0, unit preserved, no metadata stamp. Regression
+# for the Stage-1 pipeline break where the records path's sales.cycle_days
+# (unit "days") 422'd at AAM Transport -> DCL because the allowlist only knew
+# currency + count/pct/ratio. The fix added the dimensional measures the live
+# generators/aggregators stamp; this proves they pass through unchanged.
+# ---------------------------------------------------------------------------
+
+class TestDimensionalUnits:
+    @pytest.mark.parametrize("unit", [
+        "days", "days_outstanding", "hours", "seconds",
+        "score", "points", "story_points", "messages_per_second",
+    ])
+    def test_dimensional_unit_passes_through(self, unit):
+        run = str(uuid.uuid4())
+        _ingest_ok(run, [
+            _triple("salesforce_crm", PIPE_A, 87.0, concept="sales.cycle_days",
+                    prop="days", unit=unit, currency=None),
+        ])
+        rows = _stored(run, "salesforce_crm")
+        assert len(rows) == 1, f"unit {unit!r} must ingest exactly one row"
+        value, meta, _s, _currency, stored_unit = rows[0]
+        assert float(value) == 87.0, (
+            f"dimensional unit {unit!r} stores the value unchanged (factor 1.0), got {value}"
+        )
+        assert stored_unit == unit, (
+            f"the stored unit must be preserved as {unit!r}, got {stored_unit!r}"
+        )
+        assert meta is None, (
+            f"a factor-1.0 dimensional unit must NOT stamp normalization_metadata, got {meta!r}"
+        )
+
+    def test_currency_scale_alias_still_fails_loud(self):
+        # dollars_millions / millions_usd appear ONLY in stale shared-tenant
+        # fixture artifacts ($M-scale, flagged broken in the constitution).
+        # Adding a 1e6 scale would bless that fixture; refusing is the correct
+        # A1 outcome. Guard the deliberate exclusion so a later edit cannot
+        # silently scale it (which would corrupt every value 1,000,000x).
+        run = str(uuid.uuid4())
+        resp = _ingest(run, [
+            _triple("sap", PIPE_A, 267.35, concept="customer.pipeline.lead",
+                    prop="amount", unit="dollars_millions"),
+        ])
+        assert 400 <= resp.status_code < 500, (
+            f"dollars_millions must still fail loud, got {resp.status_code}: {resp.text}"
+        )
+        assert "dollars_millions" in resp.text, resp.text
+        assert _stored(run, "sap") == [], "failed ingest must not persist rows"
+
+
+# ---------------------------------------------------------------------------
+# Structural namespace markers ({ns}._meta / namespace_type) carry a non-numeric
+# catalog value and the "_meta" period SENTINEL by ledger-aggregator protocol.
+# They must bypass value normalization (not 422 on the unparseable sentinel) and
+# store the sentinel unchanged — domain queries key on it. Regression for the
+# second Stage-1 pipeline break (after the dimensional-units one).
+# ---------------------------------------------------------------------------
+
+class TestStructuralMarkers:
+    def test_meta_marker_bypasses_normalization(self):
+        run = str(uuid.uuid4())
+        _ingest_ok(run, [
+            _triple("netsuite_gl", PIPE_A, "financial_fact", concept="gl._meta",
+                    prop="namespace_type", period="_meta", unit=None, currency=None),
+        ])
+        rows = _stored(run, "netsuite_gl")
+        assert len(rows) == 1, "the _meta marker must ingest exactly one row"
+        value, meta, _s, _currency, _unit = rows[0]
+        assert str(value).strip('"') == "financial_fact", (
+            f"marker's non-numeric value must store unchanged, got {value!r}"
+        )
+        assert meta is None, f"marker must not stamp normalization_metadata, got {meta!r}"
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT period FROM semantic_triples "
+                    "WHERE tenant_id=%s AND run_id=%s AND concept=%s",
+                    (TEST_TENANT_ID, run, "gl._meta"),
+                )
+                period = cur.fetchone()[0]
+        assert period == "_meta", (
+            f"the _meta period sentinel must be preserved (not canonicalized/nulled), got {period!r}"
+        )
+
+    def test_real_metric_bad_period_still_fails_loud(self):
+        # The marker bypass must NOT weaken the guarantee for real metrics: a
+        # genuine (non-marker) concept with an unparseable period still 422s, so
+        # an unparsed period that should match another source can't silently
+        # split a conflict group.
+        run = str(uuid.uuid4())
+        resp = _ingest(run, [
+            _triple("netsuite", PIPE_A, 100.0, concept="revenue.total",
+                    prop="amount", period="not-a-period"),
+        ])
+        assert 400 <= resp.status_code < 500, (
+            f"a real metric with an unparseable period must fail loud, got {resp.status_code}: {resp.text}"
+        )
+        assert "unparseable period" in resp.text or "cannot canonicalize" in resp.text, resp.text
+        assert _stored(run, "netsuite") == [], "failed ingest must not persist rows"
+
+
+# ---------------------------------------------------------------------------
 # Deferred #80: source_system casing split must collapse to one source.
 # ---------------------------------------------------------------------------
 
