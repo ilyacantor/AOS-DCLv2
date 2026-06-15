@@ -101,3 +101,8 @@ personas:
       - workforce
       - headcount
       - employee
+      # "What's driving attrition" concepts: trailing-window exit themes ride the
+      # workforce root (workforce.exit_theme.*); the comp-gap pair are their own
+      # roots — internal comp band vs external market benchmark (cross-source).
+      - comp_band
+      - market_benchmark

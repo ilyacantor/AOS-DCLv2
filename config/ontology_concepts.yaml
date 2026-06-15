@@ -3924,6 +3924,102 @@ concepts:
     calculation_methodology: "Headcount = active employees at period-end. Attrition Rate = voluntary terms in period / avg headcount. Utilization = billable hours / available hours. Time-to-fill = days from req open to offer accept."
     comparability_rules: "Headcount vs FTE distinction must be explicit. Attrition definitions vary (voluntary-only vs all separations). Utilization requires consistent billable/non-billable classification. Cross-entity comparison requires aligned reporting periods."
 
+  - id: exit_theme
+    concept_id: HR-015
+    name: Exit Theme
+    description: "Trailing-window exit cohort by self-reported departure reason, per department"
+    domain: hr
+    cluster: People
+    example_fields:
+      - exit_reason
+      - departure_reason
+      - exit_compensation_by_department
+      - exit_growth_by_department
+      - exit_management_by_department
+      - exit_worklife_by_department
+      - reason_for_leaving
+      - exit_interview_theme
+    aliases:
+      - exit_reason
+      - departure_reason
+      - attrition_driver
+      - exit_interview
+      - reason_for_leaving
+    expected_type: float
+    typical_source_systems: [workday, lattice, cultureamp]
+    persona_relevance:
+      chro: 1.0
+      coo: 0.6
+      cfo: 0.4
+    recognition_basis: "Self-reported primary reason recorded at an exit interview or in the HRIS offboarding record, aggregated over a trailing window of departures (typically trailing 12 months) and counted by department. A windowed exit cohort, NOT the current period's terminations."
+    timing_semantics: "Trailing-window cohort — a slow-moving annual profile aggregated over ~12 months of departures, refreshed as the window rolls. Not a point-in-time or single-period measure; the per-reason counts move slowly month to month."
+    scope_boundaries: "Includes voluntary departures with a recorded reason within the trailing window. Excludes involuntary terminations and departures with no exit-interview reason. The per-reason counts are independent of the monthly terminations figure and the attrition rate — different population (windowed cohort vs current-period leavers)."
+    calculation_methodology: "For each department, COUNT departures in the trailing window grouped by primary exit reason (compensation, growth, management, work_life). The department cohort total is the sum across reasons; dominant reason is the argmax. No separate cohort field — the per-reason counts are the data."
+    comparability_rules: "exit-reason taxonomies differ by HRIS; self-reported reasons under-report compensation. Trailing-window length must match before comparison. Counts are not comparable to single-period termination counts (different population). Department mapping must align across entities."
+
+  - id: comp_band
+    concept_id: HR-016
+    name: Compensation Band
+    description: "Internal compensation band median (annual base) per department"
+    domain: hr
+    cluster: People
+    example_fields:
+      - comp_band_median_by_department
+      - comp_band_median
+      - salary_band_median
+      - base_salary_median
+      - pay_band
+      - median_base
+    aliases:
+      - comp_band
+      - salary_band
+      - pay_band
+      - compensation_band
+      - base_salary_band
+    expected_type: float
+    typical_source_systems: [workday, any_hris]
+    persona_relevance:
+      chro: 1.0
+      cfo: 0.7
+      coo: 0.5
+    recognition_basis: "Median annual base salary of active employees within a department's compensation band, computed from current HRIS payroll/comp records. An internal pay statistic — not a market survey."
+    timing_semantics: "Point-in-time internal statistic, typically refreshed on the annual comp cycle. Stable within a year; moves at merit/adjustment cycles."
+    scope_boundaries: "Includes base salary only for active employees in the band. Excludes bonus, equity, contractors, and one-time payments unless explicitly stated. This is the INTERNAL figure — comparison to external market requires a separate market-benchmark concept."
+    calculation_methodology: "MEDIAN(annual_base_salary) over active employees in the department's band as of the measurement date. By-department breakdown carries one median per department."
+    comparability_rules: "comparable to market benchmark only after leveling + geo adjustment. Base-only vs total-cash definitions must match. Median vs mean must be explicit. Cross-entity comparison requires aligned band definitions and currency."
+
+  - id: market_benchmark
+    concept_id: HR-017
+    name: Market Benchmark
+    description: "External market compensation median (annual base) by job family, from a third-party survey"
+    domain: hr
+    cluster: People
+    example_fields:
+      - market_median_by_job_family
+      - market_median
+      - market_benchmark
+      - survey_median
+      - radford_median
+      - market_50th_percentile
+    aliases:
+      - market_benchmark
+      - market_median
+      - comp_survey
+      - radford
+      - levels_fyi
+      - external_benchmark
+    expected_type: float
+    typical_source_systems: [radford, levels_fyi]
+    persona_relevance:
+      chro: 1.0
+      cfo: 0.7
+      coo: 0.4
+    recognition_basis: "third-party survey — median market base compensation for a job family, sourced from a compensation benchmarking survey (e.g. Radford, Levels.fyi) rather than internal payroll. The external reference point an internal comp band is measured against."
+    timing_semantics: "refreshed annually — the survey publishes on an annual cadence; values are stable across the year between refreshes."
+    scope_boundaries: "Keyed by JOB FAMILY (the survey's unit), not internal department — resolution from job family to department is required before any internal comparison. Includes market base only unless the survey cut specifies total cash. Excludes internal-specific adjustments."
+    calculation_methodology: "Taken directly from the survey's published median (50th percentile) market base per job family for the matched leveling and geography. By-job-family breakdown carries one median per family."
+    comparability_rules: "job-family->internal-department mapping + leveling + geo adjustment required before comparison. Survey base vs total-cash cut must match the internal figure's basis. Percentile (50th) must be consistent. Different survey vendors are not directly comparable without crosswalk."
+
   - id: sales
     concept_id: SAL-015
     name: Sales Metrics

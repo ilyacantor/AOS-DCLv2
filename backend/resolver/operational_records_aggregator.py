@@ -88,6 +88,18 @@ _NESTED_BREAKDOWNS = {
     "arr_by_customer": ("arr.by_customer", "usd"),
     "headcount_by_department": ("headcount.by_department", "count"),
     "uptime_pct_by_service": ("uptime_pct.by_service", "pct"),
+    # ── Attrition drivers (CHRO) — the "what's driving attrition" data ────────
+    # Trailing-window exit cohort by reason (dept->count), internal comp band
+    # (dept->usd), and external market median (job_family->usd). property=member
+    # (dept / job_family); currency="USD" emitted for the usd breakdowns. The
+    # comp-gap compare = comp_band.median (workday_hr) vs market_benchmark.median
+    # (radford_comp) — the cross-source beat resolved in DCL.
+    "exit_compensation_by_department": ("workforce.exit_theme.compensation.by_department", "count"),
+    "exit_growth_by_department": ("workforce.exit_theme.growth.by_department", "count"),
+    "exit_management_by_department": ("workforce.exit_theme.management.by_department", "count"),
+    "exit_worklife_by_department": ("workforce.exit_theme.work_life.by_department", "count"),
+    "comp_band_median_by_department": ("comp_band.median.by_department", "usd"),
+    "market_median_by_job_family": ("market_benchmark.median.by_job_family", "usd"),
 }
 
 _PERIOD_KEY = "period"
