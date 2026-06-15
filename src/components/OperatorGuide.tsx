@@ -78,8 +78,8 @@ export function OperatorGuide() {
           <Stage
             n="6" name="The Demo" tab="Demo tab"
             what="The before/after that proves the point on the same question, same data, same model. It shows a captured run comparing an ungoverned agent against the same question answered through DCL."
-            see="Two panels. Panel A — a capable agent with raw access; it answers but can't show its work (it silently picks or blends sources). Panel B — the same question through DCL: it discloses the conflict, names the authoritative source, and carries a provenance badge. If no run has been captured, it says so."
-            doNote="Pick the entity; read the two panels side by side. A good run: both answer, and Panel B shows provenance on every answer and discloses each conflict."
+            see="Two panels. Panel A — a capable agent with raw access; it answers, but silently picks or blends sources, so it can be confidently wrong. Panel B — the same question through DCL: it detects the conflict, decomposes why the sources differ, and names which one decides. If no run has been captured, it says so."
+            doNote="Pick the entity; read the two panels side by side. A good run: both answer, but only Panel B discloses the conflict and names the authoritative source — that resolution is the product. The source trail behind each figure is how you verify it, not the headline."
           />
         </section>
 

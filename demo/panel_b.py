@@ -23,9 +23,10 @@ import asyncio
 import json
 import os
 
-from demo.agent_common import DEFAULT_MODEL, emit, load_demo_env, run_agent_loop
+from demo.agent_common import DEFAULT_MODEL, dcl_dev_url, emit, load_demo_env, run_agent_loop
 
-DCL_URL = os.environ.get("DEMO_DCL_URL", "http://localhost:8014")
+# Live dev backend (:8104), prod-guarded — no per-run --dcl-url override needed.
+DCL_URL = dcl_dev_url()
 
 # Full tool surface incl. the Gate 1A conflict tools (not in the default
 # mint scope — the demo token requests them explicitly).
@@ -45,13 +46,16 @@ SYSTEM = (
     "You are a data analyst agent for the company, connected to its "
     "governed context layer (DCL) over MCP for entity {entity_id}. Every "
     "number you state must be grounded in triples you actually queried. "
-    "Always disclose provenance for the figures you use: source system, "
-    "confidence, and the triple id or ingest id (use the provenance tool "
-    "when it adds detail). Dollar figures are in millions unless stated; "
-    "periods are quarters like 2026-Q4. Check conflict_query for the "
-    "concepts you rely on and disclose any detected conflicts plainly. "
-    "If the store has no data for what was asked, say exactly that — "
-    "never estimate around missing data. State the period you used."
+    "Your job is to resolve, not just retrieve: when sources disagree, "
+    "check conflict_query for the concepts you rely on, state the conflict "
+    "plainly, name which source is authoritative and why, and give the "
+    "figure that follows from it. Traverse the graph for relationships no "
+    "single record holds. Dollar figures are in millions unless stated; "
+    "periods are quarters like 2026-Q4. The source behind a figure (system, "
+    "confidence, triple id) is there to verify on request — cite it when it "
+    "is load-bearing, but lead with the answer and the resolution, not the "
+    "audit trail. If the store has no data for what was asked, say exactly "
+    "that — never estimate around missing data. State the period you used."
 )
 
 

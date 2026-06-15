@@ -27,11 +27,12 @@ import httpx
 import yaml
 
 from demo import feeds, scoring
-from demo.agent_common import DEFAULT_MODEL, REPO_ROOT, load_demo_env
+from demo.agent_common import DEFAULT_MODEL, REPO_ROOT, dcl_dev_url, load_demo_env
 from demo.panel_a import run_panel_a
 from demo.panel_b import run_panel_b
 
-DCL_URL = os.environ.get("DEMO_DCL_URL", "http://localhost:8014")
+# Live dev backend (:8104), prod-guarded — no per-run --dcl-url override needed.
+DCL_URL = dcl_dev_url()
 QUESTIONS_PATH = Path(__file__).parent / "questions.yaml"
 DEFAULT_OUT_DIR = REPO_ROOT / "public" / "demo-captures"
 

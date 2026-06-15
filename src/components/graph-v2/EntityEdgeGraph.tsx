@@ -452,9 +452,11 @@ export function EntityEdgeGraph({ entityId }: { entityId: string }) {
             {edgeInspectorLine(selectedEdge)}
           </p>
 
-          {/* Reveal: the SOURCE RECORDS this synthesized edge was derived from —
-              the audit trail behind the derived fact. Real click triggers the
-              fetch (no hover, no auto-load). */}
+          {/* Reveal: the source claims this synthesized edge is composed from.
+              Not an audit trail for its own sake — the decomposition of the
+              cross-source relationship, which is held by none of the source
+              records alone. Real click triggers the fetch (no hover, no
+              auto-load). */}
           <div className="mt-2.5 pt-2 border-t border-border/60">
             <button
               type="button"
@@ -464,10 +466,10 @@ export function EntityEdgeGraph({ entityId }: { entityId: string }) {
               className="text-[11px] font-medium px-2 py-1 rounded border border-border bg-muted/40 text-foreground hover:bg-muted/70 transition-colors disabled:opacity-60"
             >
               {provLoading && provEdgeId === selectedEdge.id
-                ? 'Loading source records…'
+                ? 'Loading the source claims…'
                 : provenanceForSelected
-                  ? 'Source records (audit trail)'
-                  : 'Reveal source records'}
+                  ? 'What this edge is synthesized from'
+                  : 'Show what composes this'}
             </button>
 
             {/* Fail loud — the readable error, never a silent empty table (A1). */}
@@ -483,9 +485,9 @@ export function EntityEdgeGraph({ entityId }: { entityId: string }) {
             {provenanceForSelected && (
               <div className="mt-2" data-testid="ee-provenance">
                 <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
-                  {provenanceForSelected.sources.length} source record
-                  {provenanceForSelected.sources.length === 1 ? '' : 's'} consumed — the
-                  audit trail behind this derived edge
+                  {provenanceForSelected.sources.length} source claim
+                  {provenanceForSelected.sources.length === 1 ? '' : 's'} this edge is
+                  synthesized from — the relationship is held by none of them alone
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-[11px] border-collapse">

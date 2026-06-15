@@ -25,18 +25,72 @@ MAX_ITERATIONS = 8
 RESULT_EXCERPT_CHARS = 2000
 
 
-def load_demo_env() -> None:
-    """Load the dev env file explicitly. Never .env (prod) — dev/prod rule."""
-    from dotenv import load_dotenv
+# The demo targets the live DEV DCL backend — run_dcl_dev.sh's ${PORT:-8104} —
+# never the prod instance (:8004). One guarded definition, imported by both
+# panels and the sequence, so a normal `python -m demo.sequence` run needs no
+# --dcl-url override.
+DCL_DEV_URL_DEFAULT = "http://localhost:8104"
+_PROD_DCL_PORT = "8004"
 
-    env_path = REPO_ROOT / ".env.development"
-    if not env_path.exists():
-        raise RuntimeError(f"{env_path} not found — demo runs against dev only")
-    load_dotenv(env_path, override=False)
+
+def dcl_dev_url() -> str:
+    """Resolve the DCL backend the demo runs against.
+
+    Defaults to the live dev backend (:8104 — the run_dcl_dev.sh PORT default),
+    overridable with DEMO_DCL_URL only for a *non-default dev* port. Refuses the
+    prod DCL port (:8004) loudly: the grounded demo runs against the dev stack
+    only and must never silently hit prod (A1, dev/prod rule).
+    """
+    url = os.environ.get("DEMO_DCL_URL", DCL_DEV_URL_DEFAULT).rstrip("/")
+    if f":{_PROD_DCL_PORT}" in url:
+        raise RuntimeError(
+            f"DEMO_DCL_URL={url!r} points at the PROD DCL port :{_PROD_DCL_PORT}. "
+            f"The grounded demo runs against the dev stack only (default "
+            f"{DCL_DEV_URL_DEFAULT}). Refusing to run against prod."
+        )
+    return url
+
+
+def load_demo_env() -> None:
+    """Resolve the demo's env exactly like the running dev stack (run_dcl_dev.sh):
+    aos-dev DB + ANTHROPIC_API_KEY from .env.development, and the single shared
+    DCL_MCP_TOKEN_SECRET from .env (where it lives) — so the minted MCP token
+    validates against the dev backend with NO hand-injected secret.
+
+    The prod DB creds in .env are NEVER loaded into this process: only the MCP
+    secret is pulled, by name, via dotenv_values (which parses without mutating
+    the environment). An already-set env var always wins, so a shell override
+    still works and is never clobbered.
+    """
+    from dotenv import dotenv_values, load_dotenv
+
+    dev_path = REPO_ROOT / ".env.development"
+    if not dev_path.exists():
+        raise RuntimeError(f"{dev_path} not found — demo runs against dev only")
+    load_dotenv(dev_path, override=False)  # aos-dev DB + ANTHROPIC_API_KEY
+
+    # DCL_MCP_TOKEN_SECRET is the one shared dev value that lives in .env — the
+    # dev backend sources it the same way (run_dcl_dev.sh:27, "single shared dev
+    # token"). Pull ONLY that key by name; do NOT load .env wholesale, so its
+    # prod DB creds never enter this process.
+    if not os.environ.get("DCL_MCP_TOKEN_SECRET"):
+        prod_path = REPO_ROOT / ".env"
+        if prod_path.exists():
+            secret = dotenv_values(prod_path).get("DCL_MCP_TOKEN_SECRET")
+            if secret:
+                os.environ["DCL_MCP_TOKEN_SECRET"] = secret
+
     if not os.environ.get("ANTHROPIC_API_KEY"):
         raise RuntimeError(
             "ANTHROPIC_API_KEY missing after loading .env.development — "
             "both demo panels need it; aborting (A1)."
+        )
+    if not os.environ.get("DCL_MCP_TOKEN_SECRET"):
+        raise RuntimeError(
+            "DCL_MCP_TOKEN_SECRET unresolved — not in the environment, not in "
+            ".env.development, and not present in .env. The dev DCL backend mints "
+            "and validates MCP tokens with this shared dev secret (run_dcl_dev.sh); "
+            "set it in .env as the dev stack expects, or export it. No fallback (A1)."
         )
 
 

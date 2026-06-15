@@ -45,7 +45,7 @@ interface Capture {
 }
 
 const NARRATION: Record<string, string> = {
-  numeric: 'Same model, same question. Panel A reads the raw warehouse exports directly. Panel B answers through the governed context layer — every figure grounded in queried triples, with provenance.',
+  numeric: 'Same model, same question. Panel A reads the raw warehouse exports directly. Panel B answers through the context layer — every figure resolved against the store, the authoritative source named where they disagree.',
   no_data: 'A question the data cannot answer. The honest outcome IS the feature: the grounded panel states the absence plainly — no estimate, no filler.',
   conflict: 'Where sources disagree, raw access has no register to consult. The grounded panel discloses the detected conflict from the Conflict Register — sources named, nothing arbitrated silently.',
 };
@@ -73,12 +73,12 @@ function PanelCard({ title, subtitle, cap, scores, accent }: {
         {scores?.conflict && <Chip ok={scores.conflict.passed} label={scores.conflict.passed ? `conflict disclosed (${scores.conflict.sources_named_in_answer?.join(' vs ') || 'register'})` : 'conflict not disclosed'} />}
         {accent === 'b' ? (
           <>
-            <Chip ok={scores?.provenance.present} label={scores?.provenance.present ? `provenance: ${[...(scores?.provenance.cited_source_systems ?? [])].join(', ') || 'triple ids cited'}` : 'no provenance cited'} />
+            <Chip ok={scores?.provenance.present} label={scores?.provenance.present ? `sourced: ${[...(scores?.provenance.cited_source_systems ?? [])].join(', ') || 'triple ids cited'}` : 'source not cited'} />
             <span className="text-xs text-muted-foreground">{cap.tool_calls.length} MCP calls · token {cap.mcp?.caller_token_id} · {cap.elapsed_s}s</span>
           </>
         ) : (
           <>
-            <span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-500/15 text-amber-400">no audit trail · no provenance · unauditable arbitration</span>
+            <span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-500/15 text-amber-400">silently picks one source · blends without disclosing · no conflict register</span>
             <span className="text-xs text-muted-foreground">{cap.tool_calls.length} raw reads · {cap.elapsed_s}s</span>
           </>
         )}
@@ -149,8 +149,8 @@ export default function GroundedDemoTab({ requestedEntityId }: { requestedEntity
           <Chip ok={capture.sequence_passed} label={capture.sequence_passed ? 'sequence PASS' : 'sequence FAIL'} />
           <Chip ok={s.panel_b.numeric_correct === s.panel_b.numeric_total} label={`grounded correct ${s.panel_b.numeric_correct}/${s.panel_b.numeric_total}`} />
           <Chip ok={undefined} label={`raw correct ${s.panel_a.numeric_correct}/${s.panel_a.numeric_total}`} />
-          <Chip ok={s.panel_b.provenance_present === s.live_slots} label={`provenance ${s.panel_b.provenance_present}/${s.live_slots}`} />
           {s.panel_b.conflict_total > 0 && <Chip ok={s.panel_b.conflict_disclosed === s.panel_b.conflict_total} label={`conflicts disclosed ${s.panel_b.conflict_disclosed}/${s.panel_b.conflict_total}`} />}
+          <Chip ok={s.panel_b.provenance_present === s.live_slots} label={`sourced ${s.panel_b.provenance_present}/${s.live_slots}`} />
           {s.pending_slots > 0 && <span className="px-2 py-0.5 rounded text-xs font-medium bg-sky-500/15 text-sky-400">{s.pending_slots} pending (Gate 1A)</span>}
         </div>
       </div>
