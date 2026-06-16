@@ -1,7 +1,9 @@
-# AutonomOS (AOS) — Agent Constitution
-> Version: 7.1 | Updated: May 2026 | Owner: Ilya (CEO)
+# AOS — Agent Constitution
+> Version: 7.2 | Updated: June 2026 | Owner: Ilya (CEO)
+> Company is **Onta** (Onta, Inc. — house mark). **AOS** is the product/platform name and stays. "autonomOS"/"AutonomOS" as a company name is retired.
 > Replaces: CLAUDE.md v6.0 + HARNESS_RULES_v2.md (now one document)
 > v7.1: architecture (pipeline topology, RACI table, ports, module wiring) moved to the canonical governing docs; this file holds durable behavioral rules and guardrails only.
+> v7.2 (2026-06-15): reconciled to `contextOS_blueprint`, `AAM_Blueprint_v4`, `AOS_MASTER_RACI_v8.6` — Onta company rename; Semantics/contextOS tier model; canonical pipeline (raw-records handoff, Farm as substrate); AAM scope = connect+transport+handoff; Mai-as-onboarding-interviewer ruling; AR/AP "Acme" demo retired.
 > Deploy to `tests/CLAUDE.md` in every AOS repo.
 
 ---
@@ -23,6 +25,8 @@ Rules agents violate most often:
 - **I1–I6:** Pipeline identity rules. No silent fallback on missing tenant_id/entity_id. 422 or fail loud. No run_id in API responses.
 
 **Canonical governing documents:**
+- `contextOS_blueprint_v1.5` — AOS core context: the Semantics/contextOS tier model, the reframe (relationships are the value), propose-verify-learn, the demo standard, platform naming. Canonical for AOS context architecture.
+- `context_lab_blueprint_v0.5` — the empirical R&D engine behind propose-verify-learn (find/trust; synthetic ground truth); companion to contextOS_blueprint.
 - `convergence_blueprint_master` — Convergence product architecture, workflow pattern, engines, pipeline identity. Supersedes all convergence_MA_spec versions (v5–v8).
 - `mai_blueprint_master` — Mai concierge runtime, constitution, memory, surfaces, build phases. Supersedes all Maestra/Mai specs and Omnipresence Blueprint.
 - `convergence_transition_master` — fixture eradication, identity resolver, AOS catalog generalization. Supersedes ME v2 Blueprint.
@@ -45,12 +49,12 @@ Ilya is the CEO and de facto CTO. He is NOT a developer. He reasons architectura
 ---
 
 ## PLATFORM IN ONE PARAGRAPH
-Platform overview and module roles are architecture — see `aos_production_architecture_blueprint_v1.1.md` and the RACI (`AOS_MASTER_RACI_v8.6.csv`).
+AOS delivers unified enterprise context in two tiers: **Semantics** (base — resolved, governed, provenanced data) and **contextOS** (premium — relationship graph, graph-grounded retrieval, arbitration, as-of). "ContextOS" as a single-entity *product line* is retired; contextOS is the premium tier — under active development and demonstrable, positioned with conviction but never represented to a buyer as generally available while building (contextOS_blueprint_v1.5 §0). Semantics goes to market first. Platform overview and module roles are architecture — see `aos_production_architecture_blueprint_v1.1.md` and the RACI (`AOS_MASTER_RACI_v8.6.csv`).
 
 ---
 
 ## DATA ARCHITECTURE
-Pipeline topology, stage order, and triple write paths are architecture — see `se_triples_conversion_build_plan_v2.2.md` and `pipeline_identity_architecture_v1` (AOS), `convergence_blueprint_master` (Convergence), `AAM_Blueprint_v4` (AAM connectivity).
+Canonical pipeline (per `AAM_Blueprint_v4`): **enterprise substrate (the customer's systems; Farm is the synthetic stand-in, NOT a pipeline stage) → AOD discovers → AAM connects and transports RAW RECORDS (no mapping) → DCL ingests via `/api/dcl/ingest-records` and does ALL semantic work → consumers (NLQ, agents) over DCL's MCP surface (DCL-MCP), or BI/curl.** The handoff is raw records, not triples — AAM produces no business triples. The old "AOD→AAM→Farm→triple-conversion→PG-direct, six orchestrated steps" framing is dead. Stage order and triple write paths are architecture — see `se_triples_conversion_build_plan_v2.2.md` and `pipeline_identity_architecture_v1` (AOS), `convergence_blueprint_master` (Convergence), `AAM_Blueprint_v4` (AAM connectivity).
 
 Durable guardrails:
 - Existing direct-PG write code in AOD/AAM is tech debt — must not be extended.
@@ -60,10 +64,13 @@ Durable guardrails:
 - No demo mode. fact_base.json is removed. If data is missing, fail loudly.
 
 ### Terminology
+- Onta = the company (Onta, Inc.; house mark). AOS = the product/platform — retain "AOS" everywhere; "autonomOS" as a company name is retired.
+- Semantics = base tier (resolved, governed, provenanced data). contextOS = premium tier (relationship graph, graph-grounded retrieval, arbitration, as-of). "ContextOS" as a single-entity product line is retired.
+- DCL-MCP = the consumer-serving MCP surface DCL exposes (Semantics/contextOS served to agents, BI/curl, NLQ; read-only). There is no separate "AIS" / "AOS-MCP server".
 - AOS = single-entity product (codebase: SE)
 - Convergence = multi-entity product (codebase: ME)
 - Convergence M&A = deal-driven engagement workflow (codebase: MA)
-- Mai = concierge agent (codebase: maestra pre-rename, mai post-rename)
+- Mai = concierge agent + onboarding interviewer (codebase: maestra pre-rename, mai post-rename)
 - Product names (AOS, Convergence) in specs and operator surfaces. Code identifiers (SE, ME) retained until code cleanup phase.
 
 ---
@@ -156,6 +163,8 @@ Durable guardrails:
 ## MAI
 Mai's runtime, scope, constitution layers, supervised-execution mechanics, and observability surfaces are architecture — see `mai_blueprint_master`. Constitution lives in Platform.
 
+**Onboarding interviewer:** Mai conducts the onboarding stakeholder interview and Contour-Map workflow — in her concierge/engagement-lead scope (`mai_blueprint_master`; AAM_Blueprint_v4 §1.5). `dcl-onboarding-agent` is the Mai-fronted home for that workflow. Standalone "Align" is scrapped and "align" naming is purged from DCL surfaces. Interview output is *proposals* into DCL HITL queues — elicitation, not operational execution (consistent with "Mai reads, Convergence acts").
+
 Durable guardrails — Mai is the concierge: reads broadly, writes narrowly to admin surfaces only. She does NOT:
 - Execute operational workflows, or route COFA merge / combining / entity resolution / QofE through her chat endpoint.
 - Register operational tools in her tool catalog.
@@ -233,7 +242,7 @@ Separate repos per module. All repos branch from `dev`. No feature branches unle
 - Claiming "pre-existing" as an excuse (D6)
 - Dodging pre-commit hooks (C13)
 - Claiming "metadata only" or "we don't touch your data"
-- Claiming AOS delivers ontology — current truth is context through sophisticated semantics
+- Claiming Level-5 formal ontology — the honest claim is **Semantics** (L3 semantic layer, shipped) plus **contextOS** (L4 knowledge graph, building); never L5
 - Using bare run_id in any API response payload (I1)
 - Returning a stage response without tenant_id + entity_id (I2)
 - String-mangling or prefix-stripping IDs (I6)
@@ -244,6 +253,12 @@ Separate repos per module. All repos branch from `dev`. No feature branches unle
 - Registering operational tools (write_cofa_mapping, write_combining_output, write_resolution_decision) in Mai's tool catalog
 - Any reference to AOA (cancelled) or Replit
 - Any reference to fact_base.json
+- "autonomOS"/"AutonomOS" as a **company** name (the company is Onta; AOS is the product/platform)
+- Any reference to the retired AR/AP "Acme #12345 ↔ ACME-Corp at 0.94" identity-resolution demo. Canonical demos: **engineering attrition** (hero — additive/traversal) and **cloud_spend** (connect vehicle + a FinOps agent consuming AOS context via DCL-MCP; the agent-acting path is the payoff)
+- Treating Farm as a pipeline stage — Farm is the enterprise substrate / synthetic stand-in
+- AAM producing business triples, or a semantic mapper / identity resolver acting on business records inside AAM (RACI-misaligned residue — AAM is connect+transport+handoff only)
+- Standalone "Align" onboarding, or "align" naming in DCL surfaces (Mai is the onboarding interviewer; `dcl-onboarding-agent` is the Mai-fronted home)
+- Any "local_fallback when DCL unavailable" path (removed alongside fact_base.json)
 
 ---
 
@@ -289,7 +304,7 @@ AOS is a tightly integrated chain (7 services + Console). Before making a change
 Never fall back to fact_base.json. It is removed. Any reference to it, any fallback to it, any test against it is broken.
 
 ## A10: Respect module authority
-Farm owns entity_id generation. AAM owns connection mapping. DCL owns semantic resolution and triple store writes. Convergence owns all ME engines. NLQ is not modified for pipeline data issues. Console orchestrates but does not own module internals. Respect RACI boundaries for design decisions.
+Farm owns entity_id generation. AAM owns connect + transport + handoff — it transports raw records and converts only its own connectivity output (DeclaredPipes, connections, drift, planes) to `mapping.*` triples; it does NO semantic mapping or identity resolution of business records (those are DCL/Convergence). DCL owns semantic resolution and triple store writes. Convergence owns all ME engines. NLQ is not modified for pipeline data issues. Console orchestrates but does not own module internals. Respect RACI boundaries for design decisions.
 
 ## A11: Read this file before starting
 It contains all rules. After v7.0, HARNESS_RULES_v2.md is merged into this document.
