@@ -26,7 +26,7 @@ Rules agents violate most often:
 
 **Canonical governing documents:**
 - `contextOS_blueprint_v1.5` — AOS core context: the Semantics/contextOS tier model, the reframe (relationships are the value), propose-verify-learn, the demo standard, platform naming. Canonical for AOS context architecture.
-- `context_lab_blueprint_v0.5` — the empirical R&D engine behind propose-verify-learn (find/trust; synthetic ground truth); companion to contextOS_blueprint.
+- `context_lab_blueprint_v0.8` — the empirical R&D engine behind propose-verify-learn (find/trust; synthetic ground truth); companion to contextOS_blueprint.
 - `convergence_blueprint_master` — Convergence product architecture, workflow pattern, engines, pipeline identity. Supersedes all convergence_MA_spec versions (v5–v8).
 - `mai_blueprint_master` — Mai concierge runtime, constitution, memory, surfaces, build phases. Supersedes all Maestra/Mai specs and Omnipresence Blueprint.
 - `convergence_transition_master` — fixture eradication, identity resolver, AOS catalog generalization. Supersedes ME v2 Blueprint.
