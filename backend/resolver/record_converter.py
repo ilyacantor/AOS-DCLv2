@@ -11,7 +11,11 @@ DCL's own mapping + resolution + conversion — the work that used to live in AA
      (HeuristicMapper, called directly — no DB persistence side effect).
        * domain-tagged pipe (AAM SE path: customer / vendor / invoice):
          concept = the declared domain (a persona-routed business concept),
-         property = source field name. Reproduces AAM's triple shape and keeps
+         property = the canonical predicate from semantic_mapper.property_aliases
+         (config/concept_property_aliases.yaml) — e.g. company_name -> name,
+         status -> payment_status — defaulting to the source field name when no
+         alias is registered. This matches AAM's triple vocabulary (the field->
+         property remap ported from AAM's mappings.py, #59 Option A) and keeps
          utility fields like `currency` as PROPERTIES of the business concept
          rather than standalone non-persona concepts.
        * domainless pipe (e.g. cloud-spend metrics): concept = the Live Mapper's
@@ -42,6 +46,7 @@ from backend.engine.ontology import get_ontology
 from backend.engine.persona_view import get_persona_domain_mapping
 from backend.resolver.record_resolver import RecordResolver
 from backend.semantic_mapper.heuristic_mapper import HeuristicMapper
+from backend.semantic_mapper.property_aliases import canonical_property
 from backend.utils.log_utils import get_logger
 
 logger = get_logger(__name__)
@@ -344,7 +349,7 @@ class RecordConverter:
                 payload = TriplePayload(
                     entity_id=entity_id,
                     concept=concept,
-                    property=fname,
+                    property=canonical_property(concept, fname),
                     value=_json_safe(value),
                     period=record_period,
                     currency="USD",

@@ -1,0 +1,55 @@
+# Canonical field -> property aliases, per concept.
+#
+# DCL owns field->concept mapping AND field->property normalization (RACI
+# decision (c) / A10). AAM's records-path (POST /api/dcl/ingest-records) hands
+# raw records; DCL's record_converter maps the concept (Live Semantic Mapper)
+# and normalizes the property predicate through this registry. So a business
+# record's triple carries a CANONICAL property (customer.name,
+# invoice.payment_status) instead of the raw source field name
+# (customer.company_name, invoice.status).
+#
+# Ported from AAM's app/ingest/mappings.py to preserve the established triple
+# vocabulary across the AAM->DCL ingest cutover, so NO consumer migrates
+# (aam_deferred_work #59, Option A). Only REMAPS are listed (source_field !=
+# property); any field without an entry defaults to property = source field
+# name (provenance-faithful).
+#
+# Addressable + swappable: this is the registered DATA SOURCE behind
+# semantic_mapper/property_aliases.py::canonical_property(). Option C (#59 —
+# learned/ontology-driven normalization) replaces the mechanism here WITHOUT
+# re-plumbing record_converter's call site. To add a mapping: add
+# `source_field: canonical_property` under the concept. No code deploy required.
+
+concept_property_aliases:
+  customer:
+    account_id: id
+    account_name: name
+    annual_revenue: revenue_usd
+    customer_id: id
+    company_name: name
+  invoice:
+    invoice_number: id
+    bill_no: id
+    status: payment_status
+    # (invoice, amount) intentionally NOT remapped: AR invoice uses
+    # amount->amount (identity, parity-certified); AP invoice used
+    # amount->gross_billed_usd in AAM. AP is out of the certified scope — a
+    # known limit (revisit if the AP-invoice shape flows through the cutover).
+  vendor:
+    vendor_id: id
+    vendor_name: name
+    is_1099: is_1099_reportable
+  gl_account:
+    account_number: id
+    account_name: name
+    account_type: type
+  revenue:
+    charge_id: id
+  support:
+    ticket_id: id
+  opex:
+    expense_id: id
+    amount: amount_usd
+  employee:
+    employee_id: id
+    salary: compensation_usd
