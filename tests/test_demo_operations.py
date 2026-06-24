@@ -48,7 +48,18 @@ def _load_slots():
 
 def test_questions_slot_count_in_eval_range():
     _, slots = _load_slots()
-    assert 8 <= len(slots) <= 10, f"§13 eval harness is 8-10 slots; got {len(slots)}"
+    assert 5 <= len(slots) <= 12, f"tier-demo harness is 5-12 slots; got {len(slots)}"
+
+
+def test_questions_cover_the_capability_classes():
+    """The redesign organizes slots by capability class, not by metric: Connection
+    is the hero (relationships), Conflict is arbitration, Fact (numeric) shows the
+    base tier is sufficient, Absence (no_data) is honesty. Every class the demo
+    claims must be present as at least one slot."""
+    _, slots = _load_slots()
+    kinds = {s["kind"] for s in slots}
+    for required in ("connection", "conflict", "numeric", "no_data"):
+        assert required in kinds, f"capability class {required!r} missing from slots"
 
 
 def test_questions_slots_well_formed():
@@ -58,10 +69,15 @@ def test_questions_slots_well_formed():
     assert spec["meta"]["entity_default"], "meta.entity_default required"
     for s in slots:
         assert s["status"] in ("live", "pending"), s["id"]
-        assert s["kind"] in ("numeric", "no_data", "conflict"), s["id"]
+        assert s["kind"] in ("numeric", "no_data", "conflict", "connection", "time"), s["id"]
         if s["status"] == "pending":
             assert len(s.get("pending_reason", "")) > 30, (
                 f"{s['id']}: pending slots must say WHY they are pending"
+            )
+        if s["kind"] == "conflict":
+            assert s.get("target_concept"), (
+                f"{s['id']}: conflict slots must name the registered target_concept "
+                f"scored against (no global-register match)"
             )
         if s["status"] == "live" and s["kind"] == "numeric":
             gt = s["ground_truth"]
@@ -77,22 +93,25 @@ def test_questions_slots_well_formed():
             assert gt["scales"], s["id"]
 
 
-def test_gate1a_headline_slots_present_and_live():
-    """The two §13 headline beats exist verbatim as slots and are LIVE
-    conflict slots — flipped pending→live when the Farm scenario months
-    landed (ledger #66 RESOLVED, commit b3387e5). The never-simulate rule
-    holds in its live form: conflict slots score against the entity's real
-    Register (see the capture's conflict scores), never canned output."""
+def test_capability_class_hero_slots_present_and_live():
+    """The reframe's anchor slots exist and are live: the Connection hero
+    (relationship traversal — the answer that lives in no single record) and the
+    Conflict arbitration slot (scored against a registered target concept). The
+    as-of/Time slot stays an honest pending tile — no scenario data yet, never
+    simulated."""
     _, slots = _load_slots()
     by_id = {s["id"]: s for s in slots}
-    q1 = by_id["q1_attrition_headline"]
-    assert q1["status"] == "live"
-    assert q1["kind"] == "conflict"
-    assert "attrition" in q1["question"].lower()
-    q2 = by_id["q2_cloud_conflict"]
-    assert q2["status"] == "live"
-    assert q2["kind"] == "conflict"
-    assert "compute spend" in q2["question"].lower()
+    conn = by_id["q_connection_attrition"]
+    assert conn["status"] == "live"
+    assert conn["kind"] == "connection"
+    assert "attrition" in conn["question"].lower()
+    conf = by_id["q_conflict_attrition_rate"]
+    assert conf["status"] == "live"
+    assert conf["kind"] == "conflict"
+    assert conf["target_concept"] == "workforce.attrition_rate"
+    time_slot = by_id["q_time_asof"]
+    assert time_slot["status"] == "pending"
+    assert time_slot["kind"] == "time"
 
 
 # ---------------------------------------------------------------------------
@@ -152,6 +171,44 @@ def test_score_conflict_against_register():
 
     none_expected = scoring.score_conflict("No conflicts detected across sources.", [], tool_calls)
     assert none_expected["passed"] and none_expected["expected_conflicts"] == 0
+
+
+def test_score_conflict_require_called_kills_technicality_pass():
+    """Tightened scoring: when require_called is set (premium tier), wording a
+    disagreement without ever calling conflict_query does NOT pass — kills the
+    global-register technicality the redesign found."""
+    register = [{"claims": [{"source_system": "workday_hr"}, {"source_system": "netsuite_finance_rollup"}]}]
+    answer = "Workday HR and the NetSuite finance rollup disagree on attrition."
+    # No conflict_query call + require_called → fails despite correct wording.
+    not_called = scoring.score_conflict(answer, register, [], require_called=True)
+    assert not not_called["passed"] and not not_called["called_conflict_query"]
+    # Same answer WITH the call → passes.
+    called = scoring.score_conflict(answer, register, [{"name": "conflict_query"}], require_called=True)
+    assert called["passed"] and called["called_conflict_query"]
+
+
+def test_score_connection_requires_traversal_and_grounding():
+    """Connection passes only when the panel called traverse_graph AND grounded
+    the answer in graph content (a concentration node + a driver). The base tier,
+    which never calls traverse_graph, fails the class by construction — that is
+    the tier gap, not a broken answer."""
+    graph = ('{"nodes":[{"node_type":"team","node_key":"platform"},'
+             '{"node_type":"exit_theme","node_key":"compensation"}],'
+             '"edges":[{"edge_type":"BELOW_MARKET","properties":{"gap_pct":13.16}}]}')
+    traversed = [{"name": "traverse_graph", "result_excerpt": graph}]
+    answer = "Attrition concentrates in the Platform team, driven by a below-market comp gap."
+
+    grounded = scoring.score_connection(answer, traversed)
+    assert grounded["passed"] and grounded["called_traverse_graph"]
+    assert "platform" in grounded["cited_concentration_nodes"]
+
+    # Identical answer but no traversal tool call (the base tier) → fails.
+    base = scoring.score_connection(answer, [{"name": "query_triples", "result_excerpt": "{}"}])
+    assert not base["passed"] and not base["called_traverse_graph"]
+
+    # Traversed, but the answer names no concentration/driver → not grounded.
+    ungrounded = scoring.score_connection("Attrition is elevated this quarter.", traversed)
+    assert not ungrounded["passed"]
 
 
 # ---------------------------------------------------------------------------

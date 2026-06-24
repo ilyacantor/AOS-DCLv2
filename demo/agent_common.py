@@ -53,12 +53,13 @@ def dcl_dev_url() -> str:
 
 def load_demo_env() -> None:
     """Resolve the demo's env exactly like the running dev stack (run_dcl_dev.sh):
-    aos-dev DB + ANTHROPIC_API_KEY from .env.development, and the single shared
-    DCL_MCP_TOKEN_SECRET from .env (where it lives) — so the minted MCP token
-    validates against the dev backend with NO hand-injected secret.
+    the aos-dev DB from .env.development, plus the single shared secrets that live
+    in .env — DCL_MCP_TOKEN_SECRET (so the minted MCP token validates against the
+    dev backend) and the account-level ANTHROPIC_API_KEY (one key, not a per-DB
+    cred). Either secret may also be set in .env.development or the shell.
 
-    The prod DB creds in .env are NEVER loaded into this process: only the MCP
-    secret is pulled, by name, via dotenv_values (which parses without mutating
+    The prod DB creds in .env are NEVER loaded into this process: only those two
+    secrets are pulled, BY NAME, via dotenv_values (which parses without mutating
     the environment). An already-set env var always wins, so a shell override
     still works and is never clobbered.
     """
@@ -69,21 +70,25 @@ def load_demo_env() -> None:
         raise RuntimeError(f"{dev_path} not found — demo runs against dev only")
     load_dotenv(dev_path, override=False)  # aos-dev DB + ANTHROPIC_API_KEY
 
-    # DCL_MCP_TOKEN_SECRET is the one shared dev value that lives in .env — the
-    # dev backend sources it the same way (run_dcl_dev.sh:27, "single shared dev
-    # token"). Pull ONLY that key by name; do NOT load .env wholesale, so its
-    # prod DB creds never enter this process.
-    if not os.environ.get("DCL_MCP_TOKEN_SECRET"):
+    # Two values are single shared secrets that live in .env, not .env.development:
+    # DCL_MCP_TOKEN_SECRET (the dev backend sources it the same way —
+    # run_dcl_dev.sh:27, "single shared dev token") and the account-level
+    # ANTHROPIC_API_KEY (one key, not a per-DB cred). Pull ONLY these by name; do
+    # NOT load .env wholesale, so its prod DB creds never enter this process.
+    _shared = ("DCL_MCP_TOKEN_SECRET", "ANTHROPIC_API_KEY")
+    if any(not os.environ.get(k) for k in _shared):
         prod_path = REPO_ROOT / ".env"
-        if prod_path.exists():
-            secret = dotenv_values(prod_path).get("DCL_MCP_TOKEN_SECRET")
-            if secret:
-                os.environ["DCL_MCP_TOKEN_SECRET"] = secret
+        prod_vals = dotenv_values(prod_path) if prod_path.exists() else {}
+        for k in _shared:
+            if not os.environ.get(k) and prod_vals.get(k):
+                os.environ[k] = prod_vals[k]
 
     if not os.environ.get("ANTHROPIC_API_KEY"):
         raise RuntimeError(
-            "ANTHROPIC_API_KEY missing after loading .env.development — "
-            "both demo panels need it; aborting (A1)."
+            "ANTHROPIC_API_KEY missing — not in the environment, not in "
+            ".env.development, and not present in .env. Both demo panels need it "
+            "(account-level key, one shared value); set it in .env or "
+            ".env.development, or export it. No fallback (A1)."
         )
     if not os.environ.get("DCL_MCP_TOKEN_SECRET"):
         raise RuntimeError(

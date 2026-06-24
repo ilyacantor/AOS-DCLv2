@@ -216,7 +216,8 @@ def run_sequence(entity_id: str, tenant_override: str | None, dcl_url: str,
         b_ok = (
             b.get("correctness", {}).get("passed",
             b.get("no_data_honesty", {}).get("passed",
-            b.get("conflict", {}).get("passed", False)))
+            b.get("conflict", {}).get("passed",
+            b.get("connection", {}).get("passed", False))))
         )
         record["passed"] = bool(b_ok)
         if not b_ok:

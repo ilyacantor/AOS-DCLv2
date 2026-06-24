@@ -1,17 +1,25 @@
-# Eval question slots for the grounded-agent before/after demo (§13).
+# Eval question slots for the Semantics-vs-Context tier demo (§13).
 #
 # This file is DATA — the sequence layer reads it; nothing here executes.
+#
+# The slots are organized by CAPABILITY CLASS, not by metric. The thesis is the
+# seam: Semantics (base) serves trustworthy resolved facts; Context (premium)
+# answers the questions that only exist ACROSS relationships, conflict, or time —
+# the answers flat retrieval cannot assemble. Each live slot is a base-vs-premium
+# pair where the premium panel shows the answer CHANGING (or, on the Fact class,
+# shows base is already sufficient — that is the teaching point, not a weakness).
+#
 # Slot statuses:
 #   live    — runs now against the live dev entity; scored.
-#   pending — the §13 beat whose scenario data arrives with Gate 1A demo
-#             datasets (Farm conflict-class months). The slot is presented
-#             honestly as pending; output is NEVER faked.
+#   pending — the beat whose scenario data has not landed yet (Gate 1A). Presented
+#             honestly as pending; output is NEVER faked, never simulated.
 #
-# Ground truth is resolved at RUN TIME from the raw source feeds
-# (demo/feeds.py — B10). No expected values are hardcoded here.
-# scales: accepted unit multipliers when matching a number extracted from
-# an answer (feeds are $M-scale; an agent may verbalize $1.48B for 1477.13;
-# rates may be verbalized as 0.058 or 5.8%).
+# Ground truth is resolved at RUN TIME from the raw source feeds (demo/feeds.py —
+# B10) for numeric slots, and from the live Conflict Register for conflict slots.
+# No expected values are hardcoded here. target_concept on a conflict slot is the
+# REGISTERED concept id the disclosure is scored against (not a global match).
+# scales: accepted unit multipliers when matching a number extracted from an
+# answer (feeds are $M-scale; rates may be verbalized as 0.114 or 11.4%).
 
 meta:
   entity_default: ContextOSDemo
@@ -20,102 +28,85 @@ meta:
   rel_tolerance: 0.02
 
 slots:
-  - id: q1_attrition_headline
+  # ===== CONNECTION (hero) — the answer lives in no single record =====
+  - id: q_connection_attrition
+    status: live
+    kind: connection
+    question: "Where is attrition highest, and what's driving it?"
+    notes: >-
+      THE HERO. The driver exists only in the join of org structure → team →
+      compensation band → external market; no single record holds it. Premium
+      walks the derived entity graph (traverse_graph over entity_edges) and returns
+      the concentration (a team) and the cross-source driver (the BELOW_MARKET comp
+      gap and/or the dominant exit theme). Base has the SAME resolved facts — roster,
+      exit reasons, internal comp, external market — reachable over the same MCP, but
+      no traversal tool, so it can only present them as separate lists and must say
+      plainly that it cannot assemble them into a driver. This is a TIER gap, not a
+      data gap. Scored (score_connection): premium must call traverse_graph AND ground
+      the answer in graph content (a team/department node AND a market-gap or
+      exit-theme driver that appeared in the traverse_graph result). Underlying
+      numbers resolve live (B10); the comp gap is whatever the graph holds at run time.
+
+  # ===== CONFLICT (decisive value) — the answer needs arbitration =====
+  - id: q_conflict_attrition_rate
     status: live
     kind: conflict
-    question: "Where is attrition highest and what's driving it?"
+    target_concept: "workforce.attrition_rate"
+    question: "Your source systems report different attrition for the company — what's the decisive figure, and which source wins?"
     notes: >-
-      §13 Q1 (headline). The Farm conflict-scenario months are live: an
-      HR-system feed (workday_hr) and a finance cost-center rollup
-      (netsuite_finance_rollup) legitimately disagree on headcount —
-      contractor classification, terminations not yet cleared from payroll,
-      org-unit mapping — so derived attrition differs (~22% vs ~19% in the
-      headline month). Both raw files are in Panel A's feed set
-      (hr_headcount / finance_headcount); the Register carries the
-      workforce.* conflicts DCL's engine detected from the ingested feeds.
-      Scored against the live Register: disclosure must name the disagreeing
-      sources. Ground truth for the underlying values resolves from the
-      feeds at run time (B10); per-month detail (incl. the conflict-free
-      month) lives in GET /api/farm/scenario/ground-truth.
+      A real VALUE conflict in the live Register: concept workforce.attrition_rate,
+      sources netsuite_finance_rollup vs workday_hr disagree on the rate. Premium calls
+      conflict_query on workforce.attrition_rate (+ reconciliation_recommend), names the
+      disagreeing sources, gives the decisive reconciled value, and cites the authority.
+      Base can retrieve both source values via query_triples and state that they differ,
+      but has NO arbitration tool — it cannot produce the decisive value. Scored
+      (score_conflict) against the live Register FOR THIS CONCEPT ONLY (target_concept,
+      not a global match): premium must have called conflict_query AND named the
+      disagreeing sources for workforce.attrition_rate. The question does not pre-name
+      the sources — naming them is part of the answer.
 
-  - id: q2_cloud_conflict
-    status: live
-    kind: conflict
-    question: "What was March compute spend for the entity — billing or GL?"
-    notes: >-
-      §13 Q2. Dual cloud-spend scenario feeds are live: provider billing
-      (aws_billing) vs GL allocation (netsuite_gl_allocation) disagree on
-      monthly compute spend ($412K-class vs $387K-class in 2026-03),
-      decomposable into untagged resources + credit posting lag + a small
-      honest unexplained remainder (decomposition in
-      GET /api/farm/scenario/ground-truth). Both raw files are in Panel A's
-      feed set (billing_cloud / gl_cloud); the Register carries the
-      cloud_spend.* per-month conflicts DCL's engine detected. Scored
-      against the live Register: disclosure must name the disagreeing
-      sources.
-
-  - id: q_revenue
+  # ===== FACT (base succeeds) — resolved, governed, provenanced =====
+  - id: q_fact_revenue
     status: live
     kind: numeric
     question: "What was total revenue in the most recent quarter?"
     ground_truth: {feed: financial, field: revenue, period: latest, scales: [1, 1000]}
+    notes: >-
+      The seam from the BASE side. A resolved, governed fact: Semantics returns it
+      correctly, with provenance (source system / lineage). Premium returns the same
+      value — there is nothing to traverse or arbitrate. BOTH pass; that is the point.
+      The teaching moment: you do not pay for the premium tier to answer this — the base
+      tier is sufficient and trustworthy. Base correctness is the headline here (base
+      must pass). Ground truth resolves live from the financial feed (B10).
 
-  - id: q_net_income
-    status: live
-    kind: numeric
-    question: "What was net income in the most recent quarter?"
-    ground_truth: {feed: financial, field: net_income, period: latest, scales: [1, 1000]}
-
-  - id: q_cash
-    status: live
-    kind: numeric
-    question: "What was the cash position at the end of the most recent quarter?"
-    ground_truth: {feed: financial, field: cash, period: latest, scales: [1, 1000]}
-
-  - id: q_headcount
-    status: live
-    kind: numeric
-    question: "What is total company headcount in the latest month on record?"
-    # Workforce is owned by the §13 scenario (monthly roster). Ground truth is the
-    # HR lens at the conflict-free month (2026-06), where workday_hr and the finance
-    # rollup agree exactly (210) — an unambiguous single value for a clean retrieval.
-    ground_truth: {feed: hr_headcount, field: headcount_total, period: "2026-06", scales: [1]}
-
-  - id: q_arr
+  - id: q_fact_arr
     status: live
     kind: numeric
     question: "What is ending ARR for the most recent quarter?"
     ground_truth: {feed: operational, field: arr_ending, period: latest, scales: [1, 1000]}
+    notes: >-
+      Second Fact slot — another clean resolved figure where the base tier is fully
+      sufficient. Reinforces that Semantics is a real, trustworthy base, not a
+      crippled teaser for the premium tier. Both panels pass.
 
-  - id: q_attrition_live
-    status: live
-    kind: numeric
-    question: "What is the company-wide attrition rate in the latest month on record?"
-    # HR-lens attrition at the conflict-free month (2026-06): workday_hr and the
-    # finance rollup agree (11.43% annualized), so the value is unambiguous. The
-    # scenario owns the workforce domain; this is its clean monthly figure.
-    ground_truth: {feed: hr_headcount, field: attrition_rate, period: "2026-06", scales: [1, 0.01, 100]}
-
-  - id: q_enps_no_data
+  # ===== ABSENCE (honesty) — both tiers honest, neither fabricates =====
+  - id: q_no_data_enps
     status: live
     kind: no_data
     question: "What is the employee NPS (eNPS) for the most recent quarter?"
     notes: >-
-      No source produces employee-NPS for any records-path entity (customer
-      'nps' exists; employee NPS does not). The honest answer is that the
-      data is absent — the no-data tile renders that honestly. A fabricated
-      number here is a scoring failure.
+      No source produces employee-NPS for any records-path entity (customer 'nps'
+      exists; employee NPS does not). The honest outcome IS the feature: both tiers
+      state the absence plainly — no estimate, no filler. A fabricated number here is
+      a scoring failure for either tier.
 
-  - id: q_conflict_live
-    status: live
-    kind: conflict
-    question: "Do your source systems disagree about any customer records for this entity?"
-    notes: >-
-      Scored against the live Conflict Register (Gate 1A) at run time: the
-      expected disclosure set is GET /api/dcl/conflicts for the entity at
-      sequence start. Panel B carries conflict_query in its token scope.
-      Panel A's raw surface is the pull-accessible feeds (financial /
-      operational / ledger); the fabric planes (e.g. confluent vs workato
-      customer rows) are push-class with no pull endpoint — raw access has
-      no cross-source register, which is precisely the before-condition.
-      This asymmetry is stated here and in the capture, not hidden.
+  # ===== TIME / as-of (pending) — arrives with Gate 1A scenario data =====
+  - id: q_time_asof
+    status: pending
+    kind: time
+    question: "What was headcount as of the close of the prior quarter — the figure as it was reported then, not today's restated number?"
+    pending_reason: >-
+      As-of / point-in-time answering needs scenario data where a value was reported,
+      later restated, and BOTH versions are retained with valid-time. That dataset
+      (Gate 1A) is not yet in Farm, so this slot is presented honestly as pending. It
+      runs the day the data exists; it is never simulated.
