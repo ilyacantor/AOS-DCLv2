@@ -21,6 +21,7 @@ Usage:
 """
 
 import os
+import re
 import select
 import time
 import threading
@@ -35,6 +36,7 @@ from backend.core.constants import (
     POOL_GETCONN_TIMEOUT,
     POOL_PREPING_IDLE_S,
     QUERY_STATEMENT_TIMEOUT_MS,
+    DB_SCHEMA,
 )
 from backend.utils.log_utils import get_logger
 
@@ -82,14 +84,45 @@ class PoolExhausted(Exception):
 _bound_factory_cache: dict = {}
 
 
+def _configured_schema() -> Optional[str]:
+    """The explicitly-configured DB schema (SUPABASE_DB_SCHEMA), or None.
+
+    When SET, DCL binds search_path to it per transaction: the Supabase pooler
+    ignores DSN `options`, and a role-default flip silently scatters
+    reads/writes across schemas (observed 2026-06 — DCL read `dev` while live
+    data was in `shared_gdbmdr`). When UNSET, DCL uses the connection role's
+    default search_path UNCHANGED — the deployed/prod path, where the role
+    default is authoritative. Requiring the var would break those deployments,
+    so unset is a first-class, supported config. A set-but-malformed value
+    fails loud (a real misconfiguration, A1)."""
+    if not DB_SCHEMA:
+        return None
+    if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", DB_SCHEMA):
+        raise RuntimeError(
+            f"SUPABASE_DB_SCHEMA={DB_SCHEMA!r} is not a valid bare schema identifier."
+        )
+    return DB_SCHEMA
+
+
 def _bound_cursor_factory(base):
-    """Return (cached) subclass of `base` that binds the read ceiling on the
-    first statement of every transaction."""
+    """Return (cached) subclass of `base` that binds search_path + the read
+    ceiling on the first statement of every transaction."""
     cached = _bound_factory_cache.get(base)
     if cached is not None:
         return cached
 
-    prefix = f"SET LOCAL statement_timeout = {int(QUERY_STATEMENT_TIMEOUT_MS)}; "
+    # When a schema is configured, bind it EXPLICITLY per transaction alongside
+    # the read ceiling. The pooler ignores DSN `options` (#62) so search_path
+    # can't be set in the DSN; SET LOCAL rides the same single round trip as the
+    # timeout bind (zero marginal cost) and is immune to role-default drift.
+    # When unset, only the timeout is bound and the role default search_path
+    # stands (prod/deployed path) — exactly the prior behavior.
+    schema = _configured_schema()
+    set_search = f"SET LOCAL search_path = {schema}; " if schema else ""
+    prefix = (
+        f"{set_search}"
+        f"SET LOCAL statement_timeout = {int(QUERY_STATEMENT_TIMEOUT_MS)}; "
+    )
 
     class _TimeoutBoundCursor(base):  # type: ignore[misc,valid-type]
         def execute(self, query, vars=None):
@@ -268,13 +301,28 @@ def _ensure_pool() -> Optional[ThreadedConnectionPool]:
             options=f"-c statement_timeout={QUERY_STATEMENT_TIMEOUT_MS}",
         )
 
-        # Startup validation: verify we can actually use the pool
+        # Startup validation: verify we can use the pool. When a schema is
+        # explicitly configured, also verify search_path resolves to it (the
+        # bound cursor issues SET LOCAL search_path on this first statement) and
+        # fail loud on mismatch — never silently serve the wrong schema (A1;
+        # 2026-06 role-default flip stranded DCL on `dev`). When unset, behave
+        # exactly as before (role default stands) — do NOT require the var, that
+        # would break deployments relying on a correct role default.
+        expected_schema = _configured_schema()
         test_conn = _pool.getconn()
         try:
             with test_conn.cursor() as cur:
-                cur.execute("SELECT 1")
+                cur.execute("SELECT current_schema()" if expected_schema else "SELECT 1")
+                resolved = (cur.fetchone() or [None])[0]
+            test_conn.rollback()
         finally:
             _pool.putconn(test_conn)
+        if expected_schema and resolved != expected_schema:
+            raise RuntimeError(
+                f"search_path resolved to {resolved!r} but SUPABASE_DB_SCHEMA="
+                f"{expected_schema!r}. The schema may not exist or binding failed — "
+                f"refusing to serve the wrong schema."
+            )
 
         _pool_initialized = True
         logger.info(

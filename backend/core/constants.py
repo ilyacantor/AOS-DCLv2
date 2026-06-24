@@ -51,6 +51,14 @@ ONTOLOGY_CACHE_TTL = float(os.getenv("DCL_ONTOLOGY_CACHE_TTL", "300.0"))
 MAPPINGS_CACHE_TTL = float(os.getenv("DCL_MAPPINGS_CACHE_TTL", "60.0"))
 SCHEMA_CACHE_TTL = float(os.getenv("DCL_SCHEMA_CACHE_TTL", "300.0"))
 
+# --- DB schema binding ---
+# DCL binds search_path EXPLICITLY per transaction (see core/db.py): the
+# Supabase pooler ignores DSN `options` (#62) and the role-default search_path
+# is fragile — a role-default flip silently strands every query in the wrong
+# schema (observed 2026-06: DCL resolved `dev` while live data sat in
+# `shared_gdbmdr`). No default here — unset fails loud at pool init (A1).
+DB_SCHEMA = os.getenv("SUPABASE_DB_SCHEMA")
+
 # --- Connection Pool ---
 POOL_RETRY_COOLDOWN = float(os.getenv("DCL_POOL_RETRY_COOLDOWN", "30.0"))
 POOL_MIN_CONN = int(os.getenv("DCL_POOL_MIN_CONN", "2"))
