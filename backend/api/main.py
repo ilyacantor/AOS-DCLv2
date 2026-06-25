@@ -82,6 +82,7 @@ from backend.api.routes.mcp_audit_read import router as mcp_audit_read_router
 from backend.api.routes.traces import router as traces_router
 from backend.api.routes.exports import router as exports_router
 from backend.api.routes.proposals import router as proposals_router
+from backend.api.routes.demo import router as demo_router
 
 logger = get_logger(__name__)
 
@@ -523,6 +524,8 @@ app.include_router(exports_router)
 app.include_router(monitor_router)
 # Gate 3A: Change proposal HITL queue + canonical apply-on-approve.
 app.include_router(proposals_router)
+# Glass Box commercial demo — captured-trace SSE replay (RAILS MODE, read-only).
+app.include_router(demo_router)
 # Gate 3B D1: Structural drift monitor — schedule list + pause/resume/run-now.
 from backend.api.routes.monitor_schedule import router as monitor_schedule_router
 app.include_router(monitor_schedule_router)
