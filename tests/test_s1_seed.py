@@ -16,9 +16,7 @@ overlap tests are skipped when only one entity is present.
 import os
 from collections import defaultdict
 from decimal import Decimal
-from pathlib import Path
 
-import psycopg2
 import pytest
 
 from tests.conftest import TENANT_ID, RUN_ID, ENTITIES
@@ -28,25 +26,15 @@ from tests.conftest import TENANT_ID, RUN_ID, ENTITIES
 # Fixtures
 # ---------------------------------------------------------------------------
 
-def _load_db_url() -> str:
-    """Load DATABASE_URL from .env.development (aos-dev, not prod)."""
-    env_path = Path(__file__).resolve().parent.parent / ".env.development"
-    if not env_path.exists():
-        raise RuntimeError(f"No .env.development file at {env_path}")
-    with open(env_path) as f:
-        for line in f:
-            line = line.strip()
-            if line.startswith("DATABASE_URL="):
-                return line.split("=", 1)[1].strip().strip('"').strip("'")
-    raise RuntimeError("DATABASE_URL not found in .env.development")
-
-
 @pytest.fixture(scope="module")
 def conn():
-    """Shared PG connection for the test module."""
-    c = psycopg2.connect(_load_db_url())
-    yield c
-    c.close()
+    """Shared PG connection for the test module, via the bound get_connection so
+    reads honor the configured schema (SUPABASE_DB_SCHEMA) per transaction. A raw
+    psycopg2 connection resolves the role-default search_path on the txn pooler
+    and would miss the seed data, which lives in the configured schema (#115)."""
+    from backend.core.db import get_connection
+    with get_connection() as c:
+        yield c
 
 
 QUARTERS = [

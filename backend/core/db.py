@@ -124,6 +124,8 @@ def _bound_cursor_factory(base):
         f"SET LOCAL statement_timeout = {int(QUERY_STATEMENT_TIMEOUT_MS)}; "
     )
 
+    _prefix_bytes = prefix.encode()
+
     class _TimeoutBoundCursor(base):  # type: ignore[misc,valid-type]
         def execute(self, query, vars=None):
             try:
@@ -133,8 +135,16 @@ def _bound_cursor_factory(base):
                 )
             except Exception:
                 fresh_txn = False
-            if fresh_txn and isinstance(query, str):
-                query = prefix + query
+            if fresh_txn:
+                # The bind must ride the first statement whether the caller passed
+                # str OR bytes. psycopg2.extras.execute_values composes its query as
+                # BYTES, so a str-only check silently skips the search_path/timeout
+                # bind and the batch write lands in the role-default schema — the
+                # conflict-register split-brain (writes->dev, reads->configured).
+                if isinstance(query, str):
+                    query = prefix + query
+                elif isinstance(query, (bytes, bytearray)):
+                    query = _prefix_bytes + bytes(query)
             return super().execute(query, vars)
 
     _TimeoutBoundCursor.__name__ = f"TimeoutBound{getattr(base, '__name__', 'Cursor')}"
