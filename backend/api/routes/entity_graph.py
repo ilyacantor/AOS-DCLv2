@@ -574,6 +574,16 @@ def graph_edge_provenance(
     sources: list[dict] = []
     gaps: list[dict] = []
     for concept in consumed:
+        if ".resolution." in concept:
+            # A structural join key (e.g. comp_band.resolution.department_to_job_family):
+            # the derivation READ it to connect the edge's endpoints (department ->
+            # job_family), but it is not a VALUE source record the synthesized gap was
+            # computed from — the gap arithmetic uses only the two medians, and a
+            # resolution concept keys on neither endpoint's median (its value is the
+            # external key, not a number). It stays listed in `consumed` (the full
+            # input set) but is not a revealed source record (Blueprint §13: reveal
+            # the value records the gap came from).
+            continue
         prop = _provenance_property_for(concept, src_type, src_key, dst_type, dst_key)
         rec = _source_record(tenant_id, entity_id, concept, prop, _HEADLINE_PERIOD)
         if rec is None:

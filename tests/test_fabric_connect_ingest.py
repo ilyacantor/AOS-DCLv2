@@ -257,8 +257,11 @@ def test_nonpersona_field_dropped_loudly_not_silently():
                for w in warnings), warnings
 
     # No silent drop: every input field is accounted for as either a written
-    # triple (property == field) or a warning.
-    triple_fields = {t["property"] for t in _triples_for_run(run_id)
+    # triple or a warning. The ledger is the triple's SOURCE_FIELD (the original
+    # field name, a provenance-contract column), NOT its property — the records
+    # path canonicalizes the property (e.g. invoice_number -> the id concept's
+    # property), so a converted field's name lives on source_field, never lost.
+    triple_fields = {t["source_field"] for t in _triples_for_run(run_id)
                      if str(t["pipe_id"]) == METRICS_PIPE}
     warning_fields = {w.get("field") for w in warnings}
     assert set(fields) <= (triple_fields | warning_fields), \

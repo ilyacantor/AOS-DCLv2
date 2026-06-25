@@ -47,7 +47,6 @@ EXPECTED_INTERNAL_MEDIAN = 165000.0
 EXPECTED_MARKET_MEDIAN = 190000.0
 EXPECTED_GAP_PCT = 13.16
 EXPECTED_GAP_USD = 25000
-EXPECTED_DRIVEN_BY_SHARE = 0.667  # compensation is the dominant exit driver
 INTERNAL_SOURCE = "workday_hr"
 MARKET_SOURCE = "radford_comp"
 
@@ -115,11 +114,23 @@ def test_traverse_returns_synthesized_gap():
         f"Expected one DRIVEN_BY edge from engineering to the compensation "
         f"exit_theme. Got {len(driven)}: {driven}"
     )
-    share = round(float(driven[0]["properties"]["share"]), 3)
-    assert share == EXPECTED_DRIVEN_BY_SHARE, (
-        f"DRIVEN_BY(compensation) must carry the dominant-driver share "
-        f"{EXPECTED_DRIVEN_BY_SHARE}. Got {share} — "
-        f"properties {driven[0]['properties']}"
+    # The share is the compensation count over the total exits — an INVARIANT
+    # derived from the edge's own count/total/breakdown, never a hardcoded Farm
+    # value (B8/B10: the exit data regenerates, the invariant does not).
+    props_d = driven[0]["properties"]
+    share = round(float(props_d["share"]), 3)
+    expected_share = round(int(props_d["count"]) / int(props_d["total"]), 3)
+    assert share == expected_share, (
+        f"DRIVEN_BY(compensation) share must equal count/total "
+        f"({props_d['count']}/{props_d['total']} = {expected_share}); got {share} "
+        f"— properties {props_d}"
+    )
+    # compensation must be the DOMINANT exit driver — that is why the edge is
+    # DRIVEN_BY compensation (not another reason).
+    breakdown = props_d["breakdown"]
+    assert int(breakdown["compensation"]) == max(int(v) for v in breakdown.values()), (
+        f"compensation must be the dominant exit driver for the DRIVEN_BY edge; "
+        f"breakdown {breakdown}"
     )
 
 

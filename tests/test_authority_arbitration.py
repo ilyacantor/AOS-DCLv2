@@ -119,50 +119,60 @@ def _claim_value(conflict, source):
 
 
 def test_cloud_conflict_resolves_to_billing(demo_conflicts):
-    """cloud_spend.summary/total_cost/2026-03 → ONE decisive value 409,974.93
-    from aws_billing; the GL allocation is disclosed as the loser at 388,829.94."""
+    """cloud_spend.summary/total_cost/2026-03 → ONE decisive value from aws_billing
+    (the provider invoice is authoritative over the GL allocation); the GL
+    allocation is disclosed as the loser. Values are read from the conflict's OWN
+    claims (Farm-derived at ingest), never hardcoded — the test verifies the
+    arbitration LOGIC, robust to Farm regeneration (B8/B10)."""
     c = demo_conflicts[("cloud_spend.summary", "total_cost", "2026-03")]
-    # Sanity: the conflict really is the aws_billing-vs-GL value disagreement.
-    assert _claim_value(c, "aws_billing") == 409974.93
-    assert _claim_value(c, "netsuite_gl_allocation") == 388829.94
+    billing = _claim_value(c, "aws_billing")
+    gl = _claim_value(c, "netsuite_gl_allocation")
+    assert billing != gl, f"the conflict must be a real value disagreement; both are {billing}"
 
     r = c["resolved"]
     assert r["status"] == "resolved", f"expected resolved, got {r}"
-    assert r["decisive_value"] == 409974.93, (
-        f"the provider invoice is authoritative — decisive value must be "
-        f"409974.93; got {r['decisive_value']}"
-    )
     assert r["decisive_source"] == "aws_billing", r
     assert r["basis"] == "authority", r
+    assert r["decisive_value"] == billing, (
+        f"the provider invoice is authoritative — decisive value must be the "
+        f"aws_billing claim {billing}; got {r['decisive_value']}"
+    )
 
     # The loser is disclosed by source and value — and ONLY the loser.
     assert r["disclosed"] == [
-        {"source_system": "netsuite_gl_allocation", "value": 388829.94}
-    ], f"loser must be disclosed as netsuite_gl_allocation 388829.94; got {r['disclosed']}"
+        {"source_system": "netsuite_gl_allocation", "value": gl}
+    ], f"loser must be disclosed as netsuite_gl_allocation {gl}; got {r['disclosed']}"
 
     # The disclosed spread between the two sources.
-    assert r["gap_abs"] == 21144.99, r
+    assert abs(r["gap_abs"] - abs(billing - gl)) < 0.01, (
+        f"gap_abs must be the spread |{billing} - {gl}|; got {r['gap_abs']}"
+    )
 
 
 def test_headcount_resolves_to_hr(demo_conflicts):
-    """headcount.by_department/engineering/2026-03 → decisive 95 from workday_hr
-    (HRIS system of record); netsuite_finance_rollup disclosed at 102."""
+    """headcount.by_department/engineering/2026-03 → decisive value from workday_hr
+    (HRIS system of record); netsuite_finance_rollup disclosed. Values read from the
+    conflict's OWN claims, never hardcoded — verifies the arbitration LOGIC, robust
+    to Farm regeneration (B8/B10)."""
     c = demo_conflicts[("headcount.by_department", "engineering", "2026-03")]
-    assert _claim_value(c, "workday_hr") == 95.0
-    assert _claim_value(c, "netsuite_finance_rollup") == 102.0
+    hr = _claim_value(c, "workday_hr")
+    fin = _claim_value(c, "netsuite_finance_rollup")
+    assert hr != fin, f"the conflict must be a real disagreement; both are {hr}"
 
     r = c["resolved"]
     assert r["status"] == "resolved", f"expected resolved, got {r}"
-    assert r["decisive_value"] == 95.0, (
-        f"HRIS is authoritative — decisive headcount must be 95.0; got "
-        f"{r['decisive_value']}"
-    )
     assert r["decisive_source"] == "workday_hr", r
     assert r["basis"] == "authority", r
+    assert r["decisive_value"] == hr, (
+        f"HRIS is authoritative — decisive headcount must be the workday_hr claim "
+        f"{hr}; got {r['decisive_value']}"
+    )
     assert r["disclosed"] == [
-        {"source_system": "netsuite_finance_rollup", "value": 102.0}
-    ], f"loser must be disclosed as netsuite_finance_rollup 102.0; got {r['disclosed']}"
-    assert r["gap_abs"] == 7.0, r
+        {"source_system": "netsuite_finance_rollup", "value": fin}
+    ], f"loser must be disclosed as netsuite_finance_rollup {fin}; got {r['disclosed']}"
+    assert abs(r["gap_abs"] - abs(hr - fin)) < 0.01, (
+        f"gap_abs must be the spread |{hr} - {fin}|; got {r['gap_abs']}"
+    )
 
 
 # ---------------------------------------------------------------------------
