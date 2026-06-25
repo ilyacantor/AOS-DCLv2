@@ -75,6 +75,114 @@
         { "stage": "COMPUTE", "delay_ms": 1600, "message": "Assembling risk across clinical + pharmacy + scheduling + eligibility + SDOH", "operator": "readmission_risk()", "inputs": ["dx", "rx", "fu", "sdoh"], "result": 82, "result_label": "82 / 100 · top decile" },
         { "stage": "DONE", "delay_ms": 800, "message": "Additive risk assembled", "answer": "31 of 142 CHF discharges score in the readmission top decile (82/100). The driver isn't clinical alone — it's the out-of-network referral that silently killed the PCP follow-up, compounded by a med-adherence gap and a transport barrier. No single system held that chain.", "result_label": "82 / 100 · top decile" }
       ]
+    },
+
+    {
+      "id": "salesforce_blast_radius",
+      "vertical": "General",
+      "capability": "traversal",
+      "question": "If Salesforce goes down, what breaks — and who owns it?",
+      "tenant_id": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f",
+      "entity_id": "Salesforce",
+      "events": [
+        { "stage": "INTAKE", "delay_ms": 800, "message": "Mapping the blast radius — fanning across integrations and downstream services", "root": { "id": "sfdc", "label": "Salesforce", "source": "service_catalog" }, "hops": 4 },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Live integrations off Salesforce", "edge": { "from": "sfdc", "to": "intg", "label": "feeds" }, "node": { "id": "intg", "label": "14 live integrations", "source": "ipaas_mulesoft", "value_label": "14 flows", "raw_row": { "bitemporal_id": "d1a1b1c1-9101-4a11-9b21-0c1d2e3f4a01", "concept": "integration_count", "entity_id": "Salesforce", "tenant_id": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f", "source_system": "ipaas_mulesoft", "value": 14, "updated_at": "2026-06-20T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Customer-facing service on the critical path", "edge": { "from": "intg", "to": "svc", "label": "drives" }, "node": { "id": "svc", "label": "Quote-to-cash service", "source": "service_registry", "sublabel": "customer-facing", "raw_row": { "bitemporal_id": "d2a2b2c2-9102-4a12-9b22-1d2e3f4a5b02", "concept": "service", "entity_id": "Salesforce", "tenant_id": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f", "source_system": "service_registry", "tier": "customer_facing", "updated_at": "2026-06-20T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1900, "message": "Discovered: the finance month-end close silently depends on a nightly Salesforce export — an outage stalls the close, and no runbook lists it", "discovered": true, "edge": { "from": "svc", "to": "close", "label": "depends_on" }, "node": { "id": "close", "label": "Month-end close job", "source": "finance_batch × data_lineage", "sublabel": "undocumented export", "raw_row": { "bitemporal_id": "d3a3b3c3-9103-4a13-9b23-2e3f4a5b6c03", "concept": "hidden_dependency", "entity_id": "Salesforce", "tenant_id": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f", "source_system": "data_lineage", "runbook": "absent", "updated_at": "2026-06-21T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Owning teams and an on-call gap", "edge": { "from": "close", "to": "team", "label": "owned_by" }, "node": { "id": "team", "label": "RevOps + FP&A", "source": "ownership_registry", "value_label": "2 teams · 1 on-call gap", "raw_row": { "bitemporal_id": "d4a4b4c4-9104-4a14-9b24-3f4a5b6c7d04", "concept": "ownership", "entity_id": "Salesforce", "tenant_id": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f", "source_system": "ownership_registry", "oncall_gap": true, "updated_at": "2026-06-21T00:00:00Z" } } },
+        { "stage": "COMPUTE", "delay_ms": 1600, "message": "Assembling impacted systems and owners across the dependency graph", "operator": "BLAST_RADIUS()", "inputs": ["intg", "svc", "close", "team"], "result": 9, "result_label": "9 systems · 2 teams · 1 gap" },
+        { "stage": "DONE", "delay_ms": 800, "message": "Blast radius assembled", "answer": "A Salesforce outage hits 9 downstream systems across 2 teams — including the month-end financial close, which depends on an undocumented nightly export with no on-call owner. The dependency graph surfaced it; the runbook didn't.", "result_label": "9 systems · 2 teams · 1 gap" }
+      ]
+    },
+
+    {
+      "id": "share_of_wallet",
+      "vertical": "BFSI",
+      "capability": "traversal",
+      "question": "Which wealth households are our biggest share-of-wallet opportunities?",
+      "tenant_id": "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f60",
+      "entity_id": "Whitfield household",
+      "events": [
+        { "stage": "INTAKE", "delay_ms": 800, "message": "Mapping total household wealth against what we manage", "root": { "id": "hh", "label": "Whitfield household", "source": "crm_wealth" }, "hops": 4 },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Assets managed with us", "edge": { "from": "hh", "to": "aum", "label": "holds_with_us" }, "node": { "id": "aum", "label": "Managed AUM", "source": "portfolio_accounting", "value_label": "$3.2M", "raw_row": { "bitemporal_id": "e1a1b1c1-9201-4a21-9b31-0c1d2e3f4a11", "concept": "managed_aum", "entity_id": "Whitfield household", "tenant_id": "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f60", "source_system": "portfolio_accounting", "value_usd": 3200000, "updated_at": "2026-06-20T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Recurring inbound transfers from an external broker", "edge": { "from": "hh", "to": "ext", "label": "signals" }, "node": { "id": "ext", "label": "External-broker transfers", "source": "transactions × aggregation", "value_label": "$140K / qtr", "raw_row": { "bitemporal_id": "e2a2b2c2-9202-4a22-9b32-1d2e3f4a5b12", "concept": "external_flow", "entity_id": "Whitfield household", "tenant_id": "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f60", "source_system": "transactions", "value_usd": 140000, "cadence": "quarterly", "updated_at": "2026-06-19T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1900, "message": "Discovered: those transfers trace to a ~$7.8M held-away brokerage account — share-of-wallet the statements never showed", "discovered": true, "edge": { "from": "ext", "to": "heldaway", "label": "implies" }, "node": { "id": "heldaway", "label": "Held-away brokerage ≈ $7.8M", "source": "account_aggregation", "sublabel": "not managed by us", "raw_row": { "bitemporal_id": "e3a3b3c3-9203-4a23-9b33-2e3f4a5b6c13", "concept": "held_away_assets", "entity_id": "Whitfield household", "tenant_id": "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f60", "source_system": "account_aggregation", "value_usd": 7800000, "updated_at": "2026-06-21T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Product fit for the held-away wallet", "edge": { "from": "heldaway", "to": "fit", "label": "matches" }, "node": { "id": "fit", "label": "Managed-portfolio + trust fit", "source": "product_propensity", "value_label": "≈ $58K / yr fees", "raw_row": { "bitemporal_id": "e4a4b4c4-9204-4a24-9b34-3f4a5b6c7d14", "concept": "product_opportunity", "entity_id": "Whitfield household", "tenant_id": "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f60", "source_system": "product_propensity", "est_annual_fees_usd": 58000, "updated_at": "2026-06-21T00:00:00Z" } } },
+        { "stage": "COMPUTE", "delay_ms": 1600, "message": "Ranking households by held-away assets × product fit", "operator": "RANK(opportunity)", "inputs": ["heldaway", "fit"], "result": 7800000, "result_label": "$7.8M held-away · $58K/yr" },
+        { "stage": "DONE", "delay_ms": 800, "message": "Opportunity assembled", "answer": "The Whitfield household keeps $3.2M with us but holds about $7.8M away — surfaced by recurring inbound transfers, not any statement. Capturing it fits a managed-portfolio + trust mandate worth roughly $58K/yr. The relationship graph found the held-away wallet.", "result_label": "$7.8M held-away · $58K/yr" }
+      ]
+    },
+
+    {
+      "id": "insurance_accumulation",
+      "vertical": "BFSI",
+      "capability": "traversal",
+      "question": "What's our total exposure to a Gulf Coast hurricane across policies and treaties?",
+      "tenant_id": "e3f4a5b6-c7d8-4e9f-0a1b-2c3d4e5f6071",
+      "entity_id": "Gulf Coast windstorm",
+      "events": [
+        { "stage": "INTAKE", "delay_ms": 800, "message": "Aggregating catastrophe accumulation across policies and treaties", "root": { "id": "peril", "label": "Gulf Coast windstorm", "source": "cat_model_zone" }, "hops": 4 },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "In-force policies in the peril zone", "edge": { "from": "peril", "to": "pol", "label": "covers" }, "node": { "id": "pol", "label": "4,210 in-force policies", "source": "policy_admin", "value_label": "$1.9B insured", "raw_row": { "bitemporal_id": "f1a1b1c1-9301-4a31-9b41-0c1d2e3f4a21", "concept": "insured_value", "entity_id": "Gulf Coast windstorm", "tenant_id": "e3f4a5b6-c7d8-4e9f-0a1b-2c3d4e5f6071", "source_system": "policy_admin", "value_usd": 1900000000, "policies": 4210, "updated_at": "2026-06-20T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Insured locations geocoded to the wind tier", "edge": { "from": "pol", "to": "loc", "label": "located_at" }, "node": { "id": "loc", "label": "Tier-1 wind locations", "source": "geocoding × cat_model", "sublabel": "zone-tagged", "raw_row": { "bitemporal_id": "f2a2b2c2-9302-4a32-9b42-1d2e3f4a5b22", "concept": "location_zone", "entity_id": "Gulf Coast windstorm", "tenant_id": "e3f4a5b6-c7d8-4e9f-0a1b-2c3d4e5f6071", "source_system": "cat_model", "tier": "1", "updated_at": "2026-06-20T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1900, "message": "Discovered: a commercial property book in the same county was never tagged to the windstorm zone — hidden accumulation the cat model missed", "discovered": true, "edge": { "from": "loc", "to": "hidden", "label": "co_located" }, "node": { "id": "hidden", "label": "Untagged commercial book", "source": "commercial_lines", "sublabel": "missing the zone tag", "value_label": "+$280M", "raw_row": { "bitemporal_id": "f3a3b3c3-9303-4a33-9b43-2e3f4a5b6c23", "concept": "hidden_accumulation", "entity_id": "Gulf Coast windstorm", "tenant_id": "e3f4a5b6-c7d8-4e9f-0a1b-2c3d4e5f6071", "source_system": "commercial_lines", "value_usd": 280000000, "zone_tag": "missing", "updated_at": "2026-06-21T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Reinsurance treaty cedes part of the loss", "edge": { "from": "hidden", "to": "treaty", "label": "ceded_to" }, "node": { "id": "treaty", "label": "Cat XoL treaty", "source": "reinsurance_mgmt", "value_label": "−$1.4B ceded", "raw_row": { "bitemporal_id": "f4a4b4c4-9304-4a34-9b44-3f4a5b6c7d24", "concept": "ceded_exposure", "entity_id": "Gulf Coast windstorm", "tenant_id": "e3f4a5b6-c7d8-4e9f-0a1b-2c3d4e5f6071", "source_system": "reinsurance_mgmt", "value_usd": -1400000000, "treaty": "cat_xol", "updated_at": "2026-06-20T00:00:00Z" } } },
+        { "stage": "COMPUTE", "delay_ms": 1600, "message": "Aggregating gross incl. the untagged book, netting reinsurance", "operator": "SUM(gross) − ceded", "inputs": ["pol", "hidden", "treaty"], "result": 780000000, "result_label": "$780M net retained" },
+        { "stage": "DONE", "delay_ms": 800, "message": "Accumulation assembled", "answer": "Net retained exposure to a Gulf Coast windstorm is $780M — about $2.18B gross including a $280M commercial book the zone tag missed, less $1.4B ceded to the cat treaty. The hidden accumulation only showed once the location graph connected the untagged book to the peril zone.", "result_label": "$780M net retained" }
+      ]
+    },
+
+    {
+      "id": "oon_referral_leakage",
+      "vertical": "Healthcare",
+      "capability": "traversal",
+      "question": "Where are our referrals leaking out-of-network — and why?",
+      "tenant_id": "f4a5b6c7-d8e9-4f0a-1b2c-3d4e5f607182",
+      "entity_id": "Cardiology referrals",
+      "events": [
+        { "stage": "INTAKE", "delay_ms": 800, "message": "Tracing referral destinations against plan networks", "root": { "id": "ref", "label": "Cardiology referrals (Q2)", "source": "ehr_referrals" }, "hops": 4 },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Top receiving specialist by volume", "edge": { "from": "ref", "to": "prov", "label": "sent_to" }, "node": { "id": "prov", "label": "Receiving specialist", "source": "provider_directory", "value_label": "312 referrals", "raw_row": { "bitemporal_id": "a1b1c1d1-9401-4a41-9b51-0c1d2e3f4a31", "concept": "referral_volume", "entity_id": "Cardiology referrals", "tenant_id": "f4a5b6c7-d8e9-4f0a-1b2c-3d4e5f607182", "source_system": "provider_directory", "referrals": 312, "updated_at": "2026-06-20T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Directory lists the specialist as in-network", "edge": { "from": "prov", "to": "net", "label": "participates" }, "node": { "id": "net", "label": "Directory network status", "source": "payer_network_feed", "sublabel": "says in-network", "raw_row": { "bitemporal_id": "a2b2c2d2-9402-4a42-9b52-1d2e3f4a5b32", "concept": "network_status", "entity_id": "Cardiology referrals", "tenant_id": "f4a5b6c7-d8e9-4f0a-1b2c-3d4e5f607182", "source_system": "provider_directory", "status": "in_network", "updated_at": "2026-05-01T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1900, "message": "Discovered: adjudicated claims show out-of-network for the dominant plan — referrals are leaking against a stale directory", "discovered": true, "edge": { "from": "net", "to": "stale", "label": "contradicted_by" }, "node": { "id": "stale", "label": "Out-of-network (dominant plan)", "source": "claims_adjudication × eligibility", "sublabel": "directory is stale", "value_label": "$1.1M leaked", "raw_row": { "bitemporal_id": "a3b3c3d3-9403-4a43-9b53-2e3f4a5b6c33", "concept": "oon_leakage", "entity_id": "Cardiology referrals", "tenant_id": "f4a5b6c7-d8e9-4f0a-1b2c-3d4e5f607182", "source_system": "claims_adjudication", "status": "out_of_network", "value_usd": 1100000, "updated_at": "2026-06-21T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "In-network peers to redirect to", "edge": { "from": "stale", "to": "fix", "label": "remediated_by" }, "node": { "id": "fix", "label": "3 in-network peers", "source": "network_planning", "value_label": "$1.1M retainable", "raw_row": { "bitemporal_id": "a4b4c4d4-9404-4a44-9b54-3f4a5b6c7d34", "concept": "remediation", "entity_id": "Cardiology referrals", "tenant_id": "f4a5b6c7-d8e9-4f0a-1b2c-3d4e5f607182", "source_system": "network_planning", "in_network_alternatives": 3, "updated_at": "2026-06-21T00:00:00Z" } } },
+        { "stage": "COMPUTE", "delay_ms": 1600, "message": "Summing OON referral volume × contracted-rate delta", "operator": "SUM(leakage)", "inputs": ["prov", "stale"], "result": 1100000, "result_label": "$1.1M / yr leaking" },
+        { "stage": "DONE", "delay_ms": 800, "message": "Leakage assembled", "answer": "312 cardiology referrals went to a specialist the directory calls in-network but adjudicated claims prove is out-of-network for the dominant plan — $1.1M/yr leaking. The leak only surfaced when claims contradicted the provider directory.", "result_label": "$1.1M / yr leaking" }
+      ]
+    },
+
+    {
+      "id": "denied_claims_driver",
+      "vertical": "Healthcare",
+      "capability": "traversal",
+      "question": "Whose orders drive the most denied claims — and what's the root cause?",
+      "tenant_id": "a5b6c7d8-e9f0-4a1b-2c3d-4e5f60718293",
+      "entity_id": "Denied claims (90d)",
+      "events": [
+        { "stage": "INTAKE", "delay_ms": 800, "message": "Tracing denials to their order-level root cause", "root": { "id": "den", "label": "Denied claims (90d)", "source": "claims_adjudication" }, "hops": 4 },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Top denial reason", "edge": { "from": "den", "to": "reason", "label": "coded_as" }, "node": { "id": "reason", "label": "Missing prior-auth", "source": "remittance_835", "value_label": "41% of denials", "raw_row": { "bitemporal_id": "b1c1d1e1-9501-4a51-9b61-0c1d2e3f4a41", "concept": "denial_reason", "entity_id": "Denied claims (90d)", "tenant_id": "a5b6c7d8-e9f0-4a1b-2c3d-4e5f60718293", "source_system": "remittance_835", "code": "CO-197", "share": 0.41, "updated_at": "2026-06-20T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Denials trace to one imaging order set across providers", "edge": { "from": "reason", "to": "order", "label": "originates_from" }, "node": { "id": "order", "label": "Imaging order set", "source": "cpoe_order_sets", "value_label": "7 providers", "raw_row": { "bitemporal_id": "b2c2d2e2-9502-4a52-9b62-1d2e3f4a5b42", "concept": "order_set", "entity_id": "Denied claims (90d)", "tenant_id": "a5b6c7d8-e9f0-4a1b-2c3d-4e5f60718293", "source_system": "cpoe_order_sets", "providers": 7, "updated_at": "2026-06-20T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1900, "message": "Discovered: one shared order template defaults the prior-auth flag off — not 7 careless providers, one template tripping a payer policy", "discovered": true, "edge": { "from": "order", "to": "template", "label": "defaults" }, "node": { "id": "template", "label": "Template omits auth flag", "source": "order_template_config × payer_policy", "sublabel": "one template, many providers", "value_label": "$640K denied", "raw_row": { "bitemporal_id": "b3c3d3e3-9503-4a53-9b63-2e3f4a5b6c43", "concept": "root_cause_template", "entity_id": "Denied claims (90d)", "tenant_id": "a5b6c7d8-e9f0-4a1b-2c3d-4e5f60718293", "source_system": "order_template_config", "auth_flag_default": false, "value_usd": 640000, "updated_at": "2026-06-21T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "The payer policy the template violates", "edge": { "from": "template", "to": "policy", "label": "violates" }, "node": { "id": "policy", "label": "Prior-auth policy", "source": "payer_policy_registry", "raw_row": { "bitemporal_id": "b4c4d4e4-9504-4a54-9b64-3f4a5b6c7d44", "concept": "payer_policy", "entity_id": "Denied claims (90d)", "tenant_id": "a5b6c7d8-e9f0-4a1b-2c3d-4e5f60718293", "source_system": "payer_policy_registry", "requires_prior_auth": true, "updated_at": "2026-05-15T00:00:00Z" } } },
+        { "stage": "COMPUTE", "delay_ms": 1600, "message": "Attributing denied dollars to the shared root-cause template", "operator": "SUM(denied_$)", "inputs": ["template"], "result": 640000, "result_label": "$640K · 1 template" },
+        { "stage": "DONE", "delay_ms": 800, "message": "Root cause assembled", "answer": "$640K of denials trace not to 7 providers but to one imaging order template that defaults the prior-auth flag off, tripping a payer policy. Fix one template and the bulk of the denials clear. The order-to-policy graph found the shared root cause.", "result_label": "$640K · 1 template" }
+      ]
+    },
+
+    {
+      "id": "conflicting_meds",
+      "vertical": "Healthcare",
+      "capability": "traversal",
+      "question": "Which patients are on conflicting meds prescribed across different providers?",
+      "tenant_id": "b6c7d8e9-f0a1-4b2c-3d4e-5f60718293a4",
+      "entity_id": "Polypharmacy cohort",
+      "events": [
+        { "stage": "INTAKE", "delay_ms": 800, "message": "Cross-referencing prescriptions across providers and pharmacies", "root": { "id": "cohort", "label": "Polypharmacy cohort (≥5 meds)", "source": "med_list" }, "hops": 4 },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Anticoagulant from cardiology", "edge": { "from": "cohort", "to": "p1", "label": "prescribed_by" }, "node": { "id": "p1", "label": "Cardiologist — anticoagulant", "source": "eprescribe_a", "value_label": "warfarin", "raw_row": { "bitemporal_id": "c1d1e1f1-9601-4a61-9b71-0c1d2e3f4a51", "concept": "prescription", "entity_id": "Polypharmacy cohort", "tenant_id": "b6c7d8e9-f0a1-4b2c-3d4e-5f60718293a4", "source_system": "eprescribe_a", "drug": "warfarin", "updated_at": "2026-06-18T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "High-dose NSAID from the PCP", "edge": { "from": "cohort", "to": "p2", "label": "prescribed_by" }, "node": { "id": "p2", "label": "PCP — NSAID", "source": "eprescribe_b", "value_label": "high-dose NSAID", "raw_row": { "bitemporal_id": "c2d2e2f2-9602-4a62-9b72-1d2e3f4a5b52", "concept": "prescription", "entity_id": "Polypharmacy cohort", "tenant_id": "b6c7d8e9-f0a1-4b2c-3d4e-5f60718293a4", "source_system": "eprescribe_b", "drug": "ibuprofen_800", "updated_at": "2026-06-19T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1900, "message": "Discovered: anticoagulant + high-dose NSAID, prescribed by two providers who never saw each other's records — a major bleed-risk interaction", "discovered": true, "edge": { "from": "p2", "to": "interaction", "label": "conflicts_with" }, "node": { "id": "interaction", "label": "Major bleed-risk interaction", "source": "drug_interaction_db × med_reconciliation", "sublabel": "neither provider saw the other's script", "value_label": "218 patients", "raw_row": { "bitemporal_id": "c3d3e3f3-9603-4a63-9b73-2e3f4a5b6c53", "concept": "drug_interaction", "entity_id": "Polypharmacy cohort", "tenant_id": "b6c7d8e9-f0a1-4b2c-3d4e-5f60718293a4", "source_system": "drug_interaction_db", "severity": "major", "patients": 218, "updated_at": "2026-06-21T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Filled at different pharmacies — no single med list", "edge": { "from": "interaction", "to": "pharm", "label": "filled_at" }, "node": { "id": "pharm", "label": "Different pharmacies", "source": "pharmacy_claims", "sublabel": "no unified med list", "raw_row": { "bitemporal_id": "c4d4e4f4-9604-4a64-9b74-3f4a5b6c7d54", "concept": "fill_location", "entity_id": "Polypharmacy cohort", "tenant_id": "b6c7d8e9-f0a1-4b2c-3d4e-5f60718293a4", "source_system": "pharmacy_claims", "distinct_pharmacies": 2, "updated_at": "2026-06-21T00:00:00Z" } } },
+        { "stage": "COMPUTE", "delay_ms": 1600, "message": "Counting patients with cross-provider interacting prescriptions", "operator": "COUNT(at_risk)", "inputs": ["interaction"], "result": 218, "result_label": "218 patients flagged" },
+        { "stage": "DONE", "delay_ms": 800, "message": "At-risk cohort assembled", "answer": "218 patients are on an anticoagulant plus a high-dose NSAID — a major bleed-risk pair prescribed by separate providers who never saw each other's med list, filled at different pharmacies. No single chart held both; the cross-provider graph did.", "result_label": "218 patients flagged" }
+      ]
     }
   ]
 }

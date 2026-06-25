@@ -159,7 +159,12 @@ export function XRayCanvas() {
 
   useEffect(() => {
     const s = useTraceStore.getState()
-    const { nodes: n, edges: e } = s.capability === 'traversal' ? buildTraversal(s) : buildConflict(s)
+    const { nodes: n, edges: e } =
+      s.status === 'IDLE'
+        ? { nodes: [] as Node[], edges: [] as Edge[] }
+        : s.capability === 'traversal'
+          ? buildTraversal(s)
+          : buildConflict(s)
     setNodes(n)
     setEdges(e)
     const id = requestAnimationFrame(() => rf.fitView({ duration: 450, padding: 0.2 }))
