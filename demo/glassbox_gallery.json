@@ -1,0 +1,80 @@
+{
+  "_note": "Glass Box demo GALLERY (RAILS MODE replay). Preselected, verticalized questions. Each is a captured/authored trace replay, NOT live engine output. Two capabilities: 'conflict' (source-authority prune) and 'traversal' (relationship discovery — the additive/hero story: assemble an answer no single source holds by hopping non-obvious relationships; the hard edge is flagged discovered:true). The live contextOS SSE replaces this fixture at backend/api/routes/demo.py; no silent fallback. Slice 1 = one card per vertical (General/BFSI/Healthcare) to lock the traversal canvas; fan to 10 after.",
+  "questions": [
+    {
+      "id": "eng_runrate",
+      "vertical": "General",
+      "capability": "conflict",
+      "question": "What's the real run-rate for the Engineering team?",
+      "tenant_id": "d3b07384-d9a0-4c9b-9b7a-1f2e3a4b5c6d",
+      "entity_id": "Engineering",
+      "events": [
+        { "stage": "INTAKE", "delay_ms": 700, "message": "Routing plan resolved: Org → Team → Comp (3 hops)", "plan": ["Org", "Team", "Comp"], "hops": 3 },
+        { "stage": "RETRIEVE", "delay_ms": 1600, "message": "Lateral conflict detected on run_rate for Engineering",
+          "nodes": [
+            { "id": "node_a", "label": "run_rate", "source": "workday_main", "value": 2640000, "value_label": "$2.64M", "status": "active", "authority": "system_of_record",
+              "raw_row": { "bitemporal_id": "b1f9c2a4-6e10-4d77-8a3b-2c5d9e0f1a22", "concept": "run_rate", "entity_id": "Engineering", "tenant_id": "d3b07384-d9a0-4c9b-9b7a-1f2e3a4b5c6d", "source_system": "workday_main", "value_usd": 2640000, "status": "active", "valid_from": "2026-04-01T00:00:00Z", "updated_at": "2026-06-18T14:22:07Z" } },
+            { "id": "node_b", "label": "run_rate", "source": "shadow_crm", "value": 8640000, "value_label": "$8.64M", "status": "cancelled", "authority": "unauthorized",
+              "raw_row": { "bitemporal_id": "c7a2e519-3b44-4f0c-9d61-8e2a7b4c0d33", "concept": "run_rate", "entity_id": "Engineering", "tenant_id": "d3b07384-d9a0-4c9b-9b7a-1f2e3a4b5c6d", "source_system": "shadow_crm", "value_usd": 8640000, "status": "cancelled", "valid_from": "2025-11-02T00:00:00Z", "updated_at": "2026-01-09T03:11:55Z" } }
+          ] },
+        { "stage": "PRUNE", "delay_ms": 1800, "message": "Applying Source-Authority Matrix", "dropped": [ { "id": "node_b", "reason": "negative_status_unauthorized_source" } ], "survived": ["node_a"] },
+        { "stage": "COMPUTE", "delay_ms": 1500, "message": "Executing hardcoded operator: SUM(run_rate)", "operator": "SUM", "inputs": ["node_a"], "result": 2640000, "result_label": "$2.64M" },
+        { "stage": "DONE", "delay_ms": 700, "message": "Deterministic answer ready", "answer": "Engineering team run-rate is $2.64M, resolved from workday_main (system of record). A conflicting $8.64M record from shadow_crm was pruned before compute — cancelled status, unauthorized source.", "result_label": "$2.64M" }
+      ]
+    },
+
+    {
+      "id": "supply_chain_whitespace",
+      "vertical": "BFSI",
+      "capability": "traversal",
+      "question": "Which companies in Vantage Foods' supply chain aren't our customers yet?",
+      "tenant_id": "b28cf5e3-a1d4-4f62-9a7b-33c0d1e2f4a5",
+      "entity_id": "Vantage Foods",
+      "events": [
+        { "stage": "INTAKE", "delay_ms": 800, "message": "Mapping the payment graph around an existing client to find banking whitespace", "root": { "id": "client", "label": "Vantage Foods", "source": "client_master" }, "hops": 4 },
+        { "stage": "TRAVERSE", "delay_ms": 1500, "message": "18 months of payment flows in and out of the client", "edge": { "from": "client", "to": "flows", "label": "transacts" }, "node": { "id": "flows", "label": "Payment flows", "source": "payments_hub", "value_label": "$540M / yr", "raw_row": { "bitemporal_id": "93a4b5c6-9001-4a01-9b11-0c1d2e3f4a60", "concept": "payment_volume", "entity_id": "Vantage Foods", "tenant_id": "b28cf5e3-a1d4-4f62-9a7b-33c0d1e2f4a5", "source_system": "payments_hub", "value_usd": 540000000, "window_months": 18, "updated_at": "2026-06-20T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1500, "message": "Largest supplier by inflow", "edge": { "from": "flows", "to": "supplier", "label": "pays" }, "node": { "id": "supplier", "label": "Cedar Logistics", "source": "payments_hub × kyc", "value_label": "$92M / yr", "sublabel": "banks elsewhere", "raw_row": { "bitemporal_id": "a4b5c6d7-9002-4a02-9b22-1d2e3f4a5b71", "concept": "counterparty_flow", "entity_id": "Cedar Logistics", "tenant_id": "b28cf5e3-a1d4-4f62-9a7b-33c0d1e2f4a5", "source_system": "payments_hub", "value_usd": 92000000, "primary_bank": "external", "updated_at": "2026-06-19T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1900, "message": "Discovered: Cedar takes $92M/yr from our client but isn't our customer — a warm prospect the payment graph surfaced, not the CRM", "discovered": true, "edge": { "from": "supplier", "to": "whitespace", "label": "not_a_customer" }, "node": { "id": "whitespace", "label": "Cedar Logistics — not our customer", "source": "customer_master (no match)", "sublabel": "prime prospect", "raw_row": { "bitemporal_id": "b5c6d7e8-9003-4a03-9b33-2e3f4a5b6c82", "concept": "whitespace_match", "entity_id": "Cedar Logistics", "tenant_id": "b28cf5e3-a1d4-4f62-9a7b-33c0d1e2f4a5", "source_system": "customer_master", "match": "none", "updated_at": "2026-06-21T00:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Reachable through the existing Vantage relationship", "edge": { "from": "whitespace", "to": "intro", "label": "reachable_via" }, "node": { "id": "intro", "label": "Warm-intro path via Vantage AR", "source": "relationship_graph", "value_label": "≈ $1.4M / yr", "raw_row": { "bitemporal_id": "c6d7e8f9-9004-4a04-9b44-3f4a5b6c7d93", "concept": "revenue_opportunity", "entity_id": "Cedar Logistics", "tenant_id": "b28cf5e3-a1d4-4f62-9a7b-33c0d1e2f4a5", "source_system": "relationship_graph", "est_annual_revenue_usd": 1400000, "updated_at": "2026-06-21T00:00:00Z" } } },
+        { "stage": "COMPUTE", "delay_ms": 1600, "message": "Ranking non-customer counterparties by flow × product fit", "operator": "RANK(whitespace)", "inputs": ["supplier", "whitespace", "intro"], "result": 7, "result_label": "7 prospects · $6.2M / yr" },
+        { "stage": "DONE", "delay_ms": 800, "message": "Whitespace assembled from the payment graph", "answer": "7 companies in Vantage Foods' payment graph aren't our customers — led by Cedar Logistics ($92M/yr of flows, banking elsewhere). Combined whitespace is about $6.2M in annual revenue, each reachable through an existing relationship. The CRM never saw them; the payment graph did.", "result_label": "7 prospects · $6.2M / yr" }
+      ]
+    },
+
+    {
+      "id": "counterparty_exposure",
+      "vertical": "BFSI",
+      "capability": "traversal",
+      "question": "What's our true aggregate exposure to Brightwater Partners across desks, products, and legal entities?",
+      "tenant_id": "a17be4d2-90c3-4e51-8f6a-22b9c0d1e3f4",
+      "entity_id": "Brightwater Partners",
+      "events": [
+        { "stage": "INTAKE", "delay_ms": 800, "message": "Resolving aggregate exposure — fanning across booking systems and legal entities", "root": { "id": "cp", "label": "Brightwater Partners", "source": "counterparty_master" }, "hops": 4 },
+        { "stage": "TRAVERSE", "delay_ms": 1500, "message": "Equity total-return swaps booked at Prime Brokerage", "edge": { "from": "cp", "to": "pos_pb", "label": "held_via" }, "node": { "id": "pos_pb", "label": "PB equity-swap book", "source": "murex", "value_label": "$320M gross", "raw_row": { "bitemporal_id": "1a2b3c4d-1111-4aaa-9bbb-0c1d2e3f4a51", "concept": "gross_exposure", "entity_id": "Brightwater Markets Ltd", "tenant_id": "a17be4d2-90c3-4e51-8f6a-22b9c0d1e3f4", "source_system": "murex", "product": "equity_trs", "value_usd": 320000000, "updated_at": "2026-06-20T21:05:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1500, "message": "A second desk faces the same name on synthetic financing", "edge": { "from": "cp", "to": "pos_fin", "label": "also_faces" }, "node": { "id": "pos_fin", "label": "Synthetic financing book", "source": "calypso", "value_label": "$420M gross", "raw_row": { "bitemporal_id": "2b3c4d5e-2222-4bbb-9ccc-1d2e3f4a5b62", "concept": "gross_exposure", "entity_id": "Brightwater Capital LLC", "tenant_id": "a17be4d2-90c3-4e51-8f6a-22b9c0d1e3f4", "source_system": "calypso", "product": "synthetic_financing", "value_usd": 420000000, "updated_at": "2026-06-20T20:48:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1900, "message": "Discovered: the two books sit under different legal entities that roll up to the same parent — never aggregated", "discovered": true, "edge": { "from": "pos_fin", "to": "le_link", "label": "subsidiary_of" }, "node": { "id": "le_link", "label": "Brightwater Markets Ltd ⇄ Brightwater Capital LLC", "source": "legal_entity_master", "sublabel": "same ultimate parent", "raw_row": { "bitemporal_id": "3c4d5e6f-3333-4ccc-9ddd-2e3f4a5b6c73", "concept": "legal_entity_rollup", "entity_id": "Brightwater Partners", "tenant_id": "a17be4d2-90c3-4e51-8f6a-22b9c0d1e3f4", "source_system": "legal_entity_master", "children": ["Brightwater Markets Ltd", "Brightwater Capital LLC"], "updated_at": "2026-05-31T09:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1500, "message": "ISDA netting and posted collateral govern the combined position", "edge": { "from": "le_link", "to": "netting", "label": "governed_by" }, "node": { "id": "netting", "label": "ISDA netting + collateral", "source": "collateral_mgmt", "value_label": "−$128M", "raw_row": { "bitemporal_id": "4d5e6f70-4444-4ddd-9eee-3f4a5b6c7d84", "concept": "netting_benefit", "entity_id": "Brightwater Partners", "tenant_id": "a17be4d2-90c3-4e51-8f6a-22b9c0d1e3f4", "source_system": "collateral_mgmt", "value_usd": -128000000, "agreement": "ISDA_2002", "updated_at": "2026-06-20T22:10:00Z" } } },
+        { "stage": "COMPUTE", "delay_ms": 1600, "message": "Aggregating gross across linked entities, applying ISDA netting", "operator": "SUM(gross) − netting", "inputs": ["pos_pb", "pos_fin", "netting"], "result": 612000000, "result_label": "$612M net" },
+        { "stage": "DONE", "delay_ms": 800, "message": "Look-through exposure assembled", "answer": "Net exposure to Brightwater Partners is $612M — $740M gross across two desks (murex, calypso) booked under two separate legal entities, less $128M ISDA netting. The parent rollup linking Brightwater Markets Ltd and Brightwater Capital LLC was the exposure nobody had aggregated.", "result_label": "$612M net" }
+      ]
+    },
+
+    {
+      "id": "readmission_risk",
+      "vertical": "Healthcare",
+      "capability": "traversal",
+      "question": "Which recently discharged patients are highest readmission risk — and why?",
+      "tenant_id": "f5e6d7c8-1029-4b3a-8c7d-6e5f4a3b2c1d",
+      "entity_id": "CHF discharge cohort",
+      "events": [
+        { "stage": "INTAKE", "delay_ms": 800, "message": "Assembling readmission risk — fanning across clinical, pharmacy, scheduling, eligibility", "root": { "id": "pt", "label": "CHF discharge cohort (142 patients)", "source": "ehr_encounters" }, "hops": 4 },
+        { "stage": "TRAVERSE", "delay_ms": 1500, "message": "Index encounter: heart-failure discharge", "edge": { "from": "pt", "to": "dx", "label": "diagnosed_with" }, "node": { "id": "dx", "label": "Primary dx: heart failure", "source": "ehr_problem_list", "raw_row": { "bitemporal_id": "5e6f7081-5555-4eee-9fff-405a6b7c8d95", "concept": "diagnosis", "entity_id": "CHF discharge cohort", "tenant_id": "f5e6d7c8-1029-4b3a-8c7d-6e5f4a3b2c1d", "source_system": "ehr_problem_list", "icd10": "I50.9", "updated_at": "2026-06-19T11:30:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1500, "message": "Pharmacy claims show a loop-diuretic adherence gap", "edge": { "from": "dx", "to": "rx", "label": "treated_with" }, "node": { "id": "rx", "label": "Loop-diuretic adherence gap", "source": "pharmacy_claims", "value_label": "38% gap", "raw_row": { "bitemporal_id": "60718293-6666-4fff-9000-516b7c8d9ea6", "concept": "med_adherence", "entity_id": "CHF discharge cohort", "tenant_id": "f5e6d7c8-1029-4b3a-8c7d-6e5f4a3b2c1d", "source_system": "pharmacy_claims", "pdc": 0.62, "updated_at": "2026-06-21T08:00:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1900, "message": "Discovered: the PCP follow-up was never booked — the referral routed out-of-network and eligibility denied it. A clinical risk created by an administrative gap across two systems.", "discovered": true, "edge": { "from": "rx", "to": "fu", "label": "missing_followup" }, "node": { "id": "fu", "label": "PCP follow-up never scheduled", "source": "scheduling × payer_eligibility", "sublabel": "out-of-network referral denied", "raw_row": { "bitemporal_id": "71829304-7777-4000-9111-627c8d9eafb7", "concept": "care_gap", "entity_id": "CHF discharge cohort", "tenant_id": "f5e6d7c8-1029-4b3a-8c7d-6e5f4a3b2c1d", "source_system": "scheduling+eligibility", "referral_status": "denied_out_of_network", "updated_at": "2026-06-21T15:42:00Z" } } },
+        { "stage": "TRAVERSE", "delay_ms": 1400, "message": "Compounded by a documented transport barrier", "edge": { "from": "fu", "to": "sdoh", "label": "compounded_by" }, "node": { "id": "sdoh", "label": "Transport barrier (SDOH)", "source": "sdoh_screening", "raw_row": { "bitemporal_id": "82930415-8888-4111-9222-738d9eafbac8", "concept": "sdoh_factor", "entity_id": "CHF discharge cohort", "tenant_id": "f5e6d7c8-1029-4b3a-8c7d-6e5f4a3b2c1d", "source_system": "sdoh_screening", "factor": "transportation", "updated_at": "2026-06-17T10:00:00Z" } } },
+        { "stage": "COMPUTE", "delay_ms": 1600, "message": "Assembling risk across clinical + pharmacy + scheduling + eligibility + SDOH", "operator": "readmission_risk()", "inputs": ["dx", "rx", "fu", "sdoh"], "result": 82, "result_label": "82 / 100 · top decile" },
+        { "stage": "DONE", "delay_ms": 800, "message": "Additive risk assembled", "answer": "31 of 142 CHF discharges score in the readmission top decile (82/100). The driver isn't clinical alone — it's the out-of-network referral that silently killed the PCP follow-up, compounded by a med-adherence gap and a transport barrier. No single system held that chain.", "result_label": "82 / 100 · top decile" }
+      ]
+    }
+  ]
+}

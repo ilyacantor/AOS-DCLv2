@@ -231,3 +231,50 @@
 
 @keyframes gb-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 @keyframes gb-slide { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes gb-glow { 0%,100% { box-shadow: 0 0 0 0 rgba(167,139,250,0.0); } 50% { box-shadow: 0 0 22px 2px rgba(167,139,250,0.55); } }
+
+/* ---- question gallery (left pane) --------------------------------------- */
+
+.gb-gallery { display: flex; flex-direction: column; gap: 14px; }
+.gb-gallery__group { display: flex; flex-direction: column; gap: 6px; }
+.gb-gallery__label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #6366f1;
+}
+.gb-qcard {
+  display: flex; align-items: center; gap: 8px; text-align: left;
+  background: #111114; border: 1px solid #27272a; border-radius: 8px;
+  padding: 9px 11px; color: #d4d4d8; cursor: pointer; transition: all 0.15s ease;
+}
+.gb-qcard:hover:not(:disabled) { border-color: #3f3f46; background: #16161b; }
+.gb-qcard:disabled { opacity: 0.5; cursor: not-allowed; }
+.gb-qcard--active { border-color: #2563eb; background: #0e1626; }
+.gb-qcard__q { font-size: 12.5px; line-height: 1.35; }
+.gb-qcard__cap {
+  flex: 0 0 auto; font-size: 8.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 999px;
+}
+.gb-qcard__cap--traversal { color: #c4b5fd; background: #1e1633; }
+.gb-qcard__cap--conflict { color: #fbbf24; background: #1c1407; }
+
+/* ---- traversal nodes ----------------------------------------------------- */
+
+.gb-tnode { min-width: 168px; border-color: #3f3f46; }
+.gb-tnode--root { border-color: #1e3a8a; background: #0e1626; }
+.gb-tnode__value { color: #93c5fd; }
+.gb-tnode__sub { font-size: 10px; color: #a1a1aa; font-style: italic; margin-top: 2px; }
+.gb-tnode--found {
+  border-color: #7c3aed; background: #150f24;
+  animation: gb-glow 1.8s ease-in-out infinite;
+}
+.gb-tnode__ribbon {
+  font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: #0a0a0d; background: #a78bfa; border-radius: 4px; padding: 1px 6px;
+  margin: -4px auto 6px; width: fit-content;
+}
+.gb-tnode--found .gb-node__title { color: #e9d5ff; }
+
+.gb-drawer__found {
+  margin: 12px 0; padding: 8px 10px; background: #150f24; border: 1px solid #6d28d9;
+  border-radius: 6px; color: #d8b4fe; font-size: 11.5px;
+}
+.gb-drawer__empty { margin-top: 14px; color: #71717a; font-size: 12px; }

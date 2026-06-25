@@ -1,18 +1,23 @@
 import { useTraceStore } from './traceStore'
 
-const STAGES = ['INTAKE', 'RETRIEVE', 'PRUNE', 'COMPUTE', 'DONE'] as const
+const STAGES = ['INTAKE', 'TRAVERSE', 'RETRIEVE', 'PRUNE', 'COMPUTE', 'DONE'] as const
 
 /**
- * Open the Glass Box SSE replay stream and drive the trace store.
+ * Open the Glass Box SSE replay stream for a gallery question and drive the
+ * trace store. Pass the question id (omit for the default first question).
  *
  * No silent fallback (A1): a stream error before DONE surfaces a readable
- * error in the store — the UI must never sit blank pretending it resolved.
- * When the live contextOS stream replaces the replay endpoint, this hook is
- * unchanged; only the URL / event contract on the server side moves.
+ * error — the UI must never sit blank pretending it resolved. When the live
+ * contextOS stream replaces the replay endpoint, this hook is unchanged.
  */
-export function startTraceStream(): EventSource {
-  useTraceStore.getState().reset()
-  const es = new EventSource('/api/demo/stream-trace')
+export function startTraceStream(questionId?: string): EventSource {
+  if (questionId) useTraceStore.getState().setQuestion(questionId)
+  else useTraceStore.getState().reset()
+
+  const url = questionId
+    ? `/api/demo/stream-trace?q=${encodeURIComponent(questionId)}`
+    : '/api/demo/stream-trace'
+  const es = new EventSource(url)
   let done = false
 
   for (const stage of STAGES) {
@@ -21,9 +26,7 @@ export function startTraceStream(): EventSource {
         const data = JSON.parse((ev as MessageEvent).data)
         useTraceStore.getState().applyEvent(stage, data)
       } catch (err) {
-        useTraceStore.getState().setError(
-          `Glass Box trace frame (${stage}) was not valid JSON: ${String(err)}`,
-        )
+        useTraceStore.getState().setError(`Glass Box trace frame (${stage}) was not valid JSON: ${String(err)}`)
         es.close()
         return
       }
