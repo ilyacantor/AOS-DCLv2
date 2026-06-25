@@ -12,9 +12,11 @@ const isGlassBox = window.location.pathname.startsWith('/glassbox')
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     {isGlassBox ? (
-      <React.Suspense fallback={<div style={{ padding: 24, color: '#71717a' }}>Loading Glass Box…</div>}>
-        <GlassBox />
-      </React.Suspense>
+      <div style={{ position: 'fixed', inset: 0 }}>
+        <React.Suspense fallback={<div style={{ padding: 24, color: '#71717a' }}>Loading Glass Box…</div>}>
+          <GlassBox />
+        </React.Suspense>
+      </div>
     ) : (
       <App />
     )}

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { GraphSnapshot, PersonaId, PersonaStats } from './types';
 import { Toaster } from './components/ui/toaster';
 import { useToast } from './hooks/use-toast';
@@ -11,7 +11,10 @@ import GroundedDemoTab from './components/demo/GroundedDemoTab';
 import { MonitoringTab } from './components/MonitoringTab';
 import { useSnapshots } from './components/RunSelector';
 
-type MainView = 'graph' | 'dashboard' | 'context' | 'guide' | 'ingest' | 'demo' | 'monitor';
+// Glass Box demo — lazy so React Flow / zustand never enter the console bundle.
+const GlassBox = lazy(() => import('./glassbox/GlassBox'));
+
+type MainView = 'graph' | 'dashboard' | 'context' | 'guide' | 'ingest' | 'demo' | 'monitor' | 'glassbox';
 
 // Deep-link support so Console can launch a surface directly
 // (?view=demo&entity_id=…). Read once at module init; tab clicks still rule.
@@ -306,6 +309,7 @@ function App() {
     { id: 'ingest', label: 'Ingest' },
     { id: 'monitor', label: 'Monitor' },
     { id: 'demo', label: 'Demo' },
+    { id: 'glassbox', label: 'Glass Box' },
   ];
 
   return (
@@ -459,6 +463,10 @@ function App() {
           <MonitoringTab snapshot={snapshot} />
         ) : mainView === 'demo' ? (
           <GroundedDemoTab requestedEntityId={requestedEntityId} />
+        ) : mainView === 'glassbox' ? (
+          <Suspense fallback={<div style={{ padding: 24, color: '#71717a' }}>Loading Glass Box…</div>}>
+            <GlassBox />
+          </Suspense>
         ) : (
           <GraphV2Tab graphData={graphData} snapshot={snapshot} selectedPersonas={selectedPersonas} />
         )}

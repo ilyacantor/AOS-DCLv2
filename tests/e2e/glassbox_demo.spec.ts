@@ -78,3 +78,13 @@ test('Glass Box surfaces a readable error when the trace stream fails (no silent
   await expect(page.getByTestId('operator-result')).toHaveCount(0)
   await expect(page.getByTestId('result-value')).toHaveCount(0)
 })
+
+test('Glass Box is reachable as a tab inside the DCL console', async ({ page }) => {
+  await page.goto('http://localhost:3004/')
+  // Click the console nav tab (not a deep-link) — the operator path.
+  await page.getByRole('button', { name: 'Glass Box', exact: true }).click()
+  await expect(page.getByTestId('replay-tag')).toHaveText(/captured lab trace · replay/)
+  await page.getByTestId('run-trace').click()
+  await expect(page.getByTestId('operator-result')).toHaveText(compute.result_label, { timeout: 15000 })
+  await page.screenshot({ path: 'tests/e2e/screenshots/glassbox_tab.png', fullPage: true })
+})
