@@ -146,7 +146,9 @@ export default function GroundedDemoTab({ requestedEntityId }: { requestedEntity
     fetch('/demo-captures/latest.json', { cache: 'no-store' })
       .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(setCapture)
-      .catch((e) => setLoadError(String(e)));
+      // Operators get the real cause in the console; the customer-facing surface
+      // never shows a raw error or a CLI command (below).
+      .catch((e) => { console.error('[demo] capture load failed:', e); setLoadError(String(e)); });
   }, []);
 
   useEffect(() => {
@@ -159,11 +161,9 @@ export default function GroundedDemoTab({ requestedEntityId }: { requestedEntity
     return (
       <div className="h-full flex items-center justify-center p-8">
         <div className="max-w-xl text-center space-y-3" data-testid="demo-no-capture">
-          <div className="text-lg font-semibold">Demo data not loaded</div>
+          <div className="text-lg font-semibold">Demo unavailable</div>
           <div className="text-sm text-muted-foreground">
-            Generate the run first:
-            <code className="block mt-2 p-2 bg-muted rounded text-xs">python -m demo.sequence --entity &lt;entity&gt;</code>
-            ({loadError})
+            This demo is being refreshed — please check back shortly.
           </div>
         </div>
       </div>

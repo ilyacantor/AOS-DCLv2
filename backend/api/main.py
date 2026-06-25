@@ -1105,6 +1105,14 @@ DIST_DIR = Path(__file__).parent.parent.parent / "dist"
 if DIST_DIR.exists() and (DIST_DIR / "assets").exists():
     app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
 
+# The grounded-demo wrapper fetches its captured run from /demo-captures/latest.json
+# (a public/ asset the build copies into dist/). It is a curated demo artifact — serve
+# it as static so it is not caught by serve_spa's `.json` block (which exists to keep
+# raw data/config files — data/*.json, *.env — off the wire, NOT the demo's capture).
+# The mount is registered before the catch-all, so it takes precedence.
+if DIST_DIR.exists() and (DIST_DIR / "demo-captures").exists():
+    app.mount("/demo-captures", StaticFiles(directory=DIST_DIR / "demo-captures"), name="demo-captures")
+
 
 @app.get("/favicon.png")
 async def serve_favicon():
