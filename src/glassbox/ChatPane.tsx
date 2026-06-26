@@ -4,13 +4,13 @@ import { startTraceStream } from './useTraceStream'
 
 interface GalleryItem {
   id: string
-  vertical: string
+  category: string
   capability: 'conflict' | 'traversal'
   question: string
   entity_id: string
 }
 
-const VERTICAL_ORDER = ['General', 'BFSI', 'Healthcare']
+const CATEGORY_ORDER = ['Grow Revenue', 'See the Real Risk', 'Stop the Leakage', 'Operate with Confidence']
 
 export function ChatPane() {
   const status = useTraceStore((s) => s.status)
@@ -43,8 +43,8 @@ export function ChatPane() {
     esRef.current = startTraceStream(id)
   }
 
-  const groups = VERTICAL_ORDER
-    .map((v) => ({ vertical: v, qs: items.filter((q) => q.vertical === v) }))
+  const groups = CATEGORY_ORDER
+    .map((c) => ({ category: c, qs: items.filter((q) => q.category === c) }))
     .filter((g) => g.qs.length > 0)
 
   return (
@@ -58,8 +58,8 @@ export function ChatPane() {
 
       <div className="gb-gallery" data-testid="question-gallery">
         {groups.map((g) => (
-          <div key={g.vertical} className="gb-gallery__group">
-            <div className="gb-gallery__label">{g.vertical}</div>
+          <div key={g.category} className="gb-gallery__group">
+            <div className="gb-gallery__label">{g.category}</div>
             {g.qs.map((q) => (
               <button
                 key={q.id}

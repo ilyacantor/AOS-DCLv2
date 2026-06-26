@@ -84,7 +84,7 @@ def list_questions() -> Dict[str, Any]:
     items = [
         {
             "id": q["id"],
-            "vertical": q.get("vertical", "General"),
+            "category": q.get("category", "Operate with Confidence"),
             "capability": q.get("capability", "traversal"),
             "question": q["question"],
             "entity_id": q.get("entity_id"),

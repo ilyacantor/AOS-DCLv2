@@ -92,15 +92,15 @@ test('Glass Box is reachable as a tab inside the DCL console', async ({ page }) 
   await page.screenshot({ path: 'tests/e2e/screenshots/glassbox_tab.png', fullPage: true })
 })
 
-test('Gallery presents all 10 preselected questions across General / BFSI / Healthcare', async ({ page }) => {
+test('Gallery presents all 10 preselected questions across the four outcome groups', async ({ page }) => {
   await page.goto(APP)
   await page.waitForLoadState('networkidle')
   // Every fixture question renders as a clickable card (ground truth = the gallery).
   for (const item of gallery.questions) {
     await expect(page.getByTestId(`q-${item.id}`)).toBeVisible()
   }
-  for (const v of ['General', 'BFSI', 'Healthcare']) {
-    await expect(page.getByText(v, { exact: true })).toBeVisible()
+  for (const c of ['Grow Revenue', 'See the Real Risk', 'Stop the Leakage', 'Operate with Confidence']) {
+    await expect(page.getByText(c, { exact: true })).toBeVisible()
   }
   await page.screenshot({ path: 'tests/e2e/screenshots/glassbox_gallery.png', fullPage: true })
 })

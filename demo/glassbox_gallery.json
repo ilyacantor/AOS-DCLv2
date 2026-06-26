@@ -1,9 +1,9 @@
 {
-  "_note": "Glass Box demo GALLERY (RAILS MODE replay). Preselected, verticalized questions. Each is a captured/authored trace replay, NOT live engine output. Two capabilities: 'conflict' (source-authority prune) and 'traversal' (relationship discovery — the additive/hero story: assemble an answer no single source holds by hopping non-obvious relationships; the hard edge is flagged discovered:true). The live contextOS SSE replaces this fixture at backend/api/routes/demo.py; no silent fallback. Slice 1 = one card per vertical (General/BFSI/Healthcare) to lock the traversal canvas; fan to 10 after.",
+  "_note": "Glass Box demo GALLERY (RAILS MODE replay). Preselected questions grouped by business outcome (Grow Revenue / See the Real Risk / Stop the Leakage / Operate with Confidence). Each is a captured/authored trace replay, NOT live engine output. Two capabilities: 'conflict' (source-authority prune) and 'traversal' (relationship discovery — the additive/hero story: assemble an answer no single source holds by hopping non-obvious relationships; the hard edge is flagged discovered:true). The live contextOS SSE replaces this fixture at backend/api/routes/demo.py; no silent fallback. All 10 questions are live.",
   "questions": [
     {
       "id": "eng_runrate",
-      "vertical": "General",
+      "category": "Operate with Confidence",
       "capability": "conflict",
       "question": "What's the real run-rate for the Engineering team?",
       "tenant_id": "d3b07384-d9a0-4c9b-9b7a-1f2e3a4b5c6d",
@@ -25,7 +25,7 @@
 
     {
       "id": "supply_chain_whitespace",
-      "vertical": "BFSI",
+      "category": "Grow Revenue",
       "capability": "traversal",
       "question": "Which companies in Vantage Foods' supply chain aren't our customers yet?",
       "tenant_id": "b28cf5e3-a1d4-4f62-9a7b-33c0d1e2f4a5",
@@ -43,7 +43,7 @@
 
     {
       "id": "counterparty_exposure",
-      "vertical": "BFSI",
+      "category": "See the Real Risk",
       "capability": "traversal",
       "question": "What's our true aggregate exposure to Brightwater Partners across desks, products, and legal entities?",
       "tenant_id": "a17be4d2-90c3-4e51-8f6a-22b9c0d1e3f4",
@@ -61,7 +61,7 @@
 
     {
       "id": "readmission_risk",
-      "vertical": "Healthcare",
+      "category": "See the Real Risk",
       "capability": "traversal",
       "question": "Which recently discharged patients are highest readmission risk — and why?",
       "tenant_id": "f5e6d7c8-1029-4b3a-8c7d-6e5f4a3b2c1d",
@@ -79,7 +79,7 @@
 
     {
       "id": "salesforce_blast_radius",
-      "vertical": "General",
+      "category": "Operate with Confidence",
       "capability": "traversal",
       "question": "If Salesforce goes down, what breaks — and who owns it?",
       "tenant_id": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f",
@@ -97,7 +97,7 @@
 
     {
       "id": "share_of_wallet",
-      "vertical": "BFSI",
+      "category": "Grow Revenue",
       "capability": "traversal",
       "question": "Which wealth households are our biggest share-of-wallet opportunities?",
       "tenant_id": "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f60",
@@ -115,7 +115,7 @@
 
     {
       "id": "insurance_accumulation",
-      "vertical": "BFSI",
+      "category": "See the Real Risk",
       "capability": "traversal",
       "question": "What's our total exposure to a Gulf Coast hurricane across policies and treaties?",
       "tenant_id": "e3f4a5b6-c7d8-4e9f-0a1b-2c3d4e5f6071",
@@ -133,7 +133,7 @@
 
     {
       "id": "oon_referral_leakage",
-      "vertical": "Healthcare",
+      "category": "Stop the Leakage",
       "capability": "traversal",
       "question": "Where are our referrals leaking out-of-network — and why?",
       "tenant_id": "f4a5b6c7-d8e9-4f0a-1b2c-3d4e5f607182",
@@ -151,7 +151,7 @@
 
     {
       "id": "denied_claims_driver",
-      "vertical": "Healthcare",
+      "category": "Stop the Leakage",
       "capability": "traversal",
       "question": "Whose orders drive the most denied claims — and what's the root cause?",
       "tenant_id": "a5b6c7d8-e9f0-4a1b-2c3d-4e5f60718293",
@@ -169,7 +169,7 @@
 
     {
       "id": "conflicting_meds",
-      "vertical": "Healthcare",
+      "category": "See the Real Risk",
       "capability": "traversal",
       "question": "Which patients are on conflicting meds prescribed across different providers?",
       "tenant_id": "b6c7d8e9-f0a1-4b2c-3d4e-5f60718293a4",
