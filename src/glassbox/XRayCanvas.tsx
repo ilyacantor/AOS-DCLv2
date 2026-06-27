@@ -13,22 +13,22 @@ import {
   type Edge,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import Dagre from '@dagrejs/dagre'
 import { useTraceStore, type TravNode } from './traceStore'
 import './glassbox.css'
 
-// ===== conflict-capability nodes ============================================
+// ===== node renderers (Handles top/bottom so a TB layout connects cleanly) ==
 
 function IntakeNode({ data }: { data: any }) {
   return (
     <div className="gb-node gb-node--intake">
       <Handle type="source" position={Position.Bottom} className="gb-handle" />
-      <div className="gb-node__title">INTAKE · routing plan</div>
+      <div className="gb-node__title">INTAKE · {data.entityId ?? 'query'}</div>
       <div className="gb-node__plan">
         {(data.plan ?? []).map((p: string, i: number) => (
           <span key={p}>{i > 0 && <span className="gb-arrow"> → </span>}{p}</span>
         ))}
       </div>
-      <div className="gb-node__sub">{data.entityId ?? ''}</div>
     </div>
   )
 }
@@ -50,8 +50,6 @@ function SourceNode({ data }: { data: { node: any } }) {
   )
 }
 
-// ===== traversal-capability nodes ===========================================
-
 function TravNodeView({ data }: { data: { node: TravNode; isRoot?: boolean } }) {
   const n = data.node
   const cls = ['gb-node', 'gb-tnode', data.isRoot ? 'gb-tnode--root' : '',
@@ -64,7 +62,6 @@ function TravNodeView({ data }: { data: { node: TravNode; isRoot?: boolean } }) 
       {n.value_label && <div className="gb-node__value gb-tnode__value">{n.value_label}</div>}
       {n.sublabel && <div className="gb-tnode__sub">{n.sublabel}</div>}
       <div className="gb-node__status">{n.source}</div>
-      {n.raw_row && <div className="gb-node__hint">click → raw row</div>}
       <Handle type="source" position={Position.Bottom} className="gb-handle" />
     </div>
   )
@@ -74,9 +71,8 @@ function OperatorNode({ data }: { data: any }) {
   return (
     <div className="gb-node gb-node--operator" data-testid="operator-block">
       <Handle type="target" position={Position.Top} className="gb-handle" />
-      <div className="gb-node__op">{data.operator ?? 'SUM'}</div>
+      <div className="gb-node__eyebrow">ANSWER · {data.operator ?? 'SUM'}</div>
       <div className="gb-node__value gb-node__value--result" data-testid="operator-result">{data.resultLabel ?? '—'}</div>
-      <div className="gb-node__sub">deterministic operator</div>
       <Handle type="source" position={Position.Bottom} className="gb-handle" />
     </div>
   )
@@ -94,26 +90,61 @@ function AnswerNode({ data }: { data: any }) {
 
 const nodeTypes = { intake: IntakeNode, source: SourceNode, operator: OperatorNode, answer: AnswerNode, trav: TravNodeView }
 
-// ===== graph builders =======================================================
+// ===== layout (dagre, top-down) =============================================
+
+const DIM: Record<string, { w: number; h: number }> = {
+  intake: { w: 190, h: 92 }, source: { w: 168, h: 134 }, trav: { w: 204, h: 112 },
+  operator: { w: 214, h: 96 }, answer: { w: 150, h: 80 },
+}
+const dimOf = (t?: string) => DIM[t ?? ''] ?? { w: 190, h: 100 }
+
+function layoutTB(nodes: Node[], edges: Edge[]): Node[] {
+  const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}))
+  g.setGraph({ rankdir: 'TB', ranksep: 64, nodesep: 46, marginx: 24, marginy: 24 })
+  nodes.forEach((n) => { const d = dimOf(n.type); g.setNode(n.id, { width: d.w, height: d.h }) })
+  edges.forEach((e) => g.setEdge(e.source, e.target))
+  Dagre.layout(g)
+  return nodes.map((n) => {
+    const d = dimOf(n.type)
+    const p = g.node(n.id)
+    return { ...n, position: { x: p.x - d.w / 2, y: p.y - d.h / 2 } }
+  })
+}
+
+// A labeled edge — the relationship name IS the meaning, so make it readable.
+function relEdge(e: { id: string; from: string; to: string; label: string; discovered?: boolean }): Edge {
+  const disc = !!e.discovered
+  return {
+    id: e.id, source: e.from, target: e.to, animated: true, label: e.label,
+    labelStyle: { fill: disc ? '#d8b4fe' : '#a1a1aa', fontSize: 11, fontWeight: disc ? 700 : 500 },
+    labelBgStyle: { fill: '#0a0a0d', fillOpacity: 0.92 },
+    labelBgPadding: [6, 3], labelBgBorderRadius: 4,
+    style: disc ? { stroke: '#a78bfa', strokeWidth: 3 } : { stroke: '#52525b', strokeWidth: 1.6 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: disc ? '#a78bfa' : '#52525b' },
+  }
+}
 
 type S = ReturnType<typeof useTraceStore.getState>
+const at = (): Node['position'] => ({ x: 0, y: 0 }) // placeholder; dagre assigns real positions
 
 function buildConflict(s: S): { nodes: Node[]; edges: Edge[] } {
-  const nodes: Node[] = [{ id: 'intake', type: 'intake', position: { x: 300, y: 16 }, data: { plan: s.plan, entityId: s.entityId } }]
+  const nodes: Node[] = [{ id: 'intake', type: 'intake', position: at(), data: { plan: s.plan, entityId: s.entityId } }]
   const edges: Edge[] = []
-  s.nodes.forEach((n, i) => {
-    nodes.push({ id: n.id, type: 'source', position: i === 0 ? { x: 96, y: 196 } : { x: 496, y: 196 }, data: { node: n } })
-    if (!n.dropped) edges.push({ id: `e-intake-${n.id}`, source: 'intake', target: n.id, animated: s.status === 'RETRIEVE', style: { stroke: '#3f3f46', strokeWidth: 1.5 } })
+  s.nodes.forEach((n) => {
+    nodes.push({ id: n.id, type: 'source', position: at(), data: { node: n } })
+    edges.push(
+      n.dropped
+        ? { id: `e-intake-${n.id}`, source: 'intake', target: n.id, label: 'pruned',
+            labelStyle: { fill: '#f87171', fontSize: 11, fontWeight: 700 }, labelBgStyle: { fill: '#0a0a0d', fillOpacity: 0.92 }, labelBgPadding: [6, 3], labelBgBorderRadius: 4,
+            style: { stroke: '#7f1d1d', strokeWidth: 1.5, strokeDasharray: '5 4', opacity: 0.65 } }
+        : { id: `e-intake-${n.id}`, source: 'intake', target: n.id, animated: s.status === 'RETRIEVE', style: { stroke: '#3f3f46', strokeWidth: 1.6 } },
+    )
   })
   const operatorPresent = s.operator != null || s.status === 'COMPUTE' || s.status === 'DONE'
   const survivor = s.nodes.find((n) => n.id === s.survivedId) ?? s.nodes.find((n) => !n.dropped)
   if (operatorPresent) {
-    nodes.push({ id: 'operator', type: 'operator', position: { x: 300, y: 392 }, data: { operator: `Σ ${s.operator}(run_rate)`, resultLabel: s.resultLabel } })
+    nodes.push({ id: 'operator', type: 'operator', position: at(), data: { operator: `${s.operator}(run_rate)`, resultLabel: s.resultLabel } })
     if (survivor && !survivor.dropped) edges.push({ id: `e-${survivor.id}-op`, source: survivor.id, target: 'operator', animated: true, style: { stroke: '#34d399', strokeWidth: 2.5 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#34d399' } })
-  }
-  if (s.answer) {
-    nodes.push({ id: 'answer', type: 'answer', position: { x: 330, y: 560 }, data: { resultLabel: s.resultLabel } })
-    edges.push({ id: 'e-op-answer', source: 'operator', target: 'answer', animated: true, style: { stroke: '#a78bfa', strokeWidth: 2 } })
   }
   return { nodes, edges }
 }
@@ -121,24 +152,12 @@ function buildConflict(s: S): { nodes: Node[]; edges: Edge[] } {
 function buildTraversal(s: S): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = []
   const edges: Edge[] = []
-  // Cascade the path so each discovered hop steps down-and-right.
-  s.travNodes.forEach((n, i) => {
-    nodes.push({ id: n.id, type: 'trav', position: { x: 40 + i * 196, y: 24 + i * 104 }, data: { node: n, isRoot: i === 0 } })
-  })
-  s.travEdges.forEach((e) => {
-    edges.push({
-      id: e.id, source: e.from, target: e.to, label: e.label, animated: true,
-      style: e.discovered ? { stroke: '#a78bfa', strokeWidth: 3 } : { stroke: '#52525b', strokeWidth: 1.5 },
-      labelStyle: { fill: e.discovered ? '#c4b5fd' : '#71717a', fontSize: 10 },
-      labelBgStyle: { fill: '#0a0a0d' },
-      markerEnd: { type: MarkerType.ArrowClosed, color: e.discovered ? '#a78bfa' : '#52525b' },
-    })
-  })
+  s.travNodes.forEach((n, i) => nodes.push({ id: n.id, type: 'trav', position: at(), data: { node: n, isRoot: i === 0 } }))
+  s.travEdges.forEach((e) => edges.push(relEdge(e)))
   const operatorPresent = s.operator != null || s.status === 'COMPUTE' || s.status === 'DONE'
   if (operatorPresent && s.travNodes.length) {
     const last = s.travNodes[s.travNodes.length - 1]
-    const i = s.travNodes.length
-    nodes.push({ id: 'operator', type: 'operator', position: { x: 40 + i * 196, y: 24 + i * 104 }, data: { operator: s.operator, resultLabel: s.resultLabel } })
+    nodes.push({ id: 'operator', type: 'operator', position: at(), data: { operator: s.operator, resultLabel: s.resultLabel } })
     edges.push({ id: 'e-last-op', source: last.id, target: 'operator', animated: true, style: { stroke: '#34d399', strokeWidth: 2.5 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#34d399' } })
   }
   return { nodes, edges }
@@ -159,15 +178,15 @@ export function XRayCanvas() {
 
   useEffect(() => {
     const s = useTraceStore.getState()
-    const { nodes: n, edges: e } =
+    const built =
       s.status === 'IDLE'
         ? { nodes: [] as Node[], edges: [] as Edge[] }
         : s.capability === 'traversal'
           ? buildTraversal(s)
           : buildConflict(s)
-    setNodes(n)
-    setEdges(e)
-    const id = requestAnimationFrame(() => rf.fitView({ duration: 450, padding: 0.2 }))
+    setNodes(layoutTB(built.nodes, built.edges))
+    setEdges(built.edges)
+    const id = requestAnimationFrame(() => rf.fitView({ duration: 450, padding: 0.18, maxZoom: 1.15 }))
     return () => cancelAnimationFrame(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, capability, conflictNodes, travNodes, operator, answer])
@@ -181,12 +200,10 @@ export function XRayCanvas() {
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onNodeClick={(_, node) => {
-          if (node.type === 'source' || node.type === 'trav') selectNode(node.id)
-        }}
+        onNodeClick={(_, node) => { if (node.type === 'source' || node.type === 'trav') selectNode(node.id) }}
         colorMode="dark"
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.18, maxZoom: 1.15 }}
         nodesDraggable={false}
         nodesConnectable={false}
         proOptions={{ hideAttribution: false }}

@@ -39,12 +39,13 @@ test('BFSI traversal: finds the hidden whitespace relationship and assembles the
   await expect(page.getByTestId('result-value')).toHaveText(compute.result_label)
   await expect(page.getByTestId('trace-answer')).toContainText('Cedar Logistics')
 
+  // Clean full-DAG capture before the drawer covers it.
+  await page.screenshot({ path: 'tests/e2e/screenshots/glassbox_traversal.png', fullPage: true })
+
   // Audit drawer on the discovered hop shows its raw row.
   await found.click()
   await expect(page.getByTestId('drawer-source')).toHaveText(discovered.node.raw_row.source_system)
   await expect(page.getByTestId('drawer-bitemporal')).toHaveText(discovered.node.raw_row.bitemporal_id)
-
-  await page.screenshot({ path: 'tests/e2e/screenshots/glassbox_traversal.png', fullPage: true })
 })
 
 test('General conflict: prunes the unauthorized $8.64M decoy and computes $2.64M', async ({ page }) => {

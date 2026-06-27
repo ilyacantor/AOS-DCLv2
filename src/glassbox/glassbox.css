@@ -278,3 +278,16 @@
   border-radius: 6px; color: #d8b4fe; font-size: 11.5px;
 }
 .gb-drawer__empty { margin-top: 14px; color: #71717a; font-size: 12px; }
+
+/* ---- layered-DAG sizing + motion --------------------------------------- */
+/* Fixed widths so the dagre ranks line up with the rendered boxes. */
+.gb-node--intake { width: 190px; }
+.gb-node--source { width: 168px; }
+.gb-tnode { width: 204px; }
+.gb-node--operator { width: 214px; }
+.gb-node--answer { width: 150px; }
+.gb-node__eyebrow { font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #c4b5fd; }
+.gb-node--operator .gb-node__value--result { font-size: 26px; }
+/* Nodes glide to new ranks as each hop is discovered. */
+.gb-canvas .react-flow__node { transition: transform 0.45s ease; }
+.gb-canvas .react-flow__edge-text { font-family: 'Quicksand', sans-serif; }
