@@ -1,33 +1,25 @@
 import { useTraceStore } from './traceStore'
 import './glassbox.css'
 
-// Audit-grade drawer: the simulated raw Postgres row behind any node (conflict
-// source or traversal hop). In RAILS MODE these rows come from the captured
-// gallery fixture; live, they are the actual store rows DCL resolved over.
+// Audit-grade drawer: the raw record behind a beat. In RAILS MODE these come
+// from the captured story fixture; live, they are the actual rows DCL resolved.
 export function AuditDrawer() {
-  const selectedNodeId = useTraceStore((s) => s.selectedNodeId)
-  const nodes = useTraceStore((s) => s.nodes)
-  const travNodes = useTraceStore((s) => s.travNodes)
-  const selectNode = useTraceStore((s) => s.selectNode)
+  const selectedBeatId = useTraceStore((s) => s.selectedBeatId)
+  const beats = useTraceStore((s) => s.beats)
+  const selectBeat = useTraceStore((s) => s.selectBeat)
 
-  const conflict = nodes.find((n) => n.id === selectedNodeId)
-  const trav = travNodes.find((n) => n.id === selectedNodeId)
-  const node = conflict ?? trav
-  if (!node) return null
-
-  const row: Record<string, any> | undefined = (node as any).raw_row
-  const label = conflict ? conflict.source : (trav as any).label
-  const dropped = !!(conflict && conflict.dropped)
+  const beat = beats.find((b) => b.id === selectedBeatId)
+  if (!beat) return null
+  const row = beat.record
 
   return (
-    <div className="gb-drawer" role="dialog" aria-label="Raw Postgres row" data-testid="audit-drawer">
+    <div className="gb-drawer" role="dialog" aria-label="Raw record" data-testid="audit-drawer">
       <div className="gb-drawer__head">
-        <span>raw row · <b>{label}</b></span>
-        <button className="gb-drawer__close" aria-label="close" onClick={() => selectNode(null)}>✕</button>
+        <span>raw record</span>
+        <button className="gb-drawer__close" aria-label="close" onClick={() => selectBeat(null)}>✕</button>
       </div>
 
-      {dropped && <div className="gb-drawer__dropped">Pruned before compute — {conflict!.dropReason}</div>}
-      {trav?.discovered && <div className="gb-drawer__found">Discovered relationship — this hop is the link no single system held.</div>}
+      {beat.link && <div className="gb-drawer__found">This is the link no single system held.</div>}
 
       {row ? (
         <>
@@ -39,7 +31,7 @@ export function AuditDrawer() {
           <pre className="gb-drawer__json">{JSON.stringify(row, null, 2)}</pre>
         </>
       ) : (
-        <div className="gb-drawer__empty">No raw row on this node (it is the query root, not a stored record).</div>
+        <div className="gb-drawer__empty">No raw record on this step.</div>
       )}
     </div>
   )

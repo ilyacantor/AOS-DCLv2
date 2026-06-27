@@ -291,3 +291,21 @@
 /* Nodes glide to new ranks as each hop is discovered. */
 .gb-canvas .react-flow__node { transition: transform 0.45s ease; }
 .gb-canvas .react-flow__edge-text { font-family: 'Quicksand', sans-serif; }
+
+/* ---- presenter-paced story stage --------------------------------------- */
+.gb-stage { position: absolute; inset: 0; padding: 44px 52px; overflow-y: auto; cursor: pointer; }
+.gb-stage--idle { display: flex; align-items: center; justify-content: center; color: #52525b; font-size: 15px; cursor: default; }
+.gb-story__q { font-size: 23px; font-weight: 600; color: #fafafa; margin-bottom: 30px; max-width: 660px; line-height: 1.35; }
+.gb-story__beats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 22px; max-width: 660px; }
+.gb-beat { display: flex; gap: 14px; align-items: flex-start; animation: gb-in 0.4s ease; }
+.gb-beat__n { flex: 0 0 30px; height: 30px; border-radius: 50%; background: #1c1c22; border: 1px solid #2f2f37; color: #a1a1aa; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.gb-beat__t { font-size: 18px; line-height: 1.5; color: #d4d4d8; padding-top: 3px; }
+.gb-beat__rec { margin-left: 6px; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em; color: #818cf8; background: none; border: 1px solid #312e81; border-radius: 4px; padding: 2px 7px; cursor: pointer; white-space: nowrap; align-self: center; }
+.gb-beat__rec:hover { background: #1e1b4b; color: #c7d2fe; }
+.gb-beat--link .gb-beat__n { background: #2e1065; border-color: #7c3aed; color: #d8b4fe; box-shadow: 0 0 14px rgba(167, 139, 250, 0.4); }
+.gb-beat--link .gb-beat__t { color: #f5f3ff; font-weight: 600; }
+.gb-story__answer { margin-top: 38px; max-width: 660px; animation: gb-in 0.5s ease; }
+.gb-story__headline { font-size: 48px; font-weight: 700; color: #34d399; line-height: 1.05; }
+.gb-story__sub { margin-top: 10px; font-size: 15px; color: #a7f3d0; line-height: 1.5; }
+.gb-reveal { margin-top: 32px; background: #18181b; border: 1px solid #3f3f46; color: #e4e4e7; border-radius: 8px; padding: 10px 18px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.gb-reveal:hover { border-color: #6366f1; color: #fff; }

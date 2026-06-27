@@ -1,102 +1,74 @@
-// Operator-visible outcome: the Glass Box shows a verticalized question gallery (General/BFSI/Healthcare). Picking the BFSI "supply-chain whitespace" question streams a traversal that hops the payment graph, lights a "relationship found" node (Cedar Logistics — not our customer), and assembles "7 prospects · $6.2M / yr"; picking the General run-rate question prunes the $8.64M shadow_crm decoy and computes $2.64M. Clicking any node opens its raw row.
+// Operator-visible outcome: picking a question reveals a plain-English walk-through one click at a time. The "Grow Revenue" whitespace story flags "Cedar banks somewhere else…" as the link and ends in "$6.2M / yr"; the run-rate story ends in "$2.64M" after noting the pruned $8.64M; clicking a step's "view record" opens its raw row (source_system + bitemporal_id).
 //
-// TAXONOMY: regression (mocked engine). RAILS MODE — the SSE replays
+// TAXONOMY: regression (mocked engine). RAILS MODE — the trace is replayed from
 // demo/glassbox_gallery.json, so this is NOT live-services acceptance. It drives
 // the real operator path through real clicks and pulls every expected value from
-// the fixture at runtime (no hardcoded/agent-authored expectations). Live-services
-// acceptance is deferred (dcl_deferred_work.md).
+// the fixture at runtime (no hardcoded/agent-authored expectations).
 
-import { test, expect } from 'playwright/test'
+import { test, expect, type Page } from 'playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 
 const APP = 'http://localhost:3004/glassbox'
-
-const gallery = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, '../../demo/glassbox_gallery.json'), 'utf-8'),
-)
+const gallery = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../demo/glassbox_gallery.json'), 'utf-8'))
 const q = (id: string) => gallery.questions.find((x: any) => x.id === id)
-const ev = (question: any, stage: string) => question.events.find((e: any) => e.stage === stage)
 
-test('BFSI traversal: finds the hidden whitespace relationship and assembles the revenue answer', async ({ page }) => {
+async function revealAll(page: Page, beatCount: number) {
+  const btn = page.getByTestId('reveal-next')
+  for (let i = 0; i < beatCount + 1; i++) {
+    if (await btn.isVisible().catch(() => false)) await btn.click()
+  }
+}
+
+test('Grow-Revenue story: flags the hidden link and lands the plain-English answer', async ({ page }) => {
   const ws = q('supply_chain_whitespace')
-  const discovered = ws.events.find((e: any) => e.stage === 'TRAVERSE' && e.discovered)
-  const compute = ev(ws, 'COMPUTE')
+  const beats = ws.story.beats
+  const link = beats.find((b: any) => b.link)
+  const answer = ws.story.answer
 
   await page.goto(APP)
   await page.waitForLoadState('networkidle')
-
   await page.getByTestId('q-supply_chain_whitespace').click()
+  await revealAll(page, beats.length)
 
-  // The non-obvious relationship is surfaced and flagged.
-  const found = page.locator(`[data-node-id="${discovered.node.id}"]`)
-  await expect(found).toHaveAttribute('data-discovered', 'true', { timeout: 15000 })
-  await expect(found).toContainText(discovered.node.label)
-  await expect(page.getByTestId('discovered-ribbon').first()).toBeVisible()
+  await expect(page.getByTestId(`beat-${link.id}`)).toContainText(link.text)
+  await expect(page.getByTestId('answer-headline')).toHaveText(answer.headline)
+  await page.screenshot({ path: 'tests/e2e/screenshots/glassbox_story.png', fullPage: true })
 
-  // The answer is assembled deterministically from the traversed path.
-  await expect(page.getByTestId('operator-result')).toHaveText(compute.result_label, { timeout: 15000 })
-  await expect(page.getByTestId('result-value')).toHaveText(compute.result_label)
-  await expect(page.getByTestId('trace-answer')).toContainText('Cedar Logistics')
-
-  // Clean full-DAG capture before the drawer covers it.
-  await page.screenshot({ path: 'tests/e2e/screenshots/glassbox_traversal.png', fullPage: true })
-
-  // Audit drawer on the discovered hop shows its raw row.
-  await found.click()
-  await expect(page.getByTestId('drawer-source')).toHaveText(discovered.node.raw_row.source_system)
-  await expect(page.getByTestId('drawer-bitemporal')).toHaveText(discovered.node.raw_row.bitemporal_id)
+  // The raw record behind the link step is one click away.
+  await page.getByTestId(`record-${link.id}`).click()
+  await expect(page.getByTestId('drawer-source')).toHaveText(link.record.source_system)
+  await expect(page.getByTestId('drawer-bitemporal')).toHaveText(link.record.bitemporal_id)
 })
 
-test('General conflict: prunes the unauthorized $8.64M decoy and computes $2.64M', async ({ page }) => {
+test('Conflict story: ends in $2.64M after noting the pruned $8.64M', async ({ page }) => {
   const rr = q('eng_runrate')
-  const retrieve = ev(rr, 'RETRIEVE')
-  const prune = ev(rr, 'PRUNE')
-  const compute = ev(rr, 'COMPUTE')
-  const survivor = retrieve.nodes.find((n: any) => n.id === prune.survived[0])
-  const dropped = retrieve.nodes.find((n: any) => n.id === prune.dropped[0].id)
+  const beats = rr.story.beats
+  const answer = rr.story.answer
+  const pruneBeat = beats.find((b: any) => b.text.includes('$8.64M'))
 
   await page.goto(APP)
   await page.waitForLoadState('networkidle')
   await page.getByTestId('q-eng_runrate').click()
+  await revealAll(page, beats.length)
 
-  const nodeA = page.locator(`[data-node-id="${survivor.id}"]`)
-  const nodeB = page.locator(`[data-node-id="${dropped.id}"]`)
-  await expect(nodeA).toContainText(survivor.value_label, { timeout: 15000 })
-  await expect(nodeB).toContainText(dropped.value_label)
-  await expect(nodeB).toHaveAttribute('data-dropped', 'true', { timeout: 15000 })
-  await expect(page.getByTestId(`drop-${dropped.id}`)).toContainText(prune.dropped[0].reason)
-
-  await expect(page.getByTestId('operator-result')).toHaveText(compute.result_label, { timeout: 15000 })
-  await expect(page.getByTestId('result-value')).toHaveText(compute.result_label)
-  await expect(page.getByTestId('trace-answer')).toContainText(dropped.value_label)
+  await expect(page.getByTestId('answer-headline')).toHaveText(answer.headline)
+  await expect(page.getByTestId(`beat-${pruneBeat.id}`)).toContainText('$8.64M')
 })
 
-test('Stream failure surfaces a readable error (no silent blank)', async ({ page }) => {
-  await page.route('**/api/demo/stream-trace*', (r) => r.abort())
+test('Fetch failure surfaces a readable error (no silent blank)', async ({ page }) => {
+  await page.route('**/api/demo/trace*', (r) => r.abort())
   await page.goto(APP)
   await page.waitForLoadState('networkidle')
   await page.getByTestId('q-eng_runrate').click()
 
-  await expect(page.getByTestId('trace-error')).toContainText('Trace stream failed', { timeout: 15000 })
-  await expect(page.getByTestId('operator-result')).toHaveCount(0)
-  await expect(page.getByTestId('result-value')).toHaveCount(0)
-})
-
-test('Glass Box is reachable as a tab inside the DCL console', async ({ page }) => {
-  const compute = ev(q('eng_runrate'), 'COMPUTE')
-  await page.goto('http://localhost:3004/')
-  await page.getByRole('button', { name: 'Glass Box', exact: true }).click()
-  await expect(page.getByTestId('replay-tag')).toHaveText(/captured lab trace · replay/)
-  await page.getByTestId('q-eng_runrate').click()
-  await expect(page.getByTestId('operator-result')).toHaveText(compute.result_label, { timeout: 15000 })
-  await page.screenshot({ path: 'tests/e2e/screenshots/glassbox_tab.png', fullPage: true })
+  await expect(page.getByTestId('trace-error')).toContainText("Couldn't load", { timeout: 15000 })
+  await expect(page.getByTestId('answer-headline')).toHaveCount(0)
 })
 
 test('Gallery presents all 10 preselected questions across the four outcome groups', async ({ page }) => {
   await page.goto(APP)
   await page.waitForLoadState('networkidle')
-  // Every fixture question renders as a clickable card (ground truth = the gallery).
   for (const item of gallery.questions) {
     await expect(page.getByTestId(`q-${item.id}`)).toBeVisible()
   }

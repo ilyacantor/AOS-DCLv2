@@ -1,13 +1,12 @@
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
-import { ReactFlowProvider } from '@xyflow/react'
 import { ChatPane } from './ChatPane'
-import { XRayCanvas } from './XRayCanvas'
+import { StoryStage } from './StoryStage'
 import { AuditDrawer } from './AuditDrawer'
 import './glassbox.css'
 
-// Glass Box — the commercial "MRI machine" demo. Left: query + deterministic
-// answer. Right: a live X-ray of the engine resolving a lateral source
-// conflict (workday_main vs shadow_crm) before any LLM sees the data.
+// Glass Box — the commercial demo. Left: the question gallery. Right: a
+// presenter-paced, plain-English walk-through of how the engine finds the
+// answer (one step per click), with the raw record one click away.
 export default function GlassBox() {
   return (
     <div className="gb-root">
@@ -16,21 +15,19 @@ export default function GlassBox() {
         <div
           className="gb-replay"
           data-testid="replay-tag"
-          title="This canvas replays a captured, verified lab trace — it is not a live computation while contextOS is being extracted."
+          title="This walk-through replays a captured, verified lab trace — not a live computation while contextOS is being extracted."
         >
           captured lab trace · replay
         </div>
       </header>
       <PanelGroup direction="horizontal" className="gb-panels">
-        <Panel defaultSize={38} minSize={26}>
+        <Panel defaultSize={40} minSize={28}>
           <ChatPane />
         </Panel>
         <PanelResizeHandle className="gb-resize" />
-        <Panel defaultSize={62} minSize={40}>
+        <Panel defaultSize={60} minSize={40}>
           <div className="gb-canvas-wrap">
-            <ReactFlowProvider>
-              <XRayCanvas />
-            </ReactFlowProvider>
+            <StoryStage />
             <AuditDrawer />
           </div>
         </Panel>
