@@ -1,4 +1,4 @@
-// Operator-visible outcome: all six DCL operator tabs load real aos-dev data with no "Failed to fetch" — Graph shows >1 snapshot option, Dashboard shows the top-domain "(count)" from /api/dcl/dashboard-data, Context renders the entity-scoped Conflict Register, Ingest shows a real dcl_ingest_id prefix from /api/dcl/ingest-log, Monitor shows the live schedule jobs (structural_drift/value_drift), Demo renders the grounded capture.
+// Operator-visible outcome: all five DCL operator tabs load real aos-dev data with no "Failed to fetch" — Graph shows >1 snapshot option, Dashboard shows the top-domain "(count)" from /api/dcl/dashboard-data, Context renders the entity-scoped Conflict Register, Ingest shows a real dcl_ingest_id prefix from /api/dcl/ingest-log, Monitor shows the live schedule jobs (structural_drift/value_drift).
 //
 // Single-browser-session spec (one page, sequential tab clicks). This is the
 // WSL2-robust restructure prescribed by dcl_deferred_work.md #33: the prior
@@ -18,7 +18,7 @@ const DEV = "http://localhost:8104"; // dcl-dev backend the UI proxies to
 test.describe.serial("DCL operator tabs — real dev data, no Failed to fetch", () => {
   test.setTimeout(180_000);
 
-  test("all six tabs render real aos-dev data", async ({ page }) => {
+  test("all five tabs render real aos-dev data", async ({ page }) => {
     const errors: string[] = [];
     page.on("console", (m) => {
       if (m.type() !== "error") return;
@@ -113,12 +113,9 @@ test.describe.serial("DCL operator tabs — real dev data, no Failed to fetch", 
     await noFetchFail("Monitor");
     await shot("monitor");
 
-    // 6) DEMO — the grounded capture renders (not the empty-capture state)
-    await tab("Demo").click();
-    await expect(page.locator('[data-testid="grounded-demo"]')).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('[data-testid="demo-no-capture"]')).toHaveCount(0);
-    await noFetchFail("Demo");
-    await shot("demo");
+    // Demo tab removed — the demo now lives in the platform guided tour (step 3)
+    // and DCL's standalone /glassbox; it is no longer a console tab.
+    await expect(page.getByRole("button", { name: "Demo", exact: true })).toHaveCount(0);
 
     expect(errors, `API 5xx / console errors across tabs: ${errors.join(" | ")}`).toEqual([]);
   });
