@@ -5,7 +5,7 @@ import { create } from 'zustand'
 // contextOS engine will return, so the wiring survives the engine swap.
 
 export type Status = 'idle' | 'loading' | 'revealing' | 'done' | 'error'
-export interface Beat { id: string; text: string; link?: boolean; record?: Record<string, any> }
+export interface Beat { id: string; text: string; link?: boolean; source?: string; record?: Record<string, any> }
 export interface Answer { headline: string; sub: string }
 
 interface TraceState {

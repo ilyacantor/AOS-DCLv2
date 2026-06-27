@@ -33,6 +33,8 @@ test('Grow-Revenue story: flags the hidden link and lands the plain-English answ
 
   await expect(page.getByTestId(`beat-${link.id}`)).toContainText(link.text)
   await expect(page.getByTestId('answer-headline')).toHaveText(answer.headline)
+  // every card denotes its source system
+  await expect(page.locator('.gb-card__src')).toHaveCount(beats.length)
   await page.screenshot({ path: 'tests/e2e/screenshots/glassbox_story.png', fullPage: true })
 
   // The raw record behind the link step is one click away.

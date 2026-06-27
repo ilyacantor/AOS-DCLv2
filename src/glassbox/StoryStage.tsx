@@ -39,7 +39,9 @@ export function StoryStage() {
       <div className="gb-story__q">{questionText}</div>
 
       <div className="gb-cards">
-        {beats.slice(0, revealed).map((b, i) => (
+        {beats.slice(0, revealed).map((b, i) => {
+          const src = b.source ?? b.record?.source_system
+          return (
           <div className="gb-cardwrap" key={b.id}>
             {i > 0 && <div className="gb-cardconn" />}
             <div className={`gb-card ${b.link ? 'gb-card--link' : ''}`} data-testid={`beat-${b.id}`}>
@@ -47,7 +49,7 @@ export function StoryStage() {
               <div className="gb-card__body">
                 {b.link && <div className="gb-card__tag">the link no system had</div>}
                 <div className="gb-card__text">{b.text}</div>
-                {b.record?.source_system && <span className="gb-card__src">{b.record.source_system}</span>}
+                {src && <span className="gb-card__src">{src}</span>}
               </div>
               {b.record && (
                 <button
@@ -60,7 +62,8 @@ export function StoryStage() {
               )}
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {answerShown && answer && (
