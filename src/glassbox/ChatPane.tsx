@@ -1,61 +1,107 @@
 import { useEffect, useState } from 'react'
-import { useTraceStore } from './traceStore'
-import { fetchStory } from './storyApi'
+import { Boxes, Loader2 } from 'lucide-react'
+import type { ChatMessage } from './trace/types'
+import { fetchQuestions, type GalleryItem } from './trace/galleryTrace'
 
-interface GalleryItem {
-  id: string
-  category: string
-  capability: 'conflict' | 'traversal'
-  question: string
-  entity_id: string
+interface ChatPaneProps {
+  messages: ChatMessage[]
+  loading: boolean
+  running: boolean
+  onSelect: (questionId: string) => void
 }
 
-const CATEGORY_ORDER = ['Grow Revenue', 'See the Real Risk', 'Stop the Leakage', 'Operate with Confidence']
-
-export function ChatPane() {
-  const activeId = useTraceStore((s) => s.questionId)
+// Curated demo: the five preselected questions are the gallery (flat — no
+// category buckets). Picking one auto-runs its trace on the canvas and lands the
+// answer here. The source system shows up as a node on the canvas, not a tag.
+export function ChatPane({ messages, loading, running, onSelect }: ChatPaneProps) {
   const [items, setItems] = useState<GalleryItem[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     // No silent fallback: surface a load failure rather than show an empty gallery.
-    fetch('/api/demo/questions')
-      .then((r) => { if (!r.ok) throw new Error(`questions endpoint returned ${r.status}`); return r.json() })
-      .then((d) => setItems(d.questions ?? []))
+    fetchQuestions()
+      .then(setItems)
       .catch((e) => setLoadError(`Could not load the question gallery: ${String(e)}`))
   }, [])
 
-  const groups = CATEGORY_ORDER
-    .map((c) => ({ category: c, qs: items.filter((q) => q.category === c) }))
-    .filter((g) => g.qs.length > 0)
-
   return (
-    <div className="gb-chat">
-      <div className="gb-chat__head">
-        <h1>Ask the graph</h1>
-        <p>Pick a question. Walk through how the engine finds the answer — one step per click.</p>
-      </div>
+    <aside className="flex h-full w-[34%] min-w-[360px] max-w-[460px] flex-col border-r border-slate-800 bg-slate-900/40">
+      <header className="border-b border-slate-800 px-5 py-4">
+        <div className="flex items-center gap-2">
+          <Boxes size={18} className="text-emerald-400" />
+          <h1 className="text-sm font-semibold tracking-tight text-slate-100">
+            contextOS <span className="text-slate-500">·</span> Glass Box
+          </h1>
+          <span className="ml-auto rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-400 ring-1 ring-amber-500/30">
+            Rails Mode
+          </span>
+        </div>
+        <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
+          Deterministic semantic routing &amp; trust arbitration over the resolved base.
+        </p>
+      </header>
 
-      {loadError && <div className="gb-error" data-testid="gallery-error">{loadError}</div>}
+      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
+        <div className="space-y-2" data-testid="question-gallery">
+          <p className="px-1 text-[10px] font-medium uppercase tracking-wider text-slate-500">Demo questions</p>
+          {loadError && (
+            <div data-testid="gallery-error" className="rounded-md border border-red-500/30 bg-red-950/30 px-3 py-2 text-xs text-red-300">
+              {loadError}
+            </div>
+          )}
+          {items.map((q) => (
+            <button
+              key={q.id}
+              data-testid={`q-${q.id}`}
+              disabled={running}
+              onClick={() => onSelect(q.id)}
+              className="block w-full rounded-lg border border-slate-700/80 bg-slate-800/40 px-3 py-2 text-left transition hover:border-emerald-500/40 hover:bg-slate-800/70 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="block text-sm leading-snug text-slate-100">{q.question}</span>
+              <span className="mt-0.5 block text-[11px] text-slate-500">{q.entity_id}</span>
+            </button>
+          ))}
+        </div>
 
-      <div className="gb-gallery" data-testid="question-gallery">
-        {groups.map((g) => (
-          <div key={g.category} className="gb-gallery__group">
-            <div className="gb-gallery__label">{g.category}</div>
-            {g.qs.map((q) => (
-              <button
-                key={q.id}
-                data-testid={`q-${q.id}`}
-                className={`gb-qcard ${activeId === q.id ? 'gb-qcard--active' : ''}`}
-                onClick={() => fetchStory(q.id)}
-              >
-                <span className={`gb-qcard__cap gb-qcard__cap--${q.capability}`}>{q.capability}</span>
-                <span className="gb-qcard__q">{q.question}</span>
-              </button>
+        {(messages.length > 0 || loading) && (
+          <div className="space-y-3 border-t border-slate-800/70 pt-3">
+            {messages.map((m) => (
+              <Bubble key={m.id} message={m} />
             ))}
+            {loading && <Thinking />}
           </div>
-        ))}
+        )}
       </div>
+    </aside>
+  )
+}
+
+function Bubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === 'user'
+  const isError = message.tone === 'error'
+  return (
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div
+        data-testid={isError ? 'trace-error' : undefined}
+        className={`max-w-[88%] whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+          isUser
+            ? 'rounded-br-sm bg-slate-700/70 text-slate-100'
+            : isError
+              ? 'rounded-bl-sm border border-red-500/30 bg-red-950/30 text-red-200'
+              : 'rounded-bl-sm border border-emerald-500/20 bg-emerald-950/30 text-emerald-50'
+        }`}
+      >
+        {message.text}
+      </div>
+    </div>
+  )
+}
+
+function Thinking() {
+  return (
+    <div className="flex items-center gap-2 px-1 text-xs text-sky-300/80">
+      <Loader2 size={13} className="animate-spin" />
+      <span>Routing &amp; arbitrating trust…</span>
     </div>
   )
 }

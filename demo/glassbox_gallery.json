@@ -1,9 +1,8 @@
 {
-  "_note": "Glass Box demo GALLERY (RAILS MODE replay). Preselected questions grouped by business outcome (Grow Revenue / See the Real Risk / Stop the Leakage / Operate with Confidence). Each question is a presenter-paced STORY: plain-English beats revealed one click at a time, the 'aha' beat flagged link:true, ending in a plain answer. Beats may carry a `record` (the raw row, shown in the audit drawer). This is an authored replay, NOT live engine output. The live contextOS engine replaces this fixture at backend/api/routes/demo.py (same beat contract); no silent fallback.",
+  "_note": "Glass Box demo GALLERY (RAILS MODE replay). Five preselected questions, no category buckets. Each question carries: (a) `story.beats` — the authored narrative + raw records (the live-engine beat contract, served unchanged by backend/api/routes/demo.py); and (b) `graph` — the node-graph topology the React-Flow Glass Box animates (intake -> source-system candidates -> link/verify -> reducer). The source system (workday, murex, …) is shown as the candidate NODE itself; a verdict of 'excised' severs that path. Authored replay, NOT live engine output; no silent fallback. The `graph` source-system labels and the eventual record lineage must be wired to real sources in prod.",
   "questions": [
     {
       "id": "eng_runrate",
-      "category": "Operate with Confidence",
       "capability": "conflict",
       "question": "What's the real run-rate for Engineering?",
       "tenant_id": "d3b07384-d9a0-4c9b-9b7a-1f2e3a4b5c6d",
@@ -16,28 +15,19 @@
           { "id": "b4", "text": "So the $8.64M is dropped before the LLM ever sees it.", "source": "workday_main", "link": true }
         ],
         "answer": { "headline": "$2.64M", "sub": "the trustworthy number — the conflicting $8.64M was pruned, not averaged in" }
-      }
-    },
-    {
-      "id": "supply_chain_whitespace",
-      "category": "Grow Revenue",
-      "capability": "traversal",
-      "question": "Which of our client's suppliers should we be banking?",
-      "tenant_id": "b28cf5e3-a1d4-4f62-9a7b-33c0d1e2f4a5",
-      "entity_id": "Vantage Foods",
-      "story": {
-        "beats": [
-          { "id": "b1", "text": "You bank Vantage Foods. They move $540M a year.", "source": "payments_hub" },
-          { "id": "b2", "text": "$92M of it goes to one supplier — Cedar Logistics.", "record": { "source_system": "payments_hub", "concept": "counterparty_flow", "counterparty": "Cedar Logistics", "value_usd": 92000000, "bitemporal_id": "a4b5c6d7-9002-4a02-9b22-1d2e3f4a5b71", "updated_at": "2026-06-19T00:00:00Z" } },
-          { "id": "b3", "text": "Cedar banks somewhere else — and has never been your customer.", "link": true, "record": { "source_system": "customer_master", "concept": "whitespace_match", "entity": "Cedar Logistics", "match": "none", "bitemporal_id": "b5c6d7e8-9003-4a03-9b33-2e3f4a5b6c82", "updated_at": "2026-06-21T00:00:00Z" } },
-          { "id": "b4", "text": "Six more companies like Cedar sit in Vantage's payment network.", "source": "payments_hub" }
+      },
+      "graph": {
+        "parse": "entity=Engineering · metric=run_rate",
+        "candidates": [
+          { "id": "workday", "label": "Source: Workday", "detail": "$2.64M · active", "badge": "SoR", "verdict": "verified" },
+          { "id": "shadow_crm", "label": "Source: Shadow CRM", "detail": "$8.64M · cancelled", "badge": "shadow", "verdict": "excised", "excisedDetail": "Cancelled · unauthorized source. Excised." }
         ],
-        "answer": { "headline": "$6.2M / yr", "sub": "in new business — every prospect reachable through a client you already have" }
+        "link": { "label": "Source-Authority Verify", "detail": "Workday upheld (SoR). $8.64M decoy pruned." },
+        "answer": { "headline": "$2.64M", "sub": "the trustworthy number — the conflicting $8.64M was pruned, not averaged in" }
       }
     },
     {
       "id": "counterparty_exposure",
-      "category": "See the Real Risk",
       "capability": "traversal",
       "question": "What's our real exposure to Brightwater Partners?",
       "tenant_id": "a17be4d2-90c3-4e51-8f6a-22b9c0d1e3f4",
@@ -50,95 +40,43 @@
           { "id": "b4", "text": "After netting, your true exposure is far bigger than either desk saw.", "source": "collateral_mgmt" }
         ],
         "answer": { "headline": "$612M net", "sub": "the real number — not the $320M or $420M any one desk was watching" }
+      },
+      "graph": {
+        "parse": "entity=Brightwater Partners · metric=net_exposure",
+        "candidates": [
+          { "id": "murex", "label": "Source: Murex", "detail": "Prime Bkg · $320M", "verdict": "verified" },
+          { "id": "calypso", "label": "Source: Calypso", "detail": "Financing · $420M", "verdict": "verified" }
+        ],
+        "link": { "label": "Legal-Entity Rollup", "detail": "Two entities → one parent. Netted across desks." },
+        "answer": { "headline": "$612M net", "sub": "the real number — not the $320M or $420M any one desk was watching" }
       }
     },
     {
-      "id": "share_of_wallet",
-      "category": "Grow Revenue",
+      "id": "salesforce_blast_radius",
       "capability": "traversal",
-      "question": "Where's our biggest wealth opportunity?",
-      "tenant_id": "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f60",
-      "entity_id": "Whitfield household",
+      "question": "If Salesforce goes down, what actually breaks?",
+      "tenant_id": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f",
+      "entity_id": "Salesforce",
       "story": {
         "beats": [
-          { "id": "b1", "text": "The Whitfield household keeps $3.2M with you.", "source": "portfolio_accounting" },
-          { "id": "b2", "text": "But money keeps arriving from an outside broker.", "record": { "source_system": "transactions", "concept": "external_flow", "value_usd": 140000, "cadence": "quarterly", "bitemporal_id": "e2a2b2c2-9202-4a22-9b32-1d2e3f4a5b12", "updated_at": "2026-06-19T00:00:00Z" } },
-          { "id": "b3", "text": "Those transfers trace to a $7.8M account held away — money you don't manage.", "link": true, "record": { "source_system": "account_aggregation", "concept": "held_away_assets", "value_usd": 7800000, "bitemporal_id": "e3a3b3c3-9203-4a23-9b33-2e3f4a5b6c13", "updated_at": "2026-06-21T00:00:00Z" } },
-          { "id": "b4", "text": "It's a clean fit for a managed-portfolio and trust mandate.", "source": "product_propensity" }
+          { "id": "b1", "text": "Salesforce feeds 14 live integrations.", "source": "ipaas_mulesoft" },
+          { "id": "b2", "text": "One of them drives your quote-to-cash service.", "record": { "source_system": "service_registry", "concept": "service", "tier": "customer_facing", "bitemporal_id": "d2a2b2c2-9102-4a12-9b22-1d2e3f4a5b02", "updated_at": "2026-06-20T00:00:00Z" } },
+          { "id": "b3", "text": "And the month-end financial close quietly depends on a nightly Salesforce export — with no runbook and no on-call owner.", "link": true, "record": { "source_system": "data_lineage", "concept": "hidden_dependency", "runbook": "absent", "bitemporal_id": "d3a3b3c3-9103-4a13-9b23-2e3f4a5b6c03", "updated_at": "2026-06-21T00:00:00Z" } }
         ],
-        "answer": { "headline": "$7.8M held away", "sub": "≈ $58K/yr in fees to win back — surfaced by the money flow, not any statement" }
-      }
-    },
-    {
-      "id": "insurance_accumulation",
-      "category": "See the Real Risk",
-      "capability": "traversal",
-      "question": "What's our real hurricane exposure on the Gulf Coast?",
-      "tenant_id": "e3f4a5b6-c7d8-4e9f-0a1b-2c3d4e5f6071",
-      "entity_id": "Gulf Coast windstorm",
-      "story": {
-        "beats": [
-          { "id": "b1", "text": "4,210 policies sit in the Gulf Coast wind zone — $1.9B insured.", "source": "policy_admin" },
-          { "id": "b2", "text": "All correctly tagged to the hurricane peril.", "source": "cat_model" },
-          { "id": "b3", "text": "But a $280M commercial book in the same county was never tagged. Hidden accumulation.", "link": true, "record": { "source_system": "commercial_lines", "concept": "hidden_accumulation", "value_usd": 280000000, "zone_tag": "missing", "bitemporal_id": "f3a3b3c3-9303-4a33-9b43-2e3f4a5b6c23", "updated_at": "2026-06-21T00:00:00Z" } },
-          { "id": "b4", "text": "After reinsurance, the retained loss is what actually hits you.", "source": "reinsurance_mgmt" }
+        "answer": { "headline": "9 systems · 2 teams", "sub": "in the blast radius — including the close nobody had mapped" }
+      },
+      "graph": {
+        "parse": "entity=Salesforce · query=blast_radius",
+        "candidates": [
+          { "id": "service_registry", "label": "Source: Service Registry", "detail": "quote-to-cash · customer-facing", "verdict": "verified" },
+          { "id": "ipaas", "label": "Source: iPaaS (MuleSoft)", "detail": "14 live integrations", "verdict": "verified" }
         ],
-        "answer": { "headline": "$780M net retained", "sub": "including $280M the catastrophe model never saw" }
-      }
-    },
-    {
-      "id": "readmission_risk",
-      "category": "See the Real Risk",
-      "capability": "traversal",
-      "question": "Which discharges are most likely to bounce back?",
-      "tenant_id": "f5e6d7c8-1029-4b3a-8c7d-6e5f4a3b2c1d",
-      "entity_id": "CHF discharge cohort",
-      "story": {
-        "beats": [
-          { "id": "b1", "text": "142 heart-failure patients were just discharged.", "source": "ehr_encounters" },
-          { "id": "b2", "text": "Many already aren't refilling their medication.", "record": { "source_system": "pharmacy_claims", "concept": "med_adherence", "pdc": 0.62, "bitemporal_id": "60718293-6666-4fff-9000-516b7c8d9ea6", "updated_at": "2026-06-21T08:00:00Z" } },
-          { "id": "b3", "text": "Their follow-up was never booked — the referral went out-of-network and got denied. A clinical risk created by an admin gap.", "link": true, "record": { "source_system": "scheduling + eligibility", "concept": "care_gap", "referral_status": "denied_out_of_network", "bitemporal_id": "71829304-7777-4000-9111-627c8d9eafb7", "updated_at": "2026-06-21T15:42:00Z" } },
-          { "id": "b4", "text": "A transport barrier compounds it.", "source": "sdoh_screening" }
-        ],
-        "answer": { "headline": "31 patients", "sub": "in the readmission top decile — and you can see exactly why" }
-      }
-    },
-    {
-      "id": "oon_referral_leakage",
-      "category": "Stop the Leakage",
-      "capability": "traversal",
-      "question": "Where are referrals leaking out of network?",
-      "tenant_id": "f4a5b6c7-d8e9-4f0a-1b2c-3d4e5f607182",
-      "entity_id": "Cardiology referrals",
-      "story": {
-        "beats": [
-          { "id": "b1", "text": "312 cardiology referrals went to one specialist last quarter.", "source": "ehr_referrals" },
-          { "id": "b2", "text": "Your provider directory says she's in-network.", "record": { "source_system": "provider_directory", "concept": "network_status", "status": "in_network", "bitemporal_id": "a2b2c2d2-9402-4a42-9b52-1d2e3f4a5b32", "updated_at": "2026-05-01T00:00:00Z" } },
-          { "id": "b3", "text": "But the claims prove she's out-of-network for your biggest plan. The directory is stale.", "link": true, "record": { "source_system": "claims_adjudication", "concept": "oon_leakage", "status": "out_of_network", "value_usd": 1100000, "bitemporal_id": "a3b3c3d3-9403-4a43-9b53-2e3f4a5b6c33", "updated_at": "2026-06-21T00:00:00Z" } },
-          { "id": "b4", "text": "Three in-network peers could absorb those referrals.", "source": "network_planning" }
-        ],
-        "answer": { "headline": "$1.1M / yr", "sub": "leaking out-of-network — and fixable today" }
-      }
-    },
-    {
-      "id": "denied_claims_driver",
-      "category": "Stop the Leakage",
-      "capability": "traversal",
-      "question": "Why do our claims keep getting denied?",
-      "tenant_id": "a5b6c7d8-e9f0-4a1b-2c3d-4e5f60718293",
-      "entity_id": "Denied claims (90d)",
-      "story": {
-        "beats": [
-          { "id": "b1", "text": "Most denials come back as 'missing prior authorization.'", "source": "remittance_835" },
-          { "id": "b2", "text": "They look like seven different providers each making mistakes.", "record": { "source_system": "cpoe_order_sets", "concept": "order_set", "providers": 7, "bitemporal_id": "b2c2d2e2-9502-4a52-9b62-1d2e3f4a5b42", "updated_at": "2026-06-20T00:00:00Z" } },
-          { "id": "b3", "text": "But all seven use one order template that turns the auth flag off. One template, not seven people.", "link": true, "record": { "source_system": "order_template_config", "concept": "root_cause_template", "auth_flag_default": false, "value_usd": 640000, "bitemporal_id": "b3c3d3e3-9503-4a53-9b63-2e3f4a5b6c43", "updated_at": "2026-06-21T00:00:00Z" } }
-        ],
-        "answer": { "headline": "$640K", "sub": "in denials — traced to a single order template you can fix in an afternoon" }
+        "link": { "label": "Hidden Dependency", "detail": "Month-end close depends on a nightly export. No runbook, no owner." },
+        "answer": { "headline": "9 systems · 2 teams", "sub": "in the blast radius — including the close nobody had mapped" }
       }
     },
     {
       "id": "conflicting_meds",
-      "category": "See the Real Risk",
       "capability": "traversal",
       "question": "Are any patients on dangerous medication combinations?",
       "tenant_id": "b6c7d8e9-f0a1-4b2c-3d4e-5f60718293a4",
@@ -151,22 +89,39 @@
           { "id": "b4", "text": "Filled at different pharmacies, so no single med list ever caught it.", "source": "pharmacy_claims" }
         ],
         "answer": { "headline": "218 patients", "sub": "on a dangerous combination no single chart would have shown" }
+      },
+      "graph": {
+        "parse": "entity=Polypharmacy cohort · query=interactions",
+        "candidates": [
+          { "id": "erx_cardio", "label": "Source: eRx · Cardiology", "detail": "anticoagulant", "verdict": "verified" },
+          { "id": "erx_primary", "label": "Source: eRx · Primary Care", "detail": "high-dose NSAID", "verdict": "verified" }
+        ],
+        "link": { "label": "Cross-Source Interaction", "detail": "Neither chart saw the other. Major bleeding risk." },
+        "answer": { "headline": "218 patients", "sub": "on a dangerous combination no single chart would have shown" }
       }
     },
     {
-      "id": "salesforce_blast_radius",
-      "category": "Operate with Confidence",
+      "id": "denied_claims_driver",
       "capability": "traversal",
-      "question": "If Salesforce goes down, what actually breaks?",
-      "tenant_id": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f",
-      "entity_id": "Salesforce",
+      "question": "Why do our claims keep getting denied?",
+      "tenant_id": "a5b6c7d8-e9f0-4a1b-2c3d-4e5f60718293",
+      "entity_id": "Denied claims (90d)",
       "story": {
         "beats": [
-          { "id": "b1", "text": "Salesforce feeds 14 live integrations.", "source": "ipaas_mulesoft" },
-          { "id": "b2", "text": "One of them drives your quote-to-cash service.", "record": { "source_system": "service_registry", "concept": "service", "tier": "customer_facing", "bitemporal_id": "d2a2b2c2-9102-4a12-9b22-1d2e3f4a5b02", "updated_at": "2026-06-20T00:00:00Z" } },
-          { "id": "b3", "text": "And the month-end financial close quietly depends on a nightly Salesforce export — with no runbook and no on-call owner.", "link": true, "record": { "source_system": "data_lineage", "concept": "hidden_dependency", "runbook": "absent", "bitemporal_id": "d3a3b3c3-9103-4a13-9b23-2e3f4a5b6c03", "updated_at": "2026-06-21T00:00:00Z" } }
+          { "id": "b1", "text": "Most denials come back as 'missing prior authorization.'", "source": "remittance_835" },
+          { "id": "b2", "text": "They look like seven different providers each making mistakes.", "record": { "source_system": "cpoe_order_sets", "concept": "order_set", "providers": 7, "bitemporal_id": "b2c2d2e2-9502-4a52-9b62-1d2e3f4a5b42", "updated_at": "2026-06-20T00:00:00Z" } },
+          { "id": "b3", "text": "But all seven use one order template that turns the auth flag off. One template, not seven people.", "link": true, "record": { "source_system": "order_template_config", "concept": "root_cause_template", "auth_flag_default": false, "value_usd": 640000, "bitemporal_id": "b3c3d3e3-9503-4a53-9b63-2e3f4a5b6c43", "updated_at": "2026-06-21T00:00:00Z" } }
         ],
-        "answer": { "headline": "9 systems · 2 teams", "sub": "in the blast radius — including the close nobody had mapped" }
+        "answer": { "headline": "$640K", "sub": "in denials — traced to a single order template you can fix in an afternoon" }
+      },
+      "graph": {
+        "parse": "entity=Denied claims (90d) · query=root_cause",
+        "candidates": [
+          { "id": "remittance", "label": "Source: Remittance 835", "detail": "denials: missing prior-auth", "verdict": "verified" },
+          { "id": "cpoe", "label": "Source: CPOE Order Sets", "detail": "7 providers implicated", "verdict": "verified" }
+        ],
+        "link": { "label": "Root-Cause Template", "detail": "One template defaults the auth flag off — not seven people." },
+        "answer": { "headline": "$640K", "sub": "in denials — traced to a single order template you can fix in an afternoon" }
       }
     }
   ]

@@ -1,37 +1,36 @@
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
+import '@xyflow/react/dist/style.css'
+import { ReactFlowProvider } from '@xyflow/react'
+import { Activity } from 'lucide-react'
+import { Canvas } from './Canvas'
 import { ChatPane } from './ChatPane'
-import { StoryStage } from './StoryStage'
-import { AuditDrawer } from './AuditDrawer'
-import './glassbox.css'
+import { GalleryTraceSource } from './trace/galleryTrace'
+import { useExecutionTrace } from './trace/useExecutionTrace'
 
-// Glass Box — the commercial demo. Left: the question gallery. Right: a
-// presenter-paced, plain-English walk-through of how the engine finds the
-// answer (one step per click), with the raw record one click away.
+// Glass Box — the commercial demo. Left: the question gallery + answer. Right: a
+// live React-Flow execution canvas that routes the query across candidate source
+// systems and excises the decoy before answering. Rails Mode: the trace is the
+// /api/demo replay. The swap point is the TraceSource — a live contextOS engine
+// emitting the same graph replaces GalleryTraceSource with no UI change.
+const source = new GalleryTraceSource()
+
 export default function GlassBox() {
+  const { nodes, edges, messages, loading, running, submit } = useExecutionTrace(source)
+
   return (
-    <div className="gb-root">
-      <header className="gb-topbar">
-        <div className="gb-brand">AOS · <span>Glass Box</span></div>
-        <div
-          className="gb-replay"
-          data-testid="replay-tag"
-          title="This walk-through replays a captured, verified lab trace — not a live computation while contextOS is being extracted."
-        >
-          captured lab trace · replay
+    <div className="flex h-full w-full overflow-hidden bg-slate-950 text-slate-100">
+      <ChatPane messages={messages} loading={loading} running={running} onSelect={submit} />
+
+      <main className="relative flex-1">
+        <div className="pointer-events-none absolute left-4 top-4 z-10 flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-900/70 px-2.5 py-1 text-[11px] font-medium text-slate-400 backdrop-blur-sm">
+          <Activity size={12} className={running ? 'text-sky-400' : 'text-slate-500'} />
+          Execution Canvas
+          <span className="text-slate-600">·</span>
+          <span className="text-amber-400/80">Rails Mode</span>
         </div>
-      </header>
-      <PanelGroup direction="horizontal" className="gb-panels">
-        <Panel defaultSize={40} minSize={28}>
-          <ChatPane />
-        </Panel>
-        <PanelResizeHandle className="gb-resize" />
-        <Panel defaultSize={60} minSize={40}>
-          <div className="gb-canvas-wrap">
-            <StoryStage />
-            <AuditDrawer />
-          </div>
-        </Panel>
-      </PanelGroup>
+        <ReactFlowProvider>
+          <Canvas nodes={nodes} edges={edges} />
+        </ReactFlowProvider>
+      </main>
     </div>
   )
 }
