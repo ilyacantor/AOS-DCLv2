@@ -26,7 +26,12 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/demo", tags=["demo"])
 
 # routes -> api -> backend -> <repo root>
-_GALLERY_PATH = Path(__file__).resolve().parents[3] / "demo" / "glassbox_gallery.json"
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_GALLERY_PATH = _REPO_ROOT / "demo" / "glassbox_gallery.json"
+# The agent-context arc writes its capture here. The headless arc runs the REAL
+# ops (auth -> traverse -> act -> govern -> revoke) and writes the capture; this
+# endpoint RENDERS that capture (replay-only, no live ops, no outcome logic).
+_CAPTURES_DIR = _REPO_ROOT / "public" / "demo-captures"
 
 
 def _load_gallery() -> Dict[str, Any]:
@@ -105,3 +110,64 @@ def get_trace(q: Optional[str] = Query(default=None)) -> Dict[str, Any]:
             detail=f"Glass Box question '{question.get('id')}' has no story beats; refusing to serve an empty trace.",
         )
     return question
+
+
+@router.get("/finops-arc")
+def get_finops_arc() -> Dict[str, Any]:
+    """Return the LATEST agent-context arc capture for the Agent Arc render layer.
+
+    The headless arc (`python -m demo.finops_arc`) runs the REAL ops and writes
+    `public/demo-captures/finops_arc__<stamp>.json`. This endpoint parses and
+    returns the most recent capture verbatim — it is RENDER-ONLY and synthesizes
+    nothing. No silent fallback (A1): if no capture exists, 404 with the command
+    to produce one. The identity pair (I2) is carried in the capture's `target`
+    (tenant_id machine-only + entity_id business key).
+    """
+    if not _CAPTURES_DIR.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"No demo-captures directory at {_CAPTURES_DIR}. The Agent Arc tab "
+                "renders a captured arc; run `python -m demo.finops_arc` first to "
+                "produce one."
+            ),
+        )
+    captures = sorted(
+        _CAPTURES_DIR.glob("finops_arc__*.json"), key=lambda p: p.stat().st_mtime
+    )
+    if not captures:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"No finops_arc capture found in {_CAPTURES_DIR}. The Agent Arc tab "
+                "renders a captured arc; run `python -m demo.finops_arc` first to "
+                "produce one."
+            ),
+        )
+    latest = captures[-1]
+    try:
+        capture = json.loads(latest.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"finops_arc capture {latest.name} is not valid JSON: {exc}",
+        ) from exc
+
+    target = capture.get("target") or {}
+    if not target.get("tenant_id") or not target.get("entity_id"):
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"finops_arc capture {latest.name} is missing tenant_id/entity_id in "
+                "its target — refusing to serve a capture without the identity pair (I2)."
+            ),
+        )
+    if not capture.get("beats"):
+        raise HTTPException(
+            status_code=500,
+            detail=f"finops_arc capture {latest.name} has no beats; refusing to serve an empty arc.",
+        )
+
+    # Provenance for the replay tag — which capture file is on screen.
+    capture["_capture_file"] = latest.name
+    return capture
