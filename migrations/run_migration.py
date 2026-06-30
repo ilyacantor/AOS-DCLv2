@@ -101,6 +101,21 @@ def run_migrations():
         conn.autocommit = False
         cur = conn.cursor()
 
+        # Apply to the SAME schema the app reads (mirror backend/core/db.py's
+        # get_connection). When SUPABASE_DB_SCHEMA is set (dev / parallel-branch
+        # stacks) migrations MUST land there, not the connection role's default
+        # schema — otherwise a migration applies to `dev` while the app reads
+        # `shared_gdbmdr` and the change is silently invisible (the documented
+        # role-default flip). When UNSET (prod), leave the role default unchanged.
+        _schema = os.environ.get("SUPABASE_DB_SCHEMA")
+        if _schema:
+            if not _schema.replace("_", "").isalnum():
+                print(f"ERROR: refusing unsafe SUPABASE_DB_SCHEMA={_schema!r}")
+                sys.exit(1)
+            cur.execute(f"SET search_path TO {_schema}")
+            conn.commit()
+            print(f"  search_path -> {_schema} (applying to the app schema)")
+
         # Migration ledger: the runner applies each file ONCE and records it.
         # Boot re-runs then skip already-applied files instead of re-applying
         # all of them every time — re-applying the full set on every boot is

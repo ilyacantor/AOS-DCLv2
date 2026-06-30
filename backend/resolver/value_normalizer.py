@@ -93,6 +93,13 @@ BASE_UNIT_SCALES: dict[Optional[str], Tuple[float, Optional[str]]] = {
     "points": (1.0, "points"),
     "story_points": (1.0, "story_points"),
     "messages_per_second": (1.0, "messages_per_second"),
+    # cloud_spend estate per-team OUTPUT + derived efficiency — MEASURES, not
+    # magnitude scales (factor 1.0, base == itself; exact pass-through, like the
+    # operational measures above). "deploys" is a deploy count;
+    # "usd_per_deploys_per_month" is cost ÷ output, a derived rate. No 1000x/1e6
+    # multiplier to guess, so this is exact, not a silent fallback (A1).
+    "deploys": (1.0, "deploys"),
+    "usd_per_deploys_per_month": (1.0, "usd_per_deploys_per_month"),
     None: (1.0, None),
     "": (1.0, ""),
     # currency-scoped scales -> base unit "usd"

@@ -424,6 +424,13 @@ async def test_b3_aam_readback_agent_in_scope_byte_identical_to_legacy():
     BYTE-IDENTICAL bytes to a legacy token for the same tenant.
     list_runs for a fresh per-run tenant returns [] deterministically."""
     fresh_tenant = str(uuid.uuid4())  # no runs, empty list guaranteed
+    # D2: identity-bearing calls now consult the live registry — provision the
+    # identity for this fresh tenant (scoped identically) or it is denied
+    # fail-closed.
+    _register_identity(
+        fresh_tenant, "aam-readback-agent", ["query_triples"],
+        ["cloud_spend", "revenue", "support", "customer", "service"],
+    )
     legacy_tok = mint_token(fresh_tenant)["token"]
     aam_tok = mint_token(
         fresh_tenant,
@@ -600,6 +607,9 @@ async def test_d1_demo_panel_b_token_accepted_on_all_demo_tools():
     from demo.panel_b import mint_demo_token, TOKEN_SCOPE
 
     fresh_tenant = str(uuid.uuid4())
+    # D2: provision demo-panel-b for this fresh tenant (unrestricted domains,
+    # matching the demo token) so live-registry enforcement accepts it.
+    _register_identity(fresh_tenant, "demo-panel-b", list(TOKEN_SCOPE), [])
     minted = mint_demo_token(fresh_tenant)
 
     # Verify the identity was embedded.

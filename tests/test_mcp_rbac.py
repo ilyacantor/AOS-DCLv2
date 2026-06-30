@@ -163,6 +163,45 @@ def _legacy_token() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Registry provisioning (Gate 3C D2): the boundary now consults the LIVE
+# mcp_agent_identities registry on every identity-bearing call (token ∩
+# registry), and an identity with no row is denied fail-closed. So the scoped
+# identity this suite mints MUST exist in the registry, scoped identically to
+# the token, for the token-floor behavior asserted below to be observable.
+# (D2 added revocation/narrowing; the registry, registered identically here,
+# never narrows — the denials below are the token∩registry floor.)
+# ---------------------------------------------------------------------------
+
+
+def _register_scoped_identity() -> None:
+    sql = """
+        INSERT INTO mcp_agent_identities
+               (tenant_id, identity_name, tool_scope, domain_scope, persona_scope)
+        VALUES (%s::uuid, %s, %s, %s, %s)
+        ON CONFLICT (tenant_id, identity_name) DO UPDATE
+            SET tool_scope = EXCLUDED.tool_scope,
+                domain_scope = EXCLUDED.domain_scope,
+                persona_scope = EXCLUDED.persona_scope,
+                revoked_at = NULL
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (
+                _TENANT, SCOPED_IDENTITY,
+                [ALLOWED_TOOL], [ALLOWED_DOMAIN], [ALLOWED_PERSONA],
+            ))
+        conn.commit()
+
+
+@pytest.fixture(autouse=True, scope="module")
+def _provision_registry():
+    """Register finops-readonly for this suite's tenant, scoped identically to
+    the minted token, so live-registry enforcement reflects the token floor."""
+    _register_scoped_identity()
+    yield
+
+
+# ---------------------------------------------------------------------------
 # Test 1: in-scope tool + domain call SUCCEEDS
 # ---------------------------------------------------------------------------
 

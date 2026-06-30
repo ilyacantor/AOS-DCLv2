@@ -32,6 +32,12 @@ from backend.api.mcp_audit import (
     write_audit,
 )
 from backend.api.mcp_auth import TokenError, VerifiedToken, verify_token
+from backend.api.mcp_identity_registry import (
+    IdentityRegistryError,
+    UnknownIdentityError,
+    get_effective_identity,
+    intersect_scope,
+)
 from backend.api.mcp_rate_limit import global_limiter
 from backend.engine.mcp_tools import (
     PUBLIC_TOOLS,
@@ -117,6 +123,7 @@ def build_server() -> Server:
                 tenant_id=(token.tenant_id if token else "00000000-0000-0000-0000-000000000000"),
                 tool_name=name,
                 caller_token_id=(token.token_id if token else "anonymous"),
+                identity=(token.identity if token else None),
                 arguments_hash=hash_arguments(arguments),
                 latency_ms=0,
                 outcome="error",
@@ -133,6 +140,7 @@ def build_server() -> Server:
                 tenant_id="00000000-0000-0000-0000-000000000000",
                 tool_name=name,
                 caller_token_id="anonymous",
+                identity=None,
                 arguments_hash=hash_arguments(arguments),
                 latency_ms=0,
                 outcome="unauthorized",
@@ -151,6 +159,130 @@ def build_server() -> Server:
 
         identity_label = token.identity or token.token_id
 
+        # --- Live registry enforcement (Gate 3C D2): token ∩ live registry. ---
+        # Consulted ONLY when the token carries an identity. Legacy/identity-less
+        # tokens skip this entirely and behave EXACTLY as before — a minted token
+        # keeps its embedded scope (back-compat). When an identity IS present the
+        # registry is the live source of truth: an operator can NARROW or REVOKE
+        # it and the NEXT call (within the ~5s TTL) enforces it, with no
+        # HMAC-secret rotation and no waiting for token expiry. The registry can
+        # only NARROW — the token-only checks below remain the floor, so the
+        # registry can never widen access beyond what the token already grants.
+        effective_domain_for_dispatch = token.domain_scope
+        if token.identity:
+
+            def _deny_registry(reason: str, axis: str, denied: str) -> None:
+                write_audit(AuditRow(
+                    tenant_id=token.tenant_id,
+                    tool_name=name,
+                    caller_token_id=token.token_id,
+                    identity=token.identity,
+                    arguments_hash=hash_arguments(arguments),
+                    latency_ms=0,
+                    outcome="unauthorized",
+                    error_summary=reason,
+                    transport=transport,
+                    **_rbac_denial_enrichment(arguments, identity_label, axis, denied),
+                ))
+                raise MCPToolError(reason)
+
+            try:
+                reg = get_effective_identity(token.tenant_id, token.identity)
+            except UnknownIdentityError as exc:
+                # Fail-closed: a token naming an identity the registry does not
+                # have is denied, never treated as unrestricted.
+                _deny_registry(
+                    f"identity {token.identity!r} is not present in the live "
+                    f"agent-identity registry — denied (fail-closed). {exc}",
+                    axis="unknown_identity", denied=token.identity,
+                )
+            except IdentityRegistryError as exc:
+                # System failure reading the registry — fail closed and loud,
+                # recorded as outcome='error' (not an authorization denial).
+                write_audit(AuditRow(
+                    tenant_id=token.tenant_id,
+                    tool_name=name,
+                    caller_token_id=token.token_id,
+                    identity=token.identity,
+                    arguments_hash=hash_arguments(arguments),
+                    latency_ms=0,
+                    outcome="error",
+                    error_summary=str(exc),
+                    transport=transport,
+                    **_audit_enrichment(arguments),
+                ))
+                raise MCPToolError(str(exc)) from exc
+
+            # Revocation is a hard deny on every axis — checked before scopes.
+            if reg.revoked_at is not None:
+                _deny_registry(
+                    f"identity {identity_label!r} has been REVOKED "
+                    f"(revoked_at={reg.revoked_at}) — all MCP access denied. "
+                    f"A new token does NOT restore access; an operator must "
+                    f"un-revoke the identity in mcp_agent_identities.",
+                    axis="revoked", denied=token.identity,
+                )
+
+            # Registry tool floor — live narrowing of the tool axis.
+            if reg.tool_scope and name not in reg.tool_scope:
+                _deny_registry(
+                    f"identity {identity_label!r} is not scoped for tool "
+                    f"{name!r} by the live registry — denied (current allowed "
+                    f"tools: {list(reg.tool_scope)})",
+                    axis="tool", denied=name,
+                )
+
+            # Registry persona floor — explicit out-of-scope persona arg.
+            reg_persona: str | None = (arguments or {}).get("persona")
+            if reg.persona_scope and reg_persona and reg_persona not in reg.persona_scope:
+                _deny_registry(
+                    f"identity {identity_label!r} is not scoped for persona "
+                    f"{reg_persona!r} by the live registry — denied (current "
+                    f"allowed personas: {list(reg.persona_scope)})",
+                    axis="persona", denied=reg_persona,
+                )
+
+            # Registry domain floor — explicit domain arg and domain-qualified
+            # concept root (mirrors the token-floor checks below).
+            if reg.domain_scope:
+                reg_domain: str | None = (arguments or {}).get("domain")
+                if reg_domain and reg_domain not in reg.domain_scope:
+                    _deny_registry(
+                        f"identity {identity_label!r} is not scoped for domain "
+                        f"{reg_domain!r} by the live registry — denied (current "
+                        f"allowed domains: {list(reg.domain_scope)})",
+                        axis="domain", denied=reg_domain,
+                    )
+                reg_concept: str | None = (arguments or {}).get("concept")
+                if reg_concept and "." in reg_concept:
+                    reg_root = reg_concept.split(".", 1)[0]
+                    if reg_root not in reg.domain_scope:
+                        _deny_registry(
+                            f"identity {identity_label!r} is not scoped for "
+                            f"domain {reg_root!r} (from concept {reg_concept!r}) "
+                            f"by the live registry — denied (current allowed "
+                            f"domains: {list(reg.domain_scope)})",
+                            axis="domain", denied=reg_root,
+                        )
+
+            # Effective domain scope for BROAD reads = token ∩ registry. A
+            # genuinely empty intersection (both sides restrict, no overlap) is a
+            # deny-all — NOT unrestricted — so a broad read can never leak the
+            # whole tenant when the registry has narrowed the identity to a
+            # domain the token never carried.
+            eff_domains, deny_all = intersect_scope(
+                token.domain_scope, reg.domain_scope
+            )
+            if deny_all:
+                _deny_registry(
+                    f"identity {identity_label!r} has an empty effective domain "
+                    f"scope: token domains {list(token.domain_scope)} ∩ live "
+                    f"registry domains {list(reg.domain_scope)} = none in "
+                    f"common. No domain is readable — denied.",
+                    axis="domain", denied="(empty token∩registry intersection)",
+                )
+            effective_domain_for_dispatch = eff_domains
+
         # Tool axis (pre-existing, extended with identity label in reason).
         if token.scope and name not in token.scope:
             reason = (
@@ -161,6 +293,7 @@ def build_server() -> Server:
                 tenant_id=token.tenant_id,
                 tool_name=name,
                 caller_token_id=token.token_id,
+                identity=token.identity,
                 arguments_hash=hash_arguments(arguments),
                 latency_ms=0,
                 outcome="unauthorized",
@@ -183,6 +316,7 @@ def build_server() -> Server:
                     tenant_id=token.tenant_id,
                     tool_name=name,
                     caller_token_id=token.token_id,
+                    identity=token.identity,
                     arguments_hash=hash_arguments(arguments),
                     latency_ms=0,
                     outcome="unauthorized",
@@ -206,6 +340,7 @@ def build_server() -> Server:
                         tenant_id=token.tenant_id,
                         tool_name=name,
                         caller_token_id=token.token_id,
+                        identity=token.identity,
                         arguments_hash=hash_arguments(arguments),
                         latency_ms=0,
                         outcome="unauthorized",
@@ -230,6 +365,7 @@ def build_server() -> Server:
                     tenant_id=token.tenant_id,
                     tool_name=name,
                     caller_token_id=token.token_id,
+                    identity=token.identity,
                     arguments_hash=hash_arguments(arguments),
                     latency_ms=0,
                     outcome="unauthorized",
@@ -249,6 +385,7 @@ def build_server() -> Server:
                 tenant_id=token.tenant_id,
                 tool_name=name,
                 caller_token_id=token.token_id,
+                identity=token.identity,
                 arguments_hash=hash_arguments(arguments),
                 latency_ms=0,
                 outcome="rate_limited",
@@ -270,7 +407,7 @@ def build_server() -> Server:
             try:
                 result = dispatch(
                     token.tenant_id, name, arguments,
-                    effective_domain_scope=token.domain_scope,
+                    effective_domain_scope=effective_domain_for_dispatch,
                 )
                 outcome = "success"
                 error_summary: str | None = None
@@ -281,6 +418,7 @@ def build_server() -> Server:
                     tenant_id=token.tenant_id,
                     tool_name=name,
                     caller_token_id=token.token_id,
+                    identity=token.identity,
                     arguments_hash=hash_arguments(arguments),
                     latency_ms=t["latency_ms"],
                     outcome=outcome,
@@ -297,6 +435,7 @@ def build_server() -> Server:
                     tenant_id=token.tenant_id,
                     tool_name=name,
                     caller_token_id=token.token_id,
+                    identity=token.identity,
                     arguments_hash=hash_arguments(arguments),
                     latency_ms=t["latency_ms"],
                     outcome=outcome,
@@ -312,6 +451,7 @@ def build_server() -> Server:
             tenant_id=token.tenant_id,
             tool_name=name,
             caller_token_id=token.token_id,
+            identity=token.identity,
             arguments_hash=hash_arguments(arguments),
             latency_ms=t["latency_ms"],
             outcome=outcome,

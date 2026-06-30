@@ -65,6 +65,10 @@ class AuditRow:
     entity_id: str | None = None          # entity business key from tool args, when present
     arguments: dict[str, Any] | None = None       # full tool-call arguments
     result_summary: dict[str, Any] | None = None  # summarize_result() output, success only
+    # Migration 030 go-forward enrichment (nullable; historical/legacy rows stay
+    # NULL): declared agent-identity NAME of the caller, when the token carried
+    # one. Lets a governance pane attribute calls by identity, not token hash.
+    identity: str | None = None
 
 
 def write_audit(row: AuditRow) -> None:
@@ -73,8 +77,8 @@ def write_audit(row: AuditRow) -> None:
         "INSERT INTO mai_mcp_audit "
         "(tenant_id, tool_name, caller_token_id, arguments_hash, "
         " latency_ms, outcome, error_summary, transport, "
-        " entity_id, arguments, result_summary) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb)"
+        " entity_id, arguments, result_summary, identity) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s)"
     )
     try:
         with get_connection() as conn:
@@ -93,6 +97,7 @@ def write_audit(row: AuditRow) -> None:
                         row.entity_id,
                         json.dumps(row.arguments, default=str) if row.arguments is not None else None,
                         json.dumps(row.result_summary, default=str) if row.result_summary is not None else None,
+                        row.identity,
                     ),
                 )
                 conn.commit()

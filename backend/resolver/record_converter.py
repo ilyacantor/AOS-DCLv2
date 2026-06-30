@@ -193,6 +193,13 @@ class RecordConverter:
         result = ConversionResult()
         for pipe in pipes:
             self._convert_one_pipe(tenant_id, entity_id, pipe, result)
+        # Cross-pipe cloud_spend efficiency (cost ÷ output per team) — a post-pass
+        # over the emitted aggregates so cost (warehouse pipe) and output
+        # (delivery-analytics pipe) that rode the SAME ingest envelope join per
+        # team. Emits nothing when only one signal is present (e.g. a cost-only
+        # run, or the periodized billing/GL conflict feeds) — no fabricated rows.
+        from backend.resolver.cloud_spend_aggregator import compute_team_efficiency
+        result.payloads.extend(compute_team_efficiency(entity_id, result.payloads))
         # The field->concept classifications this batch implies — persisted by the
         # endpoint so the graph can resolve them (deferred #76).
         result.mappings = derive_field_mappings(result.payloads)
@@ -238,6 +245,7 @@ class RecordConverter:
             from backend.resolver.cloud_spend_aggregator import aggregate_cloud_spend
             result.payloads.extend(aggregate_cloud_spend(
                 entity_id=entity_id, pipe=pipe, records=pipe.get("records") or [],
+                warnings=result.warnings,
             ))
             return
         # Financial-statement pipe: period-keyed P&L/BS/CF bundles. DCL owns the
