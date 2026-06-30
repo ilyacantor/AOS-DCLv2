@@ -16,7 +16,7 @@
           { "id": "b3", "text": "contextOS relates two systems billing never sees together — cost from aws_cost_explorer, deploys from deploy_analytics — so the agent can rank every team by dollars per deploy.", "link": true, "record": { "source_system": "aws_cost_explorer × deploy_analytics", "concept": "cost_per_deploy", "team": "data_sci_apac", "cost_usd": 21758.42, "deploys": 19, "usd_per_deploy": 1145.18, "bitemporal_id": "a1b2c3d4-5e6f-4071-9b2c-3d4e5f6a7b81", "updated_at": "2026-06-29T18:14:10Z" } },
           { "id": "b4", "text": "data_sci_apac burns $1,145.18 per deploy — the worst in the estate. contextOS hands the agent that signal; the agent pinpoints the underutilized instances behind it to right-size next.", "source": "finops agent" }
         ],
-        "answer": { "headline": "data_sci_apac — worst $/deploy", "sub": "$1,145.18 per deploy, the worst team. contextOS joined cost (aws_cost_explorer) with output (deploy_analytics) — something billing alone can't see — and the FinOps agent takes that signal to pinpoint the underutilized instances to right-size." }
+        "answer": { "headline": "data_sci_apac · $1,145.18 / deploy", "sub": "$21,758.42 in cloud cost (AWS Cost Explorer) across 19 deploys (Deploy Analytics) — $1,145.18 per deploy, the highest of any team." }
       },
       "graph": {
         "parse": "agent=finops-rightsizing · cost_per_deploy · CloudFleet-USE1-7f3a",
@@ -28,7 +28,7 @@
         ],
         "link": { "label": "Cross-Source Efficiency", "detail": "$/deploy = cost ÷ output. data_sci_apac worst at $1,145.18.", "system": "contextOS" },
         "action": { "label": "Pinpoints the idle instances", "detail": "data_sci_apac's underutilized instances flagged → ready to right-size", "system": "agent", "badge": "targeted" },
-        "answer": { "headline": "data_sci_apac — worst $/deploy", "sub": "$1,145.18 per deploy, the worst team. contextOS joined cost (aws_cost_explorer) with output (deploy_analytics) — something billing alone can't see — and the FinOps agent takes that signal to pinpoint the underutilized instances to right-size." }
+        "answer": { "headline": "data_sci_apac · $1,145.18 / deploy", "sub": "$21,758.42 in cloud cost (AWS Cost Explorer) across 19 deploys (Deploy Analytics) — $1,145.18 per deploy, the highest of any team." }
       }
     },
     {
@@ -46,7 +46,7 @@
           { "id": "b3", "text": "The agent proposes the fix: downsize to c5.large — expected ~85% utilization, about $1K a month saved ($15K a year), under 5% performance risk.", "link": true, "record": { "source_system": "finops agent", "concept": "rightsizing_proposal", "instance_id": "i-75c0c1813079025d", "recommended_type": "c5.large", "expected_utilization_pct": 85, "monthly_savings_usd": 1000, "annual_savings_usd": 15000, "performance_risk": "<5%", "bitemporal_id": "d2e3f4a5-9b12-4c34-8d56-7e8f90a12b34", "updated_at": "2026-06-29T20:49:03Z" } },
           { "id": "b4", "text": "Right-sizing production isn't autonomous here — it needs Head of Cloud Platform approval. Approved, the agent executes the downsize in the Sun 2-4 AM maintenance window.", "source": "Head of Cloud Platform · HITL" }
         ],
-        "answer": { "headline": "Right-sized i-75c0c… → c5.large", "sub": "An idle c5.2xlarge at 22% utilization, downsized to c5.large (≈85%) for about $1K/month ($15K/yr). contextOS pointed the agent at the waste; the FinOps agent proposed the fix and executed it — gated by Head of Cloud Platform approval." }
+        "answer": { "headline": "Right-sized i-75c0c… → c5.large", "sub": "i-75c0c1813079025d was a c5.2xlarge at 22% utilization ($7,561/mo). Downsized to c5.large — ~85% expected utilization, ~$1,000/mo saved. Approved by Head of Cloud Platform." }
       },
       "graph": {
         "parse": "agent=finops-rightsizing · rightsize EC2 · CloudFleet-USE1-7f3a",
@@ -57,7 +57,7 @@
         ],
         "link": { "label": "Rightsize proposal · c5.2xlarge → c5.large", "detail": "≈85% expected utilization · save ~$1K/mo ($15K/yr) · risk <5%", "system": "agent" },
         "action": { "label": "Head of Cloud Platform approves → executed", "detail": "HITL gate · downsized in the Sun 2-4 AM window · cited to CloudWatch + AWS Cost Explorer", "system": "hitl", "badge": "executed" },
-        "answer": { "headline": "Right-sized i-75c0c… → c5.large", "sub": "An idle c5.2xlarge at 22% utilization, downsized to c5.large (≈85%) for about $1K/month ($15K/yr). contextOS pointed the agent at the waste; the FinOps agent proposed the fix and executed it — gated by Head of Cloud Platform approval." }
+        "answer": { "headline": "Right-sized i-75c0c… → c5.large", "sub": "i-75c0c1813079025d was a c5.2xlarge at 22% utilization ($7,561/mo). Downsized to c5.large — ~85% expected utilization, ~$1,000/mo saved. Approved by Head of Cloud Platform." }
       }
     },
     {
@@ -75,7 +75,7 @@
           { "id": "b3", "text": "A shadow CRM claims $8.64M — but that record is cancelled, from an unauthorized source.", "record": { "source_system": "shadow_crm", "concept": "run_rate", "value_usd": 8640000, "status": "cancelled", "bitemporal_id": "c7a2e519-3b44-4f0c-9d61-8e2a7b4c0d33", "updated_at": "2026-01-09T03:11:55Z" } },
           { "id": "b4", "text": "So the $8.64M is dropped before the LLM ever sees it.", "source": "workday_main", "link": true }
         ],
-        "answer": { "headline": "$2.64M", "sub": "from Workday, your system of record — the cancelled $8.64M shadow-CRM record was dropped, not averaged in" }
+        "answer": { "headline": "$2.64M", "sub": "From Workday (system of record). The conflicting $8.64M from shadow_crm is a cancelled record — excluded." }
       },
       "graph": {
         "parse": "entity=Engineering · metric=run_rate",
@@ -84,7 +84,7 @@
           { "id": "shadow_crm", "label": "Source: Shadow CRM", "detail": "$8.64M · cancelled", "badge": "shadow", "verdict": "excised", "excisedDetail": "Cancelled · unauthorized source. Excised." }
         ],
         "link": { "label": "Source-Authority Verify", "detail": "Workday upheld (SoR). $8.64M decoy pruned." },
-        "answer": { "headline": "$2.64M", "sub": "from Workday, your system of record — the cancelled $8.64M shadow-CRM record was dropped, not averaged in" }
+        "answer": { "headline": "$2.64M", "sub": "From Workday (system of record). The conflicting $8.64M from shadow_crm is a cancelled record — excluded." }
       }
     },
     {
@@ -102,7 +102,7 @@
           { "id": "b3", "text": "They're booked under two different legal entities — that roll up to the same parent. Nobody had added them together.", "link": true, "record": { "source_system": "legal_entity_master", "concept": "legal_entity_rollup", "parent": "Brightwater Partners", "children": "Brightwater Markets Ltd, Brightwater Capital LLC", "bitemporal_id": "3c4d5e6f-3333-4ccc-9ddd-2e3f4a5b6c73", "updated_at": "2026-05-31T09:00:00Z" } },
           { "id": "b4", "text": "After netting, your true exposure is far bigger than either desk saw.", "source": "collateral_mgmt" }
         ],
-        "answer": { "headline": "$612M net", "sub": "netted across both desks — not the $320M or $420M any one desk was watching" }
+        "answer": { "headline": "$612M net", "sub": "Murex prime brokerage ($320M) and Calypso financing ($420M) book under two legal entities that roll up to Brightwater — $612M net of collateral." }
       },
       "graph": {
         "parse": "entity=Brightwater Partners · metric=net_exposure",
@@ -111,7 +111,7 @@
           { "id": "calypso", "label": "Source: Calypso", "detail": "Financing · $420M", "verdict": "verified" }
         ],
         "link": { "label": "Legal-Entity Rollup", "detail": "Two entities → one parent. Netted across desks." },
-        "answer": { "headline": "$612M net", "sub": "netted across both desks — not the $320M or $420M any one desk was watching" }
+        "answer": { "headline": "$612M net", "sub": "Murex prime brokerage ($320M) and Calypso financing ($420M) book under two legal entities that roll up to Brightwater — $612M net of collateral." }
       }
     },
     {
@@ -128,7 +128,7 @@
           { "id": "b2", "text": "One of them drives your quote-to-cash service.", "record": { "source_system": "service_registry", "concept": "service", "tier": "customer_facing", "bitemporal_id": "d2a2b2c2-9102-4a12-9b22-1d2e3f4a5b02", "updated_at": "2026-06-20T00:00:00Z" } },
           { "id": "b3", "text": "And the month-end financial close quietly depends on a nightly Salesforce export — with no runbook and no on-call owner.", "link": true, "record": { "source_system": "data_lineage", "concept": "hidden_dependency", "runbook": "absent", "bitemporal_id": "d3a3b3c3-9103-4a13-9b23-2e3f4a5b6c03", "updated_at": "2026-06-21T00:00:00Z" } }
         ],
-        "answer": { "headline": "9 systems · 2 teams", "sub": "in the blast radius — including the close nobody had mapped" }
+        "answer": { "headline": "9 systems · 2 teams", "sub": "9 downstream systems across 2 teams — including quote-to-cash and the month-end close, which runs off a nightly Salesforce export with no runbook or owner." }
       },
       "graph": {
         "parse": "entity=Salesforce · query=blast_radius",
@@ -137,7 +137,7 @@
           { "id": "ipaas", "label": "Source: iPaaS (MuleSoft)", "detail": "14 live integrations", "verdict": "verified" }
         ],
         "link": { "label": "Hidden Dependency", "detail": "Month-end close depends on a nightly export. No runbook, no owner." },
-        "answer": { "headline": "9 systems · 2 teams", "sub": "in the blast radius — including the close nobody had mapped" }
+        "answer": { "headline": "9 systems · 2 teams", "sub": "9 downstream systems across 2 teams — including quote-to-cash and the month-end close, which runs off a nightly Salesforce export with no runbook or owner." }
       }
     },
     {
@@ -155,7 +155,7 @@
           { "id": "b3", "text": "Neither saw the other's chart. Together, it's a major bleeding risk.", "link": true, "record": { "source_system": "drug_interaction_db", "concept": "drug_interaction", "severity": "major", "patients": 218, "bitemporal_id": "c3d3e3f3-9603-4a63-9b73-2e3f4a5b6c53", "updated_at": "2026-06-21T00:00:00Z" } },
           { "id": "b4", "text": "Filled at different pharmacies, so no single med list ever caught it.", "source": "pharmacy_claims" }
         ],
-        "answer": { "headline": "218 patients", "sub": "on a dangerous combination no single chart would have shown" }
+        "answer": { "headline": "218 patients", "sub": "On a major-severity interaction — an anticoagulant and a high-dose NSAID from different providers, filled at different pharmacies." }
       },
       "graph": {
         "parse": "entity=Polypharmacy cohort · query=interactions",
@@ -164,7 +164,7 @@
           { "id": "erx_primary", "label": "Source: eRx · Primary Care", "detail": "high-dose NSAID", "verdict": "verified" }
         ],
         "link": { "label": "Cross-Source Interaction", "detail": "Neither chart saw the other. Major bleeding risk." },
-        "answer": { "headline": "218 patients", "sub": "on a dangerous combination no single chart would have shown" }
+        "answer": { "headline": "218 patients", "sub": "On a major-severity interaction — an anticoagulant and a high-dose NSAID from different providers, filled at different pharmacies." }
       }
     },
     {
@@ -181,7 +181,7 @@
           { "id": "b2", "text": "They look like seven different providers each making mistakes.", "record": { "source_system": "cpoe_order_sets", "concept": "order_set", "providers": 7, "bitemporal_id": "b2c2d2e2-9502-4a52-9b62-1d2e3f4a5b42", "updated_at": "2026-06-20T00:00:00Z" } },
           { "id": "b3", "text": "But all seven use one order template that turns the auth flag off. One template, not seven people.", "link": true, "record": { "source_system": "order_template_config", "concept": "root_cause_template", "auth_flag_default": false, "value_usd": 640000, "bitemporal_id": "b3c3d3e3-9503-4a53-9b63-2e3f4a5b6c43", "updated_at": "2026-06-21T00:00:00Z" } }
         ],
-        "answer": { "headline": "$640K", "sub": "in denials — traced to a single order template you can fix in an afternoon" }
+        "answer": { "headline": "$640K", "sub": "In denials over 90 days (missing prior authorization), all traced to one order-set template that defaults the auth flag off — used by 7 providers." }
       },
       "graph": {
         "parse": "entity=Denied claims (90d) · query=root_cause",
@@ -190,7 +190,7 @@
           { "id": "cpoe", "label": "Source: CPOE Order Sets", "detail": "7 providers implicated", "verdict": "verified" }
         ],
         "link": { "label": "Root-Cause Template", "detail": "One template defaults the auth flag off — not seven people." },
-        "answer": { "headline": "$640K", "sub": "in denials — traced to a single order template you can fix in an afternoon" }
+        "answer": { "headline": "$640K", "sub": "In denials over 90 days (missing prior authorization), all traced to one order-set template that defaults the auth flag off — used by 7 providers." }
       }
     }
   ]
