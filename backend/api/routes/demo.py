@@ -82,6 +82,10 @@ def list_questions() -> Dict[str, Any]:
             "capability": q.get("capability", "traversal"),
             "question": q["question"],
             "entity_id": q.get("entity_id"),
+            # Source of the request — who is asking (e.g. "FinOps Agent",
+            # "Head of Engineering"). askerKind distinguishes agent vs human.
+            "asker": q.get("asker"),
+            "askerKind": q.get("askerKind"),
         }
         for q in gallery["questions"]
     ]
@@ -114,21 +118,25 @@ def get_trace(q: Optional[str] = Query(default=None)) -> Dict[str, Any]:
 
 @router.get("/finops-arc")
 def get_finops_arc() -> Dict[str, Any]:
-    """Return the LATEST agent-context arc capture for the Agent Arc render layer.
+    """Return the LATEST agent-context arc capture (headless finops_arc tool).
 
-    The headless arc (`python -m demo.finops_arc`) runs the REAL ops and writes
-    `public/demo-captures/finops_arc__<stamp>.json`. This endpoint parses and
-    returns the most recent capture verbatim — it is RENDER-ONLY and synthesizes
-    nothing. No silent fallback (A1): if no capture exists, 404 with the command
-    to produce one. The identity pair (I2) is carried in the capture's `target`
+    The Agent Arc UI tab was removed — Glass Box is the only DCL demo surface —
+    but the headless arc and its capture are retained as a regression / ground-
+    truth tool (it runs the REAL auth -> traverse -> act -> govern -> revoke ops
+    against DCL-MCP). This endpoint serves the latest capture for inspection
+    (curl / tooling). `python -m demo.finops_arc` runs the ops and writes
+    `public/demo-captures/finops_arc__<stamp>.json`; this endpoint parses and
+    returns the most recent capture verbatim — RENDER-ONLY, synthesizes nothing.
+    No silent fallback (A1): if no capture exists, 404 with the command to
+    produce one. The identity pair (I2) is carried in the capture's `target`
     (tenant_id machine-only + entity_id business key).
     """
     if not _CAPTURES_DIR.exists():
         raise HTTPException(
             status_code=404,
             detail=(
-                f"No demo-captures directory at {_CAPTURES_DIR}. The Agent Arc tab "
-                "renders a captured arc; run `python -m demo.finops_arc` first to "
+                f"No demo-captures directory at {_CAPTURES_DIR}. This endpoint serves "
+                "the headless arc capture; run `python -m demo.finops_arc` first to "
                 "produce one."
             ),
         )
@@ -139,8 +147,8 @@ def get_finops_arc() -> Dict[str, Any]:
         raise HTTPException(
             status_code=404,
             detail=(
-                f"No finops_arc capture found in {_CAPTURES_DIR}. The Agent Arc tab "
-                "renders a captured arc; run `python -m demo.finops_arc` first to "
+                f"No finops_arc capture found in {_CAPTURES_DIR}. This endpoint serves "
+                "the headless arc capture; run `python -m demo.finops_arc` first to "
                 "produce one."
             ),
         )

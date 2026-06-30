@@ -1,7 +1,7 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { Loader2 } from 'lucide-react'
 import type { EngineNodeData } from './trace/types'
-import { NODE_THEME, badgeTone } from './theme'
+import { NODE_THEME, badgeTone, systemTag } from './theme'
 import { ICONS } from './icons'
 
 export type EngineNodeType = Node<EngineNodeData, 'engine'>
@@ -22,7 +22,18 @@ export function EngineNode({ data }: NodeProps<EngineNodeType>) {
     >
       <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-slate-700 !bg-slate-500" />
 
-      <div className="flex items-start gap-2 px-3 pb-1.5 pt-2.5">
+      {data.system && (
+        <div className="px-3 pt-2">
+          <span
+            data-testid={`system-${data.system}`}
+            className={`inline-block rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ring-1 ${systemTag(data.system).cls}`}
+          >
+            {systemTag(data.system).label}
+          </span>
+        </div>
+      )}
+
+      <div className={`flex items-start gap-2 px-3 pb-1.5 ${data.system ? 'pt-1.5' : 'pt-2.5'}`}>
         <span className={`mt-0.5 shrink-0 ${tone.icon}`}>
           {data.state === 'processing' ? (
             <Loader2 size={16} className="animate-spin" />

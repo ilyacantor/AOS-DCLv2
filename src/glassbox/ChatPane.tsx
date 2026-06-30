@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Boxes, Loader2 } from 'lucide-react'
+import { Bot, Boxes, Loader2, UserRound } from 'lucide-react'
 import type { ChatMessage } from './trace/types'
 import { fetchQuestions, type GalleryItem } from './trace/galleryTrace'
 
@@ -57,6 +57,16 @@ export function ChatPane({ messages, loading, running, onSelect }: ChatPaneProps
               onClick={() => onSelect(q.id)}
               className="block w-full rounded-lg border border-slate-700/80 bg-slate-800/40 px-3 py-2 text-left transition hover:border-emerald-500/40 hover:bg-slate-800/70 disabled:cursor-not-allowed disabled:opacity-50"
             >
+              {q.asker && (
+                <span className="mb-1 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                  {q.askerKind === 'agent' ? (
+                    <Bot size={11} className="text-emerald-400" />
+                  ) : (
+                    <UserRound size={11} className="text-sky-400" />
+                  )}
+                  {q.asker}
+                </span>
+              )}
               <span className="block text-sm leading-snug text-slate-100">{q.question}</span>
               <span className="mt-0.5 block text-[11px] text-slate-500">{q.entity_id}</span>
             </button>
@@ -64,7 +74,7 @@ export function ChatPane({ messages, loading, running, onSelect }: ChatPaneProps
         </div>
 
         {(messages.length > 0 || loading) && (
-          <div className="space-y-3 border-t border-slate-800/70 pt-3">
+          <div data-testid="chat-messages" className="space-y-3 border-t border-slate-800/70 pt-3">
             {messages.map((m) => (
               <Bubble key={m.id} message={m} />
             ))}
@@ -80,7 +90,17 @@ function Bubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user'
   const isError = message.tone === 'error'
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+      {message.author && (
+        <span className="mb-1 flex items-center gap-1 px-1 text-[10px] font-medium uppercase tracking-wider text-slate-400">
+          {message.authorIsAgent ? (
+            <Bot size={11} className="text-emerald-400" />
+          ) : (
+            <UserRound size={11} className="text-sky-400" />
+          )}
+          {message.author}
+        </span>
+      )}
       <div
         data-testid={isError ? 'trace-error' : undefined}
         className={`max-w-[88%] whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${

@@ -1,5 +1,5 @@
 import type { TraceSource } from './TraceSource'
-import type { TraceEvent } from './types'
+import type { StepSystem, TraceEvent } from './types'
 
 // Adapter: the /api/demo replay backend serves each question's authored `graph`
 // (intake -> source-system candidates -> link/verify -> reducer). This turns
@@ -11,6 +11,10 @@ export interface GalleryItem {
   question: string
   entity_id: string
   capability?: string
+  /** Source of the request — who is asking (e.g. "FinOps Agent"). */
+  asker?: string
+  /** 'agent' | 'human' — distinguishes an agent requester from a person. */
+  askerKind?: 'agent' | 'human'
 }
 
 interface GraphCandidate {
@@ -20,12 +24,21 @@ interface GraphCandidate {
   badge?: string
   verdict: 'verified' | 'excised'
   excisedDetail?: string
+  /** Denotes where this input comes from — contextOS context vs agent telemetry. */
+  system?: StepSystem
 }
 
 interface QuestionGraph {
   parse?: string
+  /** System lane for the intake/query node (the agent issues it). */
+  intakeSystem?: StepSystem
   candidates: GraphCandidate[]
-  link: { label: string; detail?: string }
+  link: { label: string; detail?: string; system?: StepSystem }
+  // Agentic questions END IN AN ACTION, not a compute reducer: the agent acts on
+  // the resolved context (e.g. right-sizes a concrete EC2 instance), gated by HITL
+  // approval. Each node carries a `system` so the agent↔contextOS↔human boundary
+  // is denoted. Read-queries omit `action` (they get the compute reducer).
+  action?: { label: string; detail?: string; system?: StepSystem; badge?: string }
   answer: { headline: string; sub: string }
 }
 
@@ -46,7 +59,7 @@ export async function fetchQuestions(): Promise<GalleryItem[]> {
   return data.questions
 }
 
-function buildTimeline(question: { id: string; question: string; entity_id: string; graph?: QuestionGraph }): Step[] {
+function buildTimeline(question: { id: string; question: string; entity_id: string; asker?: string; askerKind?: 'agent' | 'human'; graph?: QuestionGraph }): Step[] {
   const g = question.graph
   if (!g?.candidates?.length || !g.link || !g.answer) {
     throw new Error(`question '${question.id}' has no graph topology to animate`)
@@ -75,7 +88,7 @@ function buildTimeline(question: { id: string; question: string; entity_id: stri
       at: 0,
       events: [
         { kind: 'reset' },
-        { kind: 'chat.message', message: { id: `u-${question.id}`, role: 'user', text: question.question } },
+        { kind: 'chat.message', message: { id: `u-${question.id}`, role: 'user', text: question.question, author: question.asker, authorIsAgent: question.askerKind === 'agent' } },
         { kind: 'chat.loading', value: true },
       ],
     },
@@ -87,7 +100,7 @@ function buildTimeline(question: { id: string; question: string; entity_id: stri
           node: {
             id: INTAKE,
             position: { x: centerX, y: ROW.intake },
-            data: { label: 'Intake Parser', state: 'verified', icon: 'parser', detail: g.parse ?? `entity=${question.entity_id}` },
+            data: { label: 'Intake Parser', state: 'verified', icon: 'parser', detail: g.parse ?? `entity=${question.entity_id}`, system: g.intakeSystem },
           },
         },
       ],
@@ -100,7 +113,7 @@ function buildTimeline(question: { id: string; question: string; entity_id: stri
           node: {
             id: c.id,
             position: { x: i * COL, y: ROW.candidate },
-            data: { label: c.label, state: 'processing', icon: 'database', detail: c.detail, badge: c.badge },
+            data: { label: c.label, state: 'processing', icon: 'database', detail: c.detail, badge: c.badge, system: c.system },
           },
         })),
         ...g.candidates.map<TraceEvent>((c) => ({
@@ -117,7 +130,7 @@ function buildTimeline(question: { id: string; question: string; entity_id: stri
           node: {
             id: LINK,
             position: { x: centerX, y: ROW.link },
-            data: { label: g.link.label, state: 'processing', icon: 'shield', detail: g.link.detail ?? 'Arbitrating…' },
+            data: { label: g.link.label, state: 'processing', icon: 'shield', detail: g.link.detail ?? 'Arbitrating…', system: g.link.system },
           },
         },
         ...g.candidates.map<TraceEvent>((c) => ({
@@ -130,15 +143,33 @@ function buildTimeline(question: { id: string; question: string; entity_id: stri
     {
       at: 5700,
       events: [
-        {
-          kind: 'node.add',
-          node: {
-            id: REDUCER,
-            position: { x: centerX, y: ROW.reducer },
-            data: { label: 'Compute Reducer', state: 'verified', icon: 'reducer', detail: `Push-down complete. Payload: ${g.answer.headline}` },
-          },
-        },
-        { kind: 'edge.add', edge: { id: 'e-verify-reducer', source: LINK, target: REDUCER } },
+        ...(g.action
+          ? ([
+              // Agentic: one ACT node — the agent acts on the resolved context
+              // (e.g. executes the EC2 rightsize). Its `system` denotes the lane
+              // (agent execution, or a HITL approval gate).
+              {
+                kind: 'node.add',
+                node: {
+                  id: REDUCER,
+                  position: { x: centerX, y: ROW.reducer },
+                  data: { label: g.action.label, state: 'verified', icon: 'action', detail: g.action.detail ?? `Committed. ${g.answer.headline}`, badge: g.action.badge ?? 'acted', system: g.action.system },
+                },
+              },
+              { kind: 'edge.add', edge: { id: 'e-verify-reducer', source: LINK, target: REDUCER } },
+            ] as TraceEvent[])
+          : ([
+                // Read-query: a single compute reducer carrying the payload.
+                {
+                  kind: 'node.add',
+                  node: {
+                    id: REDUCER,
+                    position: { x: centerX, y: ROW.reducer },
+                    data: { label: 'Compute Reducer', state: 'verified', icon: 'reducer', detail: `Push-down complete. Payload: ${g.answer.headline}` },
+                  },
+                },
+                { kind: 'edge.add', edge: { id: 'e-verify-reducer', source: LINK, target: REDUCER } },
+              ] as TraceEvent[])),
       ],
     },
     {

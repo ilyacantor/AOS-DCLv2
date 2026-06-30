@@ -46,3 +46,18 @@ export function badgeTone(badge: string): string {
   if (/1\.0\s*$/.test(badge) || /\bSoR\b/.test(badge)) return 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
   return 'bg-slate-700/40 text-slate-300 ring-1 ring-slate-600/40'
 }
+
+/** The system-lane tag shown on a node — denotes WHERE the step runs so the
+ *  contextOS↔agent↔human boundary is explicit. */
+export function systemTag(system: string): { label: string; cls: string } {
+  switch (system) {
+    case 'contextOS':
+      return { label: 'contextOS', cls: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30' }
+    case 'agent':
+      return { label: 'FinOps agent', cls: 'bg-violet-500/15 text-violet-300 ring-violet-500/30' }
+    case 'hitl':
+      return { label: 'HITL · approval', cls: 'bg-amber-500/15 text-amber-300 ring-amber-500/30' }
+    default:
+      return { label: system, cls: 'bg-slate-700/40 text-slate-300 ring-slate-600/40' }
+  }
+}

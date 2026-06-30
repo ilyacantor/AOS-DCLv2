@@ -1,10 +1,71 @@
 {
-  "_note": "Glass Box demo GALLERY (RAILS MODE replay). Five preselected questions, no category buckets. Each question carries: (a) `story.beats` — the authored narrative + raw records (the live-engine beat contract, served unchanged by backend/api/routes/demo.py); and (b) `graph` — the node-graph topology the React-Flow Glass Box animates (intake -> source-system candidates -> link/verify -> reducer). The source system (workday, murex, …) is shown as the candidate NODE itself; a verdict of 'excised' severs that path. Authored replay, NOT live engine output; no silent fallback. The `graph` source-system labels and the eventual record lineage must be wired to real sources in prod.",
+  "_note": "Glass Box demo GALLERY (RAILS MODE replay). Seven preselected questions, no category buckets. The first two are AGENTIC and tag every node with the system it runs in (`system`: contextOS / agent / hitl) so the agent↔contextOS boundary is explicit. `agent_rightsize` (contextOS relates cost x output across sources so the agent finds the worst $/deploy team — data_sci_apac — then pinpoints its idle instances; the cross-source relate is contextOS, the query + pinpoint are the agent). `agent_execute` (the core function — the FinOps agent right-sizes a CONCRETE underutilized EC2 instance, i-75c0c1813079025d c5.2xlarge -> c5.large, gated by HITL Head-of-Cloud-Platform approval; NOT autonomous, NOT a 'team' right-size). The other five are read-queries. The cross-source numbers (data_sci_apac, $1,145.18/deploy, aws_cost_explorer x deploy_analytics, entity CloudFleet-USE1-7f3a) mirror the real headless agent-arc capture; the EC2 rightsize (instance, c5.2xlarge->c5.large, 22%->85%, ~$1K/mo, approval) mirrors the FinOps Recommendations 'Approve Optimization' surface. Each question carries: (a) `story.beats` — the authored narrative + raw records (the live-engine beat contract, served unchanged by backend/api/routes/demo.py); and (b) `graph` — the node-graph topology the React-Flow Glass Box animates (intake -> source-system candidates -> link/verify -> reducer; agentic questions end in a `graph.action` ACT node instead of the reducer, and every node may carry a `system` lane tag). The source system (workday, murex, …) is shown as the candidate NODE itself; a verdict of 'excised' severs that path. Authored replay, NOT live engine output; no silent fallback. The `graph` source-system labels and the eventual record lineage must be wired to real sources in prod.",
   "questions": [
+    {
+      "id": "agent_rightsize",
+      "capability": "agentic",
+      "question": "Which team is burning the most per deploy?",
+      "asker": "FinOps Agent",
+      "askerKind": "agent",
+      "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
+      "entity_id": "CloudFleet-USE1-7f3a",
+      "story": {
+        "beats": [
+          { "id": "b1", "text": "A FinOps agent connects to AOS read-only — scoped to cloud_spend as finops-rightsizing — and asks one question across the whole estate.", "source": "finops agent · DCL-MCP" },
+          { "id": "b2", "text": "Billing shows $128,914 of cloud spend, but it can't say which team is wasteful — billing has no notion of output.", "record": { "source_system": "billing", "concept": "total_cost", "value_usd": 128914, "note": "no team · no output", "bitemporal_id": "f0a1b2c3-4d5e-4f60-8a1b-2c3d4e5f6a70", "updated_at": "2026-06-29T18:14:10Z" } },
+          { "id": "b3", "text": "contextOS relates two systems billing never sees together — cost from aws_cost_explorer, deploys from deploy_analytics — so the agent can rank every team by dollars per deploy.", "link": true, "record": { "source_system": "aws_cost_explorer × deploy_analytics", "concept": "cost_per_deploy", "team": "data_sci_apac", "cost_usd": 21758.42, "deploys": 19, "usd_per_deploy": 1145.18, "bitemporal_id": "a1b2c3d4-5e6f-4071-9b2c-3d4e5f6a7b81", "updated_at": "2026-06-29T18:14:10Z" } },
+          { "id": "b4", "text": "data_sci_apac burns $1,145.18 per deploy — the worst in the estate. contextOS hands the agent that signal; the agent pinpoints the underutilized instances behind it to right-size next.", "source": "finops agent" }
+        ],
+        "answer": { "headline": "data_sci_apac — worst $/deploy", "sub": "$1,145.18 per deploy, the worst team. contextOS joined cost (aws_cost_explorer) with output (deploy_analytics) — something billing alone can't see — and the FinOps agent takes that signal to pinpoint the underutilized instances to right-size." }
+      },
+      "graph": {
+        "parse": "agent=finops-rightsizing · cost_per_deploy · CloudFleet-USE1-7f3a",
+        "intakeSystem": "agent",
+        "candidates": [
+          { "id": "billing", "label": "Source: Billing", "detail": "$128,914 · no team / no output", "badge": "shallow", "system": "contextOS", "verdict": "excised", "excisedDetail": "One system, no output dimension — can't rank efficiency. Excised." },
+          { "id": "aws_cost_explorer", "label": "Source: AWS Cost Explorer", "detail": "data_sci_apac · $21,758.42 cost", "badge": "cost", "system": "contextOS", "verdict": "verified" },
+          { "id": "deploy_analytics", "label": "Source: Deploy Analytics", "detail": "data_sci_apac · 19 deploys", "badge": "output", "system": "contextOS", "verdict": "verified" }
+        ],
+        "link": { "label": "Cross-Source Efficiency", "detail": "$/deploy = cost ÷ output. data_sci_apac worst at $1,145.18.", "system": "contextOS" },
+        "action": { "label": "Pinpoints the idle instances", "detail": "data_sci_apac's underutilized instances flagged → ready to right-size", "system": "agent", "badge": "targeted" },
+        "answer": { "headline": "data_sci_apac — worst $/deploy", "sub": "$1,145.18 per deploy, the worst team. contextOS joined cost (aws_cost_explorer) with output (deploy_analytics) — something billing alone can't see — and the FinOps agent takes that signal to pinpoint the underutilized instances to right-size." }
+      }
+    },
+    {
+      "id": "agent_execute",
+      "capability": "agentic",
+      "question": "Right-size the idle EC2 instance the agent flagged.",
+      "asker": "FinOps Agent",
+      "askerKind": "agent",
+      "tenant_id": "69688df3-fc8e-51f8-a77c-9c13f9b3a784",
+      "entity_id": "CloudFleet-USE1-7f3a",
+      "story": {
+        "beats": [
+          { "id": "b1", "text": "The agent takes contextOS's signal — data_sci_apac is the worst $/deploy team — and drills into the instances behind it.", "source": "finops agent · DCL-MCP" },
+          { "id": "b2", "text": "One EC2 instance, i-75c0c1813079025d, is a c5.2xlarge running at 22% utilization — $7,561 a month for capacity it isn't using.", "record": { "source_system": "cloudwatch", "concept": "ec2_utilization", "instance_id": "i-75c0c1813079025d", "instance_type": "c5.2xlarge", "monthly_cost_usd": 7561, "avg_utilization_pct": 22, "bitemporal_id": "c1d2e3f4-9a01-4b23-8c45-6d7e8f901a23", "updated_at": "2026-06-29T20:49:02Z" } },
+          { "id": "b3", "text": "The agent proposes the fix: downsize to c5.large — expected ~85% utilization, about $1K a month saved ($15K a year), under 5% performance risk.", "link": true, "record": { "source_system": "finops agent", "concept": "rightsizing_proposal", "instance_id": "i-75c0c1813079025d", "recommended_type": "c5.large", "expected_utilization_pct": 85, "monthly_savings_usd": 1000, "annual_savings_usd": 15000, "performance_risk": "<5%", "bitemporal_id": "d2e3f4a5-9b12-4c34-8d56-7e8f90a12b34", "updated_at": "2026-06-29T20:49:03Z" } },
+          { "id": "b4", "text": "Right-sizing production isn't autonomous here — it needs Head of Cloud Platform approval. Approved, the agent executes the downsize in the Sun 2-4 AM maintenance window.", "source": "Head of Cloud Platform · HITL" }
+        ],
+        "answer": { "headline": "Right-sized i-75c0c… → c5.large", "sub": "An idle c5.2xlarge at 22% utilization, downsized to c5.large (≈85%) for about $1K/month ($15K/yr). contextOS pointed the agent at the waste; the FinOps agent proposed the fix and executed it — gated by Head of Cloud Platform approval." }
+      },
+      "graph": {
+        "parse": "agent=finops-rightsizing · rightsize EC2 · CloudFleet-USE1-7f3a",
+        "intakeSystem": "agent",
+        "candidates": [
+          { "id": "ctx_signal", "label": "Cross-source signal", "detail": "data_sci_apac = worst $/deploy (cost × output)", "badge": "context", "system": "contextOS", "verdict": "verified" },
+          { "id": "cw_util", "label": "CloudWatch · i-75c0c…", "detail": "c5.2xlarge · 22% utilization · $7,561/mo", "badge": "telemetry", "system": "agent", "verdict": "verified" }
+        ],
+        "link": { "label": "Rightsize proposal · c5.2xlarge → c5.large", "detail": "≈85% expected utilization · save ~$1K/mo ($15K/yr) · risk <5%", "system": "agent" },
+        "action": { "label": "Head of Cloud Platform approves → executed", "detail": "HITL gate · downsized in the Sun 2-4 AM window · cited to CloudWatch + AWS Cost Explorer", "system": "hitl", "badge": "executed" },
+        "answer": { "headline": "Right-sized i-75c0c… → c5.large", "sub": "An idle c5.2xlarge at 22% utilization, downsized to c5.large (≈85%) for about $1K/month ($15K/yr). contextOS pointed the agent at the waste; the FinOps agent proposed the fix and executed it — gated by Head of Cloud Platform approval." }
+      }
+    },
     {
       "id": "eng_runrate",
       "capability": "conflict",
       "question": "What's the real run-rate for Engineering?",
+      "asker": "Head of Engineering",
+      "askerKind": "human",
       "tenant_id": "d3b07384-d9a0-4c9b-9b7a-1f2e3a4b5c6d",
       "entity_id": "Engineering",
       "story": {
@@ -14,7 +75,7 @@
           { "id": "b3", "text": "A shadow CRM claims $8.64M — but that record is cancelled, from an unauthorized source.", "record": { "source_system": "shadow_crm", "concept": "run_rate", "value_usd": 8640000, "status": "cancelled", "bitemporal_id": "c7a2e519-3b44-4f0c-9d61-8e2a7b4c0d33", "updated_at": "2026-01-09T03:11:55Z" } },
           { "id": "b4", "text": "So the $8.64M is dropped before the LLM ever sees it.", "source": "workday_main", "link": true }
         ],
-        "answer": { "headline": "$2.64M", "sub": "the trustworthy number — the conflicting $8.64M was pruned, not averaged in" }
+        "answer": { "headline": "$2.64M", "sub": "from Workday, your system of record — the cancelled $8.64M shadow-CRM record was dropped, not averaged in" }
       },
       "graph": {
         "parse": "entity=Engineering · metric=run_rate",
@@ -23,13 +84,15 @@
           { "id": "shadow_crm", "label": "Source: Shadow CRM", "detail": "$8.64M · cancelled", "badge": "shadow", "verdict": "excised", "excisedDetail": "Cancelled · unauthorized source. Excised." }
         ],
         "link": { "label": "Source-Authority Verify", "detail": "Workday upheld (SoR). $8.64M decoy pruned." },
-        "answer": { "headline": "$2.64M", "sub": "the trustworthy number — the conflicting $8.64M was pruned, not averaged in" }
+        "answer": { "headline": "$2.64M", "sub": "from Workday, your system of record — the cancelled $8.64M shadow-CRM record was dropped, not averaged in" }
       }
     },
     {
       "id": "counterparty_exposure",
       "capability": "traversal",
       "question": "What's our real exposure to Brightwater Partners?",
+      "asker": "Chief Risk Officer",
+      "askerKind": "human",
       "tenant_id": "a17be4d2-90c3-4e51-8f6a-22b9c0d1e3f4",
       "entity_id": "Brightwater Partners",
       "story": {
@@ -39,7 +102,7 @@
           { "id": "b3", "text": "They're booked under two different legal entities — that roll up to the same parent. Nobody had added them together.", "link": true, "record": { "source_system": "legal_entity_master", "concept": "legal_entity_rollup", "parent": "Brightwater Partners", "children": "Brightwater Markets Ltd, Brightwater Capital LLC", "bitemporal_id": "3c4d5e6f-3333-4ccc-9ddd-2e3f4a5b6c73", "updated_at": "2026-05-31T09:00:00Z" } },
           { "id": "b4", "text": "After netting, your true exposure is far bigger than either desk saw.", "source": "collateral_mgmt" }
         ],
-        "answer": { "headline": "$612M net", "sub": "the real number — not the $320M or $420M any one desk was watching" }
+        "answer": { "headline": "$612M net", "sub": "netted across both desks — not the $320M or $420M any one desk was watching" }
       },
       "graph": {
         "parse": "entity=Brightwater Partners · metric=net_exposure",
@@ -48,13 +111,15 @@
           { "id": "calypso", "label": "Source: Calypso", "detail": "Financing · $420M", "verdict": "verified" }
         ],
         "link": { "label": "Legal-Entity Rollup", "detail": "Two entities → one parent. Netted across desks." },
-        "answer": { "headline": "$612M net", "sub": "the real number — not the $320M or $420M any one desk was watching" }
+        "answer": { "headline": "$612M net", "sub": "netted across both desks — not the $320M or $420M any one desk was watching" }
       }
     },
     {
       "id": "salesforce_blast_radius",
       "capability": "traversal",
       "question": "If Salesforce goes down, what actually breaks?",
+      "asker": "Head of Platform",
+      "askerKind": "human",
       "tenant_id": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f",
       "entity_id": "Salesforce",
       "story": {
@@ -79,6 +144,8 @@
       "id": "conflicting_meds",
       "capability": "traversal",
       "question": "Are any patients on dangerous medication combinations?",
+      "asker": "Chief Medical Officer",
+      "askerKind": "human",
       "tenant_id": "b6c7d8e9-f0a1-4b2c-3d4e-5f60718293a4",
       "entity_id": "Polypharmacy cohort",
       "story": {
@@ -104,6 +171,8 @@
       "id": "denied_claims_driver",
       "capability": "traversal",
       "question": "Why do our claims keep getting denied?",
+      "asker": "Head of Revenue Cycle",
+      "askerKind": "human",
       "tenant_id": "a5b6c7d8-e9f0-4a1b-2c3d-4e5f60718293",
       "entity_id": "Denied claims (90d)",
       "story": {

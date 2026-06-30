@@ -6,7 +6,11 @@
 export type NodeState = 'pending' | 'processing' | 'verified' | 'excised'
 
 /** Serializable icon key — resolved to a lucide icon in the component layer. */
-export type IconKey = 'parser' | 'database' | 'shield' | 'reducer'
+export type IconKey = 'parser' | 'database' | 'shield' | 'reducer' | 'action'
+
+/** Which system a step runs in — denoted on the node so the agent↔contextOS
+ *  boundary is explicit. contextOS serves context; the agent acts; HITL gates. */
+export type StepSystem = 'contextOS' | 'agent' | 'hitl'
 
 export interface EngineNodeData {
   label: string
@@ -14,6 +18,8 @@ export interface EngineNodeData {
   icon: IconKey
   detail?: string
   badge?: string
+  /** Denotes where the step takes place (agent vs contextOS vs human gate). */
+  system?: StepSystem
   [key: string]: unknown
 }
 
@@ -35,6 +41,10 @@ export interface ChatMessage {
   text: string
   /** 'error' renders a readable failure surface (no silent blank). */
   tone?: 'error'
+  /** Source of the request — e.g. "FinOps Agent", "Head of Engineering". */
+  author?: string
+  /** True when the author is an agent (vs a human persona) — drives the icon. */
+  authorIsAgent?: boolean
 }
 
 export type TraceEvent =
