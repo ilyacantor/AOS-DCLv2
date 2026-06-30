@@ -1,7 +1,7 @@
 {
-  "seed_date": "2026-06-23",
-  "dcl_ingest_id": "a5bba8ad-33b4-4f98-8cd4-1aac969b448b",
-  "tenant_id": "e82ae78d-5977-4317-b330-38dfa29d4cc3",
+  "seed_date": "2026-06-30",
+  "dcl_ingest_id": "e7a66add-bd7f-4815-9614-c19bcf95877d",
+  "tenant_id": "918796c2-85d0-4ac4-ab1e-4f08d917202d",
   "total_triples": 2099,
   "concept_summary": {
     "account": 12,
@@ -49,7 +49,7 @@
     "workforce": 120
   },
   "entities": [
-    "DriftNexus-ad85"
+    "EchoEdge-b292"
   ],
   "farm_run_id": "snapshot_push_5652c2f4-efa_f8f75ced"
 }

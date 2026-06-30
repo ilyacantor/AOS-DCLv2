@@ -32,7 +32,14 @@ set +a
 
 source .venv/bin/activate
 
+# --reload-dir backend: only watch the served code. Default --reload watches the
+# whole repo cwd, so (a) WatchFiles walks .venv/node_modules/.git (~777MB) at
+# startup, and (b) ANY .py write under tests/, scripts/, demo/, migrations/ —
+# including edits from other agent sessions — restarts the worker and drops :8104
+# mid-reboot. Scoping to backend/ keeps hot-reload for real backend edits while
+# the boot stays ~9s and the service stays up. (ledger: dcl-dev --reload thrash.)
 exec python -m uvicorn backend.api.main:app \
     --host 0.0.0.0 \
     --port "${PORT:-8104}" \
-    --reload
+    --reload \
+    --reload-dir backend
