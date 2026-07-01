@@ -11,10 +11,14 @@ import { MonitoringTab } from './components/MonitoringTab';
 import { useSnapshots } from './components/RunSelector';
 
 // Glass Box demo — lazy so React Flow / zustand never enter the console bundle.
-// Glass Box is the only demo surface in the DCL console.
 const GlassBox = lazy(() => import('./glassbox/GlassBox'));
 
-type MainView = 'graph' | 'dashboard' | 'context' | 'guide' | 'ingest' | 'monitor' | 'glassbox';
+// Agent Arc — render layer for the captured agent-context arc (finops
+// cloud_spend); lazy for the same reason (it reuses the Glass Box React-Flow
+// Canvas). Renders the /api/demo/finops-arc capture — replay, not live ops.
+const AgentArcTab = lazy(() => import('./components/AgentArcTab'));
+
+type MainView = 'graph' | 'dashboard' | 'context' | 'guide' | 'ingest' | 'monitor' | 'glassbox' | 'agentarc';
 
 const initialView: MainView = 'graph';
 
@@ -304,6 +308,7 @@ function App() {
     { id: 'ingest', label: 'Ingest' },
     { id: 'monitor', label: 'Monitor' },
     { id: 'glassbox', label: 'Glass Box' },
+    { id: 'agentarc', label: 'Agent Arc' },
   ];
 
   return (
@@ -458,6 +463,10 @@ function App() {
         ) : mainView === 'glassbox' ? (
           <Suspense fallback={<div style={{ padding: 24, color: '#71717a' }}>Loading Glass Box…</div>}>
             <GlassBox />
+          </Suspense>
+        ) : mainView === 'agentarc' ? (
+          <Suspense fallback={<div style={{ padding: 24, color: '#71717a' }}>Loading Agent Arc…</div>}>
+            <AgentArcTab />
           </Suspense>
         ) : (
           <GraphV2Tab graphData={graphData} snapshot={snapshot} selectedPersonas={selectedPersonas} />
