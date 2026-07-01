@@ -73,7 +73,10 @@ def _find_question(gallery: Dict[str, Any], qid: Optional[str]) -> Dict[str, Any
 
 @router.get("/questions")
 def list_questions() -> Dict[str, Any]:
-    """Return the preselected gallery for the picker (client groups by category)."""
+    """Return the picker's questions — every gallery entry except those flagged
+    `hidden: true`. Hidden questions are RETAINED in the fixture and still resolve
+    via /api/demo/trace?q=<id>; they are removed from the UI picker, not deleted.
+    """
     gallery = _load_gallery()
     items = [
         {
@@ -88,6 +91,7 @@ def list_questions() -> Dict[str, Any]:
             "askerKind": q.get("askerKind"),
         }
         for q in gallery["questions"]
+        if not q.get("hidden")
     ]
     return {"questions": items}
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Bot, Boxes, Loader2, UserRound } from 'lucide-react'
 import type { ChatMessage } from './trace/types'
 import { fetchQuestions, type GalleryItem } from './trace/galleryTrace'
@@ -10,9 +10,11 @@ interface ChatPaneProps {
   onSelect: (questionId: string) => void
 }
 
-// Curated demo: the five preselected questions are the gallery (flat — no
-// category buckets). Picking one auto-runs its trace on the canvas and lands the
-// answer here. The source system shows up as a node on the canvas, not a tag.
+// Curated demo: the picker lists the gallery's non-hidden questions (flat — no
+// category buckets). /api/demo/questions omits `hidden` entries, so they don't
+// appear here (they're retained server-side, not deleted). Picking one auto-runs
+// its trace on the canvas and lands the answer here. The source system shows up
+// as a node on the canvas, not a tag.
 export function ChatPane({ messages, loading, running, onSelect }: ChatPaneProps) {
   const [items, setItems] = useState<GalleryItem[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -49,28 +51,35 @@ export function ChatPane({ messages, loading, running, onSelect }: ChatPaneProps
               {loadError}
             </div>
           )}
-          {items.map((q) => (
-            <button
-              key={q.id}
-              data-testid={`q-${q.id}`}
-              disabled={running}
-              onClick={() => onSelect(q.id)}
-              className="block w-full rounded-lg border border-slate-700/80 bg-slate-800/40 px-3 py-2 text-left transition hover:border-emerald-500/40 hover:bg-slate-800/70 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {q.asker && (
-                <span className="mb-1 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-slate-400">
-                  {q.askerKind === 'agent' ? (
-                    <Bot size={11} className="text-emerald-400" />
-                  ) : (
-                    <UserRound size={11} className="text-sky-400" />
+          {items.map((q, i) => {
+            // Thin hairline delineating agent-asked questions from human-asked
+            // ones — rendered at the first agent→human boundary in picker order.
+            const showDivider = i > 0 && items[i - 1].askerKind === 'agent' && q.askerKind !== 'agent'
+            return (
+              <Fragment key={q.id}>
+                {showDivider && <div role="separator" data-testid="asker-divider" className="border-t border-slate-700/70" />}
+                <button
+                  data-testid={`q-${q.id}`}
+                  disabled={running}
+                  onClick={() => onSelect(q.id)}
+                  className="block w-full rounded-lg border border-slate-700/80 bg-slate-800/40 px-3 py-2 text-left transition hover:border-emerald-500/40 hover:bg-slate-800/70 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {q.asker && (
+                    <span className="mb-1 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                      {q.askerKind === 'agent' ? (
+                        <Bot size={11} className="text-emerald-400" />
+                      ) : (
+                        <UserRound size={11} className="text-sky-400" />
+                      )}
+                      {q.asker}
+                    </span>
                   )}
-                  {q.asker}
-                </span>
-              )}
-              <span className="block text-sm leading-snug text-slate-100">{q.question}</span>
-              <span className="mt-0.5 block text-[11px] text-slate-500">{q.entity_id}</span>
-            </button>
-          ))}
+                  <span className="block text-sm leading-snug text-slate-100">{q.question}</span>
+                  <span className="mt-0.5 block text-[11px] text-slate-500">{q.entity_id}</span>
+                </button>
+              </Fragment>
+            )
+          })}
         </div>
 
         {(messages.length > 0 || loading) && (

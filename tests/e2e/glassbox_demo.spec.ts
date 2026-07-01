@@ -1,4 +1,4 @@
-// Operator-visible outcome: picking a question auto-runs a React-Flow trace. The LEAD question "agent_rightsize" is agentic — contextOS relates cost x output (the "Source: Billing" node ends excised: a single system can't rank efficiency), the chat reports "data_sci_apac — worst $/deploy", and the agent's terminal node "Pinpoints the idle instances" is tagged FinOps agent while the source/relate nodes are tagged contextOS. The second question "agent_execute" is the core function — the FinOps agent right-sizes a CONCRETE EC2 instance (proposal "c5.2xlarge → c5.large", then HITL "Head of Cloud Platform approves → executed"), every node tagged by system (contextOS / FinOps agent / HITL). For "eng_runrate" the "Source: Shadow CRM" node ends excised (line-through, detail "Cancelled · unauthorized source. Excised."), its incoming edge turns red+dashed, and the chat answers "$2.64M". For "salesforce_blast_radius" the link node "Hidden Dependency" lights up and the chat answers "9 systems · 2 teams". The gallery shows exactly the 6 preselected questions with no category buckets.
+// Operator-visible outcome: picking a question auto-runs a React-Flow trace. The LEAD question "agent_rightsize" is agentic — contextOS relates cost x output (the "Source: Billing" node ends excised: a single system can't rank efficiency), the chat reports "data_sci_apac — worst $/deploy", and the agent's terminal node "Pinpoints the idle instances" is tagged FinOps agent while the source/relate nodes are tagged contextOS. The second question "agent_execute" is the core function — the FinOps agent right-sizes a CONCRETE EC2 instance (proposal "c5.2xlarge → c5.large", then HITL "Head of Cloud Platform approves → executed"), every node tagged by system (contextOS / FinOps agent / HITL). For "eng_runrate" the "Source: Shadow CRM" node ends excised (line-through, detail "Cancelled · unauthorized source. Excised."), its incoming edge turns red+dashed, and the chat answers "$2.64M". For the traversal question "conflicting_meds" the link node "Cross-Source Interaction" lights up and the chat answers "218 patients". The gallery picker shows exactly the 4 non-hidden questions (agent_rightsize, agent_execute, eng_runrate, conflicting_meds); the 3 hidden ones (counterparty_exposure, salesforce_blast_radius, denied_claims_driver) are removed from the UI picker but retained server-side — /api/demo/trace still resolves them.
 //
 // TAXONOMY: regression (mocked engine). RAILS MODE — the trace is replayed from
 // demo/glassbox_gallery.json, so this is NOT live-services acceptance. It drives
@@ -9,7 +9,8 @@ import { test, expect } from 'playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 
-const APP = 'http://localhost:3004/glassbox'
+const BASE = 'http://localhost:3004'
+const APP = `${BASE}/glassbox`
 const gallery = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../demo/glassbox_gallery.json'), 'utf-8'))
 const q = (id: string) => gallery.questions.find((x: any) => x.id === id)
 const node = (page: any, label: string) => page.locator('.react-flow__node', { hasText: label })
@@ -106,12 +107,12 @@ test('Agentic execution: the agent right-sizes a concrete EC2 instance, gated by
 })
 
 test('Traversal story: lights the hidden-link node and lands the plain-English answer', async ({ page }) => {
-  const item = q('salesforce_blast_radius')
+  const item = q('conflicting_meds')
   const g = item.graph
 
   await page.goto(APP)
   await page.waitForLoadState('networkidle')
-  await page.getByTestId('q-salesforce_blast_radius').click()
+  await page.getByTestId('q-conflicting_meds').click()
 
   // The link/verify node carries the fixture's "aha", and the answer lands.
   await expect(node(page, g.link.label)).toBeVisible({ timeout: 12_000 })
@@ -131,19 +132,63 @@ test('Fetch failure surfaces a readable error (no silent blank)', async ({ page 
   await expect(page.locator('.react-flow__node', { hasText: 'Compute Reducer' })).toHaveCount(0)
 })
 
-test('Gallery presents exactly the 7 preselected questions, with no category buckets', async ({ page }) => {
+test('Gallery picker shows exactly the non-hidden questions; hidden ones are removed from the UI but retained', async ({ page }) => {
+  const visible = gallery.questions.filter((x: any) => !x.hidden)
+  const hidden = gallery.questions.filter((x: any) => x.hidden)
+
   await page.goto(APP)
   await page.waitForLoadState('networkidle')
 
-  for (const item of gallery.questions) {
+  // Every non-hidden question renders as a picker button...
+  for (const item of visible) {
     await expect(page.getByTestId(`q-${item.id}`)).toBeVisible()
   }
-  await expect(page.locator('[data-testid^="q-"]')).toHaveCount(gallery.questions.length)
-  expect(gallery.questions.length).toBe(7)
+  // ...and the picker shows exactly those — no more, no fewer (fixture ground truth).
+  await expect(page.locator('[data-testid^="q-"]')).toHaveCount(visible.length)
+
+  // The removed questions are absent from the UI picker (negative assertion — the
+  // "bad behavior" this change prevents is any of them reappearing in the picker).
+  for (const item of hidden) {
+    await expect(page.getByTestId(`q-${item.id}`)).toHaveCount(0)
+  }
+
+  // "Not deleted": each hidden question is RETAINED server-side and still resolves
+  // via the read-only trace endpoint — its full authored story comes back intact.
+  for (const item of hidden) {
+    const res = await page.request.get(`${BASE}/api/demo/trace?q=${item.id}`)
+    expect(res.status()).toBe(200)
+    const body = await res.json()
+    expect(body.id).toBe(item.id)
+    expect(body.story.answer.headline).toBe(item.story.answer.headline)
+  }
 
   // The retired categorization must not appear anywhere.
   for (const c of ['Grow Revenue', 'See the Real Risk', 'Stop the Leakage', 'Operate with Confidence']) {
     await expect(page.getByText(c, { exact: true })).toHaveCount(0)
   }
   await page.screenshot({ path: 'tests/e2e/screenshots/glassbox_gallery.png', fullPage: true })
+})
+
+test('A thin divider delineates agent-asked questions from human-asked ones', async ({ page }) => {
+  const vis = gallery.questions.filter((x: any) => !x.hidden)
+  const agents = vis.filter((x: any) => x.askerKind === 'agent')
+  const humans = vis.filter((x: any) => x.askerKind !== 'agent')
+
+  await page.goto(APP)
+  await page.waitForLoadState('networkidle')
+
+  // Exactly one boundary: the agent block sits above, the human block below.
+  const divider = page.getByTestId('asker-divider')
+  await expect(divider).toHaveCount(1)
+
+  const lastAgent = page.getByTestId(`q-${agents[agents.length - 1].id}`)
+  const firstHuman = page.getByTestId(`q-${humans[0].id}`)
+  const aBox = await lastAgent.boundingBox()
+  const dBox = await divider.boundingBox()
+  const hBox = await firstHuman.boundingBox()
+
+  // The line renders below the last agent question and above the first human one.
+  expect(aBox!.y + aBox!.height).toBeLessThanOrEqual(dBox!.y)
+  expect(dBox!.y).toBeLessThanOrEqual(hBox!.y)
+  await page.screenshot({ path: 'tests/e2e/screenshots/glassbox_asker_divider.png', fullPage: true })
 })

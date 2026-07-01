@@ -1,5 +1,5 @@
 {
-  "_note": "Glass Box demo GALLERY (RAILS MODE replay). Seven preselected questions, no category buckets. The first two are AGENTIC and tag every node with the system it runs in (`system`: contextOS / agent / hitl) so the agent↔contextOS boundary is explicit. `agent_rightsize` (contextOS relates cost x output across sources so the agent finds the worst $/deploy team — data_sci_apac — then pinpoints its idle instances; the cross-source relate is contextOS, the query + pinpoint are the agent). `agent_execute` (the core function — the FinOps agent right-sizes a CONCRETE underutilized EC2 instance, i-75c0c1813079025d c5.2xlarge -> c5.large, gated by HITL Head-of-Cloud-Platform approval; NOT autonomous, NOT a 'team' right-size). The other five are read-queries. The cross-source numbers (data_sci_apac, $1,145.18/deploy, aws_cost_explorer x deploy_analytics, entity CloudFleet-USE1-7f3a) mirror the real headless agent-arc capture; the EC2 rightsize (instance, c5.2xlarge->c5.large, 22%->85%, ~$1K/mo, approval) mirrors the FinOps Recommendations 'Approve Optimization' surface. Each question carries: (a) `story.beats` — the authored narrative + raw records (the live-engine beat contract, served unchanged by backend/api/routes/demo.py); and (b) `graph` — the node-graph topology the React-Flow Glass Box animates (intake -> source-system candidates -> link/verify -> reducer; agentic questions end in a `graph.action` ACT node instead of the reducer, and every node may carry a `system` lane tag). The source system (workday, murex, …) is shown as the candidate NODE itself; a verdict of 'excised' severs that path. Authored replay, NOT live engine output; no silent fallback. The `graph` source-system labels and the eventual record lineage must be wired to real sources in prod.",
+  "_note": "Glass Box demo GALLERY (RAILS MODE replay). Seven authored questions, no category buckets. Three carry `hidden: true` (counterparty_exposure, salesforce_blast_radius, denied_claims_driver): /api/demo/questions omits them so the UI picker does not show them, but they are RETAINED here and /api/demo/trace?q=<id> still resolves them — removed from the UI, NOT deleted. The first two are AGENTIC and tag every node with the system it runs in (`system`: contextOS / agent / hitl) so the agent↔contextOS boundary is explicit. `agent_rightsize` (contextOS relates cost x output across sources so the agent finds the worst $/deploy team — data_sci_apac — then pinpoints its idle instances; the cross-source relate is contextOS, the query + pinpoint are the agent). `agent_execute` (the core function — the FinOps agent right-sizes a CONCRETE underutilized EC2 instance, i-75c0c1813079025d c5.2xlarge -> c5.large, gated by HITL Head-of-Cloud-Platform approval; NOT autonomous, NOT a 'team' right-size). The other five are read-queries. The cross-source numbers (data_sci_apac, $1,145.18/deploy, aws_cost_explorer x deploy_analytics, entity CloudFleet-USE1-7f3a) mirror the real headless agent-arc capture; the EC2 rightsize (instance, c5.2xlarge->c5.large, 22%->85%, ~$1K/mo, approval) mirrors the FinOps Recommendations 'Approve Optimization' surface. Each question carries: (a) `story.beats` — the authored narrative + raw records (the live-engine beat contract, served unchanged by backend/api/routes/demo.py); and (b) `graph` — the node-graph topology the React-Flow Glass Box animates (intake -> source-system candidates -> link/verify -> reducer; agentic questions end in a `graph.action` ACT node instead of the reducer, and every node may carry a `system` lane tag). The source system (workday, murex, …) is shown as the candidate NODE itself; a verdict of 'excised' severs that path. Authored replay, NOT live engine output; no silent fallback. The `graph` source-system labels and the eventual record lineage must be wired to real sources in prod.",
   "questions": [
     {
       "id": "agent_rightsize",
@@ -90,6 +90,7 @@
     {
       "id": "counterparty_exposure",
       "capability": "traversal",
+      "hidden": true,
       "question": "What's our real exposure to Brightwater Partners?",
       "asker": "Chief Risk Officer",
       "askerKind": "human",
@@ -117,6 +118,7 @@
     {
       "id": "salesforce_blast_radius",
       "capability": "traversal",
+      "hidden": true,
       "question": "If Salesforce goes down, what actually breaks?",
       "asker": "Head of Platform",
       "askerKind": "human",
@@ -170,6 +172,7 @@
     {
       "id": "denied_claims_driver",
       "capability": "traversal",
+      "hidden": true,
       "question": "Why do our claims keep getting denied?",
       "asker": "Head of Revenue Cycle",
       "askerKind": "human",
